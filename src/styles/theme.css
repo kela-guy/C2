@@ -179,3 +179,12 @@
     line-height: 1.5;
   }
 }
+
+@keyframes missile-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.06); opacity: 0.88; }
+}
+
+.animate-missile-pulse {
+  animation: missile-pulse 0.55s ease-in-out infinite;
+}

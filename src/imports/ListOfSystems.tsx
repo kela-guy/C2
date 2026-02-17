@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronDown,
@@ -47,13 +48,31 @@ export interface TargetSystem {
   type: TargetType;
   status: 'active' | 'tracking' | 'engaged' | 'neutralized' | 'suspect' | 'expired' | 'success';
   missionStatus?: 'idle' | 'planning' | 'executing' | 'waiting_confirmation' | 'complete' | 'aborted';
+  /** Drives whether timeline advances by timer (intercept/surveillance) or by map events (attack), or jamming (user ends mission). */
+  missionType?: 'intercept' | 'surveillance' | 'attack' | 'jamming';
   timestamp: string;
   coordinates: string;
   distance: string;
   isNew?: boolean;
   missionSteps?: string[];
   missionProgress?: number;
+  // Sensors / assets that detected this target (filled by simulation logic)
+  detectedBySensors?: {
+    id: string;
+    typeLabel: string;
+    latitude: number;
+    longitude: number;
+  }[];
+  dismissReason?: string;
 }
+
+/** Mock options shown when user dismisses a target (must pick a reason). */
+export const DISMISS_REASONS = [
+  "לא רלוונטי",
+  "תרגיל",
+  "זיהוי שגוי",
+  "אחר",
+] as const;
 
 export const MOCK_TARGETS: TargetSystem[] = [
   {
@@ -129,6 +148,13 @@ function StatusChip({ label, color = "green", className = "" }: { label: string;
   );
 }
 
+const DroneIcon = ({ className }: { className?: string }) => (
+  <svg width="16" height="16" viewBox="0 0 28 32" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <path d="M23.334 15.7502L9.33696 0.583495L5.86139 4.0835L10.5007 11.0835L9.32456 15.7502L10.5007 20.4168L5.86139 27.4168L9.32456 30.6801L23.334 15.7502Z" fill="white"/>
+    <path d="M23.5479 15.5522C23.6516 15.6646 23.6514 15.8382 23.5469 15.9497L9.53711 30.8794C9.48421 30.9358 9.41124 30.9687 9.33398 30.9712C9.2566 30.9736 9.18137 30.9452 9.125 30.8921L5.66113 27.6294C5.55779 27.532 5.53972 27.3737 5.61816 27.2554L10.1865 20.3628L9.04199 15.8218C9.03022 15.7751 9.03026 15.7259 9.04199 15.6792L10.1865 11.1362L5.61817 4.24463C5.54184 4.12942 5.55708 3.97659 5.6543 3.87842L9.12988 0.378417C9.18594 0.321963 9.26323 0.290048 9.34277 0.291503C9.42215 0.293084 9.49791 0.326905 9.55176 0.385253L23.5479 15.5522Z" stroke="black" strokeOpacity="0.8" strokeWidth="0.583333" strokeLinejoin="round"/>
+  </svg>
+);
+
 function ActionButton({ 
   label, 
   icon: Icon, 
@@ -169,7 +195,7 @@ function ActionButton({
     return (
       <button 
         onClick={onClick}
-        className={`w-full bg-[rgba(250,82,82,0.15)] hover:bg-[rgba(250,82,82,0.25)] border border-[#fa5252] text-[#ff8787] rounded h-9 flex items-center justify-center gap-2 transition-all active:scale-95 ${className}`}
+      className={`w-[160px] bg-[rgba(250,82,82,0.15)] hover:bg-[rgba(250,82,82,0.25)] border border-[#fa5252] text-[#ff8787] rounded h-9 flex items-center justify-center gap-2 transition-all active:scale-95 ${className}`}
       >
         <span className="text-sm font-semibold font-['Inter']">{label}</span>
         {Icon && <Icon size={16} />}
@@ -180,7 +206,7 @@ function ActionButton({
   return (
     <button 
       onClick={onClick}
-      className={`flex-1 bg-[rgba(34,139,230,0.15)] hover:bg-[rgba(34,139,230,0.25)] border border-[#74c0fc] text-[#74c0fc] rounded h-8 flex items-center justify-center gap-2 transition-all active:scale-95 ${className}`}
+      className={`w-[160px] bg-[rgba(34,139,230,0.15)] hover:bg-[rgba(34,139,230,0.25)] border border-[#74c0fc] text-[#74c0fc] rounded h-9 flex items-center justify-center gap-2 transition-all active:scale-95 ${className}`}
     >
       <span className="text-xs font-medium font-['Inter']">{label}</span>
       {Icon && <Icon size={14} />}
@@ -288,39 +314,45 @@ function CollapsibleGroup({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className={`mb-2 rounded-lg border border-[#333] bg-[#111] overflow-hidden ${className}`}>
-        <button 
-            onClick={() => setIsOpen(!isOpen)}
-            className="w-full flex items-center justify-between p-3 bg-white/5 hover:bg-white/10 transition-colors"
+    <div className={`mb-3 ${className}`} dir="rtl">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between px-1 py-2 rounded-md hover:bg-white/5 transition-colors"
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <Icon size={14} className="text-zinc-500 shrink-0" />
+          <span className="text-xs text-zinc-300 font-semibold truncate text-balance">
+            {title}
+          </span>
+          <span className="text-[11px] text-zinc-500 font-mono tabular-nums">
+            {count}
+          </span>
+        </div>
+
+        <motion.div
+          animate={{ rotate: isOpen ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+          className="text-zinc-500 shrink-0"
         >
-            <div className="flex items-center gap-2 text-gray-400">
-                <motion.div animate={{ rotate: isOpen ? 180 : 0 }}>
-                    <ChevronDown size={16} />
-                </motion.div>
-                <span className="text-xs font-mono">({count})</span>
+          <ChevronDown size={16} />
+        </motion.div>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0 }}
+            animate={{ height: 'auto' }}
+            exit={{ height: 0 }}
+            transition={{ duration: 0.3 }}
+            className="overflow-hidden"
+          >
+            <div className="pt-2 space-y-2 border-t border-white/5">
+              {children}
             </div>
-            
-            <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-gray-300">{title}</span>
-                <Icon size={14} className="text-blue-500" />
-            </div>
-        </button>
-        
-        <AnimatePresence initial={false}>
-            {isOpen && (
-                <motion.div
-                    initial={{ height: 0 }}
-                    animate={{ height: "auto" }}
-                    exit={{ height: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="overflow-hidden"
-                >
-                    <div className="p-2 space-y-2 border-t border-[#333]">
-                        {children}
-                    </div>
-                </motion.div>
-            )}
-        </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -353,7 +385,7 @@ function SystemCard({
 
   return (
     <div 
-        className={`w-full bg-[#1A1A1A] text-white p-3 rounded-lg shadow-xl border font-['Inter'] p-[0px] overflow-hidden mb-2 transition-colors
+        className={`w-full bg-[#1A1A1A] text-white rounded-lg shadow-xl border font-['Inter'] p-[0px] overflow-hidden mb-2 transition-colors
         ${target.status === 'active' || target.status === 'engaged' ? 'border-red-500/30' : 'border-[#333]'}
         ${target.status === 'suspect' ? 'border-amber-500/30' : ''}
         ${target.status === 'success' || target.status === 'neutralized' ? 'border-green-500/30 opacity-75' : ''}
@@ -490,15 +522,44 @@ function ExpandedTargetDetails({
     onEngage,
     onDismiss,
     onCancelMission,
-    onCompleteMission
+    onCompleteMission,
+    getClosestAssets,
+    onSensorHover,
 }: { 
     target: TargetSystem, 
     onVerify?: (action: 'intercept' | 'surveillance') => void,
     onEngage?: (type: 'jamming' | 'attack') => void,
-    onDismiss?: () => void,
+    onDismiss?: (reason?: string) => void,
     onCancelMission?: () => void,
-    onCompleteMission?: () => void
+    onCompleteMission?: () => void,
+    getClosestAssets?: (target: TargetSystem) => Array<{ id: string; typeLabel: string; actionLabel: string; distanceM: number }>,
+    onSensorHover?: (sensorId: string | null) => void,
+    onAvailableAssetHover?: (assetId: string | null) => void,
 }) {
+  const [dismissDropdownOpen, setDismissDropdownOpen] = useState(false);
+  const dismissTriggerRef = useRef<HTMLDivElement>(null);
+  const [dismissDropdownRect, setDismissDropdownRect] = useState<{ top: number; left: number } | null>(null);
+
+  useEffect(() => {
+    if (!dismissDropdownOpen) {
+      setDismissDropdownRect(null);
+      return;
+    }
+    const el = dismissTriggerRef.current;
+    if (!el) return;
+    const updateRect = () => {
+      const rect = el.getBoundingClientRect();
+      setDismissDropdownRect({ top: rect.bottom + 4, left: rect.right - 140 });
+    };
+    updateRect();
+    window.addEventListener('scroll', updateRect, true);
+    window.addEventListener('resize', updateRect);
+    return () => {
+      window.removeEventListener('scroll', updateRect, true);
+      window.removeEventListener('resize', updateRect);
+    };
+  }, [dismissDropdownOpen]);
+
   const isCritical = target.status === 'active' || target.status === 'engaged';
   const isSuspect = target.status === 'suspect';
   const isMissionActive = target.missionStatus === 'planning' || target.missionStatus === 'executing' || target.missionStatus === 'waiting_confirmation';
@@ -539,6 +600,53 @@ function ExpandedTargetDetails({
           </div>
       </AccordionSection>
 
+      {/* Detected By Sensors */}
+      {target.detectedBySensors && target.detectedBySensors.length > 0 && (
+        <AccordionSection title="חיישנים שזיהו" defaultOpen={true} icon={Signal}>
+          <div className="flex flex-col gap-1 p-[4px]" dir="rtl">
+            {target.detectedBySensors.map(sensor => (
+              <div
+                key={sensor.id}
+                className="flex items-center justify-between text-[11px] text-gray-300 bg-black/30 border border-white/10 rounded px-2 py-1 cursor-pointer hover:bg-white/10 hover:border-cyan-500/30 transition-colors"
+                onMouseEnter={() => onSensorHover?.(sensor.id)}
+                onMouseLeave={() => onSensorHover?.(null)}
+              >
+                <span className="font-mono text-[10px] text-gray-500">{sensor.id}</span>
+                <span className="font-['Inter'] text-xs">{sensor.typeLabel}</span>
+              </div>
+            ))}
+          </div>
+        </AccordionSection>
+      )}
+
+      {/* Closest assets to handle detection (mock actions) */}
+      {getClosestAssets && target.coordinates && (() => {
+        const parts = target.coordinates.split(',').map(s => parseFloat(s.trim()));
+        if (parts.length < 2 || isNaN(parts[0]) || isNaN(parts[1])) return null;
+        const assets = getClosestAssets(target);
+        if (assets.length === 0) return null;
+        return (
+          <AccordionSection title="אמצעים זמינים" defaultOpen={true} icon={Target}>
+            <div className="flex flex-col gap-1 p-[4px]" dir="rtl">
+              {assets.map(a => (
+                <div
+                  key={a.id}
+                  className="flex items-center justify-between gap-2 text-[11px] text-gray-300 bg-black/30 border border-white/10 rounded px-2 py-1.5 hover:bg-white/5 hover:border-cyan-500/30 transition-colors cursor-pointer"
+                  onMouseEnter={() => onAvailableAssetHover?.(a.id)}
+                  onMouseLeave={() => onAvailableAssetHover?.(null)}
+                >
+                  <span className="font-['Inter'] text-xs">{a.actionLabel}</span>
+                  <span className="flex items-center gap-1.5 font-mono text-[10px] text-gray-500">
+                    {a.id === 'DRONE-MOCK' ? <DroneIcon className="w-4 h-4 flex-shrink-0" /> : null}
+                    {a.typeLabel}{a.distanceM > 0 ? ` · ${(a.distanceM / 1000).toFixed(1)} ק״מ` : ''}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </AccordionSection>
+        );
+      })()}
+
       {/* Mission Timeline - Only show if active */}
       {isMissionActive && target.missionSteps && (
           <MissionTimeline 
@@ -553,19 +661,49 @@ function ExpandedTargetDetails({
       {!isMissionActive && !isSuccess && !isExpired && (
           <div className="p-3 bg-black/20 space-y-2">
              <div className="flex gap-2 pt-2">
-                {isCritical ? (
+                {(isCritical || isSuspect) ? (
                     <>
                         <ActionButton 
                             label="ירי" 
                             variant="danger" 
                             icon={Crosshair} 
+                            className="w-40"
                             onClick={(e) => { e?.stopPropagation(); onEngage?.('attack'); }}
                         />
                         <ActionButton 
                             label="שיבוש" 
                             icon={Radio} 
+                            className="w-40"
                             onClick={(e) => { e?.stopPropagation(); onEngage?.('jamming'); }}
                         />
+                        <div className="relative" ref={dismissTriggerRef}>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); setDismissDropdownOpen(open => !open); }}
+                            className="flex items-center gap-1 px-2 py-1.5 rounded bg-white/5 hover:bg-red-500/20 text-[#666] hover:text-red-400 border border-transparent hover:border-red-500/30 transition-all text-[11px] font-medium"
+                            title="הסר ממעקב (בחירת סיבה)"
+                          >
+                            <span>הסר</span>
+                            <ChevronDown size={12} className={`transition-transform ${dismissDropdownOpen ? 'rotate-180' : ''}`} />
+                          </button>
+                          {dismissDropdownOpen && dismissDropdownRect && createPortal(
+                            <div
+                              className="fixed py-1 min-w-[140px] rounded border border-white/20 bg-[#1a1a1a] shadow-xl z-[9999]"
+                              style={{ top: dismissDropdownRect.top, left: dismissDropdownRect.left }}
+                              dir="rtl"
+                            >
+                              {DISMISS_REASONS.map(reason => (
+                                <button
+                                  key={reason}
+                                  onClick={(e) => { e.stopPropagation(); onDismiss?.(reason); setDismissDropdownOpen(false); }}
+                                  className="w-full text-right px-3 py-1.5 text-[11px] text-gray-300 hover:bg-white/10 transition-colors"
+                                >
+                                  {reason}
+                                </button>
+                              ))}
+                            </div>,
+                            document.body
+                          )}
+                        </div>
                     </>
                 ) : (
                     <>
@@ -581,13 +719,34 @@ function ExpandedTargetDetails({
                             className="border-blue-500/50 text-blue-500 bg-blue-500/10 hover:bg-blue-500/20"
                             onClick={(e) => { e?.stopPropagation(); onVerify?.('surveillance'); }}
                         />
-                        <button 
-                            onClick={(e) => { e.stopPropagation(); onDismiss?.(); }}
-                            className="w-8 h-8 flex items-center justify-center rounded bg-white/5 hover:bg-red-500/20 text-[#666] hover:text-red-400 border border-transparent hover:border-red-500/30 transition-all"
-                            title="Dismiss"
-                        >
-                            <X size={14} />
-                        </button>
+                        <div className="relative" ref={dismissTriggerRef}>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); setDismissDropdownOpen(open => !open); }}
+                            className="flex items-center gap-1 px-2 py-1.5 rounded bg-white/5 hover:bg-red-500/20 text-[#666] hover:text-red-400 border border-transparent hover:border-red-500/30 transition-all text-[11px] font-medium"
+                            title="הסר ממעקב (בחירת סיבה)"
+                          >
+                            <span>הסר</span>
+                            <ChevronDown size={12} className={`transition-transform ${dismissDropdownOpen ? 'rotate-180' : ''}`} />
+                          </button>
+                          {dismissDropdownOpen && dismissDropdownRect && createPortal(
+                            <div
+                              className="fixed py-1 min-w-[140px] rounded border border-white/20 bg-[#1a1a1a] shadow-xl z-[9999]"
+                              style={{ top: dismissDropdownRect.top, left: dismissDropdownRect.left }}
+                              dir="rtl"
+                            >
+                              {DISMISS_REASONS.map(reason => (
+                                <button
+                                  key={reason}
+                                  onClick={(e) => { e.stopPropagation(); onDismiss?.(reason); setDismissDropdownOpen(false); }}
+                                  className="w-full text-right px-3 py-1.5 text-[11px] text-gray-300 hover:bg-white/10 transition-colors"
+                                >
+                                  {reason}
+                                </button>
+                              ))}
+                            </div>,
+                            document.body
+                          )}
+                        </div>
                     </>
                 )}
              </div>
@@ -607,7 +766,10 @@ interface ListOfSystemsProps {
     onTargetClick?: (target: TargetSystem) => void;
     onVerify?: (targetId: string, action: 'intercept' | 'surveillance') => void;
     onEngage?: (targetId: string, type: 'jamming' | 'attack') => void;
-    onDismiss?: (targetId: string) => void;
+    onDismiss?: (targetId: string, reason?: string) => void;
+    getClosestAssets?: (target: TargetSystem) => Array<{ id: string; typeLabel: string; actionLabel: string; distanceM: number }>;
+    onSensorHover?: (sensorId: string | null) => void;
+    onAvailableAssetHover?: (assetId: string | null) => void;
     onCancelMission?: (targetId: string) => void;
     onCompleteMission?: (targetId: string) => void;
 }
@@ -621,7 +783,10 @@ export default function ListOfSystems({
     onEngage,
     onDismiss,
     onCancelMission,
-    onCompleteMission
+    onCompleteMission,
+    getClosestAssets,
+    onSensorHover,
+    onAvailableAssetHover,
 }: ListOfSystemsProps) {
   
   // Dedup targets
@@ -670,9 +835,12 @@ export default function ListOfSystems({
                                 target={target}
                                 onVerify={(action) => onVerify?.(target.id, action)}
                                 onEngage={(type) => onEngage?.(target.id, type)}
-                                onDismiss={() => onDismiss?.(target.id)}
+                                onDismiss={(reason) => onDismiss?.(target.id, reason)}
                                 onCancelMission={() => onCancelMission?.(target.id)}
                                 onCompleteMission={() => onCompleteMission?.(target.id)}
+                                getClosestAssets={getClosestAssets}
+                                onSensorHover={onSensorHover}
+                                onAvailableAssetHover={onAvailableAssetHover}
                             />
                         </SystemCard>
                     </motion.div>
