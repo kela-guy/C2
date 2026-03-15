@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
@@ -70,7 +72,12 @@
     "@tailwindcss/vite": "4.1.12",
     "@vitejs/plugin-react": "4.7.0",
     "tailwindcss": "4.1.12",
-    "vite": "6.3.5"
+    "typescript": "^5.9.3",
+    "vite": "6.3.5",
+    "storybook": "^10.2.19",
+    "@storybook/react-vite": "^10.2.19",
+    "@storybook/addon-a11y": "^10.2.19",
+    "@storybook/addon-docs": "^10.2.19"
   },
   "peerDependencies": {
     "react": "18.3.1",

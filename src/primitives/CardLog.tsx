@@ -1,0 +1,67 @@
+import React, { useState } from 'react';
+import { History } from 'lucide-react';
+import { AccordionSection } from './AccordionSection';
+
+export interface LogEntry {
+  time: string;
+  label: string;
+}
+
+export interface CardLogProps {
+  entries: LogEntry[];
+  maxVisible?: number;
+  defaultOpen?: boolean;
+  className?: string;
+}
+
+export function CardLog({
+  entries,
+  maxVisible = 5,
+  defaultOpen = false,
+  className = '',
+}: CardLogProps) {
+  const [expanded, setExpanded] = useState(false);
+
+  if (entries.length === 0) return null;
+
+  const reversed = [...entries].reverse();
+  const visible = expanded ? reversed : reversed.slice(0, maxVisible);
+  const hasMore = reversed.length > maxVisible;
+
+  return (
+    <AccordionSection
+      title={`לוג (${entries.length})`}
+      defaultOpen={defaultOpen}
+      icon={History}
+      className={className}
+    >
+      <div className="flex flex-col py-2 px-1" dir="rtl">
+        <div className="flex flex-col justify-center items-start">
+          {visible.map((entry, idx) => (
+            <div key={idx} className="flex items-center justify-center gap-2.5 mb-2 relative">
+              <div className="w-[11px] h-[11px] rounded-full border border-white/20 bg-[#1a1a1a] shrink-0 mt-0.5 z-[1]" />
+              <div className="flex-1 min-w-0">
+                <span className="text-[11px] text-zinc-300">{entry.label}</span>
+              </div>
+              <span className="text-[9px] text-zinc-600 font-mono shrink-0 tabular-nums">
+                {entry.time}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {hasMore && !expanded && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setExpanded(true);
+            }}
+            className="w-full text-center text-[9px] text-zinc-600 hover:text-zinc-400 transition-colors py-0.5"
+          >
+            עוד {reversed.length - maxVisible} רשומות
+          </button>
+        )}
+      </div>
+    </AccordionSection>
+  );
+}

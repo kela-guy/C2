@@ -1,0 +1,128 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Docs/Operational Flows" />
+
+# Operational Flows
+
+State machines and phase transitions for each operational flow.
+
+## Flow 1 – Ground Suspicion
+
+Unknown movement detected by perimeter sensors. Operator investigates, decides, and acts.
+
+`trigger` → `orient` → `investigate` → `decide` → `act` → `closure`
+
+| Phase | UI Shown | Callbacks |
+|-------|----------|-----------|
+| trigger | StatusChip(suspicion), camera grid | `onAdvanceFlowPhase` |
+| orient | Sensor data, nearby cameras | `onCameraLookAt`, `onSensorHover` |
+| investigate | Camera feed, playbook selector | `onPlaybookSelect`, `onSensorModeChange` |
+| decide | Escalation options, response actions | `onEscalateCreatePOI`, `onEscalateSendDrone` |
+| act | Active response UI | `onVerify`, `onEngage` |
+| closure | Outcome selector, action log | `onClosureOutcome`, `onDismiss` |
+
+```ts
+// Detection props that control Flow 1
+{
+  flowType: 1,
+  flowPhase: 'trigger' | 'orient' | 'investigate' | 'decide' | 'act' | 'closure',
+  status: 'suspicion' | 'detection' | 'tracking',
+}
+```
+
+---
+
+## Flow 2 – CUAS Drone Threat
+
+Classified drone detected. System tracks, operator initiates mitigation (jamming/attack/intercept), then BDA.
+
+`detection` → `classified` → `mitigating` → `mitigated` → `BDA`
+
+| Phase | UI Shown | Callbacks |
+|-------|----------|-----------|
+| orient | Classification card, confidence % | — |
+| decide | Mitigation grid (שיבוש, ירי, יירוט) | `onMitigate`, `onMitigateAll` |
+| act | MissionTimeline, mitigating indicator | `onCancelMission`, `onCompleteMission` |
+| closure | BDA status, outcome selector | `onBdaOutcome`, `onClosureOutcome` |
+
+```ts
+// Detection props that control Flow 2
+{
+  flowType: 2,
+  entityStage: 'classified',
+  classifiedType: 'drone',
+  confidence: 0.92,
+  mitigationStatus: 'idle' | 'mitigating' | 'mitigated',
+  bdaStatus: 'pending' | 'looking' | 'complete',
+}
+```
+
+---
+
+## Flow 3 – Drone Deployment
+
+Operator deploys a drone from a hive to investigate or pursue a target.
+
+`select` → `takeoff` → `flying` → `on_station` → `low_battery` → `rtb` → `landed`
+
+| Phase | UI Shown | Callbacks |
+|-------|----------|-----------|
+| select | Hive picker, drone list | `onDroneSelect` |
+| flying | Battery, ETA, override button | `onDroneOverride`, `onDroneResume` |
+| on_station | Camera feed, control panel | `onTakeControl`, `onReleaseControl` |
+| low_battery | Battery warning, RTB prompt | `onDroneRTB` |
+| rtb / landed | Return status, completion | — |
+
+```ts
+// Detection props that control Flow 3
+{
+  flowType: 3,
+  droneDeployment: {
+    phase: 'select' | 'takeoff' | 'flying' | 'on_station' | 'low_battery' | 'rtb' | 'landed',
+    battery: number,
+    droneId: string,
+    hiveId: string,
+  },
+}
+```
+
+---
+
+## Flow 4 – Mission Execution
+
+Planned missions (intercept, surveillance, attack, jamming) with step-by-step progress.
+
+`planning` → `executing` → `waiting` → `complete`
+
+| Phase | UI Shown | Callbacks |
+|-------|----------|-----------|
+| planning | Waypoint editor, mission config | `onPlanningFinalize`, `onPlanningToggleLoop` |
+| executing | MissionTimeline steps | `onCancelMission` |
+| waiting_confirmation | Completion button, drone verification | `onCompleteMission`, `onSendDroneVerification` |
+| complete | Summary, outcome | `onClosureOutcome` |
+
+```ts
+// Detection props that control Flow 4
+{
+  flowType: 4,
+  missionStatus: 'planning' | 'executing' | 'waiting_confirmation' | 'complete',
+  missionType: 'intercept' | 'surveillance' | 'attack' | 'jamming',
+  missionSteps: string[],
+  missionProgress: number,
+  plannedMission: PlannedMission,
+}
+```
+
+---
+
+## Flow 5 – Post-Mitigation
+
+After a target has been neutralized. BDA assessment and incident closure.
+
+`neutralized` → `BDA` → `closure`
+
+| Phase | UI Shown | Callbacks |
+|-------|----------|-----------|
+| neutralized | Neutralized badge, BDA status | — |
+| BDA | Camera/drone verification | `onBdaOutcome`, `onSendDroneVerification` |
+| closure | Outcome selector, archive | `onClosureOutcome` |

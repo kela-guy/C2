@@ -1,0 +1,76 @@
+import type { Meta, StoryObj } from '@storybook/react';
+import { CardHeader } from './CardHeader';
+import { StatusChip } from './StatusChip';
+import { MissionPhaseChip } from './MissionPhaseChip';
+import { Plane, Target, Rocket, Ship, ScanLine } from 'lucide-react';
+
+const meta: Meta<typeof CardHeader> = {
+  title: 'TargetCard/Slots/CardHeader',
+  component: CardHeader,
+  tags: ['autodocs'],
+  decorators: [
+    (Story) => (
+      <div style={{ maxWidth: 380, background: '#1A1A1A', padding: 8, borderRadius: 8 }}>
+        <Story />
+      </div>
+    ),
+  ],
+};
+
+export default meta;
+type Story = StoryObj<typeof CardHeader>;
+
+export const Default: Story = {
+  args: {
+    icon: Target,
+    title: 'חשד תנועה - גזרה צפונית',
+    subtitle: 't-001',
+    open: false,
+  },
+};
+
+export const WithStatus: Story = {
+  args: {
+    icon: Plane,
+    iconBgActive: true,
+    iconColor: '#ef4444',
+    title: 'רחפן מסווג',
+    status: <StatusChip label="איתור" color="red" />,
+    open: true,
+  },
+};
+
+export const MissionHeader: Story = {
+  args: {
+    icon: ScanLine,
+    iconColor: '#a78bfa',
+    title: 'סריקת מצלמה',
+    subtitle: 't-030',
+    badge: <MissionPhaseChip phase="active" />,
+    open: false,
+  },
+};
+
+export const AllIcons: Story = {
+  name: 'All Icon Types',
+  render: () => (
+    <div className="flex flex-col gap-3">
+      {[
+        { icon: Plane, title: 'UAV', color: '#ef4444', active: true },
+        { icon: Rocket, title: 'Missile', color: '#9ca3af', active: false },
+        { icon: Ship, title: 'Naval', color: '#9ca3af', active: false },
+        { icon: Target, title: 'Unknown', color: '#71717a', active: false },
+        { icon: ScanLine, title: 'PTZ Scan', color: '#a78bfa', active: false },
+      ].map((cfg) => (
+        <CardHeader
+          key={cfg.title}
+          icon={cfg.icon}
+          iconColor={cfg.color}
+          iconBgActive={cfg.active}
+          title={cfg.title}
+          open={false}
+        />
+      ))}
+    </div>
+  ),
+};

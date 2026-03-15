@@ -1,54 +1,71 @@
-import React, { useState, useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ChevronDown,
-  Satellite,
-  Radio,
-  Zap,
-  TriangleAlert,
-  MapPin,
-  Maximize2,
-  Eye,
-  EyeOff,
-  Activity,
-  X,
+  TargetCard,
+  CardHeader,
+  CardActions,
+  CardTimeline,
+  CardDetails,
+  CardSensors,
+  CardMedia,
+  CardLog,
+  CardClosure,
+  StatusChip,
+  CollapsibleGroup,
+  MissionPhaseChip,
+} from '@/primitives';
+import {
+  Crosshair,
   Target,
   Scan,
-  Ruler,
-  VideoOff,
-  Signal,
-  Check,
-  Loader2,
-  Circle,
-  Play,
-  ArrowRight,
-  Crosshair,
-  Ban,
+  Pause,
   Plane,
-  Rocket,
-  Ship,
-  Filter,
-  ShieldAlert,
   AlertTriangle,
-  History,
-  CheckCircle2,
   ListTodo,
-  Clock
-} from "lucide-react";
-import imgBackImage from "figma:asset/66ccf516497c539c4117e5bbcf6e3cad11d2e3ed.png";
+  ScanLine,
+  SlidersHorizontal,
+  ArrowUpDown,
+  Radar,
+} from 'lucide-react';
+import { useCardSlots, type CardCallbacks, type CardContext } from './useCardSlots';
 
-// --- Types ---
+// ─── Types ───────────────────────────────────────────────────────────────────
 
-export type TargetType = 'uav' | 'missile' | 'aircraft' | 'naval' | 'unknown';
+export type DetectionType = 'uav' | 'missile' | 'aircraft' | 'naval' | 'unknown';
+export type EntityStage = 'raw_detection' | 'classified';
+export type ClassifiedType = 'drone' | 'bird' | 'aircraft' | 'unknown';
+export type MitigationStatus = 'idle' | 'mitigating' | 'mitigated' | 'failed';
+export type BdaStatus = 'pending' | 'looking' | 'stabilizing' | 'observing' | 'complete';
 
-export interface TargetSystem {
+export interface ContributingSensor {
+  sensorId: string;
+  sensorType: string;
+  firstDetectedAt: string;
+  lastDetectedAt: string;
+}
+
+export interface TrailPoint {
+  lat: number;
+  lon: number;
+  timestamp: string;
+}
+
+export interface RegulusEffector {
   id: string;
   name: string;
-  type: TargetType;
-  status: 'active' | 'tracking' | 'engaged' | 'neutralized' | 'suspect' | 'expired' | 'success';
+  lat: number;
+  lon: number;
+  coverageRadiusM: number;
+  status: 'available' | 'active' | 'inactive';
+  activeTargetId?: string;
+}
+
+export interface Detection {
+  id: string;
+  name: string;
+  type: DetectionType;
+  status: 'detection' | 'tracking' | 'event' | 'event_neutralized' | 'suspicion' | 'expired' | 'event_resolved';
   missionStatus?: 'idle' | 'planning' | 'executing' | 'waiting_confirmation' | 'complete' | 'aborted';
-  /** Drives whether timeline advances by timer (intercept/surveillance) or by map events (attack), or jamming (user ends mission). */
   missionType?: 'intercept' | 'surveillance' | 'attack' | 'jamming';
   timestamp: string;
   coordinates: string;
@@ -56,822 +73,567 @@ export interface TargetSystem {
   isNew?: boolean;
   missionSteps?: string[];
   missionProgress?: number;
-  // Sensors / assets that detected this target (filled by simulation logic)
-  detectedBySensors?: {
-    id: string;
-    typeLabel: string;
-    latitude: number;
-    longitude: number;
-  }[];
+  detectedBySensors?: { id: string; typeLabel: string; latitude: number; longitude: number }[];
   dismissReason?: string;
+  flowPhase?: 'trigger' | 'orient' | 'investigate' | 'decide' | 'act' | 'closure';
+  flowType?: number;
+  controlledByUser?: boolean;
+  sensorMode?: 'day' | 'thermal';
+  droneDeployment?: DroneDeployment;
+  plannedMission?: PlannedMission;
+  actionLog?: { time: string; label: string }[];
+  entityStage?: EntityStage;
+  confidence?: number;
+  classifiedType?: ClassifiedType;
+  trail?: TrailPoint[];
+  contributingSensors?: ContributingSensor[];
+  mitigationStatus?: MitigationStatus;
+  mitigatingEffectorId?: string;
+  bdaStatus?: BdaStatus;
+  lastSeenAt?: string;
+  lastSeenCoordinates?: string;
+  altitude?: string;
 }
 
-/** Mock options shown when user dismisses a target (must pick a reason). */
-export const DISMISS_REASONS = [
-  "לא רלוונטי",
-  "תרגיל",
-  "זיהוי שגוי",
-  "אחר",
-] as const;
+export interface MissionWaypoint {
+  lat: number;
+  lon: number;
+  label: string;
+  stayTimeS: number;
+}
 
-export const MOCK_TARGETS: TargetSystem[] = [
-  {
-    id: "TGT-001",
-    name: "מטרה #12",
-    type: "uav",
-    status: "active",
-    timestamp: "10:24:59",
-    coordinates: "31.47293, 34.89127",
-    distance: "234 מטר",
-    isNew: true
-  },
-  {
-    id: "TGT-002",
-    name: "איום בליסטי A-4",
-    type: "missile",
-    status: "tracking",
-    timestamp: "10:24:52",
-    coordinates: "32.11220, 34.55112",
-    distance: "12 ק״מ",
-    isNew: true
-  },
-  {
-    id: "TGT-003",
-    name: "זיהוי לא ידוע",
-    type: "unknown",
-    status: "tracking",
-    timestamp: "10:07:31",
-    coordinates: "33.55112, 35.11220",
-    distance: "45 ק״מ"
-  },
-  {
-    id: "TGT-004",
-    name: "כלי שיט עוין",
-    type: "naval",
-    status: "engaged",
-    timestamp: "09:45:10",
-    coordinates: "31.99211, 34.11220",
-    distance: "8 מייל ימי"
-  },
-  {
-    id: "TGT-005",
-    name: "מטוס קרב (ידידותי)",
-    type: "aircraft",
-    status: "tracking",
-    timestamp: "09:30:00",
-    coordinates: "32.55112, 35.55112",
-    distance: "120 ק״מ"
-  }
+export type MissionPhaseType = 'planning' | 'active' | 'paused' | 'override' | 'completed';
+
+export interface PlannedMission {
+  missionType: 'drone' | 'ptz';
+  waypoints: MissionWaypoint[];
+  loop: boolean;
+  currentWaypointIdx: number;
+  segmentProgress: number;
+  phase: MissionPhaseType;
+  overrideAutoResumeS?: number;
+  durationMinutes: number;
+  repetitions: number;
+  currentRepetition: number;
+  selectedAssetId?: string;
+  scanBearings?: number[];
+  dwellTimeS?: number;
+}
+
+export type DronePhase = 'select' | 'takeoff' | 'flying' | 'on_station' | 'low_battery' | 'rtb' | 'landed';
+
+export interface DroneDeployment {
+  droneId: string;
+  hiveId: string;
+  hiveLat: number;
+  hiveLon: number;
+  targetLat: number;
+  targetLon: number;
+  currentLat: number;
+  currentLon: number;
+  phase: DronePhase;
+  battery: number;
+  overridden: boolean;
+}
+
+export type IncidentOutcome =
+  | 'Handled'
+  | 'Escalated'
+  | 'Ignored_Animal'
+  | 'Ignored_AuthorizedVehicle'
+  | 'Ignored_Vegetation'
+  | 'Ignored_SensorError'
+  | 'Ignored_OwnForces'
+  | 'Ignored_PoorDetection';
+
+export const INCIDENT_OUTCOMES: { value: IncidentOutcome; label: string }[] = [
+  { value: 'Handled', label: 'טופל' },
+  { value: 'Escalated', label: 'הועבר לגורם מוסמך' },
+  { value: 'Ignored_Animal', label: 'בעל חיים' },
+  { value: 'Ignored_AuthorizedVehicle', label: 'רכב מורשה' },
+  { value: 'Ignored_Vegetation', label: 'צמחייה / רוח' },
+  { value: 'Ignored_SensorError', label: 'תקלת חיישן' },
+  { value: 'Ignored_OwnForces', label: 'כוחות עצמיים' },
+  { value: 'Ignored_PoorDetection', label: 'זיהוי לקוי' },
 ];
 
-// --- Reusable Components ---
-
-function StatusChip({ label, color = "green", className = "" }: { label: string; color?: "green" | "gray" | "red" | "orange"; className?: string }) {
-  let bg = "bg-[rgba(255,255,255,0.15)]";
-  let text = "text-white";
-
-  if (color === "green") {
-    bg = "bg-[rgba(18,184,134,0.15)]";
-    text = "text-[#12b886]";
-  } else if (color === "red") {
-    bg = "bg-[rgba(250,82,82,0.15)]";
-    text = "text-[#fa5252]";
-  } else if (color === "orange") {
-    bg = "bg-[rgba(253,126,20,0.15)]";
-    text = "text-[#fd7e14]";
-  }
-
-  return (
-    <div className={`${bg} flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium ${text} ${className}`}>
-      {label}
-    </div>
-  );
+export interface Playbook {
+  id: string;
+  name: string;
+  description: string;
+  riskLevel: 'low' | 'medium' | 'high';
 }
 
-const DroneIcon = ({ className }: { className?: string }) => (
-  <svg width="16" height="16" viewBox="0 0 28 32" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-    <path d="M23.334 15.7502L9.33696 0.583495L5.86139 4.0835L10.5007 11.0835L9.32456 15.7502L10.5007 20.4168L5.86139 27.4168L9.32456 30.6801L23.334 15.7502Z" fill="white"/>
-    <path d="M23.5479 15.5522C23.6516 15.6646 23.6514 15.8382 23.5469 15.9497L9.53711 30.8794C9.48421 30.9358 9.41124 30.9687 9.33398 30.9712C9.2566 30.9736 9.18137 30.9452 9.125 30.8921L5.66113 27.6294C5.55779 27.532 5.53972 27.3737 5.61816 27.2554L10.1865 20.3628L9.04199 15.8218C9.03022 15.7751 9.03026 15.7259 9.04199 15.6792L10.1865 11.1362L5.61817 4.24463C5.54184 4.12942 5.55708 3.97659 5.6543 3.87842L9.12988 0.378417C9.18594 0.321963 9.26323 0.290048 9.34277 0.291503C9.42215 0.293084 9.49791 0.326905 9.55176 0.385253L23.5479 15.5522Z" stroke="black" strokeOpacity="0.8" strokeWidth="0.583333" strokeLinejoin="round"/>
-  </svg>
-);
+export const FLOW1_PLAYBOOKS: Playbook[] = [
+  { id: 'fast-inspect', name: 'חקירה מהירה', description: 'שיגור רחפן + התחלת הקלטה', riskLevel: 'low' },
+  { id: 'full-response', name: 'תגובה מלאה', description: 'רחפן + כוח תגובה + הקלטה', riskLevel: 'high' },
+  { id: 'transfer', name: 'העברת אחריות', description: 'העברת נתונים למשטרה / גורם סמוך', riskLevel: 'medium' },
+];
 
-function ActionButton({ 
-  label, 
-  icon: Icon, 
-  onClick, 
-  variant = "primary",
-  className = "" 
-}: { 
-  label: string; 
-  icon?: React.ElementType; 
-  onClick?: (e: React.MouseEvent) => void;
-  variant?: "primary" | "secondary" | "ghost" | "glass" | "danger";
-  className?: string;
-}) {
-  if (variant === "ghost") {
-    return (
-      <button 
-        onClick={onClick}
-        className={`w-full h-8 flex items-center justify-center text-sm text-[#909296] hover:text-white transition-colors active:scale-95 font-['Inter'] ${className}`}
-      >
-        {label}
-      </button>
-    );
-  }
+export const DISMISS_REASONS = [
+  'לא רלוונטי',
+  'תרגיל',
+  'זיהוי שגוי',
+  'אחר',
+] as const;
 
-  if (variant === "glass") {
-    return (
-      <button 
-        onClick={onClick}
-        className={`flex-1 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white rounded h-8 flex items-center justify-center gap-2 transition-all active:scale-95 ${className}`}
-      >
-        <span className="text-xs font-medium font-['Inter']">{label}</span>
-        {Icon && <Icon size={14} />}
-      </button>
-    );
-  }
+export const MOCK_TARGETS: Detection[] = [];
 
-  if (variant === "danger") {
-    return (
-      <button 
-        onClick={onClick}
-      className={`w-[160px] bg-[rgba(250,82,82,0.15)] hover:bg-[rgba(250,82,82,0.25)] border border-[#fa5252] text-[#ff8787] rounded h-9 flex items-center justify-center gap-2 transition-all active:scale-95 ${className}`}
-      >
-        <span className="text-sm font-semibold font-['Inter']">{label}</span>
-        {Icon && <Icon size={16} />}
-      </button>
-    );
-  }
+// ─── Status chip builder ────────────────────────────────────────────────────
 
-  return (
-    <button 
-      onClick={onClick}
-      className={`w-[160px] bg-[rgba(34,139,230,0.15)] hover:bg-[rgba(34,139,230,0.25)] border border-[#74c0fc] text-[#74c0fc] rounded h-9 flex items-center justify-center gap-2 transition-all active:scale-95 ${className}`}
-    >
-      <span className="text-xs font-medium font-['Inter']">{label}</span>
-      {Icon && <Icon size={14} />}
-    </button>
-  );
+function buildStatusChip(target: Detection) {
+  if (target.entityStage === 'raw_detection') return <StatusChip label="לא ידוע" color="gray" />;
+  if (target.status === 'detection') return <StatusChip label="איתור" color="red" />;
+  if (target.status === 'tracking') return <StatusChip label="מעקב" color="orange" />;
+  if (target.status === 'event') return <StatusChip label="אירוע" color="green" />;
+  if (target.status === 'suspicion') return <StatusChip label="תח״ש" color="orange" />;
+  if (target.status === 'event_neutralized') return <StatusChip label="נוטרל" color="green" />;
+  if (target.status === 'event_resolved') return <StatusChip label="הושלם" color="green" />;
+  if (target.status === 'expired') return <StatusChip label="פג תוקף" color="gray" />;
+  return null;
 }
 
-function AccordionSection({
-  title,
-  children,
-  defaultOpen = false,
-  className = "",
-  headerAction = null,
-  icon: HeaderIcon = null
+// ─── Unified Card ───────────────────────────────────────────────────────────
+
+function UnifiedCard({
+  target,
+  isOpen,
+  onToggle,
+  callbacks,
+  ctx,
 }: {
-  title: string;
-  children: React.ReactNode;
-  defaultOpen?: boolean;
-  className?: string;
-  headerAction?: React.ReactNode;
-  icon?: React.ElementType | null;
+  target: Detection;
+  isOpen: boolean;
+  onToggle: () => void;
+  callbacks: CardCallbacks;
+  ctx: CardContext;
 }) {
-  const [isOpen, setOpen] = useState(defaultOpen);
+  const slots = useCardSlots(target, callbacks, ctx);
+  const isMission = target.flowType === 4;
+  const isSuccess = target.status === 'event_resolved' || target.status === 'event_neutralized';
+  const isExpired = target.status === 'expired';
+  const showDetails = !isSuccess && !isExpired && target.flowType !== 4;
 
   return (
-    <div className={`border-b border-[#333] last:border-0 ${className}`}>
-      <div 
-        className="flex w-full items-center justify-between p-[8px] cursor-pointer hover:bg-white/5 transition-colors rounded-sm"
-        onClick={(e) => {
-          if (!(e.target as HTMLElement).closest('button')) {
-             setOpen(!isOpen);
+    <TargetCard
+      accent={slots.accent}
+      completed={slots.completed}
+      open={isOpen}
+      onToggle={onToggle}
+      header={
+        <CardHeader
+          {...slots.header}
+          status={
+            isMission && target.plannedMission
+              ? <MissionPhaseChip phase={target.plannedMission.phase} />
+              : buildStatusChip(target)
           }
-        }}
-      >
-        <div className="flex items-center gap-2">
-           <button
-             onClick={() => setOpen(!isOpen)}
-             className="text-[#909296] hover:text-[#c9c9c9] transition-colors"
-           >
-              <motion.div
-                animate={{ rotate: isOpen ? 180 : 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <ChevronDown size={16} />
-              </motion.div>
-           </button>
-           {headerAction}
+          open={isOpen}
+        />
+      }
+    >
+      {slots.media && <CardMedia {...slots.media} />}
+
+      {slots.actions.length > 0 && <CardActions actions={slots.actions} />}
+
+      {slots.timeline.length > 0 && (
+        <div className="px-2 border-b border-white/5">
+          <CardTimeline steps={slots.timeline} />
         </div>
+      )}
 
-        <button 
-           onClick={() => setOpen(!isOpen)}
-           className="flex items-center gap-2 text-sm font-semibold text-[#c9c9c9] font-['Inter'] hover:text-white transition-colors"
-        >
-          {title}
-          {HeaderIcon && <HeaderIcon size={14} className="text-[#909296]" />}
-        </button>
-      </div>
+      {showDetails && (
+        <CardDetails
+          rows={slots.details.rows}
+          classification={slots.details.classification}
+        />
+      )}
 
-      <AnimatePresence initial={false}>
-        {isOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="overflow-hidden"
-          >
-            <div className="bg-[rgba(255,255,255,0.05)] px-[8px] py-[0px]">{children}</div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-function TelemetryRow({ label, value, icon: Icon }: { label: string; value: string; icon?: React.ElementType }) {
-  return (
-    <div className="flex justify-between items-center py-1">
-      <span className="text-sm text-white font-mono">{value}</span>
-      <div className="flex items-center gap-2">
-          <span className="text-sm text-[#909296] font-['Inter']">{label}</span>
-          {Icon && <Icon size={14} className="text-[#555]" />}
-      </div>
-    </div>
-  );
-}
-
-// --- Collapsible Group Component ---
-
-function CollapsibleGroup({ 
-  title, 
-  count, 
-  children, 
-  icon: Icon,
-  defaultOpen = false,
-  className = ""
-}: { 
-  title: string; 
-  count: number; 
-  children: React.ReactNode; 
-  icon: React.ElementType;
-  defaultOpen?: boolean;
-  className?: string;
-}) {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-
-  return (
-    <div className={`mb-3 ${className}`} dir="rtl">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-1 py-2 rounded-md hover:bg-white/5 transition-colors"
-      >
-        <div className="flex items-center gap-2 min-w-0">
-          <Icon size={14} className="text-zinc-500 shrink-0" />
-          <span className="text-xs text-zinc-300 font-semibold truncate text-balance">
-            {title}
-          </span>
-          <span className="text-[11px] text-zinc-500 font-mono tabular-nums">
-            {count}
-          </span>
+      {slots.sensors.length > 0 && (
+        <div className="px-2 pb-2">
+          <CardSensors
+            sensors={slots.sensors}
+            onSensorHover={callbacks.onSensorHover}
+            onSensorClick={callbacks.onSensorFocus}
+          />
         </div>
+      )}
 
-        <motion.div
-          animate={{ rotate: isOpen ? 180 : 0 }}
-          transition={{ duration: 0.2 }}
-          className="text-zinc-500 shrink-0"
-        >
-          <ChevronDown size={16} />
-        </motion.div>
-      </button>
+      {slots.log.length > 0 && (
+        <CardLog entries={slots.log} defaultOpen={isSuccess || isExpired} />
+      )}
 
-      <AnimatePresence initial={false}>
-        {isOpen && (
-          <motion.div
-            initial={{ height: 0 }}
-            animate={{ height: 'auto' }}
-            exit={{ height: 0 }}
-            transition={{ duration: 0.3 }}
-            className="overflow-hidden"
-          >
-            <div className="pt-2 space-y-2 border-t border-white/5">
-              {children}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+      {slots.closure && (
+        <CardClosure outcomes={slots.closure.outcomes} onSelect={slots.closure.onSelect} />
+      )}
+    </TargetCard>
   );
 }
 
-// --- Card Container Component ---
+// ─── Legacy exports (backward-compatible wrappers) ──────────────────────────
 
-function SystemCard({ 
+/** @deprecated Use UnifiedCard with TargetCard + CardHeader instead */
+export function SystemCard({
   target,
   children,
   isOpen,
   onToggle,
-}: { 
-  target: TargetSystem;
+}: {
+  target: Detection;
   children?: React.ReactNode;
   isOpen: boolean;
   onToggle: () => void;
+  loopActive?: boolean;
+  onToggleLoop?: () => void;
+  quickAction?: { label: string; variant: 'primary' | 'danger' | 'amber' | 'glass' | 'ghost' | 'secondary'; icon?: React.ElementType; onClick: (e: React.MouseEvent) => void };
 }) {
-  
-  const getIcon = () => {
-    switch(target.type) {
-      case 'uav': return Plane;
-      case 'missile': return Rocket;
-      case 'naval': return Ship;
-      case 'aircraft': return Plane;
-      default: return Target;
-    }
-  };
-
-  const Icon = getIcon();
+  const accent = (() => {
+    if (target.mitigationStatus === 'mitigating') return 'mitigating' as const;
+    if (target.status === 'event_resolved' || target.status === 'event_neutralized') return 'resolved' as const;
+    if (target.status === 'detection' || target.status === 'event') return 'detection' as const;
+    if (target.status === 'tracking') return 'tracking' as const;
+    if (target.status === 'suspicion') return 'suspicion' as const;
+    return 'idle' as const;
+  })();
 
   return (
-    <div 
-        className={`w-full bg-[#1A1A1A] text-white rounded-lg shadow-xl border font-['Inter'] p-[0px] overflow-hidden mb-2 transition-colors
-        ${target.status === 'active' || target.status === 'engaged' ? 'border-red-500/30' : 'border-[#333]'}
-        ${target.status === 'suspect' ? 'border-amber-500/30' : ''}
-        ${target.status === 'success' || target.status === 'neutralized' ? 'border-green-500/30 opacity-75' : ''}
-        ${isOpen ? 'ring-1 ring-white/10' : ''}
-        `}
-        dir="ltr"
+    <TargetCard
+      accent={accent}
+      completed={target.status === 'event_resolved' || target.status === 'event_neutralized'}
+      open={isOpen}
+      onToggle={onToggle}
+      header={
+        <CardHeader
+          title={target.name}
+          status={buildStatusChip(target)}
+          open={isOpen}
+        />
+      }
     >
-      {/* Main Card Header */}
-      <div 
-        className={`flex justify-between items-center mb-0 p-[8px] transition-colors rounded-t-lg relative z-20 cursor-pointer hover:bg-white/5
-        ${isOpen ? 'bg-white/5' : ''}`}
-        onClick={onToggle}
-      >
-        <div className="flex gap-2 items-center">
-             <motion.div
-                animate={{ rotate: isOpen ? 180 : 0 }}
-                transition={{ duration: 0.2 }}
-                className="text-[#909296]"
-             >
-                <ChevronDown size={20} />
-             </motion.div>
-
-           {target.status === 'active' && <StatusChip label="פעיל" color="red" />}
-           {target.status === 'tracking' && <StatusChip label="מעקב" color="orange" />}
-           {target.status === 'engaged' && <StatusChip label="בטיפול" color="green" />}
-           {target.status === 'suspect' && <StatusChip label="חשוד" color="orange" />}
-           {(target.status === 'neutralized' || target.status === 'success') && <StatusChip label="נוטרל" color="green" />}
-           {target.status === 'expired' && <StatusChip label="פג תוקף" color="gray" />}
-           
-        </div>
-        <div className="flex items-center gap-2 text-right">
-            <div className="flex flex-col items-end">
-                <h2 className="text-sm font-semibold text-[#dee2e6] font-['Inter']">
-                {target.name}
-                </h2>
-                <span className="text-[10px] text-[#666] font-mono">{target.id}</span>
-            </div>
-            <div className={`w-8 h-8 rounded flex items-center justify-center text-gray-400
-                ${target.status === 'active' || target.status === 'engaged' ? 'bg-red-500/20 text-red-400' : 'bg-[#333]'}
-            `}>
-                <Icon size={16} />
-            </div>
-        </div>
-      </div>
-
-      <AnimatePresence initial={false}>
-        {isOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="overflow-hidden"
-          >
-            <div className="flex flex-col border-t border-[#333] bg-[#141414]">
-               {children}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+      {children}
+    </TargetCard>
   );
 }
 
-// --- Content Components ---
-
-function MissionTimeline({ 
-    steps, 
-    progress, 
-    onCancel,
-    onComplete
-}: { 
-    steps: string[], 
-    progress: number, 
-    onCancel: () => void,
-    onComplete: () => void
-}) {
-    // Check if we are waiting for confirmation (progress >= steps.length)
-    const isWaitingConfirmation = progress >= steps.length;
-    const isCompleted = false; // We use parent state really, but here for display
-
-    return (
-        <div className="flex flex-col gap-2 p-3 bg-black/40 border-t border-white/5 relative" dir="rtl">
-            <h3 className="text-xs font-bold text-blue-400 font-mono mb-1 flex items-center gap-2">
-                <Loader2 size={12} className={`animate-spin ${isWaitingConfirmation ? 'opacity-0' : ''}`} />
-                מתכנן משימה
-            </h3>
-            
-            <div className="flex flex-col gap-2 pr-1 border-r border-white/10 mr-1">
-                {steps.map((step, idx) => {
-                    const isActive = idx === progress;
-                    const isStepCompleted = idx < progress;
-                    
-                    return (
-                        <div key={idx} className={`flex items-center gap-2 text-xs font-mono transition-all duration-300
-                            ${isActive ? 'text-white' : isStepCompleted ? 'text-green-400/70' : 'text-white/20'}
-                        `}>
-                            <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0
-                                ${isActive ? 'bg-blue-500 animate-pulse' : isStepCompleted ? 'bg-green-500' : 'bg-[#333]'}
-                            `} />
-                            <span>{step}</span>
-                            {isActive && <span className="inline-block w-1 h-3 bg-blue-500 animate-blink mr-1" />}
-                        </div>
-                    );
-                })}
-            </div>
-
-            <div className="mt-4 flex justify-between items-center pt-2 border-t border-white/5">
-                <button 
-                    onClick={(e) => { e.stopPropagation(); onCancel(); }}
-                    className="flex items-center gap-1.5 px-2 py-1 bg-red-900/20 hover:bg-red-900/40 border border-red-500/30 text-red-400 text-[10px] rounded transition-colors"
-                >
-                    <X size={12} />
-                    ביטול משימה
-                </button>
-
-                {isWaitingConfirmation && (
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); onComplete(); }}
-                        className="flex items-center gap-1.5 px-3 py-1 bg-green-900/20 hover:bg-green-900/40 border border-green-500/30 text-green-400 text-[10px] font-bold rounded transition-colors animate-pulse"
-                    >
-                        <Check size={12} />
-                        סיום משימה
-                    </button>
-                )}
-            </div>
-        </div>
-    );
+/** @deprecated Use UnifiedCard with useCardSlots instead */
+export function ExpandedTargetDetails({ target }: { target: Detection; [key: string]: any }) {
+  return <div className="p-2 text-xs text-zinc-500">Use ComposedCard instead</div>;
 }
 
-function ExpandedTargetDetails({ 
-    target, 
-    onVerify, 
-    onEngage,
-    onDismiss,
-    onCancelMission,
-    onCompleteMission,
-    getClosestAssets,
-    onSensorHover,
-}: { 
-    target: TargetSystem, 
-    onVerify?: (action: 'intercept' | 'surveillance') => void,
-    onEngage?: (type: 'jamming' | 'attack') => void,
-    onDismiss?: (reason?: string) => void,
-    onCancelMission?: () => void,
-    onCompleteMission?: () => void,
-    getClosestAssets?: (target: TargetSystem) => Array<{ id: string; typeLabel: string; actionLabel: string; distanceM: number }>,
-    onSensorHover?: (sensorId: string | null) => void,
-    onAvailableAssetHover?: (assetId: string | null) => void,
-}) {
-  const [dismissDropdownOpen, setDismissDropdownOpen] = useState(false);
-  const dismissTriggerRef = useRef<HTMLDivElement>(null);
-  const [dismissDropdownRect, setDismissDropdownRect] = useState<{ top: number; left: number } | null>(null);
+// ─── List Component ─────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    if (!dismissDropdownOpen) {
-      setDismissDropdownRect(null);
-      return;
-    }
-    const el = dismissTriggerRef.current;
-    if (!el) return;
-    const updateRect = () => {
-      const rect = el.getBoundingClientRect();
-      setDismissDropdownRect({ top: rect.bottom + 4, left: rect.right - 140 });
-    };
-    updateRect();
-    window.addEventListener('scroll', updateRect, true);
-    window.addEventListener('resize', updateRect);
-    return () => {
-      window.removeEventListener('scroll', updateRect, true);
-      window.removeEventListener('resize', updateRect);
-    };
-  }, [dismissDropdownOpen]);
-
-  const isCritical = target.status === 'active' || target.status === 'engaged';
-  const isSuspect = target.status === 'suspect';
-  const isMissionActive = target.missionStatus === 'planning' || target.missionStatus === 'executing' || target.missionStatus === 'waiting_confirmation';
-  const isExpired = target.status === 'expired';
-  const isSuccess = target.status === 'success' || target.status === 'neutralized';
-
-  const imageUrl = isSuspect 
-    ? "https://images.unsplash.com/photo-1506953823976-52e1fdc0149a?auto=format&fit=crop&q=80&w=200&h=200"
-    : "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=200&h=200";
-
-  return (
-    <>
-      <AccordionSection title="זיהוי ויזואלי" defaultOpen={true} icon={Eye}>
-          <div className="relative w-full h-[140px] rounded-lg overflow-hidden border border-[#333] group bg-black/40">
-            <img
-              src={imageUrl}
-              alt="Target"
-              className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity mix-blend-screen grayscale contrast-125"
-            />
-            
-            {/* Overlay Grid */}
-            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSIxIiBmaWxsPSIjZmZmIiBvcGFjaXR5PSIwLjEiLz4KPC9zdmc+')] pointer-events-none" />
-            
-            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-2 flex justify-between items-end">
-               <div className="flex gap-1">
-                 {isCritical && <ShieldAlert size={14} className="text-red-500 animate-pulse" />}
-                 {isSuspect && <AlertTriangle size={14} className="text-amber-500 animate-pulse" />}
-               </div>
-            </div>
-          </div>
-      </AccordionSection>
-
-      <AccordionSection title="נתונים טלמטריים" defaultOpen={true} icon={Activity}>
-          <div className="flex flex-col gap-1 p-[0px]">
-              <TelemetryRow label="מיקום" value={target.coordinates} icon={MapPin} />
-              <TelemetryRow label="מרחק" value={target.distance} icon={Ruler} />
-              <TelemetryRow label="זמן זיהוי" value={target.timestamp} icon={Scan} />
-          </div>
-      </AccordionSection>
-
-      {/* Detected By Sensors */}
-      {target.detectedBySensors && target.detectedBySensors.length > 0 && (
-        <AccordionSection title="חיישנים שזיהו" defaultOpen={true} icon={Signal}>
-          <div className="flex flex-col gap-1 p-[4px]" dir="rtl">
-            {target.detectedBySensors.map(sensor => (
-              <div
-                key={sensor.id}
-                className="flex items-center justify-between text-[11px] text-gray-300 bg-black/30 border border-white/10 rounded px-2 py-1 cursor-pointer hover:bg-white/10 hover:border-cyan-500/30 transition-colors"
-                onMouseEnter={() => onSensorHover?.(sensor.id)}
-                onMouseLeave={() => onSensorHover?.(null)}
-              >
-                <span className="font-mono text-[10px] text-gray-500">{sensor.id}</span>
-                <span className="font-['Inter'] text-xs">{sensor.typeLabel}</span>
-              </div>
-            ))}
-          </div>
-        </AccordionSection>
-      )}
-
-      {/* Closest assets to handle detection (mock actions) */}
-      {getClosestAssets && target.coordinates && (() => {
-        const parts = target.coordinates.split(',').map(s => parseFloat(s.trim()));
-        if (parts.length < 2 || isNaN(parts[0]) || isNaN(parts[1])) return null;
-        const assets = getClosestAssets(target);
-        if (assets.length === 0) return null;
-        return (
-          <AccordionSection title="אמצעים זמינים" defaultOpen={true} icon={Target}>
-            <div className="flex flex-col gap-1 p-[4px]" dir="rtl">
-              {assets.map(a => (
-                <div
-                  key={a.id}
-                  className="flex items-center justify-between gap-2 text-[11px] text-gray-300 bg-black/30 border border-white/10 rounded px-2 py-1.5 hover:bg-white/5 hover:border-cyan-500/30 transition-colors cursor-pointer"
-                  onMouseEnter={() => onAvailableAssetHover?.(a.id)}
-                  onMouseLeave={() => onAvailableAssetHover?.(null)}
-                >
-                  <span className="font-['Inter'] text-xs">{a.actionLabel}</span>
-                  <span className="flex items-center gap-1.5 font-mono text-[10px] text-gray-500">
-                    {a.id === 'DRONE-MOCK' ? <DroneIcon className="w-4 h-4 flex-shrink-0" /> : null}
-                    {a.typeLabel}{a.distanceM > 0 ? ` · ${(a.distanceM / 1000).toFixed(1)} ק״מ` : ''}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </AccordionSection>
-        );
-      })()}
-
-      {/* Mission Timeline - Only show if active */}
-      {isMissionActive && target.missionSteps && (
-          <MissionTimeline 
-            steps={target.missionSteps} 
-            progress={target.missionProgress || 0}
-            onCancel={() => onCancelMission?.()}
-            onComplete={() => onCompleteMission?.()}
-          />
-      )}
-
-      {/* Action Buttons - Hide if mission is running or cleared */}
-      {!isMissionActive && !isSuccess && !isExpired && (
-          <div className="p-3 bg-black/20 space-y-2">
-             <div className="flex gap-2 pt-2">
-                {(isCritical || isSuspect) ? (
-                    <>
-                        <ActionButton 
-                            label="ירי" 
-                            variant="danger" 
-                            icon={Crosshair} 
-                            className="w-40"
-                            onClick={(e) => { e?.stopPropagation(); onEngage?.('attack'); }}
-                        />
-                        <ActionButton 
-                            label="שיבוש" 
-                            icon={Radio} 
-                            className="w-40"
-                            onClick={(e) => { e?.stopPropagation(); onEngage?.('jamming'); }}
-                        />
-                        <div className="relative" ref={dismissTriggerRef}>
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); setDismissDropdownOpen(open => !open); }}
-                            className="flex items-center gap-1 px-2 py-1.5 rounded bg-white/5 hover:bg-red-500/20 text-[#666] hover:text-red-400 border border-transparent hover:border-red-500/30 transition-all text-[11px] font-medium"
-                            title="הסר ממעקב (בחירת סיבה)"
-                          >
-                            <span>הסר</span>
-                            <ChevronDown size={12} className={`transition-transform ${dismissDropdownOpen ? 'rotate-180' : ''}`} />
-                          </button>
-                          {dismissDropdownOpen && dismissDropdownRect && createPortal(
-                            <div
-                              className="fixed py-1 min-w-[140px] rounded border border-white/20 bg-[#1a1a1a] shadow-xl z-[9999]"
-                              style={{ top: dismissDropdownRect.top, left: dismissDropdownRect.left }}
-                              dir="rtl"
-                            >
-                              {DISMISS_REASONS.map(reason => (
-                                <button
-                                  key={reason}
-                                  onClick={(e) => { e.stopPropagation(); onDismiss?.(reason); setDismissDropdownOpen(false); }}
-                                  className="w-full text-right px-3 py-1.5 text-[11px] text-gray-300 hover:bg-white/10 transition-colors"
-                                >
-                                  {reason}
-                                </button>
-                              ))}
-                            </div>,
-                            document.body
-                          )}
-                        </div>
-                    </>
-                ) : (
-                    <>
-                        <ActionButton 
-                            label="יירוט" 
-                            icon={Rocket} 
-                            className="border-amber-500/50 text-amber-500 bg-amber-500/10 hover:bg-amber-500/20"
-                            onClick={(e) => { e?.stopPropagation(); onVerify?.('intercept'); }}
-                        />
-                        <ActionButton 
-                            label="מעקב" 
-                            icon={Eye} 
-                            className="border-blue-500/50 text-blue-500 bg-blue-500/10 hover:bg-blue-500/20"
-                            onClick={(e) => { e?.stopPropagation(); onVerify?.('surveillance'); }}
-                        />
-                        <div className="relative" ref={dismissTriggerRef}>
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); setDismissDropdownOpen(open => !open); }}
-                            className="flex items-center gap-1 px-2 py-1.5 rounded bg-white/5 hover:bg-red-500/20 text-[#666] hover:text-red-400 border border-transparent hover:border-red-500/30 transition-all text-[11px] font-medium"
-                            title="הסר ממעקב (בחירת סיבה)"
-                          >
-                            <span>הסר</span>
-                            <ChevronDown size={12} className={`transition-transform ${dismissDropdownOpen ? 'rotate-180' : ''}`} />
-                          </button>
-                          {dismissDropdownOpen && dismissDropdownRect && createPortal(
-                            <div
-                              className="fixed py-1 min-w-[140px] rounded border border-white/20 bg-[#1a1a1a] shadow-xl z-[9999]"
-                              style={{ top: dismissDropdownRect.top, left: dismissDropdownRect.left }}
-                              dir="rtl"
-                            >
-                              {DISMISS_REASONS.map(reason => (
-                                <button
-                                  key={reason}
-                                  onClick={(e) => { e.stopPropagation(); onDismiss?.(reason); setDismissDropdownOpen(false); }}
-                                  className="w-full text-right px-3 py-1.5 text-[11px] text-gray-300 hover:bg-white/10 transition-colors"
-                                >
-                                  {reason}
-                                </button>
-                              ))}
-                            </div>,
-                            document.body
-                          )}
-                        </div>
-                    </>
-                )}
-             </div>
-          </div>
-      )}
-    </>
-  );
+export interface ListOfSystemsProps {
+  className?: string;
+  targets?: Detection[];
+  activeTargetId?: string | null;
+  onTargetClick?: (target: Detection) => void;
+  onVerify?: (targetId: string, action: 'intercept' | 'surveillance') => void;
+  onEngage?: (targetId: string, type: 'jamming' | 'attack') => void;
+  onDismiss?: (targetId: string, reason?: string) => void;
+  onSensorHover?: (sensorId: string | null) => void;
+  onCancelMission?: (targetId: string) => void;
+  onCompleteMission?: (targetId: string) => void;
+  onSendDroneVerification?: (targetId: string) => void;
+  droneVerifyingTargetId?: string | null;
+  onCameraLookAt?: (targetId: string, cameraId: string) => void;
+  onTakeControl?: (targetId: string) => void;
+  onReleaseControl?: (targetId: string) => void;
+  onSensorModeChange?: (targetId: string, mode: 'day' | 'thermal') => void;
+  onPlaybookSelect?: (targetId: string, playbookId: string) => void;
+  onClosureOutcome?: (targetId: string, outcome: IncidentOutcome) => void;
+  onAdvanceFlowPhase?: (targetId: string) => void;
+  nearbyCameras?: { id: string; typeLabel: string; distanceM: number }[];
+  nearbyHives?: { id: string; latitude: number; longitude: number; distanceM: number; battery: number; status: string }[];
+  onEscalateCreatePOI?: (targetId: string) => void;
+  onEscalateSendDrone?: (targetId: string) => void;
+  onDroneSelect?: (targetId: string, hiveId: string) => void;
+  onDroneOverride?: (targetId: string) => void;
+  onDroneResume?: (targetId: string) => void;
+  onDroneRTB?: (targetId: string) => void;
+  onMissionActivate?: (targetId: string) => void;
+  onMissionPause?: (targetId: string) => void;
+  onMissionResume?: (targetId: string) => void;
+  onMissionOverride?: (targetId: string) => void;
+  onMissionCancel?: (targetId: string) => void;
+  missionPlanningMode?: { targetId: string; missionType: 'drone' | 'ptz'; waypoints: { lat: number; lon: number; label: string; stayTimeS: number }[]; loop: boolean; repetitions: number; dwellTimeS?: number; selectedCameraId?: string; scanCenterDeg?: number; scanWidthDeg?: number; scanSteps?: number } | null;
+  onPlanningRemoveWaypoint?: (idx: number) => void;
+  onPlanningToggleLoop?: () => void;
+  onPlanningFinalize?: () => void;
+  onPlanningUpdateWaypoint?: (idx: number, updates: Partial<{ lat: number; lon: number; label: string; stayTimeS: number }>) => void;
+  onPlanningSetRepetitions?: (n: number) => void;
+  onPlanningSetDwellTime?: (seconds: number) => void;
+  onPlanningSetScanCenter?: (deg: number) => void;
+  onPlanningSetScanWidth?: (deg: number) => void;
+  onPlanningSetScanSteps?: (n: number) => void;
+  onPlanningSelectCamera?: (cameraId: string) => void;
+  onPlanningZoomCameras?: () => void;
+  onMitigate?: (targetId: string, effectorId: string) => void;
+  onMitigateAll?: (targetId: string) => void;
+  regulusEffectors?: RegulusEffector[];
+  onBdaOutcome?: (targetId: string, outcome: 'neutralized' | 'active' | 'lost') => void;
+  cameraActiveTargetId?: string | null;
+  onSensorFocus?: (sensorId: string) => void;
 }
 
-// --- Filter Component ---
-// (Keeping it for now if user wants to filter within groups, or we can remove it. Let's keep it but make it optional)
-
-interface ListOfSystemsProps {
-    className?: string;
-    targets?: TargetSystem[];
-    activeTargetId?: string | null;
-    onTargetClick?: (target: TargetSystem) => void;
-    onVerify?: (targetId: string, action: 'intercept' | 'surveillance') => void;
-    onEngage?: (targetId: string, type: 'jamming' | 'attack') => void;
-    onDismiss?: (targetId: string, reason?: string) => void;
-    getClosestAssets?: (target: TargetSystem) => Array<{ id: string; typeLabel: string; actionLabel: string; distanceM: number }>;
-    onSensorHover?: (sensorId: string | null) => void;
-    onAvailableAssetHover?: (assetId: string | null) => void;
-    onCancelMission?: (targetId: string) => void;
-    onCompleteMission?: (targetId: string) => void;
-}
-
-export default function ListOfSystems({ 
-    className = "", 
-    targets = MOCK_TARGETS, 
-    activeTargetId,
-    onTargetClick,
-    onVerify,
-    onEngage,
-    onDismiss,
-    onCancelMission,
-    onCompleteMission,
-    getClosestAssets,
-    onSensorHover,
-    onAvailableAssetHover,
+export default function ListOfSystems({
+  className = '',
+  targets = MOCK_TARGETS,
+  activeTargetId,
+  onTargetClick,
+  onVerify,
+  onEngage,
+  onDismiss,
+  onCancelMission,
+  onCompleteMission,
+  onSendDroneVerification,
+  droneVerifyingTargetId,
+  onSensorHover,
+  onCameraLookAt,
+  onTakeControl,
+  onReleaseControl,
+  onSensorModeChange,
+  onPlaybookSelect,
+  onClosureOutcome,
+  onAdvanceFlowPhase,
+  nearbyCameras,
+  nearbyHives,
+  onEscalateCreatePOI,
+  onEscalateSendDrone,
+  onDroneSelect,
+  onDroneOverride,
+  onDroneResume,
+  onDroneRTB,
+  onMissionActivate,
+  onMissionPause,
+  onMissionResume,
+  onMissionOverride,
+  onMissionCancel,
+  onMitigate,
+  onMitigateAll,
+  regulusEffectors,
+  onBdaOutcome,
+  cameraActiveTargetId,
+  onSensorFocus,
 }: ListOfSystemsProps) {
-  
-  // Dedup targets
-  const uniqueTargets = React.useMemo(() => {
-      const seen = new Set();
-      return targets.filter(t => {
-          if (seen.has(t.id)) return false;
-          seen.add(t.id);
-          return true;
-      });
+  const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'threat' | 'suspect'>('all');
+  const [sortBy, setSortBy] = useState<'time' | 'confidence'>('time');
+  const [showFilters, setShowFilters] = useState(false);
+
+  const uniqueTargets = useMemo(() => {
+    const seen = new Set<string>();
+    return targets.filter((t) => {
+      if (seen.has(t.id)) return false;
+      seen.add(t.id);
+      return true;
+    });
   }, [targets]);
 
-  // Grouping Logic
-  const groups = {
-      needsReview: uniqueTargets.filter(t => t.status === 'suspect'),
-      tasks: uniqueTargets.filter(t => ['active', 'tracking', 'engaged'].includes(t.status)),
-      cleared: uniqueTargets.filter(t => ['neutralized', 'success'].includes(t.status)),
-      expired: uniqueTargets.filter(t => t.status === 'expired'),
+  const rawDetections = uniqueTargets.filter((t) => t.entityStage === 'raw_detection');
+
+  const listVisibleTargets = uniqueTargets.filter((t) => {
+    if (t.entityStage === 'raw_detection') return false;
+    if (filterStatus === 'threat' && t.classifiedType !== 'drone' && t.status !== 'event' && t.status !== 'detection') return false;
+    if (filterStatus === 'suspect' && t.status !== 'suspicion' && t.classifiedType !== 'bird') return false;
+    return true;
+  });
+
+  const sortFn = (a: Detection, b: Detection) => {
+    if (sortBy === 'confidence') return (b.confidence ?? 0) - (a.confidence ?? 0);
+    return 0;
   };
 
-  const renderTargetList = (list: TargetSystem[]) => {
-      if (list.length === 0) {
-          return <div className="p-2 text-center text-[10px] text-gray-600 font-mono">אין מטרות</div>;
-      }
-      return (
-         <AnimatePresence mode="popLayout">
-            {list.map((target) => {
-                const isActive = target.id === activeTargetId;
-                return (
-                    <motion.div
-                        key={target.id}
-                        layout
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        transition={{ duration: 0.2 }}
-                        className="cursor-pointer"
-                        id={`target-card-${target.id}`}
-                    >
-                        <SystemCard 
-                            target={target} 
-                            isOpen={isActive}
-                            onToggle={() => onTargetClick?.(target)}
-                        >
-                            <ExpandedTargetDetails 
-                                target={target}
-                                onVerify={(action) => onVerify?.(target.id, action)}
-                                onEngage={(type) => onEngage?.(target.id, type)}
-                                onDismiss={(reason) => onDismiss?.(target.id, reason)}
-                                onCancelMission={() => onCancelMission?.(target.id)}
-                                onCompleteMission={() => onCompleteMission?.(target.id)}
-                                getClosestAssets={getClosestAssets}
-                                onSensorHover={onSensorHover}
-                                onAvailableAssetHover={onAvailableAssetHover}
-                            />
-                        </SystemCard>
-                    </motion.div>
-                );
-            })}
-         </AnimatePresence>
-      );
+  const nonMissionTargets = listVisibleTargets.filter((t) => t.flowType !== 4).sort(sortFn);
+  const missionTargets = listVisibleTargets
+    .filter((t) => t.flowType === 4 && !['event_neutralized', 'event_resolved', 'expired'].includes(t.status))
+    .sort(sortFn);
+  const completedMissions = listVisibleTargets
+    .filter((t) => t.flowType === 4 && ['event_neutralized', 'event_resolved', 'expired'].includes(t.status));
+
+  const groups = {
+    needsReview: nonMissionTargets.filter((t) => t.status === 'suspicion'),
+    tasks: nonMissionTargets.filter((t) => ['detection', 'tracking', 'event'].includes(t.status)),
+    cleared: nonMissionTargets.filter((t) => ['event_neutralized', 'event_resolved'].includes(t.status)),
+    expired: nonMissionTargets.filter((t) => t.status === 'expired'),
+  };
+
+  const activeCount = groups.needsReview.length + groups.tasks.length + missionTargets.length + rawDetections.length;
+  const completedList = [...groups.cleared, ...groups.expired, ...completedMissions];
+
+  const buildCallbacks = (target: Detection): CardCallbacks => ({
+    onVerify: (action) => onVerify?.(target.id, action as 'intercept' | 'surveillance'),
+    onEngage: (type) => onEngage?.(target.id, type),
+    onDismiss: (reason) => onDismiss?.(target.id, reason),
+    onCancelMission: () => onCancelMission?.(target.id),
+    onCompleteMission: () => onCompleteMission?.(target.id),
+    onSendDroneVerification: () => onSendDroneVerification?.(target.id),
+    onSensorHover,
+    onCameraLookAt: (camId) => onCameraLookAt?.(target.id, camId),
+    onTakeControl: () => onTakeControl?.(target.id),
+    onReleaseControl: () => onReleaseControl?.(target.id),
+    onSensorModeChange: (mode) => onSensorModeChange?.(target.id, mode),
+    onPlaybookSelect: (pbId) => onPlaybookSelect?.(target.id, pbId),
+    onClosureOutcome: (outcome) => onClosureOutcome?.(target.id, outcome),
+    onAdvanceFlowPhase: () => onAdvanceFlowPhase?.(target.id),
+    onEscalateCreatePOI: () => onEscalateCreatePOI?.(target.id),
+    onEscalateSendDrone: () => onEscalateSendDrone?.(target.id),
+    onDroneSelect: (hiveId) => onDroneSelect?.(target.id, hiveId),
+    onDroneOverride: () => onDroneOverride?.(target.id),
+    onDroneResume: () => onDroneResume?.(target.id),
+    onDroneRTB: () => onDroneRTB?.(target.id),
+    onMissionActivate: () => onMissionActivate?.(target.id),
+    onMissionPause: () => onMissionPause?.(target.id),
+    onMissionResume: () => onMissionResume?.(target.id),
+    onMissionOverride: () => onMissionOverride?.(target.id),
+    onMissionCancel: () => onMissionCancel?.(target.id),
+    onMitigate: (effectorId) => onMitigate?.(target.id, effectorId),
+    onMitigateAll: () => onMitigateAll?.(target.id),
+    onBdaOutcome: (outcome) => onBdaOutcome?.(target.id, outcome),
+    onSensorFocus,
+  });
+
+  const buildCtx = (target: Detection): CardContext => ({
+    isDroneVerifying: droneVerifyingTargetId === target.id,
+    isCameraActive: cameraActiveTargetId === target.id,
+    regulusEffectors,
+    nearbyCameras: (target.flowType === 1 || target.flowType === 2) ? nearbyCameras : undefined,
+    nearbyHives: target.flowType === 3 ? nearbyHives : undefined,
+  });
+
+  const renderTargetList = (list: Detection[]) => {
+    if (list.length === 0) {
+      return <div className="p-2 text-center text-[10px] text-gray-600 font-mono">אין איתורים</div>;
+    }
+    return (
+      <AnimatePresence mode="popLayout">
+        {list.map((target) => {
+          const isActive = target.id === activeTargetId;
+          return (
+            <motion.div
+              key={target.id}
+              layout
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="cursor-pointer"
+              id={`detection-card-${target.id}`}
+            >
+              <UnifiedCard
+                target={target}
+                isOpen={isActive}
+                onToggle={() => onTargetClick?.(target)}
+                callbacks={buildCallbacks(target)}
+                ctx={buildCtx(target)}
+              />
+            </motion.div>
+          );
+        })}
+      </AnimatePresence>
+    );
   };
 
   return (
     <div className={`w-full flex flex-col ${className}`}>
-       
-       <div className="flex-1 space-y-2 pb-20 overflow-y-auto custom-scrollbar px-2">
-            
-            <CollapsibleGroup title="לטיפול" count={groups.needsReview.length} icon={AlertTriangle} defaultOpen={true}>
-                {renderTargetList(groups.needsReview)}
-            </CollapsibleGroup>
+      {/* Tab bar */}
+      <div className="flex border-b border-white/10 px-1 sticky top-0 z-10" dir="rtl">
+        <button
+          onClick={() => setActiveTab('active')}
+          className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold transition-colors border-b-2 ${
+            activeTab === 'active' ? 'border-white text-white' : 'border-transparent text-zinc-500 hover:text-zinc-300'
+          }`}
+        >
+          פעילות
+          {activeCount > 0 && (
+            <span className="text-[10px] font-mono bg-white/10 rounded px-1.5 py-0.5 tabular-nums">{activeCount}</span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('completed')}
+          className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold transition-colors border-b-2 ${
+            activeTab === 'completed' ? 'border-white text-white' : 'border-transparent text-zinc-500 hover:text-zinc-300'
+          }`}
+        >
+          הושלמו
+        </button>
+      </div>
 
-            <CollapsibleGroup title="משימות פעילות" count={groups.tasks.length} icon={ListTodo} defaultOpen={true}>
-                {renderTargetList(groups.tasks)}
-            </CollapsibleGroup>
+      {/* Filter & Sort bar */}
+      <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-white/5" dir="rtl">
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-colors border ${
+            showFilters || filterStatus !== 'all'
+              ? 'border-white/20 text-zinc-200 bg-white/5'
+              : 'border-transparent text-zinc-500 hover:text-zinc-300'
+          }`}
+        >
+          <SlidersHorizontal size={11} />
+          <span>סינון</span>
+        </button>
+        {showFilters && (
+          <>
+            <button
+              onClick={() => setFilterStatus('all')}
+              className={`px-2 py-1 rounded text-[10px] transition-colors ${filterStatus === 'all' ? 'bg-white/10 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+            >
+              הכל
+            </button>
+            <button
+              onClick={() => setFilterStatus('threat')}
+              className={`px-2 py-1 rounded text-[10px] transition-colors ${filterStatus === 'threat' ? 'bg-red-500/20 text-red-400' : 'text-zinc-500 hover:text-zinc-300'}`}
+            >
+              איומים
+            </button>
+            <button
+              onClick={() => setFilterStatus('suspect')}
+              className={`px-2 py-1 rounded text-[10px] transition-colors ${filterStatus === 'suspect' ? 'bg-amber-500/20 text-amber-400' : 'text-zinc-500 hover:text-zinc-300'}`}
+            >
+              חשודים
+            </button>
+          </>
+        )}
+        <div className="flex-1" />
+        <button
+          onClick={() => setSortBy((prev) => (prev === 'time' ? 'confidence' : 'time'))}
+          className="flex items-center gap-1 px-2 py-1 rounded text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors"
+          title={sortBy === 'time' ? 'מיון לפי זמן' : 'מיון לפי ביטחון'}
+        >
+          <ArrowUpDown size={11} />
+          <span>{sortBy === 'time' ? 'זמן' : 'ביטחון'}</span>
+        </button>
+      </div>
 
-            <CollapsibleGroup title="הושלמו" count={groups.cleared.length} icon={CheckCircle2} defaultOpen={false}>
-                 {renderTargetList(groups.cleared)}
+      <div className="flex-1 space-y-2 pb-20 overflow-y-auto custom-scrollbar px-2 pt-2">
+        {activeTab === 'active' && (
+          <>
+            {rawDetections.length > 0 && (
+              <CollapsibleGroup title="זיהויים לא ידועים" count={rawDetections.length} icon={Radar} defaultOpen>
+                {renderTargetList(rawDetections)}
+              </CollapsibleGroup>
+            )}
+            <CollapsibleGroup title="תנועות חשודות" count={groups.needsReview.length} icon={AlertTriangle} defaultOpen>
+              {renderTargetList(groups.needsReview)}
             </CollapsibleGroup>
-
-            <CollapsibleGroup title="פג תוקף" count={groups.expired.length} icon={History} defaultOpen={false}>
-                 {renderTargetList(groups.expired)}
+            <CollapsibleGroup title="איתורים פעילים" count={groups.tasks.length} icon={ListTodo} defaultOpen>
+              {renderTargetList(groups.tasks)}
             </CollapsibleGroup>
-
-       </div>
+            <CollapsibleGroup title="סריקות ידניות" count={missionTargets.length} icon={ScanLine} defaultOpen>
+              {missionTargets.length === 0 ? (
+                <div className="p-3 text-center text-[10px] text-zinc-600 font-mono">אין סריקות פעילות</div>
+              ) : (
+                renderTargetList(missionTargets)
+              )}
+            </CollapsibleGroup>
+          </>
+        )}
+        {activeTab === 'completed' &&
+          (completedList.length === 0 ? (
+            <div className="p-4 text-center text-[10px] text-gray-600 font-mono">אין אירועים שהושלמו</div>
+          ) : (
+            renderTargetList(completedList)
+          ))}
+      </div>
     </div>
   );
 }

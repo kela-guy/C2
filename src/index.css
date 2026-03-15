@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+@theme {
+  /* ── Colors ── */
+  --color-surface: rgba(255, 255, 255, 0.1);
+  --color-surface-subtle: rgba(255, 255, 255, 0.05);
+  --color-surface-chip: rgba(255, 255, 255, 0.15);
+  --color-border-default: #333;
+  --color-text-primary: #fff;
+  --color-text-secondary: #dee2e6;
+  --color-blue-light-bg: rgba(34, 139, 230, 0.15);
+  --color-blue-accent: #74c0fc;
+  --color-overlay: rgba(0, 0, 0, 0.6);
+
+  /* ── Fonts ── */
+  --font-sans: "Inter", "Arimo", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+
+  /* ── Radius (4pt grid) ── */
+  --radius-sm: 4px;
+}
+
+/* ── Reset ── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: #111;
+  color: var(--color-text-primary);
+  direction: rtl;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Accordion CSS transition (content wrapper) ── */
+.accordion-content {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 200ms ease-out;
+}
+.accordion-content[data-open="true"] {
+  grid-template-rows: 1fr;
+}
+.accordion-content > div {
+  overflow: hidden;
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .accordion-content {
+    transition: none;
+  }
+}

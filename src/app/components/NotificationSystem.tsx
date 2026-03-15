@@ -12,13 +12,6 @@ import {
   Database, 
   Info,
   X,
-  Settings,
-  Minimize2,
-  Maximize2,
-  Edit3,
-  Palette,
-  Layout,
-  Type,
   Eye
 } from "lucide-react";
 
@@ -132,8 +125,8 @@ const LEVEL_STYLES = {
 
 // --- Custom Toast Component ---
 const TacticalToast = ({ data, t }: { data: NotificationData; t: string | number }) => {
-  const styles = LEVEL_STYLES[data.level];
-  const Icon = LEVEL_ICONS[data.level];
+  const styles = LEVEL_STYLES[data.level] || LEVEL_STYLES.info;
+  const Icon = LEVEL_ICONS[data.level] || LEVEL_ICONS.info;
   const config = useContext(ToastContext);
 
   // Determine effective colors
@@ -250,28 +243,178 @@ const TacticalToast = ({ data, t }: { data: NotificationData; t: string | number
   );
 };
 
+// --- Batch state (module-level) ---
+const BATCH_WINDOW_MS = 10_000;
+
+const LEVEL_PRIORITY: Record<ThreatLevel, number> = {
+  critical: 6, high: 5, suspect: 4, medium: 3, info: 2, success: 1,
+};
+
+let pendingBatch: (Omit<NotificationData, "id"> & { timestamp: string })[] = [];
+let batchTimerId: ReturnType<typeof setTimeout> | null = null;
+let batchToastId: string | number | null = null;
+let batchTriggeredJamModal = false;
+
+function highestLevel(items: { level: ThreatLevel }[]): ThreatLevel {
+  let best: ThreatLevel = 'info';
+  for (const item of items) {
+    if (LEVEL_PRIORITY[item.level] > LEVEL_PRIORITY[best]) best = item.level;
+  }
+  return best;
+}
+
+function renderBatchedToast(items: typeof pendingBatch, toastId: string | number) {
+  toast.custom(() => (
+    <BatchedToast items={items} t={toastId} />
+  ), {
+    id: toastId,
+    duration: Infinity,
+    position: "bottom-right",
+  });
+}
+
+// --- Batched Toast Component ---
+const BatchedToast = ({ items, t }: { items: typeof pendingBatch; t: string | number }) => {
+  const [expanded, setExpanded] = React.useState(false);
+  const level = highestLevel(items);
+  const styles = LEVEL_STYLES[level] || LEVEL_STYLES.info;
+  const Icon = LEVEL_ICONS[level] || LEVEL_ICONS.info;
+
+  return (
+    <div
+      className="relative overflow-hidden bg-[#141414] font-['Inter'] shadow-2xl transition-all duration-200"
+      style={{
+        width: '356px',
+        borderRadius: '8px',
+        borderWidth: '1px',
+        borderColor: styles.border.replace("border-[", "").replace("]", ""),
+        backdropFilter: 'blur(12px)',
+        boxShadow: `0 0 15px ${styles.shadowColor}`,
+      }}
+      dir="rtl"
+    >
+      <div className="absolute inset-0 transition-opacity duration-200" style={{ backgroundColor: `rgba(${styles.bgRaw}, 0.1)` }} />
+      <div className="absolute inset-0 pointer-events-none z-0 opacity-5" style={{ backgroundImage: "linear-gradient(#fff 1px, transparent 1px)", backgroundSize: "100% 3px" }} />
+
+      <div className="relative z-10 p-3">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className={`p-1.5 rounded-md bg-white/5 border border-white/5 ${styles.iconColor}`}>
+              <Icon size={16} strokeWidth={2} />
+            </div>
+            <div>
+              <span className={`text-[13px] font-bold ${styles.text}`}>
+                {items.length} התראות חדשות
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setExpanded(prev => !prev)}
+              className="text-[10px] text-zinc-500 hover:text-white transition-colors px-1.5 py-0.5 rounded bg-white/5"
+            >
+              {expanded ? 'סגור' : 'הרחב'}
+            </button>
+            <button onClick={() => toast.dismiss(t)} className="text-[#555] hover:text-white transition-colors">
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+
+        {/* Summary row when collapsed */}
+        {!expanded && (
+          <p className="text-[11px] text-[#c1c2c5] mt-1.5 truncate">
+            {items[items.length - 1]?.title} {items.length > 1 ? `ועוד ${items.length - 1}` : ''}
+          </p>
+        )}
+
+        {/* Expanded list */}
+        {expanded && (
+          <div className="mt-2 flex flex-col gap-1 max-h-[260px] overflow-y-auto">
+            {items.map((item, i) => {
+              const s = LEVEL_STYLES[item.level] || LEVEL_STYLES.info;
+              return (
+                <div
+                  key={i}
+                  className="flex items-start gap-2 p-2 rounded border border-white/5 bg-white/[0.02] cursor-pointer hover:bg-white/[0.05] transition-colors"
+                  onClick={() => {
+                    if (item.code) {
+                      window.dispatchEvent(new CustomEvent('toast-clicked', { detail: item }));
+                    }
+                  }}
+                >
+                  <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0`} style={{ backgroundColor: `rgb(${s.bgRaw})` }} />
+                  <div className="flex-1 min-w-0">
+                    <div className={`text-[11px] font-semibold ${s.text} truncate`}>{item.title}</div>
+                    <div className="text-[10px] text-zinc-500 truncate">{item.message}</div>
+                  </div>
+                  <span className="text-[9px] font-mono text-zinc-600 shrink-0">{item.timestamp}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="absolute right-0 top-0 bottom-0 w-[2px]" style={{ backgroundColor: `rgb(${styles.bgRaw})` }} />
+    </div>
+  );
+};
+
+function flushBatch() {
+  if (batchTimerId) { clearTimeout(batchTimerId); batchTimerId = null; }
+  pendingBatch = [];
+  batchToastId = null;
+  batchTriggeredJamModal = false;
+}
+
 // --- Helper to trigger ---
 export const showTacticalNotification = (data: Omit<NotificationData, "id">) => {
-  // Dispatch critical alert event if needed
   if (data.level === 'critical') {
     window.dispatchEvent(new Event('trigger-critical-alert'));
   } else if (data.level === 'suspect') {
     window.dispatchEvent(new Event('trigger-suspect-alert'));
   }
 
-  toast.custom((t) => (
-    <TacticalToast 
-       data={{ 
-         ...data, 
-         id: t.toString(),
-         timestamp: new Date().toLocaleTimeString('he-IL', { hour12: false }) 
-       }} 
-       t={t} 
-    />
-  ), {
-    duration: 5000,
-    position: "bottom-right",
-  });
+  const ts = new Date().toLocaleTimeString('he-IL', { hour12: false });
+  const item = { ...data, timestamp: ts };
+
+  if (pendingBatch.length === 0) {
+    // First notification — show it as a normal toast, start the batch window
+    const id = toast.custom((t) => (
+      <TacticalToast data={{ ...data, id: t.toString(), timestamp: ts }} t={t} />
+    ), { duration: 5000, position: "bottom-right" });
+
+    batchToastId = id;
+    pendingBatch.push(item);
+
+    batchTimerId = setTimeout(() => {
+      flushBatch();
+    }, BATCH_WINDOW_MS);
+  } else {
+    pendingBatch.push(item);
+
+    // Dismiss single toast and replace with batched view
+    if (batchToastId !== null) {
+      toast.dismiss(batchToastId);
+    }
+    const groupId = `batch-${Date.now()}`;
+    batchToastId = groupId;
+    renderBatchedToast([...pendingBatch], groupId);
+
+    // Emit event for jam-all modal if threshold reached
+    if (pendingBatch.length >= 10 && !batchTriggeredJamModal) {
+      batchTriggeredJamModal = true;
+      window.dispatchEvent(new CustomEvent('detection-burst', { detail: { count: pendingBatch.length } }));
+    }
+
+    // Reset the timer to extend the window from last notification
+    if (batchTimerId) clearTimeout(batchTimerId);
+    batchTimerId = setTimeout(() => {
+      flushBatch();
+    }, BATCH_WINDOW_MS);
+  }
 };
 
 // --- Mock Data ---
@@ -344,41 +487,9 @@ export const MOCK_NOTIFICATIONS: Omit<NotificationData, "id">[] = [
   }
 ];
 
-// --- Config Control Components ---
-const RangeControl = ({ label, value, min, max, step, onChange, unit = "" }: any) => (
-  <div className="flex flex-col gap-1 mb-2">
-    <div className="flex justify-between">
-      <label className="text-[10px] text-[#909296]">{label}</label>
-      <span className="text-[10px] font-mono text-white">{value}{unit}</span>
-    </div>
-    <input 
-      type="range" 
-      min={min} max={max} step={step}
-      value={value}
-      onChange={(e) => onChange(parseFloat(e.target.value))}
-      className="w-full h-1 bg-[#333] rounded-lg appearance-none cursor-pointer accent-white"
-    />
-  </div>
-);
-
-const ToggleControl = ({ label, checked, onChange }: any) => (
-  <div className="flex items-center justify-between mb-2">
-      <label className="text-[10px] text-[#909296]">{label}</label>
-      <input 
-        type="checkbox" 
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="accent-blue-500"
-      />
-  </div>
-);
-
 // --- Demo Component ---
 export function NotificationSystem() {
   const [criticalActive, setCriticalActive] = useState(false);
-  const [showDebug, setShowDebug] = useState(true);
-  const [isMinimized, setIsMinimized] = useState(false);
-  const [activeTab, setActiveTab] = useState<'vignette' | 'toasts'>('toasts');
   
   // Vignette Configuration State
   const [vignetteConfig, setVignetteConfig] = useState(() => {
@@ -445,10 +556,10 @@ export function NotificationSystem() {
       {/* Critical Alert Overlay */}
       <div 
         className={`fixed inset-0 pointer-events-none z-40 transition-opacity duration-300 ease-in-out ${
-           (criticalActive || (vignetteConfig.alwaysVisible && showDebug && activeTab === 'vignette')) ? 'visible' : 'invisible'
+           criticalActive ? 'visible' : 'invisible'
         }`}
         style={{
-          opacity: (criticalActive || (vignetteConfig.alwaysVisible && showDebug && activeTab === 'vignette')) ? vignetteConfig.opacity : 0,
+          opacity: criticalActive ? vignetteConfig.opacity : 0,
           boxShadow: `inset 0 0 ${vignetteConfig.blur}px ${vignetteConfig.spread}px ${vignetteConfig.color}`,
           animation: criticalActive ? `pulse ${vignetteConfig.speed}s cubic-bezier(0.4, 0, 0.6, 1) infinite` : 'none'
         }}
@@ -470,168 +581,6 @@ export function NotificationSystem() {
          }}
       />
       
-      {/* Floating Toggle Button */}
-      {isMinimized && (
-        <button
-          onClick={() => setIsMinimized(false)}
-          className="fixed top-4 left-4 z-50 p-2 bg-[#111] border border-[#333] text-white rounded-lg shadow-lg hover:bg-[#222] transition-colors"
-          title="Open Debug Console"
-        >
-          <Settings size={20} />
-        </button>
-      )}
-
-      {/* Controls Container */}
-      {!isMinimized && (
-        <div className="fixed top-4 left-4 z-50 flex flex-col gap-2 max-h-[90vh] overflow-y-auto pb-4 transition-all animate-in fade-in slide-in-from-left-4 duration-300 scrollbar-hide">
-          
-          {/* Header Bar */}
-          <div className="flex items-center justify-between p-2 bg-[#111] border border-[#333] rounded-lg shadow-lg w-[240px]">
-             <div className="flex items-center gap-2">
-               <Settings size={14} className="text-[#909296]" />
-               <span className="text-xs font-bold text-white uppercase tracking-wide">System Config</span>
-             </div>
-             <button 
-               onClick={() => setIsMinimized(true)}
-               className="text-[#909296] hover:text-white transition-colors"
-             >
-               <Minimize2 size={14} />
-             </button>
-          </div>
-
-          {/* Tab Switcher */}
-          <div className="flex p-1 bg-[#111] border border-[#333] rounded-lg w-[240px]">
-             <button 
-                onClick={() => setActiveTab('toasts')}
-                className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded text-[10px] font-medium transition-all ${activeTab === 'toasts' ? 'bg-[#333] text-white shadow' : 'text-[#909296] hover:text-white'}`}
-             >
-                <Layout size={12} />
-                Toasts
-             </button>
-             <button 
-                onClick={() => setActiveTab('vignette')}
-                className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded text-[10px] font-medium transition-all ${activeTab === 'vignette' ? 'bg-[#333] text-white shadow' : 'text-[#909296] hover:text-white'}`}
-             >
-                <Target size={12} />
-                Vignette
-             </button>
-          </div>
-
-          {/* Configuration Panel */}
-          <div className="p-3 bg-[#111]/95 backdrop-blur border border-[#333] rounded-lg shadow-2xl w-[240px] flex flex-col gap-2">
-             
-             {/* Toasts Config */}
-             {activeTab === 'toasts' && (
-                <>
-                  <div className="flex items-center gap-2 pb-2 border-b border-white/10 mb-2">
-                     <Palette size={12} className="text-blue-400" />
-                     <span className="text-xs font-bold text-white">עיצוב התראות</span>
-                     <button 
-                        onClick={() => setToastConfig(DEFAULT_TOAST_CONFIG)} 
-                        className="mr-auto text-[9px] text-blue-400 hover:underline"
-                     >
-                        איפוס
-                     </button>
-                  </div>
-
-                  <div className="space-y-4">
-                     <div>
-                        <span className="text-[10px] text-[#555] font-bold uppercase mb-2 block">צבעים מותאמים אישית</span>
-                        <ToggleControl label="הפעל צבעים מותאמים" checked={toastConfig.useCustomColors} onChange={(v: boolean) => setToastConfig(prev => ({ ...prev, useCustomColors: v }))} />
-                        
-                        {toastConfig.useCustomColors && (
-                           <>
-                              <div className="flex flex-col gap-1 mb-2">
-                                 <label className="text-[10px] text-[#909296]">צבע גבול (Border)</label>
-                                 <input 
-                                    type="color" 
-                                    value={toastConfig.customBorderColor}
-                                    onChange={(e) => setToastConfig(prev => ({ ...prev, customBorderColor: e.target.value }))}
-                                    className="w-full h-6 bg-transparent border border-[#333] rounded cursor-pointer"
-                                 />
-                              </div>
-                              <div className="flex flex-col gap-1 mb-2">
-                                 <label className="text-[10px] text-[#909296]">צבע רקע (Background)</label>
-                                 <input 
-                                    type="color" 
-                                    value={toastConfig.customBgColor}
-                                    onChange={(e) => setToastConfig(prev => ({ ...prev, customBgColor: e.target.value }))}
-                                    className="w-full h-6 bg-transparent border border-[#333] rounded cursor-pointer"
-                                 />
-                              </div>
-                           </>
-                        )}
-                     </div>
-
-                     <div>
-                        <span className="text-[10px] text-[#555] font-bold uppercase mb-2 block">סגנון</span>
-                        <RangeControl label="עגלול פינות" value={toastConfig.borderRadius} min={0} max={24} step={1} onChange={(v: number) => setToastConfig(prev => ({ ...prev, borderRadius: v }))} unit="px" />
-                        <RangeControl label="עובי מסגרת" value={toastConfig.borderWidth} min={0} max={4} step={1} onChange={(v: number) => setToastConfig(prev => ({ ...prev, borderWidth: v }))} unit="px" />
-                        <RangeControl label="שקיפות רקע" value={toastConfig.bgOpacity} min={0} max={1} step={0.05} onChange={(v: number) => setToastConfig(prev => ({ ...prev, bgOpacity: v }))} />
-                        <RangeControl label="טשטוש רקע" value={toastConfig.backdropBlur} min={0} max={40} step={1} onChange={(v: number) => setToastConfig(prev => ({ ...prev, backdropBlur: v }))} unit="px" />
-                     </div>
-                  </div>
-                </>
-             )}
-
-             {/* Vignette Config */}
-             {activeTab === 'vignette' && (
-                <>
-                  <div className="flex items-center gap-2 pb-2 border-b border-white/10 mb-2">
-                     <Target size={12} className="text-red-400" />
-                     <span className="text-xs font-bold text-white">הגדרות ויגנט</span>
-                  </div>
-                  
-                  <div className="space-y-4">
-                      {/* Always Visible Toggle */}
-                      <ToggleControl label="תצוגה מקדימה" checked={vignetteConfig.alwaysVisible} onChange={(v: boolean) => setVignetteConfig(prev => ({ ...prev, alwaysVisible: v }))} />
-
-                      <div>
-                          <label className="text-[10px] text-[#909296] mb-1 block">צבע</label>
-                          <input 
-                              type="color" 
-                              value={vignetteConfig.color}
-                              onChange={(e) => setVignetteConfig(prev => ({ ...prev, color: e.target.value }))}
-                              className="w-full h-6 bg-transparent border border-[#333] rounded cursor-pointer"
-                          />
-                      </div>
-
-                      <RangeControl label="שקיפות" value={vignetteConfig.opacity} min={0} max={1} step={0.1} onChange={(v: number) => setVignetteConfig(prev => ({ ...prev, opacity: v }))} />
-                      <RangeControl label="טשטוש" value={vignetteConfig.blur} min={0} max={500} step={10} onChange={(v: number) => setVignetteConfig(prev => ({ ...prev, blur: v }))} unit="px" />
-                      <RangeControl label="פיזור" value={vignetteConfig.spread} min={0} max={500} step={10} onChange={(v: number) => setVignetteConfig(prev => ({ ...prev, spread: v }))} unit="px" />
-                      <RangeControl label="מהירות הבהוב" value={vignetteConfig.speed} min={0.2} max={5} step={0.1} onChange={(v: number) => setVignetteConfig(prev => ({ ...prev, speed: v }))} unit="s" />
-                  </div>
-                </>
-             )}
-
-          </div>
-
-          {/* Trigger Panel (Always Visible) */}
-          <div className="p-3 bg-[#111] border border-[#333] rounded-lg shadow-2xl w-[240px] flex flex-col gap-2">
-            <h4 className="text-white text-xs font-bold mb-1 uppercase tracking-wider text-center">בדיקת התראות</h4>
-            <div className="grid grid-cols-2 gap-2">
-                {MOCK_NOTIFICATIONS.map((notif, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => showTacticalNotification(notif)}
-                    className={`
-                      text-[9px] py-1.5 px-1 rounded text-center transition-all font-mono truncate
-                      ${notif.level === 'critical' ? 'bg-red-900/20 text-red-400 hover:bg-red-900/40 border border-red-900/30' : ''}
-                      ${notif.level === 'suspect' ? 'bg-amber-900/20 text-amber-400 hover:bg-amber-900/40 border border-amber-900/30' : ''}
-                      ${notif.level === 'high' ? 'bg-orange-900/20 text-orange-400 hover:bg-orange-900/40 border border-orange-900/30' : ''}
-                      ${notif.level === 'medium' ? 'bg-yellow-900/20 text-yellow-400 hover:bg-yellow-900/40 border border-yellow-900/30' : ''}
-                      ${notif.level === 'info' ? 'bg-blue-900/20 text-blue-400 hover:bg-blue-900/40 border border-blue-900/30' : ''}
-                      ${notif.level === 'success' ? 'bg-green-900/20 text-green-400 hover:bg-green-900/40 border border-green-900/30' : ''}
-                    `}
-                    title={notif.title}
-                  >
-                    {notif.code || notif.title}
-                  </button>
-                ))}
-            </div>
-          </div>
-        </div>
-      )}
     </ToastContext.Provider>
   );
 }
