@@ -67,7 +67,7 @@ export function CardDetails({
           </div>
         )}
 
-        <div className="flex flex-col group/copy relative">
+        <div className="grid grid-cols-2 grid-rows-2 group/copy relative">
           {rows.map((row, idx) => (
             <TelemetryRow key={idx} label={row.label} value={row.value} icon={row.icon} />
           ))}

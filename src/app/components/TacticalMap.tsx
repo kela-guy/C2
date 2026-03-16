@@ -1134,6 +1134,14 @@ export const TacticalMap = ({
             const showPulse = !isExpiredCuas && (isMitigating || (stage === 'raw_detection' && !isClassified));
             const pulseColor = isMitigating ? 'bg-red-500' : 'bg-zinc-400';
 
+            let droneHeadingDeg = 0;
+            if (isDrone && target.trail && target.trail.length >= 2) {
+              const t = target.trail;
+              const p0 = t[t.length - 2];
+              const p1 = t[t.length - 1];
+              droneHeadingDeg = bearingDegrees(p0.lat, p0.lon, p1.lat, p1.lon) - 90;
+            }
+
             return (
                 <Marker
                     key={target.id}
@@ -1154,52 +1162,29 @@ export const TacticalMap = ({
                             <div className={`absolute -inset-3 rounded-full opacity-40 animate-ping ${pulseColor}`} />
                         )}
 
+                        {/* Hover backdrop */}
+                        <div className="absolute -inset-2.5 rounded-full bg-white/0 group-hover:bg-white/[0.08] transition-colors duration-150 pointer-events-none" />
+
                         {isClassified && isDrone ? (
-                          <DroneIcon color={isMitigated ? undefined : '#fa5252'} disabled={isMitigated} />
+                          <DroneIcon rotationDeg={droneHeadingDeg} color={isMitigated ? undefined : '#fa5252'} disabled={isMitigated} />
                         ) : (
                           <div className={`${dotSize} rounded-full border-2 shadow-lg transition-all ${dotColor} ${isActive ? 'ring-2 ring-white ring-offset-2 ring-offset-black' : ''}`} />
                         )}
 
-                        {/* Map Info Card — positioned to the right of the marker */}
+                        {/* Map Info Card — hover-only tooltip */}
                         {isClassified ? (
-                          <div className="absolute top-1/2 -translate-y-1/2 pointer-events-none transition-all duration-200 z-20"
+                          <div className={`
+                            absolute top-1/2 -translate-y-1/2 pointer-events-none transition-all duration-200 z-20
+                            ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
+                          `}
                             style={{ left: isDrone ? '34px' : '24px' }}
                           >
                             <div className={`
-                              bg-black/90 backdrop-blur-sm text-white rounded border whitespace-nowrap
-                              ${isBird ? 'border-amber-500/30' : isMitigated ? 'border-zinc-600' : 'border-red-500/30'}
+                              bg-black/40 backdrop-blur-md text-white rounded border whitespace-nowrap
+                              ${isBird ? 'border-amber-500/20' : isMitigated ? 'border-zinc-600/40' : 'border-red-500/20'}
                             `}>
                               <div className="flex items-center gap-1.5 px-2 py-1" dir="rtl">
                                 <span className="text-[10px] font-semibold truncate max-w-[120px]">{target.name}</span>
-                                <span className={`text-[8px] font-bold uppercase px-1 py-px rounded-sm ${
-                                  isBird ? 'bg-amber-500/20 text-amber-400'
-                                  : isMitigated ? 'bg-zinc-600/30 text-zinc-400'
-                                  : isMitigating ? 'bg-red-500/20 text-red-400'
-                                  : 'bg-red-500/20 text-red-400'
-                                }`}>
-                                  {isBird ? 'SUSPECT' : isMitigated ? 'NEUTRALIZED' : isMitigating ? 'JAMMING' : 'HOSTILE'}
-                                </span>
-                              </div>
-
-                              {/* Tier 2: Expanded on hover or active */}
-                              <div className={`
-                                overflow-hidden transition-all duration-200
-                                ${isActive ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0 group-hover:max-h-20 group-hover:opacity-100'}
-                              `}>
-                                <div className="border-t border-white/10 px-2 py-1 space-y-0.5" dir="rtl">
-                                  <div className="flex items-center justify-between gap-3">
-                                    <span className="text-[9px] text-zinc-400">ביטחון</span>
-                                    <span className="text-[9px] text-zinc-200 font-mono tabular-nums">{target.confidence ?? '—'}%</span>
-                                  </div>
-                                  <div className="flex items-center justify-between gap-3">
-                                    <span className="text-[9px] text-zinc-400">מרחק</span>
-                                    <span className="text-[9px] text-zinc-200 font-mono tabular-nums">{target.distance}</span>
-                                  </div>
-                                  <div className="flex items-center justify-between gap-3">
-                                    <span className="text-[9px] text-zinc-400">חיישנים</span>
-                                    <span className="text-[9px] text-zinc-200 font-mono tabular-nums">{target.contributingSensors?.length ?? 0}</span>
-                                  </div>
-                                </div>
                               </div>
                             </div>
                           </div>
@@ -1277,7 +1262,7 @@ export const TacticalMap = ({
             anchor="bottom"
           >
             <div
-              className="relative cursor-pointer"
+              className={`relative cursor-pointer rounded-full p-1 transition-all duration-150 ${hoveredLauncherId === launcher.id ? 'bg-white/[0.08]' : ''}`}
               onMouseEnter={() => setHoveredLauncherId(launcher.id)}
               onMouseLeave={() => setHoveredLauncherId(null)}
             >
@@ -1495,7 +1480,7 @@ export const TacticalMap = ({
               anchor="center"
             >
               <div
-                className="relative cursor-pointer"
+                className={`relative cursor-pointer rounded-full p-1 transition-all duration-150 ${isHovered ? 'bg-white/[0.08]' : ''}`}
                 onMouseEnter={() => setHoveredMissileId(missile.id)}
                 onMouseLeave={() => setHoveredMissileId(null)}
               >

@@ -13,6 +13,8 @@ import {
   StatusChip,
   CollapsibleGroup,
   MissionPhaseChip,
+  FilterBar,
+  StackedCard,
 } from '@/primitives';
 import {
   Crosshair,
@@ -23,11 +25,11 @@ import {
   AlertTriangle,
   ListTodo,
   ScanLine,
-  SlidersHorizontal,
-  ArrowUpDown,
   Radar,
 } from 'lucide-react';
 import { useCardSlots, type CardCallbacks, type CardContext } from './useCardSlots';
+import { useTargetFilters } from './useTargetFilters';
+import { groupIntoBursts, isBurst } from './useTargetBursts';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -185,7 +187,7 @@ function buildStatusChip(target: Detection) {
   if (target.entityStage === 'raw_detection') return <StatusChip label="לא ידוע" color="gray" />;
   if (target.status === 'detection') return <StatusChip label="איתור" color="red" />;
   if (target.status === 'tracking') return <StatusChip label="מעקב" color="orange" />;
-  if (target.status === 'event') return <StatusChip label="אירוע" color="green" />;
+  if (target.status === 'event') return <StatusChip label="מטרה" color="green" />;
   if (target.status === 'suspicion') return <StatusChip label="תח״ש" color="orange" />;
   if (target.status === 'event_neutralized') return <StatusChip label="נוטרל" color="green" />;
   if (target.status === 'event_resolved') return <StatusChip label="הושלם" color="green" />;
@@ -327,7 +329,7 @@ export interface ListOfSystemsProps {
   targets?: Detection[];
   activeTargetId?: string | null;
   onTargetClick?: (target: Detection) => void;
-  onVerify?: (targetId: string, action: 'intercept' | 'surveillance') => void;
+  onVerify?: (targetId: string, action: 'intercept' | 'surveillance' | 'investigate') => void;
   onEngage?: (targetId: string, type: 'jamming' | 'attack') => void;
   onDismiss?: (targetId: string, reason?: string) => void;
   onSensorHover?: (sensorId: string | null) => void;
@@ -416,9 +418,7 @@ export default function ListOfSystems({
   onSensorFocus,
 }: ListOfSystemsProps) {
   const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'threat' | 'suspect'>('all');
-  const [sortBy, setSortBy] = useState<'time' | 'confidence'>('time');
-  const [showFilters, setShowFilters] = useState(false);
+  const [expandedBurstTargets, setExpandedBurstTargets] = useState<Set<string>>(new Set());
 
   const uniqueTargets = useMemo(() => {
     const seen = new Set<string>();
@@ -429,24 +429,30 @@ export default function ListOfSystems({
     });
   }, [targets]);
 
+  const {
+    filters,
+    activeFilterCount,
+    availableSensors,
+    availableTypes,
+    getActiveFilters,
+    applyFilters,
+    updateFilter,
+    removeFilter,
+    resetFilters,
+    toggleSensorId,
+    toggleType,
+    toggleSignature,
+  } = useTargetFilters(uniqueTargets);
+
   const rawDetections = uniqueTargets.filter((t) => t.entityStage === 'raw_detection');
 
-  const listVisibleTargets = uniqueTargets.filter((t) => {
-    if (t.entityStage === 'raw_detection') return false;
-    if (filterStatus === 'threat' && t.classifiedType !== 'drone' && t.status !== 'event' && t.status !== 'detection') return false;
-    if (filterStatus === 'suspect' && t.status !== 'suspicion' && t.classifiedType !== 'bird') return false;
-    return true;
-  });
+  const listVisibleTargets = applyFilters(
+    uniqueTargets.filter((t) => t.entityStage !== 'raw_detection')
+  );
 
-  const sortFn = (a: Detection, b: Detection) => {
-    if (sortBy === 'confidence') return (b.confidence ?? 0) - (a.confidence ?? 0);
-    return 0;
-  };
-
-  const nonMissionTargets = listVisibleTargets.filter((t) => t.flowType !== 4).sort(sortFn);
+  const nonMissionTargets = listVisibleTargets.filter((t) => t.flowType !== 4);
   const missionTargets = listVisibleTargets
-    .filter((t) => t.flowType === 4 && !['event_neutralized', 'event_resolved', 'expired'].includes(t.status))
-    .sort(sortFn);
+    .filter((t) => t.flowType === 4 && !['event_neutralized', 'event_resolved', 'expired'].includes(t.status));
   const completedMissions = listVisibleTargets
     .filter((t) => t.flowType === 4 && ['event_neutralized', 'event_resolved', 'expired'].includes(t.status));
 
@@ -461,7 +467,7 @@ export default function ListOfSystems({
   const completedList = [...groups.cleared, ...groups.expired, ...completedMissions];
 
   const buildCallbacks = (target: Detection): CardCallbacks => ({
-    onVerify: (action) => onVerify?.(target.id, action as 'intercept' | 'surveillance'),
+    onVerify: (action) => onVerify?.(target.id, action),
     onEngage: (type) => onEngage?.(target.id, type),
     onDismiss: (reason) => onDismiss?.(target.id, reason),
     onCancelMission: () => onCancelMission?.(target.id),
@@ -500,13 +506,73 @@ export default function ListOfSystems({
     nearbyHives: target.flowType === 3 ? nearbyHives : undefined,
   });
 
+  const renderSingleCard = (
+    target: Detection,
+    isActive: boolean,
+    callbacks: CardCallbacks,
+    ctx: CardContext,
+  ) => (
+    <UnifiedCard
+      target={target}
+      isOpen={isActive}
+      onToggle={() => onTargetClick?.(target)}
+      callbacks={callbacks}
+      ctx={ctx}
+    />
+  );
+
+  const handleBulkMitigate = (targets: Detection[]) => {
+    for (const t of targets) onMitigateAll?.(t.id);
+  };
+
   const renderTargetList = (list: Detection[]) => {
     if (list.length === 0) {
       return <div className="p-2 text-center text-[10px] text-gray-600 font-mono">אין איתורים</div>;
     }
+
+    const items = groupIntoBursts(list);
+
     return (
       <AnimatePresence mode="popLayout">
-        {list.map((target) => {
+        {items.map((item) => {
+          if (isBurst(item)) {
+            return (
+              <motion.div
+                key={item.id}
+                layout="position"
+                initial={false}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+              >
+                <StackedCard
+                  burst={item}
+                  expanded={item.targets.some(t => expandedBurstTargets.has(t.id))}
+                  onToggleExpanded={() => {
+                    setExpandedBurstTargets(prev => {
+                      const next = new Set(prev);
+                      const ids = item.targets.map(t => t.id);
+                      const isExpanded = ids.some(id => next.has(id));
+                      if (isExpanded) {
+                        ids.forEach(id => next.delete(id));
+                      } else {
+                        ids.forEach(id => next.add(id));
+                      }
+                      return next;
+                    });
+                  }}
+                  activeTargetId={activeTargetId ?? null}
+                  onTargetClick={(t) => onTargetClick?.(t)}
+                  buildCallbacks={buildCallbacks}
+                  buildCtx={buildCtx}
+                  renderCard={renderSingleCard}
+                  onBulkMitigate={onMitigateAll ? handleBulkMitigate : undefined}
+                />
+              </motion.div>
+            );
+          }
+
+          const target = item;
           const isActive = target.id === activeTargetId;
           return (
             <motion.div
@@ -535,89 +601,59 @@ export default function ListOfSystems({
 
   return (
     <div className={`w-full flex flex-col ${className}`}>
-      {/* Tab bar */}
-      <div className="flex border-b border-white/10 px-1 sticky top-0 z-10" dir="rtl">
-        <button
-          onClick={() => setActiveTab('active')}
-          className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold transition-colors border-b-2 ${
-            activeTab === 'active' ? 'border-white text-white' : 'border-transparent text-zinc-500 hover:text-zinc-300'
-          }`}
-        >
-          פעילות
-          {activeCount > 0 && (
-            <span className="text-[10px] font-mono bg-white/10 rounded px-1.5 py-0.5 tabular-nums">{activeCount}</span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab('completed')}
-          className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold transition-colors border-b-2 ${
-            activeTab === 'completed' ? 'border-white text-white' : 'border-transparent text-zinc-500 hover:text-zinc-300'
-          }`}
-        >
-          הושלמו
-        </button>
-      </div>
+      <div className="sticky top-0 z-10 bg-[#161616]">
+        {/* Tab bar */}
+        <div className="flex border-b border-white/10 px-1" dir="rtl">
+          <button
+            onClick={() => setActiveTab('active')}
+            className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold transition-colors border-b-2 ${
+              activeTab === 'active' ? 'border-white text-white' : 'border-transparent text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            פעילות
+            {activeCount > 0 && (
+              <span className="text-[10px] font-mono bg-white/10 rounded px-1.5 py-0.5 tabular-nums">{activeCount}</span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('completed')}
+            className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold transition-colors border-b-2 ${
+              activeTab === 'completed' ? 'border-white text-white' : 'border-transparent text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            הושלמו
+          </button>
+        </div>
 
-      {/* Filter & Sort bar */}
-      <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-white/5" dir="rtl">
-        <button
-          onClick={() => setShowFilters(!showFilters)}
-          className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-colors border ${
-            showFilters || filterStatus !== 'all'
-              ? 'border-white/20 text-zinc-200 bg-white/5'
-              : 'border-transparent text-zinc-500 hover:text-zinc-300'
-          }`}
-        >
-          <SlidersHorizontal size={11} />
-          <span>סינון</span>
-        </button>
-        {showFilters && (
-          <>
-            <button
-              onClick={() => setFilterStatus('all')}
-              className={`px-2 py-1 rounded text-[10px] transition-colors ${filterStatus === 'all' ? 'bg-white/10 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
-            >
-              הכל
-            </button>
-            <button
-              onClick={() => setFilterStatus('threat')}
-              className={`px-2 py-1 rounded text-[10px] transition-colors ${filterStatus === 'threat' ? 'bg-red-500/20 text-red-400' : 'text-zinc-500 hover:text-zinc-300'}`}
-            >
-              איומים
-            </button>
-            <button
-              onClick={() => setFilterStatus('suspect')}
-              className={`px-2 py-1 rounded text-[10px] transition-colors ${filterStatus === 'suspect' ? 'bg-amber-500/20 text-amber-400' : 'text-zinc-500 hover:text-zinc-300'}`}
-            >
-              חשודים
-            </button>
-          </>
-        )}
-        <div className="flex-1" />
-        <button
-          onClick={() => setSortBy((prev) => (prev === 'time' ? 'confidence' : 'time'))}
-          className="flex items-center gap-1 px-2 py-1 rounded text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors"
-          title={sortBy === 'time' ? 'מיון לפי זמן' : 'מיון לפי ביטחון'}
-        >
-          <ArrowUpDown size={11} />
-          <span>{sortBy === 'time' ? 'זמן' : 'ביטחון'}</span>
-        </button>
+        <FilterBar
+          filters={filters}
+          activeFilters={getActiveFilters()}
+          activeFilterCount={activeFilterCount}
+          availableSensors={availableSensors}
+          availableTypes={availableTypes}
+          onUpdate={updateFilter}
+          onRemove={removeFilter}
+          onToggleSensor={toggleSensorId}
+          onToggleType={toggleType}
+          onToggleSignature={toggleSignature}
+          onReset={resetFilters}
+        />
       </div>
 
       <div className="flex-1 space-y-2 pb-20 overflow-y-auto custom-scrollbar px-2 pt-2">
         {activeTab === 'active' && (
           <>
+            <CollapsibleGroup title="מטרות" count={groups.tasks.length} icon={ListTodo} defaultOpen>
+              {renderTargetList(groups.tasks)}
+            </CollapsibleGroup>
+            <CollapsibleGroup title="תנועות חשודות" count={groups.needsReview.length} icon={AlertTriangle} defaultOpen>
+              {renderTargetList(groups.needsReview)}
+            </CollapsibleGroup>
             {rawDetections.length > 0 && (
               <CollapsibleGroup title="זיהויים לא ידועים" count={rawDetections.length} icon={Radar} defaultOpen>
                 {renderTargetList(rawDetections)}
               </CollapsibleGroup>
             )}
-            <CollapsibleGroup title="תנועות חשודות" count={groups.needsReview.length} icon={AlertTriangle} defaultOpen>
-              {renderTargetList(groups.needsReview)}
-            </CollapsibleGroup>
-            <CollapsibleGroup title="איתורים פעילים" count={groups.tasks.length} icon={ListTodo} defaultOpen>
-              {renderTargetList(groups.tasks)}
-            </CollapsibleGroup>
             <CollapsibleGroup title="סריקות ידניות" count={missionTargets.length} icon={ScanLine} defaultOpen>
               {missionTargets.length === 0 ? (
                 <div className="p-3 text-center text-[10px] text-zinc-600 font-mono">אין סריקות פעילות</div>

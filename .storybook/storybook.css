@@ -3,6 +3,10 @@
 @import "../src/styles/fonts.css";
 @import "../src/styles/theme.css";
 
+body {
+  background: #0b0d10 !important;
+}
+
 @keyframes missile-pulse {
   0%, 100% { transform: scale(1); opacity: 1; }
   50% { transform: scale(1.06); opacity: 0.88; }

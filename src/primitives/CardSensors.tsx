@@ -5,6 +5,7 @@ export interface CardSensor {
   typeLabel: string;
   icon?: React.ElementType;
   distanceLabel?: string;
+  detectedAt?: string;
 }
 
 export interface CardSensorsProps {
@@ -49,6 +50,12 @@ export function CardSensors({
               </span>
             )}
             <span className="font-['Inter'] text-xs">{sensor.typeLabel}</span>
+            <div className="flex-1" />
+            {sensor.detectedAt && (
+              <span className="text-[9px] text-zinc-600 font-mono tabular-nums">
+                {sensor.detectedAt}
+              </span>
+            )}
             {sensor.distanceLabel && (
               <span className="text-[10px] text-zinc-500 font-mono tabular-nums">
                 {sensor.distanceLabel}

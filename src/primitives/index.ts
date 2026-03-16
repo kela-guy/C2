@@ -16,3 +16,5 @@ export { CardSensors, type CardSensor, type CardSensorsProps } from './CardSenso
 export { CardMedia, type CardMediaProps } from './CardMedia';
 export { CardLog, type LogEntry, type CardLogProps } from './CardLog';
 export { CardClosure, type ClosureOutcome, type CardClosureProps } from './CardClosure';
+export { FilterBar } from './FilterBar';
+export { StackedCard } from './StackedCard';

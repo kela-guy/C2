@@ -30,28 +30,26 @@ export function CardHeader({
   const prefersReducedMotion = useReducedMotion();
 
   return (
-    <div className="flex justify-between items-center" style={{ gap: `${d.header.gap}px` }}>
-      <div className="flex gap-1.5 items-center min-w-0 flex-1">
-        <motion.div
-          animate={{ rotate: open ? 180 : 0 }}
-          transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
-          className="text-zinc-500 shrink-0"
-        >
-          <ChevronDown size={d.animation.chevronSize} />
-        </motion.div>
-
-        {status}
-        {badge}
-
-        {!open && quickAction && (
-          <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
-            {quickAction}
+    <div className="flex justify-between items-center" dir="rtl" style={{ gap: `${d.header.gap}px` }}>
+      <div className="flex items-center gap-2 shrink-0">
+        {Icon && (
+          <div
+            className="flex items-center justify-center shrink-0"
+            style={{
+              width: `${d.iconBox.size}px`,
+              height: `${d.iconBox.size}px`,
+              borderRadius: `${d.iconBox.borderRadius}px`,
+              backgroundColor: iconBgActive
+                ? `${d.iconBox.activeBg}${Math.round(d.iconBox.activeBgOpacity * 255).toString(16).padStart(2, '0')}`
+                : d.iconBox.defaultBg,
+              color: iconColor ?? (iconBgActive ? d.iconBox.activeBg : '#9ca3af'),
+            }}
+          >
+            <Icon size={d.iconBox.iconSize} />
           </div>
         )}
-      </div>
 
-      <div className="flex items-center gap-2 text-right shrink-0">
-        <div className="flex flex-col items-end">
+        <div className="flex flex-col">
           <h2
             className="font-semibold text-balance leading-tight"
             style={{
@@ -71,23 +69,25 @@ export function CardHeader({
             </span>
           )}
         </div>
+      </div>
 
-        {Icon && (
-          <div
-            className="flex items-center justify-center shrink-0"
-            style={{
-              width: `${d.iconBox.size}px`,
-              height: `${d.iconBox.size}px`,
-              borderRadius: `${d.iconBox.borderRadius}px`,
-              backgroundColor: iconBgActive
-                ? `${d.iconBox.activeBg}${Math.round(d.iconBox.activeBgOpacity * 255).toString(16).padStart(2, '0')}`
-                : d.iconBox.defaultBg,
-              color: iconColor ?? (iconBgActive ? d.iconBox.activeBg : '#9ca3af'),
-            }}
-          >
-            <Icon size={d.iconBox.iconSize} />
+      <div className="flex gap-1.5 items-center min-w-0">
+        {!open && quickAction && (
+          <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+            {quickAction}
           </div>
         )}
+
+        {badge}
+        {status}
+
+        <motion.div
+          animate={{ rotate: open ? 180 : 0 }}
+          transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
+          className="text-zinc-500 shrink-0"
+        >
+          <ChevronDown size={d.animation.chevronSize} />
+        </motion.div>
       </div>
     </div>
   );

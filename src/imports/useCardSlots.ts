@@ -94,6 +94,7 @@ export interface CardSlots {
 
 function buildAccent(target: Detection): ThreatAccent {
   if (target.mitigationStatus === 'mitigating') return 'mitigating';
+  if (target.mitigationStatus === 'mitigated' && target.bdaStatus !== 'complete') return 'active';
   if (target.status === 'event_resolved' || target.status === 'event_neutralized') return 'resolved';
   if (target.status === 'expired') return 'expired';
   if (target.status === 'detection' || target.status === 'event') return 'detection';
@@ -147,10 +148,11 @@ function buildMedia(target: Detection, ctx: CardContext): CardMediaProps | null 
   const isSuccess = target.status === 'event_resolved' || target.status === 'event_neutralized';
   const isMissionActive = target.missionStatus === 'planning' || target.missionStatus === 'executing' || target.missionStatus === 'waiting_confirmation';
 
-  const showVideo = isCuas && (ctx.isCameraActive || target.entityStage === 'classified');
+  const isFlowCameraActive = !isCuas && ctx.isCameraActive && (target.flowType === 1 || target.flowType === 2);
+  const showVideo = (isCuas && (ctx.isCameraActive || target.entityStage === 'classified')) || isFlowCameraActive;
   const showImage = isCuas
     ? target.entityStage !== 'raw_detection'
-    : (isSuspicion || isActive) && !isMissionActive && target.flowType !== 4;
+    : (isSuspicion || isActive) && !isMissionActive && target.flowType !== 4 && !isFlowCameraActive;
 
   if (!showVideo && !showImage) return null;
 
@@ -158,7 +160,10 @@ function buildMedia(target: Detection, ctx: CardContext): CardMediaProps | null 
     return {
       src: '/videos/target-feed.mov',
       type: 'video',
-      badge: target.classifiedType === 'bird' ? 'bird' : 'threat',
+      badge: isCuas
+        ? (target.classifiedType === 'bird' ? 'bird' : 'threat')
+        : isSuspicion ? 'warning' : 'threat',
+      showControls: target.mitigationStatus === 'mitigated',
     };
   }
 
@@ -192,8 +197,8 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
         id: 'investigate-bda',
         label: 'תחקור',
         icon: Eye,
-        variant: 'secondary',
-        size: 'sm',
+        variant: 'primary',
+        size: 'lg',
         onClick: (e) => { e.stopPropagation(); callbacks.onVerify?.('investigate'); },
       });
       return actions;
@@ -216,19 +221,12 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
         }
       },
       disabled: target.entityStage !== 'classified',
-      confirm: {
-        title: 'הפעלת שיבוש',
-        description: 'האם אתה בטוח? פעולה זו תפעיל שיבוש אלקטרוני.',
-        doubleConfirm: true,
-        confirmLabel: 'הפעל שיבוש',
-      },
     });
 
     actions.push(
       { id: 'mitigate-all', label: 'מרחבי', icon: Radio, variant: 'secondary', size: 'sm',
         onClick: (e) => { e.stopPropagation(); callbacks.onMitigateAll?.(); },
         disabled: target.entityStage !== 'classified',
-        confirm: { title: 'שיבוש מרחבי', description: 'האם אתה בטוח?', doubleConfirm: true },
       },
       { id: 'lock', label: 'נעילה', icon: Crosshair, variant: 'secondary', size: 'sm',
         onClick: (e) => e.stopPropagation(), disabled: target.entityStage !== 'classified' },
@@ -340,8 +338,8 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
         actions.push({ id: 'attack', label: 'ירי', icon: Crosshair, variant: 'danger', size: 'lg',
           onClick: (e) => { e.stopPropagation(); callbacks.onEngage?.('attack'); } });
       } else {
-        actions.push({ id: 'intercept', label: 'יירוט', icon: Rocket, variant: 'amber', size: 'lg',
-          onClick: (e) => { e.stopPropagation(); callbacks.onVerify?.('intercept'); } });
+        actions.push({ id: 'jam-primary', label: 'שיבוש', icon: Zap, variant: 'danger', size: 'lg',
+          onClick: (e) => { e.stopPropagation(); callbacks.onEngage?.('jamming'); } });
       }
       actions.push(
         { id: 'jam', label: 'שיבוש', icon: Radio, variant: 'secondary', size: 'sm',
@@ -497,6 +495,7 @@ function buildSensors(target: Detection): CardSensor[] {
       sensors.push({
         id: cs.sensorId,
         typeLabel: cs.sensorType,
+        detectedAt: cs.firstDetectedAt,
       });
     });
   }

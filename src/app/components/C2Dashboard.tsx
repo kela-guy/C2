@@ -9,7 +9,7 @@ import type { Detection, IncidentOutcome, DroneDeployment, PlannedMission, Missi
 import { List, Bell, PlayCircle, AlertTriangle, Crosshair as CrosshairIcon, MapPin, Map as MapLucide, Camera, Route, ShieldAlert, Radar, Zap, BookOpen } from 'lucide-react';
 import { DroneHiveIcon as MapDroneIcon } from './TacticalMap';
 import { toast } from 'sonner';
-import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from './ui/alert-dialog';
+
 
 function haversineDistanceM(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000;
@@ -61,11 +61,6 @@ export const C2Dashboard = () => {
   // CUAS: Regulus effector state
   const [regulusEffectors, setRegulusEffectors] = useState<RegulusEffector[]>(REGULUS_EFFECTORS);
 
-  // Jam-all modal: auto-triggered when 10+ detections arrive in rapid burst
-  const [showJamAllModal, setShowJamAllModal] = useState(false);
-  const [burstDetectionCount, setBurstDetectionCount] = useState(0);
-  const jamAllModalDismissedRef = useRef(false);
-  
   // Flow simulation state
   const [flowTriggerOpen, setFlowTriggerOpen] = useState(false);
   const [flowTriggerRect, setFlowTriggerRect] = useState<{ top: number; left: number } | null>(null);
@@ -76,6 +71,7 @@ export const C2Dashboard = () => {
   const [missionPlannerRect, setMissionPlannerRect] = useState<{ top: number; left: number } | null>(null);
   const missionPlannerBtnRef = useRef<HTMLButtonElement>(null);
   const [cameraLookAtRequest, setCameraLookAtRequest] = useState<{ cameraId: string; targetLat: number; targetLon: number } | null>(null);
+  const [investigateCameraId, setInvestigateCameraId] = useState<string | null>(null);
   const [controlIndicator, setControlIndicator] = useState(false);
   const [nearbyCameras, setNearbyCameras] = useState<{ id: string; typeLabel: string; distanceM: number }[]>([]);
   const [nearbyHives, setNearbyHives] = useState<{ id: string; latitude: number; longitude: number; distanceM: number; battery: number; status: string }[]>([]);
@@ -136,8 +132,13 @@ export const C2Dashboard = () => {
         }
       }
     }
+    if (investigateCameraId) ids.add(investigateCameraId);
     return Array.from(ids);
-  }, [targets]);
+  }, [targets, investigateCameraId]);
+
+  useEffect(() => {
+    if (!cameraLookAtRequest) setInvestigateCameraId(null);
+  }, [cameraLookAtRequest]);
 
   // Clock
   useEffect(() => {
@@ -188,24 +189,14 @@ export const C2Dashboard = () => {
         }
     };
 
-    const handleDetectionBurst = (e: any) => {
-      const count = e.detail?.count ?? 10;
-      if (!jamAllModalDismissedRef.current) {
-        setBurstDetectionCount(count);
-        setShowJamAllModal(true);
-      }
-    };
-
     window.addEventListener('trigger-critical-alert', handleCritical);
     window.addEventListener('trigger-suspect-alert', handleSuspect);
     window.addEventListener('toast-clicked', handleToastClick);
-    window.addEventListener('detection-burst', handleDetectionBurst);
-    
+
     return () => {
         window.removeEventListener('trigger-critical-alert', handleCritical);
         window.removeEventListener('trigger-suspect-alert', handleSuspect);
         window.removeEventListener('toast-clicked', handleToastClick);
-        window.removeEventListener('detection-burst', handleDetectionBurst);
     };
   }, []);
 
@@ -536,8 +527,8 @@ export const C2Dashboard = () => {
     setFlow3ActiveDrone(null);
     flow3TrailRef.current = [];
 
-    const targetLat = 31.85 + (Math.random() - 0.5) * 0.1;
-    const targetLon = 34.78 + (Math.random() - 0.5) * 0.15;
+    const targetLat = 31.2080 + (Math.random() - 0.5) * 0.015;
+    const targetLon = 34.6650 + (Math.random() - 0.5) * 0.015;
     const newId = `FLOW3-${Date.now()}`;
 
     const hivesWithDist = DRONE_HIVE_ASSETS.map(h => ({
@@ -1608,8 +1599,30 @@ export const C2Dashboard = () => {
       setActiveTargetId(prev => prev === target.id ? null : target.id);
   };
 
-  const handleStartMission = (targetId: string, action: 'intercept' | 'surveillance') => {
-      // Logic for starting a mission (Verify + Action combined)
+  const handleStartMission = (targetId: string, action: 'intercept' | 'surveillance' | 'investigate') => {
+      if (action === 'investigate') {
+        const target = targets.find(t => t.id === targetId);
+        if (!target) return;
+        const [lat, lon] = target.coordinates.split(',').map(c => parseFloat(c.trim()));
+        if (isNaN(lat) || isNaN(lon)) return;
+
+        let bestCam: typeof CAMERA_ASSETS[0] | null = null;
+        let bestDist = Infinity;
+        for (const cam of CAMERA_ASSETS) {
+          const d = Math.hypot(cam.latitude - lat, cam.longitude - lon);
+          if (d < bestDist) { bestDist = d; bestCam = cam; }
+        }
+        if (bestCam) {
+          setCameraLookAtRequest({ cameraId: bestCam.id, targetLat: lat, targetLon: lon });
+          setInvestigateCameraId(bestCam.id);
+          setActiveTargetId(targetId);
+          setSidebarOpen(true);
+          setTargets(prev => appendLog(prev, targetId, `מצלמה ${bestCam!.typeLabel} נועלת על המטרה`));
+          toast.success(`${bestCam.typeLabel} מפנה לאימות — נועלת על מטרה`);
+        }
+        return;
+      }
+
       const missionSteps = action === 'intercept' 
         ? [
             "חישוב נתיב יירוט...",
@@ -2234,7 +2247,7 @@ export const C2Dashboard = () => {
             href="http://localhost:6006"
             target="_blank"
             rel="noopener noreferrer"
-            className="p-2.5 rounded-lg text-gray-400 hover:text-pink-400 hover:bg-pink-500/10 transition-colors w-full flex justify-center"
+            className="p-2.5 rounded-lg text-gray-400 hover:text-pink-400 hover:bg-pink-500/10 transition-colors w-10 flex justify-center"
             title="Storybook"
           >
             <BookOpen size={20} strokeWidth={1.5} />
@@ -2343,7 +2356,7 @@ export const C2Dashboard = () => {
                 </div>
               </div>
           )}
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
             <ListOfSystems 
               className="flex flex-col gap-2" 
               targets={targets}
@@ -2403,55 +2416,12 @@ export const C2Dashboard = () => {
               }}
             />
           </div>
-          <div className="p-3 border-t border-white/5 bg-black/20 text-[10px] text-gray-600 font-mono text-center" dir="ltr">
-            SYSTEM V.2.4.1 // SECURE
-          </div>
         </aside>
 
         <main className="flex-1 relative pointer-events-none min-h-0" />
       </div>
 
       <NotificationSystem />
-
-      {/* Jam All modal — auto-triggered by 10+ rapid detections */}
-      <AlertDialog open={showJamAllModal} onOpenChange={setShowJamAllModal}>
-        <AlertDialogContent className="bg-[#141414] border-red-500/30 text-white max-w-md" dir="rtl">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-red-400 text-lg">
-              <Zap size={20} className="text-red-400" />
-              זוהו איומים מרובים
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400 text-sm leading-relaxed">
-              {burstDetectionCount} זיהויים ב-10 שניות האחרונות.
-              <br />
-              הפעלת שיבוש מרחבי תנטרל את כל היעדים הפעילים.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex gap-2 sm:flex-row-reverse">
-            <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700 text-white"
-              onClick={() => {
-                handleMitigateAll();
-                setShowJamAllModal(false);
-                jamAllModalDismissedRef.current = true;
-                setTimeout(() => { jamAllModalDismissedRef.current = false; }, 30_000);
-              }}
-            >
-              הפעל שיבוש מרחבי
-            </AlertDialogAction>
-            <AlertDialogCancel
-              className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border-zinc-700"
-              onClick={() => {
-                setShowJamAllModal(false);
-                jamAllModalDismissedRef.current = true;
-                setTimeout(() => { jamAllModalDismissedRef.current = false; }, 30_000);
-              }}
-            >
-              ביטול
-            </AlertDialogCancel>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Flow Trigger Panel (portal to escape stacking contexts) */}
       {flowTriggerOpen && flowTriggerRect && createPortal(

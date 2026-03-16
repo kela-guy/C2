@@ -10,7 +10,7 @@ const meta: Meta<typeof CardHeader> = {
   tags: ['autodocs'],
   decorators: [
     (Story) => (
-      <div style={{ maxWidth: 380, background: '#1A1A1A', padding: 8, borderRadius: 8 }}>
+      <div dir="rtl" style={{ maxWidth: 380, background: '#1A1A1A', padding: 8, borderRadius: 8 }}>
         <Story />
       </div>
     ),
@@ -56,11 +56,11 @@ export const AllIcons: Story = {
   render: () => (
     <div className="flex flex-col gap-3">
       {[
-        { icon: Plane, title: 'UAV', color: '#ef4444', active: true },
-        { icon: Rocket, title: 'Missile', color: '#9ca3af', active: false },
-        { icon: Ship, title: 'Naval', color: '#9ca3af', active: false },
-        { icon: Target, title: 'Unknown', color: '#71717a', active: false },
-        { icon: ScanLine, title: 'PTZ Scan', color: '#a78bfa', active: false },
+        { icon: Plane, title: 'כלי טיס', color: '#ef4444', active: true },
+        { icon: Rocket, title: 'טיל', color: '#9ca3af', active: false },
+        { icon: Ship, title: 'כלי שיט', color: '#9ca3af', active: false },
+        { icon: Target, title: 'לא מזוהה', color: '#71717a', active: false },
+        { icon: ScanLine, title: 'סריקת PTZ', color: '#a78bfa', active: false },
       ].map((cfg) => (
         <CardHeader
           key={cfg.title}

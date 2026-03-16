@@ -93,7 +93,7 @@ function buildStatusChip(target: Detection) {
   if (target.entityStage === 'raw_detection') return <StatusChip label="לא ידוע" color="gray" />;
   if (target.status === 'detection') return <StatusChip label="איתור" color="red" />;
   if (target.status === 'tracking') return <StatusChip label="מעקב" color="orange" />;
-  if (target.status === 'event') return <StatusChip label="אירוע" color="green" />;
+  if (target.status === 'event') return <StatusChip label="מטרה" color="green" />;
   if (target.status === 'suspicion') return <StatusChip label="תח״ש" color="orange" />;
   if (target.status === 'event_neutralized') return <StatusChip label="נוטרל" color="green" />;
   if (target.status === 'event_resolved') return <StatusChip label="הושלם" color="green" />;

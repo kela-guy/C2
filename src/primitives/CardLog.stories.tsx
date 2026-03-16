@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
+import { expect } from 'storybook/test';
 import { CardLog } from './CardLog';
 
 const meta: Meta<typeof CardLog> = {
@@ -26,9 +27,15 @@ export const ShortLog: Story = {
     ],
     defaultOpen: true,
   },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText('זוהתה תנועה חשודה')).toBeInTheDocument();
+    await expect(canvas.getByText('התחלת חקירה')).toBeInTheDocument();
+    await expect(canvas.getByText('אימות ויזואלי')).toBeInTheDocument();
+  },
 };
 
 export const LongLogTruncated: Story = {
+  name: 'Long Log — Show More',
   args: {
     entries: Array.from({ length: 12 }, (_, i) => ({
       time: `00:${String(10 + i).padStart(2, '0')}:00`,
@@ -36,5 +43,30 @@ export const LongLogTruncated: Story = {
     })),
     maxVisible: 5,
     defaultOpen: true,
+  },
+  play: async ({ canvas, userEvent }) => {
+    const visibleEntries = canvas.getAllByText(/אירוע \d+ — פעולה בוצעה/);
+    await expect(visibleEntries).toHaveLength(5);
+
+    const showMoreBtn = canvas.getByText(/עוד \d+ רשומות/);
+    await expect(showMoreBtn).toBeInTheDocument();
+
+    await userEvent.click(showMoreBtn);
+
+    const allEntries = canvas.getAllByText(/אירוע \d+ — פעולה בוצעה/);
+    await expect(allEntries).toHaveLength(12);
+
+    expect(canvas.queryByText(/עוד \d+ רשומות/)).not.toBeInTheDocument();
+  },
+};
+
+export const EmptyLog: Story = {
+  name: 'Empty — Renders Nothing',
+  args: {
+    entries: [],
+    defaultOpen: true,
+  },
+  play: async ({ canvas }) => {
+    expect(canvas.queryByText(/לוג/)).not.toBeInTheDocument();
   },
 };
