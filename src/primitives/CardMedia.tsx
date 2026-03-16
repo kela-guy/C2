@@ -10,6 +10,7 @@ export interface CardMediaProps {
   aspectRatio?: string;
   showControls?: boolean;
   className?: string;
+  alt?: string;
 }
 
 export function CardMedia({
@@ -21,6 +22,7 @@ export function CardMedia({
   aspectRatio,
   showControls = false,
   className = '',
+  alt = 'תצפית מטרה',
 }: CardMediaProps) {
   if (!src && placeholder === 'none') return null;
 
@@ -43,12 +45,14 @@ export function CardMedia({
             muted
             playsInline
             className="w-full h-full object-cover"
-          />
+          >
+            <track kind="captions" />
+          </video>
         )
       ) : src ? (
         <img
           src={src}
-          alt="Target"
+          alt={alt}
           className="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity grayscale contrast-125"
         />
       ) : null}
@@ -58,9 +62,9 @@ export function CardMedia({
       {badge && (
         <div className="absolute bottom-0 inset-x-0 p-2 flex justify-between items-end">
           <div className="flex gap-1">
-            {badge === 'bird' && <ShieldAlert size={14} className="text-amber-400" />}
-            {badge === 'threat' && <ShieldAlert size={14} className="text-red-500" />}
-            {badge === 'warning' && <AlertTriangle size={14} className="text-zinc-400" />}
+            {badge === 'bird' && <ShieldAlert size={14} className="text-amber-400" aria-hidden="true" />}
+            {badge === 'threat' && <ShieldAlert size={14} className="text-red-500" aria-hidden="true" />}
+            {badge === 'warning' && <AlertTriangle size={14} className="text-zinc-400" aria-hidden="true" />}
           </div>
         </div>
       )}
@@ -76,7 +80,7 @@ export function CardMedia({
             </div>
           </div>
           <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/80 px-1.5 py-0.5 rounded-sm">
-            <Camera size={10} className="text-white/70" />
+            <Camera size={10} className="text-white/70" aria-hidden="true" />
             <span className="text-[9px] text-white/70 font-mono">PTZ</span>
           </div>
         </>
@@ -84,7 +88,7 @@ export function CardMedia({
 
       {isVideo && showControls && (
         <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/80 px-1.5 py-0.5 rounded-sm">
-          <Camera size={10} className="text-white/70" />
+          <Camera size={10} className="text-white/70" aria-hidden="true" />
           <span className="text-[9px] text-white/70 font-mono">Playback</span>
         </div>
       )}
@@ -156,12 +160,27 @@ function VideoWithControls({ src }: { src: string }) {
         muted
         playsInline
         className="w-full h-full object-cover"
-      />
+      >
+        <track kind="captions" />
+      </video>
 
       <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent pt-6 pb-1.5 px-2">
         <div
           className="w-full h-1 bg-white/15 rounded-full cursor-pointer mb-1.5 group/scrub"
+          role="slider"
+          tabIndex={0}
+          aria-label="מיקום בסרטון"
+          aria-valuemin={0}
+          aria-valuemax={Math.round(duration)}
+          aria-valuenow={Math.round(progress)}
+          aria-valuetext={`${formatTime(progress)} מתוך ${formatTime(duration)}`}
           onClick={handleScrub}
+          onKeyDown={(e) => {
+            const v = videoRef.current;
+            if (!v) return;
+            if (e.key === 'ArrowRight') { e.preventDefault(); v.currentTime = Math.min(v.duration, v.currentTime + 5); }
+            else if (e.key === 'ArrowLeft') { e.preventDefault(); v.currentTime = Math.max(0, v.currentTime - 5); }
+          }}
         >
           <div
             className="h-full bg-cyan-400 rounded-full relative transition-all"
@@ -172,14 +191,14 @@ function VideoWithControls({ src }: { src: string }) {
         </div>
 
         <div className="flex items-center justify-center gap-3">
-          <button onClick={skip(-5)} className="text-white/60 hover:text-white transition-colors">
-            <SkipBack size={12} />
+          <button onClick={skip(-5)} className="text-white/60 hover:text-white transition-colors" aria-label="הרצה אחורה 5 שניות">
+            <SkipBack size={12} aria-hidden="true" />
           </button>
-          <button onClick={togglePlay} className="text-white hover:text-cyan-400 transition-colors">
-            {playing ? <Pause size={16} /> : <Play size={16} />}
+          <button onClick={togglePlay} className="text-white hover:text-cyan-400 transition-colors" aria-label={playing ? 'השהה' : 'הפעל'}>
+            {playing ? <Pause size={16} aria-hidden="true" /> : <Play size={16} aria-hidden="true" />}
           </button>
-          <button onClick={skip(5)} className="text-white/60 hover:text-white transition-colors">
-            <SkipForward size={12} />
+          <button onClick={skip(5)} className="text-white/60 hover:text-white transition-colors" aria-label="הרצה קדימה 5 שניות">
+            <SkipForward size={12} aria-hidden="true" />
           </button>
           <span className="text-[9px] text-zinc-400 font-mono tabular-nums ml-2">
             {formatTime(progress)} / {formatTime(duration)}

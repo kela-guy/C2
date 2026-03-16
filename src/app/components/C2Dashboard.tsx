@@ -400,6 +400,16 @@ export const C2Dashboard = () => {
           t.id === newId ? { ...t, flowPhase: 'investigate' } : t
         ));
         setTargets(prev => appendLog(prev, newId, 'חקירה פעילה'));
+
+        setTimeout(() => {
+          setTargets(prev => {
+            const t = prev.find(x => x.id === newId);
+            if (!t || t.flowPhase !== 'investigate') return prev;
+            return prev.map(x => x.id === newId ? { ...x, flowPhase: 'decide' } : x);
+          });
+          setTargets(prev => appendLog(prev, newId, 'החלטה נדרשת'));
+          setControlIndicator(true);
+        }, 4000);
       }, 3000);
     }, 1500);
   };

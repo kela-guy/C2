@@ -22,6 +22,9 @@ import {
   Home,
   Hand,
   X,
+  BookOpen,
+  Send,
+  Shield,
 } from 'lucide-react';
 import type { ThreatAccent } from '@/primitives/tokens';
 import type { CardAction } from '@/primitives/CardActions';
@@ -268,10 +271,16 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
     return actions;
   }
 
-  // Flow 1 decide phase
+  // Flow 1 decide phase — playbook selection
   if (target.flowType === 1 && target.flowPhase === 'decide') {
     actions.push(
-      { id: 'close-event', label: 'סגור אירוע', icon: Ban, variant: 'ghost', size: 'sm',
+      { id: 'pb-fast-inspect', label: 'חקירה מהירה', icon: Plane, variant: 'primary', size: 'md',
+        onClick: (e) => { e.stopPropagation(); callbacks.onPlaybookSelect?.('fast-inspect'); } },
+      { id: 'pb-full-response', label: 'תגובה מלאה', icon: Shield, variant: 'danger', size: 'sm',
+        onClick: (e) => { e.stopPropagation(); callbacks.onPlaybookSelect?.('full-response'); } },
+      { id: 'pb-transfer', label: 'העבר אחריות', icon: Send, variant: 'secondary', size: 'sm',
+        onClick: (e) => { e.stopPropagation(); callbacks.onPlaybookSelect?.('transfer'); } },
+      { id: 'close-event', label: 'סגור', icon: Ban, variant: 'ghost', size: 'sm',
         onClick: (e) => { e.stopPropagation(); callbacks.onAdvanceFlowPhase?.(); } },
     );
     return actions;

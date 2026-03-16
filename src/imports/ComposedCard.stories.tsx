@@ -18,6 +18,8 @@ import {
   flow1_suspicion,
   flow1_investigation,
   flow1_decide,
+  flow1_act,
+  flow2_investigate,
   flow2_tracking,
   flow2_mitigating,
   flow2_mitigated,
@@ -177,8 +179,18 @@ export const Flow1_Investigation: StoryObj = {
 };
 
 export const Flow1_Decide: StoryObj = {
-  name: 'Flow 1 — Decide',
+  name: 'Flow 1 — Decide (Playbooks)',
   render: () => <ComposedCard target={flow1_decide} defaultOpen />,
+};
+
+export const Flow1_Act: StoryObj = {
+  name: 'Flow 1 — Act (Mission)',
+  render: () => <ComposedCard target={flow1_act} defaultOpen />,
+};
+
+export const Flow2_Investigate: StoryObj = {
+  name: 'Flow 2 — Manual Tracking',
+  render: () => <ComposedCard target={flow2_investigate} defaultOpen />,
 };
 
 export const Flow2_Tracking: StoryObj = {
@@ -222,7 +234,7 @@ export const Flow5_Mitigated: StoryObj = {
 };
 
 export const AllFlows: StoryObj = {
-  name: 'All 11 Flows',
+  name: 'All Flows',
   render: () => (
     <div className="flex flex-col gap-2">
       {ALL_DETECTIONS.map((d) => (
@@ -233,7 +245,7 @@ export const AllFlows: StoryObj = {
 };
 
 export const AllFlowsExpanded: StoryObj = {
-  name: 'All 11 Flows (Expanded)',
+  name: 'All Flows (Expanded)',
   render: () => (
     <div className="flex flex-col gap-2">
       {ALL_DETECTIONS.map((d) => (

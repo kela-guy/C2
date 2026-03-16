@@ -28,6 +28,12 @@ export const Default: Story = {
   play: async ({ canvas }) => {
     const trigger = canvas.getByRole('button');
     await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    await expect(trigger).toHaveAttribute('tabindex', '0');
+
+    const panelId = trigger.getAttribute('aria-controls');
+    await expect(panelId).toBeTruthy();
+    await expect(document.getElementById(panelId!)).toBeInTheDocument();
+
     await expect(canvas.getByTestId('section-content')).toBeInTheDocument();
   },
 };
@@ -50,6 +56,30 @@ export const ToggleOpenClose: Story = {
 
     await userEvent.click(trigger);
 
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  },
+};
+
+export const KeyboardToggle: Story = {
+  name: 'Keyboard — Enter/Space Toggle',
+  args: { title: 'מקלדת', defaultOpen: false, icon: Activity },
+  render: (args) => (
+    <div style={{ width: 340 }}>
+      <AccordionSection {...args}>
+        <div className="text-xs text-zinc-400 py-2" data-testid="kbd-content">תוכן</div>
+      </AccordionSection>
+    </div>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    const trigger = canvas.getByRole('button');
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+
+    trigger.focus();
+    await userEvent.keyboard('{Enter}');
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    await expect(canvas.getByTestId('kbd-content')).toBeInTheDocument();
+
+    await userEvent.keyboard(' ');
     await expect(trigger).toHaveAttribute('aria-expanded', 'false');
   },
 };

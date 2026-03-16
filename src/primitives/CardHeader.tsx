@@ -45,7 +45,7 @@ export function CardHeader({
               color: iconColor ?? (iconBgActive ? d.iconBox.activeBg : '#9ca3af'),
             }}
           >
-            <Icon size={d.iconBox.iconSize} />
+            <Icon size={d.iconBox.iconSize} aria-hidden="true" />
           </div>
         )}
 
@@ -73,7 +73,7 @@ export function CardHeader({
 
       <div className="flex gap-1.5 items-center min-w-0">
         {!open && quickAction && (
-          <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+          <div className="shrink-0" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
             {quickAction}
           </div>
         )}
@@ -86,7 +86,7 @@ export function CardHeader({
           transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
           className="text-zinc-500 shrink-0"
         >
-          <ChevronDown size={d.animation.chevronSize} />
+          <ChevronDown size={d.animation.chevronSize} aria-hidden="true" />
         </motion.div>
       </div>
     </div>

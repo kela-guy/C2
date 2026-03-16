@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 
+let collapsibleIdCounter = 0;
+
 export function CollapsibleGroup({ 
   title, 
   count, 
@@ -19,16 +21,18 @@ export function CollapsibleGroup({
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const prefersReducedMotion = useReducedMotion();
+  const [panelId] = useState(() => `collapsible-panel-${++collapsibleIdCounter}`);
 
   return (
     <div className={`mb-3 ${className}`} dir="rtl">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-1 py-2 rounded-md hover:bg-white/5 transition-colors"
+        className="w-full flex items-center justify-between px-1 py-2 rounded-md hover:bg-white/5 transition-colors focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
         aria-expanded={isOpen}
+        aria-controls={panelId}
       >
         <div className="flex items-center gap-2 min-w-0">
-          <Icon size={14} className="text-zinc-500 shrink-0" />
+          <Icon size={14} className="text-zinc-500 shrink-0" aria-hidden="true" />
           <span className="text-xs text-zinc-300 font-semibold truncate text-balance">
             {title}
           </span>
@@ -42,7 +46,7 @@ export function CollapsibleGroup({
           transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
           className="text-zinc-500 shrink-0"
         >
-          <ChevronDown size={16} />
+          <ChevronDown size={16} aria-hidden="true" />
         </motion.div>
       </button>
 
@@ -55,7 +59,7 @@ export function CollapsibleGroup({
             transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
             className="overflow-hidden"
           >
-            <div className="pt-2 space-y-2 border-t border-white/5">
+            <div id={panelId} className="pt-2 space-y-2 border-t border-white/5">
               {children}
             </div>
           </motion.div>

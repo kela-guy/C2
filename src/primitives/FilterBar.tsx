@@ -88,20 +88,22 @@ export function FilterBar({
       {/* Row 1: Search + Sort */}
       <div className="flex items-center gap-1.5 px-2 pt-1.5 pb-1">
         <div className="relative flex-1">
-          <Search size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
+          <Search size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" aria-hidden="true" />
           <input
             type="text"
             value={filters.query}
             onChange={(e) => onUpdate('query', e.target.value)}
             placeholder="חיפוש..."
-            className="w-full bg-white/5 border border-white/5 rounded-md pr-7 pl-2 py-1 text-[11px] text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-white/15 focus:bg-white/[0.07] transition-colors"
+            aria-label="חיפוש מטרות"
+            className="w-full bg-white/5 border border-white/5 rounded-md pr-7 pl-2 py-1 text-[11px] text-zinc-200 placeholder:text-zinc-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 focus:border-white/15 focus:bg-white/[0.07] transition-colors"
           />
           {filters.query && (
             <button
               onClick={() => onUpdate('query', '')}
               className="absolute left-1.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+              aria-label="נקה חיפוש"
             >
-              <X size={11} />
+              <X size={11} aria-hidden="true" />
             </button>
           )}
         </div>
@@ -487,6 +489,7 @@ function RangeSlider({
           min={min}
           max={max}
           value={value[0]}
+          aria-label="ביטחון מינימלי"
           onChange={(e) => {
             const v = Number(e.target.value);
             if (v <= value[1]) onChange([v, value[1]]);
@@ -498,6 +501,7 @@ function RangeSlider({
           min={min}
           max={max}
           value={value[1]}
+          aria-label="ביטחון מקסימלי"
           onChange={(e) => {
             const v = Number(e.target.value);
             if (v >= value[0]) onChange([value[0], v]);

@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { expect } from 'storybook/test';
 import { CollapsibleGroup } from './CollapsibleGroup';
 import { Camera, Radio, Satellite } from 'lucide-react';
 
@@ -21,7 +22,7 @@ export const Default: Story = {
   render: (args) => (
     <div style={{ width: 340 }}>
       <CollapsibleGroup {...args}>
-        <div className="text-xs text-zinc-400 space-y-1">
+        <div className="text-xs text-zinc-400 space-y-1" data-testid="group-content">
           <div>פריט 1</div>
           <div>פריט 2</div>
           <div>פריט 3</div>
@@ -29,6 +30,37 @@ export const Default: Story = {
       </CollapsibleGroup>
     </div>
   ),
+  play: async ({ canvas }) => {
+    const trigger = canvas.getByRole('button');
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+
+    const panelId = trigger.getAttribute('aria-controls');
+    await expect(panelId).toBeTruthy();
+    await expect(document.getElementById(panelId!)).toBeInTheDocument();
+  },
+};
+
+export const ToggleCollapse: Story = {
+  name: 'Toggle — Expand/Collapse',
+  args: { title: 'חיישנים', count: 2, defaultOpen: false, icon: Radio },
+  render: (args) => (
+    <div style={{ width: 340 }}>
+      <CollapsibleGroup {...args}>
+        <div className="text-xs text-zinc-400" data-testid="toggle-content">תוכן</div>
+      </CollapsibleGroup>
+    </div>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    const trigger = canvas.getByRole('button');
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+
+    await userEvent.click(trigger);
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    await expect(canvas.getByTestId('toggle-content')).toBeInTheDocument();
+
+    await userEvent.click(trigger);
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  },
 };
 
 export const MultipleGroups: Story = {

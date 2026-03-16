@@ -34,6 +34,43 @@ export const flow1_decide: Detection = {
   actionLog: [
     ...flow1_investigation.actionLog!,
     { time: '00:11:02', label: 'אימות ויזואלי' },
+    { time: '00:11:15', label: 'החלטה נדרשת' },
+  ],
+};
+
+export const flow1_act: Detection = {
+  ...flow1_decide,
+  id: 't-004',
+  flowPhase: 'act',
+  status: 'detection',
+  name: 'משימה בביצוע',
+  missionStatus: 'executing',
+  missionType: 'surveillance',
+  missionSteps: ['שיגור רחפן', 'טיסה ליעד', 'סריקה', 'חזרה'],
+  missionProgress: 1,
+  actionLog: [
+    ...flow1_decide.actionLog!,
+    { time: '00:11:30', label: 'נבחר: חקירה מהירה' },
+    { time: '00:11:31', label: 'רחפן שוגר' },
+  ],
+};
+
+export const flow2_investigate: Detection = {
+  id: 't-009',
+  name: 'תח״ש — תצפיתן',
+  type: 'unknown',
+  status: 'suspicion',
+  timestamp: '00:09:00',
+  coordinates: '32.0880° N, 34.7900° E',
+  distance: '1.5 ק״מ',
+  flowType: 2,
+  flowPhase: 'investigate',
+  detectedBySensors: [
+    { id: 's1', typeLabel: 'Pixelsight', latitude: 32.09, longitude: 34.78 },
+  ],
+  actionLog: [
+    { time: '00:09:00', label: 'תנועה חשודה דווחה' },
+    { time: '00:09:05', label: 'מעקב ידני פעיל' },
   ],
 };
 
@@ -152,10 +189,125 @@ export const flow5_mitigated: Detection = {
   bdaStatus: 'complete',
 };
 
+// --- CUAS lifecycle mocks ---
+
+export const cuas_raw: Detection = {
+  id: 'cuas-001',
+  name: 'זיהוי חדש',
+  type: 'uav',
+  status: 'detection',
+  timestamp: '00:14:10',
+  coordinates: '32.0950° N, 34.8100° E',
+  distance: '3.2 ק״מ',
+  entityStage: 'raw_detection',
+  altitude: '120 מ׳',
+  detectedBySensors: [
+    { id: 's1', typeLabel: 'Pixelsight', latitude: 32.09, longitude: 34.78 },
+  ],
+  contributingSensors: [
+    { sensorId: 's1', sensorType: 'EO/IR', firstDetectedAt: '00:14:10', lastDetectedAt: '00:14:10' },
+  ],
+  actionLog: [{ time: '00:14:10', label: 'זיהוי ראשוני — סיווג בתהליך' }],
+};
+
+export const cuas_classified: Detection = {
+  ...cuas_raw,
+  id: 'cuas-002',
+  name: 'רחפן מסווג — DJI Mavic',
+  entityStage: 'classified',
+  classifiedType: 'drone',
+  confidence: 0.94,
+  mitigationStatus: 'idle',
+  contributingSensors: [
+    { sensorId: 's1', sensorType: 'EO/IR', firstDetectedAt: '00:14:10', lastDetectedAt: '00:14:18' },
+    { sensorId: 's2', sensorType: 'RF', firstDetectedAt: '00:14:12', lastDetectedAt: '00:14:18' },
+  ],
+  actionLog: [
+    { time: '00:14:10', label: 'זיהוי ראשוני' },
+    { time: '00:14:18', label: 'סיווג: רחפן — DJI Mavic — ביטחון 94%' },
+  ],
+};
+
+export const cuas_classified_bird: Detection = {
+  ...cuas_raw,
+  id: 'cuas-003',
+  name: 'ציפור מסווגת',
+  entityStage: 'classified',
+  classifiedType: 'bird',
+  confidence: 0.88,
+  mitigationStatus: 'idle',
+  actionLog: [
+    { time: '00:14:10', label: 'זיהוי ראשוני' },
+    { time: '00:14:16', label: 'סיווג: ציפור — ביטחון 88%' },
+  ],
+};
+
+export const cuas_mitigating: Detection = {
+  ...cuas_classified,
+  id: 'cuas-004',
+  status: 'event',
+  mitigationStatus: 'mitigating',
+  mitigatingEffectorId: 'eff-1',
+  actionLog: [
+    ...cuas_classified.actionLog!,
+    { time: '00:14:25', label: 'שיבוש פעיל — Regulus-1' },
+  ],
+};
+
+export const cuas_mitigated: Detection = {
+  ...cuas_classified,
+  id: 'cuas-005',
+  status: 'event_neutralized',
+  mitigationStatus: 'mitigated',
+  bdaStatus: 'pending',
+  actionLog: [
+    ...cuas_classified.actionLog!,
+    { time: '00:14:25', label: 'שיבוש פעיל — Regulus-1' },
+    { time: '00:14:32', label: 'מטרה נוטרלה' },
+  ],
+};
+
+export const cuas_bda_complete: Detection = {
+  ...cuas_mitigated,
+  id: 'cuas-006',
+  status: 'event_resolved',
+  bdaStatus: 'complete',
+  actionLog: [
+    ...cuas_mitigated.actionLog!,
+    { time: '00:14:45', label: 'אימות פגיעה — הושלם' },
+  ],
+};
+
+export const CUAS_LIFECYCLE = [
+  cuas_raw,
+  cuas_classified,
+  cuas_classified_bird,
+  cuas_mitigating,
+  cuas_mitigated,
+  cuas_bda_complete,
+];
+
+export const burst_targets: Detection[] = Array.from({ length: 5 }, (_, i) => ({
+  id: `burst-${i}`,
+  name: `רחפן #${i + 1}`,
+  type: 'uav' as const,
+  status: 'detection' as const,
+  timestamp: `00:15:0${i}`,
+  coordinates: `32.${(900 + i).toString()}° N, 34.780° E`,
+  distance: `${(1.2 + i * 0.3).toFixed(1)} ק״מ`,
+  flowType: 5,
+  entityStage: 'classified' as const,
+  classifiedType: i < 4 ? 'drone' as const : 'bird' as const,
+  confidence: 0.85 - i * 0.05,
+  mitigationStatus: 'idle' as const,
+}));
+
 export const ALL_DETECTIONS = [
   flow1_suspicion,
   flow1_investigation,
   flow1_decide,
+  flow1_act,
+  flow2_investigate,
   flow2_tracking,
   flow2_mitigating,
   flow2_mitigated,

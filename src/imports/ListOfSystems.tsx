@@ -603,9 +603,13 @@ export default function ListOfSystems({
     <div className={`w-full flex flex-col ${className}`}>
       <div className="sticky top-0 z-10 bg-[#161616]">
         {/* Tab bar */}
-        <div className="flex border-b border-white/10 px-1" dir="rtl">
+        <div className="flex border-b border-white/10 px-1" dir="rtl" role="tablist">
           <button
+            id="tab-active"
             onClick={() => setActiveTab('active')}
+            role="tab"
+            aria-selected={activeTab === 'active'}
+            aria-controls="tabpanel-active"
             className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold transition-colors border-b-2 ${
               activeTab === 'active' ? 'border-white text-white' : 'border-transparent text-zinc-500 hover:text-zinc-300'
             }`}
@@ -616,7 +620,11 @@ export default function ListOfSystems({
             )}
           </button>
           <button
+            id="tab-completed"
             onClick={() => setActiveTab('completed')}
+            role="tab"
+            aria-selected={activeTab === 'completed'}
+            aria-controls="tabpanel-completed"
             className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold transition-colors border-b-2 ${
               activeTab === 'completed' ? 'border-white text-white' : 'border-transparent text-zinc-500 hover:text-zinc-300'
             }`}
@@ -642,7 +650,7 @@ export default function ListOfSystems({
 
       <div className="flex-1 space-y-2 pb-20 overflow-y-auto custom-scrollbar px-2 pt-2">
         {activeTab === 'active' && (
-          <>
+          <div id="tabpanel-active" role="tabpanel" aria-labelledby="tab-active">
             <CollapsibleGroup title="מטרות" count={groups.tasks.length} icon={ListTodo} defaultOpen>
               {renderTargetList(groups.tasks)}
             </CollapsibleGroup>
@@ -661,14 +669,17 @@ export default function ListOfSystems({
                 renderTargetList(missionTargets)
               )}
             </CollapsibleGroup>
-          </>
+          </div>
         )}
-        {activeTab === 'completed' &&
-          (completedList.length === 0 ? (
-            <div className="p-4 text-center text-[10px] text-gray-600 font-mono">אין אירועים שהושלמו</div>
-          ) : (
-            renderTargetList(completedList)
-          ))}
+        {activeTab === 'completed' && (
+          <div id="tabpanel-completed" role="tabpanel" aria-labelledby="tab-completed">
+            {completedList.length === 0 ? (
+              <div className="p-4 text-center text-[10px] text-gray-600 font-mono">אין אירועים שהושלמו</div>
+            ) : (
+              renderTargetList(completedList)
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

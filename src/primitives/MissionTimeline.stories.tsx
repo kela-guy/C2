@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { expect } from 'storybook/test';
 import { MissionTimeline } from './MissionTimeline';
 
 const STEPS = ['נעילת מטרה', 'אישור ירי', 'שיגור', 'מעקב', 'אימות פגיעה'];
@@ -27,6 +28,13 @@ export const InProgress: Story = {
       <MissionTimeline {...args} />
     </div>
   ),
+  play: async ({ canvas }) => {
+    const list = canvas.getByRole('list');
+    await expect(list.tagName).toBe('OL');
+
+    const items = canvas.getAllByRole('listitem');
+    await expect(items.length).toBe(STEPS.length);
+  },
 };
 
 export const WaitingConfirmation: Story = {

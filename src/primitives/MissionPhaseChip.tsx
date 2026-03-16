@@ -12,7 +12,7 @@ export function MissionPhaseChip({ phase }: { phase?: MissionPhaseType }) {
   const c = config[phase || ''] || config.planning;
   return (
     <div className={`${c.bg} flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-medium ${c.text}`}>
-      {c.dot && <span className={`w-1.5 h-1.5 rounded-full ${c.dot} ${c.pulse ? 'animate-pulse' : ''}`} />}
+      {c.dot && <span className={`w-1.5 h-1.5 rounded-full ${c.dot} ${c.pulse ? 'animate-pulse' : ''}`} aria-hidden="true" />}
       {c.label}
     </div>
   );

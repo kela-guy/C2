@@ -103,14 +103,20 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
       </div>
 
       {confirmingAction?.confirm && (
-        <div className="mt-1 p-3 rounded border border-white/10 bg-white/[0.02]">
+        <div
+          className="mt-1 p-3 rounded border border-white/10 bg-white/[0.02]"
+          role="alertdialog"
+          aria-labelledby="confirm-title"
+          aria-describedby={confirmingAction.confirm.description ? 'confirm-desc' : undefined}
+          aria-modal="true"
+        >
           {confirmStep === 1 ? (
             <>
-              <div className="text-[11px] font-semibold text-zinc-200 mb-2">
+              <div id="confirm-title" className="text-[11px] font-semibold text-zinc-200 mb-2">
                 {confirmingAction.confirm.title}
               </div>
               {confirmingAction.confirm.description && (
-                <div className="text-[10px] text-zinc-500 mb-3 text-pretty">
+                <div id="confirm-desc" className="text-[10px] text-zinc-500 mb-3 text-pretty">
                   {confirmingAction.confirm.description}
                 </div>
               )}
@@ -131,7 +137,7 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
             </>
           ) : (
             <>
-              <div className="text-[11px] font-bold text-red-400 mb-2">אישור סופי</div>
+              <div id="confirm-title" className="text-[11px] font-bold text-red-400 mb-2">אישור סופי</div>
               <div className="flex gap-2">
                 <button
                   onClick={handleConfirm}

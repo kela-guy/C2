@@ -55,7 +55,7 @@ export function TargetCard({
       dir="rtl"
     >
       <div
-        className="transition-colors cursor-pointer hover:bg-white/5"
+        className="transition-colors cursor-pointer hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
         style={{
           padding: `${d.header.paddingY}px ${d.header.paddingX}px`,
           backgroundColor: open ? `rgba(255,255,255,${d.header.selectedBgOpacity})` : undefined,
@@ -63,6 +63,10 @@ export function TargetCard({
           borderTopRightRadius: `${d.container.borderRadius}px`,
         }}
         onClick={onToggle}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(); } }}
+        role="button"
+        tabIndex={0}
+        aria-expanded={open}
       >
         {header}
       </div>

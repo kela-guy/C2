@@ -62,31 +62,28 @@ function useBatchItems(): BatchItem[] {
 const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
   const items = useBatchItems();
   const [expanded, setExpanded] = React.useState(false);
-  const level = highestLevel(items);
-  const accent = LEVEL_ACCENT[level] ?? LEVEL_ACCENT.info;
 
   if (items.length === 0) return null;
 
   if (items.length === 1) {
     const data = items[0];
-    const itemAccent = LEVEL_ACCENT[data.level] ?? LEVEL_ACCENT.info;
     return (
       <div
         className="relative w-[356px] rounded-lg border border-white/[0.12] bg-[#1c1c20] shadow-[0_8px_30px_rgba(0,0,0,0.5)] overflow-hidden cursor-pointer group"
         onClick={() => window.dispatchEvent(new CustomEvent('toast-clicked', { detail: data }))}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.dispatchEvent(new CustomEvent('toast-clicked', { detail: data })); } }}
+        role="button"
+        tabIndex={0}
         dir="rtl"
       >
-        <div
-          className="absolute right-0 top-0 bottom-0 w-[2px] rounded-full"
-          style={{ backgroundColor: itemAccent }}
-        />
-        <div className="py-3 pr-4 pl-3 flex gap-3">
+        <div className="py-3 px-3 flex gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2">
               <span className="text-[13px] font-medium text-zinc-100 truncate">{data.title}</span>
               <button
                 onClick={(e) => { e.stopPropagation(); toast.dismiss(toastId); flushBatch(); }}
                 className="text-zinc-600 hover:text-zinc-400 transition-colors shrink-0 opacity-0 group-hover:opacity-100"
+                aria-label="סגור"
               >
                 <X size={14} />
               </button>
@@ -103,12 +100,7 @@ const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
       className="relative w-[356px] rounded-lg border border-white/[0.12] bg-[#1c1c20] shadow-[0_8px_30px_rgba(0,0,0,0.5)] overflow-hidden"
       dir="rtl"
     >
-      <div
-        className="absolute right-0 top-0 bottom-0 w-[2px] rounded-full"
-        style={{ backgroundColor: accent }}
-      />
-
-      <div className="py-3 pr-4 pl-3">
+      <div className="py-3 px-3">
         <div className="flex items-center justify-between">
           <span className="text-[13px] font-medium text-zinc-100">
             {items.length} התראות חדשות
@@ -117,12 +109,14 @@ const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
             <button
               onClick={(e) => { e.stopPropagation(); setExpanded(prev => !prev); }}
               className="text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors px-1.5 py-0.5 rounded hover:bg-white/[0.04]"
+              aria-expanded={expanded}
             >
               {expanded ? 'סגור' : 'הרחב'}
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); toast.dismiss(toastId); flushBatch(); }}
               className="text-zinc-600 hover:text-zinc-400 transition-colors"
+              aria-label="סגור"
             >
               <X size={14} />
             </button>
@@ -143,10 +137,19 @@ const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
               return (
                 <div
                   key={i}
-                  className="flex items-start gap-2.5 px-2 py-2 rounded-md hover:bg-white/[0.03] transition-colors cursor-pointer"
+                  className="flex items-start gap-2.5 px-2 py-2 rounded-md hover:bg-white/[0.03] transition-colors cursor-pointer focus-visible:ring-1 focus-visible:ring-white/25 focus-visible:outline-none"
+                  role="button"
+                  tabIndex={0}
                   onClick={(e) => {
                     e.stopPropagation();
                     if (item.code) {
+                      window.dispatchEvent(new CustomEvent('toast-clicked', { detail: item }));
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if ((e.key === 'Enter' || e.key === ' ') && item.code) {
+                      e.preventDefault();
+                      e.stopPropagation();
                       window.dispatchEvent(new CustomEvent('toast-clicked', { detail: item }));
                     }
                   }}
@@ -249,6 +252,7 @@ export function NotificationSystem() {
   return (
     <>
       <div
+        aria-hidden="true"
         className={`fixed inset-0 pointer-events-none z-40 transition-opacity duration-300 ease-in-out ${
           criticalActive ? 'visible' : 'invisible'
         }`}

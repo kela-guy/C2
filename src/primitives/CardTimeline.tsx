@@ -40,6 +40,8 @@ export function CardTimeline({ steps, compact, className = '' }: CardTimelinePro
                 height: step.status === 'active' ? d.activeDotSize : d.dotSize,
               }}
               title={step.label}
+              role="img"
+              aria-label={`${step.label}: ${step.status === 'complete' ? 'הושלם' : step.status === 'active' ? 'פעיל' : step.status === 'error' ? 'שגיאה' : 'ממתין'}`}
             />
             {idx < steps.length - 1 && (
               <div
@@ -70,23 +72,23 @@ export function CardTimeline({ steps, compact, className = '' }: CardTimelinePro
           }`}
         >
           {step.status === 'complete' ? (
-            <div className="size-4 rounded-full flex-shrink-0 border border-[#333] flex items-center justify-center">
+            <div className="size-4 rounded-full flex-shrink-0 border border-[#333] flex items-center justify-center" aria-hidden="true">
               <Check size={10} className="text-[#12b886]" strokeWidth={2.5} />
             </div>
           ) : step.status === 'active' ? (
-            <div className="size-4 rounded-full flex-shrink-0 border border-[#444] flex items-center justify-center">
+            <div className="size-4 rounded-full flex-shrink-0 border border-[#444] flex items-center justify-center" aria-hidden="true">
               <div className="size-2 rounded-full bg-red-500" />
             </div>
           ) : step.status === 'error' ? (
-            <div className="size-4 rounded-full flex-shrink-0 border border-red-500/50 flex items-center justify-center">
+            <div className="size-4 rounded-full flex-shrink-0 border border-red-500/50 flex items-center justify-center" aria-hidden="true">
               <Loader2 size={10} className="text-red-400 animate-spin" />
             </div>
           ) : (
-            <div className="size-4 rounded-full flex-shrink-0 border border-[#444]" />
+            <div className="size-4 rounded-full flex-shrink-0 border border-[#444]" aria-hidden="true" />
           )}
           <span>{step.label}</span>
           {step.status === 'active' && (
-            <span className="inline-block w-1 h-3 bg-white/60 animate-blink mr-1" />
+            <span className="inline-block w-1 h-3 bg-white/60 animate-blink mr-1" aria-hidden="true" />
           )}
         </div>
       ))}

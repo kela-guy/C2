@@ -52,11 +52,43 @@ export const ExpandCollapse: Story = {
     ),
   },
   play: async ({ args, canvas, userEvent }) => {
+    const trigger = canvas.getByRole('button');
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+
     expect(canvas.queryByTestId('expanded-content')).not.toBeInTheDocument();
 
-    await userEvent.click(canvas.getByText('יעד לדוגמה'));
-
+    await userEvent.click(trigger);
     await expect(args.onToggle).toHaveBeenCalledOnce();
+  },
+};
+
+export const KeyboardToggle: Story = {
+  name: 'Keyboard — Enter/Space Toggle',
+  args: {
+    accent: 'detection',
+    open: false,
+    onToggle: fn(),
+    header: (
+      <CardHeader
+        icon={Target}
+        title="יעד מקלדת"
+        status={<StatusChip label="איתור" color="red" />}
+        open={false}
+      />
+    ),
+    children: <div className="p-3 text-xs text-zinc-400">תוכן</div>,
+  },
+  play: async ({ args, canvas, userEvent }) => {
+    const trigger = canvas.getByRole('button');
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    await expect(trigger).toHaveAttribute('tabindex', '0');
+
+    trigger.focus();
+    await userEvent.keyboard('{Enter}');
+    await expect(args.onToggle).toHaveBeenCalledOnce();
+
+    await userEvent.keyboard(' ');
+    await expect(args.onToggle).toHaveBeenCalledTimes(2);
   },
 };
 

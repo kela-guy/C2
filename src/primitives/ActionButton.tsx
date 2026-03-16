@@ -26,7 +26,7 @@ export function ActionButton({
     lg: "h-9 text-[13px] gap-2 font-semibold",
   };
 
-  const base = `${sizeStyles[size]} flex items-center justify-center px-3 rounded font-medium font-['Inter'] transition-all active:scale-[0.98] will-change-transform`;
+  const base = `${sizeStyles[size]} flex items-center justify-center px-3 rounded font-medium font-['Inter'] transition-all active:scale-[0.98] will-change-transform focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none`;
   const disabledStyle = disabled ? "opacity-40 cursor-not-allowed pointer-events-none" : "";
 
   const variantStyles: Record<string, string> = {
@@ -46,7 +46,7 @@ export function ActionButton({
       disabled={disabled}
       className={`${base} ${variantStyles[variant] || variantStyles.primary} ${disabledStyle} ${className}`}
     >
-      {Icon && <Icon size={iconSize} />}
+      {Icon && <Icon size={iconSize} aria-hidden="true" />}
       <span>{label}</span>
     </button>
   );

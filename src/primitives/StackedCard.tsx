@@ -128,12 +128,17 @@ export function StackedCard({
       >
         {/* Header — always visible */}
         <div
-          className="flex items-center gap-2 cursor-pointer hover:bg-white/[0.03] transition-colors"
+          className="flex items-center gap-2 cursor-pointer hover:bg-white/[0.03] transition-colors focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
           style={{
             padding: `${d.header.paddingY + 2}px ${d.header.paddingX}px`,
             backgroundColor: expanded ? `rgba(255,255,255,${d.header.selectedBgOpacity})` : undefined,
           }}
           onClick={onToggleExpanded}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggleExpanded(); } }}
+          role="button"
+          tabIndex={0}
+          aria-expanded={expanded}
+          aria-label={`${count} איתורים — ${expanded ? 'סגור' : 'הרחב'}`}
         >
           <div
             className="flex items-center justify-center shrink-0"
@@ -144,7 +149,7 @@ export function StackedCard({
               backgroundColor: d.iconBox.defaultBg,
             }}
           >
-            <Layers size={d.iconBox.iconSize} className="text-zinc-400" />
+            <Layers size={d.iconBox.iconSize} className="text-zinc-400" aria-hidden="true" />
           </div>
 
           <div className="flex-1 min-w-0">
@@ -181,6 +186,7 @@ export function StackedCard({
             className={`text-zinc-600 shrink-0 transition-transform duration-200 ${
               expanded ? 'rotate-180' : ''
             }`}
+            aria-hidden="true"
           />
         </div>
 

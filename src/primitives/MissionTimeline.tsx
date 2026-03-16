@@ -53,37 +53,37 @@ export function MissionTimeline({
 
     const headerAction = (
         <div className="flex items-center gap-1.5">
-            {isRunning && <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />}
-            {isDroneVerifying && <Loader2 size={12} className="animate-spin text-[#909296]" />}
+            {isRunning && <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" aria-hidden="true" />}
+            {isDroneVerifying && <Loader2 size={12} className="animate-spin text-[#909296]" aria-hidden="true" />}
         </div>
     );
 
     return (
         <AccordionSection title={title} defaultOpen={true} icon={MissionIcon} headerAction={headerAction}>
             <div className="flex flex-col gap-1.5 py-2" dir="rtl">
-                <div className="flex flex-col gap-2">
+                <ol className="flex flex-col gap-2 list-none m-0 p-0">
                     {steps.map((step, idx) => {
                         const isActive = idx === progress;
                         const isStepCompleted = idx < progress;
                         
                         return (
-                            <div key={idx} className={`flex items-center gap-2.5 text-xs font-mono transition-all duration-300
+                            <li key={idx} className={`flex items-center gap-2.5 text-xs font-mono transition-all duration-300
                                 ${isActive ? 'text-white' : isStepCompleted ? 'text-white/50' : 'text-white/20'}
                             `}>
                                 {isStepCompleted ? (
-                                    <div className="size-4 rounded-full flex-shrink-0 border border-[#333] flex items-center justify-center">
+                                    <div className="size-4 rounded-full flex-shrink-0 border border-[#333] flex items-center justify-center" aria-hidden="true">
                                         <Check size={10} className="text-[#12b886]" strokeWidth={2.5} />
                                     </div>
                                 ) : isActive ? (
-                                    <div className="size-4 rounded-full flex-shrink-0 border border-[#444] flex items-center justify-center">
+                                    <div className="size-4 rounded-full flex-shrink-0 border border-[#444] flex items-center justify-center" aria-hidden="true">
                                         <div className="size-2 rounded-full bg-red-500" />
                                     </div>
                                 ) : (
-                                    <div className="size-4 rounded-full flex-shrink-0 border border-[#444]" />
+                                    <div className="size-4 rounded-full flex-shrink-0 border border-[#444]" aria-hidden="true" />
                                 )}
                                 <span>{step}</span>
-                                {isActive && <span className="inline-block w-1 h-3 bg-white/60 animate-blink mr-1" />}
-                            </div>
+                                {isActive && <span className="inline-block w-1 h-3 bg-white/60 animate-blink mr-1" aria-hidden="true" />}
+                            </li>
                         );
                     })}
 
@@ -99,14 +99,14 @@ export function MissionTimeline({
                     )}
 
                     {isDroneVerifying && (
-                        <div className="flex items-center gap-2.5 text-xs font-mono text-white animate-pulse">
-                            <div className="size-4 rounded-full flex-shrink-0 border border-[#444] flex items-center justify-center">
+                        <li className="flex items-center gap-2.5 text-xs font-mono text-white animate-pulse">
+                            <div className="size-4 rounded-full flex-shrink-0 border border-[#444] flex items-center justify-center" aria-hidden="true">
                                 <div className="size-2 rounded-full bg-red-500" />
                             </div>
                             <span>רחפן בדרך לאימות פגיעה...</span>
-                        </div>
+                        </li>
                     )}
-                </div>
+                </ol>
 
                 <div className="mt-1 flex gap-2 items-center pt-2 border-t border-white/5">
                     {isRunning && (

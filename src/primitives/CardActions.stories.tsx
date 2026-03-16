@@ -57,6 +57,12 @@ export const ConfirmFlow: Story = {
   play: async ({ args, canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole('button', { name: /שיבוש/ }));
 
+    const dialog = canvas.getByRole('alertdialog');
+    await expect(dialog).toBeInTheDocument();
+    await expect(dialog).toHaveAttribute('aria-labelledby', 'confirm-title');
+    await expect(dialog).toHaveAttribute('aria-describedby', 'confirm-desc');
+    await expect(dialog).toHaveAttribute('aria-modal', 'true');
+
     await expect(canvas.getByText('הפעלת שיבוש')).toBeInTheDocument();
     await expect(canvas.getByText('האם אתה בטוח?')).toBeInTheDocument();
 
@@ -129,6 +135,29 @@ export const DoubleConfirmFlow: Story = {
     await userEvent.click(canvas.getByRole('button', { name: /הפעל/ }));
 
     await expect(args.actions[0].onClick).toHaveBeenCalledOnce();
+  },
+};
+
+export const PlaybookSelection: Story = {
+  name: 'Playbook Selection (Flow 1 Decide)',
+  args: {
+    actions: [
+      { id: 'pb-fast-inspect', label: 'חקירה מהירה', icon: Plane, variant: 'primary', size: 'md', onClick: fn() },
+      { id: 'pb-full-response', label: 'תגובה מלאה', icon: Zap, variant: 'danger', size: 'sm', onClick: fn() },
+      { id: 'pb-transfer', label: 'העבר אחריות', icon: Radio, variant: 'secondary', size: 'sm', onClick: fn() },
+      { id: 'close-event', label: 'סגור', icon: X, variant: 'ghost', size: 'sm', onClick: fn() },
+    ],
+  },
+};
+
+export const InvestigationActions: Story = {
+  name: 'Investigation Actions (Flow 2)',
+  args: {
+    actions: [
+      { id: 'send-drone', label: 'שגר רחפן', icon: Plane, variant: 'primary', size: 'md', onClick: fn() },
+      { id: 'mark-poi', label: 'סמן נ.ע', icon: Crosshair, variant: 'secondary', size: 'sm', onClick: fn() },
+      { id: 'close-event', label: 'סגור אירוע', icon: X, variant: 'ghost', size: 'sm', onClick: fn() },
+    ],
   },
 };
 

@@ -38,12 +38,12 @@ export function CardLog({
       <div className="flex flex-col py-2 px-1" dir="rtl">
         <div className="flex flex-col justify-center items-start">
           {visible.map((entry, idx) => (
-            <div key={idx} className="flex items-center justify-center gap-2.5 mb-2 relative">
+            <div key={idx} className="flex items-center justify-center gap-2.5 mb-2 relative w-full">
               <div className="w-[11px] h-[11px] rounded-full border border-white/20 bg-[#1a1a1a] shrink-0 mt-0.5 z-[1]" />
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 flex flex-col">
                 <span className="text-[11px] text-zinc-300">{entry.label}</span>
               </div>
-              <span className="text-[9px] text-zinc-600 font-mono shrink-0 tabular-nums">
+              <span className="text-[9px] text-white/50 font-mono shrink-0 tabular-nums leading-6 align-middle">
                 {entry.time}
               </span>
             </div>
