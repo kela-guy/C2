@@ -1,0 +1,5 @@
+{
+  "buildScriptName": "build-storybook",
+  "zip": true,
+  "autoAcceptChanges": "main"
+}
