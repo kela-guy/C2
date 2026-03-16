@@ -26,7 +26,7 @@ export const CARD_TOKENS = {
   },
   subtitle: {
     fontSize: 10,
-    color: '#666666',
+    color: '#999999',
   },
   iconBox: {
     size: 30,

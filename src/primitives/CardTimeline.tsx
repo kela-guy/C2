@@ -68,7 +68,7 @@ export function CardTimeline({ steps, compact, className = '' }: CardTimelinePro
                 ? 'text-white/50'
                 : step.status === 'error'
                   ? 'text-red-400'
-                  : 'text-white/20'
+                  : 'text-white/50'
           }`}
         >
           {step.status === 'complete' ? (

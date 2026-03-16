@@ -68,7 +68,7 @@ export function MissionTimeline({
                         
                         return (
                             <li key={idx} className={`flex items-center gap-2.5 text-xs font-mono transition-all duration-300
-                                ${isActive ? 'text-white' : isStepCompleted ? 'text-white/50' : 'text-white/20'}
+                                ${isActive ? 'text-white' : 'text-white/50'}
                             `}>
                                 {isStepCompleted ? (
                                     <div className="size-4 rounded-full flex-shrink-0 border border-[#333] flex items-center justify-center" aria-hidden="true">
@@ -88,14 +88,16 @@ export function MissionTimeline({
                     })}
 
                     {showDroneOption && onSendDroneVerification && (
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onSendDroneVerification(); }}
-                            className="flex items-center gap-2.5 text-xs font-mono text-white hover:text-white transition-all cursor-pointer group mt-1 bg-white/5 hover:bg-white/10 rounded px-2 py-1.5 border border-white/10 hover:border-white/20 w-full"
-                        >
-                            <div className="w-3 h-3 rounded-full flex-shrink-0 border border-white/30 group-hover:border-white/50 transition-colors" />
-                            <span>שלח רחפן לאימות</span>
-                            <span className="opacity-40 group-hover:opacity-70 transition-opacity mr-auto"><MapDroneIcon size={14} fill="currentColor" /></span>
-                        </button>
+                        <li>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onSendDroneVerification(); }}
+                                className="flex items-center gap-2.5 text-xs font-mono text-white hover:text-white transition-all cursor-pointer group mt-1 bg-white/5 hover:bg-white/10 rounded px-2 py-1.5 border border-white/10 hover:border-white/20 w-full"
+                            >
+                                <div className="w-3 h-3 rounded-full flex-shrink-0 border border-white/30 group-hover:border-white/50 transition-colors" />
+                                <span>שלח רחפן לאימות</span>
+                                <span className="opacity-40 group-hover:opacity-70 transition-opacity mr-auto" aria-hidden="true"><MapDroneIcon size={14} fill="currentColor" /></span>
+                            </button>
+                        </li>
                     )}
 
                     {isDroneVerifying && (
@@ -127,7 +129,7 @@ export function MissionTimeline({
                             variant="glass"
                             icon={Check}
                             onClick={(e) => { e?.stopPropagation(); onComplete(); }}
-                            className="!flex-none px-4 border-[#12b886]/40 bg-[rgba(18,184,134,0.15)] hover:bg-[rgba(18,184,134,0.25)] text-[#12b886]"
+                            className="!flex-none px-4 border-[#6ee7b7]/40 bg-[rgba(110,231,183,0.15)] hover:bg-[rgba(110,231,183,0.25)] text-[#6ee7b7]"
                         />
                     )}
                 </div>

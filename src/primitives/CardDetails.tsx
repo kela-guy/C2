@@ -51,7 +51,7 @@ export function CardDetails({
               >
                 {classification.typeLabel}
               </span>
-              <span className="text-[10px] text-zinc-500">מסווג</span>
+              <span className="text-[10px] text-zinc-400">מסווג</span>
             </div>
             {classification.confidence != null && (
               <span

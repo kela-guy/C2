@@ -5,14 +5,14 @@ export function StatusChip({ label, color = "green", className = "" }: { label: 
   let text = "text-white";
 
   if (color === "green") {
-    bg = "bg-[rgba(18,184,134,0.15)]";
-    text = "text-[#12b886]";
+    bg = "bg-[rgba(110,231,183,0.15)]";
+    text = "text-[#6ee7b7]";
   } else if (color === "red") {
-    bg = "bg-[rgba(250,82,82,0.15)]";
-    text = "text-[#fa5252]";
+    bg = "bg-[rgba(252,165,165,0.15)]";
+    text = "text-[#fca5a5]";
   } else if (color === "orange") {
-    bg = "bg-[rgba(253,126,20,0.15)]";
-    text = "text-[#fd7e14]";
+    bg = "bg-[rgba(253,186,116,0.15)]";
+    text = "text-[#fdba74]";
   }
 
   return (

@@ -95,7 +95,7 @@ export function FilterBar({
             onChange={(e) => onUpdate('query', e.target.value)}
             placeholder="חיפוש..."
             aria-label="חיפוש מטרות"
-            className="w-full bg-white/5 border border-white/5 rounded-md pr-7 pl-2 py-1 text-[11px] text-zinc-200 placeholder:text-zinc-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 focus:border-white/15 focus:bg-white/[0.07] transition-colors"
+            className="w-full bg-white/5 border border-white/5 rounded-md pr-7 pl-2 py-1 text-[11px] text-zinc-200 placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 focus:border-white/15 focus:bg-white/[0.07] transition-colors"
           />
           {filters.query && (
             <button
@@ -111,8 +111,9 @@ export function FilterBar({
           onClick={() => onUpdate('sortBy', filters.sortBy === 'time' ? 'confidence' : 'time')}
           className="flex items-center gap-1 px-2 py-1 rounded text-[10px] text-zinc-400 hover:text-zinc-200 hover:bg-white/5 transition-colors shrink-0"
           title={filters.sortBy === 'time' ? 'מיון לפי זמן' : 'מיון לפי ביטחון'}
+          aria-label={filters.sortBy === 'time' ? 'מיון לפי זמן' : 'מיון לפי ביטחון'}
         >
-          <ArrowUpDown size={11} />
+          <ArrowUpDown size={11} aria-hidden="true" />
           <span>{filters.sortBy === 'time' ? 'זמן' : 'ביטחון'}</span>
         </button>
       </div>
@@ -172,8 +173,11 @@ export function FilterBar({
                   ? 'border-white/15 text-zinc-200 bg-white/5'
                   : 'border-transparent text-zinc-300 hover:text-zinc-100'
               }`}
+              aria-label="פילטרים מתקדמים"
+              aria-expanded={advancedOpen}
+              aria-haspopup="dialog"
             >
-              <SlidersHorizontal size={11} className="opacity-70" />
+              <SlidersHorizontal size={11} className="opacity-70" aria-hidden="true" />
               <span>עוד</span>
               {advancedCount > 0 && (
                 <span className="w-3.5 h-3.5 rounded-full bg-cyan-500/20 text-cyan-400 text-[9px] flex items-center justify-center font-medium">
@@ -204,6 +208,7 @@ export function FilterBar({
           <button
             onClick={onReset}
             className="text-[9px] text-zinc-400 hover:text-zinc-200 transition-colors px-1 shrink-0"
+            aria-label="איפוס פילטרים"
           >
             איפוס
           </button>
@@ -239,12 +244,15 @@ function InlineSelect({
                 ? 'border-white/15 text-zinc-200 bg-white/5'
                 : 'border-transparent text-zinc-300 hover:text-zinc-100'
           }`}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          aria-label={label}
         >
-          <Icon size={11} className="opacity-70" />
+          <Icon size={11} className="opacity-70" aria-hidden="true" />
           <span>{label}</span>
           {isActive && (
             <>
-              <span className="text-white/20">·</span>
+              <span className="text-white/40" aria-hidden="true">·</span>
               <span className="text-cyan-400 font-medium">{value}</span>
             </>
           )}
@@ -277,11 +285,13 @@ function SingleSelect({
   onChange: (v: string) => void;
 }) {
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col" role="listbox">
       {options.map(opt => (
         <button
           key={opt.value}
           onClick={() => onChange(opt.value)}
+          role="option"
+          aria-selected={value === opt.value}
           className={`flex items-center gap-2 px-2.5 py-1.5 rounded text-[11px] transition-colors text-right ${
             value === opt.value
               ? 'bg-white/10 text-white'
@@ -290,7 +300,7 @@ function SingleSelect({
         >
           <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
             value === opt.value ? 'bg-cyan-400' : 'bg-zinc-700'
-          }`} />
+          }`} aria-hidden="true" />
           {opt.label}
         </button>
       ))}
@@ -308,17 +318,19 @@ function MultiSelect({
   onToggle: (id: string) => void;
 }) {
   if (items.length === 0) {
-    return <span className="text-[9px] text-zinc-600 px-2 py-1">אין אפשרויות</span>;
+    return <span className="text-[9px] text-zinc-400 px-2 py-1">אין אפשרויות</span>;
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col" role="listbox" aria-multiselectable="true">
       {items.map(item => {
         const isActive = selected.includes(item.id);
         return (
           <button
             key={item.id}
             onClick={() => onToggle(item.id)}
+            role="option"
+            aria-selected={isActive}
             className={`flex items-center gap-2 px-2.5 py-1.5 rounded text-[11px] transition-colors text-right ${
               isActive
                 ? 'bg-cyan-500/10 text-cyan-300'
@@ -449,10 +461,11 @@ function AdvancedSection({
         {isActive && (
           <button
             onClick={onClear}
-            className="mr-auto text-zinc-600 hover:text-zinc-400 transition-colors"
+            className="mr-auto text-zinc-500 hover:text-zinc-400 transition-colors"
             title="נקה"
+            aria-label="נקה"
           >
-            <X size={10} />
+            <X size={10} aria-hidden="true" />
           </button>
         )}
       </div>
@@ -477,7 +490,7 @@ function RangeSlider({
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-[9px] text-zinc-500 font-mono tabular-nums w-6 text-center">{value[0]}</span>
+      <span className="text-[9px] text-zinc-400 font-mono tabular-nums w-6 text-center">{value[0]}</span>
       <div className="relative flex-1 h-5 flex items-center">
         <div className="absolute inset-x-0 h-1 bg-white/10 rounded-full" />
         <div
@@ -509,7 +522,7 @@ function RangeSlider({
           className="absolute inset-x-0 w-full appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-cyan-400 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow"
         />
       </div>
-      <span className="text-[9px] text-zinc-500 font-mono tabular-nums w-6 text-center">{value[1]}</span>
+      <span className="text-[9px] text-zinc-400 font-mono tabular-nums w-6 text-center">{value[1]}</span>
     </div>
   );
 }

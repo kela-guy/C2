@@ -2254,7 +2254,7 @@ export const C2Dashboard = () => {
         {/* Storybook + Notifications at bottom */}
         <div className="border-t border-white/10 flex flex-col items-center gap-0.5 py-2">
           <a
-            href="http://localhost:6006"
+            href={import.meta.env.DEV ? 'http://localhost:6006' : 'https://main--69b81d2c2b313942c613995e.chromatic.com/'}
             target="_blank"
             rel="noopener noreferrer"
             className="p-2.5 rounded-lg text-gray-400 hover:text-pink-400 hover:bg-pink-500/10 transition-colors w-10 flex justify-center"

@@ -27,7 +27,7 @@ export function CardSensors({
 
   return (
     <div className={`flex flex-col gap-1 pt-2 border-t border-white/5 ${className}`} dir="rtl">
-      <span className="text-[10px] text-zinc-500 font-semibold pb-0.5">
+      <span className="text-[10px] text-zinc-400 font-semibold pb-0.5">
         {label} ({sensors.length})
       </span>
       {sensors.map((sensor) => {
@@ -53,12 +53,12 @@ export function CardSensors({
             <span className="font-['Inter'] text-xs">{sensor.typeLabel}</span>
             <div className="flex-1" />
             {sensor.detectedAt && (
-              <span className="text-[9px] text-zinc-600 font-mono tabular-nums">
+              <span className="text-[9px] text-zinc-400 font-mono tabular-nums">
                 {sensor.detectedAt}
               </span>
             )}
             {sensor.distanceLabel && (
-              <span className="text-[10px] text-zinc-500 font-mono tabular-nums">
+              <span className="text-[10px] text-zinc-400 font-mono tabular-nums">
                 {sensor.distanceLabel}
               </span>
             )}

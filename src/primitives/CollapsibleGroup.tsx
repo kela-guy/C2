@@ -36,7 +36,7 @@ export function CollapsibleGroup({
           <span className="text-xs text-zinc-300 font-semibold truncate text-balance">
             {title}
           </span>
-          <span className="text-[11px] text-zinc-500 font-mono tabular-nums">
+          <span className="text-[11px] text-zinc-400 font-mono tabular-nums">
             {count}
           </span>
         </div>

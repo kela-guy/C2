@@ -169,13 +169,13 @@ export function StackedCard({
               {breakdownEntries.map(([label, c]) => (
                 <span
                   key={label}
-                  className="text-[9px] text-zinc-500 font-mono"
+                  className="text-[9px] text-zinc-400 font-mono"
                 >
                   {label}
                   <span className="text-zinc-400 mr-0.5">×{c}</span>
                 </span>
               ))}
-              <span className="text-[9px] text-zinc-600 font-mono">
+              <span className="text-[9px] text-zinc-400 font-mono">
                 {timeRange}
               </span>
             </div>
@@ -183,7 +183,7 @@ export function StackedCard({
 
           <ChevronDown
             size={d.animation.chevronSize}
-            className={`text-zinc-600 shrink-0 transition-transform duration-200 ${
+            className={`text-zinc-400 shrink-0 transition-transform duration-200 ${
               expanded ? 'rotate-180' : ''
             }`}
             aria-hidden="true"

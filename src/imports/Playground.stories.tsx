@@ -52,7 +52,7 @@ function ToggleChip({
         text-[11px] px-2.5 py-1 rounded-full border transition-all font-medium
         ${active
           ? 'bg-white/10 border-white/20 text-white'
-          : 'bg-transparent border-white/5 text-zinc-600 line-through'
+          : 'bg-transparent border-white/5 text-zinc-400 line-through'
         }
         ${!hasData ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer hover:border-white/30'}
       `}
@@ -195,7 +195,7 @@ function Playground() {
       <div className="w-[260px] shrink-0 space-y-5">
         {/* Detection Picker */}
         <div>
-          <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-2 block">
+          <label className="text-[10px] uppercase tracking-wider text-zinc-400 font-semibold mb-2 block">
             Detection
           </label>
           <div className="space-y-1">
@@ -207,12 +207,12 @@ function Playground() {
                   w-full text-right px-2.5 py-1.5 rounded-md text-[11px] transition-all cursor-pointer
                   ${i === selectedIdx
                     ? 'bg-white/10 text-white border border-white/15'
-                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5 border border-transparent'
+                    : 'text-zinc-400 hover:text-zinc-300 hover:bg-white/5 border border-transparent'
                   }
                 `}
               >
                 <div className="font-medium truncate">{d.name}</div>
-                <div className="text-[9px] text-zinc-600 mt-0.5">
+                <div className="text-[9px] text-zinc-400 mt-0.5">
                   Flow {d.flowType} — {FLOW_LABELS[d.flowType ?? 0] ?? 'Unknown'}
                 </div>
               </button>
@@ -223,13 +223,13 @@ function Playground() {
         {/* Accent Override */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">
+            <label className="text-[10px] uppercase tracking-wider text-zinc-400 font-semibold">
               Accent
             </label>
             {accentOverride && (
               <button
                 onClick={() => setAccentOverride(null)}
-                className="text-[9px] text-zinc-600 hover:text-zinc-400 cursor-pointer"
+                className="text-[9px] text-zinc-400 hover:text-zinc-400 cursor-pointer"
               >
                 Reset
               </button>
@@ -245,7 +245,7 @@ function Playground() {
               />
             ))}
           </div>
-          <div className="text-[9px] text-zinc-600 mt-1.5">
+          <div className="text-[9px] text-zinc-400 mt-1.5">
             {accentOverride ? `Override: ${accentOverride}` : `Auto: ${slots.accent}`}
           </div>
         </div>
@@ -253,20 +253,20 @@ function Playground() {
         {/* Slot Toggles */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">
+            <label className="text-[10px] uppercase tracking-wider text-zinc-400 font-semibold">
               Slots ({enabledCount}/{totalAvailable})
             </label>
             <div className="flex gap-1">
               <button
                 onClick={() => setEnabledSlots(Object.fromEntries(Object.keys(SLOT_LABELS).map(k => [k, true])) as Record<SlotKey, boolean>)}
-                className="text-[9px] text-zinc-600 hover:text-zinc-400 cursor-pointer"
+                className="text-[9px] text-zinc-400 hover:text-zinc-400 cursor-pointer"
               >
                 All
               </button>
               <span className="text-zinc-700 text-[9px]">·</span>
               <button
                 onClick={() => setEnabledSlots(Object.fromEntries(Object.keys(SLOT_LABELS).map(k => [k, false])) as Record<SlotKey, boolean>)}
-                className="text-[9px] text-zinc-600 hover:text-zinc-400 cursor-pointer"
+                className="text-[9px] text-zinc-400 hover:text-zinc-400 cursor-pointer"
               >
                 None
               </button>
@@ -287,7 +287,7 @@ function Playground() {
 
         {/* State Toggle */}
         <div>
-          <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-2 block">
+          <label className="text-[10px] uppercase tracking-wider text-zinc-400 font-semibold mb-2 block">
             Card State
           </label>
           <button
@@ -296,7 +296,7 @@ function Playground() {
               text-[11px] px-3 py-1.5 rounded-md border transition-all cursor-pointer
               ${open
                 ? 'bg-white/10 border-white/20 text-white'
-                : 'bg-transparent border-white/10 text-zinc-500'
+                : 'bg-transparent border-white/10 text-zinc-400'
               }
             `}
           >
@@ -306,10 +306,10 @@ function Playground() {
 
         {/* Data Inspector */}
         <div>
-          <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-2 block">
+          <label className="text-[10px] uppercase tracking-wider text-zinc-400 font-semibold mb-2 block">
             Detection Data
           </label>
-          <div className="text-[10px] font-mono text-zinc-600 space-y-0.5 bg-white/[0.02] rounded-md p-2 border border-white/5">
+          <div className="text-[10px] font-mono text-zinc-400 space-y-0.5 bg-white/[0.02] rounded-md p-2 border border-white/5">
             <div>id: <span className="text-zinc-400">{target.id}</span></div>
             <div>flow: <span className="text-zinc-400">{target.flowType}</span></div>
             <div>status: <span className="text-zinc-400">{target.status}</span></div>

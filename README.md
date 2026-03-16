@@ -1,11 +1,20 @@
 
-  # Compact Card Design
+# C1Flow — Tactical Target Management Console
 
-  This is a code bundle for Compact Card Design. The original project is available at https://www.figma.com/design/5JVDDcHNNMjg6GWqsAkcTc/Compact-Card-Design.
+[![Storybook](https://cdn.jsdelivr.net/gh/storybookjs/brand@main/badge/badge-storybook.svg)](https://main--69b81d2c2b313942c613995e.chromatic.com/)
 
-  ## Running the code
+C1Flow tactical target management console UI (Vite + React). Original design at [Figma](https://www.figma.com/design/5JVDDcHNNMjg6GWqsAkcTc/Compact-Card-Design).
 
-  Run `npm i` to install the dependencies.
+## Running the code
 
-  Run `npm run dev` to start the development server.
+Run `npm i` to install the dependencies.
+
+Run `npm run dev` to start the development server.
+
+Run `npm run storybook` to start Storybook locally on port 6006.
+
+## Storybook
+
+- **Local**: http://localhost:6006 (run `npm run storybook`)
+- **Live**: https://main--69b81d2c2b313942c613995e.chromatic.com/ (auto-updated on every push to main)
   

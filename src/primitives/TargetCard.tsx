@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useId, useRef } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { CARD_TOKENS, type ThreatAccent } from './tokens';
 
@@ -25,6 +25,7 @@ export function TargetCard({
   const cardRef = useRef<HTMLDivElement>(null);
   const prevOpen = useRef(open);
   const prefersReducedMotion = useReducedMotion();
+  const contentId = useId();
 
   useEffect(() => {
     if (open && !prevOpen.current && cardRef.current) {
@@ -47,7 +48,7 @@ export function TargetCard({
         borderWidth: `${d.container.borderWidth}px`,
         borderStyle: 'solid',
         marginBottom: `${d.container.marginBottom}px`,
-        opacity: completed ? d.container.completedOpacity : undefined,
+        filter: completed ? 'saturate(0.4) brightness(0.85)' : undefined,
         boxShadow: open
           ? `0 0 0 ${d.selectedRing.ringWidth}px ${d.selectedRing.ringColor}${Math.round(d.selectedRing.ringOpacity * 255).toString(16).padStart(2, '0')}`
           : undefined,
@@ -67,6 +68,7 @@ export function TargetCard({
         role="button"
         tabIndex={0}
         aria-expanded={open}
+        aria-controls={contentId}
       >
         {header}
       </div>
@@ -82,6 +84,7 @@ export function TargetCard({
               ease: 'easeOut',
             }}
             className="overflow-hidden"
+            id={contentId}
           >
             <div
               className="flex flex-col"

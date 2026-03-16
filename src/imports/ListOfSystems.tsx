@@ -319,7 +319,7 @@ export function SystemCard({
 
 /** @deprecated Use UnifiedCard with useCardSlots instead */
 export function ExpandedTargetDetails({ target }: { target: Detection; [key: string]: any }) {
-  return <div className="p-2 text-xs text-zinc-500">Use ComposedCard instead</div>;
+  return <div className="p-2 text-xs text-zinc-400">Use ComposedCard instead</div>;
 }
 
 // ─── List Component ─────────────────────────────────────────────────────────
@@ -611,7 +611,7 @@ export default function ListOfSystems({
             aria-selected={activeTab === 'active'}
             aria-controls="tabpanel-active"
             className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold transition-colors border-b-2 ${
-              activeTab === 'active' ? 'border-white text-white' : 'border-transparent text-zinc-500 hover:text-zinc-300'
+              activeTab === 'active' ? 'border-white text-white' : 'border-transparent text-zinc-400 hover:text-zinc-300'
             }`}
           >
             פעילות
@@ -626,7 +626,7 @@ export default function ListOfSystems({
             aria-selected={activeTab === 'completed'}
             aria-controls="tabpanel-completed"
             className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold transition-colors border-b-2 ${
-              activeTab === 'completed' ? 'border-white text-white' : 'border-transparent text-zinc-500 hover:text-zinc-300'
+              activeTab === 'completed' ? 'border-white text-white' : 'border-transparent text-zinc-400 hover:text-zinc-300'
             }`}
           >
             הושלמו
@@ -664,7 +664,7 @@ export default function ListOfSystems({
             )}
             <CollapsibleGroup title="סריקות ידניות" count={missionTargets.length} icon={ScanLine} defaultOpen>
               {missionTargets.length === 0 ? (
-                <div className="p-3 text-center text-[10px] text-zinc-600 font-mono">אין סריקות פעילות</div>
+                <div className="p-3 text-center text-[10px] text-zinc-400 font-mono">אין סריקות פעילות</div>
               ) : (
                 renderTargetList(missionTargets)
               )}

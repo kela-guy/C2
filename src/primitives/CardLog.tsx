@@ -56,7 +56,7 @@ export function CardLog({
               e.stopPropagation();
               setExpanded(true);
             }}
-            className="w-full text-center text-[9px] text-zinc-600 hover:text-zinc-400 transition-colors py-0.5"
+            className="w-full text-center text-[9px] text-zinc-400 hover:text-zinc-300 transition-colors py-0.5"
           >
             עוד {reversed.length - maxVisible} רשומות
           </button>

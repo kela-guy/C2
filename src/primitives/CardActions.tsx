@@ -116,7 +116,7 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
                 {confirmingAction.confirm.title}
               </div>
               {confirmingAction.confirm.description && (
-                <div id="confirm-desc" className="text-[10px] text-zinc-500 mb-3 text-pretty">
+                <div id="confirm-desc" className="text-[10px] text-zinc-400 mb-3 text-pretty">
                   {confirmingAction.confirm.description}
                 </div>
               )}
@@ -124,12 +124,14 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
                 <button
                   onClick={handleConfirm}
                   className="flex-1 h-8 rounded border border-red-500 bg-red-500/15 hover:bg-red-500/25 text-red-400 text-[11px] font-semibold transition-colors active:scale-[0.98]"
+                  aria-label={confirmingAction.confirm.confirmLabel ?? 'אישור'}
                 >
                   {confirmingAction.confirm.confirmLabel ?? 'אישור'}
                 </button>
                 <button
                   onClick={handleCancel}
                   className="flex-1 h-8 rounded border border-white/10 text-zinc-400 text-[11px] hover:bg-white/5 transition-colors"
+                  aria-label="ביטול"
                 >
                   ביטול
                 </button>
@@ -142,12 +144,14 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
                 <button
                   onClick={handleConfirm}
                   className="flex-1 h-8 rounded border border-red-500 bg-red-500/15 hover:bg-red-500/25 text-red-400 text-[11px] font-bold transition-colors active:scale-[0.98]"
+                  aria-label={confirmingAction.confirm.confirmLabel ?? 'הפעל'}
                 >
                   {confirmingAction.confirm.confirmLabel ?? 'הפעל'}
                 </button>
                 <button
                   onClick={handleCancel}
                   className="flex-1 h-8 rounded border border-white/10 text-zinc-400 text-[11px] hover:bg-white/5 transition-colors"
+                  aria-label="ביטול"
                 >
                   ביטול
                 </button>
