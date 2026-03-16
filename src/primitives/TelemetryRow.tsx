@@ -7,7 +7,7 @@ export function TelemetryRow({ label, value, icon: Icon }: { label: string; valu
         {Icon && <Icon size={12} className="text-zinc-400" aria-hidden="true" />}
         <span className="text-[11px] text-zinc-400">{label}</span>
       </div>
-      <span className="text-[11px] text-zinc-200 font-mono tabular-nums truncate text-left">{value}</span>
+      <span className="text-[13px] text-zinc-200 font-mono tabular-nums truncate text-left">{value}</span>
     </div>
   );
 }
