@@ -27,7 +27,7 @@ export function AccordionSection({
             className={`text-zinc-500 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
           />
         </div>
-        <div className="flex items-center gap-2 text-sm font-semibold text-zinc-300 font-['Inter']">
+        <div className="flex items-center gap-2 text-sm font-semibold text-zinc-300">
           {title}
           {Icon && <Icon size={14} className="text-zinc-500" />}
         </div>

@@ -6,9 +6,11 @@ import { NotificationSystem, showTacticalNotification } from './NotificationSyst
 import { NotificationCenter } from './NotificationCenter';
 import ListOfSystems from '@/imports/ListOfSystems';
 import type { Detection, IncidentOutcome, DroneDeployment, PlannedMission, MissionWaypoint, RegulusEffector } from '@/imports/ListOfSystems';
-import { List, Bell, PlayCircle, AlertTriangle, Crosshair as CrosshairIcon, MapPin, Map as MapLucide, Camera, Route, ShieldAlert, Radar, Zap, BookOpen } from 'lucide-react';
+import { List, Bell, PlayCircle, AlertTriangle, Crosshair as CrosshairIcon, MapPin, Map as MapLucide, Camera, Route, ShieldAlert, Radar, Zap, BookOpen, HelpCircle } from 'lucide-react';
 import { DroneHiveIcon as MapDroneIcon } from './TacticalMap';
 import { toast } from 'sonner';
+import Joyride from 'react-joyride';
+import { useOnboardingTour } from '../hooks/useOnboardingTour';
 
 
 function haversineDistanceM(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -88,6 +90,14 @@ export const C2Dashboard = () => {
     phase: string; headingDeg: number;
     trail: [number, number][];
   } | null>(null);
+
+  const tour = useOnboardingTour(
+    useCallback((nextStepIndex: number) => {
+      if (nextStepIndex === 4 || nextStepIndex === 5) {
+        setSidebarOpen(true);
+      }
+    }, []),
+  );
 
   const toggleFlowTrigger = useCallback(() => {
     setFlowTriggerOpen(prev => {
@@ -2206,9 +2216,23 @@ export const C2Dashboard = () => {
 
   return (
     <div className="relative flex w-full h-screen overflow-hidden text-white font-sans selection:bg-red-500/30" dir="rtl">
-      
+      <Joyride
+        steps={tour.steps}
+        run={tour.run}
+        stepIndex={tour.stepIndex}
+        continuous
+        showSkipButton
+        showProgress
+        scrollToFirstStep
+        disableScrollParentFix
+        callback={tour.handleCallback}
+        styles={tour.styles}
+        locale={tour.locale}
+        floaterProps={{ disableAnimation: true }}
+      />
+
       {/* Left Side Nav */}
-      <nav className="flex flex-col w-14 sm:w-16 flex-shrink-0 h-full bg-[#1a1a1a] backdrop-blur border-l border-white/10 z-20" dir="ltr">
+      <nav data-tour="nav-bar" className="flex flex-col w-14 sm:w-16 flex-shrink-0 h-full bg-[#1a1a1a] backdrop-blur border-l border-white/10 z-20" dir="ltr">
         {/* Logo */}
         <div className="flex items-center justify-center py-4 border-b border-white/10 h-[60px] w-full">
           <div className="text-white scale-75 origin-center">
@@ -2219,6 +2243,7 @@ export const C2Dashboard = () => {
         {/* Nav: list, simulation — fills space */}
         <div className="flex flex-col items-center gap-0.5 py-3 flex-1">
           <button
+            data-tour="sidebar-toggle"
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="p-2.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
             title={sidebarOpen ? 'סגור רשימת מערכות' : 'פתח רשימת מערכות'}
@@ -2239,7 +2264,7 @@ export const C2Dashboard = () => {
               <Route size={20} strokeWidth={1.5} />
             </button>
           </div>
-          <div data-flow-trigger>
+          <div data-flow-trigger data-tour="simulations-trigger">
             <button
               ref={flowTriggerBtnRef}
               onClick={toggleFlowTrigger}
@@ -2251,9 +2276,18 @@ export const C2Dashboard = () => {
           </div>
         </div>
 
-        {/* Storybook + Notifications at bottom */}
+        {/* Tour + Storybook + Notifications at bottom */}
         <div className="border-t border-white/10 flex flex-col items-center gap-0.5 py-2">
+          <button
+            onClick={tour.startTour}
+            className="p-2.5 rounded-lg text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 transition-colors"
+            title="סיור הדרכה"
+            aria-label="סיור הדרכה"
+          >
+            <HelpCircle size={20} strokeWidth={1.5} />
+          </button>
           <a
+            data-tour="storybook-link"
             href={import.meta.env.DEV ? 'http://localhost:6006' : 'https://main--69b81d2c2b313942c613995e.chromatic.com/'}
             target="_blank"
             rel="noopener noreferrer"
@@ -2262,21 +2296,23 @@ export const C2Dashboard = () => {
           >
             <BookOpen size={20} strokeWidth={1.5} />
           </a>
-          <NotificationCenter
-            trigger={
-              <button
-                className="p-2.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors w-full flex justify-center"
-                title="התראות"
-              >
-                <Bell size={20} strokeWidth={1.5} />
-              </button>
-            }
-          />
+          <div data-tour="notification-bell">
+            <NotificationCenter
+              trigger={
+                <button
+                  className="p-2.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors w-full flex justify-center"
+                  title="התראות"
+                >
+                  <Bell size={20} strokeWidth={1.5} />
+                </button>
+              }
+            />
+          </div>
         </div>
       </nav>
 
       {/* Map (full bleed behind content) */}
-      <div className="flex-1 flex flex-col min-w-0 relative">
+      <div data-tour="tactical-map" className="flex-1 flex flex-col min-w-0 relative">
         <TacticalMap 
           focusCoords={focusCoords} 
           targets={targets}

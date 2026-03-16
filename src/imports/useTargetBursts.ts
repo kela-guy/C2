@@ -3,7 +3,7 @@ import type { Detection } from './ListOfSystems';
 import { TYPE_LABELS } from './useTargetFilters';
 
 const BURST_WINDOW_MS = 10_000;
-const MIN_BURST_SIZE = 2;
+const MIN_BURST_SIZE = 4;
 
 export interface TargetBurst {
   kind: 'burst';

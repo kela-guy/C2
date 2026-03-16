@@ -40,7 +40,7 @@ export function TargetCard({
   return (
     <div
       ref={cardRef}
-      className={`w-full text-white font-['Inter'] overflow-hidden transition-colors group/card relative ${className}`}
+      className={`w-full text-white overflow-hidden transition-colors group/card relative ${className}`}
       style={{
         backgroundColor: d.container.bgColor,
         borderColor: d.container.borderColor,

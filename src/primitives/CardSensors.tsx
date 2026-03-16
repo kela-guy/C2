@@ -50,7 +50,7 @@ export function CardSensors({
                 <SensorIcon size={16} fill="currentColor" />
               </span>
             )}
-            <span className="font-['Inter'] text-xs">{sensor.typeLabel}</span>
+            <span className="text-xs">{sensor.typeLabel}</span>
             <div className="flex-1" />
             {sensor.detectedAt && (
               <span className="text-[9px] text-zinc-400 font-mono tabular-nums">

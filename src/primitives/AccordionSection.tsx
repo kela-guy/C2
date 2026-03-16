@@ -34,7 +34,7 @@ export function AccordionSection({
         aria-expanded={isOpen}
         aria-controls={panelId}
       >
-        <div className="flex items-center gap-2 text-sm font-semibold text-zinc-300 font-['Inter']">
+        <div className="flex items-center gap-2 text-sm font-semibold text-zinc-300">
           {HeaderIcon && <HeaderIcon size={14} className="text-zinc-500" aria-hidden="true" />}
           {title}
         </div>

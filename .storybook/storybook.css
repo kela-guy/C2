@@ -3,8 +3,16 @@
 @import "../src/styles/fonts.css";
 @import "../src/styles/theme.css";
 
+@theme {
+  --font-sans: "Heebo", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+}
+
 body {
+  font-family: var(--font-sans);
   background: #0b0d10 !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 @keyframes missile-pulse {

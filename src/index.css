@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 @theme {
   /* ── Colors ── */
@@ -13,7 +14,7 @@
   --color-overlay: rgba(0, 0, 0, 0.6);
 
   /* ── Fonts ── */
-  --font-sans: "Inter", "Arimo", sans-serif;
+  --font-sans: "Heebo", sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
 
   /* ── Radius (4pt grid) ── */

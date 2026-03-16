@@ -113,7 +113,7 @@ export function StackedCard({
 
       {/* Main card */}
       <div
-        className="relative w-full text-white font-['Inter'] overflow-hidden transition-colors"
+        className="relative w-full text-white overflow-hidden transition-colors"
         style={{
           backgroundColor: d.container.bgColor,
           borderColor: d.container.borderColor,

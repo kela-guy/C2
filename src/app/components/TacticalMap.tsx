@@ -1267,7 +1267,7 @@ export const TacticalMap = ({
               onMouseLeave={() => setHoveredLauncherId(null)}
             >
               {hoveredLauncherId === launcher.id && (
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 text-xs font-medium text-white bg-black/95 border border-white/20 rounded shadow-lg font-['Inter'] whitespace-nowrap z-50">
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 text-xs font-medium text-white bg-black/95 border border-white/20 rounded shadow-lg whitespace-nowrap z-50">
                   <div>משגר טילים {launcher.id}</div>
                 </div>
               )}
@@ -1320,7 +1320,7 @@ export const TacticalMap = ({
                 )}
                 <SensorIcon fill={isActive ? '#4ade80' : undefined} />
                 {(isHovered || isActive) && (
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 text-xs font-medium text-white bg-black/95 border border-white/20 rounded shadow-lg font-['Inter'] whitespace-nowrap pointer-events-none z-50" style={{ minWidth: 'max-content' }}>
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 text-xs font-medium text-white bg-black/95 border border-white/20 rounded shadow-lg whitespace-nowrap pointer-events-none z-50" style={{ minWidth: 'max-content' }}>
                     <div>{reg.name}</div>
                     <div className="text-white/70 mt-0.5">
                       {isActive ? 'פעיל — שיבוש' : reg.id}
@@ -1406,7 +1406,7 @@ export const TacticalMap = ({
                 <Icon fill={isSelected ? '#a78bfa' : undefined} />
                 {(isHovered || isHighlighted) && (
                   <div
-                    className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 text-xs font-medium text-white bg-black/95 border border-white/20 rounded shadow-lg font-['Inter'] whitespace-nowrap pointer-events-none z-50"
+                    className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 text-xs font-medium text-white bg-black/95 border border-white/20 rounded shadow-lg whitespace-nowrap pointer-events-none z-50"
                     style={{ minWidth: 'max-content' }}
                   >
                     <div>{asset.typeLabel}</div>
@@ -1485,7 +1485,7 @@ export const TacticalMap = ({
                 onMouseLeave={() => setHoveredMissileId(null)}
               >
                 {isHovered && (
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 text-xs font-medium text-white bg-black/95 border border-cyan-400/60 rounded shadow-lg font-['Inter'] whitespace-nowrap z-50">
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 text-xs font-medium text-white bg-black/95 border border-cyan-400/60 rounded shadow-lg whitespace-nowrap z-50">
                     <div>טיל לאיתור {missile.targetId}</div>
                     <div className="text-white/70 mt-0.5">
                       התקדמות {(missile.progress * 100).toFixed(0)}%
@@ -1802,7 +1802,7 @@ export const TacticalMap = ({
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
           <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-900/90 backdrop-blur-md border border-emerald-400/60 shadow-lg shadow-emerald-500/20 animate-pulse" style={{ animationDuration: '3s' }}>
             <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-            <span className="text-sm font-bold text-emerald-200 font-['Inter']">אתה בשליטה</span>
+            <span className="text-sm font-bold text-emerald-200">אתה בשליטה</span>
           </div>
         </div>
       )}

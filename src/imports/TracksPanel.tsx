@@ -5,7 +5,7 @@ import imgObject from "figma:asset/f534abd7e154dd2e0612b80426d2975885178c70.png"
 function StatusChips() {
   return (
     <div className="bg-[rgba(18,184,134,0.15)] content-stretch flex items-center justify-center opacity-0 px-[12px] py-[2px] relative rounded-[4px] shrink-0" data-name="Status Chips">
-      <div className="css-g0mm18 flex flex-col font-['Inter:Regular','Arimo:Regular',sans-serif] font-normal justify-center leading-[0] not-italic relative shrink-0 text-[#12b886] text-[12px]">
+      <div className="css-g0mm18 flex flex-col font-sans font-normal justify-center leading-[0] not-italic relative shrink-0 text-[#12b886] text-[12px]">
         <p className="css-ew64yg leading-[15px]" dir="auto">
           חדש
         </p>
@@ -17,10 +17,10 @@ function StatusChips() {
 function Frame() {
   return (
     <div className="content-stretch flex gap-[12px] items-center leading-[18px] not-italic relative shrink-0 text-[14px] text-right">
-      <p className="css-ew64yg font-['Inter:Regular',sans-serif] font-normal relative shrink-0 text-[#868e96]" dir="auto">
+      <p className="css-ew64yg font-sans font-normal relative shrink-0 text-[#868e96]" dir="auto">
         10:07:31
       </p>
-      <p className="css-ew64yg font-['Inter:Semi_Bold','Arimo:Bold',sans-serif] font-semibold relative shrink-0 text-white" dir="auto">
+      <p className="css-ew64yg font-sans font-semibold relative shrink-0 text-white" dir="auto">
         זיהוי לא ידוע
       </p>
     </div>
@@ -105,7 +105,7 @@ function ButtonStartScan() {
       <div aria-hidden="true" className="absolute border-[#74c0fc] border-[0.4px] border-solid inset-0 pointer-events-none rounded-[4px]" />
       <div className="flex flex-row items-center justify-center size-full">
         <div className="content-stretch flex gap-[8px] items-center justify-center px-[16px] relative size-full">
-          <p className="css-ew64yg font-['Inter:Regular','Arimo:Regular',sans-serif] font-normal leading-[18px] not-italic relative shrink-0 text-[#74c0fc] text-[14px]" dir="auto">
+          <p className="css-ew64yg font-sans font-normal leading-[18px] not-italic relative shrink-0 text-[#74c0fc] text-[14px]" dir="auto">
             שיבוש
           </p>
           <IconVoice />
@@ -133,7 +133,7 @@ function ButtonStartScan1() {
       <div aria-hidden="true" className="absolute border-[#74c0fc] border-[0.4px] border-solid inset-0 pointer-events-none rounded-[4px]" />
       <div className="flex flex-row items-center justify-center size-full">
         <div className="content-stretch flex gap-[8px] items-center justify-center px-[16px] relative size-full">
-          <p className="css-ew64yg font-['Inter:Regular','Arimo:Regular',sans-serif] font-normal leading-[18px] not-italic relative shrink-0 text-[#74c0fc] text-[14px]" dir="auto">
+          <p className="css-ew64yg font-sans font-normal leading-[18px] not-italic relative shrink-0 text-[#74c0fc] text-[14px]" dir="auto">
             שיבוש הכל
           </p>
           <IconExclamationTriangle />
@@ -157,7 +157,7 @@ function ButtonStartScan2() {
     <div className="flex-[1_0_0] h-[30px] min-h-px min-w-px relative rounded-[4px]" data-name="Button_StartScan">
       <div className="flex flex-row items-center justify-center size-full">
         <div className="content-stretch flex gap-[8px] items-center justify-center px-[16px] relative size-full">
-          <p className="css-ew64yg font-['Inter:Regular','Arimo:Regular',sans-serif] font-normal leading-[18px] not-italic relative shrink-0 text-[14px] text-white" dir="auto">
+          <p className="css-ew64yg font-sans font-normal leading-[18px] not-italic relative shrink-0 text-[14px] text-white" dir="auto">
             סגור
           </p>
         </div>

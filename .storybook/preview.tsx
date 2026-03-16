@@ -19,7 +19,6 @@ function RTLWrapper({ children }: { children: React.ReactNode }) {
       style={{
         background: '#0b0d10',
         color: '#ffffff',
-        fontFamily: "'Inter', sans-serif",
         padding: '24px',
         direction: 'rtl',
         textAlign: 'right',

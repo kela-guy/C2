@@ -15,6 +15,7 @@ import {
   MissionPhaseChip,
   FilterBar,
   StackedCard,
+  AccordionSection,
 } from '@/primitives';
 import {
   Crosshair,
@@ -215,6 +216,7 @@ function UnifiedCard({
   const isSuccess = target.status === 'event_resolved' || target.status === 'event_neutralized';
   const isExpired = target.status === 'expired';
   const showDetails = !isSuccess && !isExpired && target.flowType !== 4;
+  const hasActions = (target.actionLog?.length ?? 0) > 0;
 
   return (
     <TargetCard
@@ -248,21 +250,25 @@ function UnifiedCard({
         <CardDetails
           rows={slots.details.rows}
           classification={slots.details.classification}
+          defaultOpen={!hasActions}
         />
       )}
 
       {slots.sensors.length > 0 && (
-        <div className="px-2 pb-2">
-          <CardSensors
-            sensors={slots.sensors}
-            onSensorHover={callbacks.onSensorHover}
-            onSensorClick={callbacks.onSensorFocus}
-          />
-        </div>
+        <AccordionSection title={`חיישנים (${slots.sensors.length})`} defaultOpen={!hasActions} icon={Radar}>
+          <div className="px-0 pb-2">
+            <CardSensors
+              sensors={slots.sensors}
+              label=""
+              onSensorHover={callbacks.onSensorHover}
+              onSensorClick={callbacks.onSensorFocus}
+            />
+          </div>
+        </AccordionSection>
       )}
 
       {slots.log.length > 0 && (
-        <CardLog entries={slots.log} defaultOpen={isSuccess || isExpired} />
+        <CardLog entries={slots.log} defaultOpen={!hasActions && (isSuccess || isExpired)} />
       )}
 
       {slots.closure && (
@@ -534,7 +540,7 @@ export default function ListOfSystems({
 
     return (
       <AnimatePresence mode="popLayout">
-        {items.map((item) => {
+        {items.map((item, idx) => {
           if (isBurst(item)) {
             return (
               <motion.div
@@ -544,6 +550,7 @@ export default function ListOfSystems({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.15 }}
+                {...(idx === 0 ? { 'data-tour': 'first-card' } : {})}
               >
                 <StackedCard
                   burst={item}
@@ -584,6 +591,7 @@ export default function ListOfSystems({
               transition={{ duration: 0.2 }}
               className="cursor-pointer"
               id={`detection-card-${target.id}`}
+              {...(idx === 0 ? { 'data-tour': 'first-card' } : {})}
             >
               <UnifiedCard
                 target={target}
@@ -603,7 +611,7 @@ export default function ListOfSystems({
     <div className={`w-full flex flex-col ${className}`}>
       <div className="sticky top-0 z-10 bg-[#161616]">
         {/* Tab bar */}
-        <div className="flex border-b border-white/10 px-1" dir="rtl" role="tablist">
+        <div data-tour="detection-tabs" className="flex border-b border-white/10 px-1" dir="rtl" role="tablist">
           <button
             id="tab-active"
             onClick={() => setActiveTab('active')}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
-import { ChevronDown, ArrowUpDown, Gauge, Activity, Globe, Search, Radio, Clock, Tag, Fingerprint, SlidersHorizontal, X } from 'lucide-react';
+import { ChevronDown, ArrowUpDown, Gauge, Activity, Globe, Search, Radio, Clock, Tag, Fingerprint, SlidersHorizontal, X, Check } from 'lucide-react';
 import type { FilterState, FilterKey } from '../imports/useTargetFilters';
 import { TYPE_LABELS, SIGNATURE_LABELS } from '../imports/useTargetFilters';
 
@@ -168,10 +168,10 @@ export function FilterBar({
         <Popover.Root open={advancedOpen} onOpenChange={setAdvancedOpen}>
           <Popover.Trigger asChild>
             <button
-              className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-colors border shrink-0 ${
+              className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-colors duration-150 border shrink-0 outline-hidden focus-visible:ring-2 focus-visible:ring-white/25 ${
                 advancedOpen || advancedCount > 0
                   ? 'border-white/15 text-zinc-200 bg-white/5'
-                  : 'border-transparent text-zinc-300 hover:text-zinc-100'
+                  : 'border-transparent text-zinc-300 hover:text-zinc-100 hover:bg-white/[0.03]'
               }`}
               aria-label="פילטרים מתקדמים"
               aria-expanded={advancedOpen}
@@ -191,7 +191,7 @@ export function FilterBar({
               side="bottom"
               align="start"
               sideOffset={4}
-              className="z-50 w-64 rounded-lg border border-white/10 bg-[#161819] shadow-xl shadow-black/40 overflow-hidden"
+              className="z-50 w-64 overflow-hidden rounded-lg border border-white/10 bg-[#1a1a1a]/95 backdrop-blur-xl shadow-2xl origin-(--radix-popover-content-transform-origin) data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
             >
               <AdvancedPanel
                 filters={filters}
@@ -237,12 +237,12 @@ function InlineSelect({
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
         <button
-          className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-colors border shrink-0 ${
+          className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-colors duration-150 border shrink-0 outline-hidden focus-visible:ring-2 focus-visible:ring-white/25 ${
             isActive
               ? 'border-cyan-500/25 bg-cyan-500/[0.06] text-cyan-300'
               : open
                 ? 'border-white/15 text-zinc-200 bg-white/5'
-                : 'border-transparent text-zinc-300 hover:text-zinc-100'
+                : 'border-transparent text-zinc-300 hover:text-zinc-100 hover:bg-white/[0.03]'
           }`}
           aria-haspopup="listbox"
           aria-expanded={open}
@@ -264,9 +264,9 @@ function InlineSelect({
           side="bottom"
           align="start"
           sideOffset={4}
-          className="z-50 rounded-lg border border-white/10 bg-[#161819] shadow-xl shadow-black/40 overflow-hidden"
+          className="z-50 min-w-[8rem] overflow-hidden rounded-lg border border-white/10 bg-[#1a1a1a]/95 backdrop-blur-xl p-1 shadow-2xl origin-(--radix-popover-content-transform-origin) data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
         >
-          <div className="p-1 min-w-[120px]" dir="rtl">
+          <div className="flex flex-col" dir="rtl">
             {children(() => setOpen(false))}
           </div>
         </Popover.Content>
@@ -286,24 +286,25 @@ function SingleSelect({
 }) {
   return (
     <div className="flex flex-col" role="listbox">
-      {options.map(opt => (
-        <button
-          key={opt.value}
-          onClick={() => onChange(opt.value)}
-          role="option"
-          aria-selected={value === opt.value}
-          className={`flex items-center gap-2 px-2.5 py-1.5 rounded text-[11px] transition-colors text-right ${
-            value === opt.value
-              ? 'bg-white/10 text-white'
-              : 'text-zinc-400 hover:bg-white/5 hover:text-zinc-200'
-          }`}
-        >
-          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-            value === opt.value ? 'bg-cyan-400' : 'bg-zinc-700'
-          }`} aria-hidden="true" />
-          {opt.label}
-        </button>
-      ))}
+      {options.map(opt => {
+        const active = value === opt.value;
+        return (
+          <button
+            key={opt.value}
+            onClick={() => onChange(opt.value)}
+            role="option"
+            aria-selected={active}
+            className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded text-[12px] transition-colors duration-150 text-right outline-hidden ${
+              active
+                ? 'bg-white/10 text-white'
+                : 'text-zinc-400 hover:bg-white/5 hover:text-zinc-200'
+            }`}
+          >
+            <Check size={12} strokeWidth={2.5} className={`shrink-0 transition-opacity duration-150 ${active ? 'opacity-100 text-cyan-400' : 'opacity-0'}`} aria-hidden="true" />
+            {opt.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -318,35 +319,35 @@ function MultiSelect({
   onToggle: (id: string) => void;
 }) {
   if (items.length === 0) {
-    return <span className="text-[9px] text-zinc-400 px-2 py-1">אין אפשרויות</span>;
+    return (
+      <span className="block px-2.5 py-2 text-[11px] text-zinc-500 text-center">
+        אין אפשרויות
+      </span>
+    );
   }
 
   return (
     <div className="flex flex-col" role="listbox" aria-multiselectable="true">
       {items.map(item => {
-        const isActive = selected.includes(item.id);
+        const active = selected.includes(item.id);
         return (
           <button
             key={item.id}
             onClick={() => onToggle(item.id)}
             role="option"
-            aria-selected={isActive}
-            className={`flex items-center gap-2 px-2.5 py-1.5 rounded text-[11px] transition-colors text-right ${
-              isActive
+            aria-selected={active}
+            className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded text-[12px] transition-colors duration-150 text-right outline-hidden ${
+              active
                 ? 'bg-cyan-500/10 text-cyan-300'
                 : 'text-zinc-400 hover:bg-white/5 hover:text-zinc-200'
             }`}
           >
-            <div className={`w-3 h-3 rounded border flex items-center justify-center shrink-0 ${
-              isActive
+            <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 transition-colors duration-150 ${
+              active
                 ? 'border-cyan-500/50 bg-cyan-500/20'
                 : 'border-white/15 bg-transparent'
-            }`}>
-              {isActive && (
-                <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-                  <path d="M1.5 4L3.2 5.7L6.5 2.3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              )}
+            }`} aria-hidden="true">
+              {active && <Check size={10} strokeWidth={2.5} />}
             </div>
             {item.label}
           </button>
@@ -454,14 +455,14 @@ function AdvancedSection({
   children: React.ReactNode;
 }) {
   return (
-    <div className="px-3 py-2.5">
-      <div className="flex items-center gap-1.5 mb-1.5">
-        <Icon size={11} className="text-zinc-500 opacity-60" />
-        <span className="text-[10px] text-zinc-400 font-medium">{label}</span>
+    <div className="px-2 py-2.5">
+      <div className="flex items-center gap-1.5 mb-2 px-1">
+        <Icon size={11} className="text-zinc-500" />
+        <span className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider">{label}</span>
         {isActive && (
           <button
             onClick={onClear}
-            className="mr-auto text-zinc-500 hover:text-zinc-400 transition-colors"
+            className="mr-auto text-zinc-600 hover:text-zinc-400 transition-colors duration-150 outline-hidden focus-visible:text-zinc-400"
             title="נקה"
             aria-label="נקה"
           >
