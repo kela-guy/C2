@@ -609,7 +609,7 @@ export default function ListOfSystems({
 
   return (
     <div className={`w-full flex flex-col ${className}`}>
-      <div className="sticky top-0 z-10 bg-[#161616]">
+      <div className="sticky top-0 z-10 bg-[#141414]">
         {/* Tab bar */}
         <div data-tour="detection-tabs" className="flex border-b border-white/10 px-1" dir="rtl" role="tablist">
           <button

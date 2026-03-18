@@ -2368,7 +2368,7 @@ export const C2Dashboard = () => {
         {/* Right Sidebar - List of Systems */}
         <aside 
           className={`
-            absolute top-0 bottom-0 w-96 bg-[#141414]/90 backdrop-blur border-l border-white/10 flex flex-col transition-all duration-300 ease-in-out z-10
+            absolute top-0 bottom-0 w-96 bg-[#141414] border-l border-white/10 flex flex-col transition-all duration-300 ease-in-out z-10
             ${sidebarOpen ? 'translate-x-0 right-0' : 'translate-x-full right-0'}
           `}
         >
