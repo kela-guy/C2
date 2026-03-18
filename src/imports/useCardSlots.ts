@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import {
   Plane,
   Rocket,
@@ -25,6 +25,9 @@ import {
   BookOpen,
   Send,
   Shield,
+  EyeOff,
+  Lock,
+  Timer,
 } from 'lucide-react';
 import type { ThreatAccent } from '@/primitives/tokens';
 import type { CardAction } from '@/primitives/CardActions';
@@ -72,11 +75,15 @@ export interface CardCallbacks {
   onMitigateAll?: () => void;
   onBdaOutcome?: (outcome: 'neutralized' | 'active' | 'lost') => void;
   onSensorFocus?: (sensorId: string) => void;
+  onBdaCamera?: () => void;
+  onRequestCameraControl?: () => void;
 }
 
 export interface CardContext {
   isDroneVerifying?: boolean;
   isCameraActive?: boolean;
+  allCamerasBusy?: boolean;
+  controlRequestCountdown?: number | null;
   regulusEffectors?: RegulusEffector[];
   nearbyCameras?: { id: string; typeLabel: string; distanceM: number }[];
   nearbyHives?: { id: string; latitude: number; longitude: number; distanceM: number; battery: number; status: string }[];
@@ -121,6 +128,16 @@ function buildHeaderIcon(target: Detection): React.ElementType {
   }
 }
 
+function buildConfidenceBadge(confidence: number | undefined): React.ReactNode {
+  if (confidence == null) return null;
+  const bg = confidence >= 80 ? 'bg-red-500/20 text-red-400 border-red-500/30'
+    : confidence >= 40 ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+    : 'bg-zinc-500/20 text-zinc-400 border-zinc-500/30';
+  return React.createElement('span', {
+    className: `text-[10px] font-bold font-mono tabular-nums px-1.5 py-0.5 rounded border ${bg}`,
+  }, `${confidence}%`);
+}
+
 function buildHeader(target: Detection): CardHeaderProps {
   const Icon = buildHeaderIcon(target);
   const isActive = target.status === 'detection' || target.status === 'event';
@@ -141,6 +158,7 @@ function buildHeader(target: Detection): CardHeaderProps {
       ? (target.plannedMission?.missionType === 'ptz' ? 'סריקת מצלמה' : 'משימת רחפן')
       : target.name,
     subtitle: isMission ? target.id : undefined,
+    badge: target.entityStage ? buildConfidenceBadge(target.confidence) : undefined,
   };
 }
 
@@ -160,6 +178,7 @@ function buildMedia(target: Detection, ctx: CardContext): CardMediaProps | null 
   if (!showVideo && !showImage) return null;
 
   if (showVideo) {
+    const isBdaActive = target.bdaStatus && target.bdaStatus !== 'complete' && target.bdaStatus !== 'pending';
     return {
       src: '/videos/target-feed.mov',
       type: 'video',
@@ -167,6 +186,7 @@ function buildMedia(target: Detection, ctx: CardContext): CardMediaProps | null 
         ? (target.classifiedType === 'bird' ? 'bird' : 'threat')
         : isSuspicion ? 'warning' : 'threat',
       showControls: target.mitigationStatus === 'mitigated',
+      trackingLabel: isBdaActive ? 'מעקב PTZ' : (target.mitigationStatus === 'mitigated' ? 'הקלטת PTZ' : undefined),
     };
   }
 
@@ -193,17 +213,86 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
 
   if (isSuccess || isExpired) return actions;
 
+  // Post-jam BDA: camera verification + complete (highest priority after success/expired)
+  if (target.missionType === 'jamming' && target.missionStatus === 'waiting_confirmation') {
+    const cameraActive = !!ctx.isCameraActive;
+    const countdown = ctx.controlRequestCountdown;
+    const allBusy = !!ctx.allCamerasBusy;
+
+    if (countdown != null && countdown > 0) {
+      actions.push({
+        id: 'bda-camera',
+        label: `${countdown} שניות לשליטה...`,
+        icon: Timer,
+        variant: 'glass' as const,
+        size: 'lg' as const,
+        onClick: (e: React.MouseEvent) => { e.stopPropagation(); },
+        className: 'opacity-80 ring-1 ring-amber-400/40 cursor-wait',
+      });
+    } else if (allBusy && !cameraActive) {
+      actions.push({
+        id: 'bda-camera',
+        label: 'בקש שליטה על מצלמה',
+        icon: Lock,
+        variant: 'glass' as const,
+        size: 'lg' as const,
+        onClick: (e: React.MouseEvent) => { e.stopPropagation(); callbacks.onRequestCameraControl?.(); },
+        className: 'ring-2 ring-amber-400/50 shadow-[0_0_12px_rgba(251,191,36,0.3)] text-amber-300',
+      });
+    } else if (cameraActive) {
+      actions.push({
+        id: 'bda-camera',
+        label: 'בטל מצלמה',
+        icon: EyeOff,
+        variant: 'glass' as const,
+        size: 'lg' as const,
+        onClick: (e: React.MouseEvent) => { e.stopPropagation(); callbacks.onBdaCamera?.(); },
+        className: 'ring-1 ring-white/20',
+      });
+    } else {
+      actions.push({
+        id: 'bda-camera',
+        label: 'הפנה מצלמה לאימות',
+        icon: Eye,
+        variant: 'primary' as const,
+        size: 'lg' as const,
+        dataTour: 'cuas-cta-bda',
+        onClick: (e: React.MouseEvent) => { e.stopPropagation(); callbacks.onBdaCamera?.(); },
+        className: 'ring-2 ring-cyan-400/50 shadow-[0_0_12px_rgba(34,211,238,0.3)]',
+      });
+    }
+
+    actions.push(
+      { id: 'complete-mission', label: 'סיום משימה', icon: Check, variant: 'glass', size: 'sm',
+        dataTour: 'cuas-cta-complete',
+        onClick: (e) => { e.stopPropagation(); callbacks.onCompleteMission?.(); },
+        className: 'border-[#6ee7b7]/40 bg-[rgba(110,231,183,0.15)] hover:bg-[rgba(110,231,183,0.25)] text-[#6ee7b7]' },
+    );
+    return actions;
+  }
+
   // CUAS mitigation actions (classified drone, not bird)
   if (isCuas && target.entityStage !== 'raw_detection' && target.classifiedType !== 'bird') {
     if (target.mitigationStatus === 'mitigated') {
       actions.push({
         id: 'investigate-bda',
-        label: 'תחקור',
+        label: 'תחקור — מעקב PTZ',
         icon: Eye,
         variant: 'primary',
         size: 'lg',
         onClick: (e) => { e.stopPropagation(); callbacks.onVerify?.('investigate'); },
+        className: 'animate-pulse ring-2 ring-cyan-400/50 shadow-[0_0_12px_rgba(34,211,238,0.3)]',
       });
+      if (!target.bdaStatus || target.bdaStatus === 'pending') {
+        actions.push({
+          id: 'start-bda',
+          label: 'אימות פגיעה — נעילת רחפן',
+          icon: Crosshair,
+          variant: 'secondary',
+          size: 'sm',
+          onClick: (e) => { e.stopPropagation(); callbacks.onSendDroneVerification?.(); },
+        });
+      }
       return actions;
     }
     if (target.mitigationStatus === 'mitigating') return actions;
@@ -214,6 +303,7 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
       icon: Zap,
       variant: 'danger',
       size: 'lg',
+      dataTour: 'cuas-cta-mitigate',
       onClick: (e) => {
         e.stopPropagation();
         const effs = ctx.regulusEffectors?.filter(r => r.status === 'available') ?? [];
@@ -232,8 +322,6 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
         disabled: target.entityStage !== 'classified',
       },
       { id: 'lock', label: 'נעילה', icon: Crosshair, variant: 'secondary', size: 'sm',
-        onClick: (e) => e.stopPropagation(), disabled: target.entityStage !== 'classified' },
-      { id: 'intercept-cuas', label: 'ירוט', icon: Target, variant: 'secondary', size: 'sm',
         onClick: (e) => e.stopPropagation(), disabled: target.entityStage !== 'classified' },
       { id: 'track-cuas', label: 'מעקב', icon: Scan, variant: 'secondary', size: 'sm',
         onClick: (e) => e.stopPropagation(), disabled: target.entityStage !== 'classified' },
@@ -343,17 +431,9 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
   const isMissionActive = target.missionStatus === 'planning' || target.missionStatus === 'executing' || target.missionStatus === 'waiting_confirmation';
   if (!isMissionActive) {
     if (isCritical || isSuspicion) {
-      if (isCritical) {
-        actions.push({ id: 'attack', label: 'ירי', icon: Crosshair, variant: 'danger', size: 'lg',
-          onClick: (e) => { e.stopPropagation(); callbacks.onEngage?.('attack'); } });
-      } else {
-        actions.push({ id: 'jam-primary', label: 'שיבוש', icon: Zap, variant: 'danger', size: 'lg',
-          onClick: (e) => { e.stopPropagation(); callbacks.onEngage?.('jamming'); } });
-      }
+      actions.push({ id: 'jam-primary', label: 'שיבוש', icon: Zap, variant: 'danger', size: 'lg',
+        onClick: (e) => { e.stopPropagation(); callbacks.onEngage?.('jamming'); } });
       actions.push(
-        { id: 'jam', label: 'שיבוש', icon: Radio, variant: 'secondary', size: 'sm',
-          onClick: (e) => { e.stopPropagation(); callbacks.onEngage?.('jamming'); },
-          className: 'border-white/8 bg-white/[0.03] text-zinc-400' },
         { id: 'surveillance', label: 'מעקב', icon: Eye, variant: 'secondary', size: 'sm',
           onClick: (e) => { e.stopPropagation(); callbacks.onVerify?.('surveillance'); },
           className: 'border-white/8 bg-white/[0.03] text-zinc-400' },
@@ -467,6 +547,7 @@ function buildDetails(target: Detection): { rows: DetailRow[]; classification?: 
   rows.push({ label: 'מיקום', value: target.coordinates, icon: MapPin });
   if (target.altitude) rows.push({ label: 'גובה', value: target.altitude, icon: Mountain });
   rows.push({ label: 'מרחק', value: target.distance, icon: Ruler });
+  if (target.laserDistance) rows.push({ label: 'מרחק לייזר', value: target.laserDistance, icon: Ruler });
   rows.push({ label: 'זמן זיהוי', value: target.timestamp, icon: Scan });
   if (target.lastSeenAt) rows.push({ label: 'נצפה לאחרונה', value: target.lastSeenAt, icon: Clock });
 

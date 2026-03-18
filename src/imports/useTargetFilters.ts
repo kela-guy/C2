@@ -100,11 +100,17 @@ export function useTargetFilters(targets: Detection[]) {
 
   const availableTypes = useMemo(() => {
     const set = new Set<string>();
+    const seenLabels = new Set<string>();
     targets.forEach(t => {
       if (t.classifiedType) set.add(t.classifiedType);
       if (t.type) set.add(t.type);
     });
-    return Array.from(set);
+    return Array.from(set).filter(type => {
+      const label = TYPE_LABELS[type] ?? type;
+      if (seenLabels.has(label)) return false;
+      seenLabels.add(label);
+      return true;
+    });
   }, [targets]);
 
   const activeFilterCount = useMemo(() => {
@@ -236,9 +242,12 @@ export function useTargetFilters(targets: Detection[]) {
     }
 
     if (filters.types.length > 0) {
-      result = result.filter(t =>
-        filters.types.includes(t.classifiedType ?? '') || filters.types.includes(t.type)
-      );
+      const selectedLabels = new Set(filters.types.map(t => TYPE_LABELS[t] ?? t));
+      result = result.filter(t => {
+        const classifiedLabel = TYPE_LABELS[t.classifiedType ?? ''] ?? t.classifiedType ?? '';
+        const typeLabel = TYPE_LABELS[t.type] ?? t.type;
+        return selectedLabels.has(classifiedLabel) || selectedLabels.has(typeLabel);
+      });
     }
 
     if (filters.signatureTypes.length > 0) {

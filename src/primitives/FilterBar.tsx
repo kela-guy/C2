@@ -83,10 +83,11 @@ export function FilterBar({
     filters.signatureTypes.length > 0,
   ].filter(Boolean).length;
 
+  const totalFilterCount = activeFilterCount + advancedCount;
+
   return (
     <div className="border-b border-white/5" dir="rtl">
-      {/* Row 1: Search + Sort */}
-      <div className="flex items-center gap-1.5 px-2 pt-1.5 pb-1">
+      <div className="flex items-center gap-1.5 px-2 py-1.5">
         <div className="relative flex-1">
           <Search size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" aria-hidden="true" />
           <input
@@ -116,72 +117,24 @@ export function FilterBar({
           <ArrowUpDown size={11} aria-hidden="true" />
           <span>{filters.sortBy === 'time' ? 'זמן' : 'ביטחון'}</span>
         </button>
-      </div>
-
-      {/* Row 2: Filters */}
-      <div className="flex items-center gap-1 px-2 pb-1.5 flex-wrap">
-        <InlineSelect
-          label="סטטוס"
-          value={statusLabel}
-          isActive={filters.active !== 'all'}
-          icon={Activity}
-        >
-          {(close) => (
-            <SingleSelect
-              value={filters.active}
-              options={STATUS_OPTIONS as unknown as { value: string; label: string }[]}
-              onChange={(v) => { onUpdate('active', v as FilterState['active']); close(); }}
-            />
-          )}
-        </InlineSelect>
-
-        <InlineSelect
-          label="תחום"
-          value={domainLabel}
-          isActive={filters.domain !== 'all'}
-          icon={Globe}
-        >
-          {(close) => (
-            <SingleSelect
-              value={filters.domain}
-              options={DOMAIN_OPTIONS as unknown as { value: string; label: string }[]}
-              onChange={(v) => { onUpdate('domain', v as FilterState['domain']); close(); }}
-            />
-          )}
-        </InlineSelect>
-
-        <InlineSelect
-          label="סוג"
-          value={typesLabel}
-          isActive={filters.types.length > 0}
-          icon={Tag}
-        >
-          {() => (
-            <MultiSelect
-              items={availableTypes.map(t => ({ id: t, label: TYPE_LABELS[t] ?? t }))}
-              selected={filters.types}
-              onToggle={onToggleType}
-            />
-          )}
-        </InlineSelect>
 
         <Popover.Root open={advancedOpen} onOpenChange={setAdvancedOpen}>
           <Popover.Trigger asChild>
             <button
               className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-colors duration-150 border shrink-0 outline-hidden focus-visible:ring-2 focus-visible:ring-white/25 ${
-                advancedOpen || advancedCount > 0
+                advancedOpen || totalFilterCount > 0
                   ? 'border-white/15 text-zinc-200 bg-white/5'
                   : 'border-transparent text-zinc-300 hover:text-zinc-100 hover:bg-white/[0.03]'
               }`}
-              aria-label="פילטרים מתקדמים"
+              aria-label="סינון"
               aria-expanded={advancedOpen}
               aria-haspopup="dialog"
             >
               <SlidersHorizontal size={11} className="opacity-70" aria-hidden="true" />
-              <span>עוד</span>
-              {advancedCount > 0 && (
+              <span>סינון</span>
+              {totalFilterCount > 0 && (
                 <span className="w-3.5 h-3.5 rounded-full bg-cyan-500/20 text-cyan-400 text-[9px] flex items-center justify-center font-medium">
-                  {advancedCount}
+                  {totalFilterCount}
                 </span>
               )}
             </button>
@@ -191,28 +144,56 @@ export function FilterBar({
               side="bottom"
               align="start"
               sideOffset={4}
-              className="z-50 w-64 overflow-hidden rounded-lg border border-white/10 bg-[#1a1a1a]/95 backdrop-blur-xl shadow-2xl origin-(--radix-popover-content-transform-origin) data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
+              className="z-50 w-72 overflow-hidden rounded-lg border border-white/10 bg-[#1a1a1a]/95 backdrop-blur-xl shadow-2xl max-h-[70vh] overflow-y-auto origin-(--radix-popover-content-transform-origin) data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
             >
-              <AdvancedPanel
-                filters={filters}
-                availableSensors={availableSensors}
-                onUpdate={onUpdate}
-                onToggleSensor={onToggleSensor}
-                onToggleSignature={onToggleSignature}
-              />
+              <div className="divide-y divide-white/5" dir="rtl">
+                <AdvancedSection label="סטטוס" icon={Activity} isActive={filters.active !== 'all'} onClear={() => onUpdate('active', 'all')}>
+                  <SingleSelect
+                    value={filters.active}
+                    options={STATUS_OPTIONS as unknown as { value: string; label: string }[]}
+                    onChange={(v) => onUpdate('active', v as FilterState['active'])}
+                  />
+                </AdvancedSection>
+
+                <AdvancedSection label="תחום" icon={Globe} isActive={filters.domain !== 'all'} onClear={() => onUpdate('domain', 'all')}>
+                  <SingleSelect
+                    value={filters.domain}
+                    options={DOMAIN_OPTIONS as unknown as { value: string; label: string }[]}
+                    onChange={(v) => onUpdate('domain', v as FilterState['domain'])}
+                  />
+                </AdvancedSection>
+
+                <AdvancedSection label="סוג" icon={Tag} isActive={filters.types.length > 0} onClear={() => onUpdate('types', [])}>
+                  <MultiSelect
+                    items={availableTypes.map(t => ({ id: t, label: TYPE_LABELS[t] ?? t }))}
+                    selected={filters.types}
+                    onToggle={onToggleType}
+                  />
+                </AdvancedSection>
+
+                <AdvancedPanel
+                  filters={filters}
+                  availableSensors={availableSensors}
+                  onUpdate={onUpdate}
+                  onToggleSensor={onToggleSensor}
+                  onToggleSignature={onToggleSignature}
+                />
+
+                {totalFilterCount > 0 && (
+                  <div className="p-2">
+                    <button
+                      onClick={() => { onReset(); setAdvancedOpen(false); }}
+                      className="w-full text-[10px] text-zinc-400 hover:text-zinc-200 transition-colors py-1.5 rounded hover:bg-white/5"
+                      aria-label="איפוס פילטרים"
+                    >
+                      איפוס כל הפילטרים
+                    </button>
+                  </div>
+                )}
+              </div>
             </Popover.Content>
           </Popover.Portal>
         </Popover.Root>
-
-        {activeFilterCount > 0 && (
-          <button
-            onClick={onReset}
-            className="text-[9px] text-zinc-400 hover:text-zinc-200 transition-colors px-1 shrink-0"
-            aria-label="איפוס פילטרים"
-          >
-            איפוס
-          </button>
-        )}
       </div>
     </div>
   );

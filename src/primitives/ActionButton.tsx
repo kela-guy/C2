@@ -10,6 +10,7 @@ export function ActionButton({
   className = "",
   disabled = false,
   title,
+  dataTour,
 }: { 
   label: string; 
   icon?: React.ElementType; 
@@ -19,6 +20,7 @@ export function ActionButton({
   className?: string;
   disabled?: boolean;
   title?: string;
+  dataTour?: string;
 }) {
   const sizeStyles = {
     sm: "h-[30px] text-[10px] gap-1",
@@ -45,6 +47,7 @@ export function ActionButton({
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
       className={`${base} ${variantStyles[variant] || variantStyles.primary} ${disabledStyle} ${className}`}
+      {...(dataTour ? { 'data-tour': dataTour } : {})}
     >
       {Icon && <Icon size={iconSize} aria-hidden="true" />}
       <span>{label}</span>

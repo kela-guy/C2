@@ -7,6 +7,7 @@ export interface CardMediaProps {
   placeholder?: 'camera' | 'none';
   overlay?: React.ReactNode;
   badge?: 'threat' | 'warning' | 'bird' | null;
+  trackingLabel?: string;
   aspectRatio?: string;
   showControls?: boolean;
   className?: string;
@@ -19,6 +20,7 @@ export function CardMedia({
   placeholder = 'none',
   overlay,
   badge,
+  trackingLabel,
   aspectRatio,
   showControls = false,
   className = '',
@@ -90,6 +92,13 @@ export function CardMedia({
         <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/80 px-1.5 py-0.5 rounded-sm">
           <Camera size={10} className="text-white/70" aria-hidden="true" />
           <span className="text-[9px] text-white/70 font-mono">Playback</span>
+        </div>
+      )}
+
+      {trackingLabel && (
+        <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-cyan-900/80 border border-cyan-400/30 px-2 py-0.5 rounded" dir="rtl">
+          <Camera size={10} className="text-cyan-300" aria-hidden="true" />
+          <span className="text-[9px] font-semibold text-cyan-200">{trackingLabel}</span>
         </div>
       )}
 

@@ -17,6 +17,7 @@ export interface CardAction {
   disabled?: boolean;
   className?: string;
   title?: string;
+  dataTour?: string;
 }
 
 export interface CardActionsProps {
@@ -83,6 +84,7 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
               disabled={action.disabled}
               title={action.title}
               className={`w-full ${action.className ?? ''}`}
+              dataTour={action.dataTour}
             />
           </div>
         ))}
@@ -98,6 +100,7 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
             disabled={action.disabled}
             title={action.title}
             className={`w-full ${action.className ?? ''}`}
+            dataTour={action.dataTour}
           />
         ))}
       </div>

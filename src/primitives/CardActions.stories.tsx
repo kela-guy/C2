@@ -22,8 +22,7 @@ type Story = StoryObj<typeof CardActions>;
 export const PrimaryWithSecondary: Story = {
   args: {
     actions: [
-      { id: 'attack', label: 'ירי', icon: Crosshair, variant: 'danger', size: 'lg', onClick: fn() },
-      { id: 'jam', label: 'שיבוש', icon: Radio, variant: 'secondary', size: 'sm', onClick: fn() },
+      { id: 'jam-primary', label: 'שיבוש', icon: Zap, variant: 'danger', size: 'lg', onClick: fn() },
       { id: 'surveil', label: 'מעקב', icon: Eye, variant: 'secondary', size: 'sm', onClick: fn() },
       { id: 'drone', label: 'רחפן', icon: Plane, variant: 'secondary', size: 'sm', onClick: fn() },
       { id: 'dismiss', label: 'ביטול', icon: X, variant: 'ghost', size: 'sm', onClick: fn() },

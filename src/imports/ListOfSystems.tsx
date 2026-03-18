@@ -96,6 +96,7 @@ export interface Detection {
   lastSeenAt?: string;
   lastSeenCoordinates?: string;
   altitude?: string;
+  laserDistance?: string;
 }
 
 export interface MissionWaypoint {
@@ -204,12 +205,14 @@ function UnifiedCard({
   onToggle,
   callbacks,
   ctx,
+  onFocus,
 }: {
   target: Detection;
   isOpen: boolean;
   onToggle: () => void;
   callbacks: CardCallbacks;
   ctx: CardContext;
+  onFocus?: () => void;
 }) {
   const slots = useCardSlots(target, callbacks, ctx);
   const isMission = target.flowType === 4;
@@ -224,6 +227,7 @@ function UnifiedCard({
       completed={slots.completed}
       open={isOpen}
       onToggle={onToggle}
+      onFocus={onFocus}
       header={
         <CardHeader
           {...slots.header}
@@ -250,7 +254,7 @@ function UnifiedCard({
         <CardDetails
           rows={slots.details.rows}
           classification={slots.details.classification}
-          defaultOpen={!hasActions}
+          defaultOpen
         />
       )}
 
@@ -379,8 +383,15 @@ export interface ListOfSystemsProps {
   onMitigateAll?: (targetId: string) => void;
   regulusEffectors?: RegulusEffector[];
   onBdaOutcome?: (targetId: string, outcome: 'neutralized' | 'active' | 'lost') => void;
+  onBdaCamera?: (targetId: string) => void;
   cameraActiveTargetId?: string | null;
+  allCamerasBusyForTarget?: string | null;
+  controlRequestCountdown?: number | null;
+  controlRequestTargetId?: string | null;
+  onRequestCameraControl?: (targetId: string) => void;
   onSensorFocus?: (sensorId: string) => void;
+  onTargetFocus?: (targetId: string) => void;
+  onTargetHover?: (targetId: string | null) => void;
 }
 
 export default function ListOfSystems({
@@ -420,8 +431,15 @@ export default function ListOfSystems({
   onMitigateAll,
   regulusEffectors,
   onBdaOutcome,
+  onBdaCamera,
   cameraActiveTargetId,
+  allCamerasBusyForTarget,
+  controlRequestCountdown,
+  controlRequestTargetId,
+  onRequestCameraControl,
   onSensorFocus,
+  onTargetFocus,
+  onTargetHover,
 }: ListOfSystemsProps) {
   const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
   const [expandedBurstTargets, setExpandedBurstTargets] = useState<Set<string>>(new Set());
@@ -501,12 +519,16 @@ export default function ListOfSystems({
     onMitigate: (effectorId) => onMitigate?.(target.id, effectorId),
     onMitigateAll: () => onMitigateAll?.(target.id),
     onBdaOutcome: (outcome) => onBdaOutcome?.(target.id, outcome),
+    onBdaCamera: () => onBdaCamera?.(target.id),
+    onRequestCameraControl: () => onRequestCameraControl?.(target.id),
     onSensorFocus,
   });
 
   const buildCtx = (target: Detection): CardContext => ({
     isDroneVerifying: droneVerifyingTargetId === target.id,
     isCameraActive: cameraActiveTargetId === target.id,
+    allCamerasBusy: allCamerasBusyForTarget === target.id,
+    controlRequestCountdown: controlRequestTargetId === target.id ? controlRequestCountdown : null,
     regulusEffectors,
     nearbyCameras: (target.flowType === 1 || target.flowType === 2) ? nearbyCameras : undefined,
     nearbyHives: target.flowType === 3 ? nearbyHives : undefined,
@@ -524,6 +546,7 @@ export default function ListOfSystems({
       onToggle={() => onTargetClick?.(target)}
       callbacks={callbacks}
       ctx={ctx}
+      onFocus={onTargetFocus ? () => onTargetFocus(target.id) : undefined}
     />
   );
 
@@ -574,6 +597,7 @@ export default function ListOfSystems({
                   buildCtx={buildCtx}
                   renderCard={renderSingleCard}
                   onBulkMitigate={onMitigateAll ? handleBulkMitigate : undefined}
+                  onTargetHover={onTargetHover}
                 />
               </motion.div>
             );
@@ -592,6 +616,8 @@ export default function ListOfSystems({
               className="cursor-pointer"
               id={`detection-card-${target.id}`}
               {...(idx === 0 ? { 'data-tour': 'first-card' } : {})}
+              onMouseEnter={() => onTargetHover?.(target.id)}
+              onMouseLeave={() => onTargetHover?.(null)}
             >
               <UnifiedCard
                 target={target}
@@ -599,6 +625,7 @@ export default function ListOfSystems({
                 onToggle={() => onTargetClick?.(target)}
                 callbacks={buildCallbacks(target)}
                 ctx={buildCtx(target)}
+                onFocus={onTargetFocus ? () => onTargetFocus(target.id) : undefined}
               />
             </motion.div>
           );
@@ -629,6 +656,7 @@ export default function ListOfSystems({
           </button>
           <button
             id="tab-completed"
+            data-tour="cuas-completed-tab"
             onClick={() => setActiveTab('completed')}
             role="tab"
             aria-selected={activeTab === 'completed'}

@@ -167,7 +167,7 @@ const NotificationRow = ({ item }: { item: NotificationItem }) => {
         
         {/* Header Line: Sender & Time */}
         <div className="flex justify-between items-center h-5">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-[#666] group-hover:text-[#888] transition-colors">
+          <span className="text-[11px] font-medium uppercase tracking-wider text-white/70 group-hover:text-white/90 transition-colors">
             {item.sender}
           </span>
           <span className="text-[10px] text-[#555] font-medium font-mono tabular-nums">
@@ -383,7 +383,7 @@ export const NotificationCenter = ({ trigger: customTrigger }: NotificationCente
                    return (
                      <div key={category} className="flex flex-col">
                         <div className="sticky top-0 z-10 bg-[#141414]/95 backdrop-blur-sm px-4 py-2 border-b border-[#333]/30 flex items-center">
-                           <span className="text-[10px] font-bold text-[#444] uppercase tracking-wider">
+                           <span className="text-[11px] font-medium text-white/70 uppercase tracking-wider">
                              {category === "Today" ? "היום" :
                               category === "Yesterday" ? "אתמול" :
                               category === "Last 7 Days" ? "השבוע" : "היסטוריה"}

@@ -10,6 +10,7 @@ export interface TargetCardProps {
   accent?: ThreatAccent;
   completed?: boolean;
   className?: string;
+  onFocus?: () => void;
 }
 
 export function TargetCard({
@@ -20,6 +21,7 @@ export function TargetCard({
   accent = 'idle',
   completed,
   className = '',
+  onFocus,
 }: TargetCardProps) {
   const d = CARD_TOKENS;
   const cardRef = useRef<HTMLDivElement>(null);
@@ -29,10 +31,21 @@ export function TargetCard({
 
   useEffect(() => {
     if (open && !prevOpen.current && cardRef.current) {
-      cardRef.current.scrollIntoView({
-        behavior: prefersReducedMotion ? 'auto' : 'smooth',
-        block: 'nearest',
-      });
+      const container = cardRef.current.closest('.overflow-y-auto');
+      if (container) {
+        const containerRect = container.getBoundingClientRect();
+        const cardRect = cardRef.current.getBoundingClientRect();
+        const isNearBottom = cardRect.top > containerRect.bottom - 200;
+        cardRef.current.scrollIntoView({
+          behavior: prefersReducedMotion ? 'auto' : 'smooth',
+          block: isNearBottom ? 'start' : 'nearest',
+        });
+      } else {
+        cardRef.current.scrollIntoView({
+          behavior: prefersReducedMotion ? 'auto' : 'smooth',
+          block: 'nearest',
+        });
+      }
     }
     prevOpen.current = open;
   }, [open, prefersReducedMotion]);
@@ -47,7 +60,7 @@ export function TargetCard({
         borderRadius: `${d.container.borderRadius}px`,
         borderWidth: `${d.container.borderWidth}px`,
         borderStyle: 'solid',
-        marginBottom: `${d.container.marginBottom}px`,
+        marginBottom: `${d.container.marginBottom + 2}px`,
         filter: completed ? 'saturate(0.4) brightness(0.85)' : undefined,
         boxShadow: open
           ? `0 0 0 ${d.selectedRing.ringWidth}px ${d.selectedRing.ringColor}${Math.round(d.selectedRing.ringOpacity * 255).toString(16).padStart(2, '0')}`
@@ -63,7 +76,10 @@ export function TargetCard({
           borderTopLeftRadius: `${d.container.borderRadius}px`,
           borderTopRightRadius: `${d.container.borderRadius}px`,
         }}
-        onClick={onToggle}
+        onClick={(e) => {
+          if (onFocus && !open) onFocus();
+          onToggle();
+        }}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(); } }}
         role="button"
         tabIndex={0}

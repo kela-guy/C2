@@ -25,11 +25,10 @@ export interface CardDetailsProps {
 
 export function CardDetails({
   rows,
-  classification,
   defaultOpen = true,
   className = '',
 }: CardDetailsProps) {
-  if (rows.length === 0 && !classification) return null;
+  if (rows.length === 0) return null;
 
   const copyAll = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -38,35 +37,8 @@ export function CardDetails({
   };
 
   return (
-    <AccordionSection title="פרטים" defaultOpen={defaultOpen} icon={Eye} className={className}>
+    <AccordionSection title="נתוני טלמטריה" defaultOpen={defaultOpen} icon={Eye} className={className}>
       <div className="py-1">
-        {classification && (
-          <div
-            className="flex items-center justify-between px-1 pb-2 mb-2 border-b border-white/5"
-            dir="rtl"
-          >
-            <div className="flex items-center gap-2">
-              <span
-                className={`text-[13px] font-bold ${classification.colorClass ?? 'text-zinc-300'}`}
-              >
-                {classification.typeLabel}
-              </span>
-              <span className="text-[10px] text-zinc-400">מסווג</span>
-            </div>
-            {classification.confidence != null && (
-              <span
-                className={`text-[12px] font-bold font-mono tabular-nums ${
-                  classification.confidence >= 80
-                    ? (classification.colorClass ?? 'text-zinc-400')
-                    : 'text-zinc-400'
-                }`}
-              >
-                {classification.confidence}%
-              </span>
-            )}
-          </div>
-        )}
-
         <div className="grid grid-cols-2 grid-rows-2 group/copy relative">
           {rows.map((row, idx) => (
             <TelemetryRow key={idx} label={row.label} value={row.value} icon={row.icon} />

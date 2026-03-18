@@ -27,9 +27,6 @@ export function CardSensors({
 
   return (
     <div className={`flex flex-col gap-1 pt-2 border-t border-white/5 ${className}`} dir="rtl">
-      <span className="text-[10px] text-zinc-400 font-semibold pb-0.5">
-        {label} ({sensors.length})
-      </span>
       {sensors.map((sensor) => {
         const SensorIcon = sensor.icon;
         return (

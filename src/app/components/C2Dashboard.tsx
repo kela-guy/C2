@@ -11,6 +11,7 @@ import { DroneHiveIcon as MapDroneIcon } from './TacticalMap';
 import { toast } from 'sonner';
 import Joyride from 'react-joyride';
 import { useOnboardingTour } from '../hooks/useOnboardingTour';
+import { DevicesPanel, DevicesIcon } from './DevicesPanel';
 
 
 function haversineDistanceM(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -43,18 +44,27 @@ const C2Logo = ({ className }: { className?: string }) => (
 export const C2Dashboard = () => {
   const [activeTargetId, setActiveTargetId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [devicesPanelOpen, setDevicesPanelOpen] = useState(false);
+  const [panelSwitching, setPanelSwitching] = useState(false);
+  const [deviceFocusRequest, setDeviceFocusRequest] = useState<{ lat: number; lon: number } | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
-  
+
+  useEffect(() => {
+    if (panelSwitching) {
+      const id = requestAnimationFrame(() => setPanelSwitching(false));
+      return () => cancelAnimationFrame(id);
+    }
+  }, [panelSwitching]);
+
   // Simulation State
   const [targets, setTargets] = useState<Detection[]>([]);
   const [pendingMissileLaunch, setPendingMissileLaunch] = useState<MissileLaunchRequest | null>(null);
   const [hoveredSensorIdFromCard, setHoveredSensorIdFromCard] = useState<string | null>(null);
+  const [hoveredTargetIdFromCard, setHoveredTargetIdFromCard] = useState<string | null>(null);
   const [sensorFocusId, setSensorFocusId] = useState<string | null>(null);
   /** When user clicks שיבוש: target being jammed and the map asset (antenna) doing the jamming. Cleared on "סיום משימה". */
   const [jammingTargetId, setJammingTargetId] = useState<string | null>(null);
   const [jammingJammerAssetId, setJammingJammerAssetId] = useState<string | null>(null);
-  /** After "סיום משימה" on a jamming mission: show verification choice (camera / drone / skip). */
-  const [postJamVerificationTargetId, setPostJamVerificationTargetId] = useState<string | null>(null);
   /** When user chose camera or drone: active verification to show on map; cleared when map calls onJammingVerificationComplete. */
   const [jammingVerificationActive, setJammingVerificationActive] = useState<{ targetId: string; method: 'camera' | 'drone' } | null>(null);
   /** When user sends a drone to verify an attack mission before completing it. */
@@ -72,12 +82,14 @@ export const C2Dashboard = () => {
   const [missionPlannerOpen, setMissionPlannerOpen] = useState(false);
   const [missionPlannerRect, setMissionPlannerRect] = useState<{ top: number; left: number } | null>(null);
   const missionPlannerBtnRef = useRef<HTMLButtonElement>(null);
-  const [cameraLookAtRequest, setCameraLookAtRequest] = useState<{ cameraId: string; targetLat: number; targetLon: number } | null>(null);
+  const [cameraLookAtRequest, setCameraLookAtRequest] = useState<{ cameraId: string; targetLat: number; targetLon: number; fovOverrideDeg?: number } | null>(null);
   const [investigateCameraId, setInvestigateCameraId] = useState<string | null>(null);
   const [controlIndicator, setControlIndicator] = useState(false);
   const [nearbyCameras, setNearbyCameras] = useState<{ id: string; typeLabel: string; distanceM: number }[]>([]);
   const [nearbyHives, setNearbyHives] = useState<{ id: string; latitude: number; longitude: number; distanceM: number; battery: number; status: string }[]>([]);
   const [fitBoundsPoints, setFitBoundsPoints] = useState<{ lat: number; lon: number }[] | null>(null);
+  const [allCamerasBusyForTarget, setAllCamerasBusyForTarget] = useState<string | null>(null);
+  const [cameraControlRequest, setCameraControlRequest] = useState<{ targetId: string; countdown: number } | null>(null);
 
   // Flow 3: Drone deployment state
   const flow3IntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -149,6 +161,33 @@ export const C2Dashboard = () => {
   useEffect(() => {
     if (!cameraLookAtRequest) setInvestigateCameraId(null);
   }, [cameraLookAtRequest]);
+
+  useEffect(() => {
+    if (!cameraControlRequest) return;
+    const iv = setInterval(() => {
+      setCameraControlRequest(prev => {
+        if (!prev) return null;
+        if (prev.countdown <= 1) {
+          const target = targets.find(t => t.id === prev.targetId);
+          if (target) {
+            const [lat, lon] = target.coordinates.split(',').map(s => parseFloat(s.trim()));
+            const nearest = CAMERA_ASSETS
+              .map(c => ({ cam: c, dist: haversineDistanceM(lat, lon, c.latitude, c.longitude) }))
+              .sort((a, b) => a.dist - b.dist)[0];
+            if (nearest) {
+              setJammingVerificationActive({ targetId: prev.targetId, method: 'camera' });
+              setCameraLookAtRequest({ cameraId: nearest.cam.id, targetLat: lat, targetLon: lon, fovOverrideDeg: 135 });
+              setAllCamerasBusyForTarget(null);
+              toast.success("שליטה על מצלמה התקבלה — מפנה לאימות");
+            }
+          }
+          return null;
+        }
+        return { ...prev, countdown: prev.countdown - 1 };
+      });
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [cameraControlRequest?.targetId]);
 
   // Clock
   useEffect(() => {
@@ -1741,11 +1780,6 @@ export const C2Dashboard = () => {
   };
 
   const handleCompleteMission = (targetId: string) => {
-      const target = targets.find(t => t.id === targetId);
-      if (target?.missionType === 'jamming') {
-        setPostJamVerificationTargetId(targetId);
-        return;
-      }
       if (attackVerificationTargetId === targetId) {
         setAttackVerificationTargetId(null);
         setJammingVerificationActive(null);
@@ -1753,22 +1787,65 @@ export const C2Dashboard = () => {
       completeMissionAndClearJammingState(targetId);
   };
 
-  const finishMissionAndClearJamming = (targetId: string, method: 'camera' | 'drone' | null) => {
-      setPostJamVerificationTargetId(null);
-      if (method === null) {
-        completeMissionAndClearJammingState(targetId);
-        return;
+  const handleBdaCamera = (targetId: string) => {
+      // Toggle: if camera is already active for this target, dismiss it
+      if (cameraLookAtRequest) {
+        const target = targets.find(t => t.id === targetId);
+        if (target) {
+          const [lat, lon] = target.coordinates.split(',').map(s => parseFloat(s.trim()));
+          const isActiveForTarget = Math.abs(lat - cameraLookAtRequest.targetLat) < 0.01
+            && Math.abs(lon - cameraLookAtRequest.targetLon) < 0.01;
+          if (isActiveForTarget) {
+            setCameraLookAtRequest(null);
+            setAllCamerasBusyForTarget(null);
+            toast.success("מצלמה בוטלה");
+            return;
+          }
+        }
       }
-      setJammingVerificationActive({ targetId, method });
+
+      const target = targets.find(t => t.id === targetId);
+      if (!target) return;
+      const [lat, lon] = target.coordinates.split(',').map(s => parseFloat(s.trim()));
+
+      const sorted = CAMERA_ASSETS
+        .map(c => ({ cam: c, dist: haversineDistanceM(lat, lon, c.latitude, c.longitude) }))
+        .sort((a, b) => a.dist - b.dist);
+
+      const busyCameraId = cameraLookAtRequest?.cameraId ?? null;
+      const freeCamera = sorted.find(c => c.cam.id !== busyCameraId);
+
+      if (freeCamera) {
+        setJammingVerificationActive({ targetId, method: 'camera' });
+        setCameraLookAtRequest({ cameraId: freeCamera.cam.id, targetLat: lat, targetLon: lon, fovOverrideDeg: 135 });
+        setAllCamerasBusyForTarget(null);
+        toast.success("מפנה מצלמה לאימות שיבוש");
+      } else {
+        setAllCamerasBusyForTarget(targetId);
+        toast("כל המצלמות תפוסות — לחץ 'בקש שליטה' להשגת גישה", { icon: '⚠️' });
+      }
   };
+
+  const handleRequestCameraControl = (targetId: string) => {
+    setCameraControlRequest({ targetId, countdown: 10 });
+    toast("מבקש שליטה על מצלמה...", { icon: '🔒' });
+  };
+
+  const handleDeviceFlyTo = useCallback((lat: number, lon: number) => {
+    setDeviceFocusRequest({ lat, lon });
+    setTimeout(() => setDeviceFocusRequest(null), 100);
+  }, []);
 
   const handleJammingVerificationComplete = () => {
       if (!jammingVerificationActive) return;
       const targetId = jammingVerificationActive.targetId;
-      const isAttackVerification = attackVerificationTargetId === targetId;
       setJammingVerificationActive(null);
-      if (isAttackVerification) {
-        // Drone arrived — don't auto-complete; let user click "סיום משימה"
+      const target = targets.find(t => t.id === targetId);
+      if (target?.missionType === 'jamming') {
+        toast.success('אימות מצלמה הושלם — לחץ "סיום משימה" להשלמה');
+        return;
+      }
+      if (attackVerificationTargetId === targetId) {
         return;
       }
       completeMissionAndClearJammingState(targetId);
@@ -1790,13 +1867,18 @@ export const C2Dashboard = () => {
     ));
 
     setTimeout(() => {
-      setTargets(prev => appendLog(prev, targetId, 'שיבוש הושלם — יעד נוטרל').map(t =>
-        t.id === targetId ? { ...t, mitigationStatus: 'mitigated' as const, status: 'event_neutralized' } : t
+      setTargets(prev => appendLog(prev, targetId, 'שיבוש הושלם — ממתין לאימות').map(t =>
+        t.id === targetId ? {
+          ...t,
+          mitigationStatus: 'mitigated' as const,
+          missionType: 'jamming' as const,
+          missionStatus: 'waiting_confirmation' as const,
+        } : t
       ));
       setRegulusEffectors(prev => prev.map(r =>
         r.id === effectorId ? { ...r, status: 'available' as const, activeTargetId: undefined } : r
       ));
-      toast.success('יעד נוטרל בהצלחה');
+      toast.success('שיבוש הושלם — נדרש אימות');
     }, 10000);
   }, []);
 
@@ -1822,15 +1904,20 @@ export const C2Dashboard = () => {
 
     setTimeout(() => {
       setTargets(prev => {
-        const logged = targetId ? appendLog(prev, targetId, 'שיבוש מרחבי הושלם — כל היעדים נוטרלו') : prev;
+        const logged = targetId ? appendLog(prev, targetId, 'שיבוש מרחבי הושלם — ממתין לאימות') : prev;
         return logged.map(t =>
           t.mitigatingEffectorId === 'ALL' && t.mitigationStatus === 'mitigating'
-            ? { ...t, mitigationStatus: 'mitigated' as const, status: 'event_neutralized' as const }
+            ? {
+                ...t,
+                mitigationStatus: 'mitigated' as const,
+                missionType: 'jamming' as const,
+                missionStatus: 'waiting_confirmation' as const,
+              }
             : t
         );
       });
       setRegulusEffectors(prev => prev.map(r => ({ ...r, status: 'available' as const, activeTargetId: undefined })));
-      toast.success('כל היעדים נוטרלו בהצלחה');
+      toast.success('שיבוש הושלם — נדרש אימות');
     }, 10000);
   }, [regulusEffectors]);
 
@@ -1885,6 +1972,95 @@ export const C2Dashboard = () => {
     setCameraLookAtRequest(null);
   }, [targets]);
 
+  // Targets still on their initial approach path — loitering must not interfere
+  const approachingTargetIds = useRef<Set<string>>(new Set());
+
+  // --- Hostile drone loitering: smooth random movement within asset area until jammed ---
+  const loiterStateRef = useRef<Record<string, {
+    homeLat: number; homeLon: number;
+    heading: number; targetHeading: number;
+    nextTurnTick: number; tick: number;
+  }>>({});
+
+  const AREA_MIN_LAT = 31.194, AREA_MAX_LAT = 31.224;
+  const AREA_MIN_LON = 34.645, AREA_MAX_LON = 34.690;
+
+  useEffect(() => {
+    const TICK_MS = 250;
+    const SPEED = 0.00012;
+    const TURN_RATE = 0.08;
+    const HOME_RADIUS = 0.006;
+
+    const interval = setInterval(() => {
+      setTargets(prev => prev.map(t => {
+        if (approachingTargetIds.current.has(t.id)) return t;
+
+        const isActiveDrone = t.entityStage === 'classified'
+          && t.classifiedType === 'drone'
+          && t.mitigationStatus !== 'mitigating'
+          && t.mitigationStatus !== 'mitigated'
+          && t.status !== 'event_resolved'
+          && t.status !== 'event_neutralized'
+          && t.status !== 'expired';
+        if (!isActiveDrone) return t;
+
+        const [curLat, curLon] = t.coordinates.split(',').map(s => parseFloat(s.trim()));
+        if (isNaN(curLat) || isNaN(curLon)) return t;
+
+        if (!loiterStateRef.current[t.id]) {
+          loiterStateRef.current[t.id] = {
+            homeLat: curLat, homeLon: curLon,
+            heading: Math.random() * Math.PI * 2,
+            targetHeading: Math.random() * Math.PI * 2,
+            nextTurnTick: 8 + Math.floor(Math.random() * 15),
+            tick: 0,
+          };
+        }
+
+        const state = loiterStateRef.current[t.id];
+        state.tick++;
+
+        if (state.tick >= state.nextTurnTick) {
+          state.targetHeading = Math.random() * Math.PI * 2;
+          state.nextTurnTick = state.tick + 10 + Math.floor(Math.random() * 20);
+        }
+
+        const dFromHome = Math.sqrt((curLat - state.homeLat) ** 2 + (curLon - state.homeLon) ** 2);
+        if (dFromHome > HOME_RADIUS) {
+          state.targetHeading = Math.atan2(state.homeLon - curLon, state.homeLat - curLat);
+        }
+
+        const latMargin = 0.003, lonMargin = 0.003;
+        if (curLat < AREA_MIN_LAT + latMargin) state.targetHeading = Math.PI * 0.5 * (Math.random() - 0.5);
+        if (curLat > AREA_MAX_LAT - latMargin) state.targetHeading = Math.PI + Math.PI * 0.5 * (Math.random() - 0.5);
+        if (curLon < AREA_MIN_LON + lonMargin) state.targetHeading = Math.PI * 0.5 + Math.PI * 0.5 * (Math.random() - 0.5);
+        if (curLon > AREA_MAX_LON - lonMargin) state.targetHeading = -Math.PI * 0.5 + Math.PI * 0.5 * (Math.random() - 0.5);
+
+        let diff = state.targetHeading - state.heading;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        state.heading += Math.sign(diff) * Math.min(Math.abs(diff), TURN_RATE);
+
+        const newLat = curLat + Math.cos(state.heading) * SPEED;
+        const newLon = curLon + Math.sin(state.heading) * SPEED;
+
+        const clampedLat = Math.max(AREA_MIN_LAT, Math.min(AREA_MAX_LAT, newLat));
+        const clampedLon = Math.max(AREA_MIN_LON, Math.min(AREA_MAX_LON, newLon));
+
+        const now = new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const updatedTrail = [...(t.trail || []), { lat: clampedLat, lon: clampedLon, timestamp: now }];
+
+        return {
+          ...t,
+          coordinates: `${clampedLat.toFixed(5)}, ${clampedLon.toFixed(5)}`,
+          trail: updatedTrail.length > 60 ? updatedTrail.slice(-60) : updatedTrail,
+        };
+      }));
+    }, TICK_MS);
+
+    return () => clearInterval(interval);
+  }, []);
+
   // --- CUAS Simulation Flow ---
   const cuasIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const cuasIntervalRef2 = useRef<NodeJS.Timeout | null>(null);
@@ -1924,14 +2100,15 @@ export const C2Dashboard = () => {
       altitude: '120 מ׳',
     };
 
+    approachingTargetIds.current.add(targetId);
     setTargets(prev => [...prev, rawDetection]);
 
     if (!opts.silent) {
       setActiveTargetId(prev => prev !== null ? prev : targetId);
       if (!activeTargetId) setSidebarOpen(true);
       showTacticalNotification({
-        title: 'זיהוי חדש',
-        message: `זיהוי לא ידוע — ${rawDetection.contributingSensors?.[0]?.sensorId ?? 'חיישן'}`,
+        title: `זיהוי חדש — ${rawDetection.name}`,
+        message: `ביטחון ${rawDetection.confidence}% — ${rawDetection.contributingSensors?.[0]?.sensorId ?? 'חיישן'}`,
         code: targetId,
         level: 'info',
       });
@@ -1991,8 +2168,8 @@ export const C2Dashboard = () => {
           updated.actionLog = [...(updated.actionLog || []), { time: t, label: opts.isBird ? 'סווג כציפור — ביטחון 85%' : 'סווג כרחפן — ביטחון 92%' }];
           setTimeout(() => {
             showTacticalNotification({
-              title: `CUAS — ${updated.name}`,
-              message: opts.isBird ? 'זוהה ציפור — ממתין לאישור' : 'איום מסווג — רחפן עוין',
+              title: `זיהוי חדש — ${updated.name}`,
+              message: `ביטחון ${updated.confidence}% — ${opts.isBird ? 'ממתין לאישור' : 'איום מסווג — רחפן עוין'}`,
               code: targetId,
               level: opts.isBird ? 'suspect' : 'critical',
             });
@@ -2008,6 +2185,7 @@ export const C2Dashboard = () => {
 
       if (step >= 12) {
         if (opts.intervalRef.current) clearInterval(opts.intervalRef.current);
+        approachingTargetIds.current.delete(targetId);
       }
     }, 2000);
 
@@ -2141,9 +2319,9 @@ export const C2Dashboard = () => {
           t.id === targetId 
             ? { 
                 ...t, 
-                status: 'event', 
-                missionType: 'jamming',
-                missionStatus: 'waiting_confirmation',
+                status: 'event' as const,
+                missionType: 'jamming' as const,
+                missionStatus: 'waiting_confirmation' as const,
                 missionSteps: jammingSteps,
                 missionProgress: 1,
               }
@@ -2244,11 +2422,18 @@ export const C2Dashboard = () => {
         <div className="flex flex-col items-center gap-0.5 py-3 flex-1">
           <button
             data-tour="sidebar-toggle"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
+            onClick={() => { const next = !sidebarOpen; if (next && devicesPanelOpen) setPanelSwitching(true); setSidebarOpen(next); if (next) setDevicesPanelOpen(false); }}
             className="p-2.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
             title={sidebarOpen ? 'סגור רשימת מערכות' : 'פתח רשימת מערכות'}
           >
             <List size={20} strokeWidth={1.5} />
+          </button>
+          <button
+            onClick={() => { const next = !devicesPanelOpen; if (next && sidebarOpen) setPanelSwitching(true); setDevicesPanelOpen(next); if (next) setSidebarOpen(false); }}
+            className={`p-2.5 rounded-lg transition-colors ${devicesPanelOpen ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
+            title={devicesPanelOpen ? 'סגור מכשירים' : 'מכשירים'}
+          >
+            <DevicesIcon size={20} />
           </button>
           <div data-mission-planner>
             <button
@@ -2317,7 +2502,7 @@ export const C2Dashboard = () => {
           focusCoords={focusCoords} 
           targets={targets}
           activeTargetId={activeTargetId}
-          onMarkerClick={(id) => { setActiveTargetId(id); setSidebarOpen(true); }}
+          onMarkerClick={(id) => { setActiveTargetId(id); setSidebarOpen(true); setDevicesPanelOpen(false); }}
           missileLaunchRequest={pendingMissileLaunch}
           highlightedSensorIds={highlightedSensorIds}
           onMissilePhaseChange={handleMissilePhaseChange}
@@ -2363,45 +2548,20 @@ export const C2Dashboard = () => {
           selectedAssetId={missionPlanningMode?.selectedCameraId ?? null}
           onMapClick={handlePlanningMapClick}
           regulusEffectors={regulusEffectors}
+          smoothFocusRequest={deviceFocusRequest}
+          hoveredTargetIdFromCard={hoveredTargetIdFromCard}
         />
 
         {/* Right Sidebar - List of Systems */}
         <aside 
           className={`
-            absolute top-0 bottom-0 w-96 bg-[#141414] border-l border-white/10 flex flex-col transition-all duration-300 ease-in-out z-10
+            absolute top-0 bottom-0 w-96 bg-[#141414] border-l border-white/10 flex flex-col ${panelSwitching ? '' : 'transition-all duration-300 ease-in-out'} z-10
             ${sidebarOpen ? 'translate-x-0 right-0' : 'translate-x-full right-0'}
           `}
         >
           <div className="p-3 border-b border-white/5">
-            <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider">מערכות פעילות ({targets.length})</h2>
+            <h2 className="text-[11px] font-medium text-white/70 uppercase tracking-wider">מערכות פעילות ({targets.length})</h2>
           </div>
-          {postJamVerificationTargetId && (
-              <div className="p-3 border-b border-amber-500/30 bg-amber-950/20" dir="rtl">
-                <p className="text-xs font-medium text-amber-200 mb-3">
-                  אימות שיבוש: האם להפנות מצלמה או לשלוח רחפן לאימות שיבוש הרחפן?
-                </p>
-                <div className="flex flex-col gap-2">
-                  <button
-                    onClick={() => finishMissionAndClearJamming(postJamVerificationTargetId, 'camera')}
-                    className="w-full px-3 py-2 text-xs font-medium rounded border border-cyan-500/50 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20 transition-colors"
-                  >
-                    הפנה מצלמה לאימות
-                  </button>
-                  <button
-                    onClick={() => finishMissionAndClearJamming(postJamVerificationTargetId, 'drone')}
-                    className="w-full px-3 py-2 text-xs font-medium rounded border border-amber-500/50 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 transition-colors"
-                  >
-                    שלח רחפן לאימות
-                  </button>
-                  <button
-                    onClick={() => finishMissionAndClearJamming(postJamVerificationTargetId, null)}
-                    className="w-full px-3 py-2 text-xs text-gray-400 hover:text-gray-300 transition-colors"
-                  >
-                    סיים בלי אימות
-                  </button>
-                </div>
-              </div>
-          )}
           <div className="flex-1 overflow-y-auto custom-scrollbar">
             <ListOfSystems 
               className="flex flex-col gap-2" 
@@ -2413,6 +2573,7 @@ export const C2Dashboard = () => {
               onCancelMission={handleCancelMission}
               onCompleteMission={handleCompleteMission}
               onEngage={handleEngage}
+              onBdaCamera={handleBdaCamera}
               onSendDroneVerification={handleSendAttackVerification}
               droneVerifyingTargetId={attackVerificationTargetId}
               onSensorHover={setHoveredSensorIdFromCard}
@@ -2456,13 +2617,25 @@ export const C2Dashboard = () => {
                 const [lat, lon] = t.coordinates.split(',').map(s => parseFloat(s.trim()));
                 return Math.abs(lat - cameraLookAtRequest.targetLat) < 0.01 && Math.abs(lon - cameraLookAtRequest.targetLon) < 0.01;
               })?.id ?? null : null}
+              allCamerasBusyForTarget={allCamerasBusyForTarget}
+              controlRequestCountdown={cameraControlRequest?.countdown ?? null}
+              controlRequestTargetId={cameraControlRequest?.targetId ?? null}
+              onRequestCameraControl={handleRequestCameraControl}
               onSensorFocus={(sensorId) => {
                 setSensorFocusId(sensorId);
                 setTimeout(() => setSensorFocusId(null), 2000);
               }}
+              onTargetHover={setHoveredTargetIdFromCard}
             />
           </div>
         </aside>
+
+        <DevicesPanel
+          open={devicesPanelOpen}
+          onClose={() => setDevicesPanelOpen(false)}
+          onFlyTo={handleDeviceFlyTo}
+          noTransition={panelSwitching}
+        />
 
         <main className="flex-1 relative pointer-events-none min-h-0" />
       </div>
@@ -2477,7 +2650,7 @@ export const C2Dashboard = () => {
           style={{ top: flowTriggerRect.top, left: flowTriggerRect.left, zIndex: 99999 }}
           dir="rtl"
         >
-          <div className="px-3 py-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider border-b border-white/10 mb-1">סימולציות</div>
+          <div className="px-3 py-1.5 text-[11px] font-medium text-white/70 uppercase tracking-wider border-b border-white/10 mb-1">סימולציות</div>
           <button onClick={handleFlow1} className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-zinc-300 hover:bg-white/10 hover:text-white transition-colors text-right">
             <AlertTriangle size={14} className="text-red-400 shrink-0" />
             <span>התרעה → חקירה → פעולה</span>
@@ -2491,7 +2664,7 @@ export const C2Dashboard = () => {
             <span>שיגור רחפן</span>
           </button>
           <div className="border-t border-white/10 mt-1 pt-1">
-            <div className="px-3 py-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">CUAS</div>
+            <div className="px-3 py-1.5 text-[11px] font-medium text-white/70 uppercase tracking-wider">CUAS</div>
             <button onClick={handleCUASFlow} className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-zinc-300 hover:bg-white/10 hover:text-white transition-colors text-right">
               <ShieldAlert size={14} className="shrink-0 text-zinc-400" />
               <span>תרחיש מלא (3 יעדים)</span>

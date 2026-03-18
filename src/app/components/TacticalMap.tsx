@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Map, { Marker, NavigationControl, Source, Layer, type MapRef } from 'react-map-gl';
 import type { FillLayer } from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { Crosshair, Map as MapIcon, AlertTriangle, ShieldAlert, Camera, CheckCircle2, Zap, Radio, Search, Eye, MapPin, X, Compass, Circle, Video, Info, Settings, BellOff, Wrench, ExternalLink, Maximize2 } from 'lucide-react';
+import { Crosshair, AlertTriangle, ShieldAlert, Camera, CheckCircle2, Zap, Radio, Search, Eye, MapPin, X, Compass, Circle, Video, Info, Settings, BellOff, Wrench, ExternalLink, Maximize2 } from 'lucide-react';
 import {
   ContextMenu,
   ContextMenuTrigger,
@@ -185,11 +185,11 @@ export const DroneHiveIcon = ({ size = 28, fill = "white" }: { size?: number; fi
   </svg>
 );
 
-const LauncherIcon = () => (
-  <svg width="34" height="35" viewBox="0 0 26 27" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M17.9444 13.5L18.5 13L18 4L9.13333 13.5H17.9444Z" fill="white"/>
-    <path fillRule="evenodd" clipRule="evenodd" d="M9.13333 13.5H7V15.7857V21V23H22.5V13.5H17.9444H9.13333ZM11 17H9V20H11V17ZM13.5 20V17H15.5V20H13.5ZM18 20V17H20V20H18Z" fill="white"/>
-    <path d="M7 15.7857L4 19L7 21V15.7857Z" fill="white"/>
+export const LauncherIcon = ({ size = 34, fill = "white" }: { size?: number; fill?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 26 27" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M17.9444 13.5L18.5 13L18 4L9.13333 13.5H17.9444Z" fill={fill}/>
+    <path fillRule="evenodd" clipRule="evenodd" d="M9.13333 13.5H7V15.7857V21V23H22.5V13.5H17.9444H9.13333ZM11 17H9V20H11V17ZM13.5 20V17H15.5V20H13.5ZM18 20V17H20V20H18Z" fill={fill}/>
+    <path d="M7 15.7857L4 19L7 21V15.7857Z" fill={fill}/>
     <path d="M9 17H11V20H9V17Z" fill="black"/>
     <path d="M13.5 17V20H15.5V17H13.5Z" fill="black"/>
     <path d="M18 17V20H20V17H18Z" fill="black"/>
@@ -198,7 +198,7 @@ const LauncherIcon = () => (
 );
 
 // Nevatim area sensors
-const SENSOR_ASSETS: MapAsset[] = [
+export const SENSOR_ASSETS: MapAsset[] = [
   { id: 'SENS-NVT-MAGOS-N', latitude: 31.2195, longitude: 34.6580, typeLabel: 'Magos (North)', fovDeg: 180, bearingDeg: 0, Icon: SensorIcon },
   { id: 'SENS-NVT-MAGOS-S', latitude: 31.1965, longitude: 34.6720, typeLabel: 'Magos (South)', fovDeg: 180, bearingDeg: 180, Icon: SensorIcon },
 ];
@@ -208,7 +208,7 @@ export const CAMERA_ASSETS: MapAsset[] = [
   { id: 'CAM-NVT-PIXELSIGHT', latitude: 31.2050, longitude: 34.6700, typeLabel: 'PixelSight', fovDeg: 360, bearingDeg: 0, Icon: CameraIcon },
 ];
 
-const RADAR_ASSETS: MapAsset[] = [
+export const RADAR_ASSETS: MapAsset[] = [
   { id: 'RAD-NVT-RADA', latitude: 31.2120, longitude: 34.6500, typeLabel: 'RADA ieMHR', fovDeg: 360, bearingDeg: 0, Icon: RadarIcon },
   { id: 'RAD-NVT-ELTA', latitude: 31.2030, longitude: 34.6850, typeLabel: 'Elta MHR', fovDeg: 360, bearingDeg: 0, Icon: RadarIcon },
 ];
@@ -308,8 +308,8 @@ interface TacticalMapProps {
   jammingJammerAssetId?: string | null;
   jammingVerification?: { targetId: string; method: 'camera' | 'drone' } | null;
   onJammingVerificationComplete?: () => void;
-  /** Camera look-at: animate a camera FOV cone to face a target. */
-  cameraLookAtRequest?: { cameraId: string; targetLat: number; targetLon: number } | null;
+  /** Camera look-at: animate a camera FOV cone to face a target. fovOverrideDeg widens/narrows the cone. */
+  cameraLookAtRequest?: { cameraId: string; targetLat: number; targetLon: number; fovOverrideDeg?: number } | null;
   /** Show "You have control" indicator on the map. */
   controlIndicator?: boolean;
   /** Fit map to show all these points */
@@ -349,6 +349,12 @@ interface TacticalMapProps {
   sensorFocusId?: string | null;
   /** Context menu action callbacks */
   onContextMenuAction?: (action: string, elementType: 'target' | 'effector' | 'sensor', elementId: string) => void;
+  /** Friendly drones shown as cyan markers with tooltip only */
+  friendlyDrones?: { id: string; name: string; lat: number; lon: number; altitude: string; headingDeg?: number }[];
+  /** Smooth pan to a target without zoom change */
+  smoothFocusRequest?: { lat: number; lon: number } | null;
+  /** Target ID hovered from card sidebar — highlight on map */
+  hoveredTargetIdFromCard?: string | null;
 }
 
 const JAM_VERIFICATION_DURATION_MS = 4500;
@@ -380,6 +386,9 @@ export const TacticalMap = ({
   regulusEffectors = REGULUS_EFFECTORS,
   sensorFocusId,
   onContextMenuAction,
+  friendlyDrones = [],
+  smoothFocusRequest,
+  hoveredTargetIdFromCard,
 }: TacticalMapProps) => {
   const mapRef = useRef<MapRef>(null);
   const [viewState, setViewState] = useState({
@@ -407,6 +416,19 @@ export const TacticalMap = ({
   }, [focusCoords?.lat, focusCoords?.lon]);
 
   useEffect(() => {
+    if (!smoothFocusRequest) return;
+    const map = mapRef.current;
+    if (!map) return;
+    try {
+      map.flyTo({
+        center: [smoothFocusRequest.lon, smoothFocusRequest.lat],
+        duration: 2000,
+        essential: true,
+      });
+    } catch {}
+  }, [smoothFocusRequest?.lat, smoothFocusRequest?.lon]);
+
+  useEffect(() => {
     if (!fitBoundsPoints || fitBoundsPoints.length < 2) return;
     const map = mapRef.current;
     if (!map) return;
@@ -431,7 +453,7 @@ export const TacticalMap = ({
       });
   }, [targets]);
 
-  const [mapStyleId, setMapStyleId] = useState<'dark' | 'satellite'>('dark');
+  const [mapStyleId, setMapStyleId] = useState<'dark' | 'satellite'>('satellite');
   const [flickeringSensorId, setFlickeringSensorId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -637,7 +659,8 @@ export const TacticalMap = ({
     const radius = cameraLookAtRequest 
       ? haversineDistanceM(cam.latitude, cam.longitude, cameraLookAtRequest.targetLat, cameraLookAtRequest.targetLon) + 100
       : FOV_RADIUS_M;
-    const ring = fovPolygon(cam.latitude, cam.longitude, cam.fovDeg, cameraLookAtBearing.bearing, radius);
+    const fov = cameraLookAtRequest?.fovOverrideDeg ?? cam.fovDeg;
+    const ring = fovPolygon(cam.latitude, cam.longitude, fov, cameraLookAtBearing.bearing, radius);
     return {
       type: 'FeatureCollection' as const,
       features: [{ type: 'Feature' as const, geometry: { type: 'Polygon' as const, coordinates: [ring] }, properties: {} }],
@@ -866,8 +889,8 @@ export const TacticalMap = ({
           );
         })}
 
-        {/* Post-jam verification: camera FOV cone pointing at target */}
-        {verificationFovGeoJSON && jammingVerification?.method === 'camera' && (
+        {/* Post-jam verification: camera FOV cone pointing at target (hidden when camera look-at is active to avoid duplicates) */}
+        {verificationFovGeoJSON && jammingVerification?.method === 'camera' && !cameraLookAtBearing && (
           <Source id="jam-verification-fov" type="geojson" data={verificationFovGeoJSON}>
             <Layer
               id="jam-verification-fov-fill"
@@ -1108,6 +1131,7 @@ export const TacticalMap = ({
             if (target.flowType === 4) return null;
 
             const isActive = target.id === activeTargetId;
+            const isHoveredFromCard = target.id === hoveredTargetIdFromCard;
             const stage = target.entityStage;
             const isCritical = target.status === 'detection' || target.status === 'event';
             const isClassified = stage === 'classified';
@@ -1118,12 +1142,10 @@ export const TacticalMap = ({
             const isExpiredCuas = target.status === 'expired' && !!target.entityStage;
 
             const dotSize = isExpiredCuas ? 'w-3 h-3'
-              : stage === 'raw_detection' ? 'w-3 h-3'
               : isClassified ? 'w-5 h-5'
               : 'w-4 h-4';
 
             const dotColor = isExpiredCuas ? 'bg-zinc-600/50 border-zinc-600/30'
-              : stage === 'raw_detection' ? 'bg-zinc-400/60 border-zinc-400/40'
               : isMitigating ? 'bg-red-500 border-red-400'
               : isMitigated ? 'bg-zinc-500 border-zinc-400'
               : isClassified && isBird ? 'bg-amber-400 border-amber-300'
@@ -1132,7 +1154,7 @@ export const TacticalMap = ({
               : 'bg-amber-500 border-white';
 
             const showPulse = !isExpiredCuas && (isMitigating || (stage === 'raw_detection' && !isClassified));
-            const pulseColor = isMitigating ? 'bg-red-500' : 'bg-zinc-400';
+            const pulseColor = isMitigating ? 'bg-red-500' : 'bg-amber-500';
 
             let droneHeadingDeg = 0;
             if (isDrone && target.trail && target.trail.length >= 2) {
@@ -1156,10 +1178,14 @@ export const TacticalMap = ({
                     <ContextMenu>
                     <ContextMenuTrigger asChild>
                     <div
-                      className={`relative group cursor-pointer transition-all duration-200 ${isActive ? 'z-50' : 'z-10'} ${isExpiredCuas ? 'opacity-40' : ''}`}
+                      className={`relative group cursor-pointer transition-all duration-200 ${isActive || isHoveredFromCard ? 'z-50' : 'z-10'} ${isExpiredCuas && !isHoveredFromCard ? 'opacity-40' : ''} ${isHoveredFromCard ? 'scale-125' : ''}`}
                     >
                         {showPulse && (
                             <div className={`absolute -inset-3 rounded-full opacity-40 animate-ping ${pulseColor}`} />
+                        )}
+
+                        {isHoveredFromCard && (
+                          <div className="absolute -inset-3 rounded-full border-2 border-white/60 animate-pulse pointer-events-none" />
                         )}
 
                         {/* Hover backdrop */}
@@ -1168,20 +1194,20 @@ export const TacticalMap = ({
                         {isClassified && isDrone ? (
                           <DroneIcon rotationDeg={droneHeadingDeg} color={isMitigated ? undefined : '#fa5252'} disabled={isMitigated} />
                         ) : (
-                          <div className={`${dotSize} rounded-full border-2 shadow-lg transition-all ${dotColor} ${isActive ? 'ring-2 ring-white ring-offset-2 ring-offset-black' : ''}`} />
+                          <div className={`${dotSize} rounded-full border-2 shadow-lg transition-all ${dotColor} ${isActive || isHoveredFromCard ? 'ring-2 ring-white ring-offset-2 ring-offset-black' : ''}`} />
                         )}
 
-                        {/* Map Info Card — hover-only tooltip */}
+                        {/* Map Info Card — hover-only tooltip (also shown when card is hovered) */}
                         {isClassified ? (
                           <div className={`
                             absolute top-1/2 -translate-y-1/2 pointer-events-none transition-all duration-200 z-20
-                            ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
+                            ${isActive || isHoveredFromCard ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
                           `}
                             style={{ left: isDrone ? '34px' : '24px' }}
                           >
                             <div className={`
                               bg-black/40 backdrop-blur-md text-white rounded border whitespace-nowrap
-                              ${isBird ? 'border-amber-500/20' : isMitigated ? 'border-zinc-600/40' : 'border-red-500/20'}
+                              ${isHoveredFromCard ? 'border-white/40' : isBird ? 'border-amber-500/20' : isMitigated ? 'border-zinc-600/40' : 'border-red-500/20'}
                             `}>
                               <div className="flex items-center gap-1.5 px-2 py-1" dir="rtl">
                                 <span className="text-[10px] font-semibold truncate max-w-[120px]">{target.name}</span>
@@ -1193,7 +1219,7 @@ export const TacticalMap = ({
                             absolute top-1/2 -translate-y-1/2
                             bg-black/90 backdrop-blur-sm text-white text-[9px] px-1.5 py-0.5 rounded border border-white/10 whitespace-nowrap
                             transition-all duration-200 pointer-events-none flex items-center gap-1
-                            ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
+                            ${isActive || isHoveredFromCard ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
                           `} style={{ left: '20px' }}>
                             {isExpiredCuas ? (
                               <span className="text-zinc-500">נצפה לאחרונה — {target.lastSeenAt || target.timestamp}</span>
@@ -1381,6 +1407,7 @@ export const TacticalMap = ({
           const isSelected = asset.id === selectedAssetId;
           const isFlickering = asset.id === flickeringSensorId;
           const isCamera = asset.typeLabel === 'Camera';
+          const isInUse = asset.id === cameraLookAtBearing?.cameraId || asset.id === jammingJammerAssetId || (asset.id === verificationCameraAsset?.id && !!jammingVerification);
           return (
             <Marker
               key={asset.id}
@@ -1404,15 +1431,12 @@ export const TacticalMap = ({
                   <div className={`absolute -inset-2 rounded-full border animate-pulse ${isHoveredFromCard ? 'border-white/50 border-2' : 'border-white/30'}`} />
                 )}
                 <Icon fill={isSelected ? '#a78bfa' : undefined} />
-                {(isHovered || isHighlighted) && (
+                {(isHovered || isHighlighted || isInUse) && (
                   <div
-                    className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 text-xs font-medium text-white bg-black/95 border border-white/20 rounded shadow-lg whitespace-nowrap pointer-events-none z-50"
+                    className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 text-xs font-medium text-white bg-black/95 border rounded shadow-lg whitespace-nowrap pointer-events-none z-50 ${isInUse ? 'border-cyan-400/50' : 'border-white/20'}`}
                     style={{ minWidth: 'max-content' }}
                   >
                     <div>{asset.typeLabel}</div>
-                    <div className="text-white/70 mt-0.5">
-                      FOV {asset.fovDeg}° · {asset.id}
-                    </div>
                   </div>
                 )}
               </div>
@@ -1749,6 +1773,20 @@ export const TacticalMap = ({
           </>
         )}
 
+        {/* Friendly drone markers (cyan, tooltip only, no card) */}
+        {friendlyDrones.map(drone => (
+          <Marker key={drone.id} longitude={drone.lon} latitude={drone.lat} anchor="center">
+            <div className="relative group cursor-default drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]">
+              <DroneIcon color="#22d3ee" rotationDeg={drone.headingDeg ?? 0} />
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-1.5 py-1 text-[10px] text-zinc-300 bg-zinc-900/90 rounded shadow whitespace-nowrap pointer-events-none z-50 opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="text-zinc-400">{drone.name}</span>
+                <span className="text-zinc-600 mx-0.5">·</span>
+                <span className="text-zinc-500">{drone.altitude}</span>
+              </div>
+            </div>
+          </Marker>
+        ))}
+
       </Map>
 
       {/* --- Tactical Overlays (Pointer Events None) --- */}
@@ -1782,16 +1820,6 @@ export const TacticalMap = ({
          <div className="w-full h-full border-x border-white/5" />
       </div>
 
-      {/* Coordinates / Map UI */}
-      <div className="absolute bottom-8 left-8 flex flex-col gap-1 pointer-events-none bg-black/50 backdrop-blur p-2 rounded border border-white/10">
-         <div className="flex items-center gap-2 text-white/60 text-xs font-mono uppercase">
-           <MapIcon size={14} />
-           <span>Sector 7G / North District</span>
-         </div>
-         <div className="text-white/40 text-[10px] font-mono">
-           LAT: {viewState.latitude.toFixed(4)}° N | LON: {viewState.longitude.toFixed(4)}° E
-         </div>
-      </div>
 
       {/* Center Crosshair */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white/20 pointer-events-none">

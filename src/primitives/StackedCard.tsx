@@ -22,6 +22,7 @@ interface StackedCardProps {
     ctx: CardContext,
   ) => React.ReactNode;
   onBulkMitigate?: (targets: Detection[]) => void;
+  onTargetHover?: (targetId: string | null) => void;
 }
 
 const d = CARD_TOKENS;
@@ -48,6 +49,7 @@ export function StackedCard({
   buildCtx,
   renderCard,
   onBulkMitigate,
+  onTargetHover,
 }: StackedCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(burst.targets.length);
@@ -232,7 +234,13 @@ export function StackedCard({
                     {burst.targets.map((target) => {
                       const isActive = target.id === activeTargetId;
                       return (
-                        <div key={target.id} id={`detection-card-${target.id}`} className="cursor-pointer">
+                        <div
+                          key={target.id}
+                          id={`detection-card-${target.id}`}
+                          className="cursor-pointer"
+                          onMouseEnter={() => onTargetHover?.(target.id)}
+                          onMouseLeave={() => onTargetHover?.(null)}
+                        >
                           {renderCard(
                             target,
                             isActive,
