@@ -6,8 +6,8 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<C2Dashboard />} />
-        <Route path="/cuas" element={<CUASDashboard />} />
+        <Route path="/" element={<CUASDashboard />} />
+        <Route path="/full-flow" element={<C2Dashboard />} />
       </Routes>
     </BrowserRouter>
   );
