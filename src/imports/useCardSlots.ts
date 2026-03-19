@@ -39,6 +39,7 @@ import type { CardSensor } from '@/primitives/CardSensors';
 import type { LogEntry } from '@/primitives/CardLog';
 import type { ClosureOutcome } from '@/primitives/CardClosure';
 import type { CardHeaderProps } from '@/primitives/CardHeader';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/app/components/ui/tooltip';
 import type { CardMediaProps } from '@/primitives/CardMedia';
 import type {
   Detection,
@@ -141,13 +142,16 @@ function buildConfidenceBadge(confidence: number | undefined, classifiedType?: s
     : confidence >= 40 ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
     : 'bg-zinc-500/20 text-zinc-400 border-zinc-500/30';
   const typeLabel = CLASSIFIED_TYPE_LABELS[classifiedType ?? 'unknown'] ?? 'לא ידוע';
-  return React.createElement('span', {
-    className: `text-[10px] font-bold font-mono tabular-nums px-1.5 py-0.5 rounded border ${bg} relative group/badge cursor-default`,
-  },
-    `${confidence}%`,
-    React.createElement('span', {
-      className: 'absolute top-full left-1/2 -translate-x-1/2 mt-1.5 px-2 py-1 text-[9px] font-normal font-sans text-white bg-zinc-700 border border-white/10 rounded shadow-lg whitespace-nowrap pointer-events-none z-50 opacity-0 group-hover/badge:opacity-100 transition-opacity',
-      'aria-hidden': 'true',
+  return React.createElement(Tooltip, null,
+    React.createElement(TooltipTrigger, { asChild: true },
+      React.createElement('span', {
+        className: `text-[10px] font-bold font-mono tabular-nums px-1.5 py-0.5 rounded border ${bg} cursor-default`,
+      }, `${confidence}%`),
+    ),
+    React.createElement(TooltipContent, {
+      side: 'top',
+      sideOffset: 6,
+      className: 'px-2 py-1 text-[9px] font-normal font-sans text-white bg-zinc-700 border border-white/10 shadow-lg whitespace-nowrap',
     }, `סביר ביותר שמדובר ב${typeLabel}`),
   );
 }

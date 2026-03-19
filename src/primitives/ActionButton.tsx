@@ -33,7 +33,7 @@ export function ActionButton({
 
   const variantStyles: Record<string, string> = {
     primary: "flex-1 bg-[rgba(34,139,230,0.15)] hover:bg-[rgba(34,139,230,0.25)] border border-[#74c0fc] text-[#74c0fc]",
-    danger: "flex-1 bg-red-500/15 hover:bg-red-500/25 border border-red-500/70 text-red-400 font-semibold",
+    danger: "flex-1 bg-red-500/15 hover:bg-red-500/25 border border-red-500 text-red-400 font-semibold",
     amber: "flex-1 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/50 text-amber-400",
     glass: "flex-1 bg-white/10 hover:bg-white/20 border border-white/20 text-white",
     ghost: "w-full text-[#909296] hover:text-white hover:bg-white/5",

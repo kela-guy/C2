@@ -28,7 +28,7 @@ export function CollapsibleGroup({
     <div className={`mb-3 ${className}`} dir="rtl">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-1 py-2 rounded-md hover:bg-white/5 transition-colors focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
+        className="w-full flex items-center justify-between px-1 py-2 rounded-none hover:bg-white/5 transition-colors focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
         aria-expanded={isOpen}
         aria-controls={panelId}
       >

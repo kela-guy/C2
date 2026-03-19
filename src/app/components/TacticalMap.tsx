@@ -197,18 +197,14 @@ export const LauncherIcon = ({ size = 34, fill = "white" }: { size?: number; fil
   </svg>
 );
 
-// Nevatim area sensors
-export const SENSOR_ASSETS: MapAsset[] = [
-  { id: 'SENS-NVT-MAGOS-N', latitude: 31.2195, longitude: 34.6580, typeLabel: 'Magos (North)', fovDeg: 180, bearingDeg: 0, Icon: SensorIcon },
-  { id: 'SENS-NVT-MAGOS-S', latitude: 31.1965, longitude: 34.6720, typeLabel: 'Magos (South)', fovDeg: 180, bearingDeg: 180, Icon: SensorIcon },
-];
-
 export const CAMERA_ASSETS: MapAsset[] = [
   { id: 'CAM-NVT-PTZ-N', latitude: 31.2180, longitude: 34.6620, typeLabel: 'PTZ Camera (North)', fovDeg: 90, bearingDeg: 350, Icon: CameraIcon },
   { id: 'CAM-NVT-PIXELSIGHT', latitude: 31.2050, longitude: 34.6700, typeLabel: 'PixelSight', fovDeg: 360, bearingDeg: 0, Icon: CameraIcon },
 ];
 
 export const RADAR_ASSETS: MapAsset[] = [
+  { id: 'SENS-NVT-MAGOS-N', latitude: 31.2195, longitude: 34.6580, typeLabel: 'Magos (North)', fovDeg: 180, bearingDeg: 0, Icon: RadarIcon },
+  { id: 'SENS-NVT-MAGOS-S', latitude: 31.1965, longitude: 34.6720, typeLabel: 'Magos (South)', fovDeg: 180, bearingDeg: 180, Icon: RadarIcon },
   { id: 'RAD-NVT-RADA', latitude: 31.2120, longitude: 34.6500, typeLabel: 'RADA ieMHR', fovDeg: 360, bearingDeg: 0, Icon: RadarIcon },
   { id: 'RAD-NVT-ELTA', latitude: 31.2030, longitude: 34.6850, typeLabel: 'Elta MHR', fovDeg: 360, bearingDeg: 0, Icon: RadarIcon },
 ];
@@ -233,7 +229,7 @@ export const REGULUS_EFFECTORS: RegulusEffector[] = [
   { id: 'REG-NVT-WEST', name: 'Regulus West', lat: 31.2100, lon: 34.6400, coverageRadiusM: 2500, status: 'available' },
 ];
 
-const ALL_MAP_ASSETS = [...SENSOR_ASSETS, ...CAMERA_ASSETS, ...RADAR_ASSETS];
+const ALL_MAP_ASSETS = [...CAMERA_ASSETS, ...RADAR_ASSETS];
 const ALL_RENDERABLE_ASSETS = [...ALL_MAP_ASSETS, ...DRONE_HIVE_ASSETS];
 
 export const LAUNCHER_ASSETS = [
@@ -1280,27 +1276,34 @@ export const TacticalMap = ({
         })}
 
         {/* Static missile launcher assets (weaponized sites) */}
-        {LAUNCHER_ASSETS.map(launcher => (
-          <Marker
-            key={launcher.id}
-            longitude={launcher.longitude}
-            latitude={launcher.latitude}
-            anchor="bottom"
-          >
-            <div
-              className={`relative cursor-pointer rounded-full p-1 transition-all duration-150 ${hoveredLauncherId === launcher.id ? 'bg-white/[0.08]' : ''}`}
-              onMouseEnter={() => setHoveredLauncherId(launcher.id)}
-              onMouseLeave={() => setHoveredLauncherId(null)}
+        {LAUNCHER_ASSETS.map(launcher => {
+          const isHoveredFromCard = launcher.id === hoveredSensorIdFromCard;
+          const isHovered = hoveredLauncherId === launcher.id;
+          return (
+            <Marker
+              key={launcher.id}
+              longitude={launcher.longitude}
+              latitude={launcher.latitude}
+              anchor="bottom"
             >
-              {hoveredLauncherId === launcher.id && (
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 text-xs font-medium text-white bg-black/95 border border-white/20 rounded shadow-lg whitespace-nowrap z-50">
-                  <div>משגר טילים {launcher.id}</div>
-                </div>
-              )}
-              <LauncherIcon />
-            </div>
-          </Marker>
-        ))}
+              <div
+                className={`relative cursor-pointer rounded-full p-1 transition-all duration-150 ${isHovered || isHoveredFromCard ? 'bg-white/[0.08] scale-110' : ''} ${isHoveredFromCard ? 'ring-2 ring-white/40 ring-offset-1 ring-offset-[#0a0a0a]' : ''}`}
+                onMouseEnter={() => setHoveredLauncherId(launcher.id)}
+                onMouseLeave={() => setHoveredLauncherId(null)}
+              >
+                {isHoveredFromCard && (
+                  <div className="absolute -inset-2 rounded-full border-2 border-white/50 animate-pulse" />
+                )}
+                {(isHovered || isHoveredFromCard) && (
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 text-xs font-medium text-white bg-black/95 border border-white/20 rounded shadow-lg whitespace-nowrap pointer-events-none z-50">
+                    <div>משגר טילים {launcher.id}</div>
+                  </div>
+                )}
+                <LauncherIcon />
+              </div>
+            </Marker>
+          );
+        })}
 
         {/* Regulus effector coverage rings (shown on hover or when active) */}
         {regulusEffectors.map(reg => {
@@ -1332,20 +1335,24 @@ export const TacticalMap = ({
         {regulusEffectors.map(reg => {
           const isHovered = hoveredRegulusId === reg.id;
           const isActive = reg.status === 'active';
+          const isHoveredFromCard = reg.id === hoveredSensorIdFromCard;
           return (
             <Marker key={reg.id} longitude={reg.lon} latitude={reg.lat} anchor="bottom">
               <ContextMenu>
               <ContextMenuTrigger asChild>
               <div
-                className={`relative group cursor-pointer rounded-full p-1.5 transition-all duration-200 ${isActive ? 'scale-110 drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]' : ''} ${isHovered && !isActive ? 'bg-white/10' : ''}`}
+                className={`relative group cursor-pointer rounded-full p-1.5 transition-all duration-200 ${isActive ? 'scale-110 drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]' : ''} ${isHoveredFromCard && !isActive ? 'scale-110 ring-2 ring-white/40 ring-offset-1 ring-offset-[#0a0a0a]' : ''} ${(isHovered || isHoveredFromCard) && !isActive ? 'bg-white/10' : ''}`}
                 onMouseEnter={() => setHoveredRegulusId(reg.id)}
                 onMouseLeave={() => setHoveredRegulusId(null)}
               >
                 {isActive && (
                   <div className="absolute -inset-2 rounded-full border border-green-400/60 animate-pulse bg-green-500/10" />
                 )}
+                {isHoveredFromCard && !isActive && (
+                  <div className="absolute -inset-2 rounded-full border-2 border-white/50 animate-pulse" />
+                )}
                 <SensorIcon fill={isActive ? '#4ade80' : undefined} />
-                {(isHovered || isActive) && (
+                {(isHovered || isActive || isHoveredFromCard) && (
                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 text-xs font-medium text-white bg-black/95 border border-white/20 rounded shadow-lg whitespace-nowrap pointer-events-none z-50" style={{ minWidth: 'max-content' }}>
                     <div>{reg.name}</div>
                     <div className="text-white/70 mt-0.5">

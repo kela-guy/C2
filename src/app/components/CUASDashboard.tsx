@@ -992,6 +992,9 @@ export const CUASDashboard = () => {
           onClose={() => setDevicesPanelOpen(false)}
           onFlyTo={handleDeviceFlyTo}
           onDeviceHover={setHoveredSensorIdFromCard}
+          onJamActivate={(jammerId) => {
+            toast.success(`שיבוש הופעל — ${jammerId}`, { duration: 3000 });
+          }}
           noTransition={panelSwitching}
         />
 
