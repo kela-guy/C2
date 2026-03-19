@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { X, Search, Camera, AlertTriangle, Zap } from 'lucide-react';
+import { X, Search, Camera, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 import { LAYOUT_TOKENS } from '@/primitives/tokens';
@@ -27,7 +27,7 @@ export function DevicesIcon({ size = 20, className = '' }: { size?: number; clas
   );
 }
 
-type DeviceType = 'camera' | 'radar' | 'jammer' | 'drone_hive' | 'launcher';
+type DeviceType = 'camera' | 'radar' | 'jammer' | 'drone_hive' | 'launcher' | 'drone';
 type OperationalStatus = 'operational' | 'malfunctioning';
 type CameraCapability = 'video' | 'photo';
 
@@ -44,23 +44,37 @@ interface Device {
   coverageRadiusM?: number;
   batteryPct?: number;
   capabilities?: CameraCapability[];
+  altitude?: string;
   Icon: React.FC<{ size?: number; fill?: string }>;
 }
 
-const TYPE_ORDER: DeviceType[] = ['camera', 'radar', 'drone_hive', 'jammer', 'launcher'];
+const TYPE_ORDER: DeviceType[] = ['camera', 'radar', 'drone_hive', 'drone', 'jammer', 'launcher'];
 
 const TYPE_LABELS: Record<DeviceType, string> = {
   camera: 'מצלמות',
   radar: 'מכ"מים',
   drone_hive: 'כוורות',
+  drone: 'רחפנים',
   jammer: 'משבשים',
   launcher: 'משגרים',
 };
+
+const DroneDeviceIcon = ({ size = 28, fill = "white" }: { size?: number; fill?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 28 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M23.334 15.7502L9.33696 0.583495L5.86139 4.0835L10.5007 11.0835L9.32456 15.7502L10.5007 20.4168L5.86139 27.4168L9.32456 30.6801L23.334 15.7502Z"
+      fill={fill}
+      stroke="#0a0a0a"
+      strokeWidth="1"
+    />
+  </svg>
+);
 
 const TYPE_FILTER_ICONS: Record<DeviceType, React.FC<{ size?: number; fill?: string }>> = {
   camera: CameraIcon,
   radar: RadarIcon,
   drone_hive: DroneHiveIcon,
+  drone: DroneDeviceIcon,
   jammer: SensorIcon,
   launcher: LauncherIcon,
 };
@@ -118,7 +132,25 @@ const ALL_DEVICES: Device[] = [
     operationalStatus: 'operational' as OperationalStatus,
     Icon: LauncherIcon,
   })),
+  { id: 'FRIENDLY-01', name: 'סיור-3', type: 'drone' as DeviceType,
+    lat: 31.218, lon: 34.652, status: 'active' as const,
+    operationalStatus: 'operational' as OperationalStatus,
+    altitude: '80 מ׳', Icon: DroneDeviceIcon,
+  },
+  { id: 'FRIENDLY-02', name: 'תצפית-7', type: 'drone' as DeviceType,
+    lat: 31.225, lon: 34.678, status: 'active' as const,
+    operationalStatus: 'operational' as OperationalStatus,
+    altitude: '110 מ׳', Icon: DroneDeviceIcon,
+  },
 ];
+
+function JamIcon({ size = 16, className }: { size?: number; className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" width={size} height={size} className={className}>
+      <path d="M22 12C19.5 10.5 19.5 5 17.5 5C15.5 5 15.5 10 13 10C10.5 10 10.5 2 8 2C5.5 2 5 10.5 2 12C5 13.5 5.5 22 8 22C10.5 22 10.5 14 13 14C15.5 14 15.5 19 17.5 19C19.5 19 19 13.5 22 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
 
 function BatteryIcon({ pct }: { pct: number }) {
   const color = pct > 60 ? '#34d399' : pct > 30 ? '#fbbf24' : pct >= 20 ? '#fb923c' : '#f87171';
@@ -146,22 +178,23 @@ function DeviceRow({
   onJamActivate?: (jammerId: string) => void;
 }) {
   const metricParts: string[] = [device.id];
-  if (device.fovDeg != null) metricParts.push(`${device.fovDeg}°`);
   if (device.coverageRadiusM != null) metricParts.push(`${(device.coverageRadiusM / 1000).toFixed(1)}km`);
 
   const isMalfunctioning = device.operationalStatus === 'malfunctioning';
 
   return (
     <div>
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={onToggle}
-        className="w-full flex items-start gap-2.5 px-4 py-2.5 text-right hover:bg-white/[0.04] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25 rounded-none border-b border-white/[0.06]"
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(); } }}
+        className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right hover:bg-white/[0.04] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25 rounded-none border-b border-white/[0.06]"
         dir="rtl"
         onMouseEnter={() => onHover(device.id)}
         onMouseLeave={() => onHover(null)}
       >
-        <div className={`w-8 h-8 rounded flex items-center justify-center shrink-0 mt-0.5 ${isMalfunctioning ? 'bg-orange-900/40' : 'bg-[#333]'}`}>
+        <div className={`w-8 h-8 rounded flex items-center justify-center shrink-0 ${isMalfunctioning ? 'bg-orange-900/40' : 'bg-[#333]'}`}>
           <device.Icon size={20} fill={isMalfunctioning ? '#f97316' : 'white'} />
         </div>
         <div className="flex-1 min-w-0">
@@ -183,7 +216,46 @@ function DeviceRow({
             {metricParts.join(' · ')}
           </div>
         </div>
-      </button>
+        {device.type === 'jammer' && (() => {
+          const isDisabled = isMalfunctioning || device.status === 'active';
+          const disabledReason = isMalfunctioning ? 'המכשיר בתקלה' : device.status === 'active' ? 'שיבוש כבר פעיל' : undefined;
+          const btn = (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onJamActivate?.(device.id); }}
+              disabled={isDisabled}
+              className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-red-500/15 text-red-400 border border-red-500/25 hover:bg-red-500/25 active:bg-red-500/30"
+            >
+              <JamIcon size={12} />
+              {device.status === 'active' ? 'שיבוש פעיל' : 'הפעל'}
+            </button>
+          );
+
+          if (!disabledReason) return btn;
+
+          return (
+            <TooltipPrimitive.Provider delayDuration={150}>
+              <TooltipPrimitive.Root>
+                <TooltipPrimitive.Trigger asChild>
+                  <span className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                    {btn}
+                  </span>
+                </TooltipPrimitive.Trigger>
+                <TooltipPrimitive.Portal>
+                  <TooltipPrimitive.Content
+                    side="top"
+                    sideOffset={6}
+                    className="px-2 py-1 rounded bg-zinc-800 border border-white/10 text-[10px] text-zinc-300 whitespace-nowrap z-50 animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
+                    dir="rtl"
+                  >
+                    {disabledReason}
+                  </TooltipPrimitive.Content>
+                </TooltipPrimitive.Portal>
+              </TooltipPrimitive.Root>
+            </TooltipPrimitive.Provider>
+          );
+        })()}
+      </div>
 
       <AnimatePresence initial={false}>
         {isExpanded && (
@@ -212,13 +284,14 @@ function DeviceRow({
                 </div>
               )}
 
-              <div className="grid grid-cols-3 grid-rows-2 gap-x-4 gap-y-5 px-4 py-3">
+              <div className="grid grid-cols-3 gap-x-4 gap-y-5 px-4 py-3">
                 <DetailRow label="מיקום" value={`${device.lat.toFixed(4)}, ${device.lon.toFixed(4)}`} />
                 {device.bearingDeg != null && <DetailRow label="כיוון" value={`${device.bearingDeg}°`} />}
                 {device.fovDeg != null && <DetailRow label="שדה ראייה" value={`${device.fovDeg}°`} />}
                 {device.coverageRadiusM != null && (
                   <DetailRow label="כיסוי" value={`${device.coverageRadiusM.toLocaleString()}m`} />
                 )}
+                {device.altitude != null && <DetailRow label="גובה" value={device.altitude} />}
                 <DetailRow
                   label="תקינות"
                   value={isMalfunctioning ? 'תקלה' : 'תקין'}
@@ -233,22 +306,6 @@ function DeviceRow({
                 )}
               </div>
 
-              {device.type === 'jammer' && (
-                <div className="mt-2 pt-2 border-t border-white/5">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onJamActivate?.(device.id);
-                    }}
-                    disabled={isMalfunctioning || device.status === 'active'}
-                    className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-[11px] font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-amber-500/15 text-amber-400 border border-amber-500/25 hover:bg-amber-500/25 active:bg-amber-500/30"
-                  >
-                    <Zap size={12} />
-                    {device.status === 'active' ? 'שיבוש פעיל' : 'הפעל שיבוש'}
-                  </button>
-                </div>
-              )}
             </div>
           </motion.div>
         )}
@@ -383,7 +440,7 @@ export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onJamActiv
                   <TooltipPrimitive.Trigger asChild>
                     <button
                       onClick={() => handleTypeToggle(type)}
-                      className={`p-1.5 rounded transition-colors ${
+                      className={`p-1.5 rounded transition-colors cursor-pointer ${
                         isActive && !allActive
                           ? 'bg-white/15 text-white ring-1 ring-white/30'
                           : 'text-white hover:text-zinc-300 hover:bg-white/[0.06]'

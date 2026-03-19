@@ -95,6 +95,16 @@ export const CUASDashboard = () => {
     }))
   );
 
+  const highlightedSensorIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const t of targets) {
+      if (t.detectedBySensors) {
+        for (const s of t.detectedBySensors) ids.add(s.id);
+      }
+    }
+    return Array.from(ids);
+  }, [targets]);
+
   const cuasIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const cuasIntervalRef2 = useRef<NodeJS.Timeout | null>(null);
   const cuasIntervalRef3 = useRef<NodeJS.Timeout | null>(null);
@@ -870,7 +880,7 @@ export const CUASDashboard = () => {
           targets={targets}
           activeTargetId={activeTargetId}
           onMarkerClick={(id) => { setActiveTargetId(id); setSidebarOpen(true); setDevicesPanelOpen(false); }}
-          highlightedSensorIds={[]}
+          highlightedSensorIds={highlightedSensorIds}
           hoveredSensorIdFromCard={hoveredSensorIdFromCard}
           sensorFocusId={sensorFocusId}
           onContextMenuAction={(action, elementType, elementId) => {

@@ -663,13 +663,13 @@ export const TacticalMap = ({
     };
   }, [cameraLookAtBearing, cameraLookAtRequest]);
 
-  const highlightedAssets = useMemo(
-    () => ALL_MAP_ASSETS.filter(a =>
-      (highlightedSensorIds.includes(a.id) || a.id === hoveredSensorIdFromCard)
+  const highlightedAssets = useMemo(() => {
+    const result = ALL_MAP_ASSETS.filter(a =>
+      a.id === hoveredSensorIdFromCard
       && a.id !== cameraLookAtBearing?.cameraId
-    ),
-    [highlightedSensorIds, hoveredSensorIdFromCard, cameraLookAtBearing?.cameraId]
-  );
+    );
+    return result;
+  }, [hoveredSensorIdFromCard, cameraLookAtBearing?.cameraId]);
 
   // Refs to sync missile phases with parent (timeline)
   const launchedSentRef = useRef<Set<string>>(new Set());
@@ -761,12 +761,13 @@ export const TacticalMap = ({
     };
   }, [hoveredAsset]);
 
+
   const fovFillLayerStyle: FillLayer = {
     id: 'fov-fill',
     type: 'fill',
     paint: {
-      'fill-color': 'rgba(59, 130, 246, 0.35)',
-      'fill-outline-color': 'rgba(96, 165, 250, 1.0)',
+      'fill-color': 'rgba(34, 211, 238, 0.40)',
+      'fill-outline-color': 'rgba(34, 211, 238, 1.0)',
     },
   };
 
@@ -774,8 +775,8 @@ export const TacticalMap = ({
     id: 'fov-line',
     type: 'line',
     paint: {
-      'line-color': 'rgba(96, 165, 250, 1.0)',
-      'line-width': 1.5,
+      'line-color': 'rgba(34, 211, 238, 1.0)',
+      'line-width': 2.5,
     },
   };
 
@@ -869,16 +870,16 @@ export const TacticalMap = ({
                 id={`sensor-fov-fill-${asset.id}`}
                 type="fill"
                 paint={{
-                  'fill-color': 'rgba(56, 189, 248, 0.30)',
-                  'fill-outline-color': 'rgba(56, 189, 248, 1.0)',
+                  'fill-color': 'rgba(34, 211, 238, 0.40)',
+                  'fill-outline-color': 'rgba(34, 211, 238, 1.0)',
                 }}
               />
               <Layer
                 id={`sensor-fov-line-${asset.id}`}
                 type="line"
                 paint={{
-                  'line-color': 'rgba(56, 189, 248, 1.0)',
-                  'line-width': 2,
+                  'line-color': 'rgba(34, 211, 238, 1.0)',
+                  'line-width': 2.5,
                 }}
               />
             </Source>
@@ -1111,11 +1112,15 @@ export const TacticalMap = ({
             type: 'Feature', properties: {},
             geometry: { type: 'LineString', coordinates: target.trail!.map(p => [p.lon, p.lat]) },
           }}>
+            <Layer id={`trail-casing-${target.id}`} type="line" paint={{
+              'line-color': '#000000',
+              'line-width': 7,
+              'line-opacity': 1,
+            }} />
             <Layer id={`trail-line-${target.id}`} type="line" paint={{
-              'line-color': target.mitigationStatus === 'mitigating' ? '#fa5252' : target.classifiedType === 'bird' ? '#fbbf24' : '#fa5252',
-              'line-width': 2,
-              'line-opacity': 0.6,
-              'line-dasharray': [2, 2],
+              'line-color': '#ffffff',
+              'line-width': 3,
+              'line-opacity': 1,
             }} />
           </Source>
         ))}

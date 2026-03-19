@@ -52,6 +52,18 @@ body {
   overflow: hidden;
 }
 
+/* ── Tour click-through highlight ── */
+@keyframes tour-click-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(34, 184, 207, 0.6), 0 0 16px rgba(34, 184, 207, 0.3); }
+  50%      { box-shadow: 0 0 0 6px rgba(34, 184, 207, 0.35), 0 0 24px rgba(34, 184, 207, 0.15); }
+}
+.tour-click-target {
+  position: relative;
+  z-index: 100001 !important;
+  animation: tour-click-pulse 1.5s ease-in-out infinite;
+  border-radius: 8px;
+}
+
 /* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
   *,

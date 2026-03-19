@@ -24,7 +24,7 @@ const TOUR_STEPS: CuasTourStep[] = [
   {
     target: '[data-cuas-sim-menu]',
     title: 'הפעלת סימולציה',
-    content: 'לחצו על כפתור הסימולציה כדי לפתוח את תפריט התרחישים.',
+    content: '👆 לחצו על כפתור הסימולציה המודגש כדי לפתוח את תפריט התרחישים.',
     placement: 'left',
     disableBeacon: true,
     advanceMode: 'click-through',
@@ -33,7 +33,7 @@ const TOUR_STEPS: CuasTourStep[] = [
   {
     target: '[data-tour="cuas-single-sim"]',
     title: 'בחירת תרחיש',
-    content: 'לחצו כאן להפעלת יעד בודד. נעקוב אחריו יחד צעד אחר צעד.',
+    content: '👆 לחצו על הכפתור המודגש להפעלת יעד בודד. נעקוב אחריו יחד צעד אחר צעד.',
     placement: 'left',
     disableBeacon: true,
     advanceMode: 'click-through',
@@ -84,7 +84,7 @@ const TOUR_STEPS: CuasTourStep[] = [
   {
     target: '[data-tour="cuas-cta-mitigate"]',
     title: 'הפעלת שיבוש',
-    content: 'לחצו על "שיבוש" כדי להפעיל אפקטור נגד הרחפן. השיבוש ישבש את תקשורת הרחפן.',
+    content: '👆 לחצו על כפתור "שיבוש" המודגש כדי להפעיל אפקטור נגד הרחפן.',
     placement: 'left',
     disableBeacon: true,
     advanceMode: 'click-through',
@@ -103,7 +103,7 @@ const TOUR_STEPS: CuasTourStep[] = [
   {
     target: '[data-tour="cuas-cta-bda"]',
     title: 'אימות פגיעה (BDA)',
-    content: 'השיבוש הושלם! כעת לחצו "הפנה מצלמה לאימות" כדי לכוון מצלמה ולוודא שהרחפן נוטרל.',
+    content: '👆 השיבוש הושלם! לחצו על כפתור "הפנה מצלמה לאימות" המודגש כדי לכוון מצלמה ולוודא שהרחפן נוטרל.',
     placement: 'left',
     disableBeacon: true,
     advanceMode: 'click-through',
@@ -112,7 +112,7 @@ const TOUR_STEPS: CuasTourStep[] = [
   {
     target: '[data-tour="cuas-cta-complete"]',
     title: 'סיום משימה',
-    content: 'המצלמה מכוונת לרחפן. כעת לחצו "סיום משימה" כדי לסגור את האירוע ולהעביר אותו לרשימת ההושלמו.',
+    content: '👆 המצלמה מכוונת לרחפן. לחצו על כפתור "סיום משימה" המודגש כדי לסגור את האירוע.',
     placement: 'left',
     disableBeacon: true,
     advanceMode: 'click-through',
@@ -122,7 +122,7 @@ const TOUR_STEPS: CuasTourStep[] = [
   {
     target: '[data-tour="cuas-completed-tab"]',
     title: 'לשונית הושלמו',
-    content: 'האירוע הועבר ללשונית "הושלמו". לחצו כאן כדי לצפות באירועים שטופלו בהצלחה.',
+    content: '👆 האירוע הועבר ללשונית "הושלמו". לחצו על הלשונית המודגשת כדי לצפות באירועים שטופלו.',
     placement: 'left',
     disableBeacon: true,
     advanceMode: 'click-through',
@@ -196,6 +196,18 @@ const TOUR_STYLES: Styles = {
   },
 };
 
+const CLICK_THROUGH_STYLES: Styles = {
+  ...TOUR_STYLES,
+  buttonNext: {
+    ...TOUR_STYLES.buttonNext,
+    display: 'none',
+  },
+  spotlight: {
+    borderRadius: 8,
+    border: '2px solid rgba(34, 184, 207, 0.7)',
+  },
+};
+
 const AUTO_STYLES: Styles = {
   ...TOUR_STYLES,
   buttonNext: {
@@ -238,6 +250,32 @@ export function useCuasTour(
 
   const currentStep = run ? TOUR_STEPS[stepIndex] : null;
   const currentAdvanceMode = currentStep?.advanceMode ?? null;
+  const prevHighlightRef = useRef<Element | null>(null);
+
+  useEffect(() => {
+    if (prevHighlightRef.current) {
+      prevHighlightRef.current.classList.remove('tour-click-target');
+      prevHighlightRef.current = null;
+    }
+
+    if (!run) return;
+
+    const step = TOUR_STEPS[stepIndex];
+    if (step.advanceMode !== 'click-through') return;
+
+    const applyHighlight = () => {
+      const target = typeof step.target === 'string'
+        ? document.querySelector(step.target)
+        : step.target;
+      if (target instanceof Element) {
+        target.classList.add('tour-click-target');
+        prevHighlightRef.current = target;
+      }
+    };
+
+    const timer = setTimeout(applyHighlight, 100);
+    return () => clearTimeout(timer);
+  }, [run, stepIndex]);
 
   const startTour = useCallback(() => {
     setStepIndex(0);
@@ -336,13 +374,17 @@ export function useCuasTour(
   }, [run, stepIndex, advanceTo]);
 
   const activeStep = TOUR_STEPS[stepIndex];
-  const isAutoOrClickThrough = activeStep?.advanceMode === 'auto' || activeStep?.advanceMode === 'click-through';
+  const resolvedStyles = activeStep?.advanceMode === 'click-through'
+    ? CLICK_THROUGH_STYLES
+    : activeStep?.advanceMode === 'auto'
+      ? AUTO_STYLES
+      : TOUR_STYLES;
 
   return {
     run,
     stepIndex,
     steps: TOUR_STEPS as Step[],
-    styles: isAutoOrClickThrough ? AUTO_STYLES : TOUR_STYLES,
+    styles: resolvedStyles,
     locale: TOUR_LOCALE,
     handleCallback,
     startTour,

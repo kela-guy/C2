@@ -66,7 +66,7 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
   const primary = actions.filter((a) => a.size === 'lg');
   const rest = actions.filter((a) => a.size !== 'lg');
 
-  const cols = Math.min(rest.length, 4);
+  const cols = Math.min(rest.length || primary.length, 4);
 
   return (
     <div className={`px-2 py-2 ${className}`} style={{ borderBottom: `1px solid ${CARD_TOKENS.surface.level2}` }} dir="rtl">
@@ -75,7 +75,7 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
         style={{ gridTemplateColumns: `repeat(${cols || 1}, 1fr)` }}
       >
         {primary.map((action) => (
-          <div key={action.id} style={{ gridColumn: `1 / -1` }}>
+          <div key={action.id} style={primary.length === 1 ? { gridColumn: `1 / -1` } : undefined}>
             <ActionButton
               label={action.label}
               icon={action.icon}
