@@ -51,6 +51,7 @@ const meta: Meta<typeof ListOfSystems> = {
     onSensorFocus: fn(),
     onTargetFocus: fn(),
     onTargetHover: fn(),
+    thinMode: true,
   },
 };
 

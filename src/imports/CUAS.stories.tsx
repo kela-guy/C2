@@ -247,32 +247,32 @@ export default meta;
 
 export const RawDetection: StoryObj = {
   name: 'Lifecycle / Raw Detection',
-  render: () => <CuasCard target={cuas_raw} defaultOpen />,
+  render: () => <CuasCard target={cuas_raw} defaultOpen thinMode />,
 };
 
 export const Classified: StoryObj = {
   name: 'Lifecycle / Classified Drone',
-  render: () => <CuasCard target={cuas_classified} defaultOpen />,
+  render: () => <CuasCard target={cuas_classified} defaultOpen thinMode />,
 };
 
 export const ClassifiedBird: StoryObj = {
   name: 'Lifecycle / Classified Bird',
-  render: () => <CuasCard target={cuas_classified_bird} defaultOpen />,
+  render: () => <CuasCard target={cuas_classified_bird} defaultOpen thinMode />,
 };
 
 export const Mitigating: StoryObj = {
   name: 'Lifecycle / Mitigating',
-  render: () => <CuasCard target={cuas_mitigating} defaultOpen />,
+  render: () => <CuasCard target={cuas_mitigating} defaultOpen thinMode />,
 };
 
 export const Mitigated: StoryObj = {
   name: 'Lifecycle / Mitigated (BDA Pending)',
-  render: () => <CuasCard target={cuas_mitigated} defaultOpen />,
+  render: () => <CuasCard target={cuas_mitigated} defaultOpen thinMode />,
 };
 
 export const BdaComplete: StoryObj = {
   name: 'Lifecycle / BDA Complete',
-  render: () => <CuasCard target={cuas_bda_complete} defaultOpen />,
+  render: () => <CuasCard target={cuas_bda_complete} defaultOpen thinMode />,
 };
 
 export const FullLifecycle: StoryObj = {
@@ -280,7 +280,7 @@ export const FullLifecycle: StoryObj = {
   render: () => (
     <div className="flex flex-col gap-2">
       {CUAS_LIFECYCLE.map((d) => (
-        <CuasCard key={d.id} target={d} />
+        <CuasCard key={d.id} target={d} thinMode />
       ))}
     </div>
   ),
@@ -291,7 +291,7 @@ export const FullLifecycleExpanded: StoryObj = {
   render: () => (
     <div className="flex flex-col gap-2">
       {CUAS_LIFECYCLE.map((d) => (
-        <CuasCard key={d.id} target={d} defaultOpen />
+        <CuasCard key={d.id} target={d} defaultOpen thinMode />
       ))}
     </div>
   ),
@@ -397,6 +397,7 @@ export const DashboardSidebar: StoryObj = {
         activeTargetId={activeId}
         onTargetClick={(t) => setActiveId(prev => prev === t.id ? null : t.id)}
         regulusEffectors={dashboardEffectors}
+        thinMode
       />
     );
   },
@@ -442,6 +443,7 @@ export const DashboardSideByIdSide: StoryObj = {
             activeTargetId={activeId}
             onTargetClick={(t) => setActiveId(prev => prev === t.id ? null : t.id)}
             regulusEffectors={dashboardEffectors}
+            thinMode
           />
         </div>
         <div style={{ position: 'relative', width: 400, overflow: 'hidden', borderRadius: 8 }}>
