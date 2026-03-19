@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   TargetCard,
   CardHeader,
@@ -362,6 +362,186 @@ export const SwarmNoBulk: StoryObj = {
       />
     );
   },
+};
+
+// --- Interactive Flow ---
+
+function InteractiveCuasFlow() {
+  const [target, setTarget] = useState<Detection>({ ...cuas_classified });
+  const [effectors, setEffectors] = useState<RegulusEffector[]>([
+    { id: 'eff-1', name: 'Regulus-1', lat: 32.09, lon: 34.78, coverageRadiusM: 5000, status: 'available' },
+    { id: 'eff-2', name: 'Regulus-2', lat: 32.10, lon: 34.79, coverageRadiusM: 5000, status: 'available' },
+  ]);
+
+  const appendLog = useCallback((label: string) => {
+    const time = new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    setTarget(prev => ({ ...prev, actionLog: [...(prev.actionLog || []), { time, label }] }));
+  }, []);
+
+  const callbacks: CardCallbacks = {
+    ...noopCallbacks,
+    onMitigate: (effectorId) => {
+      appendLog(`שיבוש — ${effectorId}`);
+      setTarget(prev => ({ ...prev, mitigationStatus: 'mitigating', mitigatingEffectorId: effectorId }));
+      setEffectors(prev => prev.map(r =>
+        r.id === effectorId ? { ...r, status: 'active' as const } : r
+      ));
+      setTimeout(() => {
+        setTarget(prev => ({
+          ...prev,
+          mitigationStatus: 'mitigated',
+          status: 'event_neutralized',
+          missionType: 'jamming',
+          missionStatus: 'waiting_confirmation',
+          actionLog: [...(prev.actionLog || []), {
+            time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            label: 'שיבוש הושלם — ממתין לאימות',
+          }],
+        }));
+        setEffectors(prev => prev.map(r => ({ ...r, status: 'available' as const })));
+      }, 3000);
+    },
+    onMitigateAll: () => {
+      appendLog('שיבוש מרחבי');
+      setTarget(prev => ({ ...prev, mitigationStatus: 'mitigating', mitigatingEffectorId: 'ALL' }));
+      setTimeout(() => {
+        setTarget(prev => ({
+          ...prev,
+          mitigationStatus: 'mitigated',
+          status: 'event_neutralized',
+          missionType: 'jamming',
+          missionStatus: 'waiting_confirmation',
+          actionLog: [...(prev.actionLog || []), {
+            time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            label: 'שיבוש מרחבי הושלם — ממתין לאימות',
+          }],
+        }));
+      }, 3000);
+    },
+    onSendDroneVerification: () => {
+      appendLog('אימות פגיעה — מתחיל');
+      setTarget(prev => ({ ...prev, bdaStatus: 'looking' as const }));
+      setTimeout(() => {
+        setTarget(prev => ({
+          ...prev,
+          bdaStatus: 'stabilizing' as const,
+          actionLog: [...(prev.actionLog || []), {
+            time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            label: 'BDA — מתייצב',
+          }],
+        }));
+      }, 2000);
+      setTimeout(() => {
+        setTarget(prev => ({
+          ...prev,
+          bdaStatus: 'observing' as const,
+          actionLog: [...(prev.actionLog || []), {
+            time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            label: 'BDA — תצפית פעילה',
+          }],
+        }));
+      }, 5000);
+    },
+    onBdaOutcome: (outcome) => {
+      if (outcome === 'neutralized') {
+        appendLog('BDA — נוטרל');
+        setTarget(prev => ({ ...prev, bdaStatus: 'complete', status: 'event_neutralized' }));
+      } else if (outcome === 'active') {
+        appendLog('BDA — עדיין פעיל');
+        setTarget(prev => ({ ...prev, bdaStatus: undefined, mitigationStatus: 'idle', mitigatingEffectorId: undefined }));
+      } else {
+        appendLog('BDA — אבד מגע');
+        setTarget(prev => ({ ...prev, bdaStatus: 'complete', status: 'expired' }));
+      }
+    },
+    onVerify: () => {
+      appendLog('תחקור — מעקב PTZ');
+    },
+    onCompleteMission: () => {
+      appendLog('משימה הושלמה');
+      setTarget(prev => ({ ...prev, status: 'event_resolved', missionStatus: 'complete' }));
+    },
+  };
+
+  const ctx: CardContext = { regulusEffectors: effectors };
+
+  const slots = useCardSlots(target, callbacks, ctx);
+  const isMission = target.flowType === 4;
+  const isSuccess = target.status === 'event_resolved' || target.status === 'event_neutralized';
+  const isExpired = target.status === 'expired';
+  const showDetails = !isSuccess && !isExpired && target.flowType !== 4;
+
+  const reset = () => {
+    setTarget({ ...cuas_classified });
+    setEffectors([
+      { id: 'eff-1', name: 'Regulus-1', lat: 32.09, lon: 34.78, coverageRadiusM: 5000, status: 'available' },
+      { id: 'eff-2', name: 'Regulus-2', lat: 32.10, lon: 34.79, coverageRadiusM: 5000, status: 'available' },
+    ]);
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <TargetCard
+        accent={slots.accent}
+        completed={slots.completed}
+        open
+        onToggle={noop}
+        header={
+          <CardHeader
+            {...slots.header}
+            status={
+              isMission && target.plannedMission
+                ? <MissionPhaseChip phase={target.plannedMission.phase} />
+                : buildStatusChip(target)
+            }
+            open
+          />
+        }
+      >
+        {slots.media && <CardMedia {...slots.media} />}
+        {slots.actions.length > 0 && <CardActions actions={slots.actions} />}
+        {showDetails && (
+          <CardDetails
+            rows={slots.details.rows}
+            classification={slots.details.classification}
+          />
+        )}
+        {slots.laserPosition.length > 0 && (
+          <AccordionSection title="מיקום יחסי ללייזר" icon={Crosshair}>
+            <div className="w-full py-1">
+              <div className="grid grid-cols-3 grid-rows-1 gap-0">
+                {slots.laserPosition.map((row, idx) => (
+                  <TelemetryRow key={idx} label={row.label} value={row.value} icon={row.icon} />
+                ))}
+              </div>
+            </div>
+          </AccordionSection>
+        )}
+        {slots.sensors.length > 0 && (
+          <AccordionSection title={`חיישנים (${slots.sensors.length})`} icon={Radar}>
+            <div className="px-0 pb-2 w-full pt-2">
+              <CardSensors sensors={slots.sensors} label="" onSensorHover={noop} />
+            </div>
+          </AccordionSection>
+        )}
+        {slots.closure && (
+          <CardClosure outcomes={slots.closure.outcomes} onSelect={slots.closure.onSelect} />
+        )}
+      </TargetCard>
+
+      <button
+        onClick={reset}
+        className="px-3 py-1.5 rounded text-xs bg-white/10 hover:bg-white/15 text-zinc-400 hover:text-white transition-colors self-start"
+      >
+        איפוס ↻
+      </button>
+    </div>
+  );
+}
+
+export const InteractiveFlow: StoryObj = {
+  name: 'Interactive / Jam → BDA Flow',
+  render: () => <InteractiveCuasFlow />,
 };
 
 // --- Dashboard Composition ---
