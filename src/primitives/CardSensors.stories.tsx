@@ -2,6 +2,9 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { fn, expect } from 'storybook/test';
 import { CardSensors } from './CardSensors';
 
+/** Module-scoped so Chromatic/build never drops a function-only arg from `args`. */
+const keyboardSensorClickSpy = fn();
+
 const meta: Meta<typeof CardSensors> = {
   title: 'TargetCard/Slots/CardSensors',
   component: CardSensors,
@@ -27,12 +30,9 @@ export const Default: Story = {
     ],
   },
   play: async ({ canvas }) => {
-    const buttons = canvas.getAllByRole('button');
-    await expect(buttons).toHaveLength(3);
-
-    for (const btn of buttons) {
-      await expect(btn).toHaveAttribute('aria-label');
-    }
+    await expect(canvas.getByLabelText('Pixelsight — cam-north-01')).toBeVisible();
+    await expect(canvas.getByLabelText('Regulus — regulus-02')).toBeVisible();
+    await expect(canvas.getByLabelText('Radar — radar-main')).toBeVisible();
   },
 };
 
@@ -51,14 +51,16 @@ export const KeyboardClick: Story = {
     sensors: [
       { id: 'cam-01', typeLabel: 'Pixelsight', distanceLabel: '450m' },
     ],
-    onSensorClick: fn(),
   },
-  play: async ({ args, canvas, userEvent }) => {
-    const button = canvas.getByRole('button');
-    await expect(button.tagName).toBe('BUTTON');
+  render: (args) => <CardSensors {...args} onSensorClick={keyboardSensorClickSpy} />,
+  play: async ({ canvas, userEvent }) => {
+    keyboardSensorClickSpy.mockClear();
 
-    button.focus();
+    const row = canvas.getByLabelText('Pixelsight — cam-01');
+    await expect(row.tagName).toBe('BUTTON');
+
+    row.focus();
     await userEvent.keyboard('{Enter}');
-    await expect(args.onSensorClick).toHaveBeenCalledWith('cam-01');
+    await expect(keyboardSensorClickSpy).toHaveBeenCalledWith('cam-01');
   },
 };
