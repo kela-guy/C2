@@ -12,7 +12,11 @@ import {
   CardClosure,
   StatusChip,
   MissionPhaseChip,
+  AccordionSection,
+  TelemetryRow,
+  CARD_TOKENS,
 } from '@/primitives';
+import { Crosshair, Radar } from 'lucide-react';
 import { useCardSlots, type CardCallbacks, type CardContext } from './useCardSlots';
 import {
   flow1_suspicion,
@@ -83,6 +87,9 @@ function buildStatusChip(target: Detection) {
   return null;
 }
 
+/**
+ * Mirrors UnifiedCard from ListOfSystems.tsx — the card the dashboard renders.
+ */
 function ComposedCard({
   target,
   defaultOpen = false,
@@ -121,7 +128,7 @@ function ComposedCard({
       {slots.actions.length > 0 && <CardActions actions={slots.actions} />}
 
       {slots.timeline.length > 0 && (
-        <div className="px-2 border-b border-white/5">
+        <div className="px-2" style={{ borderBottom: `1px solid ${CARD_TOKENS.surface.level2}` }}>
           <CardTimeline steps={slots.timeline} />
         </div>
       )}
@@ -133,18 +140,32 @@ function ComposedCard({
         />
       )}
 
+      {slots.laserPosition.length > 0 && (
+        <AccordionSection title="מיקום יחסי ללייזר" icon={Crosshair}>
+          <div className="w-full py-1">
+            <div className="grid grid-cols-3 grid-rows-1 gap-0">
+              {slots.laserPosition.map((row, idx) => (
+                <TelemetryRow key={idx} label={row.label} value={row.value} icon={row.icon} />
+              ))}
+            </div>
+          </div>
+        </AccordionSection>
+      )}
+
       {slots.sensors.length > 0 && (
-        <div className="px-2 pb-2">
-          <CardSensors
-            sensors={slots.sensors}
-            onSensorHover={callbacks.onSensorHover}
-            onSensorClick={callbacks.onSensorFocus}
-          />
-        </div>
+        <AccordionSection title={`חיישנים (${slots.sensors.length})`} icon={Radar}>
+          <div className="px-0 pb-2 w-full pt-2">
+            <CardSensors
+              sensors={slots.sensors}
+              label=""
+              onSensorHover={callbacks.onSensorHover}
+            />
+          </div>
+        </AccordionSection>
       )}
 
       {slots.log.length > 0 && (
-        <CardLog entries={slots.log} defaultOpen={isSuccess || isExpired} />
+        <CardLog entries={slots.log} />
       )}
 
       {slots.closure && (

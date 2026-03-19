@@ -11,8 +11,13 @@ import {
   CardLog,
   CardClosure,
   StatusChip,
+  MissionPhaseChip,
+  AccordionSection,
+  TelemetryRow,
+  CARD_TOKENS,
   StackedCard,
 } from '@/primitives';
+import { Crosshair, Radar } from 'lucide-react';
 import { useCardSlots, type CardCallbacks, type CardContext } from './useCardSlots';
 import {
   cuas_raw,
@@ -57,23 +62,33 @@ function buildStatusChip(target: Detection) {
   if (target.status === 'detection') return <StatusChip label="איתור" color="red" />;
   if (target.status === 'tracking') return <StatusChip label="מעקב" color="orange" />;
   if (target.status === 'event') return <StatusChip label="מטרה" color="green" />;
+  if (target.status === 'suspicion') return <StatusChip label="תח״ש" color="orange" />;
   if (target.status === 'event_neutralized') return <StatusChip label="נוטרל" color="green" />;
   if (target.status === 'event_resolved') return <StatusChip label="הושלם" color="green" />;
+  if (target.status === 'expired') return <StatusChip label="פג תוקף" color="gray" />;
   return null;
 }
 
+/**
+ * Mirrors UnifiedCard from ListOfSystems.tsx exactly — this is the card
+ * the CUAS dashboard actually renders.
+ */
 function CuasCard({
   target,
   defaultOpen = false,
+  thinMode = false,
 }: {
   target: Detection;
   defaultOpen?: boolean;
+  thinMode?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const slots = useCardSlots(target, noopCallbacks, defaultCtx);
 
+  const isMission = target.flowType === 4;
   const isSuccess = target.status === 'event_resolved' || target.status === 'event_neutralized';
   const isExpired = target.status === 'expired';
+  const showDetails = !isSuccess && !isExpired && target.flowType !== 4;
 
   return (
     <TargetCard
@@ -84,7 +99,11 @@ function CuasCard({
       header={
         <CardHeader
           {...slots.header}
-          status={buildStatusChip(target)}
+          status={
+            isMission && target.plannedMission
+              ? <MissionPhaseChip phase={target.plannedMission.phase} />
+              : buildStatusChip(target)
+          }
           open={open}
         />
       }
@@ -93,31 +112,45 @@ function CuasCard({
 
       {slots.actions.length > 0 && <CardActions actions={slots.actions} />}
 
-      {slots.timeline.length > 0 && (
-        <div className="px-2 border-b border-white/5">
+      {!thinMode && slots.timeline.length > 0 && (
+        <div className="px-2" style={{ borderBottom: `1px solid ${CARD_TOKENS.surface.level2}` }}>
           <CardTimeline steps={slots.timeline} />
         </div>
       )}
 
-      {!isSuccess && !isExpired && (
+      {showDetails && (
         <CardDetails
           rows={slots.details.rows}
           classification={slots.details.classification}
         />
       )}
 
-      {slots.sensors.length > 0 && (
-        <div className="px-2 pb-2">
-          <CardSensors
-            sensors={slots.sensors}
-            onSensorHover={noop}
-            onSensorClick={noop}
-          />
-        </div>
+      {slots.laserPosition.length > 0 && (
+        <AccordionSection title="מיקום יחסי ללייזר" icon={Crosshair}>
+          <div className="w-full py-1">
+            <div className="grid grid-cols-3 grid-rows-1 gap-0">
+              {slots.laserPosition.map((row, idx) => (
+                <TelemetryRow key={idx} label={row.label} value={row.value} icon={row.icon} />
+              ))}
+            </div>
+          </div>
+        </AccordionSection>
       )}
 
-      {slots.log.length > 0 && (
-        <CardLog entries={slots.log} defaultOpen={isSuccess || isExpired} />
+      {slots.sensors.length > 0 && (
+        <AccordionSection title={`חיישנים (${slots.sensors.length})`} icon={Radar}>
+          <div className="px-0 pb-2 w-full pt-2">
+            <CardSensors
+              sensors={slots.sensors}
+              label=""
+              onSensorHover={noopCallbacks.onSensorHover}
+            />
+          </div>
+        </AccordionSection>
+      )}
+
+      {!thinMode && slots.log.length > 0 && (
+        <CardLog entries={slots.log} />
       )}
 
       {slots.closure && (
@@ -133,6 +166,11 @@ function InnerCard({ target, isActive }: { target: Detection; isActive: boolean 
   const [open, setOpen] = useState(false);
   const slots = useCardSlots(target, noopCallbacks, defaultCtx);
 
+  const isMission = target.flowType === 4;
+  const isSuccess = target.status === 'event_resolved' || target.status === 'event_neutralized';
+  const isExpired = target.status === 'expired';
+  const showDetails = !isSuccess && !isExpired && target.flowType !== 4;
+
   return (
     <TargetCard
       accent={slots.accent}
@@ -142,22 +180,34 @@ function InnerCard({ target, isActive }: { target: Detection; isActive: boolean 
       header={
         <CardHeader
           {...slots.header}
-          status={buildStatusChip(target)}
+          status={
+            isMission && target.plannedMission
+              ? <MissionPhaseChip phase={target.plannedMission.phase} />
+              : buildStatusChip(target)
+          }
           open={open}
         />
       }
     >
       {slots.actions.length > 0 && <CardActions actions={slots.actions} />}
-      {slots.timeline.length > 0 && (
-        <div className="px-2 border-b border-white/5">
-          <CardTimeline steps={slots.timeline} />
-        </div>
-      )}
-      {!isActive && (
+
+      {showDetails && (
         <CardDetails
           rows={slots.details.rows}
           classification={slots.details.classification}
         />
+      )}
+
+      {slots.sensors.length > 0 && (
+        <AccordionSection title={`חיישנים (${slots.sensors.length})`} icon={Radar}>
+          <div className="px-0 pb-2 w-full pt-2">
+            <CardSensors
+              sensors={slots.sensors}
+              label=""
+              onSensorHover={noopCallbacks.onSensorHover}
+            />
+          </div>
+        </AccordionSection>
       )}
     </TargetCard>
   );
