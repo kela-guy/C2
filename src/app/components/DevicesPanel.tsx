@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { X, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as TooltipPrimitive from '@radix-ui/react-tooltip';
+import { LAYOUT_TOKENS } from '@/primitives/tokens';
 import {
   SENSOR_ASSETS,
   CAMERA_ASSETS,
@@ -239,7 +240,8 @@ export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, noTransiti
 
   return (
     <aside
-      className={`absolute top-0 bottom-0 right-0 w-96 bg-[#141414] border-l border-white/10 flex flex-col z-10 ${noTransition ? '' : 'transition-all duration-300 ease-in-out'} ${open ? 'translate-x-0' : 'translate-x-full pointer-events-none'}`}
+      className={`absolute top-0 bottom-0 right-0 bg-[#141414] border-l border-white/10 flex flex-col z-10 ${noTransition ? '' : 'transition-all duration-300 ease-in-out'} ${open ? 'translate-x-0' : 'translate-x-full pointer-events-none'}`}
+      style={{ width: LAYOUT_TOKENS.sidebarWidthPx }}
     >
       {/* Header */}
       <div className="flex flex-col gap-2 px-4 pt-3 pb-2 border-b border-white/10 shrink-0">

@@ -53,7 +53,7 @@ export function TargetCard({
   return (
     <div
       ref={cardRef}
-      className={`w-full text-white overflow-hidden transition-colors group/card relative ${className}`}
+      className={`w-full text-white transition-colors group/card relative overflow-hidden ${className}`}
       style={{
         backgroundColor: d.container.bgColor,
         borderColor: d.container.borderColor,
@@ -63,8 +63,8 @@ export function TargetCard({
         marginBottom: `${d.container.marginBottom + 2}px`,
         filter: completed ? 'saturate(0.4) brightness(0.85)' : undefined,
         boxShadow: open
-          ? `0 0 0 ${d.selectedRing.ringWidth}px ${d.selectedRing.ringColor}${Math.round(d.selectedRing.ringOpacity * 255).toString(16).padStart(2, '0')}`
-          : undefined,
+          ? `0 0 0 ${d.selectedRing.ringWidth}px ${d.selectedRing.ringColor}${Math.round(d.selectedRing.ringOpacity * 255).toString(16).padStart(2, '0')}, ${d.elevation.shadow}`
+          : d.elevation.shadow,
       }}
       dir="rtl"
     >

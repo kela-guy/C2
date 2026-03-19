@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ActionButton } from './ActionButton';
+import { CARD_TOKENS } from './tokens';
 
 export interface CardAction {
   id: string;
@@ -68,7 +69,7 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
   const cols = Math.min(rest.length, 4);
 
   return (
-    <div className={`px-2 py-2 border-b border-white/5 ${className}`} dir="rtl">
+    <div className={`px-2 py-2 ${className}`} style={{ borderBottom: `1px solid ${CARD_TOKENS.surface.level2}` }} dir="rtl">
       <div
         className="grid gap-1.5"
         style={{ gridTemplateColumns: `repeat(${cols || 1}, 1fr)` }}
@@ -107,7 +108,8 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
 
       {confirmingAction?.confirm && (
         <div
-          className="mt-1 p-3 rounded border border-white/10 bg-white/[0.02]"
+          className="mt-1 p-3 rounded"
+          style={{ border: `1px solid ${CARD_TOKENS.surface.level2}`, backgroundColor: `rgba(255,255,255,${CARD_TOKENS.elevation.overlay.level2})` }}
           role="alertdialog"
           aria-labelledby="confirm-title"
           aria-describedby={confirmingAction.confirm.description ? 'confirm-desc' : undefined}

@@ -274,6 +274,7 @@ export function NotificationSystem() {
         theme="dark"
         expand
         visibleToasts={4}
+        position="top-center"
         style={{ zIndex: 60 }}
       />
     </>

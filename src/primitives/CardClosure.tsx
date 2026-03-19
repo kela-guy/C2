@@ -1,5 +1,6 @@
 import React from 'react';
 import { CheckCircle2 } from 'lucide-react';
+import { CARD_TOKENS } from './tokens';
 
 export interface ClosureOutcome {
   id: string;
@@ -23,7 +24,7 @@ export function CardClosure({
   if (outcomes.length === 0) return null;
 
   return (
-    <div className={`border-t border-[#333] p-3 space-y-2 ${className}`} dir="rtl">
+    <div className={`p-3 space-y-2 ${className}`} style={{ borderTop: `1px solid ${CARD_TOKENS.surface.level2}` }} dir="rtl">
       <div className="flex items-center gap-2">
         <CheckCircle2 size={14} className="text-zinc-400" aria-hidden="true" />
         <span className="text-xs font-bold text-zinc-300">{title}</span>
@@ -36,7 +37,8 @@ export function CardClosure({
               e.stopPropagation();
               onSelect(outcome.id);
             }}
-            className="px-2.5 py-2 rounded border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10 hover:border-white/20 transition-all text-[11px] font-medium text-right flex items-center gap-1.5"
+            className="px-2.5 py-2 rounded text-zinc-300 hover:brightness-125 transition-all text-[11px] font-medium text-right flex items-center gap-1.5"
+            style={{ backgroundColor: CARD_TOKENS.surface.level3, border: `1px solid ${CARD_TOKENS.surface.level3}` }}
           >
             {outcome.icon && <outcome.icon size={12} className="shrink-0 text-zinc-500" aria-hidden="true" />}
             {outcome.label}

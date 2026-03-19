@@ -6,6 +6,7 @@ import ListOfSystems from '@/imports/ListOfSystems';
 import type { Detection, RegulusEffector } from '@/imports/ListOfSystems';
 import { List, Bell, Radar, BookOpen, HelpCircle, Target } from 'lucide-react';
 import { DevicesPanel, DevicesIcon } from './DevicesPanel';
+import { LAYOUT_TOKENS } from '@/primitives/tokens';
 import { toast } from 'sonner';
 import Joyride from 'react-joyride';
 import { useCuasTour } from '../hooks/useCuasTour';
@@ -342,6 +343,9 @@ export const CUASDashboard = () => {
       mitigationStatus: 'idle',
       altitude: '120 מ׳',
       laserDistance: '2,840 מ׳',
+      laserAzimuth: '253.44°',
+      laserElevation: '2.39°',
+      laserRange: '3575.89 m',
     };
 
     approachingTargetIds.current.add(targetId);
@@ -375,7 +379,11 @@ export const CUASDashboard = () => {
         updated.timestamp = t;
         updated.altitude = `${Math.round(120 + Math.sin(progress * Math.PI) * 30)} מ׳`;
         updated.trail = [...(tgt.trail || []), { lat: curLat, lon: curLon, timestamp: t }];
-        updated.laserDistance = `${Math.round(2840 - progress * 1800)} מ׳`;
+        const currentRange = 2840 - progress * 1800;
+        updated.laserDistance = `${Math.round(currentRange)} מ׳`;
+        updated.laserAzimuth = `${(253.44 - progress * 12).toFixed(2)}°`;
+        updated.laserElevation = `${(2.39 + progress * 3.5).toFixed(2)}°`;
+        updated.laserRange = `${currentRange.toFixed(2)} m`;
 
         if (step === 2 && tgt.entityStage === 'raw_detection') {
           updated.confidence = 45;
@@ -554,7 +562,7 @@ export const CUASDashboard = () => {
         r.id === effectorId ? { ...r, status: 'available' as const, activeTargetId: undefined } : r
       ));
       toast.success('שיבוש הושלם — נדרש אימות');
-    }, 10000);
+    }, 3000);
   }, []);
 
   const JAMMABLE_STATUSES = new Set(['suspicion', 'detection', 'tracking', 'event']);
@@ -593,7 +601,7 @@ export const CUASDashboard = () => {
       });
       setRegulusEffectors(prev => prev.map(r => ({ ...r, status: 'available' as const, activeTargetId: undefined })));
       toast.success('שיבוש הושלם — נדרש אימות');
-    }, 10000);
+    }, 3000);
   }, [regulusEffectors]);
 
   const handleCompleteMission = useCallback((targetId: string) => {
@@ -901,16 +909,17 @@ export const CUASDashboard = () => {
         {/* Right Sidebar */}
         <aside
           className={`
-            absolute top-0 bottom-0 w-96 bg-[#141414] border-l border-white/10 flex flex-col ${panelSwitching ? '' : 'transition-all duration-300 ease-in-out'} z-10
+            absolute top-0 bottom-0 bg-[#141414] border-l border-white/10 flex flex-col ${panelSwitching ? '' : 'transition-all duration-300 ease-in-out'} z-10
             ${sidebarOpen ? 'translate-x-0 right-0' : 'translate-x-full right-0'}
           `}
+          style={{ width: LAYOUT_TOKENS.sidebarWidthPx }}
         >
           <div className="px-4 pt-3 pb-2 border-b border-white/10">
             <h2 className="text-[11px] font-medium text-white/70 uppercase tracking-wider" dir="rtl">CUAS — מערכות פעילות ({targets.length})</h2>
           </div>
           <div className="flex-1 overflow-y-auto custom-scrollbar">
             <ListOfSystems
-              className="flex flex-col gap-2"
+              className="flex flex-col gap-0"
               targets={targets}
               activeTargetId={activeTargetId}
               onTargetClick={handleTargetClick}
@@ -973,6 +982,7 @@ export const CUASDashboard = () => {
               }}
               onTargetFocus={handleTargetFocus}
               onTargetHover={setHoveredTargetIdFromCard}
+              thinMode
             />
           </div>
         </aside>

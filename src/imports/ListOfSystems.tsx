@@ -16,6 +16,8 @@ import {
   FilterBar,
   StackedCard,
   AccordionSection,
+  TelemetryRow,
+  CARD_TOKENS,
 } from '@/primitives';
 import {
   Crosshair,
@@ -97,6 +99,9 @@ export interface Detection {
   lastSeenCoordinates?: string;
   altitude?: string;
   laserDistance?: string;
+  laserAzimuth?: string;
+  laserElevation?: string;
+  laserRange?: string;
 }
 
 export interface MissionWaypoint {
@@ -206,6 +211,7 @@ function UnifiedCard({
   callbacks,
   ctx,
   onFocus,
+  thinMode,
 }: {
   target: Detection;
   isOpen: boolean;
@@ -213,6 +219,7 @@ function UnifiedCard({
   callbacks: CardCallbacks;
   ctx: CardContext;
   onFocus?: () => void;
+  thinMode?: boolean;
 }) {
   const slots = useCardSlots(target, callbacks, ctx);
   const isMission = target.flowType === 4;
@@ -244,8 +251,8 @@ function UnifiedCard({
 
       {slots.actions.length > 0 && <CardActions actions={slots.actions} />}
 
-      {slots.timeline.length > 0 && (
-        <div className="px-2 border-b border-white/5">
+      {!thinMode && slots.timeline.length > 0 && (
+        <div className="px-2" style={{ borderBottom: `1px solid ${CARD_TOKENS.surface.level2}` }}>
           <CardTimeline steps={slots.timeline} />
         </div>
       )}
@@ -254,25 +261,35 @@ function UnifiedCard({
         <CardDetails
           rows={slots.details.rows}
           classification={slots.details.classification}
-          defaultOpen
         />
       )}
 
+      {slots.laserPosition.length > 0 && (
+        <AccordionSection title="מיקום יחסי ללייזר" icon={Crosshair}>
+          <div className="w-full py-1">
+            <div className="grid grid-cols-3 grid-rows-1 gap-0">
+              {slots.laserPosition.map((row, idx) => (
+                <TelemetryRow key={idx} label={row.label} value={row.value} icon={row.icon} />
+              ))}
+            </div>
+          </div>
+        </AccordionSection>
+      )}
+
       {slots.sensors.length > 0 && (
-        <AccordionSection title={`חיישנים (${slots.sensors.length})`} defaultOpen={!hasActions} icon={Radar}>
-          <div className="px-0 pb-2">
+        <AccordionSection title={`חיישנים (${slots.sensors.length})`} icon={Radar}>
+          <div className="px-0 pb-2 w-full pt-2">
             <CardSensors
               sensors={slots.sensors}
               label=""
               onSensorHover={callbacks.onSensorHover}
-              onSensorClick={callbacks.onSensorFocus}
             />
           </div>
         </AccordionSection>
       )}
 
-      {slots.log.length > 0 && (
-        <CardLog entries={slots.log} defaultOpen={!hasActions && (isSuccess || isExpired)} />
+      {!thinMode && slots.log.length > 0 && (
+        <CardLog entries={slots.log} />
       )}
 
       {slots.closure && (
@@ -392,6 +409,7 @@ export interface ListOfSystemsProps {
   onSensorFocus?: (sensorId: string) => void;
   onTargetFocus?: (targetId: string) => void;
   onTargetHover?: (targetId: string | null) => void;
+  thinMode?: boolean;
 }
 
 export default function ListOfSystems({
@@ -440,6 +458,7 @@ export default function ListOfSystems({
   onSensorFocus,
   onTargetFocus,
   onTargetHover,
+  thinMode,
 }: ListOfSystemsProps) {
   const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
   const [expandedBurstTargets, setExpandedBurstTargets] = useState<Set<string>>(new Set());
@@ -547,6 +566,7 @@ export default function ListOfSystems({
       callbacks={callbacks}
       ctx={ctx}
       onFocus={onTargetFocus ? () => onTargetFocus(target.id) : undefined}
+      thinMode={thinMode}
     />
   );
 
@@ -626,6 +646,7 @@ export default function ListOfSystems({
                 callbacks={buildCallbacks(target)}
                 ctx={buildCtx(target)}
                 onFocus={onTargetFocus ? () => onTargetFocus(target.id) : undefined}
+                thinMode={thinMode}
               />
             </motion.div>
           );
@@ -684,7 +705,7 @@ export default function ListOfSystems({
         />
       </div>
 
-      <div className="flex-1 space-y-2 pb-20 overflow-y-auto custom-scrollbar px-2 pt-2">
+      <div className="flex-1 space-y-2 overflow-y-auto custom-scrollbar">
         {activeTab === 'active' && (
           <div id="tabpanel-active" role="tabpanel" aria-labelledby="tab-active">
             <CollapsibleGroup title="מטרות" count={groups.tasks.length} icon={ListTodo} defaultOpen>

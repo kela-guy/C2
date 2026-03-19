@@ -28,6 +28,8 @@ import {
   EyeOff,
   Lock,
   Timer,
+  Compass,
+  ArrowUpDown,
 } from 'lucide-react';
 import type { ThreatAccent } from '@/primitives/tokens';
 import type { CardAction } from '@/primitives/CardActions';
@@ -100,6 +102,7 @@ export interface CardSlots {
   sensors: CardSensor[];
   log: LogEntry[];
   closure: { outcomes: ClosureOutcome[]; onSelect: (id: string) => void } | null;
+  laserPosition: DetailRow[];
 }
 
 function buildAccent(target: Detection): ThreatAccent {
@@ -128,14 +131,25 @@ function buildHeaderIcon(target: Detection): React.ElementType {
   }
 }
 
-function buildConfidenceBadge(confidence: number | undefined): React.ReactNode {
+const CLASSIFIED_TYPE_LABELS: Record<string, string> = {
+  drone: 'רחפן', bird: 'ציפור', aircraft: 'מטוס', unknown: 'לא ידוע',
+};
+
+function buildConfidenceBadge(confidence: number | undefined, classifiedType?: string): React.ReactNode {
   if (confidence == null) return null;
   const bg = confidence >= 80 ? 'bg-red-500/20 text-red-400 border-red-500/30'
     : confidence >= 40 ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
     : 'bg-zinc-500/20 text-zinc-400 border-zinc-500/30';
+  const typeLabel = CLASSIFIED_TYPE_LABELS[classifiedType ?? 'unknown'] ?? 'לא ידוע';
   return React.createElement('span', {
-    className: `text-[10px] font-bold font-mono tabular-nums px-1.5 py-0.5 rounded border ${bg}`,
-  }, `${confidence}%`);
+    className: `text-[10px] font-bold font-mono tabular-nums px-1.5 py-0.5 rounded border ${bg} relative group/badge cursor-default`,
+  },
+    `${confidence}%`,
+    React.createElement('span', {
+      className: 'absolute top-full left-1/2 -translate-x-1/2 mt-1.5 px-2 py-1 text-[9px] font-normal font-sans text-white bg-zinc-700 border border-white/10 rounded shadow-lg whitespace-nowrap pointer-events-none z-50 opacity-0 group-hover/badge:opacity-100 transition-opacity',
+      'aria-hidden': 'true',
+    }, `סביר ביותר שמדובר ב${typeLabel}`),
+  );
 }
 
 function buildHeader(target: Detection): CardHeaderProps {
@@ -157,8 +171,8 @@ function buildHeader(target: Detection): CardHeaderProps {
     title: isMission
       ? (target.plannedMission?.missionType === 'ptz' ? 'סריקת מצלמה' : 'משימת רחפן')
       : target.name,
-    subtitle: isMission ? target.id : undefined,
-    badge: target.entityStage ? buildConfidenceBadge(target.confidence) : undefined,
+    subtitle: isMission ? target.id : target.timestamp,
+    badge: target.entityStage ? buildConfidenceBadge(target.confidence, target.classifiedType) : undefined,
   };
 }
 
@@ -547,8 +561,6 @@ function buildDetails(target: Detection): { rows: DetailRow[]; classification?: 
   rows.push({ label: 'מיקום', value: target.coordinates, icon: MapPin });
   if (target.altitude) rows.push({ label: 'גובה', value: target.altitude, icon: Mountain });
   rows.push({ label: 'מרחק', value: target.distance, icon: Ruler });
-  if (target.laserDistance) rows.push({ label: 'מרחק לייזר', value: target.laserDistance, icon: Ruler });
-  rows.push({ label: 'זמן זיהוי', value: target.timestamp, icon: Scan });
   if (target.lastSeenAt) rows.push({ label: 'נצפה לאחרונה', value: target.lastSeenAt, icon: Clock });
 
   let classification: CardDetailsClassification | undefined;
@@ -575,6 +587,14 @@ function buildDetails(target: Detection): { rows: DetailRow[]; classification?: 
   }
 
   return { rows, classification };
+}
+
+function buildLaserPosition(target: Detection): DetailRow[] {
+  const rows: DetailRow[] = [];
+  if (target.laserAzimuth) rows.push({ label: 'אזימוט', value: target.laserAzimuth, icon: Compass });
+  if (target.laserElevation) rows.push({ label: 'זווית הגבהה', value: target.laserElevation, icon: ArrowUpDown });
+  if (target.laserRange || target.laserDistance) rows.push({ label: 'טווח', value: target.laserRange ?? target.laserDistance!, icon: Ruler });
+  return rows;
 }
 
 function buildSensors(target: Detection): CardSensor[] {
@@ -634,9 +654,10 @@ export function useCardSlots(
   const actions = useMemo(() => buildActions(target, callbacks, ctx), [target, callbacks, ctx]);
   const timeline = useMemo(() => buildTimeline(target, ctx), [target, ctx.isDroneVerifying]);
   const details = useMemo(() => buildDetails(target), [target]);
+  const laserPosition = useMemo(() => buildLaserPosition(target), [target.laserAzimuth, target.laserElevation, target.laserRange, target.laserDistance]);
   const sensors = useMemo(() => buildSensors(target), [target.contributingSensors, target.detectedBySensors]);
   const log = target.actionLog ?? [];
   const closure = useMemo(() => buildClosure(target, callbacks), [target.flowPhase, target.flowType, callbacks]);
 
-  return { accent, completed, header, media, actions, timeline, details, sensors, log, closure };
+  return { accent, completed, header, media, actions, timeline, details, sensors, log, closure, laserPosition };
 }

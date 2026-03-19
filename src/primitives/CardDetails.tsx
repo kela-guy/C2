@@ -25,7 +25,7 @@ export interface CardDetailsProps {
 
 export function CardDetails({
   rows,
-  defaultOpen = true,
+  defaultOpen = false,
   className = '',
 }: CardDetailsProps) {
   if (rows.length === 0) return null;
@@ -38,8 +38,8 @@ export function CardDetails({
 
   return (
     <AccordionSection title="נתוני טלמטריה" defaultOpen={defaultOpen} icon={Eye} className={className}>
-      <div className="py-1">
-        <div className="grid grid-cols-2 grid-rows-2 group/copy relative">
+      <div className="w-full py-1">
+        <div className="w-full flex flex-row gap-8 group/copy relative">
           {rows.map((row, idx) => (
             <TelemetryRow key={idx} label={row.label} value={row.value} icon={row.icon} />
           ))}

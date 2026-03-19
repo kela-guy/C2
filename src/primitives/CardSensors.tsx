@@ -1,4 +1,5 @@
 import React from 'react';
+import { CARD_TOKENS } from './tokens';
 
 export interface CardSensor {
   id: string;
@@ -12,7 +13,6 @@ export interface CardSensorsProps {
   sensors: CardSensor[];
   label?: string;
   onSensorHover?: (id: string | null) => void;
-  onSensorClick?: (id: string) => void;
   className?: string;
 }
 
@@ -20,26 +20,21 @@ export function CardSensors({
   sensors,
   label = 'חיישנים',
   onSensorHover,
-  onSensorClick,
   className = '',
 }: CardSensorsProps) {
   if (sensors.length === 0) return null;
 
   return (
-    <div className={`flex flex-col gap-1 pt-2 border-t border-white/5 ${className}`} dir="rtl">
+    <div className={`grid grid-cols-3 gap-1 w-full ${className}`} style={{ borderTop: `1px solid ${CARD_TOKENS.surface.level2}` }} dir="rtl">
       {sensors.map((sensor) => {
         const SensorIcon = sensor.icon;
         return (
-          <button
+          <div
             key={sensor.id}
-            type="button"
-            className="flex items-center gap-2 text-[11px] bg-black/30 border border-white/10 text-gray-300 cursor-pointer hover:bg-white/10 hover:border-cyan-500/30 rounded px-2 py-1.5 transition-colors group/sensor relative w-full text-right focus-visible:ring-2 focus-visible:ring-cyan-500/50 focus-visible:outline-none"
+            className="flex items-center gap-2 text-[11px] text-gray-300 hover:brightness-125 hover:border-cyan-500/30 rounded px-2 py-1.5 transition-colors group/sensor relative w-full text-right cursor-default"
+            style={{ backgroundColor: CARD_TOKENS.surface.level4, border: `1px solid ${CARD_TOKENS.surface.level4}` }}
             onMouseEnter={() => onSensorHover?.(sensor.id)}
             onMouseLeave={() => onSensorHover?.(null)}
-            onClick={(e) => {
-              e.stopPropagation();
-              onSensorClick?.(sensor.id);
-            }}
             aria-label={`${sensor.typeLabel} — ${sensor.id}`}
           >
             {SensorIcon && (
@@ -59,10 +54,7 @@ export function CardSensors({
                 {sensor.distanceLabel}
               </span>
             )}
-            <span className="opacity-0 group-hover/sensor:opacity-100 transition-opacity absolute left-1/2 -translate-x-1/2 bg-black/90 px-1.5 py-0.5 rounded text-[9px] text-white -top-5 whitespace-nowrap pointer-events-none z-10" aria-hidden="true">
-              {sensor.id}
-            </span>
-          </button>
+          </div>
         );
       })}
     </div>

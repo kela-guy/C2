@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
+import { CARD_TOKENS } from "./tokens";
 
 let accordionIdCounter = 0;
 
@@ -24,9 +25,9 @@ export function AccordionSection({
   const [panelId] = useState(() => `accordion-panel-${++accordionIdCounter}`);
 
   return (
-    <div className={`border-b border-[#333] last:border-0 ${className}`} dir="rtl">
+    <div className={`last:border-0 ${className}`} style={{ borderBottom: `1px solid ${CARD_TOKENS.surface.level2}` }} dir="rtl">
       <div 
-        className="flex w-full items-center justify-between p-[8px] cursor-pointer hover:bg-white/5 transition-colors rounded-sm focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
+        className="flex w-full items-center justify-between p-[8px] cursor-pointer transition-colors rounded-none focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none bg-white/[0.05] hover:bg-white/[0.08]"
         onClick={() => setOpen(!isOpen)}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(!isOpen); } }}
         role="button"
@@ -34,7 +35,7 @@ export function AccordionSection({
         aria-expanded={isOpen}
         aria-controls={panelId}
       >
-        <div className="flex items-center gap-2 text-sm font-medium text-zinc-300">
+        <div className="flex items-center gap-2 text-sm font-normal text-zinc-300">
           {HeaderIcon && <HeaderIcon size={14} className="text-zinc-500" aria-hidden="true" />}
           {title}
         </div>
@@ -60,7 +61,7 @@ export function AccordionSection({
             transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: "easeOut" }}
             className="overflow-hidden"
           >
-            <div id={panelId} className="bg-[rgba(255,255,255,0.05)] px-[8px] py-[0px]">{children}</div>
+            <div id={panelId} className="flex flex-wrap px-[8px] py-[0px]" style={{ backgroundColor: `rgba(255,255,255,${CARD_TOKENS.elevation.overlay.level2})` }}>{children}</div>
           </motion.div>
         )}
       </AnimatePresence>

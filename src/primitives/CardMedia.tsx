@@ -1,5 +1,6 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { Camera, ShieldAlert, AlertTriangle, Play, Pause, SkipBack, SkipForward } from 'lucide-react';
+import { CARD_TOKENS } from './tokens';
 
 export interface CardMediaProps {
   src?: string;
@@ -33,8 +34,8 @@ export function CardMedia({
 
   return (
     <div
-      className={`relative w-full overflow-hidden border-b border-white/5 group bg-black ${height} ${className}`}
-      style={aspectRatio ? { aspectRatio } : undefined}
+      className={`relative w-full overflow-hidden group bg-black ${height} ${className}`}
+      style={{ ...(aspectRatio ? { aspectRatio } : {}), borderBottom: `1px solid ${CARD_TOKENS.surface.level2}` }}
     >
       {src && isVideo ? (
         showControls ? (

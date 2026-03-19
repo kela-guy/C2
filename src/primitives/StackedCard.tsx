@@ -123,9 +123,7 @@ export function StackedCard({
           borderWidth: `${d.container.borderWidth}px`,
           borderStyle: 'solid',
           marginBottom: expanded ? `${d.container.marginBottom}px` : `${d.container.marginBottom + 5}px`,
-          boxShadow: expanded
-            ? `0 0 0 1px rgba(255,255,255,0.06)`
-            : undefined,
+          boxShadow: d.elevation.shadow,
         }}
       >
         {/* Header — always visible */}
@@ -214,7 +212,7 @@ export function StackedCard({
               >
                 {/* Bulk Actions */}
                 {onBulkMitigate && (
-                  <div className="px-2 py-2 flex items-center gap-1.5 border-b border-white/5 bg-white/[0.02]">
+                  <div className="px-2 py-2 flex items-center gap-1.5" style={{ borderBottom: `1px solid ${d.surface.level2}`, backgroundColor: `rgba(255,255,255,${d.elevation.overlay.level2})` }}>
                     <ActionButton
                       label={`שיבוש הכל (${count})`}
                       icon={Zap}

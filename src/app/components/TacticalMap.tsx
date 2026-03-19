@@ -769,8 +769,8 @@ export const TacticalMap = ({
     id: 'fov-fill',
     type: 'fill',
     paint: {
-      'fill-color': 'rgba(59, 130, 246, 0.25)',
-      'fill-outline-color': 'rgba(96, 165, 250, 0.8)',
+      'fill-color': 'rgba(59, 130, 246, 0.35)',
+      'fill-outline-color': 'rgba(96, 165, 250, 1.0)',
     },
   };
 
@@ -778,7 +778,7 @@ export const TacticalMap = ({
     id: 'fov-line',
     type: 'line',
     paint: {
-      'line-color': 'rgba(96, 165, 250, 0.9)',
+      'line-color': 'rgba(96, 165, 250, 1.0)',
       'line-width': 1.5,
     },
   };
@@ -873,15 +873,15 @@ export const TacticalMap = ({
                 id={`sensor-fov-fill-${asset.id}`}
                 type="fill"
                 paint={{
-                  'fill-color': 'rgba(56, 189, 248, 0.18)',
-                  'fill-outline-color': 'rgba(56, 189, 248, 0.9)',
+                  'fill-color': 'rgba(56, 189, 248, 0.30)',
+                  'fill-outline-color': 'rgba(56, 189, 248, 1.0)',
                 }}
               />
               <Layer
                 id={`sensor-fov-line-${asset.id}`}
                 type="line"
                 paint={{
-                  'line-color': 'rgba(56, 189, 248, 0.9)',
+                  'line-color': 'rgba(56, 189, 248, 1.0)',
                   'line-width': 2,
                 }}
               />
@@ -896,8 +896,8 @@ export const TacticalMap = ({
               id="jam-verification-fov-fill"
               type="fill"
               paint={{
-                'fill-color': 'rgba(34, 197, 94, 0.22)',
-                'fill-outline-color': 'rgba(34, 197, 94, 0.9)',
+                'fill-color': 'rgba(34, 197, 94, 0.35)',
+                'fill-outline-color': 'rgba(34, 197, 94, 1.0)',
               }}
             />
             <Layer
@@ -918,8 +918,8 @@ export const TacticalMap = ({
               id="camera-lookat-fov-fill"
               type="fill"
               paint={{
-                'fill-color': 'rgba(6, 182, 212, 0.20)',
-                'fill-outline-color': 'rgba(6, 182, 212, 0.9)',
+                'fill-color': 'rgba(6, 182, 212, 0.32)',
+                'fill-outline-color': 'rgba(6, 182, 212, 1.0)',
               }}
             />
             <Layer
@@ -1197,11 +1197,11 @@ export const TacticalMap = ({
                           <div className={`${dotSize} rounded-full border-2 shadow-lg transition-all ${dotColor} ${isActive || isHoveredFromCard ? 'ring-2 ring-white ring-offset-2 ring-offset-black' : ''}`} />
                         )}
 
-                        {/* Map Info Card — hover-only tooltip (also shown when card is hovered) */}
+                        {/* Map Info Card — only shown when card is open */}
                         {isClassified ? (
                           <div className={`
-                            absolute top-1/2 -translate-y-1/2 pointer-events-none transition-all duration-200 z-20
-                            ${isActive || isHoveredFromCard ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
+                            absolute top-1/2 -translate-y-1/2 pointer-events-none transition-all duration-200 z-[9999]
+                            ${isActive ? 'opacity-100' : 'opacity-0'}
                           `}
                             style={{ left: isDrone ? '34px' : '24px' }}
                           >
@@ -1218,8 +1218,8 @@ export const TacticalMap = ({
                           <div className={`
                             absolute top-1/2 -translate-y-1/2
                             bg-black/90 backdrop-blur-sm text-white text-[9px] px-1.5 py-0.5 rounded border border-white/10 whitespace-nowrap
-                            transition-all duration-200 pointer-events-none flex items-center gap-1
-                            ${isActive || isHoveredFromCard ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
+                            transition-all duration-200 pointer-events-none flex items-center gap-1 z-[9999]
+                            ${isActive ? 'opacity-100' : 'opacity-0'}
                           `} style={{ left: '20px' }}>
                             {isExpiredCuas ? (
                               <span className="text-zinc-500">נצפה לאחרונה — {target.lastSeenAt || target.timestamp}</span>
@@ -1778,10 +1778,8 @@ export const TacticalMap = ({
           <Marker key={drone.id} longitude={drone.lon} latitude={drone.lat} anchor="center">
             <div className="relative group cursor-default drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]">
               <DroneIcon color="#22d3ee" rotationDeg={drone.headingDeg ?? 0} />
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-1.5 py-1 text-[10px] text-zinc-300 bg-zinc-900/90 rounded shadow whitespace-nowrap pointer-events-none z-50 opacity-0 group-hover:opacity-100 transition-opacity">
-                <span className="text-zinc-400">{drone.name}</span>
-                <span className="text-zinc-600 mx-0.5">·</span>
-                <span className="text-zinc-500">{drone.altitude}</span>
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-1.5 py-1 text-[10px] bg-zinc-900/90 rounded shadow whitespace-nowrap pointer-events-none z-50 opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="text-zinc-300 font-medium">רחפן ידידותי</span>
               </div>
             </div>
           </Marker>

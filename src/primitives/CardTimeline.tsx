@@ -72,11 +72,11 @@ export function CardTimeline({ steps, compact, className = '' }: CardTimelinePro
           }`}
         >
           {step.status === 'complete' ? (
-            <div className="size-4 rounded-full flex-shrink-0 border border-[#333] flex items-center justify-center" aria-hidden="true">
+            <div className="size-4 rounded-full flex-shrink-0 flex items-center justify-center" style={{ border: `1px solid ${CARD_TOKENS.surface.level2}` }} aria-hidden="true">
               <Check size={10} className="text-[#12b886]" strokeWidth={2.5} />
             </div>
           ) : step.status === 'active' ? (
-            <div className="size-4 rounded-full flex-shrink-0 border border-[#444] flex items-center justify-center" aria-hidden="true">
+            <div className="size-4 rounded-full flex-shrink-0 flex items-center justify-center" style={{ border: `1px solid ${CARD_TOKENS.surface.level3}` }} aria-hidden="true">
               <div className="size-2 rounded-full bg-red-500" />
             </div>
           ) : step.status === 'error' ? (
@@ -84,7 +84,7 @@ export function CardTimeline({ steps, compact, className = '' }: CardTimelinePro
               <Loader2 size={10} className="text-red-400 animate-spin" />
             </div>
           ) : (
-            <div className="size-4 rounded-full flex-shrink-0 border border-[#444]" aria-hidden="true" />
+            <div className="size-4 rounded-full flex-shrink-0" style={{ border: `1px solid ${CARD_TOKENS.surface.level3}` }} aria-hidden="true" />
           )}
           <span>{step.label}</span>
           {step.status === 'active' && (

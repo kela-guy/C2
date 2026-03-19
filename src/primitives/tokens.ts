@@ -1,23 +1,69 @@
+export const LAYOUT_TOKENS = {
+  sidebarWidthPx: 400,
+} as const;
+
+const ELEVATION = {
+  baseSurface: '#141414',
+  overlay: {
+    level0: 0,
+    level1: 0.05,
+    level2: 0.08,
+    level3: 0.11,
+    level4: 0.14,
+  },
+  shadow: '0 2px 4px rgba(0,0,0,0.6), 0 4px 12px rgba(0,0,0,0.4)',
+} as const;
+
+type ElevationLevel = keyof typeof ELEVATION.overlay;
+
+function mixOverlay(base: string, opacity: number): string {
+  const r = parseInt(base.slice(1, 3), 16);
+  const g = parseInt(base.slice(3, 5), 16);
+  const b = parseInt(base.slice(5, 7), 16);
+  const mix = (c: number) => Math.round(c + (255 - c) * opacity);
+  return `#${[mix(r), mix(g), mix(b)].map(c => c.toString(16).padStart(2, '0')).join('')}`;
+}
+
+const SURFACE: Record<ElevationLevel, string> = {
+  level0: ELEVATION.baseSurface,
+  level1: mixOverlay(ELEVATION.baseSurface, ELEVATION.overlay.level1),
+  level2: mixOverlay(ELEVATION.baseSurface, ELEVATION.overlay.level2),
+  level3: mixOverlay(ELEVATION.baseSurface, ELEVATION.overlay.level3),
+  level4: mixOverlay(ELEVATION.baseSurface, ELEVATION.overlay.level4),
+};
+
+export { ELEVATION, SURFACE };
+
+export function surfaceAt(level: ElevationLevel): string {
+  return SURFACE[level];
+}
+
+export function overlayAt(level: ElevationLevel): string {
+  return `rgba(255,255,255,${ELEVATION.overlay[level]})`;
+}
+
 export const CARD_TOKENS = {
   container: {
-    bgColor: '#1A1A1A',
-    borderColor: '#333333',
+    bgColor: SURFACE.level1,
+    borderColor: 'transparent',
     borderRadius: 8,
-    borderWidth: 1,
-    marginBottom: 6,
+    borderWidth: 0,
+    marginBottom: 10,
     completedOpacity: 0.65,
   },
+  elevation: ELEVATION,
+  surface: SURFACE,
   header: {
     paddingX: 8,
     paddingY: 6,
-    hoverBgOpacity: 0.05,
-    selectedBgOpacity: 0.05,
+    hoverBgOpacity: ELEVATION.overlay.level2,
+    selectedBgOpacity: ELEVATION.overlay.level2,
     gap: 6,
   },
   selectedRing: {
     ringWidth: 1,
-    ringColor: '#ffffff',
-    ringOpacity: 0.1,
+    ringColor: '#000000',
+    ringOpacity: 0.15,
   },
   title: {
     fontSize: 13,
@@ -32,13 +78,13 @@ export const CARD_TOKENS = {
     size: 30,
     borderRadius: 4,
     iconSize: 15,
-    defaultBg: '#333333',
+    defaultBg: SURFACE.level3,
     activeBg: '#ef4444',
     activeBgOpacity: 0.2,
   },
   content: {
-    bgColor: '#141414',
-    borderColor: '#333333',
+    bgColor: SURFACE.level0,
+    borderColor: SURFACE.level2,
     paddingX: 8,
     paddingY: 6,
   },

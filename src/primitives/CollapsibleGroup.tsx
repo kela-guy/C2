@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
+import { CARD_TOKENS } from "./tokens";
 
 let collapsibleIdCounter = 0;
 
@@ -59,7 +60,7 @@ export function CollapsibleGroup({
             transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
             className="overflow-hidden"
           >
-            <div id={panelId} className="pt-2 space-y-2 border-t border-white/5">
+            <div id={panelId} className="pt-2 space-y-2 px-2" style={{ borderTop: `1px solid ${CARD_TOKENS.surface.level2}` }}>
               {children}
             </div>
           </motion.div>

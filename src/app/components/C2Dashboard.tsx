@@ -1879,7 +1879,7 @@ export const C2Dashboard = () => {
         r.id === effectorId ? { ...r, status: 'available' as const, activeTargetId: undefined } : r
       ));
       toast.success('שיבוש הושלם — נדרש אימות');
-    }, 10000);
+    }, 3000);
   }, []);
 
   const JAMMABLE_STATUSES = new Set(['suspicion', 'detection', 'tracking', 'event']);
@@ -1918,7 +1918,7 @@ export const C2Dashboard = () => {
       });
       setRegulusEffectors(prev => prev.map(r => ({ ...r, status: 'available' as const, activeTargetId: undefined })));
       toast.success('שיבוש הושלם — נדרש אימות');
-    }, 10000);
+    }, 3000);
   }, [regulusEffectors]);
 
   const startBdaSequence = useCallback((targetId: string) => {
@@ -2563,8 +2563,8 @@ export const C2Dashboard = () => {
             <h2 className="text-[11px] font-medium text-white/70 uppercase tracking-wider">מערכות פעילות ({targets.length})</h2>
           </div>
           <div className="flex-1 overflow-y-auto custom-scrollbar">
-            <ListOfSystems 
-              className="flex flex-col gap-2" 
+            <ListOfSystems
+              className="flex flex-col gap-0"
               targets={targets}
               activeTargetId={activeTargetId}
               onTargetClick={handleTargetClick}
