@@ -4,17 +4,14 @@ import {
   TargetCard,
   CardHeader,
   CardActions,
-  CardTimeline,
   CardDetails,
   CardSensors,
   CardMedia,
-  CardLog,
   CardClosure,
   StatusChip,
   MissionPhaseChip,
   AccordionSection,
   TelemetryRow,
-  CARD_TOKENS,
 } from '@/primitives';
 import { Crosshair, Radar } from 'lucide-react';
 import { useCardSlots, type CardCallbacks, type CardContext } from './useCardSlots';
@@ -127,12 +124,6 @@ function ComposedCard({
 
       {slots.actions.length > 0 && <CardActions actions={slots.actions} />}
 
-      {slots.timeline.length > 0 && (
-        <div className="px-2" style={{ borderBottom: `1px solid ${CARD_TOKENS.surface.level2}` }}>
-          <CardTimeline steps={slots.timeline} />
-        </div>
-      )}
-
       {showDetails && (
         <CardDetails
           rows={slots.details.rows}
@@ -164,10 +155,6 @@ function ComposedCard({
         </AccordionSection>
       )}
 
-      {slots.log.length > 0 && (
-        <CardLog entries={slots.log} />
-      )}
-
       {slots.closure && (
         <CardClosure outcomes={slots.closure.outcomes} onSelect={slots.closure.onSelect} />
       )}
@@ -176,7 +163,7 @@ function ComposedCard({
 }
 
 const meta: Meta = {
-  title: 'TargetCard/Flows',
+  title: 'CUAS/Flows',
   tags: ['autodocs'],
   parameters: {
     a11y: { test: 'todo' },
