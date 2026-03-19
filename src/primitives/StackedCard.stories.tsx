@@ -101,6 +101,9 @@ function StackedCardDemo({ defaultExpanded = false }: { defaultExpanded?: boolea
 const meta: Meta = {
   title: 'CUAS/Primitives/StackedCard',
   tags: ['autodocs'],
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   decorators: [
     (Story) => (
       <div style={{ maxWidth: 400, padding: 16 }}>

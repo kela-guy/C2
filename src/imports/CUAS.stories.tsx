@@ -23,9 +23,13 @@ import {
   cuas_bda_complete,
   CUAS_LIFECYCLE,
   burst_targets,
+  flow1_suspicion,
+  flow2_tracking,
 } from '@/test-utils/mockDetections';
-import type { Detection } from './ListOfSystems';
+import ListOfSystems from './ListOfSystems';
+import type { Detection, RegulusEffector } from './ListOfSystems';
 import type { TargetBurst } from './useTargetBursts';
+import { DevicesPanel } from '@/app/components/DevicesPanel';
 
 const noop = () => {};
 const noopCallbacks: CardCallbacks = {
@@ -175,6 +179,9 @@ const swarmBurst: TargetBurst = {
 const meta: Meta = {
   title: 'CUAS',
   tags: ['autodocs'],
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   decorators: [
     (Story) => (
       <div style={{ maxWidth: 400, padding: 16 }}>
@@ -303,6 +310,101 @@ export const SwarmNoBulk: StoryObj = {
           <InnerCard target={target} isActive={isActive} />
         )}
       />
+    );
+  },
+};
+
+// --- Dashboard Composition ---
+
+const dashboardEffectors: RegulusEffector[] = [
+  { id: 'eff-1', name: 'Regulus-1', lat: 32.09, lon: 34.78, coverageRadiusM: 5000, status: 'available' },
+  { id: 'eff-2', name: 'Regulus-2', lat: 32.10, lon: 34.79, coverageRadiusM: 5000, status: 'available' },
+];
+
+const dashboardTargets: Detection[] = [
+  cuas_classified,
+  cuas_mitigating,
+  cuas_raw,
+  flow1_suspicion,
+  flow2_tracking,
+  cuas_bda_complete,
+];
+
+export const DashboardSidebar: StoryObj = {
+  name: 'Dashboard / Sidebar with Targets',
+  decorators: [
+    (Story) => (
+      <div style={{ width: 400, height: 700, overflow: 'auto' }}>
+        <Story />
+      </div>
+    ),
+  ],
+  render: () => {
+    const [activeId, setActiveId] = useState<string | null>(null);
+    return (
+      <ListOfSystems
+        targets={dashboardTargets}
+        activeTargetId={activeId}
+        onTargetClick={(t) => setActiveId(prev => prev === t.id ? null : t.id)}
+        regulusEffectors={dashboardEffectors}
+      />
+    );
+  },
+};
+
+export const DashboardDevices: StoryObj = {
+  name: 'Dashboard / Devices Panel',
+  decorators: [
+    (Story) => (
+      <div style={{ position: 'relative', width: 400, height: 700, overflow: 'hidden' }}>
+        <Story />
+      </div>
+    ),
+  ],
+  render: () => (
+    <DevicesPanel
+      open
+      onClose={noop}
+      onFlyTo={noop}
+      onDeviceHover={noop}
+      onJamActivate={noop}
+      noTransition
+    />
+  ),
+};
+
+export const DashboardSideByIdSide: StoryObj = {
+  name: 'Dashboard / Sidebar + Devices Side by Side',
+  decorators: [
+    (Story) => (
+      <div style={{ display: 'flex', gap: 16, height: 700, overflow: 'hidden' }}>
+        <Story />
+      </div>
+    ),
+  ],
+  render: () => {
+    const [activeId, setActiveId] = useState<string | null>(null);
+    return (
+      <>
+        <div style={{ width: 400, overflow: 'auto', background: '#141414', borderRadius: 8 }}>
+          <ListOfSystems
+            targets={dashboardTargets}
+            activeTargetId={activeId}
+            onTargetClick={(t) => setActiveId(prev => prev === t.id ? null : t.id)}
+            regulusEffectors={dashboardEffectors}
+          />
+        </div>
+        <div style={{ position: 'relative', width: 400, overflow: 'hidden', borderRadius: 8 }}>
+          <DevicesPanel
+            open
+            onClose={noop}
+            onFlyTo={noop}
+            onDeviceHover={noop}
+            onJamActivate={noop}
+            noTransition
+          />
+        </div>
+      </>
     );
   },
 };

@@ -576,7 +576,7 @@ export default function ListOfSystems({
 
   const renderTargetList = (list: Detection[]) => {
     if (list.length === 0) {
-      return <div className="p-2 text-center text-[10px] text-gray-600 font-mono">אין איתורים</div>;
+      return <div className="p-2 text-center text-[10px] text-zinc-500 font-mono">אין איתורים</div>;
     }
 
     const items = groupIntoBursts(list);
@@ -731,7 +731,7 @@ export default function ListOfSystems({
         {activeTab === 'completed' && (
           <div id="tabpanel-completed" role="tabpanel" aria-labelledby="tab-completed">
             {completedList.length === 0 ? (
-              <div className="p-4 text-center text-[10px] text-gray-600 font-mono">אין אירועים שהושלמו</div>
+              <div className="p-4 text-center text-[10px] text-zinc-500 font-mono">אין אירועים שהושלמו</div>
             ) : (
               renderTargetList(completedList)
             )}

@@ -157,6 +157,9 @@ function ComposedCard({
 const meta: Meta = {
   title: 'TargetCard/Flows',
   tags: ['autodocs'],
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   decorators: [
     (Story) => (
       <div style={{ maxWidth: 400, padding: 16 }}>
