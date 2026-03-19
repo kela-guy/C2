@@ -2497,7 +2497,7 @@ export const C2Dashboard = () => {
       </nav>
 
       {/* Map (full bleed behind content) */}
-      <div data-tour="tactical-map" className="flex-1 flex flex-col min-w-0 relative">
+      <div data-tour="tactical-map" className="flex-1 flex flex-col min-w-0 min-h-0 relative">
         <TacticalMap 
           focusCoords={focusCoords} 
           targets={targets}

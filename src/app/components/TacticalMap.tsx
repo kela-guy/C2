@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import Map, { Marker, NavigationControl, Source, Layer, type MapRef } from 'react-map-gl';
-import type { FillLayer } from 'mapbox-gl';
+
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Crosshair, AlertTriangle, ShieldAlert, Camera, CheckCircle2, Zap, Radio, Search, Eye, MapPin, X, Compass, Circle, Video, Info, Settings, BellOff, Wrench, ExternalLink, Maximize2 } from 'lucide-react';
 import {
@@ -387,6 +387,113 @@ export const TacticalMap = ({
   hoveredTargetIdFromCard,
 }: TacticalMapProps) => {
   const mapRef = useRef<MapRef>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  /** Defer Map mount until container has real size (RO + flex parent must expose height — see dashboard `h-0 flex-1`). */
+  const [mapMountReady, setMapMountReady] = useState(false);
+
+  type MapboxMapLike = { resize: () => void; triggerRepaint?: () => void };
+
+  const getInnerMap = (): MapboxMapLike | null => {
+    try {
+      const ref = mapRef.current as unknown as
+        | { resize?: () => void; getMap?: () => MapboxMapLike }
+        | null;
+      if (!ref) return null;
+      if (typeof ref.getMap === 'function') return ref.getMap() ?? null;
+      if (typeof ref.resize === 'function') return ref as unknown as MapboxMapLike;
+    } catch {
+      /* noop */
+    }
+    return null;
+  };
+
+  const resizeMap = () => {
+    try {
+      const ref = mapRef.current as unknown as
+        | { resize?: () => void; getMap?: () => { resize: () => void } }
+        | null;
+      if (!ref) return;
+      if (typeof ref.resize === 'function') {
+        ref.resize();
+        return;
+      }
+      ref.getMap?.()?.resize();
+    } catch {
+      /* map not ready */
+    }
+  };
+
+  const repaintMap = () => {
+    resizeMap();
+    try {
+      getInnerMap()?.triggerRepaint?.();
+    } catch {
+      /* noop */
+    }
+  };
+
+  useLayoutEffect(() => {
+    const el = mapContainerRef.current;
+    if (!el) return;
+    if (typeof ResizeObserver === 'undefined') {
+      setMapMountReady(true);
+      return;
+    }
+    const consider = (width: number, height: number) => {
+      const w = Math.floor(width);
+      const h = Math.floor(height);
+      if (w > 8 && h > 8) setMapMountReady(true);
+      repaintMap();
+    };
+    const r0 = el.getBoundingClientRect();
+    consider(r0.width, r0.height);
+    const ro = new ResizeObserver((entries) => {
+      for (const e of entries) {
+        let { width, height } = e.contentRect;
+        if (width <= 8 || height <= 8) {
+          const r = el.getBoundingClientRect();
+          width = r.width;
+          height = r.height;
+        }
+        consider(width, height);
+      }
+    });
+    ro.observe(el);
+    let attempts = 0;
+    let raf = 0;
+    let cancelled = false;
+    const bootstrap = () => {
+      if (cancelled) return;
+      attempts += 1;
+      const r = el.getBoundingClientRect();
+      consider(r.width, r.height);
+      if (!cancelled && attempts < 64) {
+        raf = requestAnimationFrame(bootstrap);
+      } else if (!cancelled) {
+        setMapMountReady(true);
+      }
+    };
+    raf = requestAnimationFrame(bootstrap);
+    return () => {
+      cancelled = true;
+      ro.disconnect();
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  useEffect(() => {
+    const onResize = () => repaintMap();
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') repaintMap();
+    };
+    window.addEventListener('resize', onResize);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, []);
+
   const [viewState, setViewState] = useState({
     latitude: 31.2080,
     longitude: 34.6650,
@@ -663,12 +770,28 @@ export const TacticalMap = ({
     };
   }, [cameraLookAtBearing, cameraLookAtRequest]);
 
+  const EMPTY_FC = useMemo(() => ({ type: 'FeatureCollection' as const, features: [] as any[] }), []);
+
+  const highlightedFovGeoJSON = useMemo(() => {
+    if (!hoveredSensorIdFromCard) return EMPTY_FC;
+    const asset = ALL_MAP_ASSETS.find(a => a.id === hoveredSensorIdFromCard && a.id !== cameraLookAtBearing?.cameraId);
+    if (!asset) return EMPTY_FC;
+    const ring = fovPolygon(asset.latitude, asset.longitude, asset.fovDeg, asset.bearingDeg, FOV_RADIUS_M);
+    return {
+      type: 'FeatureCollection' as const,
+      features: [{
+        type: 'Feature' as const,
+        geometry: { type: 'Polygon' as const, coordinates: [ring] },
+        properties: {},
+      }],
+    };
+  }, [hoveredSensorIdFromCard, cameraLookAtBearing?.cameraId, EMPTY_FC]);
+
   const highlightedAssets = useMemo(() => {
-    const result = ALL_MAP_ASSETS.filter(a =>
+    return ALL_MAP_ASSETS.filter(a =>
       a.id === hoveredSensorIdFromCard
       && a.id !== cameraLookAtBearing?.cameraId
     );
-    return result;
   }, [hoveredSensorIdFromCard, cameraLookAtBearing?.cameraId]);
 
   // Refs to sync missile phases with parent (timeline)
@@ -740,8 +863,8 @@ export const TacticalMap = ({
   }, [activeMissiles, onMissilePhaseChange]);
 
   const fovGeoJSON = useMemo(() => {
-    if (!hoveredAsset) return null;
-    if (hoveredAsset.id === cameraLookAtBearing?.cameraId) return null;
+    if (!hoveredAsset) return EMPTY_FC;
+    if (hoveredAsset.id === cameraLookAtBearing?.cameraId) return EMPTY_FC;
     const ring = fovPolygon(
       hoveredAsset.latitude,
       hoveredAsset.longitude,
@@ -759,29 +882,15 @@ export const TacticalMap = ({
         },
       ],
     };
-  }, [hoveredAsset]);
+  }, [hoveredAsset, cameraLookAtBearing?.cameraId, EMPTY_FC]);
 
-
-  const fovFillLayerStyle: FillLayer = {
-    id: 'fov-fill',
-    type: 'fill',
-    paint: {
-      'fill-color': 'rgba(34, 211, 238, 0.40)',
-      'fill-outline-color': 'rgba(34, 211, 238, 1.0)',
-    },
-  };
-
-  const fovLineLayerStyle = {
-    id: 'fov-line',
-    type: 'line',
-    paint: {
-      'line-color': 'rgba(34, 211, 238, 1.0)',
-      'line-width': 2.5,
-    },
-  };
+  useEffect(() => {
+    const id = requestAnimationFrame(repaintMap);
+    return () => cancelAnimationFrame(id);
+  }, [hoveredAsset?.id, hoveredSensorIdFromCard, mapStyleId]);
 
   return (
-    <div className={`absolute inset-0 bg-[#0a0a0a] overflow-hidden z-0 ${planningMode ? 'cursor-crosshair' : ''}`}>
+    <div ref={mapContainerRef} className={`absolute inset-0 min-h-0 min-w-0 bg-[#0a0a0a] overflow-hidden z-0 ${planningMode ? 'cursor-crosshair' : ''}`}>
 
       {/* Planning mode overlay banner */}
       {planningMode && (
@@ -793,17 +902,25 @@ export const TacticalMap = ({
         </div>
       )}
 
+      {mapMountReady ? (
       <Map
         ref={mapRef}
         {...viewState}
-        reuseMaps
+        onLoad={(e) => {
+          const map = e.target;
+          map.resize();
+          map.once('idle', () => {
+            map.resize();
+            map.triggerRepaint?.();
+          });
+        }}
         onMove={evt => setViewState(prev => ({ ...evt.viewState, transitionDuration: 0 }))}
         onClick={(evt) => {
           if (planningMode && onMapClick) {
             onMapClick(evt.lngLat.lat, evt.lngLat.lng);
           }
         }}
-        style={{width: '100%', height: '100%'}}
+        style={{ width: '100%', height: '100%', display: 'block' }}
         mapStyle={mapStyleId === 'satellite' ? 'mapbox://styles/mapbox/satellite-streets-v12' : 'mapbox://styles/mapbox/dark-v11'}
         mapboxAccessToken={TOKEN}
         attributionControl={false}
@@ -832,59 +949,17 @@ export const TacticalMap = ({
           </div>
         </div>
 
-        {/* FOV cone on hover (drawn under markers) */}
-        {fovGeoJSON && (
-          <Source id="fov-source" type="geojson" data={fovGeoJSON}>
-            <Layer {...fovFillLayerStyle} />
-            <Layer {...fovLineLayerStyle} />
-          </Source>
-        )}
+        {/* FOV cone on hover (always mounted, data swapped) */}
+        <Source id="fov-source" type="geojson" data={fovGeoJSON}>
+          <Layer id="fov-fill" type="fill" paint={{ 'fill-color': 'rgba(34, 211, 238, 0.40)', 'fill-opacity': 1 }} />
+          <Layer id="fov-line" type="line" paint={{ 'line-color': 'rgba(34, 211, 238, 1.0)', 'line-width': 2.5 }} />
+        </Source>
 
-        {/* FOV for highlighted sensors (always visible) */}
-        {highlightedAssets.map(asset => {
-          const ring = fovPolygon(
-            asset.latitude,
-            asset.longitude,
-            asset.fovDeg,
-            asset.bearingDeg,
-            FOV_RADIUS_M
-          );
-          const data = {
-            type: 'FeatureCollection' as const,
-            features: [
-              {
-                type: 'Feature' as const,
-                geometry: { type: 'Polygon' as const, coordinates: [ring] },
-                properties: {},
-              },
-            ],
-          };
-          return (
-            <Source
-              key={`sensor-fov-${asset.id}`}
-              id={`sensor-fov-${asset.id}`}
-              type="geojson"
-              data={data}
-            >
-              <Layer
-                id={`sensor-fov-fill-${asset.id}`}
-                type="fill"
-                paint={{
-                  'fill-color': 'rgba(34, 211, 238, 0.40)',
-                  'fill-outline-color': 'rgba(34, 211, 238, 1.0)',
-                }}
-              />
-              <Layer
-                id={`sensor-fov-line-${asset.id}`}
-                type="line"
-                paint={{
-                  'line-color': 'rgba(34, 211, 238, 1.0)',
-                  'line-width': 2.5,
-                }}
-              />
-            </Source>
-          );
-        })}
+        {/* FOV for device card hover (always mounted, data swapped) */}
+        <Source id="highlighted-fov-source" type="geojson" data={highlightedFovGeoJSON}>
+          <Layer id="highlighted-fov-fill" type="fill" paint={{ 'fill-color': 'rgba(34, 211, 238, 0.40)', 'fill-opacity': 1 }} />
+          <Layer id="highlighted-fov-line" type="line" paint={{ 'line-color': 'rgba(34, 211, 238, 1.0)', 'line-width': 2.5 }} />
+        </Source>
 
         {/* Post-jam verification: camera FOV cone pointing at target (hidden when camera look-at is active to avoid duplicates) */}
         {verificationFovGeoJSON && jammingVerification?.method === 'camera' && !cameraLookAtBearing && (
@@ -1798,6 +1873,7 @@ export const TacticalMap = ({
         ))}
 
       </Map>
+      ) : null}
 
       {/* --- Tactical Overlays (Pointer Events None) --- */}
 
