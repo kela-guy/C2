@@ -96,7 +96,7 @@ export function FilterBar({
             onChange={(e) => onUpdate('query', e.target.value)}
             placeholder="חיפוש..."
             aria-label="חיפוש מטרות"
-            className="w-full bg-white/5 border border-white/5 rounded-md pr-7 pl-2 py-1 text-[11px] text-zinc-200 placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 focus:border-white/15 focus:bg-white/[0.07] transition-colors"
+            className="w-full bg-white/5 shadow-[0_0_0_1px_rgba(255,255,255,0.05)] rounded-md pr-7 pl-2 py-1 text-[11px] text-zinc-200 placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 focus:shadow-[0_0_0_1px_rgba(255,255,255,0.15)] focus:bg-white/[0.07] transition-shadow"
           />
           {filters.query && (
             <button
@@ -144,7 +144,7 @@ export function FilterBar({
               side="bottom"
               align="start"
               sideOffset={4}
-              className="z-50 w-72 overflow-hidden rounded-lg border border-white/10 bg-[#1a1a1a]/95 backdrop-blur-xl shadow-2xl max-h-[70vh] overflow-y-auto origin-(--radix-popover-content-transform-origin) data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
+              className="z-50 w-72 overflow-hidden rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_25px_50px_-12px_rgba(0,0,0,0.5)] bg-[#1a1a1a]/95 backdrop-blur-xl max-h-[70vh] overflow-y-auto origin-(--radix-popover-content-transform-origin) data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
             >
               <div className="divide-y divide-white/5" dir="rtl">
                 <AdvancedSection label="סטטוס" icon={Activity} isActive={filters.active !== 'all'} onClear={() => onUpdate('active', 'all')}>
@@ -245,7 +245,7 @@ function InlineSelect({
           side="bottom"
           align="start"
           sideOffset={4}
-          className="z-50 min-w-[8rem] overflow-hidden rounded-lg border border-white/10 bg-[#1a1a1a]/95 backdrop-blur-xl p-1 shadow-2xl origin-(--radix-popover-content-transform-origin) data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
+          className="z-50 min-w-[8rem] overflow-hidden rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_25px_50px_-12px_rgba(0,0,0,0.5)] bg-[#1a1a1a]/95 backdrop-blur-xl p-1 origin-(--radix-popover-content-transform-origin) data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
         >
           <div className="flex flex-col" dir="rtl">
             {children(() => setOpen(false))}

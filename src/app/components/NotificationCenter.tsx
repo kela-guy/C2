@@ -151,12 +151,12 @@ const NotificationRow = ({ item }: { item: NotificationItem }) => {
       {/* Icon Section */}
       <div className="relative shrink-0 pt-0.5">
         <div className={`
-          w-9 h-9 rounded-lg flex items-center justify-center border border-white/5 shadow-sm
-          ${item.priority === 'critical' ? 'bg-red-500/10 text-red-500 border-red-500/20' : 
-            item.priority === 'high' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' :
-            item.type === 'message' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-            item.type === 'system' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
-            'bg-[#25262b] text-gray-400 border-white/10'}
+          w-9 h-9 rounded-lg flex items-center justify-center shadow-sm
+          ${item.priority === 'critical' ? 'bg-red-500/10 text-red-500 shadow-[0_0_0_1px_rgba(239,68,68,0.2)]' : 
+            item.priority === 'high' ? 'bg-orange-500/10 text-orange-500 shadow-[0_0_0_1px_rgba(249,115,22,0.2)]' :
+            item.type === 'message' ? 'bg-blue-500/10 text-blue-400 shadow-[0_0_0_1px_rgba(59,130,246,0.2)]' :
+            item.type === 'system' ? 'bg-purple-500/10 text-purple-400 shadow-[0_0_0_1px_rgba(168,85,247,0.2)]' :
+            'bg-[#25262b] text-gray-400 shadow-[0_0_0_1px_rgba(255,255,255,0.1)]'}
         `}>
           {getIcon(item.type, item.priority)}
         </div>
@@ -323,7 +323,7 @@ export const NotificationCenter = ({ trigger: customTrigger }: NotificationCente
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.98 }}
               transition={{ duration: 0.15 }}
-              className="flex flex-col bg-[#141414] border border-[#333] rounded-xl shadow-2xl overflow-hidden z-[9999] ring-1 ring-white/5 origin-top-left"
+              className="flex flex-col bg-[#141414] shadow-[0_0_0_1px_#333] rounded-xl overflow-hidden z-[9999] ring-1 ring-white/5 origin-top-left"
               style={{
                 position: 'fixed',
                 width: 380,
@@ -337,7 +337,7 @@ export const NotificationCenter = ({ trigger: customTrigger }: NotificationCente
               <div className="px-4 py-3 border-b border-[#333] flex justify-between items-center bg-[#141414]">
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm font-bold text-gray-200 tracking-wide">מרכז התראות</h3>
-                  <span className="text-[10px] bg-[#222] text-[#888] px-1.5 py-0.5 rounded border border-[#333]">beta</span>
+                  <span className="text-[10px] bg-[#222] text-[#888] px-1.5 py-0.5 rounded shadow-[0_0_0_1px_#333]">beta</span>
                 </div>
                 <div className="flex gap-1">
                   <button 
@@ -400,7 +400,7 @@ export const NotificationCenter = ({ trigger: customTrigger }: NotificationCente
                  
                  {filteredNotifications.length === 0 && (
                    <div className="flex flex-col items-center justify-center py-20 text-[#444] gap-3">
-                      <div className="w-12 h-12 rounded-full bg-[#1A1A1A] flex items-center justify-center border border-[#222]">
+                      <div className="w-12 h-12 rounded-full bg-[#1A1A1A] flex items-center justify-center shadow-[0_0_0_1px_#222]">
                           <CheckCircle2 size={20} />
                       </div>
                       <span className="text-xs font-medium">הכל נקי, אין התראות</span>

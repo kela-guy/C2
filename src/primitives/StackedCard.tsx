@@ -88,9 +88,6 @@ export function StackedCard({
             className="absolute inset-x-0 top-0 rounded-lg pointer-events-none"
             style={{
               backgroundColor: d.container.bgColor,
-              borderColor: d.container.borderColor,
-              borderWidth: `${d.container.borderWidth}px`,
-              borderStyle: 'solid',
               borderRadius: `${d.container.borderRadius}px`,
               height: '100%',
               transform: 'translateY(5px) scale(0.96)',
@@ -101,9 +98,6 @@ export function StackedCard({
             className="absolute inset-x-0 top-0 rounded-lg pointer-events-none"
             style={{
               backgroundColor: d.container.bgColor,
-              borderColor: d.container.borderColor,
-              borderWidth: `${d.container.borderWidth}px`,
-              borderStyle: 'solid',
               borderRadius: `${d.container.borderRadius}px`,
               height: '100%',
               transform: 'translateY(2.5px) scale(0.98)',
@@ -118,10 +112,7 @@ export function StackedCard({
         className="relative w-full text-white overflow-hidden transition-colors"
         style={{
           backgroundColor: d.container.bgColor,
-          borderColor: d.container.borderColor,
           borderRadius: `${d.container.borderRadius}px`,
-          borderWidth: `${d.container.borderWidth}px`,
-          borderStyle: 'solid',
           marginBottom: expanded ? `${d.container.marginBottom}px` : `${d.container.marginBottom + 5}px`,
           boxShadow: d.elevation.shadow,
         }}
@@ -201,18 +192,16 @@ export function StackedCard({
                 duration: prefersReducedMotion || isGrowing ? 0 : d.animation.expandDuration,
                 ease: 'easeOut',
               }}
-              className="overflow-hidden"
+              className="overflow-visible"
             >
               <div
                 style={{
-                  borderTopColor: d.content.borderColor,
-                  borderTopWidth: '1px',
-                  borderTopStyle: 'solid',
+                  boxShadow: `inset 0 1px 0 0 ${d.content.borderColor}`,
                 }}
               >
                 {/* Bulk Actions */}
                 {onBulkMitigate && (
-                  <div className="px-2 py-2 flex items-center gap-1.5" style={{ borderBottom: `1px solid ${d.surface.level2}`, backgroundColor: `rgba(255,255,255,${d.elevation.overlay.level2})` }}>
+                  <div className="px-2 py-2 flex items-center gap-1.5" style={{ boxShadow: `inset 0 -1px 0 0 ${d.surface.level2}`, backgroundColor: `rgba(255,255,255,${d.elevation.overlay.level2})` }}>
                     <ActionButton
                       label={`שיבוש הכל (${count})`}
                       icon={Zap}
@@ -227,15 +216,15 @@ export function StackedCard({
                 )}
 
                 {/* Individual cards — no enter/exit animation to avoid jumping */}
-                <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
-                  <div className="flex flex-col gap-1 p-1.5">
+                <div className="max-h-[480px] overflow-y-auto custom-scrollbar">
+                  <div className="flex flex-col gap-2 px-2 py-2">
                     {burst.targets.map((target) => {
                       const isActive = target.id === activeTargetId;
                       return (
                         <div
                           key={target.id}
                           id={`detection-card-${target.id}`}
-                          className="cursor-pointer"
+                          className="cursor-pointer [&>*]:!mb-0"
                           onMouseEnter={() => onTargetHover?.(target.id)}
                           onMouseLeave={() => onTargetHover?.(null)}
                         >

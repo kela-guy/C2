@@ -80,11 +80,11 @@ export function CardTimeline({ steps, compact, className = '' }: CardTimelinePro
               <div className="size-2 rounded-full bg-red-500" />
             </div>
           ) : step.status === 'error' ? (
-            <div className="size-4 rounded-full flex-shrink-0 border border-red-500/50 flex items-center justify-center" aria-hidden="true">
+            <div className="size-4 rounded-full flex-shrink-0 shadow-[0_0_0_1px_rgba(239,68,68,0.5)] flex items-center justify-center" aria-hidden="true">
               <Loader2 size={10} className="text-red-400 animate-spin" />
             </div>
           ) : (
-            <div className="size-4 rounded-full flex-shrink-0" style={{ border: `1px solid ${CARD_TOKENS.surface.level3}` }} aria-hidden="true" />
+            <div className="size-4 rounded-full flex-shrink-0" style={{ boxShadow: `0 0 0 1px ${CARD_TOKENS.surface.level3}` }} aria-hidden="true" />
           )}
           <span>{step.label}</span>
           {step.status === 'active' && (

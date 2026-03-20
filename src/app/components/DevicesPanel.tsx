@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { X, Search, Camera, AlertTriangle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import * as TooltipPrimitive from '@radix-ui/react-tooltip';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './ui/tooltip';
 import { LAYOUT_TOKENS } from '@/primitives/tokens';
 import {
   CAMERA_ASSETS,
@@ -189,7 +188,7 @@ function DeviceRow({
         tabIndex={0}
         onClick={onToggle}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(); } }}
-        className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right hover:bg-white/[0.04] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25 rounded-none border-b border-white/[0.06]"
+        className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right hover:bg-white/[0.04] active:bg-white/[0.06] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25 border-b border-white/[0.06]"
         dir="rtl"
         onMouseEnter={() => onHover(device.id)}
         onMouseLeave={() => onHover(null)}
@@ -224,7 +223,7 @@ function DeviceRow({
               type="button"
               onClick={(e) => { e.stopPropagation(); onJamActivate?.(device.id); }}
               disabled={isDisabled}
-              className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-red-500/15 text-red-400 border border-red-500/25 hover:bg-red-500/25 active:bg-red-500/30"
+              className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-red-500/15 text-red-400 shadow-[0_0_0_1px_rgba(239,68,68,0.25)] hover:bg-red-500/25 active:scale-95 active:bg-red-500/30"
             >
               <JamIcon size={12} />
               {device.status === 'active' ? 'שיבוש פעיל' : 'הפעל'}
@@ -234,47 +233,44 @@ function DeviceRow({
           if (!disabledReason) return btn;
 
           return (
-            <TooltipPrimitive.Provider delayDuration={150}>
-              <TooltipPrimitive.Root>
-                <TooltipPrimitive.Trigger asChild>
-                  <span className="shrink-0" onClick={(e) => e.stopPropagation()}>
-                    {btn}
-                  </span>
-                </TooltipPrimitive.Trigger>
-                <TooltipPrimitive.Portal>
-                  <TooltipPrimitive.Content
-                    side="top"
-                    sideOffset={6}
-                    className="px-2 py-1 rounded bg-zinc-800 border border-white/10 text-[10px] text-zinc-300 whitespace-nowrap z-50 animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                  {btn}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent
+                side="top"
+                sideOffset={6}
+                showArrow={false}
+                    className="px-2 py-1 text-[10px] text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
                     dir="rtl"
                   >
                     {disabledReason}
-                  </TooltipPrimitive.Content>
-                </TooltipPrimitive.Portal>
-              </TooltipPrimitive.Root>
-            </TooltipPrimitive.Provider>
+              </TooltipContent>
+            </Tooltip>
           );
         })()}
       </div>
 
-      <AnimatePresence initial={false}>
-        {isExpanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="overflow-hidden"
-          >
-            <div className="flex flex-col bg-white/10" dir="rtl">
+      <div
+        className="grid transition-[grid-template-rows,opacity] duration-200"
+        style={{
+          gridTemplateRows: isExpanded ? '1fr' : '0fr',
+          opacity: isExpanded ? 1 : 0,
+          transitionTimingFunction: isExpanded ? 'ease-out' : 'ease-in',
+        }}
+      >
+        <div className="overflow-hidden">
+          <div className="flex flex-col bg-white/[0.03]" dir="rtl">
               {device.type === 'camera' && (
-                <div className="relative w-full h-[200px] rounded overflow-hidden bg-black border border-white/10">
+                <div className="relative w-full h-[200px] rounded overflow-hidden bg-black shadow-[0_0_0_1px_rgba(255,255,255,0.1)]">
                   <div className="absolute inset-0 flex items-center justify-center">
                     <Camera size={24} className="text-white/20" />
                   </div>
                   <div className="absolute inset-0 bg-black/20 pointer-events-none" />
                   <div className="absolute top-1.5 right-1.5 flex items-center gap-1 bg-black/80 px-1.5 py-0.5 rounded-sm">
-                    <div className="size-1.5 rounded-full bg-red-500 animate-pulse" />
+                    <div className="size-1.5 rounded-full bg-red-500 animate-pulse motion-reduce:animate-none" />
                     <span className="text-[9px] font-medium text-white/90 uppercase tracking-wide">Live</span>
                   </div>
                   <div className="absolute top-1.5 left-1.5 flex items-center gap-1 bg-black/80 px-1.5 py-0.5 rounded-sm">
@@ -307,9 +303,8 @@ function DeviceRow({
               </div>
 
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+        </div>
     </div>
   );
 }
@@ -357,6 +352,14 @@ export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onJamActiv
     });
   }, []);
 
+  const typeCounts = useMemo(() => {
+    const counts = {} as Record<DeviceType, number>;
+    for (const type of TYPE_ORDER) {
+      counts[type] = ALL_DEVICES.filter(d => d.type === type).length;
+    }
+    return counts;
+  }, []);
+
   const hasActiveFilters = query.trim().length > 0 || activeTypes.size !== TYPE_ORDER.length;
 
   const handleReset = useCallback(() => {
@@ -390,7 +393,7 @@ export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onJamActiv
 
   return (
     <aside
-      className={`absolute top-0 bottom-0 right-0 bg-[#141414] border-l border-white/10 flex flex-col z-10 font-sans ${noTransition ? '' : 'transition-all duration-300 ease-in-out'} ${open ? 'translate-x-0' : 'translate-x-full pointer-events-none'}`}
+      className={`absolute top-0 bottom-0 right-0 bg-[#141414] border-l border-white/10 flex flex-col z-10 font-sans ${noTransition ? '' : 'transition-transform duration-300 ease-out'} ${open ? 'translate-x-0' : 'translate-x-full pointer-events-none'}`}
       style={{ width: LAYOUT_TOKENS.sidebarWidthPx }}
     >
       {/* Header */}
@@ -401,7 +404,8 @@ export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onJamActiv
           </h2>
           <button
             onClick={onClose}
-            className="p-1 rounded hover:bg-white/10 text-zinc-500 hover:text-zinc-300 transition-colors"
+            className="p-2 -m-1 rounded hover:bg-white/10 text-zinc-500 hover:text-zinc-300 transition-colors active:scale-95"
+            aria-label="סגור"
           >
             <X size={14} />
           </button>
@@ -415,12 +419,13 @@ export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onJamActiv
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="חיפוש..."
-            className="w-full bg-white/[0.04] border border-white/10 rounded text-[12px] text-zinc-300 placeholder-zinc-600 pr-7 pl-2 py-1.5 outline-none focus:border-white/20 transition-colors"
+            className="w-full bg-white/[0.04] shadow-[0_0_0_1px_rgba(255,255,255,0.1)] rounded text-[12px] text-zinc-300 placeholder-zinc-600 pr-7 pl-7 py-1.5 outline-none focus:shadow-[0_0_0_1px_rgba(255,255,255,0.25)] focus:ring-1 focus:ring-white/15 transition-shadow"
           />
           {query && (
             <button
               onClick={() => setQuery('')}
-              className="absolute left-2 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+              className="absolute left-1 top-1/2 -translate-y-1/2 p-1 text-zinc-500 hover:text-zinc-300 transition-colors"
+              aria-label="נקה חיפוש"
             >
               <X size={12} />
             </button>
@@ -428,19 +433,19 @@ export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onJamActiv
         </div>
 
         {/* Type filter toggles */}
-        <TooltipPrimitive.Provider delayDuration={150} skipDelayDuration={400}>
+        <TooltipProvider delayDuration={150}>
           <div className="flex items-center gap-1">
             {TYPE_ORDER.map(type => {
               const FilterIcon = TYPE_FILTER_ICONS[type];
               const isActive = activeTypes.has(type);
               const allActive = activeTypes.size === TYPE_ORDER.length;
-              const count = ALL_DEVICES.filter(d => d.type === type).length;
+              const count = typeCounts[type];
               return (
-                <TooltipPrimitive.Root key={type}>
-                  <TooltipPrimitive.Trigger asChild>
+                <Tooltip key={type}>
+                  <TooltipTrigger asChild>
                     <button
                       onClick={() => handleTypeToggle(type)}
-                      className={`p-1.5 rounded transition-colors cursor-pointer ${
+                      className={`p-2 rounded transition-colors cursor-pointer active:scale-95 ${
                         isActive && !allActive
                           ? 'bg-white/15 text-white ring-1 ring-white/30'
                           : 'text-white hover:text-zinc-300 hover:bg-white/[0.06]'
@@ -448,18 +453,17 @@ export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onJamActiv
                     >
                       <FilterIcon size={type === 'launcher' ? 24 : 20} fill="currentColor" />
                     </button>
-                  </TooltipPrimitive.Trigger>
-                  <TooltipPrimitive.Portal>
-                    <TooltipPrimitive.Content
-                      side="top"
-                      sideOffset={6}
-                      className="px-2 py-1 rounded bg-zinc-800 border border-white/10 text-[10px] text-zinc-300 whitespace-nowrap z-50 animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
-                      dir="rtl"
-                    >
-                      {TYPE_LABELS[type]} ({count})
-                    </TooltipPrimitive.Content>
-                  </TooltipPrimitive.Portal>
-                </TooltipPrimitive.Root>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="top"
+                    sideOffset={6}
+                    showArrow={false}
+                    className="px-2 py-1 text-[10px] text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
+                    dir="rtl"
+                  >
+                    {TYPE_LABELS[type]} ({count})
+                  </TooltipContent>
+                </Tooltip>
               );
             })}
 
@@ -474,7 +478,7 @@ export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onJamActiv
               </button>
             )}
           </div>
-        </TooltipPrimitive.Provider>
+        </TooltipProvider>
       </div>
 
       {/* Device list */}

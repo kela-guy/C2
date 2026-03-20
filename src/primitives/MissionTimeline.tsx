@@ -71,15 +71,15 @@ export function MissionTimeline({
                                 ${isActive ? 'text-white' : 'text-white/50'}
                             `}>
                                 {isStepCompleted ? (
-                                    <div className="size-4 rounded-full flex-shrink-0 border border-[#333] flex items-center justify-center" aria-hidden="true">
+                                    <div className="size-4 rounded-full flex-shrink-0 shadow-[0_0_0_1px_#333] flex items-center justify-center" aria-hidden="true">
                                         <Check size={10} className="text-[#12b886]" strokeWidth={2.5} />
                                     </div>
                                 ) : isActive ? (
-                                    <div className="size-4 rounded-full flex-shrink-0 border border-[#444] flex items-center justify-center" aria-hidden="true">
+                                    <div className="size-4 rounded-full flex-shrink-0 shadow-[0_0_0_1px_#444] flex items-center justify-center" aria-hidden="true">
                                         <div className="size-2 rounded-full bg-red-500" />
                                     </div>
                                 ) : (
-                                    <div className="size-4 rounded-full flex-shrink-0 border border-[#444]" aria-hidden="true" />
+                                    <div className="size-4 rounded-full flex-shrink-0 shadow-[0_0_0_1px_#444]" aria-hidden="true" />
                                 )}
                                 <span>{step}</span>
                                 {isActive && <span className="inline-block w-1 h-3 bg-white/60 animate-blink mr-1" aria-hidden="true" />}
@@ -91,9 +91,9 @@ export function MissionTimeline({
                         <li>
                             <button
                                 onClick={(e) => { e.stopPropagation(); onSendDroneVerification(); }}
-                                className="flex items-center gap-2.5 text-xs font-mono text-white hover:text-white transition-all cursor-pointer group mt-1 bg-white/5 hover:bg-white/10 rounded px-2 py-1.5 border border-white/10 hover:border-white/20 w-full"
+                                className="flex items-center gap-2.5 text-xs font-mono text-white hover:text-white transition-all cursor-pointer group mt-1 bg-white/5 hover:bg-white/10 rounded px-2 py-1.5 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] hover:shadow-[0_0_0_1px_rgba(255,255,255,0.2)] w-full"
                             >
-                                <div className="w-3 h-3 rounded-full flex-shrink-0 border border-white/30 group-hover:border-white/50 transition-colors" />
+                                <div className="w-3 h-3 rounded-full flex-shrink-0 shadow-[0_0_0_1px_rgba(255,255,255,0.3)] group-hover:shadow-[0_0_0_1px_rgba(255,255,255,0.5)] transition-shadow" />
                                 <span>שלח רחפן לאימות</span>
                                 <span className="opacity-40 group-hover:opacity-70 transition-opacity mr-auto" aria-hidden="true"><MapDroneIcon size={14} fill="currentColor" /></span>
                             </button>
@@ -102,7 +102,7 @@ export function MissionTimeline({
 
                     {isDroneVerifying && (
                         <li className="flex items-center gap-2.5 text-xs font-mono text-white animate-pulse">
-                            <div className="size-4 rounded-full flex-shrink-0 border border-[#444] flex items-center justify-center" aria-hidden="true">
+                            <div className="size-4 rounded-full flex-shrink-0 shadow-[0_0_0_1px_#444] flex items-center justify-center" aria-hidden="true">
                                 <div className="size-2 rounded-full bg-red-500" />
                             </div>
                             <span>רחפן בדרך לאימות פגיעה...</span>

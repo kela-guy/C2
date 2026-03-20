@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Toaster, toast } from "sonner";
+import { toast } from "sonner";
+import { Toaster } from "./ui/sonner";
 import { X } from "lucide-react";
 
 type ThreatLevel = "critical" | "high" | "medium" | "info" | "success" | "suspect";
@@ -45,14 +46,6 @@ function notifyBatchListeners() {
   batchListeners.forEach(cb => cb());
 }
 
-function highestLevel(items: { level: ThreatLevel }[]): ThreatLevel {
-  let best: ThreatLevel = 'info';
-  for (const item of items) {
-    if (LEVEL_PRIORITY[item.level] > LEVEL_PRIORITY[best]) best = item.level;
-  }
-  return best;
-}
-
 function useBatchItems(): BatchItem[] {
   const [, setTick] = React.useState(0);
   React.useEffect(() => subscribeBatch(() => setTick(t => t + 1)), []);
@@ -69,7 +62,7 @@ const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
     const data = items[0];
     return (
       <div
-        className="relative w-[356px] rounded-lg border border-white/[0.12] bg-[#1c1c20] shadow-[0_8px_30px_rgba(0,0,0,0.5)] overflow-hidden cursor-pointer group"
+        className="relative w-[356px] rounded-lg bg-[#1c1c20] shadow-[0_0_0_1px_rgba(255,255,255,0.12),0_8px_30px_rgba(0,0,0,0.5)] overflow-hidden cursor-pointer group"
         onClick={() => window.dispatchEvent(new CustomEvent('toast-clicked', { detail: data }))}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.dispatchEvent(new CustomEvent('toast-clicked', { detail: data })); } }}
         role="button"
@@ -82,7 +75,7 @@ const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
               <span className="text-[13px] font-medium text-zinc-100 truncate">{data.title}</span>
               <button
                 onClick={(e) => { e.stopPropagation(); toast.dismiss(toastId); flushBatch(); }}
-                className="text-zinc-600 hover:text-zinc-400 transition-colors shrink-0 opacity-0 group-hover:opacity-100"
+                className="text-zinc-600 hover:text-zinc-400 transition-[color,opacity] duration-150 shrink-0 opacity-0 group-hover:opacity-100 p-1 -m-1"
                 aria-label="סגור"
               >
                 <X size={14} />
@@ -97,7 +90,7 @@ const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
 
   return (
     <div
-      className="relative w-[356px] rounded-lg border border-white/[0.12] bg-[#1c1c20] shadow-[0_8px_30px_rgba(0,0,0,0.5)] overflow-hidden"
+      className="relative w-[356px] rounded-lg bg-[#1c1c20] shadow-[0_0_0_1px_rgba(255,255,255,0.12),0_8px_30px_rgba(0,0,0,0.5)] overflow-hidden"
       dir="rtl"
     >
       <div className="py-3 px-3">
@@ -108,14 +101,14 @@ const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
           <div className="flex items-center gap-1.5">
             <button
               onClick={(e) => { e.stopPropagation(); setExpanded(prev => !prev); }}
-              className="text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors px-1.5 py-0.5 rounded hover:bg-white/[0.04]"
+              className="text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors px-2 py-1.5 rounded hover:bg-white/[0.04]"
               aria-expanded={expanded}
             >
               {expanded ? 'סגור' : 'הרחב'}
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); toast.dismiss(toastId); flushBatch(); }}
-              className="text-zinc-600 hover:text-zinc-400 transition-colors"
+              className="text-zinc-600 hover:text-zinc-400 transition-colors p-1 -m-1"
               aria-label="סגור"
             >
               <X size={14} />
@@ -132,11 +125,11 @@ const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
 
         {expanded && (
           <div className="mt-2 flex flex-col gap-px max-h-[260px] overflow-y-auto">
-            {items.map((item, i) => {
+            {items.map((item) => {
               const itemAccent = LEVEL_ACCENT[item.level] ?? LEVEL_ACCENT.info;
               return (
                 <div
-                  key={i}
+                  key={`${item.code ?? item.title}-${item.timestamp}`}
                   className="flex items-start gap-2.5 px-2 py-2 rounded-md hover:bg-white/[0.03] transition-colors cursor-pointer focus-visible:ring-1 focus-visible:ring-white/25 focus-visible:outline-none"
                   role="button"
                   tabIndex={0}
@@ -183,7 +176,6 @@ function ensureToastExists() {
   toast.custom(() => <LiveBatchedToast toastId={STABLE_TOAST_ID} />, {
     id: STABLE_TOAST_ID,
     duration: Infinity,
-    position: "bottom-right",
   });
 }
 
@@ -253,7 +245,7 @@ export function NotificationSystem() {
     <>
       <div
         aria-hidden="true"
-        className={`fixed inset-0 pointer-events-none z-40 transition-opacity duration-300 ease-in-out ${
+        className={`notif-vignette fixed inset-0 pointer-events-none z-40 transition-opacity duration-300 ease-out ${
           criticalActive ? 'visible' : 'invisible'
         }`}
         style={{
@@ -268,15 +260,12 @@ export function NotificationSystem() {
           0%, 100% { opacity: 0.4; }
           50% { opacity: 0.2; }
         }
+        @media (prefers-reduced-motion: reduce) {
+          .notif-vignette { animation: none !important; }
+        }
       `}</style>
 
-      <Toaster
-        theme="dark"
-        expand
-        visibleToasts={4}
-        position="top-center"
-        style={{ zIndex: 60 }}
-      />
+      <Toaster />
     </>
   );
 }

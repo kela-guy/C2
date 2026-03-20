@@ -19,7 +19,7 @@ export interface CardSensorsProps {
 }
 
 const rowClassName =
-  'flex items-center gap-2 text-[11px] text-white hover:brightness-125 hover:border-cyan-500/30 rounded px-2 py-1.5 transition-colors group/sensor relative w-full text-right border border-white/10';
+  'flex items-center gap-2 text-[11px] text-white hover:brightness-125 hover:shadow-[0_0_0_1px_rgba(6,182,212,0.3)] rounded px-2 py-1.5 transition-colors group/sensor relative w-full text-right shadow-[0_0_0_1px_rgba(255,255,255,0.1)]';
 const rowStyle = { backgroundColor: CARD_TOKENS.surface.level4 } as const;
 
 export function CardSensors({
@@ -32,7 +32,7 @@ export function CardSensors({
   if (sensors.length === 0) return null;
 
   return (
-    <div className={`flex flex-col gap-1 w-full ${className}`} style={{ borderTop: `1px solid ${CARD_TOKENS.surface.level2}` }} dir="rtl">
+    <div className={`flex flex-col gap-1 w-full ${className}`} style={{ boxShadow: `inset 0 1px 0 0 ${CARD_TOKENS.surface.level2}` }} dir="rtl">
       {sensors.map((sensor) => {
         const SensorIcon = sensor.icon;
         const aria = `${sensor.typeLabel} — ${sensor.id}`;

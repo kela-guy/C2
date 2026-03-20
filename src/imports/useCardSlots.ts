@@ -138,20 +138,21 @@ const CLASSIFIED_TYPE_LABELS: Record<string, string> = {
 
 function buildConfidenceBadge(confidence: number | undefined, classifiedType?: string): React.ReactNode {
   if (confidence == null) return null;
-  const bg = confidence >= 80 ? 'bg-red-500/20 text-red-400 border-red-500/30'
-    : confidence >= 40 ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
-    : 'bg-zinc-500/20 text-zinc-400 border-zinc-500/30';
+  const bg = confidence >= 80 ? 'bg-red-500/20 text-red-400 shadow-[0_0_0_1px_rgba(239,68,68,0.3)]'
+    : confidence >= 40 ? 'bg-amber-500/20 text-amber-400 shadow-[0_0_0_1px_rgba(245,158,11,0.3)]'
+    : 'bg-zinc-500/20 text-zinc-400 shadow-[0_0_0_1px_rgba(113,113,122,0.3)]';
   const typeLabel = CLASSIFIED_TYPE_LABELS[classifiedType ?? 'unknown'] ?? 'לא ידוע';
   return React.createElement(Tooltip, null,
     React.createElement(TooltipTrigger, { asChild: true },
       React.createElement('span', {
-        className: `text-[10px] font-bold font-mono tabular-nums px-1.5 py-0.5 rounded border ${bg} cursor-default`,
+        className: `text-[10px] font-bold font-mono tabular-nums px-1.5 py-0.5 rounded ${bg} cursor-default`,
       }, `${confidence}%`),
     ),
     React.createElement(TooltipContent, {
       side: 'top',
       sideOffset: 6,
-      className: 'px-2 py-1 text-[9px] font-normal font-sans text-white bg-zinc-700 border border-white/10 shadow-lg whitespace-nowrap',
+      showArrow: false,
+      className: 'px-2 py-1 text-[9px] font-normal font-sans text-white bg-zinc-700 shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_10px_15px_-3px_rgba(0,0,0,0.3)] whitespace-nowrap',
     }, `סביר ביותר שמדובר ב${typeLabel}`),
   );
 }
@@ -276,15 +277,14 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
         size: 'lg' as const,
         dataTour: 'cuas-cta-bda',
         onClick: (e: React.MouseEvent) => { e.stopPropagation(); callbacks.onBdaCamera?.(); },
-        className: 'ring-2 ring-cyan-400/50 shadow-[0_0_12px_rgba(34,211,238,0.3)]',
       });
     }
 
     actions.push(
-      { id: 'complete-mission', label: 'סיום משימה', icon: Check, variant: 'glass', size: 'sm',
+      { id: 'complete-mission', label: 'סיום משימה', icon: Check, variant: 'glass', size: 'lg',
         dataTour: 'cuas-cta-complete',
         onClick: (e) => { e.stopPropagation(); callbacks.onCompleteMission?.(); },
-        className: 'border-[#6ee7b7]/40 bg-[rgba(110,231,183,0.15)] hover:bg-[rgba(110,231,183,0.25)] text-[#6ee7b7]' },
+        className: 'shadow-[0_0_0_1px_rgba(110,231,183,0.4)] bg-[rgba(110,231,183,0.15)] hover:bg-[rgba(110,231,183,0.25)] text-[#6ee7b7]' },
     );
     return actions;
   }
@@ -313,7 +313,18 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
       }
       return actions;
     }
-    if (target.mitigationStatus === 'mitigating') return actions;
+    if (target.mitigationStatus === 'mitigating') {
+      actions.push({
+        id: 'mitigate',
+        label: 'משבש אות...',
+        icon: Zap,
+        variant: 'danger',
+        size: 'lg',
+        loading: true,
+        onClick: (e) => e.stopPropagation(),
+      });
+      return actions;
+    }
 
     actions.push({
       id: 'mitigate',
@@ -426,7 +437,7 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
       } else {
         actions.push({ id: 'mission-resume', label: 'המשך', icon: Play, variant: 'glass', size: 'md',
           onClick: (e) => { e.stopPropagation(); callbacks.onMissionResume?.(); },
-          className: 'border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10' });
+          className: 'shadow-[0_0_0_1px_rgba(16,185,129,0.2)] bg-emerald-500/5 hover:bg-emerald-500/10' });
       }
       actions.push(
         { id: 'mission-override', label: 'שליטה ידנית', icon: Hand, variant: 'secondary', size: 'sm',
@@ -454,13 +465,13 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
       actions.push(
         { id: 'surveillance', label: 'מעקב', icon: Eye, variant: 'secondary', size: 'sm',
           onClick: (e) => { e.stopPropagation(); callbacks.onVerify?.('surveillance'); },
-          className: 'border-white/8 bg-white/[0.03] text-zinc-400' },
+          className: 'shadow-[0_0_0_1px_rgba(255,255,255,0.08)] bg-white/[0.03] text-zinc-400' },
         { id: 'drone', label: 'רחפן', icon: Plane, variant: 'secondary', size: 'sm',
           onClick: (e) => e.stopPropagation(),
-          className: 'border-white/8 bg-white/[0.03] text-zinc-400' },
+          className: 'shadow-[0_0_0_1px_rgba(255,255,255,0.08)] bg-white/[0.03] text-zinc-400' },
         { id: 'dismiss', label: 'ביטול', icon: X, variant: 'ghost', size: 'sm',
           onClick: (e) => { e.stopPropagation(); callbacks.onDismiss?.(); },
-          className: 'border-white/8 bg-white/[0.03] text-zinc-400' },
+          className: 'shadow-[0_0_0_1px_rgba(255,255,255,0.08)] bg-white/[0.03] text-zinc-400' },
       );
     }
   }

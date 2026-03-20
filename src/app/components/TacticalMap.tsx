@@ -494,6 +494,14 @@ export const TacticalMap = ({
     };
   }, []);
 
+  useEffect(() => {
+    if (!mapMountReady) return;
+    const timers = [150, 500, 1500].map(ms =>
+      setTimeout(repaintMap, ms),
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [mapMountReady]);
+
   const [viewState, setViewState] = useState({
     latitude: 31.2080,
     longitude: 34.6650,
@@ -895,7 +903,7 @@ export const TacticalMap = ({
       {/* Planning mode overlay banner */}
       {planningMode && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
-          <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-lg bg-violet-500/15 border border-violet-500/30 backdrop-blur-sm shadow-lg">
+          <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-lg bg-violet-500/15 shadow-[0_0_0_1px_rgba(139,92,246,0.3),0_10px_15px_-3px_rgba(0,0,0,0.3)] backdrop-blur-sm">
             <div className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" />
             <span className="text-[12px] font-medium text-violet-200" dir="rtl">לחץ על המפה להוספת נקודות ציון</span>
           </div>
@@ -913,6 +921,9 @@ export const TacticalMap = ({
             map.resize();
             map.triggerRepaint?.();
           });
+          for (const ms of [100, 300, 600, 1200]) {
+            setTimeout(() => { map.resize(); map.triggerRepaint?.(); }, ms);
+          }
         }}
         onMove={evt => setViewState(prev => ({ ...evt.viewState, transitionDuration: 0 }))}
         onClick={(evt) => {
@@ -933,7 +944,7 @@ export const TacticalMap = ({
 
         {/* Map style toggle */}
         <div className="absolute top-4 left-4 z-10">
-          <div className="flex rounded overflow-hidden border border-white/10 text-[10px] font-medium">
+          <div className="flex rounded overflow-hidden shadow-[0_0_0_1px_rgba(255,255,255,0.1)] text-[10px] font-medium">
             <button
               onClick={() => setMapStyleId('dark')}
               className={`px-2.5 py-1.5 transition-colors ${mapStyleId === 'dark' ? 'bg-white/15 text-white' : 'bg-black/60 text-zinc-400 hover:text-zinc-200'}`}
@@ -1044,7 +1055,7 @@ export const TacticalMap = ({
                 />
               </Source>
               <Marker latitude={midLat} longitude={midLon} anchor="center">
-                <div className="pointer-events-none select-none rounded bg-black/85 px-2 py-1 font-mono text-[10px] text-cyan-200 border border-cyan-400/50 shadow-lg whitespace-nowrap">
+                <div className="pointer-events-none select-none rounded bg-black/85 px-2 py-1 font-mono text-[10px] text-cyan-200 shadow-[0_0_0_1px_rgba(34,211,238,0.5),0_10px_15px_-3px_rgba(0,0,0,0.3)] whitespace-nowrap">
                   <span>{distanceKm.toFixed(1)} km</span>
                   <span className="text-white/70 mx-1">·</span>
                   <span>{secondsToHit.toFixed(1)}s</span>
@@ -1110,7 +1121,7 @@ export const TacticalMap = ({
           >
             <div className="flex flex-col items-center gap-1 pointer-events-none">
               <div className="absolute inset-0 rounded-full bg-emerald-500/30 border-2 border-emerald-400 animate-ping scale-150" style={{ animationDuration: '1.5s' }} />
-              <div className="relative flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-emerald-950/95 border border-emerald-500/60 shadow-lg">
+              <div className="relative flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-emerald-950/95 shadow-[0_0_0_1px_rgba(16,185,129,0.6),0_10px_15px_-3px_rgba(0,0,0,0.3)]">
                 <Camera size={14} className="text-emerald-400" />
                 <span className="text-[10px] font-bold text-emerald-200 whitespace-nowrap">מצלמה מפנה לאימות</span>
               </div>
@@ -1173,7 +1184,7 @@ export const TacticalMap = ({
                   <div className="rounded-full bg-amber-500/20 border-2 border-amber-400 p-1.5">
                     <CheckCircle2 size={20} className="text-amber-400" />
                   </div>
-                  <span className="text-[10px] font-bold text-amber-200 whitespace-nowrap px-2 py-0.5 rounded bg-black/80 border border-amber-500/50">אומת שיבוש</span>
+                  <span className="text-[10px] font-bold text-amber-200 whitespace-nowrap px-2 py-0.5 rounded bg-black/80 shadow-[0_0_0_1px_rgba(245,158,11,0.5)]">אומת שיבוש</span>
                 </div>
               </Marker>
             )}
@@ -1282,8 +1293,8 @@ export const TacticalMap = ({
                             style={{ left: isDrone ? '34px' : '24px' }}
                           >
                             <div className={`
-                              bg-black/40 backdrop-blur-md text-white rounded border whitespace-nowrap
-                              ${isHoveredFromCard ? 'border-white/40' : isBird ? 'border-amber-500/20' : isMitigated ? 'border-zinc-600/40' : 'border-red-500/20'}
+                              bg-black/40 backdrop-blur-md text-white rounded whitespace-nowrap
+                              ${isHoveredFromCard ? 'shadow-[0_0_0_1px_rgba(255,255,255,0.4)]' : isBird ? 'shadow-[0_0_0_1px_rgba(245,158,11,0.2)]' : isMitigated ? 'shadow-[0_0_0_1px_rgba(113,113,122,0.4)]' : 'shadow-[0_0_0_1px_rgba(239,68,68,0.2)]'}
                             `}>
                               <div className="flex items-center gap-1.5 px-2 py-1" dir="rtl">
                                 <span className="text-[10px] font-semibold truncate max-w-[120px]">{target.name}</span>
@@ -1293,7 +1304,7 @@ export const TacticalMap = ({
                         ) : (
                           <div className={`
                             absolute top-1/2 -translate-y-1/2
-                            bg-black/90 backdrop-blur-sm text-white text-[9px] px-1.5 py-0.5 rounded border border-white/10 whitespace-nowrap
+                            bg-black/90 backdrop-blur-sm text-white text-[9px] px-1.5 py-0.5 rounded shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap
                             transition-all duration-200 pointer-events-none flex items-center gap-1 z-[9999]
                             ${isActive ? 'opacity-100' : 'opacity-0'}
                           `} style={{ left: '20px' }}>
@@ -1375,7 +1386,7 @@ export const TacticalMap = ({
                   <div className="absolute -inset-2 rounded-full border-2 border-white/50 animate-pulse" />
                 )}
                 {(isHovered || isHoveredFromCard) && (
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 text-xs font-medium text-white bg-black/95 border border-white/20 rounded shadow-lg whitespace-nowrap pointer-events-none z-50">
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 text-xs font-medium text-white bg-black/95 shadow-[0_0_0_1px_rgba(255,255,255,0.2),0_10px_15px_-3px_rgba(0,0,0,0.3)] rounded whitespace-nowrap pointer-events-none z-50">
                     <div>משגר טילים {launcher.id}</div>
                   </div>
                 )}
@@ -1433,7 +1444,7 @@ export const TacticalMap = ({
                 )}
                 <SensorIcon fill={isActive ? '#4ade80' : undefined} />
                 {(isHovered || isActive || isHoveredFromCard) && (
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 text-xs font-medium text-white bg-black/95 border border-white/20 rounded shadow-lg whitespace-nowrap pointer-events-none z-50" style={{ minWidth: 'max-content' }}>
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 text-xs font-medium text-white bg-black/95 shadow-[0_0_0_1px_rgba(255,255,255,0.2),0_10px_15px_-3px_rgba(0,0,0,0.3)] rounded whitespace-nowrap pointer-events-none z-50" style={{ minWidth: 'max-content' }}>
                     <div>{reg.name}</div>
                     <div className="text-white/70 mt-0.5">
                       {isActive ? 'פעיל — שיבוש' : reg.id}
@@ -1520,7 +1531,7 @@ export const TacticalMap = ({
                 <Icon fill={isSelected ? '#a78bfa' : undefined} />
                 {(isHovered || isHighlighted || isInUse) && (
                   <div
-                    className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 text-xs font-medium text-white bg-black/95 border rounded shadow-lg whitespace-nowrap pointer-events-none z-50 ${isInUse ? 'border-cyan-400/50' : 'border-white/20'}`}
+                    className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 text-xs font-medium text-white bg-black/95 rounded whitespace-nowrap pointer-events-none z-50 ${isInUse ? 'shadow-[0_0_0_1px_rgba(34,211,238,0.5),0_10px_15px_-3px_rgba(0,0,0,0.3)]' : 'shadow-[0_0_0_1px_rgba(255,255,255,0.2),0_10px_15px_-3px_rgba(0,0,0,0.3)]'}`}
                     style={{ minWidth: 'max-content' }}
                   >
                     <div>{asset.typeLabel}</div>
@@ -1596,7 +1607,7 @@ export const TacticalMap = ({
                 onMouseLeave={() => setHoveredMissileId(null)}
               >
                 {isHovered && (
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 text-xs font-medium text-white bg-black/95 border border-cyan-400/60 rounded shadow-lg whitespace-nowrap z-50">
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 text-xs font-medium text-white bg-black/95 shadow-[0_0_0_1px_rgba(34,211,238,0.6),0_10px_15px_-3px_rgba(0,0,0,0.3)] rounded whitespace-nowrap z-50">
                     <div>טיל לאיתור {missile.targetId}</div>
                     <div className="text-white/70 mt-0.5">
                       התקדמות {(missile.progress * 100).toFixed(0)}%
@@ -1682,7 +1693,7 @@ export const TacticalMap = ({
                     }`}>
                       {idx + 1}
                     </div>
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-0.5 text-[9px] font-mono text-violet-200 bg-black/90 border border-violet-400/30 rounded whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-0.5 text-[9px] font-mono text-violet-200 bg-black/90 shadow-[0_0_0_1px_rgba(167,139,250,0.3)] rounded whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
                       {wp.label}
                     </div>
                   </div>
@@ -1839,10 +1850,10 @@ export const TacticalMap = ({
               const midLon = (activeDrone.currentLon + destLon) / 2;
               return (
                 <Marker latitude={midLat} longitude={midLon} anchor="center">
-                  <div className={`pointer-events-none select-none rounded px-2 py-1 font-mono text-[10px] border shadow-lg whitespace-nowrap ${
+                  <div className={`pointer-events-none select-none rounded px-2 py-1 font-mono text-[10px] whitespace-nowrap ${
                     activeDrone.phase === 'rtb'
-                      ? 'bg-black/85 text-zinc-300 border-zinc-500/50'
-                      : 'bg-black/85 text-cyan-200 border-cyan-400/50'
+                      ? 'bg-black/85 text-zinc-300 shadow-[0_0_0_1px_rgba(113,113,122,0.5),0_10px_15px_-3px_rgba(0,0,0,0.3)]'
+                      : 'bg-black/85 text-cyan-200 shadow-[0_0_0_1px_rgba(34,211,238,0.5),0_10px_15px_-3px_rgba(0,0,0,0.3)]'
                   }`}>
                     <span>{distKm < 1 ? `${Math.round(distM)}m` : `${distKm.toFixed(1)}km`}</span>
                     <span className="text-white/50 mx-1">·</span>
@@ -1860,17 +1871,23 @@ export const TacticalMap = ({
           </>
         )}
 
-        {/* Friendly drone markers (cyan, tooltip only, no card) */}
-        {friendlyDrones.map(drone => (
-          <Marker key={drone.id} longitude={drone.lon} latitude={drone.lat} anchor="center">
-            <div className="relative group cursor-default drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]">
-              <DroneIcon color="#22d3ee" rotationDeg={drone.headingDeg ?? 0} />
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-1.5 py-1 text-[10px] bg-zinc-900/90 rounded shadow whitespace-nowrap pointer-events-none z-50 opacity-0 group-hover:opacity-100 transition-opacity">
-                <span className="text-zinc-300 font-medium">רחפן ידידותי</span>
+        {/* Friendly drone markers (cyan, highlight on device card hover) */}
+        {friendlyDrones.map(drone => {
+          const isHoveredFromCard = drone.id === hoveredSensorIdFromCard;
+          return (
+            <Marker key={drone.id} longitude={drone.lon} latitude={drone.lat} anchor="center">
+              <div className={`relative group cursor-default transition-all duration-200 drop-shadow-[0_0_8px_rgba(6,182,212,0.5)] ${isHoveredFromCard ? 'scale-125 drop-shadow-[0_0_14px_rgba(6,182,212,0.8)]' : ''}`}>
+                {isHoveredFromCard && (
+                  <div className="absolute -inset-2 rounded-full border-2 border-cyan-400/60 animate-pulse" />
+                )}
+                <DroneIcon color="#22d3ee" rotationDeg={drone.headingDeg ?? 0} />
+                <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-1.5 py-1 text-[10px] bg-zinc-900/90 rounded shadow whitespace-nowrap pointer-events-none z-50 transition-opacity ${isHoveredFromCard ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                  <span className="text-zinc-300 font-medium">{drone.name}</span>
+                </div>
               </div>
-            </div>
-          </Marker>
-        ))}
+            </Marker>
+          );
+        })}
 
       </Map>
       ) : null}
@@ -1902,7 +1919,7 @@ export const TacticalMap = ({
       />
 
       {/* Decorative Map Elements */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] border border-white/5 rounded-3xl opacity-20 pointer-events-none flex items-center justify-center">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] shadow-[0_0_0_1px_rgba(255,255,255,0.05)] rounded-3xl opacity-20 pointer-events-none flex items-center justify-center">
          <div className="w-full h-full border-x border-white/5" />
       </div>
 
@@ -1914,7 +1931,7 @@ export const TacticalMap = ({
 
       {controlIndicator && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
-          <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-900/90 backdrop-blur-md border border-emerald-400/60 shadow-lg shadow-emerald-500/20 animate-pulse" style={{ animationDuration: '3s' }}>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-900/90 backdrop-blur-md shadow-[0_0_0_1px_rgba(52,211,153,0.6),0_10px_15px_-3px_rgba(0,0,0,0.3),0_0_20px_rgba(52,211,153,0.2)] animate-pulse" style={{ animationDuration: '3s' }}>
             <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
             <span className="text-sm font-bold text-emerald-200">אתה בשליטה</span>
           </div>

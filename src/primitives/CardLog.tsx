@@ -40,7 +40,7 @@ export function CardLog({
         <div className="flex flex-col justify-center items-start">
           {visible.map((entry, idx) => (
             <div key={idx} className="flex items-center justify-center gap-2.5 mb-2 relative w-full">
-              <div className="w-[11px] h-[11px] rounded-full border border-white/20 shrink-0 mt-0.5 z-[1]" style={{ backgroundColor: CARD_TOKENS.surface.level1 }} />
+              <div className="w-[11px] h-[11px] rounded-full shadow-[0_0_0_1px_rgba(255,255,255,0.2)] shrink-0 mt-0.5 z-[1]" style={{ backgroundColor: CARD_TOKENS.surface.level1 }} />
               <div className="flex-1 min-w-0 flex flex-col">
                 <span className="text-[11px] text-zinc-300">{entry.label}</span>
               </div>

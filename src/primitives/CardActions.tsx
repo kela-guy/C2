@@ -16,6 +16,7 @@ export interface CardAction {
     doubleConfirm?: boolean;
   };
   disabled?: boolean;
+  loading?: boolean;
   className?: string;
   title?: string;
   dataTour?: string;
@@ -69,7 +70,7 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
   const cols = Math.min(rest.length || primary.length, 4);
 
   return (
-    <div className={`px-2 py-2 ${className}`} style={{ borderBottom: `1px solid ${CARD_TOKENS.surface.level2}` }} dir="rtl">
+    <div className={`px-2 py-2 ${className}`} dir="rtl">
       <div
         className="grid gap-1.5"
         style={{ gridTemplateColumns: `repeat(${cols || 1}, 1fr)` }}
@@ -83,6 +84,7 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
               size="lg"
               onClick={(e) => handleClick(action, e!)}
               disabled={action.disabled}
+              loading={action.loading}
               title={action.title}
               className={`w-full ${action.className ?? ''}`}
               dataTour={action.dataTour}
@@ -99,6 +101,7 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
             size={action.size ?? 'sm'}
             onClick={(e) => handleClick(action, e!)}
             disabled={action.disabled}
+            loading={action.loading}
             title={action.title}
             className={`w-full ${action.className ?? ''}`}
             dataTour={action.dataTour}
@@ -109,7 +112,7 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
       {confirmingAction?.confirm && (
         <div
           className="mt-1 p-3 rounded"
-          style={{ border: `1px solid ${CARD_TOKENS.surface.level2}`, backgroundColor: `rgba(255,255,255,${CARD_TOKENS.elevation.overlay.level2})` }}
+          style={{ boxShadow: `0 0 0 1px ${CARD_TOKENS.surface.level2}`, backgroundColor: `rgba(255,255,255,${CARD_TOKENS.elevation.overlay.level2})` }}
           role="alertdialog"
           aria-labelledby="confirm-title"
           aria-describedby={confirmingAction.confirm.description ? 'confirm-desc' : undefined}
@@ -128,14 +131,14 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
               <div className="flex gap-2">
                 <button
                   onClick={handleConfirm}
-                  className="flex-1 h-8 rounded border border-red-500 bg-red-500/15 hover:bg-red-500/25 text-red-400 text-[11px] font-semibold transition-colors active:scale-[0.98]"
+                  className="flex-1 h-8 rounded shadow-[0_0_0_1px_rgba(239,68,68,1)] bg-red-500/15 hover:bg-red-500/25 text-red-400 text-[11px] font-semibold transition-colors active:scale-[0.98]"
                   aria-label={confirmingAction.confirm.confirmLabel ?? 'אישור'}
                 >
                   {confirmingAction.confirm.confirmLabel ?? 'אישור'}
                 </button>
                 <button
                   onClick={handleCancel}
-                  className="flex-1 h-8 rounded border border-white/10 text-zinc-400 text-[11px] hover:bg-white/5 transition-colors"
+                  className="flex-1 h-8 rounded shadow-[0_0_0_1px_rgba(255,255,255,0.1)] text-zinc-400 text-[11px] hover:bg-white/5 transition-colors"
                   aria-label="ביטול"
                 >
                   ביטול
@@ -148,14 +151,14 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
               <div className="flex gap-2">
                 <button
                   onClick={handleConfirm}
-                  className="flex-1 h-8 rounded border border-red-500 bg-red-500/15 hover:bg-red-500/25 text-red-400 text-[11px] font-bold transition-colors active:scale-[0.98]"
+                  className="flex-1 h-8 rounded shadow-[0_0_0_1px_rgba(239,68,68,1)] bg-red-500/15 hover:bg-red-500/25 text-red-400 text-[11px] font-bold transition-colors active:scale-[0.98]"
                   aria-label={confirmingAction.confirm.confirmLabel ?? 'הפעל'}
                 >
                   {confirmingAction.confirm.confirmLabel ?? 'הפעל'}
                 </button>
                 <button
                   onClick={handleCancel}
-                  className="flex-1 h-8 rounded border border-white/10 text-zinc-400 text-[11px] hover:bg-white/5 transition-colors"
+                  className="flex-1 h-8 rounded shadow-[0_0_0_1px_rgba(255,255,255,0.1)] text-zinc-400 text-[11px] hover:bg-white/5 transition-colors"
                   aria-label="ביטול"
                 >
                   ביטול

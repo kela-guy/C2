@@ -24,7 +24,7 @@ const TOUR_STEPS: CuasTourStep[] = [
   {
     target: '[data-cuas-sim-menu]',
     title: 'הפעלת סימולציה',
-    content: '👆 לחצו על כפתור הסימולציה המודגש כדי לפתוח את תפריט התרחישים.',
+    content: 'לחצו על כפתור הסימולציה המודגש כדי לפתוח את תפריט התרחישים.',
     placement: 'left',
     disableBeacon: true,
     advanceMode: 'click-through',
@@ -33,7 +33,7 @@ const TOUR_STEPS: CuasTourStep[] = [
   {
     target: '[data-tour="cuas-single-sim"]',
     title: 'בחירת תרחיש',
-    content: '👆 לחצו על הכפתור המודגש להפעלת יעד בודד. נעקוב אחריו יחד צעד אחר צעד.',
+    content: 'לחצו על הכפתור המודגש להפעלת יעד בודד. נעקוב אחריו יחד צעד אחר צעד.',
     placement: 'left',
     disableBeacon: true,
     advanceMode: 'click-through',
@@ -84,7 +84,7 @@ const TOUR_STEPS: CuasTourStep[] = [
   {
     target: '[data-tour="cuas-cta-mitigate"]',
     title: 'הפעלת שיבוש',
-    content: '👆 לחצו על כפתור "שיבוש" המודגש כדי להפעיל אפקטור נגד הרחפן.',
+    content: 'לחצו על כפתור "שיבוש" המודגש כדי להפעיל אפקטור נגד הרחפן.',
     placement: 'left',
     disableBeacon: true,
     advanceMode: 'click-through',
@@ -103,7 +103,7 @@ const TOUR_STEPS: CuasTourStep[] = [
   {
     target: '[data-tour="cuas-cta-bda"]',
     title: 'אימות פגיעה (BDA)',
-    content: '👆 השיבוש הושלם! לחצו על כפתור "הפנה מצלמה לאימות" המודגש כדי לכוון מצלמה ולוודא שהרחפן נוטרל.',
+    content: 'השיבוש הושלם! לחצו על כפתור "הפנה מצלמה לאימות" המודגש כדי לכוון מצלמה ולוודא שהרחפן נוטרל.',
     placement: 'left',
     disableBeacon: true,
     advanceMode: 'click-through',
@@ -112,7 +112,7 @@ const TOUR_STEPS: CuasTourStep[] = [
   {
     target: '[data-tour="cuas-cta-complete"]',
     title: 'סיום משימה',
-    content: '👆 המצלמה מכוונת לרחפן. לחצו על כפתור "סיום משימה" המודגש כדי לסגור את האירוע.',
+    content: 'המצלמה מכוונת לרחפן. לחצו על כפתור "סיום משימה" המודגש כדי לסגור את האירוע.',
     placement: 'left',
     disableBeacon: true,
     advanceMode: 'click-through',
@@ -122,7 +122,7 @@ const TOUR_STEPS: CuasTourStep[] = [
   {
     target: '[data-tour="cuas-completed-tab"]',
     title: 'לשונית הושלמו',
-    content: '👆 האירוע הועבר ללשונית "הושלמו". לחצו על הלשונית המודגשת כדי לצפות באירועים שטופלו.',
+    content: 'האירוע הועבר ללשונית "הושלמו". לחצו על הלשונית המודגשת כדי לצפות באירועים שטופלו.',
     placement: 'left',
     disableBeacon: true,
     advanceMode: 'click-through',
@@ -142,32 +142,51 @@ const TOUR_STYLES: Styles = {
   options: {
     arrowColor: '#1a1a1a',
     backgroundColor: '#1a1a1a',
-    overlayColor: 'rgba(0, 0, 0, 0.75)',
+    overlayColor: 'rgba(0, 0, 0, 0.6)',
     primaryColor: '#22b8cf',
     textColor: '#e4e4e7',
-    spotlightShadow: '0 0 20px rgba(0, 0, 0, 0.5)',
+    spotlightShadow: '0 0 0 4px rgba(0,0,0,0.3), 0 0 20px rgba(0,0,0,0.5)',
     zIndex: 100000,
   },
   tooltip: {
-    borderRadius: 12,
-    border: '1px solid rgba(255, 255, 255, 0.1)',
+    borderRadius: 10,
+    border: 'none',
+    boxShadow: '0 0 0 1px rgba(255,255,255,0.08), 0 8px 30px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,0,0,0.2)',
     fontFamily: "'Heebo', sans-serif",
     fontSize: 14,
     padding: '16px 20px',
     textAlign: 'right' as const,
     direction: 'rtl' as const,
+    maxWidth: 380,
   },
   tooltipContainer: {
     textAlign: 'right' as const,
   },
   tooltipContent: {
-    padding: '8px 0',
-    lineHeight: 1.7,
+    padding: '6px 0',
+    lineHeight: 1.5,
+    color: '#a1a1aa',
   },
   tooltipTitle: {
     fontSize: 15,
     fontWeight: 600,
     textAlign: 'right' as const,
+    color: '#e4e4e7',
+  },
+  tooltipFooter: {
+    display: 'flex',
+    flexDirection: 'row-reverse' as const,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  tooltipFooterSpacer: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column' as const,
+    width: 'fit-content',
+    justifyContent: 'center',
+    alignItems: 'flex-end',
   },
   buttonNext: {
     backgroundColor: '#22b8cf',
@@ -175,7 +194,8 @@ const TOUR_STYLES: Styles = {
     color: '#fff',
     fontSize: 13,
     fontWeight: 600,
-    padding: '8px 16px',
+    padding: '8px 18px',
+    outline: 'none',
   },
   buttonBack: {
     color: '#a1a1aa',
@@ -185,14 +205,21 @@ const TOUR_STYLES: Styles = {
     marginRight: 8,
   },
   buttonSkip: {
-    color: '#71717a',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    border: 'none',
+    boxShadow: '0 0 0 1px rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    color: '#a1a1aa',
     fontSize: 12,
+    fontWeight: 500,
+    padding: '7px 14px',
+    width: 'fit-content',
   },
   buttonClose: {
-    color: '#71717a',
+    display: 'none',
   },
   spotlight: {
-    borderRadius: 8,
+    borderRadius: 6,
   },
 };
 
@@ -202,8 +229,12 @@ const CLICK_THROUGH_STYLES: Styles = {
     ...TOUR_STYLES.buttonNext,
     display: 'none',
   },
+  buttonSkip: {
+    ...TOUR_STYLES.buttonSkip,
+    display: 'none',
+  },
   spotlight: {
-    borderRadius: 8,
+    borderRadius: 6,
     border: '2px solid rgba(34, 184, 207, 0.7)',
   },
 };
@@ -214,23 +245,30 @@ const AUTO_STYLES: Styles = {
     ...TOUR_STYLES.buttonNext,
     display: 'none',
   },
+  buttonSkip: {
+    ...TOUR_STYLES.buttonSkip,
+    display: 'none',
+  },
 };
 
-const TOUR_LOCALE = {
-  back: 'הקודם',
-  close: 'סגור',
-  last: 'סיום',
-  next: 'הבא',
-  open: 'פתח',
-  skip: 'דלג',
-};
+function makeTourLocale(stepIndex: number) {
+  const total = TOUR_STEPS.length;
+  return {
+    back: 'הקודם',
+    close: 'סגור',
+    last: 'סיום',
+    next: `הבא (${stepIndex + 1} מתוך ${total})`,
+    open: 'פתח',
+    skip: 'דלג על הסיור',
+  };
+}
 
 export interface CuasTourState {
   run: boolean;
   stepIndex: number;
   steps: Step[];
   styles: Styles;
-  locale: typeof TOUR_LOCALE;
+  locale: ReturnType<typeof makeTourLocale>;
   handleCallback: (data: CallBackProps) => void;
   startTour: () => void;
   updateTargetState: (target: Detection | null) => void;
@@ -306,7 +344,7 @@ export function useCuasTour(
   const handleCallback = useCallback((data: CallBackProps) => {
     const { action, index, status, type } = data;
 
-    if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
+    if (status === STATUS.FINISHED || status === STATUS.SKIPPED || action === ACTIONS.CLOSE) {
       setRun(false);
       setStepIndex(0);
       localStorage.setItem(STORAGE_KEY, 'true');
@@ -385,7 +423,7 @@ export function useCuasTour(
     stepIndex,
     steps: TOUR_STEPS as Step[],
     styles: resolvedStyles,
-    locale: TOUR_LOCALE,
+    locale: makeTourLocale(stepIndex),
     handleCallback,
     startTour,
     updateTargetState,

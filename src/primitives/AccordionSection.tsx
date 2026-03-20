@@ -25,7 +25,7 @@ export function AccordionSection({
   const [panelId] = useState(() => `accordion-panel-${++accordionIdCounter}`);
 
   return (
-    <div className={`last:border-0 ${className}`} style={{ borderBottom: `1px solid ${CARD_TOKENS.surface.level2}` }} dir="rtl">
+    <div className={className} dir="rtl">
       <div 
         className="flex w-full items-center justify-between p-[8px] cursor-pointer transition-colors rounded-none focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none bg-white/[0.05] hover:bg-white/[0.08]"
         onClick={() => setOpen(!isOpen)}

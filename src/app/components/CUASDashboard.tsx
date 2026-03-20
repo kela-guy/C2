@@ -822,7 +822,7 @@ export const CUASDashboard = () => {
             </button>
             {simulationMenuOpen && (
               <div
-                className="absolute top-0 right-full mr-2 w-52 rounded-lg border border-white/15 bg-[#1a1a1a]/95 backdrop-blur-xl shadow-2xl py-1.5 select-none z-50"
+                className="absolute top-0 right-full mr-2 w-52 rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_25px_50px_-12px_rgba(0,0,0,0.5)] bg-[#1a1a1a]/95 backdrop-blur-xl py-1.5 select-none z-50"
                 dir="rtl"
               >
                 <div className="px-3 py-1.5 text-[11px] font-medium text-white/70 uppercase tracking-wider border-b border-white/10 mb-1">CUAS</div>
@@ -1019,9 +1019,10 @@ export const CUASDashboard = () => {
         stepIndex={tour.stepIndex}
         continuous
         showSkipButton
-        showProgress
         scrollToFirstStep
         disableScrollParentFix
+        disableOverlayClose
+        disableCloseOnEsc
         callback={tour.handleCallback}
         styles={tour.styles}
         locale={tour.locale}

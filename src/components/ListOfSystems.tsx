@@ -35,7 +35,7 @@ export function ListOfSystems() {
 
   return (
     <div
-      className="w-[340px] flex flex-col gap-0 bg-[#1a1a1a] rounded-lg border border-[#333] overflow-hidden"
+      className="w-[340px] flex flex-col gap-0 bg-[#1a1a1a] rounded-lg shadow-[0_0_0_1px_#333] overflow-hidden"
       dir="rtl"
     >
       {/* Header */}

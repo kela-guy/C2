@@ -2403,6 +2403,8 @@ export const C2Dashboard = () => {
         showProgress
         scrollToFirstStep
         disableScrollParentFix
+        disableOverlayClose
+        disableCloseOnEsc
         callback={tour.handleCallback}
         styles={tour.styles}
         locale={tour.locale}
@@ -2646,7 +2648,7 @@ export const C2Dashboard = () => {
       {flowTriggerOpen && flowTriggerRect && createPortal(
         <div
           data-flow-panel
-          className="fixed w-52 rounded-lg border border-white/15 bg-[#1a1a1a]/95 backdrop-blur-xl shadow-2xl py-1.5 select-none"
+          className="fixed w-52 rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_25px_50px_-12px_rgba(0,0,0,0.5)] bg-[#1a1a1a]/95 backdrop-blur-xl py-1.5 select-none"
           style={{ top: flowTriggerRect.top, left: flowTriggerRect.left, zIndex: 99999 }}
           dir="rtl"
         >
@@ -2692,7 +2694,7 @@ export const C2Dashboard = () => {
       {missionPlannerOpen && missionPlannerRect && createPortal(
         <div
           data-mission-planner-panel
-          className="fixed w-[260px] rounded-lg border border-violet-500/20 bg-[#1a1a1a]/95 backdrop-blur-xl shadow-2xl p-3 select-none"
+          className="fixed w-[260px] rounded-lg shadow-[0_0_0_1px_rgba(139,92,246,0.2),0_25px_50px_-12px_rgba(0,0,0,0.5)] bg-[#1a1a1a]/95 backdrop-blur-xl p-3 select-none"
           style={{ top: missionPlannerRect.top, left: missionPlannerRect.left, zIndex: 99999 }}
           dir="rtl"
         >
@@ -2700,9 +2702,9 @@ export const C2Dashboard = () => {
           <div className="flex gap-2">
             <button
               onClick={() => handleMissionPlannerSelect('drone')}
-              className="flex-1 flex flex-col items-center gap-2 p-3 rounded-lg border border-white/10 bg-white/5 hover:bg-violet-500/10 hover:border-violet-500/30 transition-all group"
+              className="flex-1 flex flex-col items-center gap-2 p-3 rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.1)] bg-white/5 hover:bg-violet-500/10 hover:shadow-[0_0_0_1px_rgba(139,92,246,0.3)] transition-all group"
             >
-              <div className="w-9 h-9 rounded-full bg-violet-500/10 border border-violet-500/20 flex items-center justify-center group-hover:bg-violet-500/20 transition-colors">
+              <div className="w-9 h-9 rounded-full bg-violet-500/10 shadow-[0_0_0_1px_rgba(139,92,246,0.2)] flex items-center justify-center group-hover:bg-violet-500/20 transition-colors">
                 <MapDroneIcon size={18} fill="currentColor" className="text-violet-400" />
               </div>
               <div className="text-center">
@@ -2712,9 +2714,9 @@ export const C2Dashboard = () => {
             </button>
             <button
               onClick={() => handleMissionPlannerSelect('ptz')}
-              className="flex-1 flex flex-col items-center gap-2 p-3 rounded-lg border border-white/10 bg-white/5 hover:bg-cyan-500/10 hover:border-cyan-500/30 transition-all group"
+              className="flex-1 flex flex-col items-center gap-2 p-3 rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.1)] bg-white/5 hover:bg-cyan-500/10 hover:shadow-[0_0_0_1px_rgba(6,182,212,0.3)] transition-all group"
             >
-              <div className="w-9 h-9 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center group-hover:bg-cyan-500/20 transition-colors">
+              <div className="w-9 h-9 rounded-full bg-cyan-500/10 shadow-[0_0_0_1px_rgba(6,182,212,0.2)] flex items-center justify-center group-hover:bg-cyan-500/20 transition-colors">
                 <Camera size={18} className="text-cyan-400" />
               </div>
               <div className="text-center">
@@ -2729,9 +2731,9 @@ export const C2Dashboard = () => {
       {/* CUAS Guided Demo Step Indicator */}
       {cuasGuidedStep !== null && cuasGuidedStep < GUIDED_STEPS.length && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[99999] pointer-events-auto" dir="rtl">
-          <div className="bg-[#1a1a1a]/95 backdrop-blur-xl border border-emerald-500/30 rounded-xl shadow-2xl px-5 py-3 max-w-md">
+          <div className="bg-[#1a1a1a]/95 backdrop-blur-xl shadow-[0_0_0_1px_rgba(16,185,129,0.3),0_25px_50px_-12px_rgba(0,0,0,0.5)] rounded-xl px-5 py-3 max-w-md">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 text-[11px] font-bold shrink-0">
+              <div className="w-7 h-7 rounded-full bg-emerald-500/20 shadow-[0_0_0_1px_rgba(16,185,129,0.4)] flex items-center justify-center text-emerald-400 text-[11px] font-bold shrink-0">
                 {cuasGuidedStep + 1}
               </div>
               <div className="text-[12px] font-semibold text-white">{GUIDED_STEPS[cuasGuidedStep]}</div>

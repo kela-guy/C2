@@ -1,6 +1,5 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { Camera, ShieldAlert, AlertTriangle, Play, Pause, SkipBack, SkipForward } from 'lucide-react';
-import { CARD_TOKENS } from './tokens';
 
 export interface CardMediaProps {
   src?: string;
@@ -35,7 +34,7 @@ export function CardMedia({
   return (
     <div
       className={`relative w-full overflow-hidden group bg-black ${height} ${className}`}
-      style={{ ...(aspectRatio ? { aspectRatio } : {}), borderBottom: `1px solid ${CARD_TOKENS.surface.level2}` }}
+      style={{ ...(aspectRatio ? { aspectRatio } : {}) }}
     >
       {src && isVideo ? (
         showControls ? (
@@ -97,7 +96,7 @@ export function CardMedia({
       )}
 
       {trackingLabel && (
-        <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-cyan-900/80 border border-cyan-400/30 px-2 py-0.5 rounded" dir="rtl">
+        <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-cyan-900/80 shadow-[0_0_0_1px_rgba(34,211,238,0.3)] px-2 py-0.5 rounded" dir="rtl">
           <Camera size={10} className="text-cyan-300" aria-hidden="true" />
           <span className="text-[9px] font-semibold text-cyan-200">{trackingLabel}</span>
         </div>

@@ -17,7 +17,6 @@ import {
   StackedCard,
   AccordionSection,
   TelemetryRow,
-  CARD_TOKENS,
 } from '@/primitives';
 import {
   Crosshair,
@@ -252,7 +251,7 @@ function UnifiedCard({
       {slots.actions.length > 0 && <CardActions actions={slots.actions} />}
 
       {!thinMode && slots.timeline.length > 0 && (
-        <div className="px-2" style={{ borderBottom: `1px solid ${CARD_TOKENS.surface.level2}` }}>
+        <div className="px-2">
           <CardTimeline steps={slots.timeline} />
         </div>
       )}

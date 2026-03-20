@@ -56,10 +56,7 @@ export function TargetCard({
       className={`w-full text-white transition-colors group/card relative overflow-hidden ${className}`}
       style={{
         backgroundColor: d.container.bgColor,
-        borderColor: d.container.borderColor,
         borderRadius: `${d.container.borderRadius}px`,
-        borderWidth: `${d.container.borderWidth}px`,
-        borderStyle: 'solid',
         marginBottom: `${d.container.marginBottom + 2}px`,
         filter: completed ? 'saturate(0.4) brightness(0.85)' : undefined,
         boxShadow: open
@@ -103,12 +100,10 @@ export function TargetCard({
             id={contentId}
           >
             <div
-              className="flex flex-col"
+              className="flex flex-col gap-px"
               style={{
                 backgroundColor: d.content.bgColor,
-                borderTopColor: d.content.borderColor,
-                borderTopWidth: '1px',
-                borderTopStyle: 'solid',
+                boxShadow: `inset 0 1px 0 0 ${d.content.borderColor}`,
               }}
             >
               {children}

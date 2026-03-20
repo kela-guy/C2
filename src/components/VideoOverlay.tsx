@@ -11,7 +11,7 @@ export function VideoOverlay({
   isLive?: boolean;
 }) {
   return (
-    <div className="relative w-full aspect-video rounded overflow-hidden bg-[#0d0d0d] border border-white/10">
+    <div className="relative w-full aspect-video rounded overflow-hidden bg-[#0d0d0d] shadow-[0_0_0_1px_rgba(255,255,255,0.1)]">
       {imageSrc ? (
         <img
           src={imageSrc}
