@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { fn, expect } from 'storybook/test';
 import { CardActions, type CardAction } from './CardActions';
-import { Crosshair, Radio, Eye, Plane, X, Zap } from 'lucide-react';
+import { Crosshair, Radio, Eye, Plane, X } from 'lucide-react';
+import { JamWaveIcon } from './MapIcons';
 
 const meta: Meta<typeof CardActions> = {
   title: 'TargetCard/Slots/CardActions',
@@ -22,10 +23,10 @@ type Story = StoryObj<typeof CardActions>;
 export const PrimaryWithSecondary: Story = {
   args: {
     actions: [
-      { id: 'jam-primary', label: 'שיבוש', icon: Zap, variant: 'danger', size: 'lg', onClick: fn() },
+      { id: 'jam-primary', label: 'שיבוש', icon: JamWaveIcon, variant: 'danger', size: 'lg', onClick: fn() },
       { id: 'surveil', label: 'מעקב', icon: Eye, variant: 'secondary', size: 'sm', onClick: fn() },
       { id: 'drone', label: 'רחפן', icon: Plane, variant: 'secondary', size: 'sm', onClick: fn() },
-      { id: 'dismiss', label: 'ביטול', icon: X, variant: 'ghost', size: 'sm', onClick: fn() },
+      { id: 'dismiss', label: 'ביטול', icon: X, variant: 'secondary', size: 'sm', onClick: fn() },
     ],
   },
   play: async ({ args, canvas, userEvent }) => {
@@ -45,7 +46,7 @@ export const ConfirmFlow: Story = {
       {
         id: 'mitigate',
         label: 'שיבוש',
-        icon: Zap,
+        icon: JamWaveIcon,
         variant: 'danger',
         size: 'lg',
         onClick: fn(),
@@ -80,7 +81,7 @@ export const ConfirmCancel: Story = {
       {
         id: 'mitigate',
         label: 'שיבוש',
-        icon: Zap,
+        icon: JamWaveIcon,
         variant: 'danger',
         size: 'lg',
         onClick: fn(),
@@ -108,7 +109,7 @@ export const DoubleConfirmFlow: Story = {
       {
         id: 'mitigate',
         label: 'שיבוש',
-        icon: Zap,
+        icon: JamWaveIcon,
         variant: 'danger',
         size: 'lg',
         onClick: fn(),
@@ -142,7 +143,7 @@ export const PlaybookSelection: Story = {
   args: {
     actions: [
       { id: 'pb-fast-inspect', label: 'חקירה מהירה', icon: Plane, variant: 'primary', size: 'md', onClick: fn() },
-      { id: 'pb-full-response', label: 'תגובה מלאה', icon: Zap, variant: 'danger', size: 'sm', onClick: fn() },
+      { id: 'pb-full-response', label: 'תגובה מלאה', icon: JamWaveIcon, variant: 'danger', size: 'sm', onClick: fn() },
       { id: 'pb-transfer', label: 'העבר אחריות', icon: Radio, variant: 'secondary', size: 'sm', onClick: fn() },
       { id: 'close-event', label: 'סגור', icon: X, variant: 'ghost', size: 'sm', onClick: fn() },
     ],
@@ -163,7 +164,7 @@ export const InvestigationActions: Story = {
 export const Disabled: Story = {
   args: {
     actions: [
-      { id: 'mitigate', label: 'שיבוש', icon: Zap, variant: 'danger', size: 'lg', onClick: fn(), disabled: true },
+      { id: 'mitigate', label: 'שיבוש', icon: JamWaveIcon, variant: 'danger', size: 'lg', onClick: fn(), disabled: true },
       { id: 'regional', label: 'מרחבי', icon: Radio, variant: 'secondary', size: 'sm', onClick: fn(), disabled: true },
     ],
   },

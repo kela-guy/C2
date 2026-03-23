@@ -111,7 +111,7 @@ function InteractiveCuasFlow() {
       }, 3000);
     },
     onMitigateAll: () => {
-      appendLog('שיבוש מרחבי');
+      appendLog('שיבוש כללי');
       setTarget(prev => ({ ...prev, mitigationStatus: 'mitigating', mitigatingEffectorId: 'ALL' }));
       setTimeout(() => {
         setTarget(prev => ({
@@ -121,7 +121,7 @@ function InteractiveCuasFlow() {
           missionStatus: 'waiting_confirmation',
           actionLog: [...(prev.actionLog || []), {
             time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-            label: 'שיבוש מרחבי הושלם — ממתין לאימות',
+            label: 'שיבוש כללי הושלם — ממתין לאימות',
           }],
         }));
       }, 3000);

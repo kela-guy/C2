@@ -1,6 +1,28 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Tactical red scale (OKLCH hue ~17) — use for danger CTAs, jam, destructive fills */
+:root {
+  --color-1: oklch(0.195 0.03 17);
+  --color-2: oklch(0.227 0.041 17);
+  --color-3: oklch(0.295 0.082 17);
+  --color-4: oklch(0.348 0.111 17);
+  --color-5: oklch(0.394 0.133 17);
+  --color-6: oklch(0.445 0.151 17);
+  --color-7: oklch(0.513 0.168 17);
+  --color-8: oklch(0.599 0.184 17);
+  --color-9: oklch(0.647 0.176 17);
+  --color-10: oklch(0.699 0.166 17);
+  --color-11: oklch(0.863 0.102 17);
+  --color-12: oklch(0.927 0.062 17);
+
+  /* Filled danger CTAs — alias palette for non-Tailwind CSS */
+  --danger-cta-bg: var(--color-4);
+  --danger-cta-bg-hover: var(--color-6);
+  --danger-cta-bg-active: var(--color-3);
+  --danger-cta-text: var(--color-12);
+}
+
 @theme {
   /* ── Colors ── */
   --color-surface: rgba(255, 255, 255, 0.1);

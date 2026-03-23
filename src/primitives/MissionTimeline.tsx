@@ -115,7 +115,7 @@ export function MissionTimeline({
                         <ActionButton 
                             label="ביטול משימה"
                             title="ביטול המשימה הפעילה"
-                            variant="ghost"
+                            variant="secondary"
                             icon={X}
                             onClick={(e) => { e?.stopPropagation(); onCancel(); }}
                             className="!w-auto px-3"

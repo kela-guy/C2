@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import {
-  ChevronDown, Satellite, Radio, Zap, TriangleAlert, MapPin, Maximize2,
+  ChevronDown, Satellite, Radio, TriangleAlert, MapPin, Maximize2,
   Eye, EyeOff, Activity, X, Target, Scan, Ruler, VideoOff, Signal,
   Check, Loader2, Circle, Play, ArrowRight, Crosshair, Ban, Plane,
   Rocket, Ship, Filter, ShieldAlert, AlertTriangle, History,
@@ -10,13 +10,14 @@ import {
   Copy, ArrowUpDown, SlidersHorizontal, Radar,
 } from 'lucide-react';
 import { CameraIcon, SensorIcon, RadarIcon, DroneHiveIcon } from '../app/components/TacticalMap';
+import { JamWaveIcon } from './MapIcons';
 
 const LUCIDE_ICONS = [
   { name: 'ChevronDown', component: ChevronDown },
   { name: 'ChevronUp', component: ChevronUp },
   { name: 'Satellite', component: Satellite },
   { name: 'Radio', component: Radio },
-  { name: 'Zap', component: Zap },
+  { name: 'JamWave', component: JamWaveIcon },
   { name: 'TriangleAlert', component: TriangleAlert },
   { name: 'MapPin', component: MapPin },
   { name: 'Maximize2', component: Maximize2 },

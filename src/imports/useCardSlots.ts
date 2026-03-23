@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import {
   Plane,
-  Rocket,
   Ship,
   Target,
   Crosshair,
@@ -13,7 +12,6 @@ import {
   Ruler,
   Clock,
   Mountain,
-  Zap,
   Check,
   ScanLine,
   Route,
@@ -31,6 +29,7 @@ import {
   Compass,
   ArrowUpDown,
 } from 'lucide-react';
+import { DroneCardIcon, MissileCardIcon } from '@/primitives/MapIcons';
 import type { ThreatAccent } from '@/primitives/tokens';
 import type { CardAction } from '@/primitives/CardActions';
 import type { TimelineStep } from '@/primitives/CardTimeline';
@@ -47,6 +46,7 @@ import type {
   IncidentOutcome,
 } from './ListOfSystems';
 import { INCIDENT_OUTCOMES } from './ListOfSystems';
+import { JamWaveIcon } from '@/primitives/MapIcons';
 
 export interface CardCallbacks {
   onVerify?: (action: 'intercept' | 'surveillance' | 'investigate') => void;
@@ -124,8 +124,8 @@ function buildHeaderIcon(target: Detection): React.ElementType {
     return target.plannedMission?.missionType === 'ptz' ? ScanLine : Route;
   }
   switch (target.type) {
-    case 'uav': return Plane;
-    case 'missile': return Rocket;
+    case 'uav': return DroneCardIcon;
+    case 'missile': return MissileCardIcon;
     case 'naval': return Ship;
     case 'aircraft': return Plane;
     default: return Target;
@@ -222,6 +222,26 @@ function buildMedia(target: Detection, ctx: CardContext): CardMediaProps | null 
   };
 }
 
+function cuasJamDropdown(
+  callbacks: CardCallbacks,
+  opts: { classified: boolean; busy: boolean },
+): CardAction[] {
+  return [
+    { id: 'mitigate-all', label: 'שיבוש כללי', icon: Radio,
+      onClick: (e) => { e.stopPropagation(); callbacks.onMitigateAll?.(); },
+      disabled: !opts.classified || opts.busy,
+    },
+    { id: 'mitigate-directional', label: 'שיבוש ממוקד', icon: Crosshair,
+      onClick: (e) => e.stopPropagation(),
+      disabled: !opts.classified || opts.busy,
+    },
+    { id: 'mitigate-spectrum', label: 'שיבוש ספקטרום רחב', icon: ScanLine,
+      onClick: (e) => e.stopPropagation(),
+      disabled: !opts.classified || opts.busy,
+    },
+  ];
+}
+
 function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardContext): CardAction[] {
   const actions: CardAction[] = [];
   const isSuccess = target.status === 'event_resolved' || target.status === 'event_neutralized';
@@ -232,128 +252,185 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
 
   if (isSuccess || isExpired) return actions;
 
-  // Post-jam BDA: camera verification + complete (highest priority after success/expired)
+  // Post-jam BDA: same two-row shell as pre-jam (completed split + investigation grid)
   if (target.missionType === 'jamming' && target.missionStatus === 'waiting_confirmation') {
     const cameraActive = !!ctx.isCameraActive;
     const countdown = ctx.controlRequestCountdown;
     const allBusy = !!ctx.allCamerasBusy;
+
+    actions.push({
+      id: 'mitigate',
+      label: 'שיבוש הושלם',
+      group: 'effector',
+      onClick: (e) => e.stopPropagation(),
+      effectorStatusStrip: { label: 'שיבוש הושלם', icon: Check, tone: 'success' },
+    });
 
     if (countdown != null && countdown > 0) {
       actions.push({
         id: 'bda-camera',
         label: `${countdown} שניות לשליטה...`,
         icon: Timer,
-        variant: 'glass' as const,
-        size: 'lg' as const,
+        variant: 'secondary' as const,
+        size: 'sm' as const,
+        group: 'investigation' as const,
+        disabled: true,
         onClick: (e: React.MouseEvent) => { e.stopPropagation(); },
-        className: 'opacity-80 ring-1 ring-amber-400/40 cursor-wait',
+        className: 'ring-1 ring-amber-400/35',
       });
     } else if (allBusy && !cameraActive) {
       actions.push({
         id: 'bda-camera',
         label: 'בקש שליטה על מצלמה',
         icon: Lock,
-        variant: 'glass' as const,
-        size: 'lg' as const,
+        variant: 'secondary' as const,
+        size: 'sm' as const,
+        group: 'investigation' as const,
         onClick: (e: React.MouseEvent) => { e.stopPropagation(); callbacks.onRequestCameraControl?.(); },
-        className: 'ring-2 ring-amber-400/50 shadow-[0_0_12px_rgba(251,191,36,0.3)] text-amber-300',
+        className: 'ring-1 ring-amber-400/40',
       });
     } else if (cameraActive) {
       actions.push({
         id: 'bda-camera',
         label: 'בטל מצלמה',
         icon: EyeOff,
-        variant: 'glass' as const,
-        size: 'lg' as const,
+        variant: 'secondary' as const,
+        size: 'sm' as const,
+        group: 'investigation' as const,
         onClick: (e: React.MouseEvent) => { e.stopPropagation(); callbacks.onBdaCamera?.(); },
-        className: 'ring-1 ring-white/20',
       });
     } else {
       actions.push({
         id: 'bda-camera',
         label: 'הפנה מצלמה לאימות',
         icon: Eye,
-        variant: 'primary' as const,
-        size: 'lg' as const,
+        variant: 'secondary' as const,
+        size: 'sm' as const,
+        group: 'investigation' as const,
         dataTour: 'cuas-cta-bda',
         onClick: (e: React.MouseEvent) => { e.stopPropagation(); callbacks.onBdaCamera?.(); },
       });
     }
 
-    actions.push(
-      { id: 'complete-mission', label: 'סיום משימה', icon: Check, variant: 'glass', size: 'lg',
-        dataTour: 'cuas-cta-complete',
-        onClick: (e) => { e.stopPropagation(); callbacks.onCompleteMission?.(); },
-        className: 'shadow-[0_0_0_1px_rgba(110,231,183,0.4)] bg-[rgba(110,231,183,0.15)] hover:bg-[rgba(110,231,183,0.25)] text-[#6ee7b7]' },
-    );
+    actions.push({
+      id: 'complete-mission',
+      label: 'סיום משימה',
+      icon: Check,
+      variant: 'secondary',
+      size: 'sm',
+      group: 'investigation',
+      dataTour: 'cuas-cta-complete',
+      onClick: (e) => { e.stopPropagation(); callbacks.onCompleteMission?.(); },
+    });
     return actions;
   }
 
-  // CUAS mitigation actions (classified drone, not bird)
-  if (isCuas && target.entityStage !== 'raw_detection' && target.classifiedType !== 'bird') {
+  // CUAS mitigation actions (drone, not bird)
+  if (isCuas && target.classifiedType !== 'bird') {
+    // Post-mitigation: same two-row layout (split effector row + investigation grid)
     if (target.mitigationStatus === 'mitigated') {
+      const bdaPending = !target.bdaStatus || target.bdaStatus === 'pending';
+
+      actions.push({
+        id: 'mitigate',
+        label: 'שיבוש הושלם',
+        group: 'effector',
+        onClick: (e) => e.stopPropagation(),
+        effectorStatusStrip: { label: 'שיבוש הושלם', icon: Check, tone: 'success' },
+      });
+
       actions.push({
         id: 'investigate-bda',
         label: 'תחקור — מעקב PTZ',
         icon: Eye,
         variant: 'primary',
-        size: 'lg',
+        size: 'sm',
+        group: 'investigation',
+        dataTour: 'cuas-cta-bda',
         onClick: (e) => { e.stopPropagation(); callbacks.onVerify?.('investigate'); },
-        className: 'animate-pulse ring-2 ring-cyan-400/50 shadow-[0_0_12px_rgba(34,211,238,0.3)]',
+        className:
+          'animate-pulse ring-2 ring-cyan-400/50 shadow-[0_0_12px_rgba(34,211,238,0.3)]',
       });
-      if (!target.bdaStatus || target.bdaStatus === 'pending') {
+
+      if (bdaPending) {
         actions.push({
           id: 'start-bda',
           label: 'אימות פגיעה — נעילת רחפן',
           icon: Crosshair,
           variant: 'secondary',
           size: 'sm',
+          group: 'investigation',
           onClick: (e) => { e.stopPropagation(); callbacks.onSendDroneVerification?.(); },
         });
+      } else {
+        actions.push({
+          id: 'dismiss-target',
+          label: 'ביטול',
+          icon: X,
+          variant: 'secondary',
+          size: 'sm',
+          group: 'investigation',
+          onClick: (e) => { e.stopPropagation(); callbacks.onDismiss?.('dismissed'); },
+        });
       }
+
       return actions;
     }
-    if (target.mitigationStatus === 'mitigating') {
+
+    const isMitigating = target.mitigationStatus === 'mitigating';
+    const investigationDisabled = isMitigating;
+    const investigationHoldTitle = isMitigating ? 'זמין לאחר סיום השיבוש' : undefined;
+
+    if (isMitigating) {
       actions.push({
         id: 'mitigate',
         label: 'משבש אות...',
-        icon: Zap,
+        icon: JamWaveIcon,
         variant: 'danger',
-        size: 'lg',
+        size: 'sm',
+        group: 'effector',
+        dataTour: 'cuas-cta-mitigate',
         loading: true,
+        disabled: true,
         onClick: (e) => e.stopPropagation(),
+        dropdownActions: cuasJamDropdown(callbacks, { classified: true, busy: true }),
       });
-      return actions;
+    } else {
+      actions.push({
+        id: 'mitigate',
+        label: 'שיבוש',
+        icon: JamWaveIcon,
+        variant: 'danger',
+        size: 'sm',
+        group: 'effector',
+        dataTour: 'cuas-cta-mitigate',
+        onClick: (e) => {
+          e.stopPropagation();
+          const effs = ctx.regulusEffectors?.filter(r => r.status === 'available') ?? [];
+          if (effs.length > 0) {
+            const [latS, lonS] = target.coordinates.split(',').map(s => parseFloat(s.trim()));
+            const sorted = effs.sort((a, b) => Math.hypot(a.lat - latS, a.lon - lonS) - Math.hypot(b.lat - latS, b.lon - lonS));
+            callbacks.onMitigate?.(sorted[0].id);
+          }
+        },
+        dropdownActions: cuasJamDropdown(callbacks, { classified: true, busy: false }),
+      });
     }
 
-    actions.push({
-      id: 'mitigate',
-      label: 'שיבוש',
-      icon: Zap,
-      variant: 'danger',
-      size: 'lg',
-      dataTour: 'cuas-cta-mitigate',
-      onClick: (e) => {
-        e.stopPropagation();
-        const effs = ctx.regulusEffectors?.filter(r => r.status === 'available') ?? [];
-        if (effs.length > 0) {
-          const [latS, lonS] = target.coordinates.split(',').map(s => parseFloat(s.trim()));
-          const sorted = effs.sort((a, b) => Math.hypot(a.lat - latS, a.lon - lonS) - Math.hypot(b.lat - latS, b.lon - lonS));
-          callbacks.onMitigate?.(sorted[0].id);
-        }
-      },
-      disabled: target.entityStage !== 'classified',
-    });
-
+    // Investigation row: same layout while mitigating; buttons held until jam completes
     actions.push(
-      { id: 'mitigate-all', label: 'מרחבי', icon: Radio, variant: 'secondary', size: 'sm',
-        onClick: (e) => { e.stopPropagation(); callbacks.onMitigateAll?.(); },
-        disabled: target.entityStage !== 'classified',
+      { id: 'investigate-camera', label: 'הפנה מצלמה', icon: Eye, variant: 'secondary', size: 'sm',
+        group: 'investigation',
+        onClick: (e) => { e.stopPropagation(); callbacks.onVerify?.('investigate'); },
+        disabled: investigationDisabled,
+        title: investigationHoldTitle,
       },
-      { id: 'lock', label: 'נעילה', icon: Crosshair, variant: 'secondary', size: 'sm',
-        onClick: (e) => e.stopPropagation(), disabled: target.entityStage !== 'classified' },
-      { id: 'track-cuas', label: 'מעקב', icon: Scan, variant: 'secondary', size: 'sm',
-        onClick: (e) => e.stopPropagation(), disabled: target.entityStage !== 'classified' },
+      { id: 'dismiss-target', label: 'ביטול', icon: X, variant: 'secondary', size: 'sm',
+        group: 'investigation',
+        onClick: (e) => { e.stopPropagation(); callbacks.onDismiss?.('dismissed'); },
+        disabled: investigationDisabled,
+        title: investigationHoldTitle,
+      },
     );
     return actions;
   }
@@ -361,11 +438,14 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
   // CUAS bird actions
   if (isCuas && target.classifiedType === 'bird') {
     actions.push(
-      { id: 'confirm-bird', label: 'אשר ציפור — סגור זיהוי', icon: Check, variant: 'amber', size: 'lg',
+      { id: 'confirm-bird', label: 'אשר ציפור — סגור זיהוי', icon: Check, variant: 'amber', size: 'sm',
+        group: 'effector',
         onClick: (e) => { e.stopPropagation(); callbacks.onDismiss?.('bird_confirmed'); } },
       { id: 'false-alarm', label: 'שווא', icon: Ban, variant: 'secondary', size: 'sm',
+        group: 'investigation',
         onClick: (e) => { e.stopPropagation(); callbacks.onDismiss?.('false_alarm'); } },
       { id: 'investigate-bird', label: 'תחקור', icon: Eye, variant: 'secondary', size: 'sm',
+        group: 'investigation',
         onClick: (e) => { e.stopPropagation(); callbacks.onVerify?.('investigate'); } },
     );
     return actions;
@@ -408,7 +488,7 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
     const dp = target.droneDeployment;
     if (['flying', 'on_station', 'low_battery'].includes(dp.phase)) {
       if (!dp.overridden) {
-        actions.push({ id: 'drone-pause', label: 'השהה', icon: Pause, variant: 'amber', size: 'md',
+        actions.push({ id: 'drone-pause', label: 'השהה', icon: Pause, variant: 'amber', size: 'sm',
           onClick: (e) => { e.stopPropagation(); callbacks.onDroneOverride?.(); } });
       } else {
         actions.push({ id: 'drone-resume', label: 'חדש', icon: Play, variant: 'primary', size: 'md',
@@ -460,7 +540,7 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
   const isMissionActive = target.missionStatus === 'planning' || target.missionStatus === 'executing' || target.missionStatus === 'waiting_confirmation';
   if (!isMissionActive) {
     if (isCritical || isSuspicion) {
-      actions.push({ id: 'jam-primary', label: 'שיבוש', icon: Zap, variant: 'danger', size: 'lg',
+      actions.push({ id: 'jam-primary', label: 'שיבוש', icon: JamWaveIcon, variant: 'danger', size: 'lg',
         onClick: (e) => { e.stopPropagation(); callbacks.onEngage?.('jamming'); } });
       actions.push(
         { id: 'surveillance', label: 'מעקב', icon: Eye, variant: 'secondary', size: 'sm',

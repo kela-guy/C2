@@ -2,7 +2,8 @@ import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 're
 import Map, { Marker, NavigationControl, Source, Layer, type MapRef } from 'react-map-gl';
 
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { Crosshair, AlertTriangle, ShieldAlert, Camera, CheckCircle2, Zap, Radio, Search, Eye, MapPin, X, Compass, Circle, Video, Info, Settings, BellOff, Wrench, ExternalLink, Maximize2 } from 'lucide-react';
+import { Crosshair, AlertTriangle, ShieldAlert, Camera, CheckCircle2, Radio, Search, Eye, MapPin, X, Compass, Circle, Video, Info, Settings, BellOff, Wrench, ExternalLink, Maximize2 } from 'lucide-react';
+import { JamWaveIcon } from '@/primitives/MapIcons';
 import {
   ContextMenu,
   ContextMenuTrigger,
@@ -1326,12 +1327,12 @@ export const TacticalMap = ({
                       {target.classifiedType !== 'bird' && target.mitigationStatus !== 'mitigated' && (
                         <>
                           <ContextMenuItem onSelect={() => onContextMenuAction?.('mitigate', 'target', target.id)}>
-                            <Zap className="size-4" />
+                            <JamWaveIcon size={16} />
                             שיבוש
                           </ContextMenuItem>
                           <ContextMenuItem onSelect={() => onContextMenuAction?.('mitigate-all', 'target', target.id)}>
                             <Radio className="size-4" />
-                            שיבוש מרחבי
+                            שיבוש כללי
                           </ContextMenuItem>
                         </>
                       )}
@@ -1469,7 +1470,7 @@ export const TacticalMap = ({
                   הצג כיסוי
                 </ContextMenuItem>
                 <ContextMenuItem onSelect={() => onContextMenuAction?.('activate', 'effector', reg.id)}>
-                  <Zap className="size-4" />
+                  <JamWaveIcon size={16} />
                   הפעל שיבוש
                 </ContextMenuItem>
                 <ContextMenuSeparator />

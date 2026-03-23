@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   TargetCard,
   CardHeader,
@@ -459,6 +459,7 @@ export default function ListOfSystems({
   onTargetHover,
   thinMode,
 }: ListOfSystemsProps) {
+  const prefersReducedMotion = useReducedMotion();
   const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
   const [expandedBurstTargets, setExpandedBurstTargets] = useState<Set<string>>(new Set());
 
@@ -628,10 +629,10 @@ export default function ListOfSystems({
             <motion.div
               key={target.id}
               layout
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.2 }}
+              initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 8, filter: 'blur(4px)' }}
+              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+              exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
+              transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
               className="cursor-pointer"
               id={`detection-card-${target.id}`}
               {...(idx === 0 ? { 'data-tour': 'first-card' } : {})}

@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { Layers, Zap, ChevronDown } from 'lucide-react';
+import { Layers, ChevronDown } from 'lucide-react';
+import { JamWaveIcon } from './MapIcons';
 import { CARD_TOKENS } from './tokens';
 import { ActionButton } from './ActionButton';
 import type { Detection } from '../imports/ListOfSystems';
@@ -200,20 +201,25 @@ export function StackedCard({
                 }}
               >
                 {/* Bulk Actions */}
-                {onBulkMitigate && (
-                  <div className="px-2 py-2 flex items-center gap-1.5" style={{ boxShadow: `inset 0 -1px 0 0 ${d.surface.level2}`, backgroundColor: `rgba(255,255,255,${d.elevation.overlay.level2})` }}>
-                    <ActionButton
-                      label={`שיבוש הכל (${count})`}
-                      icon={Zap}
-                      variant="danger"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onBulkMitigate(burst.targets);
-                      }}
-                    />
-                  </div>
-                )}
+                {onBulkMitigate && (() => {
+                  const mitigatingCount = burst.targets.filter(t => t.mitigationStatus === 'mitigating').length;
+                  const isBulkMitigating = mitigatingCount > 0;
+                  return (
+                    <div className="px-2 py-2 flex items-center gap-1.5" style={{ boxShadow: `inset 0 -1px 0 0 ${d.surface.level2}`, backgroundColor: `rgba(255,255,255,${d.elevation.overlay.level2})` }}>
+                      <ActionButton
+                        label={isBulkMitigating ? `משבש אות... (${mitigatingCount}/${count})` : `שיבוש הכל (${count})`}
+                        icon={JamWaveIcon}
+                        variant="danger"
+                        size="sm"
+                        loading={isBulkMitigating}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onBulkMitigate(burst.targets);
+                        }}
+                      />
+                    </div>
+                  );
+                })()}
 
                 {/* Individual cards — no enter/exit animation to avoid jumping */}
                 <div className="max-h-[480px] overflow-y-auto custom-scrollbar">

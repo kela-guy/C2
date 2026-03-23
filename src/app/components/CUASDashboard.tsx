@@ -364,9 +364,12 @@ export const CUASDashboard = () => {
     if (!opts.silent) {
       setActiveTargetId(prev => prev !== null ? prev : targetId);
       if (!activeTargetId) setSidebarOpen(true);
+      const sensors = rawDetection.contributingSensors ?? [];
+      const sensorLabel = sensors[0]?.sensorId ?? 'חיישן';
+      const sensorCount = sensors.length > 1 ? ` (+${sensors.length - 1})` : '';
       showTacticalNotification({
         title: `זיהוי חדש — ${rawDetection.name}`,
-        message: `ביטחון ${rawDetection.confidence}% — ${rawDetection.contributingSensors?.[0]?.sensorId ?? 'חיישן'}`,
+        message: `ביטחון ${rawDetection.confidence}% — ${sensorLabel}${sensorCount}`,
         code: targetId,
         level: 'info',
       });
@@ -402,6 +405,12 @@ export const CUASDashboard = () => {
             { sensorId: 'SENS-NVT-MAGOS-N', sensorType: 'Magos', firstDetectedAt: t, lastDetectedAt: t },
           ];
           updated.actionLog = [...(tgt.actionLog || []), { time: t, label: 'חיישן נוסף — Magos North' }];
+          showTacticalNotification({
+            title: `חיישן נוסף — ${updated.name ?? tgt.name}`,
+            message: `ביטחון ${updated.confidence}% — SENS-NVT-MAGOS-N (+${updated.contributingSensors.length - 1})`,
+            code: targetId,
+            level: 'info',
+          });
         }
 
         if (step === 3 && tgt.entityStage === 'raw_detection') {
@@ -411,6 +420,12 @@ export const CUASDashboard = () => {
           ];
           updated.confidence = 65;
           updated.actionLog = [...(updated.actionLog || []), { time: t, label: 'חיישן נוסף — Elta MHR' }];
+          showTacticalNotification({
+            title: `חיישן נוסף — ${updated.name ?? tgt.name}`,
+            message: `ביטחון ${updated.confidence}% — RAD-NVT-ELTA (+${updated.contributingSensors.length - 1})`,
+            code: targetId,
+            level: 'info',
+          });
         }
 
         if (step === 5 && tgt.entityStage === 'raw_detection') {
@@ -579,14 +594,14 @@ export const CUASDashboard = () => {
 
   const handleMitigateAll = useCallback((targetId?: string) => {
     const available = regulusEffectors.filter(r => r.status === 'available');
-    toast.success(`שיבוש מרחבי הופעל — ${available.length} אפקטורים`);
+    toast.success(`שיבוש כללי הופעל — ${available.length} אפקטורים`);
 
     setRegulusEffectors(prev => prev.map(r =>
       r.status === 'available' ? { ...r, status: 'active' as const, activeTargetId: targetId } : r
     ));
 
     setTargets(prev => {
-      const logged = targetId ? appendLog(prev, targetId, `שיבוש מרחבי — ${available.length} אפקטורים`) : prev;
+      const logged = targetId ? appendLog(prev, targetId, `שיבוש כללי — ${available.length} אפקטורים`) : prev;
       return logged.map(t => {
         if (JAMMABLE_STATUSES.has(t.status) && t.mitigationStatus !== 'mitigated') {
           return { ...t, mitigationStatus: 'mitigating' as const, mitigatingEffectorId: 'ALL' };
@@ -597,7 +612,7 @@ export const CUASDashboard = () => {
 
     setTimeout(() => {
       setTargets(prev => {
-        const logged = targetId ? appendLog(prev, targetId, 'שיבוש מרחבי הושלם — ממתין לאימות') : prev;
+        const logged = targetId ? appendLog(prev, targetId, 'שיבוש כללי הושלם — ממתין לאימות') : prev;
         return logged.map(t =>
           t.mitigatingEffectorId === 'ALL' && t.mitigationStatus === 'mitigating'
             ? {

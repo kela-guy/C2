@@ -223,7 +223,7 @@ function DeviceRow({
               type="button"
               onClick={(e) => { e.stopPropagation(); onJamActivate?.(device.id); }}
               disabled={isDisabled}
-              className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-red-500/15 text-red-400 shadow-[0_0_0_1px_rgba(239,68,68,0.25)] hover:bg-red-500/25 active:scale-95 active:bg-red-500/30"
+              className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium transition-[background-color,transform] duration-150 ease-out disabled:opacity-40 disabled:cursor-not-allowed bg-[oklch(0.348_0.111_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)] hover:bg-[oklch(0.445_0.151_17)] active:scale-[0.98] active:bg-[oklch(0.295_0.082_17)]"
             >
               <JamIcon size={12} />
               {device.status === 'active' ? 'שיבוש פעיל' : 'הפעל'}
