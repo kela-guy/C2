@@ -1,6 +1,8 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { fn, expect } from 'storybook/test';
 import { CardSensors } from './CardSensors';
+import { SpecDocs } from '@/specs/SpecDocs';
+import { spec } from './CardSensors.spec';
 
 /** Module-scoped so Chromatic/build never drops a function-only arg from `args`. */
 const keyboardSensorClickSpy = fn();
@@ -20,6 +22,11 @@ const meta: Meta<typeof CardSensors> = {
 
 export default meta;
 type Story = StoryObj<typeof CardSensors>;
+
+export const Spec: StoryObj = {
+  render: () => <SpecDocs spec={spec} />,
+  parameters: { controls: { disable: true }, actions: { disable: true }, layout: 'fullscreen', a11y: { test: 'todo' }, specDocs: true },
+};
 
 export const Default: Story = {
   args: {

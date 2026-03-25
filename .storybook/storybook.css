@@ -9,9 +9,36 @@
 
 body {
   font-family: var(--font-sans);
-  background: #0b0d10 !important;
+  background: #0b0d10;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Storybook backgrounds addon wrapper: forces width + overflow:hidden via inline styles */
+#storybook-root > div,
+[id$="-inner"] > div {
+  width: 100% !important;
+  height: auto !important;
+  overflow: auto !important;
+}
+
+/* Docs view: remove Storybook's docs layout constraints */
+.sbdocs-wrapper {
+  padding: 20px !important;
+}
+
+.sbdocs-content {
+  max-width: 100% !important;
+}
+
+.sbdocs-preview {
+  overflow: visible !important;
+  height: auto !important;
+}
+
+.docs-story {
+  overflow: visible !important;
+  height: auto !important;
 }
 
 @keyframes missile-pulse {

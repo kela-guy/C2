@@ -16,7 +16,7 @@ export function StatusChip({ label, color = "green", className = "" }: { label: 
   }
 
   return (
-    <div className={`${bg} flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium ${text} ${className}`} role="status">
+    <div className={`${bg} flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap min-w-[3.5rem] ${text} ${className}`} role="status">
       {label}
     </div>
   );

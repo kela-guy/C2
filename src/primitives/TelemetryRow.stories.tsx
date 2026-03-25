@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { TelemetryRow } from './TelemetryRow';
 import { MapPin, Ruler, Mountain, Activity, Clock } from 'lucide-react';
+import { SpecDocs } from '@/specs/SpecDocs';
+import { spec } from './TelemetryRow.spec';
 
 const meta = {
   title: 'Primitives/TelemetryRow',
@@ -14,6 +16,11 @@ const meta = {
 } satisfies Meta<typeof TelemetryRow>;
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+export const Spec: StoryObj = {
+  render: () => <SpecDocs spec={spec} />,
+  parameters: { controls: { disable: true }, actions: { disable: true }, layout: 'fullscreen', a11y: { test: 'todo' }, specDocs: true },
+};
 
 export const Default: Story = {
   args: { label: 'מיקום', value: '32.0853° N, 34.7818° E', icon: MapPin },

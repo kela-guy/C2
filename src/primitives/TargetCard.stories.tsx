@@ -1,9 +1,11 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { fn, expect } from 'storybook/test';
 import { TargetCard } from './TargetCard';
 import { CardHeader } from './CardHeader';
 import { StatusChip } from './StatusChip';
 import { Target } from 'lucide-react';
+import { SpecDocs } from '@/specs/SpecDocs';
+import { spec } from './TargetCard.spec';
 
 const meta: Meta<typeof TargetCard> = {
   title: 'TargetCard/Shell',
@@ -28,6 +30,11 @@ const meta: Meta<typeof TargetCard> = {
 
 export default meta;
 type Story = StoryObj<typeof TargetCard>;
+
+export const Spec: StoryObj = {
+  render: () => <SpecDocs spec={spec} />,
+  parameters: { controls: { disable: true }, actions: { disable: true }, layout: 'fullscreen', a11y: { test: 'todo' }, specDocs: true },
+};
 
 export const ExpandCollapse: Story = {
   name: 'Expand / Collapse',

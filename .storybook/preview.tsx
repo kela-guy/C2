@@ -29,25 +29,53 @@ function RTLWrapper({ children }: { children: React.ReactNode }) {
   );
 }
 
+function SpecWrapper({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    document.documentElement.setAttribute('dir', 'ltr');
+    document.body.setAttribute('dir', 'ltr');
+    document.body.style.background = '#f7f7f8';
+    document.body.style.margin = '0';
+    return () => {
+      document.documentElement.removeAttribute('dir');
+      document.body.removeAttribute('dir');
+      document.body.style.background = '';
+      document.body.style.margin = '';
+    };
+  }, []);
+
+  return <>{children}</>;
+}
+
 const preview: Preview = {
   decorators: [
-    (Story) => (
-      <TooltipProvider delayDuration={200}>
-        <RTLWrapper>
-          <Story />
-        </RTLWrapper>
-      </TooltipProvider>
-    ),
+    (Story, context) => {
+      if (context.parameters?.specDocs) {
+        return (
+          <TooltipProvider delayDuration={200}>
+            <SpecWrapper>
+              <Story />
+            </SpecWrapper>
+          </TooltipProvider>
+        );
+      }
+      return (
+        <TooltipProvider delayDuration={200}>
+          <RTLWrapper>
+            <Story />
+          </RTLWrapper>
+        </TooltipProvider>
+      );
+    },
   ],
+
   parameters: {
     layout: 'fullscreen',
 
     backgrounds: {
-      default: 'dark',
-      values: [
-        { name: 'dark', value: '#0b0d10' },
-        { name: 'light', value: '#ffffff' },
-      ],
+      options: {
+        dark: { name: 'dark', value: '#0b0d10' },
+        light: { name: 'light', value: '#ffffff' }
+      }
     },
 
     controls: {
@@ -58,11 +86,14 @@ const preview: Preview = {
     },
 
     a11y: {
-      // 'todo' - show a11y violations in the test UI only
-      // 'error' - fail CI on a11y violations
-      // 'off' - skip a11y checks entirely
       test: 'error'
     }
   },
+
+  initialGlobals: {
+    backgrounds: {
+      value: 'dark'
+    }
+  }
 };
 export default preview;

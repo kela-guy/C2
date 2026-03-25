@@ -1,15 +1,22 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
+import { useDrop } from 'react-dnd';
 import { TacticalMap, CAMERA_ASSETS, REGULUS_EFFECTORS, bearingDegrees, haversineDistanceM } from './TacticalMap';
 import { NotificationSystem, showTacticalNotification } from './NotificationSystem';
 import { NotificationCenter } from './NotificationCenter';
 import ListOfSystems from '@/imports/ListOfSystems';
 import type { Detection, RegulusEffector } from '@/imports/ListOfSystems';
-import { List, Bell, Radar, BookOpen, HelpCircle, Target } from 'lucide-react';
-import { DevicesPanel, DevicesIcon } from './DevicesPanel';
+import { List, Bell, Radar, BookOpen, HelpCircle, Target, Video } from 'lucide-react';
+import { DevicesPanel, DevicesIcon, DEVICE_CAMERA_DRAG_TYPE } from './DevicesPanel';
+import type { DeviceCameraDragItem } from './DevicesPanel';
+import { CameraViewerPanel } from './CameraViewerPanel';
+import type { CameraFeed } from './CameraViewerPanel';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/app/components/ui/resizable';
 import { LAYOUT_TOKENS } from '@/primitives/tokens';
 import { toast } from 'sonner';
 import Joyride from 'react-joyride';
 import { useCuasTour } from '../hooks/useCuasTour';
+import { getPriorityBaseline } from '@/imports/useActivityStatus';
 
 function CuasIcon({ size = 20, className = '' }: { size?: number; className?: string }) {
   return (
@@ -53,15 +60,77 @@ export interface FriendlyDrone {
 const FRIENDLY_PATROL_ROUTES: { id: string; name: string; altitude: string; waypoints: [number, number][] }[] = [
   {
     id: 'FRIENDLY-01', name: 'סיור-3', altitude: '80 מ׳',
-    waypoints: [[31.218, 34.652], [31.220, 34.656], [31.222, 34.654], [31.219, 34.650]],
+    waypoints: [[32.4746, 34.9883], [32.4766, 34.9923], [32.4786, 34.9903], [32.4756, 34.9863]],
   },
   {
     id: 'FRIENDLY-02', name: 'תצפית-7', altitude: '110 מ׳',
-    waypoints: [[31.225, 34.678], [31.227, 34.675], [31.224, 34.672], [31.223, 34.676]],
+    waypoints: [[32.4816, 35.0143], [32.4836, 35.0113], [32.4806, 35.0083], [32.4796, 35.0123]],
   },
 ];
 
+function SplitLeftIcon({ className }: { className?: string }) {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+         className={className} aria-hidden="true">
+      <rect x="2" y="3" width="20" height="18" rx="2"
+            stroke="currentColor" strokeWidth="1.5" />
+      <rect x="2" y="3" width="8" height="18" rx="2"
+            fill="currentColor" fillOpacity="0.15" />
+      <line x1="10" y1="3" x2="10" y2="21"
+            stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+function SplitDropZone({
+  onDrop,
+  visible,
+}: {
+  onDrop: (item: DeviceCameraDragItem) => void;
+  visible: boolean;
+}) {
+  const shouldReduceMotion = useReducedMotion();
+  const [{ isOver }, dropRef] = useDrop(() => ({
+    accept: DEVICE_CAMERA_DRAG_TYPE,
+    drop: (item: DeviceCameraDragItem) => onDrop(item),
+    collect: (monitor) => ({ isOver: monitor.isOver() }),
+  }), [onDrop]);
+
+  const hiddenX = shouldReduceMotion ? 0 : '-100%';
+
+  return (
+    <div ref={dropRef} className={`absolute left-3 top-3 bottom-3 z-20 w-[180px] ${!visible ? 'pointer-events-none' : ''}`}>
+      <motion.div
+        animate={visible
+          ? { x: 0, opacity: 1 }
+          : { x: hiddenX, opacity: 0 }}
+        transition={shouldReduceMotion
+          ? { duration: 0.15 }
+          : { type: 'spring', duration: 0.45, bounce: 0.15 }}
+        className={`w-full h-full
+          flex flex-col items-center justify-center gap-2
+          rounded-xl border-2 border-dashed backdrop-blur-sm
+          shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_8px_24px_-4px_rgba(0,0,0,0.5)]
+          transition-[background-color,border-color] duration-200 ease-out
+          ${isOver
+            ? 'border-sky-400/40 bg-[#1c2028]/95'
+            : 'border-white/[0.15] bg-[#181818]/95'}`}
+      >
+        <SplitLeftIcon className={`transition-colors duration-150 ease-out
+          ${isOver ? 'text-white/60' : 'text-white/25'}`} />
+        <span className={`text-[11px] transition-colors duration-150 ease-out
+          ${isOver ? 'text-white/60' : 'text-white/30'}`} dir="rtl">
+          {isOver ? 'שחרר כדי לצפות' : 'גרור לכאן'}
+        </span>
+      </motion.div>
+    </div>
+  );
+}
+
 export const CUASDashboard = () => {
+  // #region agent log
+  // removed old session log
+  // #endregion
   const [activeTargetId, setActiveTargetId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [devicesPanelOpen, setDevicesPanelOpen] = useState(false);
@@ -74,6 +143,12 @@ export const CUASDashboard = () => {
     }
   }, [panelSwitching]);
 
+  useEffect(() => {
+    return () => {
+      if (cameraPointingTimeoutRef.current) clearTimeout(cameraPointingTimeoutRef.current);
+    };
+  }, []);
+
   const [targets, setTargets] = useState<Detection[]>([]);
   const [hoveredSensorIdFromCard, setHoveredSensorIdFromCard] = useState<string | null>(null);
   const [hoveredTargetIdFromCard, setHoveredTargetIdFromCard] = useState<string | null>(null);
@@ -83,6 +158,37 @@ export const CUASDashboard = () => {
   const [simulationMenuOpen, setSimulationMenuOpen] = useState(false);
   const [mapFocusRequest, setMapFocusRequest] = useState<{ lat: number; lon: number } | null>(null);
   const [allCamerasBusyForTarget, setAllCamerasBusyForTarget] = useState<string | null>(null);
+  const [cameraPointingTargetId, setCameraPointingTargetId] = useState<string | null>(null);
+  const cameraPointingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [cameraViewerFeeds, setCameraViewerFeeds] = useState<CameraFeed[]>([]);
+  const isCameraViewerOpen = cameraViewerFeeds.length > 0;
+
+  useEffect(() => {
+    if (cameraViewerFeeds.length === 0) {
+      setHoveredSensorIdFromCard(null);
+    }
+  }, [cameraViewerFeeds.length]);
+
+  const handleCameraDrop = useCallback((item: DeviceCameraDragItem) => {
+    setCameraViewerFeeds(prev => {
+      const already = prev.find(f => f.cameraId === item.cameraId);
+      if (already) return prev;
+      return [...prev, { cameraId: item.cameraId }];
+    });
+  }, []);
+
+  const [{ canDropOnMap }, mapDropRef] = useDrop(() => ({
+    accept: DEVICE_CAMERA_DRAG_TYPE,
+    collect: (monitor) => ({
+      canDropOnMap: monitor.canDrop(),
+    }),
+  }), []);
+
+  const [sidebarWidth, setSidebarWidth] = useState(LAYOUT_TOKENS.sidebarWidthPx);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isSnapping, setIsSnapping] = useState(false);
+  const asideRef = useRef<HTMLElement>(null);
   const [cameraControlRequest, setCameraControlRequest] = useState<{ targetId: string; countdown: number } | null>(null);
   const [friendlyDrones, setFriendlyDrones] = useState<FriendlyDrone[]>(() =>
     FRIENDLY_PATROL_ROUTES.map(r => ({
@@ -237,8 +343,8 @@ export const CUASDashboard = () => {
   }>>({});
 
   // Asset area bounds (derived from sensor/camera/radar positions with padding)
-  const AREA_MIN_LAT = 31.194, AREA_MAX_LAT = 31.224;
-  const AREA_MIN_LON = 34.645, AREA_MAX_LON = 34.690;
+  const AREA_MIN_LAT = 32.4506, AREA_MAX_LAT = 32.4806;
+  const AREA_MIN_LON = 34.9813, AREA_MAX_LON = 35.0263;
 
   useEffect(() => {
     const TICK_MS = 250;
@@ -337,9 +443,11 @@ export const CUASDashboard = () => {
       type: 'unknown',
       status: 'detection',
       timestamp: now(),
+      createdAtMs: Date.now(),
       coordinates: `${opts.startLat.toFixed(5)}, ${opts.startLon.toFixed(5)}`,
       distance: '3.2 ק״מ',
       entityStage: 'raw_detection',
+      priority: getPriorityBaseline({ status: 'detection', entityStage: 'raw_detection', flowType: 5 }),
       confidence: 20,
       contributingSensors: [{
         sensorId: 'RAD-NVT-RADA',
@@ -362,8 +470,6 @@ export const CUASDashboard = () => {
     setTargets(prev => [...prev, rawDetection]);
 
     if (!opts.silent) {
-      setActiveTargetId(prev => prev !== null ? prev : targetId);
-      if (!activeTargetId) setSidebarOpen(true);
       const sensors = rawDetection.contributingSensors ?? [];
       const sensorLabel = sensors[0]?.sensorId ?? 'חיישן';
       const sensorCount = sensors.length > 1 ? ` (+${sensors.length - 1})` : '';
@@ -443,6 +549,7 @@ export const CUASDashboard = () => {
             updated.confidence = 92;
             updated.status = 'event';
           }
+          updated.priority = getPriorityBaseline(updated);
           updated.actionLog = [...(updated.actionLog || []), { time: t, label: opts.isBird ? 'סווג כציפור — ביטחון 85%' : 'סווג כרחפן — ביטחון 92%' }];
           setTimeout(() => {
             showTacticalNotification({
@@ -479,14 +586,14 @@ export const CUASDashboard = () => {
     if (cuasIntervalRef3.current) clearInterval(cuasIntervalRef3.current);
 
     spawnCuasTarget({
-      startLat: 31.235, startLon: 34.695, endLat: 31.210, endLon: 34.665,
+      startLat: 32.4916, startLon: 35.0313, endLat: 32.4666, endLon: 35.0013,
       nameSuffix: String(Math.floor(Math.random() * 900) + 100),
       intervalRef: cuasIntervalRef,
     });
 
     setTimeout(() => {
       spawnCuasTarget({
-        startLat: 31.190, startLon: 34.635, endLat: 31.208, endLon: 34.660,
+        startLat: 32.4466, startLon: 34.9713, endLat: 32.4646, endLon: 34.9963,
         nameSuffix: String(Math.floor(Math.random() * 900) + 100),
         intervalRef: cuasIntervalRef2,
       });
@@ -494,7 +601,7 @@ export const CUASDashboard = () => {
 
     setTimeout(() => {
       spawnCuasTarget({
-        startLat: 31.240, startLon: 34.660, endLat: 31.215, endLon: 34.670,
+        startLat: 32.4966, startLon: 34.9963, endLat: 32.4716, endLon: 35.0063,
         nameSuffix: String(Math.floor(Math.random() * 900) + 100),
         intervalRef: cuasIntervalRef3,
         isBird: true,
@@ -509,7 +616,7 @@ export const CUASDashboard = () => {
     if (cuasIntervalRef.current) clearInterval(cuasIntervalRef.current);
 
     const id = spawnCuasTarget({
-      startLat: 31.235, startLon: 34.695, endLat: 31.210, endLon: 34.665,
+      startLat: 32.4916, startLon: 35.0313, endLat: 32.4666, endLon: 35.0013,
       nameSuffix: String(Math.floor(Math.random() * 900) + 100),
       intervalRef: cuasIntervalRef,
     });
@@ -527,8 +634,8 @@ export const CUASDashboard = () => {
     cuasMassRefs.current.forEach(ref => clearInterval(ref));
     cuasMassRefs.current = [];
 
-    const baseLat = 31.210;
-    const baseLon = 34.665;
+    const baseLat = 32.4666;
+    const baseLon = 35.0013;
     const count = 20;
 
     for (let i = 0; i < count; i++) {
@@ -632,7 +739,7 @@ export const CUASDashboard = () => {
   const handleCompleteMission = useCallback((targetId: string) => {
     setTargets(prev => prev.map(t => {
       if (t.id !== targetId) return t;
-      return { ...t, missionStatus: 'complete' as const, status: 'event_neutralized' as const };
+      return { ...t, missionStatus: 'complete' as const, status: 'event_neutralized' as const, activityStatus: 'mitigated' as const };
     }));
     toast.success('משימה הושלמה בהצלחה');
   }, []);
@@ -711,21 +818,21 @@ export const CUASDashboard = () => {
   const handleBdaOutcome = useCallback((targetId: string, outcome: 'neutralized' | 'active' | 'lost') => {
     if (outcome === 'neutralized') {
       setTargets(prev => appendLog(prev, targetId, 'BDA — נוטרל').map(t =>
-        t.id === targetId ? { ...t, bdaStatus: 'complete' as const, status: 'event_neutralized' } : t
+        t.id === targetId ? { ...t, bdaStatus: 'complete' as const } : t
       ));
-      toast.success('יעד נוטרל בהצלחה');
+      toast.success('יעד נוטרל — לחץ סיום משימה להעברה לטופל');
     } else if (outcome === 'active') {
       setTargets(prev => appendLog(prev, targetId, 'BDA — עדיין פעיל').map(t =>
-        t.id === targetId ? { ...t, bdaStatus: undefined, mitigationStatus: 'idle' as const, mitigatingEffectorId: undefined } : t
+        t.id === targetId ? { ...t, bdaStatus: undefined, mitigationStatus: 'idle' as const, mitigatingEffectorId: undefined, activityStatus: undefined } : t
       ));
       toast.warning('יעד עדיין פעיל — ניתן לשבש שוב');
     } else {
       const now = new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       const tgt = targets.find(t => t.id === targetId);
       setTargets(prev => appendLog(prev, targetId, 'BDA — אבד מגע').map(t =>
-        t.id === targetId ? { ...t, bdaStatus: 'complete' as const, status: 'expired', lastSeenAt: now, lastSeenCoordinates: tgt?.coordinates } : t
+        t.id === targetId ? { ...t, bdaStatus: 'complete' as const, lastSeenAt: now, lastSeenCoordinates: tgt?.coordinates } : t
       ));
-      toast('יעד אבד — נרשם מיקום אחרון');
+      toast('יעד אבד — לחץ סיום משימה להעברה לטופל');
     }
     setCameraLookAtRequest(null);
   }, [targets]);
@@ -749,11 +856,20 @@ export const CUASDashboard = () => {
       if (d < bestDist) { bestDist = d; bestCam = cam; }
     }
     if (bestCam) {
-      setCameraLookAtRequest({ cameraId: bestCam.id, targetLat: lat, targetLon: lon });
+      if (cameraPointingTimeoutRef.current) clearTimeout(cameraPointingTimeoutRef.current);
+      setCameraPointingTargetId(targetId);
       setActiveTargetId(targetId);
       setSidebarOpen(true);
-      setTargets(prev => appendLog(prev, targetId, `מצלמה ${bestCam!.typeLabel} נועלת על המטרה`));
-      toast.success(`${bestCam.typeLabel} מפנה לאימות — נועלת על מטרה`);
+      setTargets(prev => appendLog(prev, targetId, `מצלמה ${bestCam!.typeLabel} מפנה למטרה...`));
+      toast.success(`${bestCam.typeLabel} מפנה לאימות...`);
+
+      const camRef = bestCam;
+      cameraPointingTimeoutRef.current = setTimeout(() => {
+        setCameraPointingTargetId(null);
+        setCameraLookAtRequest({ cameraId: camRef.id, targetLat: lat, targetLon: lon });
+        setTargets(prev => appendLog(prev, targetId, `מצלמה ${camRef.typeLabel} נעולה על המטרה`));
+        toast.success(`${camRef.typeLabel} נעולה על מטרה`);
+      }, 1500);
     }
   };
 
@@ -769,7 +885,7 @@ export const CUASDashboard = () => {
     const isFalseAlarm = reason === 'false_alarm';
     const newStatus = isBirdConfirm || isFalseAlarm ? 'event_resolved' as const : 'expired' as const;
     setTargets(prev => prev.map(t =>
-      t.id === targetId ? { ...t, status: newStatus, dismissReason: reason } : t
+      t.id === targetId ? { ...t, status: newStatus, dismissReason: reason, activityStatus: 'dismissed' as const } : t
     ));
     if (activeTargetId === targetId) setActiveTargetId(null);
     const messages: Record<string, string> = {
@@ -791,6 +907,51 @@ export const CUASDashboard = () => {
   const handleDeviceFlyTo = useCallback((lat: number, lon: number) => {
     setMapFocusRequest({ lat, lon });
     setTimeout(() => setMapFocusRequest(null), 100);
+  }, []);
+
+  const handleResizePointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    setIsSnapping(false);
+    document.body.style.userSelect = 'none';
+
+    const overlay = document.createElement('div');
+    overlay.id = 'resize-overlay';
+    Object.assign(overlay.style, {
+      position: 'fixed', inset: '0', zIndex: '9999', cursor: 'col-resize',
+    });
+    document.body.appendChild(overlay);
+
+    const onMove = (ev: PointerEvent) => {
+      const aside = asideRef.current;
+      if (!aside) return;
+      const parent = aside.parentElement;
+      if (!parent) return;
+      const parentRight = parent.getBoundingClientRect().right;
+      const newWidth = Math.round(
+        Math.max(LAYOUT_TOKENS.sidebarMinWidth, Math.min(LAYOUT_TOKENS.sidebarMaxWidth, parentRight - ev.clientX))
+      );
+      setSidebarWidth(newWidth);
+    };
+
+    const onUp = () => {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.body.style.userSelect = '';
+      const el = document.getElementById('resize-overlay');
+      if (el) el.remove();
+
+      setSidebarWidth(prev => {
+        const snapped = Math.round(prev / LAYOUT_TOKENS.sidebarSnapInterval) * LAYOUT_TOKENS.sidebarSnapInterval;
+        return Math.max(LAYOUT_TOKENS.sidebarMinWidth, Math.min(LAYOUT_TOKENS.sidebarMaxWidth, snapped));
+      });
+      setIsSnapping(true);
+      setIsDragging(false);
+      setTimeout(() => setIsSnapping(false), 200);
+    };
+
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
   }, []);
 
   const noopStr = () => {};
@@ -821,6 +982,20 @@ export const CUASDashboard = () => {
             title={devicesPanelOpen ? 'סגור מכשירים' : 'מכשירים'}
           >
             <DevicesIcon size={20} />
+          </button>
+
+          <button
+            onClick={() => {
+              if (isCameraViewerOpen) {
+                setCameraViewerFeeds([]);
+              } else {
+                setCameraViewerFeeds([{ cameraId: CAMERA_ASSETS[0]?.id ?? '' }]);
+              }
+            }}
+            className={`p-2.5 rounded-lg transition-colors ${isCameraViewerOpen ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
+            title={isCameraViewerOpen ? 'סגור מצלמות' : 'מצלמות'}
+          >
+            <Video size={20} strokeWidth={1.5} />
           </button>
 
           <div className="relative" data-cuas-sim-menu>
@@ -889,56 +1064,105 @@ export const CUASDashboard = () => {
         </div>
       </nav>
 
-      {/* Map */}
+      {/* Map + Camera Viewer Split */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0 relative" data-tour="cuas-map">
-        <TacticalMap
-          targets={targets}
-          activeTargetId={activeTargetId}
-          onMarkerClick={(id) => { setActiveTargetId(id); setSidebarOpen(true); setDevicesPanelOpen(false); }}
-          highlightedSensorIds={highlightedSensorIds}
-          hoveredSensorIdFromCard={hoveredSensorIdFromCard}
-          sensorFocusId={sensorFocusId}
-          onContextMenuAction={(action, elementType, elementId) => {
-            if (elementType === 'target') {
-              if (action === 'open-card') { setActiveTargetId(elementId); setSidebarOpen(true); }
-              else if (action === 'mitigate') { setActiveTargetId(elementId); setSidebarOpen(true); }
-              else if (action === 'mitigate-all') { handleMitigateAll(elementId); }
-              else if (action === 'dismiss') { handleDismiss(elementId); }
-              else if (action === 'track') { setActiveTargetId(elementId); setSidebarOpen(true); }
-              else if (action === 'investigate') { setActiveTargetId(elementId); setSidebarOpen(true); }
-            }
-          }}
-          cameraLookAtRequest={cameraLookAtRequest}
-          regulusEffectors={regulusEffectors}
-          focusCoords={null}
-          missileLaunchRequest={null}
-          onMissilePhaseChange={() => {}}
-          jammingTargetId={null}
-          jammingJammerAssetId={null}
-          jammingVerification={null}
-          onJammingVerificationComplete={() => {}}
-          controlIndicator={false}
-          fitBoundsPoints={null}
-          activeDrone={null}
-          missionRoute={null}
-          planningMode={false}
-          planningMissionType={undefined}
-          planningScanViz={null}
-          selectedAssetId={null}
-          onMapClick={() => {}}
-          friendlyDrones={friendlyDrones}
-          smoothFocusRequest={mapFocusRequest}
-          hoveredTargetIdFromCard={hoveredTargetIdFromCard}
+        <SplitDropZone
+          visible={canDropOnMap}
+          onDrop={handleCameraDrop}
         />
+        <ResizablePanelGroup direction="horizontal" className="flex-1">
+          <ResizablePanel
+            defaultSize={isCameraViewerOpen ? 55 : 100}
+            minSize={40}
+            onResize={() => window.dispatchEvent(new Event('resize'))}
+          >
+            <div ref={mapDropRef} className="relative w-full h-full">
+              <TacticalMap
+                targets={targets}
+                activeTargetId={activeTargetId}
+                onMarkerClick={(id) => { setActiveTargetId(id); setSidebarOpen(true); setDevicesPanelOpen(false); }}
+                highlightedSensorIds={highlightedSensorIds}
+                hoveredSensorIdFromCard={hoveredSensorIdFromCard}
+                sensorFocusId={sensorFocusId}
+                onContextMenuAction={(action, elementType, elementId) => {
+                  if (elementType === 'target') {
+                    if (action === 'open-card') { setActiveTargetId(elementId); setSidebarOpen(true); }
+                    else if (action === 'mitigate') { setActiveTargetId(elementId); setSidebarOpen(true); }
+                    else if (action === 'mitigate-all') { handleMitigateAll(elementId); }
+                    else if (action === 'dismiss') { handleDismiss(elementId); }
+                    else if (action === 'track') { setActiveTargetId(elementId); setSidebarOpen(true); }
+                    else if (action === 'investigate') { setActiveTargetId(elementId); setSidebarOpen(true); }
+                  } else if (elementType === 'sensor' && action === 'view-feed') {
+                    const cam = CAMERA_ASSETS.find(c => c.id === elementId);
+                    if (cam) {
+                      setCameraViewerFeeds(prev => {
+                        const already = prev.find(f => f.cameraId === elementId);
+                        if (already) return prev;
+                        if (prev.length === 0) return [{ cameraId: elementId }];
+                        if (prev.length === 1) return [...prev, { cameraId: elementId }];
+                        return [{ cameraId: elementId }, prev[1]];
+                      });
+                    }
+                  }
+                }}
+                cameraLookAtRequest={cameraLookAtRequest}
+                regulusEffectors={regulusEffectors}
+                focusCoords={null}
+                missileLaunchRequest={null}
+                onMissilePhaseChange={() => {}}
+                jammingTargetId={null}
+                jammingJammerAssetId={null}
+                jammingVerification={null}
+                onJammingVerificationComplete={() => {}}
+                controlIndicator={false}
+                fitBoundsPoints={null}
+                activeDrone={null}
+                missionRoute={null}
+                planningMode={false}
+                planningMissionType={undefined}
+                planningScanViz={null}
+                selectedAssetId={null}
+                onMapClick={() => {}}
+                friendlyDrones={friendlyDrones}
+                smoothFocusRequest={mapFocusRequest}
+                hoveredTargetIdFromCard={hoveredTargetIdFromCard}
+              />
+            </div>
+          </ResizablePanel>
+
+          {isCameraViewerOpen && (
+            <>
+              <ResizableHandle className="w-px bg-white/10 hover:bg-white/20 transition-colors duration-150 ease-out" />
+              <ResizablePanel defaultSize={45} minSize={25} maxSize={60} collapsible collapsedSize={0} onCollapse={() => setCameraViewerFeeds([])}>
+                <CameraViewerPanel
+                  feeds={cameraViewerFeeds}
+                  onFeedsChange={setCameraViewerFeeds}
+                  onCameraHover={setHoveredSensorIdFromCard}
+                />
+              </ResizablePanel>
+            </>
+          )}
+        </ResizablePanelGroup>
 
         {/* Right Sidebar */}
         <aside
+          ref={asideRef}
           className={`
-            absolute top-0 bottom-0 bg-[#141414] border-l border-white/10 flex flex-col ${panelSwitching ? '' : 'transition-all duration-300 ease-in-out'} z-10
+            absolute top-0 bottom-0 bg-[#141414] border-l border-white/10 flex flex-col ${panelSwitching || isDragging ? '' : isSnapping ? '' : 'transition-[transform,opacity] duration-300 ease-in-out'} z-10
             ${sidebarOpen ? 'translate-x-0 right-0' : 'translate-x-full right-0'}
           `}
-          style={{ width: LAYOUT_TOKENS.sidebarWidthPx }}
+          style={{
+            width: sidebarWidth,
+            ...(isDragging ? { transition: 'none', willChange: 'width' } : {}),
+            ...(isSnapping ? { transition: 'width 200ms ease-out' } : {}),
+          }}
         >
+          {sidebarOpen && (
+            <div
+              onPointerDown={handleResizePointerDown}
+              className={`absolute left-0 top-0 bottom-0 w-1.5 z-20 cursor-col-resize transition-colors ${isDragging ? 'bg-white/20' : 'bg-transparent hover:bg-white/10'}`}
+            />
+          )}
           <div className="px-4 pt-3 pb-2 border-b border-white/10">
             <h2 className="text-[11px] font-medium text-white/70 uppercase tracking-wider" dir="rtl">CUAS — מערכות פעילות ({targets.length})</h2>
           </div>
@@ -997,6 +1221,7 @@ export const CUASDashboard = () => {
                 const [lat, lon] = t.coordinates.split(',').map(s => parseFloat(s.trim()));
                 return Math.abs(lat - cameraLookAtRequest.targetLat) < 0.01 && Math.abs(lon - cameraLookAtRequest.targetLon) < 0.01;
               })?.id ?? null : null}
+              cameraPointingTargetId={cameraPointingTargetId}
               allCamerasBusyForTarget={allCamerasBusyForTarget}
               controlRequestCountdown={cameraControlRequest?.countdown ?? null}
               controlRequestTargetId={cameraControlRequest?.targetId ?? null}
@@ -1021,9 +1246,9 @@ export const CUASDashboard = () => {
             toast.success(`שיבוש הופעל — ${jammerId}`, { duration: 3000 });
           }}
           noTransition={panelSwitching}
+          width={sidebarWidth}
         />
 
-        <main className="flex-1 relative pointer-events-none min-h-0" />
       </div>
 
       <NotificationSystem />

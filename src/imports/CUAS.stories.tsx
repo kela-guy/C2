@@ -1,5 +1,7 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useState, useCallback } from 'react';
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 import {
   TargetCard,
   CardHeader,
@@ -272,14 +274,16 @@ export const DashboardDevices: StoryObj = {
     ),
   ],
   render: () => (
-    <DevicesPanel
-      open
-      onClose={noop}
-      onFlyTo={noop}
-      onDeviceHover={noop}
-      onJamActivate={noop}
-      noTransition
-    />
+    <DndProvider backend={HTML5Backend}>
+      <DevicesPanel
+        open
+        onClose={noop}
+        onFlyTo={noop}
+        onDeviceHover={noop}
+        onJamActivate={noop}
+        noTransition
+      />
+    </DndProvider>
   ),
 };
 
@@ -306,14 +310,16 @@ export const DashboardSideByIdSide: StoryObj = {
           />
         </div>
         <div style={{ position: 'relative', width: 400, overflow: 'hidden', borderRadius: 8 }}>
-          <DevicesPanel
-            open
-            onClose={noop}
-            onFlyTo={noop}
-            onDeviceHover={noop}
-            onJamActivate={noop}
-            noTransition
-          />
+          <DndProvider backend={HTML5Backend}>
+            <DevicesPanel
+              open
+              onClose={noop}
+              onFlyTo={noop}
+              onDeviceHover={noop}
+              onJamActivate={noop}
+              noTransition
+            />
+          </DndProvider>
         </div>
       </>
     );

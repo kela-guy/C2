@@ -1,7 +1,9 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { fn, expect } from 'storybook/test';
 import { CardClosure } from './CardClosure';
 import { INCIDENT_OUTCOMES } from '@/imports/ListOfSystems';
+import { SpecDocs } from '@/specs/SpecDocs';
+import { spec } from './CardClosure.spec';
 
 const meta: Meta<typeof CardClosure> = {
   title: 'TargetCard/Slots/CardClosure',
@@ -18,6 +20,11 @@ const meta: Meta<typeof CardClosure> = {
 
 export default meta;
 type Story = StoryObj<typeof CardClosure>;
+
+export const Spec: StoryObj = {
+  render: () => <SpecDocs spec={spec} />,
+  parameters: { controls: { disable: true }, actions: { disable: true }, layout: 'fullscreen', a11y: { test: 'todo' }, specDocs: true },
+};
 
 export const Default: Story = {
   args: {

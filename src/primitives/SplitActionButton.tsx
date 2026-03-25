@@ -37,10 +37,10 @@ const colorByVariant: Record<
   { base: string; hover: string; active: string; text: string }
 > = {
   primary: {
-    base: 'bg-[#1971c2]',
-    hover: 'hover:bg-[#228be6]',
-    active: 'active:bg-[#1864ab]',
-    text: 'text-white',
+    base: 'bg-[rgba(34,139,230,0.15)]',
+    hover: 'hover:bg-[rgba(34,139,230,0.25)]',
+    active: 'active:bg-[rgba(34,139,230,0.35)]',
+    text: 'text-[#74c0fc]',
   },
   /* Literal OKLCH so JIT always emits rules (matches :root tactical red scale, hue 17) */
   danger: {
@@ -72,7 +72,7 @@ const colorByVariant: Record<
 const sizeConfig = {
   sm: { height: 'min-h-[30px] h-[30px]', text: 'text-xs', icon: 11, chevronMin: 'min-w-[30px] w-[30px]', font: 'font-medium' },
   md: { height: 'min-h-8 h-8', text: 'text-xs', icon: 14, chevronMin: 'min-w-8 w-8', font: 'font-medium' },
-  lg: { height: 'min-h-10 h-10', text: 'text-[13px]', icon: 16, chevronMin: 'min-w-10 w-10', font: 'font-semibold' },
+  lg: { height: 'min-h-9 h-9', text: 'text-[13px]', icon: 16, chevronMin: 'min-w-9 w-9', font: 'font-semibold' },
 };
 
 export function SplitActionButton({

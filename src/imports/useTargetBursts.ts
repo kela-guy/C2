@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { Detection } from './ListOfSystems';
 import { TYPE_LABELS } from './useTargetFilters';
+import { getCreatedAtMs } from './useActivityStatus';
 
 const BURST_WINDOW_MS = 10_000;
 const MIN_BURST_SIZE = 4;
@@ -20,18 +21,6 @@ export function isBurst(item: BurstOrTarget): item is TargetBurst {
   return 'kind' in item && item.kind === 'burst';
 }
 
-function parseTimestamp(ts: string): number {
-  const d = new Date(ts);
-  if (!isNaN(d.getTime())) return d.getTime();
-  const parts = ts.match(/(\d{2}):(\d{2}):(\d{2})/);
-  if (parts) {
-    const today = new Date();
-    today.setHours(+parts[1], +parts[2], +parts[3], 0);
-    return today.getTime();
-  }
-  return 0;
-}
-
 function buildTypeBreakdown(targets: Detection[]): Record<string, number> {
   const counts: Record<string, number> = {};
   for (const t of targets) {
@@ -45,23 +34,18 @@ function buildTypeBreakdown(targets: Detection[]): Record<string, number> {
 export function groupIntoBursts(targets: Detection[]): BurstOrTarget[] {
   if (targets.length < MIN_BURST_SIZE) return targets;
 
-  const sorted = [...targets].sort(
-    (a, b) => parseTimestamp(a.timestamp) - parseTimestamp(b.timestamp),
-  );
-
   const groups: Detection[][] = [];
-  let current: Detection[] = [sorted[0]];
+  let current: Detection[] = [targets[0]];
 
-  for (let i = 1; i < sorted.length; i++) {
+  for (let i = 1; i < targets.length; i++) {
     const gap =
-      parseTimestamp(sorted[i].timestamp) -
-      parseTimestamp(sorted[i - 1].timestamp);
+      Math.abs(getCreatedAtMs(targets[i]) - getCreatedAtMs(targets[i - 1]));
 
     if (gap <= BURST_WINDOW_MS) {
-      current.push(sorted[i]);
+      current.push(targets[i]);
     } else {
       groups.push(current);
-      current = [sorted[i]];
+      current = [targets[i]];
     }
   }
   groups.push(current);
@@ -71,15 +55,13 @@ export function groupIntoBursts(targets: Detection[]): BurstOrTarget[] {
     if (group.length < MIN_BURST_SIZE) {
       result.push(...group);
     } else {
-      const byConfidence = [...group].sort(
-        (a, b) => (b.confidence ?? 0) - (a.confidence ?? 0),
-      );
+      const timestamps = group.map((target) => getCreatedAtMs(target));
       result.push({
         kind: 'burst',
         id: `burst-${group[0].id}`,
-        targets: byConfidence,
-        firstTimestamp: group[0].timestamp,
-        lastTimestamp: group[group.length - 1].timestamp,
+        targets: group,
+        firstTimestamp: group[timestamps.indexOf(Math.min(...timestamps))].timestamp,
+        lastTimestamp: group[timestamps.indexOf(Math.max(...timestamps))].timestamp,
         typeBreakdown: buildTypeBreakdown(group),
       });
     }

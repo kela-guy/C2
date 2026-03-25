@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from 'react';
 import Map, { Marker, NavigationControl, Source, Layer, type MapRef } from 'react-map-gl';
 
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -186,6 +186,12 @@ export const DroneHiveIcon = ({ size = 28, fill = "white" }: { size?: number; fi
   </svg>
 );
 
+export const LidarIcon = ({ size = 28, fill = "white" }: { size?: number; fill?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M17 4.5C17.1326 4.5 17.2597 4.55273 17.3535 4.64648C17.4473 4.74025 17.5 4.86739 17.5 5V9.99902C17.5 10.2752 17.2761 10.499 17 10.499H13.4502V13.1904L20.3877 21.6836C20.5096 21.833 20.5346 22.0396 20.4521 22.2139C20.3694 22.3884 20.1931 22.5 20 22.5H18C17.8571 22.5 17.7209 22.4389 17.626 22.332L13.4502 17.6201V21.9922C13.4502 22.2683 13.2263 22.4922 12.9502 22.4922H10.9502C10.6757 22.4921 10.4524 22.2706 10.4502 21.9961L10.4141 17.6377L6.37891 22.3262C6.28392 22.4365 6.14559 22.5 6 22.5H4C3.80746 22.5 3.63191 22.3895 3.54883 22.2158C3.46579 22.042 3.49029 21.8354 3.61133 21.6855L10.4502 13.2188V10.499L7 10.5C6.86741 10.5 6.74025 10.4473 6.64648 10.3535C6.55272 10.2597 6.5 10.1326 6.5 10V5.00098C6.5 4.72485 6.72388 4.501 7 4.50098L17 4.5ZM22.7227 2.58398C22.8761 2.48171 23.0738 2.47259 23.2363 2.55957C23.3986 2.64666 23.5 2.81578 23.5 3V7.66602C23.5 7.82024 23.4284 7.96584 23.3066 8.06055L20.3066 10.3945C20.1559 10.5117 19.9518 10.5331 19.7803 10.4492C19.6087 10.3653 19.5 10.191 19.5 10V5.00098C19.5 4.83384 19.5836 4.6777 19.7227 4.58496L22.7227 2.58398ZM4.5 10C4.5 10.191 4.39126 10.3653 4.21973 10.4492C4.04823 10.5331 3.84407 10.5117 3.69336 10.3945L0.693359 8.06055C0.571632 7.96584 0.500033 7.82024 0.5 7.66602V3L0.504883 2.93164C0.526526 2.77469 0.621703 2.63575 0.763672 2.55957C0.926245 2.47259 1.12393 2.48171 1.27734 2.58398L4.27734 4.58496C4.41639 4.6777 4.5 4.83384 4.5 5.00098V10Z" fill={fill} stroke="black" strokeLinejoin="round"/>
+  </svg>
+);
+
 export const LauncherIcon = ({ size = 34, fill = "white" }: { size?: number; fill?: string }) => (
   <svg width={size} height={size} viewBox="0 0 26 27" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M17.9444 13.5L18.5 13L18 4L9.13333 13.5H17.9444Z" fill={fill}/>
@@ -199,19 +205,27 @@ export const LauncherIcon = ({ size = 34, fill = "white" }: { size?: number; fil
 );
 
 export const CAMERA_ASSETS: MapAsset[] = [
-  { id: 'CAM-NVT-PTZ-N', latitude: 31.2180, longitude: 34.6620, typeLabel: 'PTZ Camera (North)', fovDeg: 90, bearingDeg: 350, Icon: CameraIcon },
-  { id: 'CAM-NVT-PIXELSIGHT', latitude: 31.2050, longitude: 34.6700, typeLabel: 'PixelSight', fovDeg: 360, bearingDeg: 0, Icon: CameraIcon },
+  { id: 'CAM-NVT-PTZ-N', latitude: 32.4746, longitude: 34.9983, typeLabel: 'PTZ Camera (North)', fovDeg: 90, bearingDeg: 350, Icon: CameraIcon },
+  { id: 'CAM-NVT-PIXELSIGHT', latitude: 32.4616, longitude: 35.0063, typeLabel: 'PixelSight', fovDeg: 360, bearingDeg: 0, Icon: CameraIcon },
 ];
 
 export const RADAR_ASSETS: MapAsset[] = [
-  { id: 'SENS-NVT-MAGOS-N', latitude: 31.2195, longitude: 34.6580, typeLabel: 'Magos (North)', fovDeg: 180, bearingDeg: 0, Icon: RadarIcon },
-  { id: 'SENS-NVT-MAGOS-S', latitude: 31.1965, longitude: 34.6720, typeLabel: 'Magos (South)', fovDeg: 180, bearingDeg: 180, Icon: RadarIcon },
-  { id: 'RAD-NVT-RADA', latitude: 31.2120, longitude: 34.6500, typeLabel: 'RADA ieMHR', fovDeg: 360, bearingDeg: 0, Icon: RadarIcon },
-  { id: 'RAD-NVT-ELTA', latitude: 31.2030, longitude: 34.6850, typeLabel: 'Elta MHR', fovDeg: 360, bearingDeg: 0, Icon: RadarIcon },
+  { id: 'SENS-NVT-MAGOS-N', latitude: 32.4761, longitude: 34.9943, typeLabel: 'Magos (North)', fovDeg: 180, bearingDeg: 0, Icon: RadarIcon },
+  { id: 'SENS-NVT-MAGOS-S', latitude: 32.4531, longitude: 35.0083, typeLabel: 'Magos (South)', fovDeg: 180, bearingDeg: 180, Icon: RadarIcon },
+  { id: 'RAD-NVT-RADA', latitude: 32.4686, longitude: 34.9863, typeLabel: 'RADA ieMHR', fovDeg: 360, bearingDeg: 0, Icon: RadarIcon },
+  { id: 'RAD-NVT-ELTA', latitude: 32.4596, longitude: 35.0213, typeLabel: 'Elta MHR', fovDeg: 360, bearingDeg: 0, Icon: RadarIcon },
 ];
 
 export const DRONE_HIVE_ASSETS: MapAsset[] = [
-  { id: 'HIVE-NVT-MAIN', latitude: 31.2100, longitude: 34.6650, typeLabel: 'Drone Hive', fovDeg: 0, bearingDeg: 0, Icon: DroneHiveIcon },
+  { id: 'HIVE-NVT-MAIN', latitude: 32.4666, longitude: 35.0013, typeLabel: 'Drone Hive', fovDeg: 0, bearingDeg: 0, Icon: DroneHiveIcon },
+];
+
+export const LIDAR_ASSETS: MapAsset[] = [
+  { id: 'LIDAR-NVT-01', latitude: 32.4706, longitude: 35.0103, typeLabel: 'LiDAR North', fovDeg: 360, bearingDeg: 0, Icon: LidarIcon },
+];
+
+export const WEAPON_SYSTEM_ASSETS: MapAsset[] = [
+  { id: 'WPN-NVT-01', latitude: 32.4586, longitude: 34.9923, typeLabel: 'Iron Dome', fovDeg: 0, bearingDeg: 0, Icon: LauncherIcon },
 ];
 
 // Regulus effector icon
@@ -224,20 +238,20 @@ export const RegulusIcon = () => (
 );
 
 export const REGULUS_EFFECTORS: RegulusEffector[] = [
-  { id: 'REG-NVT-NORTH', name: 'Regulus North', lat: 31.2210, lon: 34.6550, coverageRadiusM: 2500, status: 'available' },
-  { id: 'REG-NVT-EAST', name: 'Regulus East', lat: 31.2080, lon: 34.6850, coverageRadiusM: 2500, status: 'available' },
-  { id: 'REG-NVT-SOUTH', name: 'Regulus South', lat: 31.1960, lon: 34.6650, coverageRadiusM: 2500, status: 'available' },
-  { id: 'REG-NVT-WEST', name: 'Regulus West', lat: 31.2100, lon: 34.6400, coverageRadiusM: 2500, status: 'available' },
+  { id: 'REG-NVT-NORTH', name: 'Regulus North', lat: 32.4776, lon: 34.9913, coverageRadiusM: 2500, status: 'available' },
+  { id: 'REG-NVT-EAST', name: 'Regulus East', lat: 32.4646, lon: 35.0213, coverageRadiusM: 2500, status: 'available' },
+  { id: 'REG-NVT-SOUTH', name: 'Regulus South', lat: 32.4526, lon: 35.0013, coverageRadiusM: 2500, status: 'available' },
+  { id: 'REG-NVT-WEST', name: 'Regulus West', lat: 32.4666, lon: 34.9763, coverageRadiusM: 2500, status: 'available' },
 ];
 
-const ALL_MAP_ASSETS = [...CAMERA_ASSETS, ...RADAR_ASSETS];
-const ALL_RENDERABLE_ASSETS = [...ALL_MAP_ASSETS, ...DRONE_HIVE_ASSETS];
+const ALL_MAP_ASSETS = [...CAMERA_ASSETS, ...RADAR_ASSETS, ...LIDAR_ASSETS];
+const ALL_RENDERABLE_ASSETS = [...ALL_MAP_ASSETS, ...DRONE_HIVE_ASSETS, ...WEAPON_SYSTEM_ASSETS];
 
 export const LAUNCHER_ASSETS = [
   {
     id: 'LCHR-NVT',
-    latitude: 31.2060,
-    longitude: 34.6600,
+    latitude: 32.4626,
+    longitude: 34.9963,
   },
 ];
 
@@ -357,6 +371,23 @@ interface TacticalMapProps {
 const JAM_VERIFICATION_DURATION_MS = 4500;
 const JAM_VERIFICATION_DRONE_DURATION_MS = 4000;
 
+const TOOLTIP_BASE = 'bg-black/60 backdrop-blur-md rounded px-2 py-1 text-xs font-medium text-white whitespace-nowrap pointer-events-none';
+const TOOLTIP_SHADOW = 'shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_4px_12px_rgba(0,0,0,0.4)]';
+const TOOLTIP_SHADOW_CYAN = 'shadow-[0_0_0_1px_rgba(34,211,238,0.4),0_4px_12px_rgba(0,0,0,0.4)]';
+const TOOLTIP_POS_ABOVE = 'absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5';
+const TOOLTIP_HOVER = `${TOOLTIP_BASE} ${TOOLTIP_SHADOW} ${TOOLTIP_POS_ABOVE} z-50`;
+const TOOLTIP_HOVER_CYAN = `${TOOLTIP_BASE} ${TOOLTIP_SHADOW_CYAN} ${TOOLTIP_POS_ABOVE} z-50`;
+
+const TARGET_CARD_BASE = 'bg-black/60 backdrop-blur-md rounded px-2 py-1 text-xs font-medium text-white whitespace-nowrap';
+const TARGET_SHADOW_THREAT = 'shadow-[0_0_0_1px_rgba(239,68,68,0.25),0_4px_12px_rgba(0,0,0,0.4)]';
+const TARGET_SHADOW_BIRD = 'shadow-[0_0_0_1px_rgba(245,158,11,0.25),0_4px_12px_rgba(0,0,0,0.4)]';
+const TARGET_SHADOW_MITIGATED = 'shadow-[0_0_0_1px_rgba(113,113,122,0.3),0_4px_12px_rgba(0,0,0,0.4)]';
+const TARGET_SHADOW_HOVERED = 'shadow-[0_0_0_1px_rgba(255,255,255,0.35),0_4px_12px_rgba(0,0,0,0.4)]';
+
+const TELEMETRY_BASE = 'bg-black/60 backdrop-blur-md rounded px-2 py-1 font-mono text-xs tabular-nums whitespace-nowrap pointer-events-none select-none';
+const TELEMETRY_SHADOW_CYAN = 'shadow-[0_0_0_1px_rgba(34,211,238,0.4),0_4px_12px_rgba(0,0,0,0.4)]';
+const TELEMETRY_SHADOW_ZINC = 'shadow-[0_0_0_1px_rgba(113,113,122,0.4),0_4px_12px_rgba(0,0,0,0.4)]';
+
 export const TacticalMap = ({ 
   focusCoords, 
   targets = [], 
@@ -433,6 +464,10 @@ export const TacticalMap = ({
     }
   };
 
+  const nudgeRepaint = useCallback(() => {
+    try { getInnerMap()?.triggerRepaint?.(); } catch {}
+  }, []);
+
   useLayoutEffect(() => {
     const el = mapContainerRef.current;
     if (!el) return;
@@ -504,11 +539,11 @@ export const TacticalMap = ({
   }, [mapMountReady]);
 
   const [viewState, setViewState] = useState({
-    latitude: 31.2080,
-    longitude: 34.6650,
+    latitude: 32.4666,
+    longitude: 35.0013,
     zoom: 13.5,
-    pitch: 45,
-    bearing: -17.6,
+    pitch: 0,
+    bearing: 0,
     transitionDuration: 0,
   });
 
@@ -567,6 +602,32 @@ export const TacticalMap = ({
 
   const [mapStyleId, setMapStyleId] = useState<'dark' | 'satellite'>('satellite');
   const [flickeringSensorId, setFlickeringSensorId] = useState<string | null>(null);
+
+  const HIDDEN_LABEL_PREFIXES = ['poi-label', 'road-label', 'place-label', 'transit-label', 'natural-point-label', 'waterway-label', 'natural-line-label', 'road-number-shield', 'road-exit-shield'];
+  const hideMapLabels = useCallback((mapOrRef: unknown) => {
+    try {
+      const map = (mapOrRef as { getMap?: () => unknown }).getMap?.() ?? mapOrRef;
+      const m = map as { getStyle: () => { layers: { id: string }[] }; setLayoutProperty: (id: string, prop: string, val: string) => void };
+      const style = m.getStyle();
+      if (!style?.layers) return;
+      // #region agent log
+      const allLayerIds = style.layers.map((l: { id: string }) => l.id);
+      const fovLayers = allLayerIds.filter((id: string) => id.includes('fov') || id.includes('trail'));
+      const hiddenIds: string[] = [];
+      // #endregion
+      for (const layer of style.layers) {
+        if (HIDDEN_LABEL_PREFIXES.some(p => layer.id.startsWith(p))) {
+          m.setLayoutProperty(layer.id, 'visibility', 'none');
+          // #region agent log
+          hiddenIds.push(layer.id);
+          // #endregion
+        }
+      }
+      // #region agent log
+      fetch('http://127.0.0.1:7712/ingest/32f5ffc4-e504-4279-a051-598b5e0df724',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2bab72'},body:JSON.stringify({sessionId:'2bab72',location:'TacticalMap.tsx:hideMapLabels',message:'hideMapLabels executed',data:{totalLayers:allLayerIds.length,fovTrailLayers:fovLayers,hiddenCount:hiddenIds.length,hiddenSample:hiddenIds.slice(0,5)},timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
+      // #endregion
+    } catch {}
+  }, []);
 
   useEffect(() => {
     if (!sensorFocusId) return;
@@ -872,7 +933,12 @@ export const TacticalMap = ({
   }, [activeMissiles, onMissilePhaseChange]);
 
   const fovGeoJSON = useMemo(() => {
-    if (!hoveredAsset) return EMPTY_FC;
+    if (!hoveredAsset) {
+      // #region agent log
+      fetch('http://127.0.0.1:7712/ingest/32f5ffc4-e504-4279-a051-598b5e0df724',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2bab72'},body:JSON.stringify({sessionId:'2bab72',location:'TacticalMap.tsx:fovGeoJSON',message:'fovGeoJSON: no hoveredAsset',data:{hasHoveredAsset:false},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
+      // #endregion
+      return EMPTY_FC;
+    }
     if (hoveredAsset.id === cameraLookAtBearing?.cameraId) return EMPTY_FC;
     const ring = fovPolygon(
       hoveredAsset.latitude,
@@ -881,6 +947,11 @@ export const TacticalMap = ({
       hoveredAsset.bearingDeg,
       FOV_RADIUS_M
     );
+    // #region agent log
+    const hasNaN = ring.some(p => isNaN(p[0]) || isNaN(p[1]));
+    const bbox = ring.reduce((acc, p) => ({ minLon: Math.min(acc.minLon, p[0]), maxLon: Math.max(acc.maxLon, p[0]), minLat: Math.min(acc.minLat, p[1]), maxLat: Math.max(acc.maxLat, p[1]) }), { minLon: Infinity, maxLon: -Infinity, minLat: Infinity, maxLat: -Infinity });
+    fetch('http://127.0.0.1:7712/ingest/32f5ffc4-e504-4279-a051-598b5e0df724',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2bab72'},body:JSON.stringify({sessionId:'2bab72',location:'TacticalMap.tsx:fovGeoJSON',message:'fovGeoJSON: polygon built',data:{assetId:hoveredAsset.id,fovDeg:hoveredAsset.fovDeg,bearingDeg:hoveredAsset.bearingDeg,radiusM:FOV_RADIUS_M,ringPointCount:ring.length,hasNaN,bbox,firstPoint:ring[0],lastPoint:ring[ring.length-1]},timestamp:Date.now(),hypothesisId:'H4'})}).catch(()=>{});
+    // #endregion
     return {
       type: 'FeatureCollection' as const,
       features: [
@@ -893,10 +964,89 @@ export const TacticalMap = ({
     };
   }, [hoveredAsset, cameraLookAtBearing?.cameraId, EMPTY_FC]);
 
+
   useEffect(() => {
     const id = requestAnimationFrame(repaintMap);
+    // #region agent log
+    if (hoveredAsset) {
+      setTimeout(() => {
+        try {
+          const map = (mapRef.current as any)?.getMap?.() ?? mapRef.current;
+          if (map) {
+            const hasFovSource = !!map.getSource?.('fov-source');
+            const fovFillLayer = map.getLayer?.('fov-fill');
+            const fovLineLayer = map.getLayer?.('fov-line');
+            const style = map.getStyle?.();
+            const allLayerIds = style?.layers?.map((l: any) => l.id) ?? [];
+            const fovRelated = allLayerIds.filter((id: string) => id.includes('fov'));
+            const fovFillIdx = allLayerIds.indexOf('fov-fill');
+            const fovLineIdx = allLayerIds.indexOf('fov-line');
+            const src = hasFovSource ? map.getSource('fov-source') : null;
+            const sourceData = src?._data ?? null;
+            const featureCount = sourceData?.features?.length ?? -1;
+            const coordCount = sourceData?.features?.[0]?.geometry?.coordinates?.[0]?.length ?? -1;
+            const fillPaint = fovFillLayer ? { color: map.getPaintProperty?.('fov-fill','fill-color'), opacity: map.getPaintProperty?.('fov-fill','fill-opacity') } : null;
+            const linePaint = fovLineLayer ? { color: map.getPaintProperty?.('fov-line','line-color'), width: map.getPaintProperty?.('fov-line','line-width') } : null;
+            const renderedFeatures = map.queryRenderedFeatures?.(undefined, { layers: ['fov-fill'] }) ?? [];
+            const sourceFeatures = map.querySourceFeatures?.('fov-source') ?? [];
+            const fovFillVisibility = map.getLayoutProperty?.('fov-fill','visibility') ?? 'default';
+            const layersAboveFov = allLayerIds.slice(fovFillIdx + 1).filter((id: string) => !id.includes('fov'));
+            fetch('http://127.0.0.1:7712/ingest/32f5ffc4-e504-4279-a051-598b5e0df724',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2bab72'},body:JSON.stringify({sessionId:'2bab72',location:'TacticalMap.tsx:repaintEffect',message:'GL state on hover',data:{hoveredId:hoveredAsset.id,hasFovSource,glFeatureCount:featureCount,glCoordCount:coordCount,renderedFeatureCount:renderedFeatures.length,sourceFeatureCount:sourceFeatures.length,fovFillVisibility,fovFillLayerIdx:fovFillIdx,totalGlLayers:allLayerIds.length,layersAboveFov:layersAboveFov.slice(0,10),fillPaint,linePaint,canvasSize:[map.getCanvas?.()?.width,map.getCanvas?.()?.height]},timestamp:Date.now(),hypothesisId:'H2-H3-H7'})}).catch(()=>{});
+          }
+        } catch {}
+      }, 100);
+    }
+    // #endregion
     return () => cancelAnimationFrame(id);
   }, [hoveredAsset?.id, hoveredSensorIdFromCard, mapStyleId]);
+
+  useEffect(() => {
+    const t1 = setTimeout(nudgeRepaint, 0);
+    const t2 = setTimeout(nudgeRepaint, 60);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [fovGeoJSON, highlightedFovGeoJSON, targets, nudgeRepaint]);
+
+  // SVG overlay: project FOV polygon coordinates to screen pixels (bypasses Mapbox GL worker)
+  const fovSvgRef = useRef<SVGPolygonElement>(null);
+  const hlFovSvgRef = useRef<SVGPolygonElement>(null);
+
+  const projectGeoJSONToSvg = useCallback((map: any, geojson: any, svgEl: SVGPolygonElement | null) => {
+    if (!svgEl) return;
+    const features = geojson?.features;
+    if (!features?.length) { svgEl.setAttribute('points', ''); return; }
+    const coords = features[0].geometry.coordinates[0];
+    const pts = coords.map(([lon, lat]: [number, number]) => {
+      const p = map.project([lon, lat]);
+      return `${p.x},${p.y}`;
+    }).join(' ');
+    svgEl.setAttribute('points', pts);
+  }, []);
+
+  useEffect(() => {
+    const map = (mapRef.current as any)?.getMap?.() ?? mapRef.current;
+    if (!map) return;
+    const update = () => {
+      projectGeoJSONToSvg(map, fovGeoJSON, fovSvgRef.current);
+      projectGeoJSONToSvg(map, highlightedFovGeoJSON, hlFovSvgRef.current);
+    };
+    update();
+    map.on('move', update);
+    // #region agent log
+    fetch('http://127.0.0.1:7712/ingest/32f5ffc4-e504-4279-a051-598b5e0df724',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2bab72'},body:JSON.stringify({sessionId:'2bab72',location:'TacticalMap.tsx:fovSvgOverlay',message:'SVG overlay update',data:{fovFeatures:fovGeoJSON?.features?.length??0,hlFeatures:highlightedFovGeoJSON?.features?.length??0,hasFovRef:!!fovSvgRef.current,hasHlRef:!!hlFovSvgRef.current},timestamp:Date.now(),hypothesisId:'H12-svg'})}).catch(()=>{});
+    // #endregion
+    return () => { map.off('move', update); };
+  }, [fovGeoJSON, highlightedFovGeoJSON, projectGeoJSONToSvg]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const timer = setTimeout(() => hideMapLabels(map), 2000);
+    return () => clearTimeout(timer);
+  }, [mapStyleId, hideMapLabels]);
+
+  // #region agent log
+  {const _containerRect = mapContainerRef.current?.getBoundingClientRect(); if (hoveredAsset) { fetch('http://127.0.0.1:7712/ingest/32f5ffc4-e504-4279-a051-598b5e0df724',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2bab72'},body:JSON.stringify({sessionId:'2bab72',location:'TacticalMap.tsx:render',message:'render with hoveredAsset',data:{hoveredAssetId:hoveredAsset.id,fovFeatureCount:fovGeoJSON?.features?.length??0,containerW:_containerRect?Math.round(_containerRect.width):null,containerH:_containerRect?Math.round(_containerRect.height):null,mapMountReady,mapRefExists:!!mapRef.current},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{}); }}
+  // #endregion
 
   return (
     <div ref={mapContainerRef} className={`absolute inset-0 min-h-0 min-w-0 bg-[#0a0a0a] overflow-hidden z-0 ${planningMode ? 'cursor-crosshair' : ''}`}>
@@ -921,10 +1071,14 @@ export const TacticalMap = ({
           map.once('idle', () => {
             map.resize();
             map.triggerRepaint?.();
+            // #region agent log
+            try { const style = map.getStyle(); const layerIds = style?.layers?.map((l: { id: string }) => l.id) ?? []; const fovTrail = layerIds.filter((id: string) => id.includes('fov') || id.includes('trail')); fetch('http://127.0.0.1:7712/ingest/32f5ffc4-e504-4279-a051-598b5e0df724',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2bab72'},body:JSON.stringify({sessionId:'2bab72',location:'TacticalMap.tsx:onLoad:idle',message:'map idle after load',data:{totalLayers:layerIds.length,fovTrailLayers:fovTrail,canvasW:map.getCanvas?.()?.width,canvasH:map.getCanvas?.()?.height},timestamp:Date.now(),hypothesisId:'H2-H5'})}).catch(()=>{}); } catch {}
+            // #endregion
           });
           for (const ms of [100, 300, 600, 1200]) {
             setTimeout(() => { map.resize(); map.triggerRepaint?.(); }, ms);
           }
+          setTimeout(() => hideMapLabels(map), 2000);
         }}
         onMove={evt => setViewState(prev => ({ ...evt.viewState, transitionDuration: 0 }))}
         onClick={(evt) => {
@@ -961,17 +1115,11 @@ export const TacticalMap = ({
           </div>
         </div>
 
-        {/* FOV cone on hover (always mounted, data swapped) */}
-        <Source id="fov-source" type="geojson" data={fovGeoJSON}>
-          <Layer id="fov-fill" type="fill" paint={{ 'fill-color': 'rgba(34, 211, 238, 0.40)', 'fill-opacity': 1 }} />
-          <Layer id="fov-line" type="line" paint={{ 'line-color': 'rgba(34, 211, 238, 1.0)', 'line-width': 2.5 }} />
-        </Source>
-
-        {/* FOV for device card hover (always mounted, data swapped) */}
-        <Source id="highlighted-fov-source" type="geojson" data={highlightedFovGeoJSON}>
-          <Layer id="highlighted-fov-fill" type="fill" paint={{ 'fill-color': 'rgba(34, 211, 238, 0.40)', 'fill-opacity': 1 }} />
-          <Layer id="highlighted-fov-line" type="line" paint={{ 'line-color': 'rgba(34, 211, 238, 1.0)', 'line-width': 2.5 }} />
-        </Source>
+        {/* FOV SVG overlay — renders instantly via DOM, bypasses Mapbox GL worker */}
+        <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}>
+          <polygon ref={fovSvgRef} fill="rgba(34, 211, 238, 0.40)" stroke="rgba(34, 211, 238, 1.0)" strokeWidth={2.5} />
+          <polygon ref={hlFovSvgRef} fill="rgba(34, 211, 238, 0.40)" stroke="rgba(34, 211, 238, 1.0)" strokeWidth={2.5} />
+        </svg>
 
         {/* Post-jam verification: camera FOV cone pointing at target (hidden when camera look-at is active to avoid duplicates) */}
         {verificationFovGeoJSON && jammingVerification?.method === 'camera' && !cameraLookAtBearing && (
@@ -1056,7 +1204,7 @@ export const TacticalMap = ({
                 />
               </Source>
               <Marker latitude={midLat} longitude={midLon} anchor="center">
-                <div className="pointer-events-none select-none rounded bg-black/85 px-2 py-1 font-mono text-[10px] text-cyan-200 shadow-[0_0_0_1px_rgba(34,211,238,0.5),0_10px_15px_-3px_rgba(0,0,0,0.3)] whitespace-nowrap">
+                <div className={`${TELEMETRY_BASE} ${TELEMETRY_SHADOW_CYAN} text-cyan-200`}>
                   <span>{distanceKm.toFixed(1)} km</span>
                   <span className="text-white/70 mx-1">·</span>
                   <span>{secondsToHit.toFixed(1)}s</span>
@@ -1122,9 +1270,9 @@ export const TacticalMap = ({
           >
             <div className="flex flex-col items-center gap-1 pointer-events-none">
               <div className="absolute inset-0 rounded-full bg-emerald-500/30 border-2 border-emerald-400 animate-ping scale-150" style={{ animationDuration: '1.5s' }} />
-              <div className="relative flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-emerald-950/95 shadow-[0_0_0_1px_rgba(16,185,129,0.6),0_10px_15px_-3px_rgba(0,0,0,0.3)]">
+              <div className="relative flex items-center gap-1.5 px-2 py-1 rounded bg-black/60 backdrop-blur-md shadow-[0_0_0_1px_rgba(16,185,129,0.4),0_4px_12px_rgba(0,0,0,0.4)]">
                 <Camera size={14} className="text-emerald-400" />
-                <span className="text-[10px] font-bold text-emerald-200 whitespace-nowrap">מצלמה מפנה לאימות</span>
+                <span className="text-xs font-bold text-emerald-200 whitespace-nowrap">מצלמה מפנה לאימות</span>
               </div>
             </div>
           </Marker>
@@ -1185,7 +1333,7 @@ export const TacticalMap = ({
                   <div className="rounded-full bg-amber-500/20 border-2 border-amber-400 p-1.5">
                     <CheckCircle2 size={20} className="text-amber-400" />
                   </div>
-                  <span className="text-[10px] font-bold text-amber-200 whitespace-nowrap px-2 py-0.5 rounded bg-black/80 shadow-[0_0_0_1px_rgba(245,158,11,0.5)]">אומת שיבוש</span>
+                  <span className="text-xs font-bold text-amber-200 whitespace-nowrap px-2 py-1 rounded bg-black/60 backdrop-blur-md shadow-[0_0_0_1px_rgba(245,158,11,0.4),0_4px_12px_rgba(0,0,0,0.4)]">אומת שיבוש</span>
                 </div>
               </Marker>
             )}
@@ -1288,34 +1436,34 @@ export const TacticalMap = ({
                         {/* Map Info Card — only shown when card is open */}
                         {isClassified ? (
                           <div className={`
-                            absolute top-1/2 -translate-y-1/2 pointer-events-none transition-all duration-200 z-[9999]
+                            absolute top-1/2 -translate-y-1/2 pointer-events-none transition-opacity duration-150 z-[9999]
                             ${isActive ? 'opacity-100' : 'opacity-0'}
                           `}
                             style={{ left: isDrone ? '34px' : '24px' }}
                           >
                             <div className={`
-                              bg-black/40 backdrop-blur-md text-white rounded whitespace-nowrap
-                              ${isHoveredFromCard ? 'shadow-[0_0_0_1px_rgba(255,255,255,0.4)]' : isBird ? 'shadow-[0_0_0_1px_rgba(245,158,11,0.2)]' : isMitigated ? 'shadow-[0_0_0_1px_rgba(113,113,122,0.4)]' : 'shadow-[0_0_0_1px_rgba(239,68,68,0.2)]'}
+                              ${TARGET_CARD_BASE}
+                              ${isHoveredFromCard ? TARGET_SHADOW_HOVERED : isBird ? TARGET_SHADOW_BIRD : isMitigated ? TARGET_SHADOW_MITIGATED : TARGET_SHADOW_THREAT}
                             `}>
-                              <div className="flex items-center gap-1.5 px-2 py-1" dir="rtl">
-                                <span className="text-[10px] font-semibold truncate max-w-[120px]">{target.name}</span>
+                              <div className="flex items-center gap-1.5" dir="rtl">
+                                <span className="font-semibold truncate max-w-[120px]">{target.name}</span>
                               </div>
                             </div>
                           </div>
                         ) : (
                           <div className={`
                             absolute top-1/2 -translate-y-1/2
-                            bg-black/90 backdrop-blur-sm text-white text-[9px] px-1.5 py-0.5 rounded shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap
-                            transition-all duration-200 pointer-events-none flex items-center gap-1 z-[9999]
+                            ${TARGET_CARD_BASE} ${TOOLTIP_SHADOW}
+                            transition-opacity duration-150 pointer-events-none flex items-center gap-1 z-[9999]
                             ${isActive ? 'opacity-100' : 'opacity-0'}
                           `} style={{ left: '20px' }}>
                             {isExpiredCuas ? (
-                              <span className="text-zinc-500">נצפה לאחרונה — {target.lastSeenAt || target.timestamp}</span>
+                              <span className="text-zinc-300">נצפה לאחרונה — {target.lastSeenAt || target.timestamp}</span>
                             ) : stage === 'raw_detection' ? (
-                              <span className="text-zinc-400">זיהוי לא ידוע</span>
+                              <span className="text-zinc-300">זיהוי לא ידוע</span>
                             ) : (
                               <>
-                                {isCritical ? <ShieldAlert size={9} className="text-red-500" /> : <AlertTriangle size={9} className="text-amber-500" />}
+                                {isCritical ? <ShieldAlert size={12} className="text-red-500" /> : <AlertTriangle size={12} className="text-amber-500" />}
                                 <span className="font-mono">{target.name || target.id}</span>
                               </>
                             )}
@@ -1379,7 +1527,7 @@ export const TacticalMap = ({
               anchor="bottom"
             >
               <div
-                className={`relative cursor-pointer rounded-full p-1 transition-all duration-150 ${isHovered || isHoveredFromCard ? 'bg-white/[0.08] scale-110' : ''} ${isHoveredFromCard ? 'ring-2 ring-white/40 ring-offset-1 ring-offset-[#0a0a0a]' : ''}`}
+                className={`relative group cursor-pointer rounded-full p-1.5 transition-all duration-200 ${isHovered || isHoveredFromCard ? 'scale-110' : ''} ${isHoveredFromCard ? 'ring-2 ring-white/40 ring-offset-1 ring-offset-[#0a0a0a]' : ''} ${isHovered && !isHoveredFromCard ? 'bg-white/10' : ''}`}
                 onMouseEnter={() => setHoveredLauncherId(launcher.id)}
                 onMouseLeave={() => setHoveredLauncherId(null)}
               >
@@ -1387,8 +1535,8 @@ export const TacticalMap = ({
                   <div className="absolute -inset-2 rounded-full border-2 border-white/50 animate-pulse" />
                 )}
                 {(isHovered || isHoveredFromCard) && (
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 text-xs font-medium text-white bg-black/95 shadow-[0_0_0_1px_rgba(255,255,255,0.2),0_10px_15px_-3px_rgba(0,0,0,0.3)] rounded whitespace-nowrap pointer-events-none z-50">
-                    <div>משגר טילים {launcher.id}</div>
+                  <div className={TOOLTIP_HOVER}>
+                    <div>משגר טילים</div>
                   </div>
                 )}
                 <LauncherIcon />
@@ -1445,9 +1593,9 @@ export const TacticalMap = ({
                 )}
                 <SensorIcon fill={isActive ? '#4ade80' : undefined} />
                 {(isHovered || isActive || isHoveredFromCard) && (
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 text-xs font-medium text-white bg-black/95 shadow-[0_0_0_1px_rgba(255,255,255,0.2),0_10px_15px_-3px_rgba(0,0,0,0.3)] rounded whitespace-nowrap pointer-events-none z-50" style={{ minWidth: 'max-content' }}>
+                  <div className={TOOLTIP_HOVER} style={{ minWidth: 'max-content' }}>
                     <div>{reg.name}</div>
-                    <div className="text-white/70 mt-0.5">
+                    <div className="text-xs text-white/70 mt-0.5">
                       {isActive ? 'פעיל — שיבוש' : reg.id}
                     </div>
                   </div>
@@ -1520,8 +1668,8 @@ export const TacticalMap = ({
                 className={`relative group cursor-pointer rounded-full p-1.5 transition-all duration-200 ${
                   isHighlighted || isFlickering ? 'scale-110' : ''
                 } ${isHoveredFromCard && !isSelected ? 'ring-2 ring-white/40 ring-offset-1 ring-offset-[#0a0a0a] rounded-full' : ''} ${isJammerActive ? 'scale-110' : ''} ${isHovered && !isHighlighted && !isJammerActive && !isSelected ? 'bg-white/10' : ''} ${isFlickering ? 'animate-pulse ring-2 ring-cyan-400/60 ring-offset-1 ring-offset-[#0a0a0a]' : ''}`}
-                onMouseEnter={() => setHoveredAsset(asset)}
-                onMouseLeave={() => setHoveredAsset(null)}
+                onMouseEnter={(e) => { const rect = (e.currentTarget as HTMLElement).getBoundingClientRect(); fetch('http://127.0.0.1:7712/ingest/32f5ffc4-e504-4279-a051-598b5e0df724',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2bab72'},body:JSON.stringify({sessionId:'2bab72',location:'TacticalMap.tsx:assetMarker:mouseEnter',message:'mouseEnter asset',data:{assetId:asset.id,typeLabel:asset.typeLabel,fovDeg:asset.fovDeg,bearingDeg:asset.bearingDeg,lat:asset.latitude,lon:asset.longitude,cursorX:e.clientX,cursorY:e.clientY,rect:{x:Math.round(rect.x),y:Math.round(rect.y),w:Math.round(rect.width),h:Math.round(rect.height)}},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{}); setHoveredAsset(asset); }}
+                onMouseLeave={(e) => { const rect = (e.currentTarget as HTMLElement).getBoundingClientRect(); const rt = e.relatedTarget as HTMLElement|null; fetch('http://127.0.0.1:7712/ingest/32f5ffc4-e504-4279-a051-598b5e0df724',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2bab72'},body:JSON.stringify({sessionId:'2bab72',location:'TacticalMap.tsx:assetMarker:mouseLeave',message:'mouseLeave asset',data:{assetId:asset.id,cursorX:e.clientX,cursorY:e.clientY,rect:{x:Math.round(rect.x),y:Math.round(rect.y),w:Math.round(rect.width),h:Math.round(rect.height)},relatedTarget:rt?.tagName??'null',relatedTargetClass:(rt?.className??'').toString().slice(0,80)},timestamp:Date.now(),hypothesisId:'H6'})}).catch(()=>{}); setHoveredAsset(null); }}
               >
                 {isJammerActive && (
                   <div className="absolute -inset-2 rounded-full border border-white/30 animate-pulse" />
@@ -1532,7 +1680,7 @@ export const TacticalMap = ({
                 <Icon fill={isSelected ? '#a78bfa' : undefined} />
                 {(isHovered || isHighlighted || isInUse) && (
                   <div
-                    className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 text-xs font-medium text-white bg-black/95 rounded whitespace-nowrap pointer-events-none z-50 ${isInUse ? 'shadow-[0_0_0_1px_rgba(34,211,238,0.5),0_10px_15px_-3px_rgba(0,0,0,0.3)]' : 'shadow-[0_0_0_1px_rgba(255,255,255,0.2),0_10px_15px_-3px_rgba(0,0,0,0.3)]'}`}
+                    className={isInUse ? TOOLTIP_HOVER_CYAN : TOOLTIP_HOVER}
                     style={{ minWidth: 'max-content' }}
                   >
                     <div>{asset.typeLabel}</div>
@@ -1544,10 +1692,16 @@ export const TacticalMap = ({
                 <ContextMenuLabel>{asset.typeLabel} — {asset.id}</ContextMenuLabel>
                 <ContextMenuSeparator />
                 {isCamera && (
-                  <ContextMenuItem onSelect={() => onContextMenuAction?.('show-video', 'sensor', asset.id)}>
-                    <Maximize2 className="size-4" />
-                    הצג שידור
-                  </ContextMenuItem>
+                  <>
+                    <ContextMenuItem onSelect={() => onContextMenuAction?.('show-video', 'sensor', asset.id)}>
+                      <Maximize2 className="size-4" />
+                      הצג שידור
+                    </ContextMenuItem>
+                    <ContextMenuItem onSelect={() => onContextMenuAction?.('view-feed', 'sensor', asset.id)}>
+                      <Video className="size-4" />
+                      צפייה בפאנל מצלמות
+                    </ContextMenuItem>
+                  </>
                 )}
                 <ContextMenuItem onSelect={() => onContextMenuAction?.('open-tab', 'sensor', asset.id)}>
                   <ExternalLink className="size-4" />
@@ -1608,9 +1762,9 @@ export const TacticalMap = ({
                 onMouseLeave={() => setHoveredMissileId(null)}
               >
                 {isHovered && (
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 text-xs font-medium text-white bg-black/95 shadow-[0_0_0_1px_rgba(34,211,238,0.6),0_10px_15px_-3px_rgba(0,0,0,0.3)] rounded whitespace-nowrap z-50">
+                  <div className={TOOLTIP_HOVER_CYAN}>
                     <div>טיל לאיתור {missile.targetId}</div>
-                    <div className="text-white/70 mt-0.5">
+                    <div className="text-xs text-white/70 mt-0.5">
                       התקדמות {(missile.progress * 100).toFixed(0)}%
                     </div>
                   </div>
@@ -1694,7 +1848,7 @@ export const TacticalMap = ({
                     }`}>
                       {idx + 1}
                     </div>
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-0.5 text-[9px] font-mono text-violet-200 bg-black/90 shadow-[0_0_0_1px_rgba(167,139,250,0.3)] rounded whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className={`${TOOLTIP_BASE} shadow-[0_0_0_1px_rgba(167,139,250,0.3),0_4px_12px_rgba(0,0,0,0.4)] ${TOOLTIP_POS_ABOVE} font-mono text-violet-200 opacity-0 group-hover:opacity-100 transition-opacity`}>
                       {wp.label}
                     </div>
                   </div>
@@ -1851,13 +2005,13 @@ export const TacticalMap = ({
               const midLon = (activeDrone.currentLon + destLon) / 2;
               return (
                 <Marker latitude={midLat} longitude={midLon} anchor="center">
-                  <div className={`pointer-events-none select-none rounded px-2 py-1 font-mono text-[10px] whitespace-nowrap ${
+                  <div className={`${TELEMETRY_BASE} ${
                     activeDrone.phase === 'rtb'
-                      ? 'bg-black/85 text-zinc-300 shadow-[0_0_0_1px_rgba(113,113,122,0.5),0_10px_15px_-3px_rgba(0,0,0,0.3)]'
-                      : 'bg-black/85 text-cyan-200 shadow-[0_0_0_1px_rgba(34,211,238,0.5),0_10px_15px_-3px_rgba(0,0,0,0.3)]'
+                      ? `${TELEMETRY_SHADOW_ZINC} text-zinc-300`
+                      : `${TELEMETRY_SHADOW_CYAN} text-cyan-200`
                   }`}>
                     <span>{distKm < 1 ? `${Math.round(distM)}m` : `${distKm.toFixed(1)}km`}</span>
-                    <span className="text-white/50 mx-1">·</span>
+                    <span className="text-white/70 mx-1">·</span>
                     <span>{etaSec < 60 ? `${Math.round(etaSec)}s` : `${Math.floor(etaSec / 60)}m${Math.round(etaSec % 60)}s`}</span>
                   </div>
                 </Marker>
@@ -1882,8 +2036,8 @@ export const TacticalMap = ({
                   <div className="absolute -inset-2 rounded-full border-2 border-cyan-400/60 animate-pulse" />
                 )}
                 <DroneIcon color="#22d3ee" rotationDeg={drone.headingDeg ?? 0} />
-                <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-1.5 py-1 text-[10px] bg-zinc-900/90 rounded shadow whitespace-nowrap pointer-events-none z-50 transition-opacity ${isHoveredFromCard ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                  <span className="text-zinc-300 font-medium">{drone.name}</span>
+                <div className={`${TOOLTIP_HOVER} transition-opacity ${isHoveredFromCard ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                  <span>{drone.name}</span>
                 </div>
               </div>
             </Marker>

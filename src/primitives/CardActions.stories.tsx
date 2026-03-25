@@ -1,8 +1,10 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { fn, expect } from 'storybook/test';
 import { CardActions, type CardAction } from './CardActions';
 import { Crosshair, Radio, Eye, Plane, X } from 'lucide-react';
 import { JamWaveIcon } from './MapIcons';
+import { SpecDocs } from '@/specs/SpecDocs';
+import { spec } from './CardActions.spec';
 
 const meta: Meta<typeof CardActions> = {
   title: 'TargetCard/Slots/CardActions',
@@ -19,6 +21,11 @@ const meta: Meta<typeof CardActions> = {
 
 export default meta;
 type Story = StoryObj<typeof CardActions>;
+
+export const Spec: StoryObj = {
+  render: () => <SpecDocs spec={spec} />,
+  parameters: { controls: { disable: true }, actions: { disable: true }, layout: 'fullscreen', a11y: { test: 'todo' }, specDocs: true },
+};
 
 export const PrimaryWithSecondary: Story = {
   args: {

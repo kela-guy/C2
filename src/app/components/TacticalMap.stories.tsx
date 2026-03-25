@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { SpecDocs } from '@/specs/SpecDocs';
+import { spec } from './TacticalMap.spec';
 import { TacticalMap } from './TacticalMap';
 import {
   flow1_suspicion,
@@ -18,6 +20,11 @@ const meta = {
 } satisfies Meta<typeof TacticalMap>;
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+export const Spec: StoryObj = {
+  render: () => <SpecDocs spec={spec} />,
+  parameters: { controls: { disable: true }, actions: { disable: true }, layout: 'fullscreen', a11y: { test: 'todo' }, specDocs: true },
+};
 
 const noop = () => {};
 

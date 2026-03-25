@@ -1,8 +1,24 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { useState, useCallback } from 'react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { useState, useCallback, useMemo } from 'react';
 import { expect } from 'storybook/test';
 import { FilterBar } from './FilterBar';
-import { DEFAULT_FILTERS, type FilterState, type FilterKey } from '../imports/useTargetFilters';
+import type { FilterState } from '../imports/useTargetFilters';
+import type { ActivityStatus } from '../imports/ListOfSystems';
+import { SpecDocs } from '@/specs/SpecDocs';
+import { spec } from './FilterBar.spec';
+
+const DEFAULT_FILTERS: FilterState = {
+  query: '',
+  activityStatus: ['active', 'recently_active'],
+  detectedByDeviceIds: [],
+  sortBy: 'priority',
+};
+
+const MOCK_SENSORS = [
+  { id: 'pixelsight-1', label: 'Pixelsight צפון' },
+  { id: 'regulus-1', label: 'Regulus-1' },
+  { id: 'radar-a', label: 'מכ"מ מרכז' },
+];
 
 function FilterBarDemo({ initialFilters }: { initialFilters?: Partial<FilterState> }) {
   const [filters, setFilters] = useState<FilterState>({
@@ -10,68 +26,47 @@ function FilterBarDemo({ initialFilters }: { initialFilters?: Partial<FilterStat
     ...initialFilters,
   });
 
-  const activeFilterCount = [
-    filters.confidence[0] > 0 || filters.confidence[1] < 100,
-    filters.active !== 'all',
-    filters.domain !== 'all',
-    filters.investigated !== 'all',
-    filters.sensorIds.length > 0,
-    filters.lastSeenWithin !== null,
-    filters.types.length > 0,
-    filters.signatureTypes.length > 0,
-  ].filter(Boolean).length;
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    const defaultStatuses: ActivityStatus[] = ['active', 'recently_active'];
+    if (
+      filters.activityStatus.length !== defaultStatuses.length ||
+      filters.activityStatus.some(s => !defaultStatuses.includes(s))
+    ) count++;
+    if (filters.detectedByDeviceIds.length > 0) count++;
+    return count;
+  }, [filters.activityStatus, filters.detectedByDeviceIds]);
 
   const updateFilter = useCallback(<K extends keyof FilterState>(key: K, value: FilterState[K]) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   }, []);
 
-  const removeFilter = useCallback((key: FilterKey) => {
-    setFilters(prev => ({ ...prev, [key]: DEFAULT_FILTERS[key] }));
+  const toggleActivity = useCallback((status: ActivityStatus) => {
+    setFilters(prev => ({
+      ...prev,
+      activityStatus: prev.activityStatus.includes(status)
+        ? prev.activityStatus.filter(s => s !== status)
+        : [...prev.activityStatus, status],
+    }));
   }, []);
 
   const toggleSensor = useCallback((id: string) => {
     setFilters(prev => ({
       ...prev,
-      sensorIds: prev.sensorIds.includes(id)
-        ? prev.sensorIds.filter(s => s !== id)
-        : [...prev.sensorIds, id],
-    }));
-  }, []);
-
-  const toggleType = useCallback((type: string) => {
-    setFilters(prev => ({
-      ...prev,
-      types: prev.types.includes(type)
-        ? prev.types.filter(t => t !== type)
-        : [...prev.types, type],
-    }));
-  }, []);
-
-  const toggleSignature = useCallback((sig: string) => {
-    setFilters(prev => ({
-      ...prev,
-      signatureTypes: prev.signatureTypes.includes(sig)
-        ? prev.signatureTypes.filter(s => s !== sig)
-        : [...prev.signatureTypes, sig],
+      detectedByDeviceIds: prev.detectedByDeviceIds.includes(id)
+        ? prev.detectedByDeviceIds.filter(s => s !== id)
+        : [...prev.detectedByDeviceIds, id],
     }));
   }, []);
 
   return (
     <FilterBar
       filters={filters}
-      activeFilters={[]}
       activeFilterCount={activeFilterCount}
-      availableSensors={[
-        { id: 'pixelsight-1', label: 'Pixelsight צפון' },
-        { id: 'regulus-1', label: 'Regulus-1' },
-        { id: 'radar-a', label: 'מכ"מ מרכז' },
-      ]}
-      availableTypes={['drone', 'bird', 'unknown', 'vehicle', 'person']}
+      availableSensors={MOCK_SENSORS}
       onUpdate={updateFilter}
-      onRemove={removeFilter}
+      onToggleActivity={toggleActivity}
       onToggleSensor={toggleSensor}
-      onToggleType={toggleType}
-      onToggleSignature={toggleSignature}
       onReset={() => setFilters(DEFAULT_FILTERS)}
     />
   );
@@ -90,6 +85,11 @@ const meta: Meta = {
 };
 
 export default meta;
+
+export const Spec: StoryObj = {
+  render: () => <SpecDocs spec={spec} />,
+  parameters: { controls: { disable: true }, actions: { disable: true }, layout: 'fullscreen', a11y: { test: 'todo' }, specDocs: true },
+};
 
 export const Default: StoryObj = {
   name: 'Default (Empty)',
@@ -111,9 +111,8 @@ export const ActiveFilters: StoryObj = {
   render: () => (
     <FilterBarDemo
       initialFilters={{
-        active: 'active',
-        domain: 'air',
-        types: ['drone'],
+        activityStatus: ['active'],
+        detectedByDeviceIds: ['pixelsight-1'],
       }}
     />
   ),

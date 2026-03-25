@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect } from 'storybook/test';
 import { StatusChip } from './StatusChip';
+import { SpecDocs } from '@/specs/SpecDocs';
+import { spec } from './StatusChip.spec';
 
 const meta = {
   title: 'Primitives/StatusChip',
@@ -22,6 +24,11 @@ const meta = {
 } satisfies Meta<typeof StatusChip>;
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+export const Spec: StoryObj = {
+  render: () => <SpecDocs spec={spec} />,
+  parameters: { controls: { disable: true }, actions: { disable: true }, layout: 'fullscreen', a11y: { test: 'todo' }, specDocs: true },
+};
 
 export const Default: Story = {
   args: { label: 'איתור', color: 'green' },

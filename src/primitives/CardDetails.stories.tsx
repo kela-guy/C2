@@ -1,6 +1,8 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { CardDetails } from './CardDetails';
 import { MapPin, Ruler, Scan, Mountain, Clock } from 'lucide-react';
+import { SpecDocs } from '@/specs/SpecDocs';
+import { spec } from './CardDetails.spec';
 
 const meta: Meta<typeof CardDetails> = {
   title: 'TargetCard/Slots/CardDetails',
@@ -17,6 +19,11 @@ const meta: Meta<typeof CardDetails> = {
 
 export default meta;
 type Story = StoryObj<typeof CardDetails>;
+
+export const Spec: StoryObj = {
+  render: () => <SpecDocs spec={spec} />,
+  parameters: { controls: { disable: true }, actions: { disable: true }, layout: 'fullscreen', a11y: { test: 'todo' }, specDocs: true },
+};
 
 export const BasicTelemetry: Story = {
   args: {

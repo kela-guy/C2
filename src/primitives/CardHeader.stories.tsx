@@ -1,8 +1,10 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { CardHeader } from './CardHeader';
 import { StatusChip } from './StatusChip';
 import { MissionPhaseChip } from './MissionPhaseChip';
 import { Plane, Target, Rocket, Ship, ScanLine } from 'lucide-react';
+import { SpecDocs } from '@/specs/SpecDocs';
+import { spec } from './CardHeader.spec';
 
 const meta: Meta<typeof CardHeader> = {
   title: 'TargetCard/Slots/CardHeader',
@@ -19,6 +21,11 @@ const meta: Meta<typeof CardHeader> = {
 
 export default meta;
 type Story = StoryObj<typeof CardHeader>;
+
+export const Spec: StoryObj = {
+  render: () => <SpecDocs spec={spec} />,
+  parameters: { controls: { disable: true }, actions: { disable: true }, layout: 'fullscreen', a11y: { test: 'todo' }, specDocs: true },
+};
 
 export const Default: Story = {
   args: {

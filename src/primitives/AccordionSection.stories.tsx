@@ -2,6 +2,8 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect } from 'storybook/test';
 import { AccordionSection } from './AccordionSection';
 import { Activity } from 'lucide-react';
+import { SpecDocs } from '@/specs/SpecDocs';
+import { spec } from './AccordionSection.spec';
 
 const meta = {
   title: 'Primitives/AccordionSection',
@@ -15,6 +17,11 @@ const meta = {
 } satisfies Meta<typeof AccordionSection>;
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+export const Spec: StoryObj = {
+  render: () => <SpecDocs spec={spec} />,
+  parameters: { controls: { disable: true }, actions: { disable: true }, layout: 'fullscreen', a11y: { test: 'todo' }, specDocs: true },
+};
 
 export const Default: Story = {
   args: { title: 'נתוני טלמטריה', defaultOpen: true, icon: Activity },

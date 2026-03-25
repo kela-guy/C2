@@ -1,4 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { SpecDocs } from '@/specs/SpecDocs';
+import { spec } from './NotificationCenter.spec';
 import { NotificationCenter } from './NotificationCenter';
 
 const meta: Meta<typeof NotificationCenter> = {
@@ -16,6 +18,11 @@ const meta: Meta<typeof NotificationCenter> = {
 
 export default meta;
 type Story = StoryObj<typeof NotificationCenter>;
+
+export const Spec: StoryObj = {
+  render: () => <SpecDocs spec={spec} />,
+  parameters: { controls: { disable: true }, actions: { disable: true }, layout: 'fullscreen', a11y: { test: 'todo' }, specDocs: true },
+};
 
 export const Default: Story = {
   name: 'Bell Trigger',

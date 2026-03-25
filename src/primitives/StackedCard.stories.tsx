@@ -1,6 +1,8 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect } from 'storybook/test';
 import { useState } from 'react';
+import { SpecDocs } from '@/specs/SpecDocs';
+import { spec } from './StackedCard.spec';
 import { StackedCard } from './StackedCard';
 import {
   TargetCard,
@@ -114,6 +116,11 @@ const meta: Meta = {
 };
 
 export default meta;
+
+export const Spec: StoryObj = {
+  render: () => <SpecDocs spec={spec} />,
+  parameters: { controls: { disable: true }, actions: { disable: true }, layout: 'fullscreen', a11y: { test: 'todo' }, specDocs: true },
+};
 
 export const Collapsed: StoryObj = {
   name: 'Collapsed',

@@ -1,14 +1,16 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { C2Dashboard } from "./components/C2Dashboard";
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 import { CUASDashboard } from "./components/CUASDashboard";
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<CUASDashboard />} />
-        <Route path="/full-flow" element={<C2Dashboard />} />
-      </Routes>
-    </BrowserRouter>
+    <DndProvider backend={HTML5Backend}>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<CUASDashboard />} />
+        </Routes>
+      </BrowserRouter>
+    </DndProvider>
   );
 }

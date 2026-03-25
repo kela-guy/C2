@@ -1,5 +1,9 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { fn } from 'storybook/test';
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
+import { SpecDocs } from '@/specs/SpecDocs';
+import { spec } from './DevicesPanel.spec';
 import { DevicesPanel } from './DevicesPanel';
 
 const meta: Meta<typeof DevicesPanel> = {
@@ -8,9 +12,11 @@ const meta: Meta<typeof DevicesPanel> = {
   tags: ['autodocs'],
   decorators: [
     (Story) => (
-      <div style={{ position: 'relative', width: 400, height: 700, background: '#0b0d10', overflow: 'hidden' }}>
-        <Story />
-      </div>
+      <DndProvider backend={HTML5Backend}>
+        <div style={{ position: 'relative', width: 400, height: 700, background: '#0b0d10', overflow: 'hidden' }}>
+          <Story />
+        </div>
+      </DndProvider>
     ),
   ],
   parameters: {
@@ -28,6 +34,11 @@ const meta: Meta<typeof DevicesPanel> = {
 
 export default meta;
 type Story = StoryObj<typeof DevicesPanel>;
+
+export const Spec: StoryObj = {
+  render: () => <SpecDocs spec={spec} />,
+  parameters: { controls: { disable: true }, actions: { disable: true }, layout: 'fullscreen', a11y: { test: 'todo' }, specDocs: true },
+};
 
 export const Default: Story = {
   name: 'All Devices',

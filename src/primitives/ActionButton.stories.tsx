@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { ActionButton } from './ActionButton';
 import { Eye, Crosshair, X, Check, Radio, Rocket } from 'lucide-react';
+import { SpecDocs } from '@/specs/SpecDocs';
+import { spec } from './ActionButton.spec';
 
 const meta = {
   title: 'Primitives/ActionButton',
@@ -29,6 +31,11 @@ const meta = {
 } satisfies Meta<typeof ActionButton>;
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+export const Spec: StoryObj = {
+  render: () => <SpecDocs spec={spec} />,
+  parameters: { controls: { disable: true }, actions: { disable: true }, layout: 'fullscreen', a11y: { test: 'todo' }, specDocs: true },
+};
 
 export const Default: Story = {
   args: { label: 'חקירה', variant: 'primary', size: 'md', disabled: false, icon: Eye },

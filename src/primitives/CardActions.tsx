@@ -114,7 +114,7 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
         <div className="flex flex-col gap-1.5">
           {/* Effector row */}
           {effectorActions.length > 0 && (
-            <div className="flex gap-1.5 relative">
+            <div className="flex flex-col gap-1.5 relative">
               <AnimatePresence mode="popLayout" initial={false}>
                 {effectorActions.map((action) => {
                   const motionKey = action.effectorStatusStrip ? `${action.id}-strip` : action.id;
@@ -159,7 +159,7 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
                           label={action.label}
                           icon={action.icon}
                           variant={action.variant ?? 'primary'}
-                          size={action.size ?? 'lg'}
+                          size={action.size ?? 'md'}
                           onClick={(e) => handleClick(action, e!)}
                           disabled={action.disabled}
                           loading={action.loading}

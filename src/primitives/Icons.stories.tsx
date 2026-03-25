@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { SpecDocs } from '@/specs/SpecDocs';
+import { spec } from './MapIcons.spec';
 import {
   ChevronDown, Satellite, Radio, TriangleAlert, MapPin, Maximize2,
   Eye, EyeOff, Activity, X, Target, Scan, Ruler, VideoOff, Signal,
@@ -104,6 +106,11 @@ const meta = {
 } satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+export const Spec: StoryObj = {
+  render: () => <SpecDocs spec={spec} />,
+  parameters: { controls: { disable: true }, actions: { disable: true }, layout: 'fullscreen', a11y: { test: 'todo' }, specDocs: true },
+};
 
 export const LucideIcons: Story = {
   render: () => (

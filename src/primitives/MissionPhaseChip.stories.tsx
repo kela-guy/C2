@@ -1,5 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { MissionPhaseChip } from './MissionPhaseChip';
+import { SpecDocs } from '@/specs/SpecDocs';
+import { spec } from './MissionPhaseChip.spec';
 
 const meta = {
   title: 'Primitives/MissionPhaseChip',
@@ -16,6 +18,11 @@ const meta = {
 } satisfies Meta<typeof MissionPhaseChip>;
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+export const Spec: StoryObj = {
+  render: () => <SpecDocs spec={spec} />,
+  parameters: { controls: { disable: true }, actions: { disable: true }, layout: 'fullscreen', a11y: { test: 'todo' }, specDocs: true },
+};
 
 export const Default: Story = {
   args: { phase: 'active' },

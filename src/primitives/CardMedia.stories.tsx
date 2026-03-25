@@ -1,6 +1,8 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect } from 'storybook/test';
 import { CardMedia } from './CardMedia';
+import { SpecDocs } from '@/specs/SpecDocs';
+import { spec } from './CardMedia.spec';
 
 const meta: Meta<typeof CardMedia> = {
   title: 'TargetCard/Slots/CardMedia',
@@ -17,6 +19,11 @@ const meta: Meta<typeof CardMedia> = {
 
 export default meta;
 type Story = StoryObj<typeof CardMedia>;
+
+export const Spec: StoryObj = {
+  render: () => <SpecDocs spec={spec} />,
+  parameters: { controls: { disable: true }, actions: { disable: true }, layout: 'fullscreen', a11y: { test: 'todo' }, specDocs: true },
+};
 
 export const StaticImage: Story = {
   args: {

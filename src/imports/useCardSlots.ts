@@ -85,6 +85,7 @@ export interface CardCallbacks {
 export interface CardContext {
   isDroneVerifying?: boolean;
   isCameraActive?: boolean;
+  isCameraPointing?: boolean;
   allCamerasBusy?: boolean;
   controlRequestCountdown?: number | null;
   regulusEffectors?: RegulusEffector[];
@@ -95,6 +96,7 @@ export interface CardContext {
 export interface CardSlots {
   accent: ThreatAccent;
   completed: boolean;
+  closureType: 'manual' | 'auto' | null;
   header: CardHeaderProps;
   media: CardMediaProps | null;
   actions: CardAction[];
@@ -162,6 +164,9 @@ function buildHeader(target: Detection): CardHeaderProps {
   const isActive = target.status === 'detection' || target.status === 'event';
   const isMission = target.flowType === 4;
   const isRaw = target.entityStage === 'raw_detection';
+  const isCompleted = target.status === 'event_resolved'
+    || target.status === 'event_neutralized'
+    || target.status === 'expired';
 
   return {
     icon: Icon,
@@ -177,7 +182,7 @@ function buildHeader(target: Detection): CardHeaderProps {
       ? (target.plannedMission?.missionType === 'ptz' ? 'סריקת מצלמה' : 'משימת רחפן')
       : target.name,
     subtitle: isMission ? target.id : target.timestamp,
-    badge: target.entityStage ? buildConfidenceBadge(target.confidence, target.classifiedType) : undefined,
+    badge: target.entityStage && !isCompleted ? buildConfidenceBadge(target.confidence, target.classifiedType) : undefined,
   };
 }
 
@@ -186,6 +191,7 @@ function buildMedia(target: Detection, ctx: CardContext): CardMediaProps | null 
   const isActive = target.status === 'detection' || target.status === 'event';
   const isSuspicion = target.status === 'suspicion';
   const isSuccess = target.status === 'event_resolved' || target.status === 'event_neutralized';
+  const isExpired = target.status === 'expired';
   const isMissionActive = target.missionStatus === 'planning' || target.missionStatus === 'executing' || target.missionStatus === 'waiting_confirmation';
 
   const isFlowCameraActive = !isCuas && ctx.isCameraActive && (target.flowType === 1 || target.flowType === 2);
@@ -204,7 +210,7 @@ function buildMedia(target: Detection, ctx: CardContext): CardMediaProps | null 
       badge: isCuas
         ? (target.classifiedType === 'bird' ? 'bird' : 'threat')
         : isSuspicion ? 'warning' : 'threat',
-      showControls: target.mitigationStatus === 'mitigated',
+      showControls: target.mitigationStatus === 'mitigated' || isSuccess || isExpired,
       trackingLabel: isBdaActive ? 'מעקב PTZ' : (target.mitigationStatus === 'mitigated' ? 'הקלטת PTZ' : undefined),
     };
   }
@@ -302,7 +308,7 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
     } else {
       actions.push({
         id: 'bda-camera',
-        label: 'הפנה מצלמה לאימות',
+        label: 'הפנה מצלמה',
         icon: Eye,
         variant: 'secondary' as const,
         size: 'sm' as const,
@@ -312,16 +318,13 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
       });
     }
 
-    actions.push({
-      id: 'complete-mission',
-      label: 'סיום משימה',
-      icon: Check,
-      variant: 'secondary',
-      size: 'sm',
-      group: 'investigation',
-      dataTour: 'cuas-cta-complete',
-      onClick: (e) => { e.stopPropagation(); callbacks.onCompleteMission?.(); },
-    });
+    actions.push(
+      { id: 'complete-mission', label: 'סיום משימה', icon: Check, variant: 'secondary', size: 'sm',
+        group: 'investigation',
+        dataTour: 'cuas-cta-complete',
+        onClick: (e) => { e.stopPropagation(); callbacks.onCompleteMission?.(); },
+      },
+    );
     return actions;
   }
 
@@ -417,21 +420,42 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
       });
     }
 
-    // Investigation row: same layout while mitigating; buttons held until jam completes
-    actions.push(
-      { id: 'investigate-camera', label: 'הפנה מצלמה', icon: Eye, variant: 'secondary', size: 'sm',
+    const cameraPointing = !!ctx.isCameraPointing;
+    const cameraActive = !!ctx.isCameraActive;
+
+    if (cameraPointing) {
+      actions.push({
+        id: 'point-camera-pointing', label: 'מפנה מצלמה...', icon: Eye, variant: 'glass', size: 'sm',
+        group: 'investigation',
+        loading: true,
+        onClick: (e) => e.stopPropagation(),
+      });
+    } else if (cameraActive) {
+      const CameraLockedIcon = () => React.createElement('span', {
+        className: 'inline-block size-2.5 rounded-full bg-emerald-400 animate-subtle-pulse',
+        'aria-hidden': true,
+      });
+      actions.push({
+        id: 'point-camera-locked', label: 'מצלמה נעולה על היעד', icon: CameraLockedIcon, variant: 'glass', size: 'sm',
         group: 'investigation',
         onClick: (e) => { e.stopPropagation(); callbacks.onVerify?.('investigate'); },
-        disabled: investigationDisabled,
-        title: investigationHoldTitle,
-      },
-      { id: 'dismiss-target', label: 'ביטול', icon: X, variant: 'secondary', size: 'sm',
+        className: 'shadow-[0_0_0_1px_rgba(34,197,94,0.4)] text-emerald-400',
+      });
+    } else {
+      actions.push({
+        id: 'point-camera', label: 'הפנה מצלמה', icon: Eye, variant: 'secondary', size: 'sm',
         group: 'investigation',
-        onClick: (e) => { e.stopPropagation(); callbacks.onDismiss?.('dismissed'); },
-        disabled: investigationDisabled,
-        title: investigationHoldTitle,
-      },
-    );
+        onClick: (e) => { e.stopPropagation(); callbacks.onVerify?.('investigate'); },
+        disabled: target.entityStage !== 'classified',
+      });
+    }
+
+    actions.push({
+      id: 'dismiss-target', label: 'ביטול', icon: X, variant: 'secondary', size: 'sm',
+      group: 'investigation',
+      onClick: (e) => { e.stopPropagation(); callbacks.onDismiss?.('dismissed'); },
+    });
+
     return actions;
   }
 
@@ -744,6 +768,16 @@ export function useCardSlots(
 ): CardSlots {
   const accent = useMemo(() => buildAccent(target), [target.status, target.mitigationStatus, target.flowType, target.droneDeployment?.phase, target.plannedMission?.phase]);
   const completed = target.status === 'event_resolved' || target.status === 'event_neutralized';
+  const closureType = useMemo((): 'manual' | 'auto' | null => {
+    const isCompleted = target.status === 'event_resolved'
+      || target.status === 'event_neutralized'
+      || target.status === 'expired';
+    if (!isCompleted) return null;
+    if (target.dismissReason) return 'manual';
+    if (target.status === 'event_neutralized') return 'manual';
+    if (target.status === 'event_resolved') return 'manual';
+    return 'auto';
+  }, [target.status, target.dismissReason]);
   const header = useMemo(() => buildHeader(target), [target]);
   const media = useMemo(() => buildMedia(target, ctx), [target, ctx.isCameraActive]);
   const actions = useMemo(() => buildActions(target, callbacks, ctx), [target, callbacks, ctx]);
@@ -754,5 +788,5 @@ export function useCardSlots(
   const log = target.actionLog ?? [];
   const closure = useMemo(() => buildClosure(target, callbacks), [target.flowPhase, target.flowType, callbacks]);
 
-  return { accent, completed, header, media, actions, timeline, details, sensors, log, closure, laserPosition };
+  return { accent, completed, closureType, header, media, actions, timeline, details, sensors, log, closure, laserPosition };
 }

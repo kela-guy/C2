@@ -1,6 +1,8 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { fn } from 'storybook/test';
 import { useState } from 'react';
+import { SpecDocs } from '@/specs/SpecDocs';
+import { spec } from './ListOfSystems.spec';
 import ListOfSystems from './ListOfSystems';
 import type { Detection, RegulusEffector } from './ListOfSystems';
 import {
@@ -57,6 +59,11 @@ const meta: Meta<typeof ListOfSystems> = {
 
 export default meta;
 type Story = StoryObj<typeof ListOfSystems>;
+
+export const Spec: StoryObj = {
+  render: () => <SpecDocs spec={spec} />,
+  parameters: { controls: { disable: true }, actions: { disable: true }, layout: 'fullscreen', a11y: { test: 'todo' }, specDocs: true },
+};
 
 const CUAS_TARGETS: Detection[] = [
   cuas_classified,

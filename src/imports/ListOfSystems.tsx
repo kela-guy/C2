@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   TargetCard,
@@ -11,27 +11,23 @@ import {
   CardLog,
   CardClosure,
   StatusChip,
-  CollapsibleGroup,
   MissionPhaseChip,
   FilterBar,
+  NewUpdatesPill,
   StackedCard,
   AccordionSection,
   TelemetryRow,
 } from '@/primitives';
 import {
   Crosshair,
-  Target,
-  Scan,
-  Pause,
-  Plane,
-  AlertTriangle,
-  ListTodo,
-  ScanLine,
   Radar,
+  Hand,
+  Zap,
 } from 'lucide-react';
 import { useCardSlots, type CardCallbacks, type CardContext } from './useCardSlots';
-import { useTargetFilters } from './useTargetFilters';
+import { ACTIVITY_STATUS_LABELS, useTargetFilters } from './useTargetFilters';
 import { groupIntoBursts, isBurst } from './useTargetBursts';
+import { getActivityStatus, isCompletedActivityStatus, useActivityStatus } from './useActivityStatus';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -40,6 +36,7 @@ export type EntityStage = 'raw_detection' | 'classified';
 export type ClassifiedType = 'drone' | 'bird' | 'aircraft' | 'unknown';
 export type MitigationStatus = 'idle' | 'mitigating' | 'mitigated' | 'failed';
 export type BdaStatus = 'pending' | 'looking' | 'stabilizing' | 'observing' | 'complete';
+export type ActivityStatus = 'active' | 'recently_active' | 'timeout' | 'dismissed' | 'mitigated';
 
 export interface ContributingSensor {
   sensorId: string;
@@ -72,6 +69,7 @@ export interface Detection {
   missionStatus?: 'idle' | 'planning' | 'executing' | 'waiting_confirmation' | 'complete' | 'aborted';
   missionType?: 'intercept' | 'surveillance' | 'attack' | 'jamming';
   timestamp: string;
+  createdAtMs?: number;
   coordinates: string;
   distance: string;
   isNew?: boolean;
@@ -94,6 +92,9 @@ export interface Detection {
   mitigationStatus?: MitigationStatus;
   mitigatingEffectorId?: string;
   bdaStatus?: BdaStatus;
+  activityStatus?: ActivityStatus;
+  alarmZone?: 'red' | 'yellow' | 'none';
+  priority?: number;
   lastSeenAt?: string;
   lastSeenCoordinates?: string;
   altitude?: string;
@@ -189,16 +190,19 @@ export const MOCK_TARGETS: Detection[] = [];
 
 // ─── Status chip builder ────────────────────────────────────────────────────
 
+const ACTIVITY_STATUS_CHIP_COLOR: Record<ActivityStatus, 'green' | 'red' | 'orange' | 'gray'> = {
+  active: 'green',
+  recently_active: 'orange',
+  timeout: 'gray',
+  dismissed: 'gray',
+  mitigated: 'green',
+};
+
 function buildStatusChip(target: Detection) {
-  if (target.entityStage === 'raw_detection') return <StatusChip label="לא ידוע" color="gray" />;
-  if (target.status === 'detection') return <StatusChip label="איתור" color="red" />;
-  if (target.status === 'tracking') return <StatusChip label="מעקב" color="orange" />;
-  if (target.status === 'event') return <StatusChip label="מטרה" color="green" />;
-  if (target.status === 'suspicion') return <StatusChip label="תח״ש" color="orange" />;
-  if (target.status === 'event_neutralized') return <StatusChip label="נוטרל" color="green" />;
-  if (target.status === 'event_resolved') return <StatusChip label="הושלם" color="green" />;
-  if (target.status === 'expired') return <StatusChip label="פג תוקף" color="gray" />;
-  return null;
+  const status = getActivityStatus(target);
+  const label = ACTIVITY_STATUS_LABELS[status];
+  const color = ACTIVITY_STATUS_CHIP_COLOR[status];
+  return <StatusChip label={label} color={color} />;
 }
 
 // ─── Unified Card ───────────────────────────────────────────────────────────
@@ -246,6 +250,22 @@ function UnifiedCard({
         />
       }
     >
+      {slots.closureType && (
+        <div className="px-2 pt-1.5 flex items-center gap-1" dir="rtl">
+          {slots.closureType === 'manual' ? (
+            <div className="flex items-center gap-1 text-[9px] text-zinc-500">
+              <Hand size={10} className="text-zinc-500" aria-hidden="true" />
+              <span>סגירה ידנית</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 text-[9px] text-zinc-500">
+              <Zap size={10} className="text-zinc-500" aria-hidden="true" />
+              <span>סגירה אוטומטית</span>
+            </div>
+          )}
+        </div>
+      )}
+
       {slots.media && <CardMedia {...slots.media} />}
 
       {slots.actions.length > 0 && <CardActions actions={slots.actions} />}
@@ -401,6 +421,7 @@ export interface ListOfSystemsProps {
   onBdaOutcome?: (targetId: string, outcome: 'neutralized' | 'active' | 'lost') => void;
   onBdaCamera?: (targetId: string) => void;
   cameraActiveTargetId?: string | null;
+  cameraPointingTargetId?: string | null;
   allCamerasBusyForTarget?: string | null;
   controlRequestCountdown?: number | null;
   controlRequestTargetId?: string | null;
@@ -450,6 +471,7 @@ export default function ListOfSystems({
   onBdaOutcome,
   onBdaCamera,
   cameraActiveTargetId,
+  cameraPointingTargetId,
   allCamerasBusyForTarget,
   controlRequestCountdown,
   controlRequestTargetId,
@@ -462,6 +484,11 @@ export default function ListOfSystems({
   const prefersReducedMotion = useReducedMotion();
   const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
   const [expandedBurstTargets, setExpandedBurstTargets] = useState<Set<string>>(new Set());
+  const [newArrivalIds, setNewArrivalIds] = useState<string[]>([]);
+  const [isScrolledToTop, setIsScrolledToTop] = useState(true);
+  const listScrollRef = useRef<HTMLDivElement>(null);
+  const seenTargetIdsRef = useRef<Set<string>>(new Set());
+  const hasHydratedTargetsRef = useRef(false);
 
   const uniqueTargets = useMemo(() => {
     const seen = new Set<string>();
@@ -472,42 +499,101 @@ export default function ListOfSystems({
     });
   }, [targets]);
 
+  const activityStatuses = useActivityStatus(uniqueTargets);
+
   const {
     filters,
     activeFilterCount,
     availableSensors,
-    availableTypes,
-    getActiveFilters,
     applyFilters,
     updateFilter,
-    removeFilter,
     resetFilters,
     toggleSensorId,
-    toggleType,
-    toggleSignature,
-  } = useTargetFilters(uniqueTargets);
+    toggleActivityStatus,
+  } = useTargetFilters(uniqueTargets, activeTab);
 
-  const rawDetections = uniqueTargets.filter((t) => t.entityStage === 'raw_detection');
+  const activeTargets = useMemo(() => (
+    uniqueTargets.filter((target) => {
+      const activityStatus = activityStatuses.get(target.id) ?? getActivityStatus(target);
+      return !isCompletedActivityStatus(activityStatus);
+    })
+  ), [activityStatuses, uniqueTargets]);
 
-  const listVisibleTargets = applyFilters(
-    uniqueTargets.filter((t) => t.entityStage !== 'raw_detection')
+  const completedTargets = useMemo(() => (
+    uniqueTargets.filter((target) => {
+      const activityStatus = activityStatuses.get(target.id) ?? getActivityStatus(target);
+      return isCompletedActivityStatus(activityStatus);
+    })
+  ), [activityStatuses, uniqueTargets]);
+
+  const filteredActiveTargets = applyFilters(activeTargets);
+  const filteredCompletedTargets = applyFilters(completedTargets);
+
+  const activeTargetsById = useMemo(
+    () => new Map(activeTargets.map((target) => [target.id, target])),
+    [activeTargets],
   );
 
-  const nonMissionTargets = listVisibleTargets.filter((t) => t.flowType !== 4);
-  const missionTargets = listVisibleTargets
-    .filter((t) => t.flowType === 4 && !['event_neutralized', 'event_resolved', 'expired'].includes(t.status));
-  const completedMissions = listVisibleTargets
-    .filter((t) => t.flowType === 4 && ['event_neutralized', 'event_resolved', 'expired'].includes(t.status));
+  useEffect(() => {
+    if (!hasHydratedTargetsRef.current) {
+      seenTargetIdsRef.current = new Set(uniqueTargets.map((target) => target.id));
+      hasHydratedTargetsRef.current = true;
+      return;
+    }
 
-  const groups = {
-    needsReview: nonMissionTargets.filter((t) => t.status === 'suspicion'),
-    tasks: nonMissionTargets.filter((t) => ['detection', 'tracking', 'event'].includes(t.status)),
-    cleared: nonMissionTargets.filter((t) => ['event_neutralized', 'event_resolved'].includes(t.status)),
-    expired: nonMissionTargets.filter((t) => t.status === 'expired'),
-  };
+    const newTargets = activeTargets.filter((target) => !seenTargetIdsRef.current.has(target.id));
+    if (newTargets.length === 0) return;
 
-  const activeCount = groups.needsReview.length + groups.tasks.length + missionTargets.length + rawDetections.length;
-  const completedList = [...groups.cleared, ...groups.expired, ...completedMissions];
+    newTargets.forEach((target) => {
+      seenTargetIdsRef.current.add(target.id);
+    });
+
+    setNewArrivalIds((prev) => {
+      const next = [...prev];
+      for (const target of newTargets) {
+        if (!next.includes(target.id)) {
+          next.unshift(target.id);
+        }
+      }
+      return next;
+    });
+  }, [activeTargets, uniqueTargets]);
+
+  useEffect(() => {
+    setNewArrivalIds((prev) => prev.filter((id) => activeTargetsById.has(id)));
+  }, [activeTargetsById]);
+
+  useEffect(() => {
+    if (!activeTargetId) return;
+    setNewArrivalIds((prev) => prev.filter((id) => id !== activeTargetId));
+  }, [activeTargetId]);
+
+  useEffect(() => {
+    if (!activeTargetId && newArrivalIds.length > 0) {
+      setNewArrivalIds([]);
+      listScrollRef.current?.scrollTo({ top: 0, behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+    }
+  }, [activeTargetId, newArrivalIds.length, prefersReducedMotion]);
+
+  const visibleArrivalTargets = useMemo(() => {
+    const filteredIds = new Set(filteredActiveTargets.map((target) => target.id));
+    return newArrivalIds
+      .map((id) => activeTargetsById.get(id))
+      .filter((target): target is Detection => !!target && filteredIds.has(target.id));
+  }, [activeTargetsById, filteredActiveTargets, newArrivalIds]);
+
+  const visibleArrivalIdSet = useMemo(
+    () => new Set(visibleArrivalTargets.map((target) => target.id)),
+    [visibleArrivalTargets],
+  );
+
+  const mainActiveTargets = useMemo(
+    () => filteredActiveTargets.filter((target) => !visibleArrivalIdSet.has(target.id)),
+    [filteredActiveTargets, visibleArrivalIdSet],
+  );
+
+  const activeCount = activeTargets.length;
+  const completedCount = completedTargets.length;
 
   const buildCallbacks = (target: Detection): CardCallbacks => ({
     onVerify: (action) => onVerify?.(target.id, action),
@@ -546,12 +632,23 @@ export default function ListOfSystems({
   const buildCtx = (target: Detection): CardContext => ({
     isDroneVerifying: droneVerifyingTargetId === target.id,
     isCameraActive: cameraActiveTargetId === target.id,
+    isCameraPointing: cameraPointingTargetId === target.id,
     allCamerasBusy: allCamerasBusyForTarget === target.id,
     controlRequestCountdown: controlRequestTargetId === target.id ? controlRequestCountdown : null,
     regulusEffectors,
     nearbyCameras: (target.flowType === 1 || target.flowType === 2) ? nearbyCameras : undefined,
     nearbyHives: target.flowType === 3 ? nearbyHives : undefined,
   });
+
+  const handleTargetToggle = (target: Detection) => {
+    setNewArrivalIds((prev) => prev.filter((id) => id !== target.id));
+    onTargetClick?.(target);
+  };
+
+  const handleListScroll = () => {
+    const top = listScrollRef.current?.scrollTop ?? 0;
+    setIsScrolledToTop(top <= 16);
+  };
 
   const renderSingleCard = (
     target: Detection,
@@ -562,7 +659,7 @@ export default function ListOfSystems({
     <UnifiedCard
       target={target}
       isOpen={isActive}
-      onToggle={() => onTargetClick?.(target)}
+      onToggle={() => handleTargetToggle(target)}
       callbacks={callbacks}
       ctx={ctx}
       onFocus={onTargetFocus ? () => onTargetFocus(target.id) : undefined}
@@ -574,21 +671,25 @@ export default function ListOfSystems({
     for (const t of targets) onMitigateAll?.(t.id);
   };
 
-  const renderTargetList = (list: Detection[]) => {
+  const renderTargetList = (
+    list: Detection[],
+    disableLayout = false,
+    emptyLabel = 'אין איתורים',
+  ) => {
     if (list.length === 0) {
-      return <div className="p-2 text-center text-[10px] text-zinc-500 font-mono">אין איתורים</div>;
+      return <div className="p-2 text-center text-xs text-white">{emptyLabel}</div>;
     }
 
     const items = groupIntoBursts(list);
 
     return (
-      <AnimatePresence mode="popLayout">
+      <AnimatePresence mode={disableLayout ? undefined : 'popLayout'}>
         {items.map((item, idx) => {
           if (isBurst(item)) {
             return (
               <motion.div
                 key={item.id}
-                layout="position"
+                layout={disableLayout ? false : 'position'}
                 initial={false}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -612,7 +713,7 @@ export default function ListOfSystems({
                     });
                   }}
                   activeTargetId={activeTargetId ?? null}
-                  onTargetClick={(t) => onTargetClick?.(t)}
+                  onTargetClick={handleTargetToggle}
                   buildCallbacks={buildCallbacks}
                   buildCtx={buildCtx}
                   renderCard={renderSingleCard}
@@ -628,10 +729,10 @@ export default function ListOfSystems({
           return (
             <motion.div
               key={target.id}
-              layout
-              initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 8, filter: 'blur(4px)' }}
+              layout={disableLayout ? false : 'position'}
+              initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -8, filter: 'blur(4px)' }}
               animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-              exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
+              exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
               transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
               className="cursor-pointer"
               id={`detection-card-${target.id}`}
@@ -642,7 +743,7 @@ export default function ListOfSystems({
               <UnifiedCard
                 target={target}
                 isOpen={isActive}
-                onToggle={() => onTargetClick?.(target)}
+                onToggle={() => handleTargetToggle(target)}
                 callbacks={buildCallbacks(target)}
                 ctx={buildCtx(target)}
                 onFocus={onTargetFocus ? () => onTargetFocus(target.id) : undefined}
@@ -654,6 +755,13 @@ export default function ListOfSystems({
       </AnimatePresence>
     );
   };
+
+  const showNewUpdatesPill = activeTab === 'active' && visibleArrivalTargets.length > 0;
+  const newUpdateEntityTypes = visibleArrivalTargets.map((target) => target.type);
+
+  // #region agent log
+  fetch('http://127.0.0.1:7712/ingest/32f5ffc4-e504-4279-a051-598b5e0df724',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d56552'},body:JSON.stringify({sessionId:'d56552',location:'ListOfSystems.tsx:pill-state',message:'pill state check',data:{activeTab,isScrolledToTop,showNewUpdatesPill,visibleArrivalCount:visibleArrivalTargets.length,newArrivalIdCount:newArrivalIds.length,mainActiveCount:mainActiveTargets.length,totalTargets:targets.length},timestamp:Date.now(),hypothesisId:'H4-H5'})}).catch(()=>{});
+  // #endregion
 
   return (
     <div className={`w-full flex flex-col ${className}`}>
@@ -692,51 +800,53 @@ export default function ListOfSystems({
 
         <FilterBar
           filters={filters}
-          activeFilters={getActiveFilters()}
           activeFilterCount={activeFilterCount}
           availableSensors={availableSensors}
-          availableTypes={availableTypes}
           onUpdate={updateFilter}
-          onRemove={removeFilter}
+          onToggleActivity={toggleActivityStatus}
           onToggleSensor={toggleSensorId}
-          onToggleType={toggleType}
-          onToggleSignature={toggleSignature}
           onReset={resetFilters}
         />
       </div>
 
-      <div className="flex-1 space-y-2 overflow-y-auto custom-scrollbar">
-        {activeTab === 'active' && (
-          <div id="tabpanel-active" role="tabpanel" aria-labelledby="tab-active">
-            <CollapsibleGroup title="מטרות" count={groups.tasks.length} icon={ListTodo} defaultOpen>
-              {renderTargetList(groups.tasks)}
-            </CollapsibleGroup>
-            <CollapsibleGroup title="תנועות חשודות" count={groups.needsReview.length} icon={AlertTriangle} defaultOpen>
-              {renderTargetList(groups.needsReview)}
-            </CollapsibleGroup>
-            {rawDetections.length > 0 && (
-              <CollapsibleGroup title="זיהויים לא ידועים" count={rawDetections.length} icon={Radar} defaultOpen>
-                {renderTargetList(rawDetections)}
-              </CollapsibleGroup>
-            )}
-            <CollapsibleGroup title="סריקות ידניות" count={missionTargets.length} icon={ScanLine} defaultOpen>
-              {missionTargets.length === 0 ? (
-                <div className="p-3 text-center text-[10px] text-zinc-400 font-mono">אין סריקות פעילות</div>
-              ) : (
-                renderTargetList(missionTargets)
-              )}
-            </CollapsibleGroup>
-          </div>
-        )}
-        {activeTab === 'completed' && (
-          <div id="tabpanel-completed" role="tabpanel" aria-labelledby="tab-completed">
-            {completedList.length === 0 ? (
-              <div className="p-4 text-center text-[10px] text-zinc-500 font-mono">אין אירועים שהושלמו</div>
-            ) : (
-              renderTargetList(completedList)
-            )}
-          </div>
-        )}
+      <div className="relative flex-1 min-h-0">
+        <AnimatePresence>
+          {showNewUpdatesPill && (
+            <div className="pointer-events-none absolute inset-x-0 top-2 z-20 flex justify-center px-3">
+              <div className="pointer-events-auto">
+                <NewUpdatesPill
+                  count={visibleArrivalTargets.length}
+                  entityTypes={newUpdateEntityTypes}
+                  onClick={() => {
+                    setNewArrivalIds([]);
+                    listScrollRef.current?.scrollTo({
+                      top: 0,
+                      behavior: prefersReducedMotion ? 'auto' : 'smooth',
+                    });
+                  }}
+                />
+              </div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        <div
+          ref={listScrollRef}
+          className="flex h-full flex-col gap-3 overflow-y-auto px-2 py-2 custom-scrollbar"
+          onScroll={handleListScroll}
+        >
+          {activeTab === 'active' && (
+            <div id="tabpanel-active" role="tabpanel" aria-labelledby="tab-active" className="space-y-2">
+              {renderTargetList(mainActiveTargets, false, 'אין מטרות פעילות')}
+            </div>
+          )}
+
+          {activeTab === 'completed' && (
+            <div id="tabpanel-completed" role="tabpanel" aria-labelledby="tab-completed">
+              {renderTargetList(filteredCompletedTargets, true, 'אין אירועים שהושלמו')}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

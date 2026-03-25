@@ -1,0 +1,238 @@
+import type { ComponentSpec } from '@/specs/types';
+
+export const spec: ComponentSpec = {
+  name: 'FilterBar',
+  filePath: 'src/primitives/FilterBar.tsx',
+  purpose: 'Sidebar filter controls for target list — search input, multi-select status/sensor popovers, sort toggle, and reset button with active filter count badge.',
+  location: 'Sidebar',
+  status: 'prototype',
+
+  props: [
+    { name: 'filters', type: 'FilterState', required: true, description: 'Current filter state: query, activityStatus[], detectedByDeviceIds[], sortBy' },
+    { name: 'activeFilterCount', type: 'number', required: true, description: 'Number of active non-default filters — controls reset button visibility and badge count' },
+    { name: 'availableSensors', type: '{ id: string; label: string }[]', required: true, description: 'List of available sensor devices for the sensor filter popover' },
+    { name: 'onUpdate', type: '<K extends keyof FilterState>(key: K, value: FilterState[K]) => void', required: true, description: 'Generic filter update callback — used for query and sortBy changes' },
+    { name: 'onToggleActivity', type: '(status: ActivityStatus) => void', required: true, description: 'Toggles a status in the activityStatus filter array' },
+    { name: 'onToggleSensor', type: '(id: string) => void', required: true, description: 'Toggles a sensor in the detectedByDeviceIds filter array' },
+    { name: 'onReset', type: '() => void', required: true, description: 'Resets all filters to default state' },
+  ],
+
+  states: [
+    {
+      name: 'default',
+      trigger: 'Rendered with default filters (no active overrides)',
+      description: 'Search input empty, status/sensor buttons in idle state, sort shows "עדיפות", no reset button',
+      implementedInPrototype: true,
+      storyProps: { filters: { query: '', activityStatus: ['active', 'recently_active'], detectedByDeviceIds: [], sortBy: 'priority' } },
+    },
+    {
+      name: 'with search query',
+      trigger: 'filters.query is non-empty',
+      description: 'Search input filled, clear (X) button appears at input end',
+      implementedInPrototype: true,
+      storyProps: { filters: { query: 'רחפן', activityStatus: [], detectedByDeviceIds: [], sortBy: 'priority' } },
+    },
+    {
+      name: 'status popover open',
+      trigger: 'User clicks status filter button',
+      description: 'Popover opens below button showing multi-select list of activity statuses with checkboxes',
+      implementedInPrototype: true,
+      visualNotes: 'Radix Popover with backdrop-blur-xl, dark glassy surface',
+    },
+    {
+      name: 'sensor popover open',
+      trigger: 'User clicks sensor filter button',
+      description: 'Popover opens showing available sensors with checkboxes',
+      implementedInPrototype: true,
+    },
+    {
+      name: 'active filters',
+      trigger: 'activeFilterCount > 0',
+      description: 'Reset button appears with filter count badge, popover triggers have sky-blue highlight',
+      implementedInPrototype: true,
+      visualNotes: 'bg-sky-500/12 on active filter buttons, sky-300 count badge',
+    },
+    {
+      name: 'empty sensors list',
+      trigger: 'availableSensors is empty array',
+      description: 'Sensor popover shows "אין מזהים זמינים" empty label',
+      implementedInPrototype: true,
+    },
+    {
+      name: 'loading',
+      trigger: 'Not implemented — no loading state for filter bar itself',
+      description: 'Would show skeleton placeholders for the filter buttons',
+      implementedInPrototype: false,
+    },
+    {
+      name: 'error',
+      trigger: 'Not implemented — sensor fetch or filter application errors not handled',
+      description: 'Would show inline error message or toast',
+      implementedInPrototype: false,
+    },
+    {
+      name: 'disabled',
+      trigger: 'Not implemented — no disabled prop exists',
+      description: 'All controls would be non-interactive with dimmed styling',
+      implementedInPrototype: false,
+    },
+  ],
+
+  interactions: [
+    {
+      trigger: 'input',
+      element: 'Search input',
+      result: 'Fires onUpdate("query", value) on each keystroke',
+      keyboard: 'Any key — text input',
+    },
+    {
+      trigger: 'click',
+      element: 'Clear search button (X)',
+      result: 'Fires onUpdate("query", "") to clear search',
+      keyboard: 'Enter/Space when focused',
+    },
+    {
+      trigger: 'click',
+      element: 'Status filter button',
+      result: 'Opens/closes status popover via Radix Popover',
+      keyboard: 'Enter/Space to toggle, Escape to close',
+    },
+    {
+      trigger: 'click',
+      element: 'Status checkbox item',
+      result: 'Fires onToggleActivity(status) — toggles status in filter array',
+      keyboard: 'Enter/Space to toggle',
+    },
+    {
+      trigger: 'click',
+      element: 'Sensor filter button',
+      result: 'Opens/closes sensor popover',
+      keyboard: 'Enter/Space to toggle, Escape to close',
+    },
+    {
+      trigger: 'click',
+      element: 'Sort button',
+      result: 'Cycles sortBy: priority → time → confidence → priority',
+      keyboard: 'Enter/Space to cycle',
+    },
+    {
+      trigger: 'click',
+      element: 'Reset button',
+      result: 'Fires onReset() — resets all filters to defaults',
+      keyboard: 'Enter/Space to reset',
+    },
+  ],
+
+  tokens: {
+    colors: [
+      { name: 'border', value: 'rgba(255,255,255,0.05)', usage: 'Bottom border of filter bar' },
+      { name: 'search-bg', value: 'rgba(255,255,255,0.04)', usage: 'Search input background' },
+      { name: 'search-ring', value: 'rgba(255,255,255,0.07)', usage: 'Search input border' },
+      { name: 'search-focus-ring', value: 'rgba(56,189,248,0.35)', usage: 'Search input focus border (sky-400)' },
+      { name: 'search-icon', value: 'text-zinc-500', usage: 'Search and clear icons' },
+      { name: 'button-bg', value: 'rgba(255,255,255,0.06)', usage: 'Filter button idle background' },
+      { name: 'button-bg-hover', value: 'rgba(255,255,255,0.10)', usage: 'Filter button hover background' },
+      { name: 'button-active', value: 'rgba(14,165,233,0.12)', usage: 'Active filter highlight (sky-500/12)' },
+      { name: 'popover-bg', value: '#17171a/95', usage: 'Popover surface with backdrop-blur' },
+      { name: 'popover-ring', value: 'rgba(255,255,255,0.1)', usage: 'Popover border' },
+      { name: 'checkbox-active-border', value: 'rgba(56,189,248,0.4)', usage: 'Active checkbox border (sky-400)' },
+      { name: 'checkbox-active-bg', value: 'rgba(14,165,233,0.2)', usage: 'Active checkbox background (sky-500)' },
+      { name: 'badge-bg', value: 'rgba(14,165,233,0.15)', usage: 'Filter count badge background' },
+      { name: 'badge-text', value: 'text-sky-300', usage: 'Filter count badge text' },
+    ],
+    typography: [
+      { name: 'search-input', fontFamily: 'inherit', fontSize: '11px', fontWeight: '400', lineHeight: '28px (h-7)', usage: 'Search input text' },
+      { name: 'button-label', fontFamily: 'inherit', fontSize: '12px (text-xs)', fontWeight: '500 (font-medium)', lineHeight: '28px (h-7)', usage: 'Filter button labels' },
+      { name: 'badge', fontFamily: 'mono', fontSize: '9px', fontWeight: '400', lineHeight: '14px', usage: 'Active filter count badge' },
+      { name: 'popover-item', fontFamily: 'inherit', fontSize: '12px (text-xs)', fontWeight: '400', lineHeight: '28px (h-7)', usage: 'Popover list item text' },
+      { name: 'empty-label', fontFamily: 'inherit', fontSize: '10px', fontWeight: '400', lineHeight: 'auto', usage: 'Empty state text in popover' },
+    ],
+    spacing: [
+      { name: 'bar-px', value: '8px (px-2)', usage: 'Filter bar horizontal padding' },
+      { name: 'bar-py', value: '6px (py-1.5)', usage: 'Filter bar vertical padding' },
+      { name: 'controls-gap', value: '6px (gap-1.5)', usage: 'Gap between filter buttons' },
+      { name: 'controls-mt', value: '6px (mt-1.5)', usage: 'Top margin of button row below search' },
+      { name: 'search-pr', value: '28px (pr-7)', usage: 'Search input right padding for icon' },
+      { name: 'popover-sideOffset', value: '4px', usage: 'Popover distance from trigger' },
+    ],
+    borderRadius: [
+      { name: 'search', value: 'rounded-md (6px)', usage: 'Search input radius' },
+      { name: 'button', value: 'rounded (4px) / rounded-sm (2px)', usage: 'Filter and sort buttons' },
+      { name: 'popover', value: 'rounded-lg (8px)', usage: 'Popover container' },
+      { name: 'checkbox', value: 'rounded (4px)', usage: 'Multi-select checkbox indicator' },
+    ],
+    shadows: [
+      { name: 'popover', value: '0 0 0 1px rgba(255,255,255,0.1), 0 16px 40px rgba(0,0,0,0.45)', usage: 'Popover elevation shadow' },
+    ],
+  },
+
+  accessibility: {
+    role: 'Composite: search input + button triggers + dialog popovers',
+    ariaAttributes: [
+      'aria-label="חיפוש מטרות" on search input',
+      'aria-label="נקה חיפוש" on clear button',
+      'aria-haspopup="dialog" on popover triggers',
+      'aria-expanded on popover triggers',
+      'aria-label on popover triggers and sort/reset buttons',
+      'aria-pressed on multi-select items',
+      'aria-hidden on decorative icons',
+    ],
+    keyboardNav: [
+      'Tab — move between search, filter buttons, sort, reset',
+      'Enter/Space — activate buttons, toggle popover items',
+      'Escape — close open popover (Radix built-in)',
+    ],
+    focusManagement: 'Focus ring on all interactive elements via focus-visible:ring-1. Popover focus trap managed by Radix.',
+    screenReaderNotes: 'Hebrew labels throughout. Sort button label includes current sort field. Reset button label is "איפוס פילטרים".',
+  },
+
+  tasks: [
+    {
+      id: 'FB-1',
+      title: 'Add debounced search',
+      priority: 'P1',
+      estimate: 'S',
+      description: 'Search fires on every keystroke — add 200ms debounce to reduce filter churn',
+      files: [{ path: 'src/primitives/FilterBar.tsx', action: 'modify', description: 'Wrap onUpdate("query") with useDeferredValue or debounce' }],
+      acceptanceCriteria: ['Search updates are debounced by 200ms', 'Input remains responsive', 'Clear button still works instantly'],
+    },
+    {
+      id: 'FB-2',
+      title: 'Extract Hebrew labels to constants',
+      priority: 'P2',
+      estimate: 'S',
+      description: 'Inline Hebrew strings scattered across JSX — collect into a labels constant or i18n key map',
+      files: [{ path: 'src/primitives/FilterBar.tsx', action: 'modify', description: 'Extract Hebrew strings to LABELS constant' }],
+      acceptanceCriteria: ['All Hebrew strings reference named constants', 'No behavioral change'],
+    },
+    {
+      id: 'FB-3',
+      title: 'Add keyboard navigation within popovers',
+      priority: 'P1',
+      estimate: 'M',
+      description: 'Popover items need arrow-key navigation for better keyboard UX',
+      files: [{ path: 'src/primitives/FilterBar.tsx', action: 'modify', description: 'Add arrow-key roving focus to MultiSelectList' }],
+      acceptanceCriteria: ['Arrow Up/Down moves focus between items', 'Home/End jump to first/last', 'Focus wraps at boundaries'],
+    },
+    {
+      id: 'FB-4',
+      title: 'Add filter presets',
+      priority: 'P2',
+      estimate: 'M',
+      description: 'Quick-apply preset filter combinations (e.g. "Active threats only", "All sensors")',
+      files: [
+        { path: 'src/primitives/FilterBar.tsx', action: 'modify', description: 'Add preset dropdown or chip row' },
+        { path: 'src/imports/useTargetFilters.ts', action: 'modify', description: 'Add preset definitions' },
+      ],
+      acceptanceCriteria: ['At least 3 preset options available', 'Preset applies all filter values at once', 'Active preset is visually indicated'],
+    },
+  ],
+
+  hardcodedData: [
+    { current: 'חיפוש יעד, מזהה או סוג...', replaceWith: 'i18n key or LABELS constant', location: 'Search input placeholder' },
+    { current: 'SORT_LABELS (עדיפות, זמן, ביטחון)', replaceWith: 'i18n keys', location: 'Sort button label map' },
+    { current: 'סטטוס, מזהה, איפוס', replaceWith: 'i18n keys', location: 'Filter button labels' },
+    { current: 'אין מזהים זמינים, אין אפשרויות', replaceWith: 'i18n keys', location: 'Empty state labels in MultiSelectList' },
+    { current: 'STATUS_OPTIONS array', replaceWith: 'Derive from ActivityStatus type or API', location: 'Module-level constant' },
+  ],
+};

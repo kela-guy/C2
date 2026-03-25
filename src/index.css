@@ -137,6 +137,21 @@ body {
   color: #e4e4eb !important;
 }
 
+/* Ensure map markers render above the FOV SVG overlay (z-index: 0) */
+.mapboxgl-marker {
+  z-index: 2 !important;
+}
+
+/* ── Subtle pulse for locked-on indicators ── */
+@keyframes subtle-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+.animate-subtle-pulse {
+  animation: subtle-pulse 2s ease-in-out infinite;
+  will-change: opacity;
+}
+
 /* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
   *,

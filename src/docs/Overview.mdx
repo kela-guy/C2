@@ -17,8 +17,8 @@ flows covering the full lifecycle from initial detection through neutralization 
 
 The card system is composed of two main layers:
 
-- **SystemCard** — The outer header containing status chip, timer, classification badge, and chevron toggle
-- **ExpandedTargetDetails** — The inner expandable content area with telemetry, actions, sensor data, and mission controls
+- **TargetCard** — The outer shell with accent color, expand/collapse toggle, and header slot
+- **Card Slots** — Modular inner sections: CardHeader, CardActions, CardDetails, CardSensors, CardMedia, CardLog, CardTimeline, CardClosure
 
 ## Primitives
 
@@ -28,9 +28,12 @@ The card system is composed of two main layers:
 | `ActionButton` | Multi-variant action button with tooltip |
 | `AccordionSection` | Collapsible section with framer-motion |
 | `TelemetryRow` | RTL label/value row for telemetry data |
-| `CollapsibleGroup` | Expandable group with count badge |
 | `MissionPhaseChip` | Mission phase indicator with pulse |
-| `MissionTimeline` | Step-by-step mission progress tracker |
+| `FilterBar` | Target list filter controls |
+| `NewUpdatesPill` | Unread updates count indicator |
+| `SplitActionButton` | Split button with dropdown actions |
+| `StackedCard` | Multi-target stacked card shell |
+| `MapIcons` | Custom tactical map icon set |
 
 ## Import Paths
 
@@ -38,8 +41,8 @@ The card system is composed of two main layers:
 // Primitives (atoms)
 import { StatusChip, ActionButton, AccordionSection } from "@/primitives";
 
-// Compositions (organisms)
-import { SystemCard, ExpandedTargetDetails } from "@/imports/ListOfSystems";
+// Card shell + slots
+import { TargetCard, CardHeader, CardActions, CardDetails } from "@/primitives";
 
 // Types
 import type { Detection, MissionPhaseType } from "@/imports/ListOfSystems";

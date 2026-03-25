@@ -1,33 +1,17 @@
-import { useState, useMemo, useCallback } from 'react';
-import type { Detection } from './ListOfSystems';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { CAMERA_ASSETS, LIDAR_ASSETS, RADAR_ASSETS } from '@/app/components/TacticalMap';
+import type { ActivityStatus, Detection } from './ListOfSystems';
+import { compareTargetsByPriority, getActivityStatus, getCreatedAtMs } from './useActivityStatus';
 
 export interface FilterState {
   query: string;
-  confidence: [number, number];
-  active: 'all' | 'active' | 'inactive';
-  domain: 'all' | 'ground' | 'air';
-  investigated: 'all' | 'investigated' | 'not_investigated';
-  sensorIds: string[];
-  lastSeenWithin: number | null;
-  types: string[];
-  signatureTypes: string[];
-  sortBy: 'time' | 'confidence' | 'distance';
+  activityStatus: ActivityStatus[];
+  detectedByDeviceIds: string[];
+  sortBy: 'priority' | 'time' | 'confidence';
 }
 
-export const DEFAULT_FILTERS: FilterState = {
-  query: '',
-  confidence: [0, 100],
-  active: 'all',
-  domain: 'all',
-  investigated: 'all',
-  sensorIds: [],
-  lastSeenWithin: null,
-  types: [],
-  signatureTypes: [],
-  sortBy: 'time',
-};
-
-export type FilterKey = Exclude<keyof FilterState, 'sortBy'>;
+export type FilterScope = 'active' | 'completed';
+export type FilterKey = 'activityStatus' | 'detectedByDeviceIds';
 
 export interface ActiveFilter {
   key: FilterKey;
@@ -35,37 +19,12 @@ export interface ActiveFilter {
   valueLabel: string;
 }
 
-const FILTER_LABELS: Record<FilterKey, string> = {
-  confidence: 'ביטחון',
-  active: 'סטטוס',
-  domain: 'תחום',
-  investigated: 'חקירה',
-  sensorIds: 'חיישנים',
-  lastSeenWithin: 'נראה לאחרונה',
-  types: 'סוג',
-  signatureTypes: 'חתימה',
-};
-
-const STATUS_LABELS: Record<string, string> = {
+export const ACTIVITY_STATUS_LABELS: Record<ActivityStatus, string> = {
   active: 'פעיל',
-  inactive: 'לא פעיל',
-};
-
-const DOMAIN_LABELS: Record<string, string> = {
-  air: 'אויר',
-  ground: 'קרקע',
-};
-
-const INVESTIGATED_LABELS: Record<string, string> = {
-  investigated: 'נחקר',
-  not_investigated: 'לא נחקר',
-};
-
-const LAST_SEEN_LABELS: Record<number, string> = {
-  60: '< 1 דק\'',
-  300: '< 5 דק\'',
-  1800: '< 30 דק\'',
-  3600: '< 1 שעה',
+  recently_active: 'פעיל לאחרונה',
+  timeout: 'פג תוקף',
+  dismissed: 'נדחה',
+  mitigated: 'טופל',
 };
 
 export const TYPE_LABELS: Record<string, string> = {
@@ -75,238 +34,176 @@ export const TYPE_LABELS: Record<string, string> = {
   uav: 'רחפן',
   missile: 'טיל',
   aircraft: 'מטוס',
-  vehicle: 'רכב',
-  person: 'אדם',
+  naval: 'כלי שיט',
 };
 
-export const SIGNATURE_LABELS: Record<string, string> = {
-  acoustic: 'אקוסטי',
-  sigint: 'סיגינט',
-  visual: 'חזותי',
-  radar: 'מכ"מ',
-};
+function getDefaultActivityStatuses(scope: FilterScope): ActivityStatus[] {
+  return scope === 'active'
+    ? ['active', 'recently_active']
+    : ['timeout', 'dismissed', 'mitigated'];
+}
 
-export function useTargetFilters(targets: Detection[]) {
-  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
+export function useTargetFilters(targets: Detection[], scope: FilterScope) {
+  const [filters, setFilters] = useState<FilterState>(() => ({
+    query: '',
+    activityStatus: getDefaultActivityStatuses(scope),
+    detectedByDeviceIds: [],
+    sortBy: 'priority',
+  }));
+
+  useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      activityStatus: getDefaultActivityStatuses(scope),
+    }));
+  }, [scope]);
 
   const availableSensors = useMemo(() => {
     const map = new Map<string, string>();
-    targets.forEach(t => {
-      t.detectedBySensors?.forEach(s => map.set(s.id, s.typeLabel));
-      t.contributingSensors?.forEach(s => map.set(s.sensorId, s.sensorType));
-    });
-    return Array.from(map.entries()).map(([id, label]) => ({ id, label }));
-  }, [targets]);
 
-  const availableTypes = useMemo(() => {
-    const set = new Set<string>();
-    const seenLabels = new Set<string>();
-    targets.forEach(t => {
-      if (t.classifiedType) set.add(t.classifiedType);
-      if (t.type) set.add(t.type);
+    [...CAMERA_ASSETS, ...RADAR_ASSETS, ...LIDAR_ASSETS].forEach((asset) => {
+      map.set(asset.id, asset.typeLabel);
     });
-    return Array.from(set).filter(type => {
-      const label = TYPE_LABELS[type] ?? type;
-      if (seenLabels.has(label)) return false;
-      seenLabels.add(label);
-      return true;
+
+    targets.forEach((target) => {
+      target.detectedBySensors?.forEach((sensor) => map.set(sensor.id, sensor.typeLabel));
+      target.contributingSensors?.forEach((sensor) => map.set(sensor.sensorId, sensor.sensorType));
     });
+
+    return Array.from(map.entries())
+      .map(([id, label]) => ({ id, label }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'he'));
   }, [targets]);
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
-    if (filters.confidence[0] > 0 || filters.confidence[1] < 100) count++;
-    if (filters.active !== 'all') count++;
-    if (filters.domain !== 'all') count++;
-    if (filters.investigated !== 'all') count++;
-    if (filters.sensorIds.length > 0) count++;
-    if (filters.lastSeenWithin !== null) count++;
-    if (filters.types.length > 0) count++;
-    if (filters.signatureTypes.length > 0) count++;
+    const defaultStatuses = getDefaultActivityStatuses(scope);
+
+    if (
+      filters.activityStatus.length !== defaultStatuses.length ||
+      filters.activityStatus.some((status) => !defaultStatuses.includes(status))
+    ) {
+      count++;
+    }
+
+    if (filters.detectedByDeviceIds.length > 0) count++;
+
     return count;
-  }, [filters]);
+  }, [filters.activityStatus, filters.detectedByDeviceIds, scope]);
 
   const getActiveFilters = useCallback((): ActiveFilter[] => {
     const active: ActiveFilter[] = [];
+    const defaultStatuses = getDefaultActivityStatuses(scope);
 
-    if (filters.confidence[0] > 0 || filters.confidence[1] < 100) {
+    if (
+      filters.activityStatus.length !== defaultStatuses.length ||
+      filters.activityStatus.some((status) => !defaultStatuses.includes(status))
+    ) {
       active.push({
-        key: 'confidence',
-        label: FILTER_LABELS.confidence,
-        valueLabel: `${filters.confidence[0]}–${filters.confidence[1]}%`,
+        key: 'activityStatus',
+        label: 'סטטוס',
+        valueLabel: filters.activityStatus.map((status) => ACTIVITY_STATUS_LABELS[status]).join(', '),
       });
     }
-    if (filters.active !== 'all') {
-      active.push({
-        key: 'active',
-        label: FILTER_LABELS.active,
-        valueLabel: STATUS_LABELS[filters.active] ?? filters.active,
-      });
-    }
-    if (filters.domain !== 'all') {
-      active.push({
-        key: 'domain',
-        label: FILTER_LABELS.domain,
-        valueLabel: DOMAIN_LABELS[filters.domain] ?? filters.domain,
-      });
-    }
-    if (filters.investigated !== 'all') {
-      active.push({
-        key: 'investigated',
-        label: FILTER_LABELS.investigated,
-        valueLabel: INVESTIGATED_LABELS[filters.investigated] ?? filters.investigated,
-      });
-    }
-    if (filters.sensorIds.length > 0) {
-      const sensorLabels = filters.sensorIds.map(id => {
-        const found = availableSensors.find(s => s.id === id);
+
+    if (filters.detectedByDeviceIds.length > 0) {
+      const deviceLabels = filters.detectedByDeviceIds.map((id) => {
+        const found = availableSensors.find((sensor) => sensor.id === id);
         return found?.label ?? id;
       });
+
       active.push({
-        key: 'sensorIds',
-        label: FILTER_LABELS.sensorIds,
-        valueLabel: sensorLabels.join(', '),
-      });
-    }
-    if (filters.lastSeenWithin !== null) {
-      active.push({
-        key: 'lastSeenWithin',
-        label: FILTER_LABELS.lastSeenWithin,
-        valueLabel: LAST_SEEN_LABELS[filters.lastSeenWithin] ?? `${filters.lastSeenWithin}s`,
-      });
-    }
-    if (filters.types.length > 0) {
-      active.push({
-        key: 'types',
-        label: FILTER_LABELS.types,
-        valueLabel: filters.types.map(t => TYPE_LABELS[t] ?? t).join(', '),
-      });
-    }
-    if (filters.signatureTypes.length > 0) {
-      active.push({
-        key: 'signatureTypes',
-        label: FILTER_LABELS.signatureTypes,
-        valueLabel: filters.signatureTypes.map(s => SIGNATURE_LABELS[s] ?? s).join(', '),
+        key: 'detectedByDeviceIds',
+        label: 'מזהה',
+        valueLabel: deviceLabels.join(', '),
       });
     }
 
     return active;
-  }, [filters, availableSensors]);
+  }, [availableSensors, filters.activityStatus, filters.detectedByDeviceIds, scope]);
 
   const applyFilters = useCallback((list: Detection[]): Detection[] => {
     let result = list;
+    const nowMs = Date.now();
 
     if (filters.query.trim()) {
-      const q = filters.query.trim().toLowerCase();
-      result = result.filter(t =>
-        t.name.toLowerCase().includes(q) ||
-        t.id.toLowerCase().includes(q) ||
-        (t.classifiedType && TYPE_LABELS[t.classifiedType]?.toLowerCase().includes(q)) ||
-        (t.type && TYPE_LABELS[t.type]?.toLowerCase().includes(q))
+      const query = filters.query.trim().toLowerCase();
+      result = result.filter((target) =>
+        target.name.toLowerCase().includes(query) ||
+        target.id.toLowerCase().includes(query) ||
+        (target.classifiedType && (TYPE_LABELS[target.classifiedType] ?? target.classifiedType).toLowerCase().includes(query)) ||
+        (target.type && (TYPE_LABELS[target.type] ?? target.type).toLowerCase().includes(query))
       );
     }
 
-    if (filters.confidence[0] > 0 || filters.confidence[1] < 100) {
-      result = result.filter(t => {
-        const c = (t.confidence ?? 0) * 100;
-        return c >= filters.confidence[0] && c <= filters.confidence[1];
-      });
+    if (filters.activityStatus.length > 0) {
+      const selected = new Set(filters.activityStatus);
+      result = result.filter((target) => selected.has(getActivityStatus(target, nowMs)));
     }
 
-    if (filters.active === 'active') {
-      result = result.filter(t => ['detection', 'tracking', 'event', 'suspicion'].includes(t.status));
-    } else if (filters.active === 'inactive') {
-      result = result.filter(t => ['event_neutralized', 'event_resolved', 'expired'].includes(t.status));
-    }
-
-    if (filters.domain === 'air') {
-      result = result.filter(t => t.type === 'uav' || t.type === 'missile' || t.type === 'aircraft' || t.classifiedType === 'drone' || t.classifiedType === 'bird');
-    } else if (filters.domain === 'ground') {
-      result = result.filter(t => t.type === 'unknown' || t.type === 'vehicle' || t.type === 'person');
-    }
-
-    if (filters.investigated === 'investigated') {
-      result = result.filter(t => t.entityStage === 'classified' || t.flowPhase === 'investigate' || t.flowPhase === 'decide');
-    } else if (filters.investigated === 'not_investigated') {
-      result = result.filter(t => t.entityStage === 'raw_detection' || !t.entityStage);
-    }
-
-    if (filters.sensorIds.length > 0) {
-      result = result.filter(t => {
+    if (filters.detectedByDeviceIds.length > 0) {
+      result = result.filter((target) => {
         const sensorIds = [
-          ...(t.detectedBySensors?.map(s => s.id) ?? []),
-          ...(t.contributingSensors?.map(s => s.sensorId) ?? []),
+          ...(target.detectedBySensors?.map((sensor) => sensor.id) ?? []),
+          ...(target.contributingSensors?.map((sensor) => sensor.sensorId) ?? []),
         ];
-        return filters.sensorIds.some(id => sensorIds.includes(id));
+
+        return filters.detectedByDeviceIds.some((id) => sensorIds.includes(id));
       });
     }
 
-    if (filters.types.length > 0) {
-      const selectedLabels = new Set(filters.types.map(t => TYPE_LABELS[t] ?? t));
-      result = result.filter(t => {
-        const classifiedLabel = TYPE_LABELS[t.classifiedType ?? ''] ?? t.classifiedType ?? '';
-        const typeLabel = TYPE_LABELS[t.type] ?? t.type;
-        return selectedLabels.has(classifiedLabel) || selectedLabels.has(typeLabel);
-      });
-    }
+    result = [...result].sort((a, b) => {
+      if (filters.sortBy === 'confidence') {
+        return (b.confidence ?? 0) - (a.confidence ?? 0);
+      }
 
-    if (filters.signatureTypes.length > 0) {
-      result = result.filter(t => {
-        const sensorTypes = [
-          ...(t.detectedBySensors?.map(s => s.typeLabel.toLowerCase()) ?? []),
-          ...(t.contributingSensors?.map(s => s.sensorType.toLowerCase()) ?? []),
-        ];
-        return filters.signatureTypes.some(sig =>
-          sensorTypes.some(st => st.includes(sig))
-        );
-      });
-    }
+      if (filters.sortBy === 'time') {
+        return getCreatedAtMs(b) - getCreatedAtMs(a);
+      }
 
-    const sortFn = (a: Detection, b: Detection) => {
-      if (filters.sortBy === 'confidence') return (b.confidence ?? 0) - (a.confidence ?? 0);
-      return 0;
-    };
-    result = [...result].sort(sortFn);
+      return compareTargetsByPriority(a, b, nowMs);
+    });
 
     return result;
   }, [filters]);
 
   const updateFilter = useCallback(<K extends keyof FilterState>(key: K, value: FilterState[K]) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+    setFilters((prev) => ({ ...prev, [key]: value }));
   }, []);
 
   const removeFilter = useCallback((key: FilterKey) => {
-    setFilters(prev => ({ ...prev, [key]: DEFAULT_FILTERS[key] }));
-  }, []);
+    if (key === 'activityStatus') {
+      setFilters((prev) => ({ ...prev, activityStatus: getDefaultActivityStatuses(scope) }));
+      return;
+    }
+
+    setFilters((prev) => ({ ...prev, detectedByDeviceIds: [] }));
+  }, [scope]);
 
   const resetFilters = useCallback(() => {
-    setFilters(DEFAULT_FILTERS);
-  }, []);
+    setFilters({
+      query: '',
+      activityStatus: getDefaultActivityStatuses(scope),
+      detectedByDeviceIds: [],
+      sortBy: 'priority',
+    });
+  }, [scope]);
 
   const toggleSensorId = useCallback((id: string) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
-      sensorIds: prev.sensorIds.includes(id)
-        ? prev.sensorIds.filter(s => s !== id)
-        : [...prev.sensorIds, id],
+      detectedByDeviceIds: prev.detectedByDeviceIds.includes(id)
+        ? prev.detectedByDeviceIds.filter((sensorId) => sensorId !== id)
+        : [...prev.detectedByDeviceIds, id],
     }));
   }, []);
 
-  const toggleType = useCallback((type: string) => {
-    setFilters(prev => ({
+  const toggleActivityStatus = useCallback((status: ActivityStatus) => {
+    setFilters((prev) => ({
       ...prev,
-      types: prev.types.includes(type)
-        ? prev.types.filter(t => t !== type)
-        : [...prev.types, type],
-    }));
-  }, []);
-
-  const toggleSignature = useCallback((sig: string) => {
-    setFilters(prev => ({
-      ...prev,
-      signatureTypes: prev.signatureTypes.includes(sig)
-        ? prev.signatureTypes.filter(s => s !== sig)
-        : [...prev.signatureTypes, sig],
+      activityStatus: prev.activityStatus.includes(status)
+        ? prev.activityStatus.filter((value) => value !== status)
+        : [...prev.activityStatus, status],
     }));
   }, []);
 
@@ -314,14 +211,12 @@ export function useTargetFilters(targets: Detection[]) {
     filters,
     activeFilterCount,
     availableSensors,
-    availableTypes,
     getActiveFilters,
     applyFilters,
     updateFilter,
     removeFilter,
     resetFilters,
     toggleSensorId,
-    toggleType,
-    toggleSignature,
+    toggleActivityStatus,
   };
 }

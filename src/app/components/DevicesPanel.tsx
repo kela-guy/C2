@@ -1,6 +1,8 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { X, Search, Camera, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useDrag } from 'react-dnd';
+import { X, Search, Camera, AlertTriangle, MapPin, BellOff, Wrench, Check, Loader2 } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './ui/tooltip';
+import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 import { LAYOUT_TOKENS } from '@/primitives/tokens';
 import {
   CAMERA_ASSETS,
@@ -8,12 +10,21 @@ import {
   DRONE_HIVE_ASSETS,
   REGULUS_EFFECTORS,
   LAUNCHER_ASSETS,
+  LIDAR_ASSETS,
+  WEAPON_SYSTEM_ASSETS,
   SensorIcon,
   CameraIcon,
   RadarIcon,
   DroneHiveIcon,
   LauncherIcon,
+  LidarIcon,
 } from './TacticalMap';
+
+export const DEVICE_CAMERA_DRAG_TYPE = 'DEVICE_CAMERA';
+export interface DeviceCameraDragItem {
+  cameraId: string;
+  label: string;
+}
 
 export function DevicesIcon({ size = 20, className = '' }: { size?: number; className?: string }) {
   return (
@@ -26,7 +37,8 @@ export function DevicesIcon({ size = 20, className = '' }: { size?: number; clas
   );
 }
 
-type DeviceType = 'camera' | 'radar' | 'jammer' | 'drone_hive' | 'launcher' | 'drone';
+type DeviceType = 'camera' | 'radar' | 'dock' | 'drone' | 'ecm' | 'launcher' | 'lidar' | 'weapon_system';
+type ConnectionState = 'online' | 'offline' | 'error' | 'warning';
 type OperationalStatus = 'operational' | 'malfunctioning';
 type CameraCapability = 'video' | 'photo';
 
@@ -38,6 +50,7 @@ interface Device {
   lon: number;
   status: 'available' | 'active' | 'offline';
   operationalStatus: OperationalStatus;
+  connectionState: ConnectionState;
   fovDeg?: number;
   bearingDeg?: number;
   coverageRadiusM?: number;
@@ -47,15 +60,17 @@ interface Device {
   Icon: React.FC<{ size?: number; fill?: string }>;
 }
 
-const TYPE_ORDER: DeviceType[] = ['camera', 'radar', 'drone_hive', 'drone', 'jammer', 'launcher'];
+const TYPE_ORDER: DeviceType[] = ['camera', 'radar', 'dock', 'drone', 'ecm', 'launcher', 'lidar', 'weapon_system'];
 
 const TYPE_LABELS: Record<DeviceType, string> = {
   camera: 'מצלמות',
   radar: 'מכ"מים',
-  drone_hive: 'כוורות',
+  dock: 'כוורות',
   drone: 'רחפנים',
-  jammer: 'משבשים',
+  ecm: 'משבשים',
   launcher: 'משגרים',
+  lidar: 'לידר',
+  weapon_system: 'מערכות נשק',
 };
 
 const DroneDeviceIcon = ({ size = 28, fill = "white" }: { size?: number; fill?: string }) => (
@@ -72,10 +87,12 @@ const DroneDeviceIcon = ({ size = 28, fill = "white" }: { size?: number; fill?: 
 const TYPE_FILTER_ICONS: Record<DeviceType, React.FC<{ size?: number; fill?: string }>> = {
   camera: CameraIcon,
   radar: RadarIcon,
-  drone_hive: DroneHiveIcon,
+  dock: DroneHiveIcon,
   drone: DroneDeviceIcon,
-  jammer: SensorIcon,
+  ecm: SensorIcon,
   launcher: LauncherIcon,
+  lidar: LidarIcon,
+  weapon_system: LauncherIcon,
 };
 
 const STATUS_SORT: Record<string, number> = { offline: 0, active: 1, available: 2 };
@@ -83,6 +100,9 @@ const STATUS_SORT: Record<string, number> = { offline: 0, active: 1, available: 
 const SENSOR_BATTERY: Record<string, number | undefined> = {
   'SENS-NVT-MAGOS-N': 82,
   'SENS-NVT-MAGOS-S': 45,
+  'RAD-NVT-RADA': 97,
+  'RAD-NVT-ELTA': 74,
+  'LIDAR-NVT-01': 63,
 };
 
 const CAMERA_CAPS: Record<string, CameraCapability[]> = {
@@ -95,11 +115,24 @@ const DEVICE_HEALTH: Record<string, OperationalStatus> = {
   'REG-NVT-SOUTH': 'malfunctioning',
 };
 
+const DEVICE_CONNECTION: Record<string, ConnectionState> = {
+  'SENS-NVT-MAGOS-S': 'warning',
+  'REG-NVT-SOUTH': 'error',
+  'FRIENDLY-02': 'offline',
+  'LIDAR-NVT-01': 'warning',
+};
+
+const CAMERA_PRESETS: Record<string, string[]> = {
+  'CAM-NVT-PTZ-N': ['רגיל', 'לילה', 'זום'],
+  'CAM-NVT-PIXELSIGHT': ['רגיל', 'תרמי'],
+};
+
 const ALL_DEVICES: Device[] = [
   ...CAMERA_ASSETS.map(a => ({
     id: a.id, name: a.typeLabel, type: 'camera' as DeviceType,
     lat: a.latitude, lon: a.longitude, status: 'available' as const,
     operationalStatus: (DEVICE_HEALTH[a.id] ?? 'operational') as OperationalStatus,
+    connectionState: (DEVICE_CONNECTION[a.id] ?? 'online') as ConnectionState,
     fovDeg: a.fovDeg, bearingDeg: a.bearingDeg, Icon: CameraIcon,
     batteryPct: a.id === 'CAM-NVT-PTZ-N' ? 18 : undefined,
     capabilities: CAMERA_CAPS[a.id],
@@ -108,37 +141,56 @@ const ALL_DEVICES: Device[] = [
     id: a.id, name: a.typeLabel, type: 'radar' as DeviceType,
     lat: a.latitude, lon: a.longitude, status: 'available' as const,
     operationalStatus: (DEVICE_HEALTH[a.id] ?? 'operational') as OperationalStatus,
+    connectionState: (DEVICE_CONNECTION[a.id] ?? 'online') as ConnectionState,
     fovDeg: a.fovDeg, bearingDeg: a.bearingDeg, Icon: RadarIcon,
-    batteryPct: SENSOR_BATTERY[a.id],
   })),
   ...DRONE_HIVE_ASSETS.map(a => ({
-    id: a.id, name: a.typeLabel, type: 'drone_hive' as DeviceType,
+    id: a.id, name: a.typeLabel, type: 'dock' as DeviceType,
     lat: a.latitude, lon: a.longitude, status: 'available' as const,
     operationalStatus: 'operational' as OperationalStatus,
+    connectionState: 'online' as ConnectionState,
     Icon: DroneHiveIcon,
     batteryPct: 91,
   })),
   ...REGULUS_EFFECTORS.map(e => ({
-    id: e.id, name: e.name, type: 'jammer' as DeviceType,
+    id: e.id, name: e.name, type: 'ecm' as DeviceType,
     lat: e.lat, lon: e.lon,
     status: (e.status === 'active' ? 'active' : e.status === 'inactive' ? 'offline' : 'available') as Device['status'],
     operationalStatus: (DEVICE_HEALTH[e.id] ?? 'operational') as OperationalStatus,
+    connectionState: (DEVICE_CONNECTION[e.id] ?? 'online') as ConnectionState,
     coverageRadiusM: e.coverageRadiusM, Icon: SensorIcon,
   })),
   ...LAUNCHER_ASSETS.map(l => ({
     id: l.id, name: 'משגר טילים', type: 'launcher' as DeviceType,
     lat: l.latitude, lon: l.longitude, status: 'available' as const,
     operationalStatus: 'operational' as OperationalStatus,
+    connectionState: 'online' as ConnectionState,
+    Icon: LauncherIcon,
+  })),
+  ...LIDAR_ASSETS.map(a => ({
+    id: a.id, name: a.typeLabel, type: 'lidar' as DeviceType,
+    lat: a.latitude, lon: a.longitude, status: 'available' as const,
+    operationalStatus: (DEVICE_HEALTH[a.id] ?? 'operational') as OperationalStatus,
+    connectionState: (DEVICE_CONNECTION[a.id] ?? 'online') as ConnectionState,
+    fovDeg: a.fovDeg, bearingDeg: a.bearingDeg, Icon: LidarIcon,
+  })),
+  ...WEAPON_SYSTEM_ASSETS.map(a => ({
+    id: a.id, name: a.typeLabel, type: 'weapon_system' as DeviceType,
+    lat: a.latitude, lon: a.longitude, status: 'available' as const,
+    operationalStatus: 'operational' as OperationalStatus,
+    connectionState: 'online' as ConnectionState,
     Icon: LauncherIcon,
   })),
   { id: 'FRIENDLY-01', name: 'סיור-3', type: 'drone' as DeviceType,
-    lat: 31.218, lon: 34.652, status: 'active' as const,
+    lat: 32.470, lon: 35.005, status: 'active' as const,
     operationalStatus: 'operational' as OperationalStatus,
+    connectionState: 'online' as ConnectionState,
     altitude: '80 מ׳', Icon: DroneDeviceIcon,
   },
   { id: 'FRIENDLY-02', name: 'תצפית-7', type: 'drone' as DeviceType,
-    lat: 31.225, lon: 34.678, status: 'active' as const,
+    lat: 32.463, lon: 34.998, status: 'active' as const,
     operationalStatus: 'operational' as OperationalStatus,
+    connectionState: (DEVICE_CONNECTION['FRIENDLY-02'] ?? 'online') as ConnectionState,
     altitude: '110 מ׳', Icon: DroneDeviceIcon,
   },
 ];
@@ -163,38 +215,155 @@ function BatteryIcon({ pct }: { pct: number }) {
   );
 }
 
+const CONNECTION_STATE_LABELS: Record<ConnectionState, string> = {
+  online: 'מחובר',
+  offline: 'לא מקוון',
+  error: 'שגיאה',
+  warning: 'אזהרה',
+};
+
+const CONNECTION_STATE_COLORS: Record<ConnectionState, string> = {
+  online: 'bg-emerald-400',
+  offline: 'bg-zinc-500',
+  error: 'bg-red-400',
+  warning: 'bg-amber-400',
+};
+
+function StatusDot({ state }: { state: ConnectionState }) {
+  if (state === 'online') return null;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          className={`absolute -bottom-0.5 -right-0.5 size-2 rounded-full shadow-[0_0_0_2px_#141414] ${CONNECTION_STATE_COLORS[state]}`}
+          aria-label={CONNECTION_STATE_LABELS[state]}
+        />
+      </TooltipTrigger>
+      <TooltipContent
+        side="top"
+        sideOffset={6}
+        showArrow={false}
+        className="px-2 py-1 text-[10px] text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
+        dir="rtl"
+      >
+        {CONNECTION_STATE_LABELS[state]}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+function WipersToggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-[11px] text-white/60">מגבים</span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        aria-label="מגבים"
+        onClick={(e) => { e.stopPropagation(); onToggle(); }}
+        className={`relative w-8 h-[18px] rounded-full cursor-pointer transition-[background-color] duration-200 ease-out focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none ${on ? 'bg-sky-500/80' : 'bg-white/10'}`}
+      >
+        <span
+          className="absolute top-[2px] left-[2px] size-[14px] rounded-full bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.1)] transition-[transform] duration-200 ease-out"
+          style={{ transform: on ? 'translateX(14px)' : 'translateX(0)' }}
+        />
+      </button>
+    </div>
+  );
+}
+
 function DeviceRow({
   device,
   isExpanded,
   onToggle,
   onHover,
   onJamActivate,
+  onFlyTo,
+  isMuted,
+  muteRemaining,
+  onToggleMute,
 }: {
   device: Device;
   isExpanded: boolean;
   onToggle: () => void;
   onHover: (id: string | null) => void;
   onJamActivate?: (jammerId: string) => void;
+  onFlyTo: (lat: number, lon: number) => void;
+  isMuted: boolean;
+  muteRemaining: string | null;
+  onToggleMute: (deviceId: string) => void;
 }) {
-  const metricParts: string[] = [device.id];
+  const metricParts: string[] = [];
   if (device.coverageRadiusM != null) metricParts.push(`${(device.coverageRadiusM / 1000).toFixed(1)}km`);
 
   const isMalfunctioning = device.operationalStatus === 'malfunctioning';
+  const isCamera = device.type === 'camera';
+  const presets = CAMERA_PRESETS[device.id];
+
+  const [activePreset, setActivePreset] = useState(presets?.[0] ?? '');
+  const [wipersOn, setWipersOn] = useState(false);
+  const [calibState, setCalibState] = useState<'idle' | 'running' | 'done'>('idle');
+
+  useEffect(() => {
+    if (calibState !== 'running') return;
+    const t = setTimeout(() => setCalibState('done'), 2000);
+    return () => clearTimeout(t);
+  }, [calibState]);
+
+  useEffect(() => {
+    if (calibState !== 'done') return;
+    const t = setTimeout(() => setCalibState('idle'), 1500);
+    return () => clearTimeout(t);
+  }, [calibState]);
+
+  const [{ isDragging }, dragRef] = useDrag(() => ({
+    type: DEVICE_CAMERA_DRAG_TYPE,
+    item: { cameraId: device.id, label: device.name } satisfies DeviceCameraDragItem,
+    canDrag: isCamera,
+    collect: (monitor) => ({ isDragging: monitor.isDragging() }),
+  }), [device.id, device.name, isCamera]);
+
+  const statRows: { label: string; value: string; color?: string }[] = [
+    { label: 'מיקום', value: `${device.lat.toFixed(4)}, ${device.lon.toFixed(4)}` },
+  ];
+  if (device.bearingDeg != null) statRows.push({ label: 'כיוון', value: `${device.bearingDeg}°` });
+  if (device.fovDeg != null) statRows.push({ label: 'שדה ראייה', value: `${device.fovDeg}°` });
+  if (device.coverageRadiusM != null) statRows.push({ label: 'כיסוי', value: `${device.coverageRadiusM.toLocaleString()}m` });
+  if (device.altitude != null) statRows.push({ label: 'גובה', value: device.altitude });
+  statRows.push({
+    label: 'תקינות',
+    value: isMalfunctioning ? 'תקלה' : 'תקין',
+    color: isMalfunctioning ? 'text-orange-400' : 'text-emerald-400',
+  });
+  if (device.batteryPct != null) {
+    statRows.push({
+      label: 'סוללה',
+      value: `${device.batteryPct}%`,
+      color: device.batteryPct <= 20 ? 'text-red-400' : device.batteryPct <= 40 ? 'text-amber-400' : 'text-emerald-400',
+    });
+  }
+
+  const gridCols = 'grid-cols-3';
 
   return (
-    <div>
+    <div style={isDragging ? { opacity: 0.4 } : undefined}>
       <div
+        ref={isCamera ? dragRef : undefined}
         role="button"
         tabIndex={0}
         onClick={onToggle}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(); } }}
-        className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right hover:bg-white/[0.04] active:bg-white/[0.06] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25 border-b border-white/[0.06]"
+        className={`flex items-center justify-center gap-2.5 px-4 py-2.5 text-right transition-[background-color,border-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25 border-b border-white/[0.06] ${
+          isExpanded ? 'bg-white/[0.04]' : 'hover:bg-white/[0.04] active:bg-white/[0.06]'
+        } ${isCamera ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
         dir="rtl"
         onMouseEnter={() => onHover(device.id)}
         onMouseLeave={() => onHover(null)}
       >
-        <div className={`w-8 h-8 rounded flex items-center justify-center shrink-0 ${isMalfunctioning ? 'bg-orange-900/40' : 'bg-[#333]'}`}>
+        <div className={`relative w-8 h-8 rounded flex items-center justify-center shrink-0 ${isMalfunctioning ? 'bg-orange-900/40' : 'bg-[#333]'}`}>
           <device.Icon size={20} fill={isMalfunctioning ? '#f97316' : 'white'} />
+          <StatusDot state={device.connectionState} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
@@ -203,6 +372,12 @@ function DeviceRow({
               {isMalfunctioning && <AlertTriangle size={11} className="text-orange-400 shrink-0" />}
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
+              {isMuted && muteRemaining && (
+                <span className="flex items-center gap-1 text-xs font-mono tabular-nums text-white">
+                  <BellOff size={12} className="text-white" />
+                  {muteRemaining}
+                </span>
+              )}
               {device.batteryPct != null && (
                 <span className="flex items-center gap-1.5 text-[11px] font-['Heebo'] tabular-nums text-white/50 align-middle">
                   <BatteryIcon pct={device.batteryPct} />
@@ -211,11 +386,13 @@ function DeviceRow({
               )}
             </div>
           </div>
-          <div className="text-[11px] font-mono tabular-nums text-white/50 truncate">
-            {metricParts.join(' · ')}
-          </div>
+          {metricParts.length > 0 && (
+            <div className="text-[11px] font-mono tabular-nums text-white/50 truncate">
+              {metricParts.join(' · ')}
+            </div>
+          )}
         </div>
-        {device.type === 'jammer' && (() => {
+        {device.type === 'ecm' && (() => {
           const isDisabled = isMalfunctioning || device.status === 'active';
           const disabledReason = isMalfunctioning ? 'המכשיר בתקלה' : device.status === 'active' ? 'שיבוש כבר פעיל' : undefined;
           const btn = (
@@ -243,10 +420,10 @@ function DeviceRow({
                 side="top"
                 sideOffset={6}
                 showArrow={false}
-                    className="px-2 py-1 text-[10px] text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
-                    dir="rtl"
-                  >
-                    {disabledReason}
+                className="px-2 py-1 text-[10px] text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
+                dir="rtl"
+              >
+                {disabledReason}
               </TooltipContent>
             </Tooltip>
           );
@@ -263,48 +440,96 @@ function DeviceRow({
       >
         <div className="overflow-hidden">
           <div className="flex flex-col bg-white/[0.03]" dir="rtl">
-              {device.type === 'camera' && (
-                <div className="relative w-full h-[200px] rounded overflow-hidden bg-black shadow-[0_0_0_1px_rgba(255,255,255,0.1)]">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Camera size={24} className="text-white/20" />
-                  </div>
-                  <div className="absolute inset-0 bg-black/20 pointer-events-none" />
-                  <div className="absolute top-1.5 right-1.5 flex items-center gap-1 bg-black/80 px-1.5 py-0.5 rounded-sm">
-                    <div className="size-1.5 rounded-full bg-red-500 animate-pulse motion-reduce:animate-none" />
-                    <span className="text-[9px] font-medium text-white/90 uppercase tracking-wide">Live</span>
-                  </div>
-                  <div className="absolute top-1.5 left-1.5 flex items-center gap-1 bg-black/80 px-1.5 py-0.5 rounded-sm">
-                    <Camera size={10} className="text-white/70" />
-                    <span className="text-[9px] text-white/70 font-mono">PTZ</span>
-                  </div>
+
+            {/* Camera preset tabs */}
+            {isCamera && presets && (
+              <Tabs value={activePreset} onValueChange={setActivePreset} onClick={(e) => e.stopPropagation()} dir="rtl">
+                <TabsList variant="line" className="px-3" aria-label="מצב מצלמה">
+                  {presets.map((preset) => (
+                    <TabsTrigger key={preset} value={preset}>
+                      {preset}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+            )}
+
+            {/* Camera video preview */}
+            {isCamera && (
+              <div className="relative w-full h-[200px] overflow-hidden bg-black shadow-[0_0_0_1px_rgba(255,255,255,0.1)]">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Camera size={24} className="text-white/20" />
                 </div>
-              )}
-
-              <div className="grid grid-cols-3 gap-x-4 gap-y-5 px-4 py-3">
-                <DetailRow label="מיקום" value={`${device.lat.toFixed(4)}, ${device.lon.toFixed(4)}`} />
-                {device.bearingDeg != null && <DetailRow label="כיוון" value={`${device.bearingDeg}°`} />}
-                {device.fovDeg != null && <DetailRow label="שדה ראייה" value={`${device.fovDeg}°`} />}
-                {device.coverageRadiusM != null && (
-                  <DetailRow label="כיסוי" value={`${device.coverageRadiusM.toLocaleString()}m`} />
-                )}
-                {device.altitude != null && <DetailRow label="גובה" value={device.altitude} />}
-                <DetailRow
-                  label="תקינות"
-                  value={isMalfunctioning ? 'תקלה' : 'תקין'}
-                  color={isMalfunctioning ? 'text-orange-400' : 'text-emerald-400'}
-                />
-                {device.batteryPct != null && (
-                  <DetailRow
-                    label="סוללה"
-                    value={`${device.batteryPct}%`}
-                    color={device.batteryPct <= 20 ? 'text-red-400' : device.batteryPct <= 40 ? 'text-amber-400' : 'text-emerald-400'}
-                  />
-                )}
+                <div className="absolute inset-0 bg-black/20 pointer-events-none" />
+                <div className="absolute top-1.5 right-1.5 flex items-center gap-1 bg-black/80 px-1.5 py-0.5 rounded-sm">
+                  <div className="size-1.5 rounded-full bg-red-500 animate-pulse motion-reduce:animate-none" />
+                  <span className="text-[9px] font-medium text-white/90 uppercase tracking-wide">Live</span>
+                </div>
               </div>
+            )}
 
+            {/* Stats grid */}
+            <div className={`grid ${gridCols} gap-x-4 gap-y-5 px-4 py-3`}>
+              {statRows.map(row => (
+                <DetailRow key={row.label} label={row.label} value={row.value} color={row.color} />
+              ))}
+            </div>
+
+            {/* Action bar */}
+            <div className="flex items-center gap-2 px-4 py-2.5 border-t border-white/[0.06]">
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onFlyTo(device.lat, device.lon); }}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90 active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out cursor-pointer focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
+                aria-label="מרכז במפה"
+              >
+                <MapPin size={12} />
+                מרכז במפה
+              </button>
+
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onToggleMute(device.id); }}
+                aria-pressed={isMuted}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium transition-[background-color,color,transform] duration-150 ease-out cursor-pointer active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none ${
+                  isMuted
+                    ? 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/25'
+                    : 'text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90'
+                }`}
+                aria-label={isMuted ? 'בטל השתקה' : 'השתק'}
+              >
+                <BellOff size={12} />
+                {isMuted ? 'בטל השתקה' : 'השתק'}
+              </button>
+
+              {/* Drone-specific controls */}
+              {device.type === 'drone' && (
+                <>
+                  <div className="w-px h-5 bg-white/[0.08] mx-0.5" />
+                  <WipersToggle on={wipersOn} onToggle={() => setWipersOn(v => !v)} />
+                  <button
+                    type="button"
+                    disabled={calibState !== 'idle'}
+                    aria-busy={calibState === 'running'}
+                    onClick={(e) => { e.stopPropagation(); setCalibState('running'); }}
+                    className="ml-auto flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90 active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
+                    aria-label="כיול"
+                  >
+                    {calibState === 'running' ? (
+                      <Loader2 size={12} className="animate-spin motion-reduce:animate-none" />
+                    ) : calibState === 'done' ? (
+                      <Check size={12} className="text-emerald-400" />
+                    ) : (
+                      <Wrench size={12} />
+                    )}
+                    {calibState === 'running' ? 'מכייל...' : calibState === 'done' ? 'הושלם' : 'כיול'}
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
+      </div>
     </div>
   );
 }
@@ -325,12 +550,57 @@ interface DevicesPanelProps {
   onDeviceHover?: (id: string | null) => void;
   onJamActivate?: (jammerId: string) => void;
   noTransition?: boolean;
+  width?: number;
 }
 
-export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onJamActivate, noTransition }: DevicesPanelProps) {
+export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onJamActivate, noTransition, width }: DevicesPanelProps) {
   const [query, setQuery] = useState('');
   const [activeTypes, setActiveTypes] = useState<Set<DeviceType>>(new Set(TYPE_ORDER));
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [mutedDevices, setMutedDevices] = useState<Map<string, number>>(new Map());
+  const [, setTick] = useState(0);
+
+  // Shared interval for mute countdown display
+  useEffect(() => {
+    if (mutedDevices.size === 0) return;
+    const id = setInterval(() => {
+      const now = Date.now();
+      setMutedDevices(prev => {
+        const next = new Map(prev);
+        let changed = false;
+        for (const [deviceId, expiry] of next) {
+          if (expiry <= now) {
+            next.delete(deviceId);
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+      setTick(t => t + 1);
+    }, 1000);
+    return () => clearInterval(id);
+  }, [mutedDevices.size > 0]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleToggleMute = useCallback((deviceId: string) => {
+    setMutedDevices(prev => {
+      const next = new Map(prev);
+      if (next.has(deviceId)) {
+        next.delete(deviceId);
+      } else {
+        next.set(deviceId, Date.now() + 30 * 60 * 1000);
+      }
+      return next;
+    });
+  }, []);
+
+  const getMuteRemaining = useCallback((deviceId: string): string | null => {
+    const expiry = mutedDevices.get(deviceId);
+    if (!expiry) return null;
+    const remaining = Math.max(0, expiry - Date.now());
+    const mins = Math.floor(remaining / 60000);
+    const secs = Math.floor((remaining % 60000) / 1000);
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  }, [mutedDevices]);
 
   const handleTypeToggle = useCallback((type: DeviceType) => {
     setActiveTypes(prev => {
@@ -388,13 +658,12 @@ export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onJamActiv
 
   const handleRowClick = useCallback((device: Device) => {
     setExpandedId(prev => prev === device.id ? null : device.id);
-    onFlyTo(device.lat, device.lon);
-  }, [onFlyTo]);
+  }, []);
 
   return (
     <aside
       className={`absolute top-0 bottom-0 right-0 bg-[#141414] border-l border-white/10 flex flex-col z-10 font-sans ${noTransition ? '' : 'transition-transform duration-300 ease-out'} ${open ? 'translate-x-0' : 'translate-x-full pointer-events-none'}`}
-      style={{ width: LAYOUT_TOKENS.sidebarWidthPx }}
+      style={{ width: width ?? LAYOUT_TOKENS.sidebarWidthPx }}
     >
       {/* Header */}
       <div className="flex flex-col gap-2 px-4 pt-3 pb-2 border-b border-white/10 shrink-0">
@@ -451,7 +720,7 @@ export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onJamActiv
                           : 'text-white hover:text-zinc-300 hover:bg-white/[0.06]'
                       }`}
                     >
-                      <FilterIcon size={type === 'launcher' ? 24 : 20} fill="currentColor" />
+                      <FilterIcon size={type === 'launcher' || type === 'weapon_system' ? 24 : 20} fill="currentColor" />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent
@@ -501,6 +770,10 @@ export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onJamActiv
                   onToggle={() => handleRowClick(device)}
                   onHover={onDeviceHover ?? (() => {})}
                   onJamActivate={onJamActivate}
+                  onFlyTo={onFlyTo}
+                  isMuted={mutedDevices.has(device.id)}
+                  muteRemaining={getMuteRemaining(device.id)}
+                  onToggleMute={handleToggleMute}
                 />
               ))}
             </div>

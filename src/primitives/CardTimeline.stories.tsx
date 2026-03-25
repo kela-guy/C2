@@ -1,6 +1,8 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect } from 'storybook/test';
 import { CardTimeline, type TimelineStep } from './CardTimeline';
+import { SpecDocs } from '@/specs/SpecDocs';
+import { spec } from './CardTimeline.spec';
 
 const meta: Meta<typeof CardTimeline> = {
   title: 'TargetCard/Slots/CardTimeline',
@@ -17,6 +19,11 @@ const meta: Meta<typeof CardTimeline> = {
 
 export default meta;
 type Story = StoryObj<typeof CardTimeline>;
+
+export const Spec: StoryObj = {
+  render: () => <SpecDocs spec={spec} />,
+  parameters: { controls: { disable: true }, actions: { disable: true }, layout: 'fullscreen', a11y: { test: 'todo' }, specDocs: true },
+};
 
 const missionSteps: TimelineStep[] = [
   { label: 'נעילת מטרה', status: 'complete' },

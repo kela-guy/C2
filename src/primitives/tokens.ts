@@ -1,5 +1,8 @@
 export const LAYOUT_TOKENS = {
   sidebarWidthPx: 400,
+  sidebarMinWidth: 320,
+  sidebarMaxWidth: 480,
+  sidebarSnapInterval: 40,
 } as const;
 
 const ELEVATION = {
@@ -77,7 +80,7 @@ export const CARD_TOKENS = {
   iconBox: {
     size: 30,
     borderRadius: 4,
-    iconSize: 15,
+    iconSize: 20,
     defaultBg: SURFACE.level3,
     activeBg: '#ef4444',
     activeBgOpacity: 0.2,
