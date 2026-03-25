@@ -7,7 +7,7 @@ export interface FilterState {
   query: string;
   activityStatus: ActivityStatus[];
   detectedByDeviceIds: string[];
-  sortBy: 'priority' | 'time' | 'confidence';
+  sortBy: 'priority' | 'time';
 }
 
 export type FilterScope = 'active' | 'completed';
@@ -153,10 +153,6 @@ export function useTargetFilters(targets: Detection[], scope: FilterScope) {
     }
 
     result = [...result].sort((a, b) => {
-      if (filters.sortBy === 'confidence') {
-        return (b.confidence ?? 0) - (a.confidence ?? 0);
-      }
-
       if (filters.sortBy === 'time') {
         return getCreatedAtMs(b) - getCreatedAtMs(a);
       }

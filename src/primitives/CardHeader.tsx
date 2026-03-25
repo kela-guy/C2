@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 import { CARD_TOKENS } from './tokens';
 
@@ -27,14 +26,13 @@ export function CardHeader({
   open,
 }: CardHeaderProps) {
   const d = CARD_TOKENS;
-  const prefersReducedMotion = useReducedMotion();
 
   return (
     <div className="flex justify-between items-center" dir="rtl" style={{ gap: `${d.header.gap}px` }}>
       <div className="flex items-center gap-2 shrink-0">
         {Icon && (
           <div
-            className="flex items-center justify-center shrink-0"
+            className={`flex items-center justify-center shrink-0${!iconColor && !iconBgActive ? ' text-zinc-400' : ''}`}
             style={{
               width: `${d.iconBox.size}px`,
               height: `${d.iconBox.size}px`,
@@ -42,7 +40,7 @@ export function CardHeader({
               backgroundColor: iconBgActive
                 ? `${d.iconBox.activeBg}${Math.round(d.iconBox.activeBgOpacity * 255).toString(16).padStart(2, '0')}`
                 : d.iconBox.defaultBg,
-              color: iconColor ?? (iconBgActive ? d.iconBox.activeBg : '#9ca3af'),
+              ...(iconColor || iconBgActive ? { color: iconColor ?? d.iconBox.activeBg } : {}),
             }}
           >
             <Icon size={d.iconBox.iconSize} aria-hidden="true" />
@@ -81,13 +79,11 @@ export function CardHeader({
         {badge}
         {status}
 
-        <motion.div
-          animate={{ rotate: open ? 180 : 0 }}
-          transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
-          className="text-zinc-500 shrink-0"
+        <div
+          className={`text-zinc-500 shrink-0 transition-transform duration-200${open ? ' rotate-180' : ''}`}
         >
           <ChevronDown size={d.animation.chevronSize} aria-hidden="true" />
-        </motion.div>
+        </div>
       </div>
     </div>
   );

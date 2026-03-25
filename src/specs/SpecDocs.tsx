@@ -1,40 +1,24 @@
 import React from 'react';
+import { Badge } from '@/app/components/ui/badge';
+import { Checkbox } from '@/app/components/ui/checkbox';
+import { Card } from '@/app/components/ui/card';
+import { cn } from '@/app/components/ui/utils';
 import type { ComponentSpec } from './types';
 
-function StatusDot({ implemented }: { implemented: boolean }) {
-  return (
-    <span
-      className={`inline-block w-[9px] h-[9px] rounded-full shrink-0 ${
-        implemented ? 'bg-emerald-500' : 'bg-red-400'
-      }`}
-    />
-  );
-}
+const SPEC_CARD_CLASS =
+  'rounded-[10px] border-gray-200/80 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.02)]';
 
-function Checkbox() {
-  return (
-    <span
-      className="inline-flex items-center justify-center w-4 h-4 rounded-[4px] border-[1.5px] border-gray-300 shrink-0 mt-[3px]"
-      style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}
-    />
-  );
-}
-
-function Tag({ children, tone = 'neutral' }: { children: React.ReactNode; tone?: 'neutral' | 'green' | 'red' | 'amber' | 'blue' | 'purple' }) {
-  const styles: Record<string, string> = {
-    neutral: 'text-gray-600 bg-gray-100 border-gray-200/80',
-    green:   'text-emerald-700 bg-emerald-50 border-emerald-200/80',
-    red:     'text-red-700 bg-red-50 border-red-200/80',
-    amber:   'text-amber-700 bg-amber-50 border-amber-200/80',
-    blue:    'text-blue-700 bg-blue-50 border-blue-200/80',
-    purple:  'text-purple-700 bg-purple-50 border-purple-200/80',
-  };
-  return (
-    <span className={`inline-flex items-center text-[11px] font-semibold px-[7px] py-[2px] rounded-[5px] border leading-none ${styles[tone]}`}>
-      {children}
-    </span>
-  );
-}
+const SPEC_BADGE_TONE_CLASS: Record<
+  'neutral' | 'green' | 'red' | 'amber' | 'blue' | 'purple',
+  string
+> = {
+  neutral: 'text-gray-600 bg-gray-100 border-gray-200/80',
+  green: 'text-emerald-700 bg-emerald-50 border-emerald-200/80',
+  red: 'text-red-700 bg-red-50 border-red-200/80',
+  amber: 'text-amber-700 bg-amber-50 border-amber-200/80',
+  blue: 'text-blue-700 bg-blue-50 border-blue-200/80',
+  purple: 'text-purple-700 bg-purple-50 border-purple-200/80',
+};
 
 function SectionHeading({ children, count }: { children: React.ReactNode; count?: number }) {
   return (
@@ -52,17 +36,6 @@ function SectionHeading({ children, count }: { children: React.ReactNode; count?
 function SubHeading({ children }: { children: React.ReactNode }) {
   return (
     <h3 className="text-[11.5px] font-semibold text-gray-500 uppercase tracking-[0.06em] mb-2">{children}</h3>
-  );
-}
-
-function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div
-      className={`rounded-[10px] bg-white border border-gray-200/80 ${className}`}
-      style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02)' }}
-    >
-      {children}
-    </div>
   );
 }
 
@@ -99,7 +72,15 @@ export function SpecDocs({ spec }: { spec: ComponentSpec }) {
             <h1 className="text-[30px] font-bold text-gray-950 tracking-[-0.025em]">
               {spec.name}
             </h1>
-            <Tag tone={status.tone}>{status.label}</Tag>
+            <Badge
+              variant="outline"
+              className={cn(
+                'inline-flex text-[11px] font-semibold px-[7px] py-[2px] rounded-[5px] leading-none',
+                SPEC_BADGE_TONE_CLASS[status.tone],
+              )}
+            >
+              {status.label}
+            </Badge>
           </div>
           <p className="text-[16px] text-gray-500 leading-[1.7] max-w-[800px]">{spec.purpose}</p>
           <div className="flex items-center gap-2.5 mt-4">
@@ -117,7 +98,16 @@ export function SpecDocs({ spec }: { spec: ComponentSpec }) {
             </div>
             <div className="flex flex-wrap gap-1.5">
               {missing.map((s, i) => (
-                <Tag key={i} tone="red">{s.name}</Tag>
+                <Badge
+                  key={i}
+                  variant="outline"
+                  className={cn(
+                    'inline-flex text-[11px] font-semibold px-[7px] py-[2px] rounded-[5px] leading-none',
+                    SPEC_BADGE_TONE_CLASS.red,
+                  )}
+                >
+                  {s.name}
+                </Badge>
               ))}
             </div>
           </div>
@@ -126,7 +116,7 @@ export function SpecDocs({ spec }: { spec: ComponentSpec }) {
         {/* ── Props ── */}
         <section className="mb-14">
           <SectionHeading count={spec.props.length}>Props</SectionHeading>
-          <Card>
+          <Card className={cn(SPEC_CARD_CLASS, 'p-0 gap-0')}>
             <div className="overflow-x-auto">
               <table className="w-full text-[13.5px] text-left">
                 <thead>
@@ -149,7 +139,17 @@ export function SpecDocs({ spec }: { spec: ComponentSpec }) {
                       </td>
                       <td className="px-5 py-3.5 align-top">
                         {p.required
-                          ? <Tag tone="red">required</Tag>
+                          ? (
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  'inline-flex text-[11px] font-semibold px-[7px] py-[2px] rounded-[5px] leading-none',
+                                  SPEC_BADGE_TONE_CLASS.red,
+                                )}
+                              >
+                                required
+                              </Badge>
+                            )
                           : <span className="text-gray-400 text-[12px]">optional</span>}
                       </td>
                       <td className="px-5 py-3.5 align-top">
@@ -171,9 +171,17 @@ export function SpecDocs({ spec }: { spec: ComponentSpec }) {
           <SectionHeading count={spec.states.length}>States</SectionHeading>
           <div className="grid gap-2.5">
             {spec.states.map((s, i) => (
-              <Card key={i} className="px-5 py-4">
+              <Card key={i} className={cn(SPEC_CARD_CLASS, 'px-5 py-4 gap-0')}>
                 <div className="flex items-start gap-3">
-                  <StatusDot implemented={s.implementedInPrototype} />
+                  <Badge
+                    variant="secondary"
+                    className={cn(
+                      'size-[9px] min-h-[9px] min-w-[9px] max-h-[9px] max-w-[9px] shrink-0 rounded-full border-0 p-0 shadow-none',
+                      'focus-visible:ring-0 overflow-hidden [&>svg]:hidden',
+                      s.implementedInPrototype ? '!bg-emerald-500' : '!bg-red-400',
+                    )}
+                    aria-hidden
+                  />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-2.5 mb-1">
                       <span className="font-semibold text-gray-900 text-[14px]">{s.name}</span>
@@ -203,11 +211,19 @@ export function SpecDocs({ spec }: { spec: ComponentSpec }) {
         {/* ── Interactions ── */}
         <section className="mb-14">
           <SectionHeading count={spec.interactions.length}>Interactions</SectionHeading>
-          <Card>
+          <Card className={cn(SPEC_CARD_CLASS, 'p-0 gap-0')}>
             <div className="divide-y divide-gray-100">
               {spec.interactions.map((ix, i) => (
                 <div key={i} className="px-5 py-4 flex items-start gap-4">
-                  <Tag tone="blue">{ix.trigger}</Tag>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      'inline-flex text-[11px] font-semibold px-[7px] py-[2px] rounded-[5px] leading-none',
+                      SPEC_BADGE_TONE_CLASS.blue,
+                    )}
+                  >
+                    {ix.trigger}
+                  </Badge>
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-gray-900 text-[14px] mb-0.5">{ix.element}</div>
                     <p className="text-[13.5px] text-gray-600">{ix.result}</p>
@@ -237,10 +253,20 @@ export function SpecDocs({ spec }: { spec: ComponentSpec }) {
             <SectionHeading count={spec.flows.length}>Flows</SectionHeading>
             <div className="grid gap-3">
               {spec.flows.map((flow, fi) => (
-                <Card key={fi} className="px-5 py-5">
+                <Card key={fi} className={cn(SPEC_CARD_CLASS, 'px-5 py-5 gap-0')}>
                   <div className="flex items-center gap-2.5 mb-5">
                     <span className="font-semibold text-gray-900 text-[15px]">{flow.name}</span>
-                    <Tag tone={flow.type === 'happy' ? 'green' : flow.type === 'error' ? 'red' : 'amber'}>{flow.type}</Tag>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        'inline-flex text-[11px] font-semibold px-[7px] py-[2px] rounded-[5px] leading-none',
+                        SPEC_BADGE_TONE_CLASS[
+                          flow.type === 'happy' ? 'green' : flow.type === 'error' ? 'red' : 'amber'
+                        ],
+                      )}
+                    >
+                      {flow.type}
+                    </Badge>
                   </div>
                   <div className="relative ml-1">
                     {flow.steps.map((step, si) => {
@@ -275,7 +301,7 @@ export function SpecDocs({ spec }: { spec: ComponentSpec }) {
               <SubHeading>Colors</SubHeading>
               <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-2">
                 {spec.tokens.colors.map((t, i) => (
-                  <Card key={i} className="px-4 py-3 flex items-center gap-3">
+                  <Card key={i} className={cn(SPEC_CARD_CLASS, 'px-4 py-3 flex flex-row items-center gap-3 gap-y-0')}>
                     <div
                       className="w-7 h-7 rounded-[6px] shrink-0 border border-black/[0.08]"
                       style={{ background: t.value }}
@@ -293,7 +319,7 @@ export function SpecDocs({ spec }: { spec: ComponentSpec }) {
           {spec.tokens.typography.length > 0 && (
             <div className="mb-8">
               <SubHeading>Typography</SubHeading>
-              <Card>
+              <Card className={cn(SPEC_CARD_CLASS, 'p-0 gap-0')}>
                 <div className="divide-y divide-gray-100">
                   {spec.tokens.typography.map((t, i) => (
                     <div key={i} className="px-5 py-3.5 flex items-baseline gap-6 text-[13.5px]">
@@ -313,7 +339,7 @@ export function SpecDocs({ spec }: { spec: ComponentSpec }) {
               <SubHeading>Spacing</SubHeading>
               <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-2">
                 {spec.tokens.spacing.map((s, i) => (
-                  <Card key={i} className="px-4 py-3 flex items-center gap-3">
+                  <Card key={i} className={cn(SPEC_CARD_CLASS, 'px-4 py-3 flex flex-row items-center gap-3 gap-y-0')}>
                     <div
                       className="h-3.5 rounded-sm bg-blue-200 shrink-0"
                       style={{ width: Math.max(Math.min(parseInt(s.value) || 8, 48), 6) }}
@@ -333,7 +359,7 @@ export function SpecDocs({ spec }: { spec: ComponentSpec }) {
               <SubHeading>Border Radius</SubHeading>
               <div className="flex flex-wrap gap-2">
                 {spec.tokens.borderRadius.map((r, i) => (
-                  <Card key={i} className="px-4 py-3 flex items-center gap-3">
+                  <Card key={i} className={cn(SPEC_CARD_CLASS, 'px-4 py-3 flex flex-row items-center gap-3 gap-y-0')}>
                     <div
                       className="w-7 h-7 bg-gray-200 shrink-0"
                       style={{ borderRadius: r.value }}
@@ -352,7 +378,7 @@ export function SpecDocs({ spec }: { spec: ComponentSpec }) {
         {/* ── Accessibility ── */}
         <section className="mb-14">
           <SectionHeading>Accessibility</SectionHeading>
-          <Card className="p-6">
+          <Card className={cn(SPEC_CARD_CLASS, 'p-6 gap-0')}>
             <div className="grid grid-cols-2 gap-x-14 gap-y-7">
               {spec.accessibility.role && (
                 <div>
@@ -402,7 +428,7 @@ export function SpecDocs({ spec }: { spec: ComponentSpec }) {
             <SectionHeading count={spec.hardcodedData.length}>Hardcoded Data</SectionHeading>
             <div className="grid gap-2.5">
               {spec.hardcodedData.map((h, i) => (
-                <Card key={i} className="px-5 py-4">
+                <Card key={i} className={cn(SPEC_CARD_CLASS, 'px-5 py-4 gap-0')}>
                   <div className="flex items-center gap-2 mb-2 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.06em]">
                     <span>Current</span>
                     <span className="text-gray-300">→</span>
@@ -433,15 +459,35 @@ export function SpecDocs({ spec }: { spec: ComponentSpec }) {
                   : '#d1d5db';
 
               return (
-                <Card key={task.id} className="overflow-hidden" style={{ borderLeftWidth: '3px', borderLeftColor: accentColor }}>
+                <Card
+                  key={task.id}
+                  className={cn(SPEC_CARD_CLASS, 'overflow-hidden gap-0')}
+                  style={{ borderLeftWidth: '3px', borderLeftColor: accentColor }}
+                >
                   <div className="px-5 py-5">
                     <div className="flex items-center gap-2.5 mb-2">
                       <span className="inline-flex items-center justify-center w-[22px] h-[22px] rounded-full bg-gray-100 text-[11px] font-bold text-gray-500 shrink-0 tabular-nums">
                         {taskIndex + 1}
                       </span>
                       <span className="font-bold text-gray-900 text-[15px] tracking-[-0.01em]">{task.title}</span>
-                      <Tag tone={priorityTone}>{task.priority}</Tag>
-                      <Tag>{task.estimate}</Tag>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          'inline-flex text-[11px] font-semibold px-[7px] py-[2px] rounded-[5px] leading-none',
+                          SPEC_BADGE_TONE_CLASS[priorityTone],
+                        )}
+                      >
+                        {task.priority}
+                      </Badge>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          'inline-flex text-[11px] font-semibold px-[7px] py-[2px] rounded-[5px] leading-none',
+                          SPEC_BADGE_TONE_CLASS.neutral,
+                        )}
+                      >
+                        {task.estimate}
+                      </Badge>
                       <code className="ml-auto font-mono text-[11px] text-gray-400">{task.id}</code>
                     </div>
                     <p className="text-[14px] text-gray-600 mb-4 leading-relaxed ml-[34px]">{task.description}</p>
@@ -461,7 +507,7 @@ export function SpecDocs({ spec }: { spec: ComponentSpec }) {
                       <div className="space-y-3">
                         {task.acceptanceCriteria.map((ac, ai) => (
                           <div key={ai} className="flex items-start gap-3 text-[13.5px]">
-                            <Checkbox />
+                            <Checkbox checked={false} disabled className="mt-[3px]" />
                             <span className="text-gray-700 leading-snug">{ac}</span>
                           </div>
                         ))}

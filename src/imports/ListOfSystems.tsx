@@ -832,7 +832,7 @@ export default function ListOfSystems({
 
         <div
           ref={listScrollRef}
-          className="flex h-full flex-col gap-3 overflow-y-auto px-2 py-2 custom-scrollbar"
+          className="flex h-full flex-col gap-3 overflow-y-auto px-2 py-2"
           onScroll={handleListScroll}
         >
           {activeTab === 'active' && (

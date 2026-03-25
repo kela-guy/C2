@@ -1,6 +1,7 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { Camera, ShieldAlert, AlertTriangle, Play, Pause, SkipBack, SkipForward, Maximize2, X } from 'lucide-react';
+import { Camera, ShieldAlert, AlertTriangle, Play, Pause, SkipBack, SkipForward, Maximize2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogTitle } from '@/app/components/ui/dialog';
+import { cn } from '@/app/components/ui/utils';
 
 export interface CardMediaProps {
   src?: string;
@@ -32,10 +33,6 @@ export function CardMedia({
   const inlineVideoRef = useRef<HTMLVideoElement>(null);
 
   if (!src && placeholder === 'none') return null;
-
-  // #region agent log
-  fetch('http://127.0.0.1:7712/ingest/32f5ffc4-e504-4279-a051-598b5e0df724',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'fbddf3'},body:JSON.stringify({sessionId:'fbddf3',location:'CardMedia.tsx:35',message:'CardMedia render',data:{type,showControls,hasSrc:!!src,hasExpandButton:type==='video'&&showControls},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
 
   const isVideo = type === 'video';
   const height = isVideo ? 'h-[160px]' : 'h-[100px]';
@@ -93,7 +90,7 @@ export function CardMedia({
           <>
             <div className="absolute top-2 right-2 flex items-center gap-1.5">
               <div className="flex items-center gap-1 bg-black/80 px-1.5 py-0.5 rounded-sm">
-                <div className="size-1.5 rounded-full bg-red-500 animate-pulse" />
+                <div className="size-1.5 rounded-full bg-red-500 animate-pulse motion-reduce:animate-none" />
                 <span className="text-[9px] font-medium text-white/90 uppercase tracking-wide">
                   Live
                 </span>
@@ -137,73 +134,20 @@ export function CardMedia({
         )}
       </div>
 
-      {expanded && src && isVideo && createPortal(
-        <VideoLightbox
-          src={src}
-          initialTime={savedTimeRef.current}
-          onClose={() => setExpanded(false)}
-        />,
-        document.body,
+      {src && isVideo && (
+        <Dialog open={expanded} onOpenChange={setExpanded}>
+          <DialogContent
+            className={cn(
+              'w-[90vw] max-w-[800px] gap-0 border-0 bg-black p-0 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_25px_60px_rgba(0,0,0,0.6)] sm:max-w-[800px]',
+              '[&>button]:text-white/80 [&>button]:hover:bg-black/80 [&>button]:hover:text-white [&>button]:bg-black/60',
+            )}
+          >
+            <DialogTitle className="sr-only">הרחבת הקלטה</DialogTitle>
+            <LightboxVideo src={src} initialTime={savedTimeRef.current} />
+          </DialogContent>
+        </Dialog>
       )}
     </>
-  );
-}
-
-function VideoLightbox({
-  src,
-  initialTime,
-  onClose,
-}: {
-  src: string;
-  initialTime: number;
-  onClose: () => void;
-}) {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    requestAnimationFrame(() => setVisible(true));
-  }, []);
-
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', handleKey);
-    return () => document.removeEventListener('keydown', handleKey);
-  }, [onClose]);
-
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) onClose();
-  };
-
-  return (
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm"
-      style={{
-        opacity: visible ? 1 : 0,
-        transition: 'opacity 200ms ease-out',
-      }}
-      onClick={handleBackdropClick}
-    >
-      <div
-        className="relative w-[90vw] max-w-[800px] rounded-lg overflow-hidden shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_25px_60px_rgba(0,0,0,0.6)]"
-        style={{
-          transform: visible ? 'scale(1)' : 'scale(0.92)',
-          opacity: visible ? 1 : 0,
-          transition: 'transform 250ms ease-out, opacity 200ms ease-out',
-          willChange: 'transform, opacity',
-        }}
-      >
-        <button
-          onClick={onClose}
-          className="absolute top-3 right-3 z-10 p-1.5 rounded-md bg-black/60 hover:bg-black/80 text-white/80 hover:text-white transition-colors cursor-pointer"
-          aria-label="סגור"
-        >
-          <X size={16} aria-hidden="true" />
-        </button>
-        <LightboxVideo src={src} initialTime={initialTime} />
-      </div>
-    </div>
   );
 }
 
@@ -261,6 +205,7 @@ function LightboxVideo({ src, initialTime }: { src: string; initialTime: number 
   }, []);
 
   const pct = duration > 0 ? (progress / duration) * 100 : 0;
+  const scale = duration > 0 ? progress / duration : 0;
 
   return (
     <div className="relative bg-black">
@@ -275,9 +220,9 @@ function LightboxVideo({ src, initialTime }: { src: string; initialTime: number 
         <track kind="captions" />
       </video>
 
-      <div className="bg-[#111] px-4 py-3">
+      <div className="bg-zinc-950 px-4 py-3">
         <div
-          className="w-full h-1.5 bg-white/15 rounded-full cursor-pointer mb-3 group/scrub"
+          className="relative mb-3 h-1.5 w-full cursor-pointer rounded-full bg-white/15 group/scrub focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
           role="slider"
           tabIndex={0}
           aria-label="מיקום בסרטון"
@@ -293,12 +238,16 @@ function LightboxVideo({ src, initialTime }: { src: string; initialTime: number 
             else if (e.key === 'ArrowLeft') { e.preventDefault(); v.currentTime = Math.max(0, v.currentTime - 5); }
           }}
         >
-          <div
-            className="h-full bg-cyan-400 rounded-full relative transition-[width] duration-100"
-            style={{ width: `${pct}%` }}
-          >
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full opacity-0 group-hover/scrub:opacity-100 transition-opacity shadow" />
+          <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-full">
+            <div
+              className="h-full w-full origin-left rounded-full bg-cyan-400 transition-transform duration-100"
+              style={{ transform: `scaleX(${scale})` }}
+            />
           </div>
+          <div
+            className="pointer-events-none absolute top-1/2 z-[1] h-3 w-3 rounded-full bg-white opacity-0 shadow transition-opacity group-hover/scrub:opacity-100"
+            style={{ left: `${pct}%`, transform: 'translate(-50%, -50%)' }}
+          />
         </div>
 
         <div className="flex items-center justify-center gap-4">
@@ -373,6 +322,7 @@ const VideoWithControls = React.forwardRef<HTMLVideoElement, { src: string }>(
     }, [videoRef]);
 
     const pct = duration > 0 ? (progress / duration) * 100 : 0;
+    const scale = duration > 0 ? progress / duration : 0;
 
     return (
       <>
@@ -388,7 +338,7 @@ const VideoWithControls = React.forwardRef<HTMLVideoElement, { src: string }>(
 
         <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent pt-6 pb-1.5 px-2">
           <div
-            className="w-full h-1 bg-white/15 rounded-full cursor-pointer mb-1.5 group/scrub"
+            className="relative mb-1.5 h-1 w-full cursor-pointer rounded-full bg-white/15 group/scrub focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
             role="slider"
             tabIndex={0}
             aria-label="מיקום בסרטון"
@@ -404,12 +354,16 @@ const VideoWithControls = React.forwardRef<HTMLVideoElement, { src: string }>(
               else if (e.key === 'ArrowLeft') { e.preventDefault(); v.currentTime = Math.max(0, v.currentTime - 5); }
             }}
           >
-            <div
-              className="h-full bg-cyan-400 rounded-full relative transition-[width] duration-100"
-              style={{ width: `${pct}%` }}
-            >
-              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-white rounded-full opacity-0 group-hover/scrub:opacity-100 transition-opacity shadow" />
+            <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-full">
+              <div
+                className="h-full w-full origin-left rounded-full bg-cyan-400 transition-transform duration-100"
+                style={{ transform: `scaleX(${scale})` }}
+              />
             </div>
+            <div
+              className="pointer-events-none absolute top-1/2 z-[1] h-2.5 w-2.5 rounded-full bg-white opacity-0 shadow transition-opacity group-hover/scrub:opacity-100"
+              style={{ left: `${pct}%`, transform: 'translate(-50%, -50%)' }}
+            />
           </div>
 
           <div className="flex items-center justify-center gap-3">

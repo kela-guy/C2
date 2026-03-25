@@ -112,7 +112,7 @@ export const spec: ComponentSpec = {
     {
       trigger: 'click',
       element: 'Sort button',
-      result: 'Cycles sortBy: priority → time → confidence → priority',
+      result: 'Cycles sortBy: priority → time → priority',
       keyboard: 'Enter/Space to cycle',
     },
     {

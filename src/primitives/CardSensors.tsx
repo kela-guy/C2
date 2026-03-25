@@ -19,7 +19,9 @@ export interface CardSensorsProps {
 }
 
 const rowClassName =
-  'flex items-center gap-2 text-[11px] text-white hover:brightness-125 hover:shadow-[0_0_0_1px_rgba(6,182,212,0.3)] rounded px-2 py-1.5 transition-colors group/sensor relative w-full text-right shadow-[0_0_0_1px_rgba(255,255,255,0.1)]';
+  'flex items-center gap-2 text-[11px] text-white hover:bg-white/[0.08] hover:shadow-[0_0_0_1px_rgba(6,182,212,0.3)] rounded px-2 py-1.5 transition-colors group/sensor relative w-full text-right shadow-[0_0_0_1px_rgba(255,255,255,0.1)]';
+const buttonRowClassName =
+  `${rowClassName} cursor-pointer font-sans focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 active:bg-white/[0.04]`;
 const rowStyle = { backgroundColor: CARD_TOKENS.surface.level4 } as const;
 
 export function CardSensors({
@@ -66,7 +68,7 @@ export function CardSensors({
             <button
               key={sensor.id}
               type="button"
-              className={`${rowClassName} cursor-pointer font-sans`}
+              className={buttonRowClassName}
               style={rowStyle}
               aria-label={aria}
               onClick={() => onSensorClick(sensor.id)}

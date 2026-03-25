@@ -1,5 +1,11 @@
 import React, { useEffect, useId, useRef } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/app/components/ui/collapsible';
+import { Card } from '@/app/components/ui/card';
+import { cn } from '@/app/components/ui/utils';
 import { CARD_TOKENS, type ThreatAccent } from './tokens';
 
 export interface TargetCardProps {
@@ -26,10 +32,15 @@ export function TargetCard({
   const d = CARD_TOKENS;
   const cardRef = useRef<HTMLDivElement>(null);
   const prevOpen = useRef(open);
-  const prefersReducedMotion = useReducedMotion();
   const contentId = useId();
+  const accentColor = d.spine.colors[accent];
+  const accentGlow =
+    accent !== 'idle' ? `0 0 16px ${accentColor}33` : '';
 
   useEffect(() => {
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (open && !prevOpen.current && cardRef.current) {
       const container = cardRef.current.closest('.overflow-y-auto');
       if (container) {
@@ -48,69 +59,75 @@ export function TargetCard({
       }
     }
     prevOpen.current = open;
-  }, [open, prefersReducedMotion]);
+  }, [open]);
+
+  const boxShadow = [
+    open
+      ? `0 0 0 ${d.selectedRing.ringWidth}px ${d.selectedRing.ringColor}${Math.round(d.selectedRing.ringOpacity * 255).toString(16).padStart(2, '0')}, ${d.elevation.shadow}`
+      : d.elevation.shadow,
+    accentGlow,
+  ]
+    .filter(Boolean)
+    .join(', ');
 
   return (
     <div
       ref={cardRef}
-      className={`w-full text-white transition-colors group/card relative overflow-hidden ${className}`}
-      style={{
-        backgroundColor: d.container.bgColor,
-        borderRadius: `${d.container.borderRadius}px`,
-        marginBottom: `${d.container.marginBottom + 2}px`,
-        filter: completed ? 'saturate(0.4) brightness(0.85)' : undefined,
-        boxShadow: open
-          ? `0 0 0 ${d.selectedRing.ringWidth}px ${d.selectedRing.ringColor}${Math.round(d.selectedRing.ringOpacity * 255).toString(16).padStart(2, '0')}, ${d.elevation.shadow}`
-          : d.elevation.shadow,
-      }}
+      className={cn('w-full', className)}
+      style={{ marginBottom: `${d.container.marginBottom + 2}px` }}
       dir="rtl"
     >
-      <div
-        className="transition-colors cursor-pointer hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
-        style={{
-          padding: `${d.header.paddingY}px ${d.header.paddingX}px`,
-          backgroundColor: open ? `rgba(255,255,255,${d.header.selectedBgOpacity})` : undefined,
-          borderTopLeftRadius: `${d.container.borderRadius}px`,
-          borderTopRightRadius: `${d.container.borderRadius}px`,
+      <Collapsible
+        open={open}
+        onOpenChange={(next) => {
+          if (next && !open && onFocus) onFocus();
+          if (next !== open) onToggle();
         }}
-        onClick={(e) => {
-          if (onFocus && !open) onFocus();
-          onToggle();
-        }}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(); } }}
-        role="button"
-        tabIndex={0}
-        aria-expanded={open}
-        aria-controls={contentId}
       >
-        {header}
-      </div>
-
-      <AnimatePresence initial={false}>
-        {open && children && (
-          <motion.div
-            initial={prefersReducedMotion ? false : { height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={prefersReducedMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
-            transition={{
-              duration: prefersReducedMotion ? 0 : d.animation.expandDuration,
-              ease: 'easeOut',
-            }}
-            className="overflow-hidden"
-            id={contentId}
-          >
+        <Card
+          className="group/card relative w-full gap-0 overflow-hidden border-0 bg-transparent p-0 text-white shadow-none transition-colors rounded-none"
+          style={{
+            backgroundColor: d.container.bgColor,
+            borderRadius: `${d.container.borderRadius}px`,
+            filter: completed ? 'saturate(0.4) brightness(0.85)' : undefined,
+            boxShadow,
+          }}
+        >
+          <CollapsibleTrigger asChild>
             <div
-              className="flex flex-col gap-px"
+              className="transition-colors cursor-pointer hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
               style={{
-                backgroundColor: d.content.bgColor,
-                boxShadow: `inset 0 1px 0 0 ${d.content.borderColor}`,
+                padding: `${d.header.paddingY}px ${d.header.paddingX}px`,
+                backgroundColor: open
+                  ? `rgba(255,255,255,${d.header.selectedBgOpacity})`
+                  : undefined,
+                borderTopLeftRadius: `${d.container.borderRadius}px`,
+                borderTopRightRadius: `${d.container.borderRadius}px`,
               }}
+              aria-controls={children != null ? contentId : undefined}
             >
-              {children}
+              {header}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </CollapsibleTrigger>
+
+          {children != null && (
+            <CollapsibleContent
+              id={contentId}
+              className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down"
+            >
+              <div
+                className="flex flex-col gap-px"
+                style={{
+                  backgroundColor: d.content.bgColor,
+                  boxShadow: `inset 0 1px 0 0 ${d.content.borderColor}`,
+                }}
+              >
+                {children}
+              </div>
+            </CollapsibleContent>
+          )}
+        </Card>
+      </Collapsible>
     </div>
   );
 }

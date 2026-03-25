@@ -1,23 +1,23 @@
-import React, { useState, useRef, useEffect, useLayoutEffect } from "react";
-import { createPortal } from "react-dom";
-import { 
-  Bell, 
-  Settings, 
-  Check, 
-  ChevronDown, 
-  MessageSquare, 
-  ShieldAlert, 
-  Radio, 
+import React, { useState } from "react";
+import {
+  Bell,
+  Settings,
+  ChevronDown,
+  MessageSquare,
+  ShieldAlert,
+  Radio,
   Info,
   CheckCircle2,
   AlertTriangle,
-  FileText,
-  User,
-  MoreHorizontal
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetHeader,
+  SheetTitle,
+} from "./ui/sheet";
 
-// --- Types ---
 type NotificationType = "alert" | "info" | "message" | "system";
 type Priority = "critical" | "high" | "medium" | "low";
 
@@ -27,14 +27,13 @@ interface NotificationItem {
   priority: Priority;
   title: string;
   description: string;
-  time: string; // e.g., "10:42 AM" or "Feb 10"
+  time: string;
   dateCategory: "Today" | "Yesterday" | "Last 7 Days" | "Older";
   read: boolean;
-  sender?: string; // "System", "Commander", etc.
+  sender?: string;
   icon?: React.ReactNode;
 }
 
-// --- Mock Data ---
 const MOCK_NOTIFICATIONS_HISTORY: NotificationItem[] = [
   {
     id: "1",
@@ -115,7 +114,6 @@ const MOCK_NOTIFICATIONS_HISTORY: NotificationItem[] = [
   }
 ];
 
-// --- Icons Helper ---
 const getIcon = (type: NotificationType, priority: Priority) => {
   const size = 18;
   if (type === "alert" || priority === "critical") return <ShieldAlert size={size} />;
@@ -126,7 +124,6 @@ const getIcon = (type: NotificationType, priority: Priority) => {
 };
 
 const getPriorityColor = (priority: Priority) => {
-  // Kept for reference or other uses, though Row handles its own colors now
   switch (priority) {
     case "critical": return "bg-red-500";
     case "high": return "bg-orange-500";
@@ -135,53 +132,44 @@ const getPriorityColor = (priority: Priority) => {
   }
 };
 
-// --- Components ---
-
 const NotificationRow = ({ item }: { item: NotificationItem }) => {
   return (
     <div className={`
-      group relative flex gap-4 p-4 hover:bg-white/[0.03] transition-colors cursor-pointer border-b border-[#333]/30 last:border-0
+      group relative flex gap-4 p-4 hover:bg-white/[0.03] transition-colors cursor-pointer border-b border-border/30 last:border-0
       ${!item.read ? 'bg-blue-500/[0.04]' : ''}
     `}>
-      {/* Unread Indicator - Left Accent Bar */}
       {!item.read && (
         <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-blue-500 shadow-[2px_0_8px_rgba(59,130,246,0.2)]" />
       )}
 
-      {/* Icon Section */}
       <div className="relative shrink-0 pt-0.5">
         <div className={`
           w-9 h-9 rounded-lg flex items-center justify-center shadow-sm
-          ${item.priority === 'critical' ? 'bg-red-500/10 text-red-500 shadow-[0_0_0_1px_rgba(239,68,68,0.2)]' : 
+          ${item.priority === 'critical' ? 'bg-red-500/10 text-red-500 shadow-[0_0_0_1px_rgba(239,68,68,0.2)]' :
             item.priority === 'high' ? 'bg-orange-500/10 text-orange-500 shadow-[0_0_0_1px_rgba(249,115,22,0.2)]' :
             item.type === 'message' ? 'bg-blue-500/10 text-blue-400 shadow-[0_0_0_1px_rgba(59,130,246,0.2)]' :
             item.type === 'system' ? 'bg-purple-500/10 text-purple-400 shadow-[0_0_0_1px_rgba(168,85,247,0.2)]' :
-            'bg-[#25262b] text-gray-400 shadow-[0_0_0_1px_rgba(255,255,255,0.1)]'}
+            'bg-zinc-900 text-gray-400 shadow-[0_0_0_1px_rgba(255,255,255,0.1)]'}
         `}>
           {getIcon(item.type, item.priority)}
         </div>
       </div>
 
-      {/* Content Section */}
       <div className="flex-1 min-w-0 flex flex-col gap-1">
-        
-        {/* Header Line: Sender & Time */}
         <div className="flex justify-between items-center h-5">
           <span className="text-[11px] font-medium uppercase tracking-wider text-white/70 group-hover:text-white/90 transition-colors">
             {item.sender}
           </span>
-          <span className="text-[10px] text-[#555] font-medium font-mono tabular-nums">
+          <span className="text-[10px] text-zinc-500 font-medium font-mono tabular-nums">
             {item.time}
           </span>
         </div>
 
-        {/* Title */}
         <h4 className={`text-[13px] leading-5 font-medium ${!item.read ? 'text-gray-100' : 'text-gray-400'}`}>
           {item.title}
         </h4>
 
-        {/* Description */}
-        <p className="text-[12px] leading-5 text-[#888] line-clamp-2 pr-1 font-light">
+        <p className="text-[12px] leading-5 text-zinc-400 line-clamp-2 pr-1 font-light">
           {item.description}
         </p>
       </div>
@@ -190,75 +178,14 @@ const NotificationRow = ({ item }: { item: NotificationItem }) => {
 };
 
 type NotificationCenterProps = {
-  /** Optional custom trigger (e.g. sidebar icon). Receives open state and must call open/close. */
   trigger?: React.ReactElement;
 };
-
-const PANEL_PADDING = 12;
-const PANEL_GAP = 8;
 
 export const NotificationCenter = ({ trigger: customTrigger }: NotificationCenterProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"all" | "alerts" | "unread">("all");
   const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS_HISTORY);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [panelStyle, setPanelStyle] = useState<React.CSSProperties>({});
 
-  // Position panel fixed and clamp to viewport when open (layout effect to avoid flash)
-  useLayoutEffect(() => {
-    if (!isOpen || !containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const viewportH = window.innerHeight;
-    const viewportW = window.innerWidth;
-    const maxH = viewportH - PANEL_PADDING * 2;
-    const panelW = 380;
-    const minPanelHeight = 200;
-    let left: number;
-    if (customTrigger) {
-      left = rect.left - panelW - PANEL_GAP;
-    } else {
-      left = rect.left;
-    }
-    const clampedLeft = Math.max(PANEL_PADDING, Math.min(left, viewportW - panelW - PANEL_PADDING));
-
-    const spaceBelow = viewportH - rect.bottom - PANEL_GAP - PANEL_PADDING;
-    const spaceAbove = rect.top - PANEL_GAP - PANEL_PADDING;
-    const openAbove = spaceBelow < minPanelHeight && spaceAbove >= spaceBelow;
-
-    let top: number;
-    let height: number;
-    if (openAbove) {
-      height = Math.max(minPanelHeight, Math.min(maxH, spaceAbove));
-      top = rect.top - height - PANEL_GAP;
-    } else {
-      top = rect.bottom + PANEL_GAP;
-      height = Math.max(minPanelHeight, Math.min(maxH, spaceBelow > 0 ? spaceBelow : maxH));
-    }
-
-    const style = {
-      position: 'fixed' as const,
-      left: clampedLeft,
-      top: Math.max(PANEL_PADDING, top),
-      width: panelW,
-      maxWidth: `calc(100vw - ${PANEL_PADDING * 2}px)` as const,
-      height,
-      maxHeight: height,
-    };
-    setPanelStyle(style);
-  }, [isOpen, customTrigger]);
-
-  // Close when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Filter Logic
   const filteredNotifications = notifications.filter(n => {
     if (activeTab === "unread") return !n.read;
     if (activeTab === "alerts") return n.type === "alert";
@@ -267,7 +194,6 @@ export const NotificationCenter = ({ trigger: customTrigger }: NotificationCente
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  // Grouping Logic
   const grouped = {
     "Today": filteredNotifications.filter(n => n.dateCategory === "Today"),
     "Yesterday": filteredNotifications.filter(n => n.dateCategory === "Yesterday"),
@@ -279,147 +205,135 @@ export const NotificationCenter = ({ trigger: customTrigger }: NotificationCente
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
 
-  const toggleOpen = () => setIsOpen((o) => !o);
   const badge = unreadCount > 0 ? (
-    <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border border-[#141414] flex items-center justify-center text-[8px] font-bold text-white shadow-sm pointer-events-none">
+    <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border border-zinc-950 flex items-center justify-center text-[8px] font-bold text-white tabular-nums shadow-sm pointer-events-none">
       {unreadCount > 9 ? '9+' : unreadCount}
     </span>
   ) : null;
 
   return (
-    <div className="relative font-sans" dir="rtl" ref={containerRef}>
-      {customTrigger ? (
-        <div className="relative inline-flex">
-          {React.cloneElement(customTrigger, {
-            onClick: (e: React.MouseEvent) => {
-              (customTrigger.props as { onClick?: (e: React.MouseEvent) => void })?.onClick?.(e);
-              toggleOpen();
-            },
-          })}
-          {badge}
-        </div>
-      ) : (
-        <button
-          onClick={toggleOpen}
-          className={`
-            relative w-10 h-10 rounded-full flex items-center justify-center 
-            transition-all duration-200 border
-            ${isOpen 
-              ? 'bg-blue-900/30 border-blue-500/50 text-blue-400' 
-              : 'bg-[#141414] border-[#333] text-[#a5a5a5] hover:text-white hover:border-[#555]'
-            }
-          `}
-        >
-          <Bell size={18} />
-          {badge}
-        </button>
-      )}
-
-      {/* Dropdown Panel - portaled to document.body so position:fixed is viewport-relative (nav has backdrop-blur which creates a containing block) */}
-      {isOpen && createPortal(
-        <AnimatePresence>
-          <motion.div
-              initial={{ opacity: 0, y: 10, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 10, scale: 0.98 }}
-              transition={{ duration: 0.15 }}
-              className="flex flex-col bg-[#141414] shadow-[0_0_0_1px_#333] rounded-xl overflow-hidden z-[9999] ring-1 ring-white/5 origin-top-left"
-              style={{
-                position: 'fixed',
-                width: 380,
-                maxWidth: 'calc(100vw - 24px)',
-                maxHeight: 'calc(100vh - 24px)',
-                ...panelStyle,
-                boxShadow: "0 40px 60px -15px rgba(0, 0, 0, 0.7), 0 20px 30px -10px rgba(0, 0, 0, 0.6)",
-              }}
+    <div className="relative font-sans">
+      <Sheet open={isOpen} onOpenChange={setIsOpen}>
+        <SheetTrigger asChild>
+          {customTrigger ? (
+            <div className="relative inline-flex">
+              {customTrigger}
+              {badge}
+            </div>
+          ) : (
+            <button
+              aria-label="מרכז התראות"
+              className={`
+                relative w-10 h-10 rounded-full flex items-center justify-center
+                transition-colors duration-200 border
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25
+                ${isOpen
+                  ? 'bg-blue-900/30 border-blue-500/50 text-blue-400'
+                  : 'bg-zinc-950 border-border text-zinc-300 hover:text-white hover:border-zinc-500'
+                }
+              `}
             >
-              {/* Header */}
-              <div className="px-4 py-3 border-b border-[#333] flex justify-between items-center bg-[#141414]">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold text-gray-200 tracking-wide">מרכז התראות</h3>
-                  <span className="text-[10px] bg-[#222] text-[#888] px-1.5 py-0.5 rounded shadow-[0_0_0_1px_#333]">beta</span>
-                </div>
-                <div className="flex gap-1">
-                  <button 
-                     onClick={markAllAsRead}
-                     className="text-[10px] text-[#666] hover:text-blue-400 font-medium transition-colors px-2 py-1 rounded hover:bg-white/5"
-                   >
-                     סמן הכל כנקרא
-                   </button>
-                  <button className="text-[#555] hover:text-white transition-colors p-1.5 rounded hover:bg-white/5">
-                    <Settings size={14} />
-                  </button>
-                </div>
-              </div>
+              <Bell size={18} />
+              {badge}
+            </button>
+          )}
+        </SheetTrigger>
 
-              {/* Tabs */}
-              <div className="flex items-center px-4 pt-2 border-b border-[#333] bg-[#141414]">
-                 <div className="flex gap-6">
-                    {(["all", "alerts", "unread"] as const).map((tab) => (
-                      <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab)}
-                        className={`
-                          text-[12px] font-medium pb-2 border-b-[2px] transition-all relative
-                          ${activeTab === tab 
-                            ? 'text-white border-blue-500' 
-                            : 'text-[#666] border-transparent hover:text-[#999]'
-                          }
-                        `}
-                      >
-                        {tab === "all" ? "הכל" : tab === "alerts" ? "דחוף" : "לא נקראו"}
-                        {tab === "unread" && unreadCount > 0 && (
-                          <span className="mr-1.5 text-[10px] bg-[#333] text-[#aaa] px-1 rounded-full">{unreadCount}</span>
-                        )}
-                      </button>
+        <SheetContent
+          side="right"
+          dir="rtl"
+          className="w-[380px] sm:max-w-[380px] p-0 gap-0 bg-zinc-950 border-border font-sans"
+        >
+          <SheetHeader className="px-4 py-3 pr-10 border-b border-border flex-row justify-between items-center space-y-0">
+            <div className="flex items-center gap-2">
+              <SheetTitle className="text-sm font-bold text-gray-200 tracking-wide">
+                מרכז התראות
+              </SheetTitle>
+              <span className="text-[10px] bg-zinc-900 text-zinc-400 px-1.5 py-0.5 rounded ring-1 ring-white/10">
+                beta
+              </span>
+            </div>
+            <div className="flex gap-1">
+              <button
+                onClick={markAllAsRead}
+                className="text-[10px] text-zinc-500 hover:text-blue-400 font-medium transition-colors px-2 py-1 rounded hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+              >
+                סמן הכל כנקרא
+              </button>
+              <button
+                aria-label="הגדרות התראות"
+                className="text-zinc-500 hover:text-white transition-colors p-1.5 rounded hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+              >
+                <Settings size={14} />
+              </button>
+            </div>
+          </SheetHeader>
+
+          <div className="flex items-center px-4 pt-2 border-b border-border bg-zinc-950">
+            <div className="flex gap-6">
+              {(["all", "alerts", "unread"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`
+                    text-[12px] font-medium pb-2 border-b-[2px] transition-colors relative
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25
+                    ${activeTab === tab
+                      ? 'text-white border-blue-500'
+                      : 'text-zinc-500 border-transparent hover:text-zinc-400'
+                    }
+                  `}
+                >
+                  {tab === "all" ? "הכל" : tab === "alerts" ? "דחוף" : "לא נקראו"}
+                  {tab === "unread" && unreadCount > 0 && (
+                    <span className="mr-1.5 text-[10px] bg-white/10 text-zinc-400 px-1 rounded-full tabular-nums">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="overflow-y-auto flex-1 min-h-0">
+            {Object.entries(grouped).map(([category, items]) => {
+              if (items.length === 0) return null;
+              return (
+                <div key={category} className="flex flex-col">
+                  <div className="sticky top-0 z-10 bg-zinc-950/95 backdrop-blur-sm px-4 py-2 border-b border-border/30 flex items-center">
+                    <span className="text-[11px] font-medium text-white/70 uppercase tracking-wider">
+                      {category === "Today" ? "היום" :
+                       category === "Yesterday" ? "אתמול" :
+                       category === "Last 7 Days" ? "השבוע" : "היסטוריה"}
+                    </span>
+                  </div>
+                  <div className="flex flex-col">
+                    {items.map(item => (
+                      <NotificationRow key={item.id} item={item} />
                     ))}
-                 </div>
-              </div>
+                  </div>
+                </div>
+              );
+            })}
 
-              {/* Scrollable List - flex-1 min-h-0 so panel height is bounded and only list scrolls */}
-              <div className="overflow-y-auto flex-1 min-h-0 custom-scrollbar">
-                 {Object.entries(grouped).map(([category, items]) => {
-                   if (items.length === 0) return null;
-                   return (
-                     <div key={category} className="flex flex-col">
-                        <div className="sticky top-0 z-10 bg-[#141414]/95 backdrop-blur-sm px-4 py-2 border-b border-[#333]/30 flex items-center">
-                           <span className="text-[11px] font-medium text-white/70 uppercase tracking-wider">
-                             {category === "Today" ? "היום" :
-                              category === "Yesterday" ? "אתמול" :
-                              category === "Last 7 Days" ? "השבוע" : "היסטוריה"}
-                           </span>
-                        </div>
-                        <div className="flex flex-col">
-                           {items.map(item => (
-                             <NotificationRow key={item.id} item={item} />
-                           ))}
-                        </div>
-                     </div>
-                   );
-                 })}
-                 
-                 {filteredNotifications.length === 0 && (
-                   <div className="flex flex-col items-center justify-center py-20 text-[#444] gap-3">
-                      <div className="w-12 h-12 rounded-full bg-[#1A1A1A] flex items-center justify-center shadow-[0_0_0_1px_#222]">
-                          <CheckCircle2 size={20} />
-                      </div>
-                      <span className="text-xs font-medium">הכל נקי, אין התראות</span>
-                   </div>
-                 )}
+            {filteredNotifications.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-20 text-zinc-600 gap-3">
+                <div className="w-12 h-12 rounded-full bg-zinc-950 flex items-center justify-center ring-1 ring-zinc-900">
+                  <CheckCircle2 size={20} />
+                </div>
+                <span className="text-xs font-medium">הכל נקי, אין התראות</span>
               </div>
+            )}
+          </div>
 
-              {/* Footer */}
-              <div className="p-2 border-t border-[#333] bg-[#141414] flex justify-center">
-                 <button className="flex items-center gap-1.5 text-[11px] text-[#666] hover:text-white transition-colors py-1 px-3 rounded hover:bg-white/5">
-                    <span>כל ההיסטוריה</span>
-                    <ChevronDown size={12} className="rotate-[90deg]" />
-                 </button>
-              </div>
-
-            </motion.div>
-        </AnimatePresence>,
-        document.body
-      )}
+          <div className="p-2 border-t border-border bg-zinc-950 flex justify-center">
+            <button className="flex items-center gap-1.5 text-[11px] text-zinc-500 hover:text-white transition-colors py-1 px-3 rounded hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25">
+              <span>כל ההיסטוריה</span>
+              <ChevronDown size={12} className="rotate-[90deg]" />
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };

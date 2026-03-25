@@ -3,6 +3,8 @@ import { useDrag } from 'react-dnd';
 import { X, Search, Camera, AlertTriangle, MapPin, BellOff, Wrench, Check, Loader2 } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './ui/tooltip';
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
+import { Switch } from './ui/switch';
+import { Collapsible, CollapsibleContent } from './ui/collapsible';
 import { LAYOUT_TOKENS } from '@/primitives/tokens';
 import {
   CAMERA_ASSETS,
@@ -204,13 +206,13 @@ function JamIcon({ size = 16, className }: { size?: number; className?: string }
 }
 
 function BatteryIcon({ pct }: { pct: number }) {
-  const color = pct > 60 ? '#34d399' : pct > 30 ? '#fbbf24' : pct >= 20 ? '#fb923c' : '#f87171';
+  const colorClass = pct > 60 ? 'text-emerald-400' : pct > 30 ? 'text-amber-400' : pct >= 20 ? 'text-orange-400' : 'text-red-400';
   const fillWidth = Math.max(1, (pct / 100) * 17);
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" width={16} height={16}>
-      <rect x="1" y="5" width="19" height="14" rx="2" stroke={color} strokeWidth="1.5" fill="none" />
-      <rect x="2.5" y="6.5" width={fillWidth} height="11" rx="1" fill={color} />
-      <rect x="20" y="10" width="3" height="4" rx="1" fill={color} />
+    <svg className={colorClass} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" width={16} height={16}>
+      <rect x="1" y="5" width="19" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" fill="none" />
+      <rect x="2.5" y="6.5" width={fillWidth} height="11" rx="1" fill="currentColor" />
+      <rect x="20" y="10" width="3" height="4" rx="1" fill="currentColor" />
     </svg>
   );
 }
@@ -228,50 +230,6 @@ const CONNECTION_STATE_COLORS: Record<ConnectionState, string> = {
   error: 'bg-red-400',
   warning: 'bg-amber-400',
 };
-
-function StatusDot({ state }: { state: ConnectionState }) {
-  if (state === 'online') return null;
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span
-          className={`absolute -bottom-0.5 -right-0.5 size-2 rounded-full shadow-[0_0_0_2px_#141414] ${CONNECTION_STATE_COLORS[state]}`}
-          aria-label={CONNECTION_STATE_LABELS[state]}
-        />
-      </TooltipTrigger>
-      <TooltipContent
-        side="top"
-        sideOffset={6}
-        showArrow={false}
-        className="px-2 py-1 text-[10px] text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
-        dir="rtl"
-      >
-        {CONNECTION_STATE_LABELS[state]}
-      </TooltipContent>
-    </Tooltip>
-  );
-}
-
-function WipersToggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-[11px] text-white/60">מגבים</span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={on}
-        aria-label="מגבים"
-        onClick={(e) => { e.stopPropagation(); onToggle(); }}
-        className={`relative w-8 h-[18px] rounded-full cursor-pointer transition-[background-color] duration-200 ease-out focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none ${on ? 'bg-sky-500/80' : 'bg-white/10'}`}
-      >
-        <span
-          className="absolute top-[2px] left-[2px] size-[14px] rounded-full bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.1)] transition-[transform] duration-200 ease-out"
-          style={{ transform: on ? 'translateX(14px)' : 'translateX(0)' }}
-        />
-      </button>
-    </div>
-  );
-}
 
 function DeviceRow({
   device,
@@ -344,10 +302,10 @@ function DeviceRow({
     });
   }
 
-  const gridCols = 'grid-cols-3';
+  const showStatusDot = device.connectionState !== 'online';
 
   return (
-    <div style={isDragging ? { opacity: 0.4 } : undefined}>
+    <Collapsible open={isExpanded} style={isDragging ? { opacity: 0.4 } : undefined}>
       <div
         ref={isCamera ? dragRef : undefined}
         role="button"
@@ -361,14 +319,32 @@ function DeviceRow({
         onMouseEnter={() => onHover(device.id)}
         onMouseLeave={() => onHover(null)}
       >
-        <div className={`relative w-8 h-8 rounded flex items-center justify-center shrink-0 ${isMalfunctioning ? 'bg-orange-900/40' : 'bg-[#333]'}`}>
+        <div className={`relative w-8 h-8 rounded flex items-center justify-center shrink-0 ${isMalfunctioning ? 'bg-orange-900/40' : 'bg-white/10'}`}>
           <device.Icon size={20} fill={isMalfunctioning ? '#f97316' : 'white'} />
-          <StatusDot state={device.connectionState} />
+          {showStatusDot && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span
+                  className={`absolute -bottom-0.5 -right-0.5 size-2 rounded-full ring-2 ring-zinc-950 ${CONNECTION_STATE_COLORS[device.connectionState]}`}
+                  aria-label={CONNECTION_STATE_LABELS[device.connectionState]}
+                />
+              </TooltipTrigger>
+              <TooltipContent
+                side="top"
+                sideOffset={6}
+                showArrow={false}
+                className="px-2 py-1 text-[10px] text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
+                dir="rtl"
+              >
+                {CONNECTION_STATE_LABELS[device.connectionState]}
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className={`text-[13px] font-medium truncate ${isMalfunctioning ? 'text-orange-300' : 'text-[#dee2e6]'}`}>{device.name}</span>
+              <span className={`text-[13px] font-medium truncate ${isMalfunctioning ? 'text-orange-300' : 'text-zinc-300'}`}>{device.name}</span>
               {isMalfunctioning && <AlertTriangle size={11} className="text-orange-400 shrink-0" />}
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
@@ -400,7 +376,7 @@ function DeviceRow({
               type="button"
               onClick={(e) => { e.stopPropagation(); onJamActivate?.(device.id); }}
               disabled={isDisabled}
-              className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium transition-[background-color,transform] duration-150 ease-out disabled:opacity-40 disabled:cursor-not-allowed bg-[oklch(0.348_0.111_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)] hover:bg-[oklch(0.445_0.151_17)] active:scale-[0.98] active:bg-[oklch(0.295_0.082_17)]"
+              className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium transition-[background-color,transform] duration-150 ease-out disabled:opacity-40 disabled:cursor-not-allowed bg-[oklch(0.348_0.111_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)] hover:bg-[oklch(0.445_0.151_17)] active:scale-[0.98] active:bg-[oklch(0.295_0.082_17)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
             >
               <JamIcon size={12} />
               {device.status === 'active' ? 'שיבוש פעיל' : 'הפעל'}
@@ -430,107 +406,101 @@ function DeviceRow({
         })()}
       </div>
 
-      <div
-        className="grid transition-[grid-template-rows,opacity] duration-200"
-        style={{
-          gridTemplateRows: isExpanded ? '1fr' : '0fr',
-          opacity: isExpanded ? 1 : 0,
-          transitionTimingFunction: isExpanded ? 'ease-out' : 'ease-in',
-        }}
-      >
-        <div className="overflow-hidden">
-          <div className="flex flex-col bg-white/[0.03]" dir="rtl">
+      <CollapsibleContent className="overflow-hidden animate-in fade-in-0 duration-200">
+        <div className="flex flex-col bg-white/[0.03]" dir="rtl">
+          {isCamera && presets && (
+            <Tabs value={activePreset} onValueChange={setActivePreset} onClick={(e) => e.stopPropagation()} dir="rtl">
+              <TabsList variant="line" className="px-3" aria-label="מצב מצלמה">
+                {presets.map((preset) => (
+                  <TabsTrigger key={preset} value={preset}>
+                    {preset}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          )}
 
-            {/* Camera preset tabs */}
-            {isCamera && presets && (
-              <Tabs value={activePreset} onValueChange={setActivePreset} onClick={(e) => e.stopPropagation()} dir="rtl">
-                <TabsList variant="line" className="px-3" aria-label="מצב מצלמה">
-                  {presets.map((preset) => (
-                    <TabsTrigger key={preset} value={preset}>
-                      {preset}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </Tabs>
-            )}
-
-            {/* Camera video preview */}
-            {isCamera && (
-              <div className="relative w-full h-[200px] overflow-hidden bg-black shadow-[0_0_0_1px_rgba(255,255,255,0.1)]">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Camera size={24} className="text-white/20" />
-                </div>
-                <div className="absolute inset-0 bg-black/20 pointer-events-none" />
-                <div className="absolute top-1.5 right-1.5 flex items-center gap-1 bg-black/80 px-1.5 py-0.5 rounded-sm">
-                  <div className="size-1.5 rounded-full bg-red-500 animate-pulse motion-reduce:animate-none" />
-                  <span className="text-[9px] font-medium text-white/90 uppercase tracking-wide">Live</span>
-                </div>
+          {isCamera && (
+            <div className="relative w-full h-[200px] overflow-hidden bg-black shadow-[0_0_0_1px_rgba(255,255,255,0.1)]">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Camera size={24} className="text-white/20" />
               </div>
+              <div className="absolute inset-0 bg-black/20 pointer-events-none" />
+              <div className="absolute top-1.5 right-1.5 flex items-center gap-1 bg-black/80 px-1.5 py-0.5 rounded-sm">
+                <div className="size-1.5 rounded-full bg-red-500 animate-pulse motion-reduce:animate-none" />
+                <span className="text-[9px] font-medium text-white/90 uppercase tracking-wide">Live</span>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-3 gap-x-4 gap-y-5 px-4 py-3">
+            {statRows.map(row => (
+              <DetailRow key={row.label} label={row.label} value={row.value} color={row.color} />
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2 px-4 py-2.5 border-t border-white/[0.06]">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onFlyTo(device.lat, device.lon); }}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90 active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out cursor-pointer focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
+              aria-label="מרכז במפה"
+            >
+              <MapPin size={12} />
+              מרכז במפה
+            </button>
+
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onToggleMute(device.id); }}
+              aria-pressed={isMuted}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium transition-[background-color,color,transform] duration-150 ease-out cursor-pointer active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none ${
+                isMuted
+                  ? 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/25'
+                  : 'text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90'
+              }`}
+              aria-label={isMuted ? 'בטל השתקה' : 'השתק'}
+            >
+              <BellOff size={12} />
+              {isMuted ? 'בטל השתקה' : 'השתק'}
+            </button>
+
+            {device.type === 'drone' && (
+              <>
+                <div className="w-px h-5 bg-white/[0.08] mx-0.5" />
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-white/60">מגבים</span>
+                  <Switch
+                    checked={wipersOn}
+                    onCheckedChange={setWipersOn}
+                    onClick={(e) => e.stopPropagation()}
+                    aria-label="מגבים"
+                    className="h-[18px] w-8 data-[state=checked]:bg-sky-500/80 data-[state=unchecked]:bg-white/10"
+                  />
+                </div>
+                <button
+                  type="button"
+                  disabled={calibState !== 'idle'}
+                  aria-busy={calibState === 'running'}
+                  onClick={(e) => { e.stopPropagation(); setCalibState('running'); }}
+                  className="ml-auto flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90 active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
+                  aria-label="כיול"
+                >
+                  {calibState === 'running' ? (
+                    <Loader2 size={12} className="animate-spin motion-reduce:animate-none" />
+                  ) : calibState === 'done' ? (
+                    <Check size={12} className="text-emerald-400" />
+                  ) : (
+                    <Wrench size={12} />
+                  )}
+                  {calibState === 'running' ? 'מכייל...' : calibState === 'done' ? 'הושלם' : 'כיול'}
+                </button>
+              </>
             )}
-
-            {/* Stats grid */}
-            <div className={`grid ${gridCols} gap-x-4 gap-y-5 px-4 py-3`}>
-              {statRows.map(row => (
-                <DetailRow key={row.label} label={row.label} value={row.value} color={row.color} />
-              ))}
-            </div>
-
-            {/* Action bar */}
-            <div className="flex items-center gap-2 px-4 py-2.5 border-t border-white/[0.06]">
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); onFlyTo(device.lat, device.lon); }}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90 active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out cursor-pointer focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
-                aria-label="מרכז במפה"
-              >
-                <MapPin size={12} />
-                מרכז במפה
-              </button>
-
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); onToggleMute(device.id); }}
-                aria-pressed={isMuted}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium transition-[background-color,color,transform] duration-150 ease-out cursor-pointer active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none ${
-                  isMuted
-                    ? 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/25'
-                    : 'text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90'
-                }`}
-                aria-label={isMuted ? 'בטל השתקה' : 'השתק'}
-              >
-                <BellOff size={12} />
-                {isMuted ? 'בטל השתקה' : 'השתק'}
-              </button>
-
-              {/* Drone-specific controls */}
-              {device.type === 'drone' && (
-                <>
-                  <div className="w-px h-5 bg-white/[0.08] mx-0.5" />
-                  <WipersToggle on={wipersOn} onToggle={() => setWipersOn(v => !v)} />
-                  <button
-                    type="button"
-                    disabled={calibState !== 'idle'}
-                    aria-busy={calibState === 'running'}
-                    onClick={(e) => { e.stopPropagation(); setCalibState('running'); }}
-                    className="ml-auto flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90 active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
-                    aria-label="כיול"
-                  >
-                    {calibState === 'running' ? (
-                      <Loader2 size={12} className="animate-spin motion-reduce:animate-none" />
-                    ) : calibState === 'done' ? (
-                      <Check size={12} className="text-emerald-400" />
-                    ) : (
-                      <Wrench size={12} />
-                    )}
-                    {calibState === 'running' ? 'מכייל...' : calibState === 'done' ? 'הושלם' : 'כיול'}
-                  </button>
-                </>
-              )}
-            </div>
           </div>
         </div>
-      </div>
-    </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 
@@ -560,7 +530,6 @@ export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onJamActiv
   const [mutedDevices, setMutedDevices] = useState<Map<string, number>>(new Map());
   const [, setTick] = useState(0);
 
-  // Shared interval for mute countdown display
   useEffect(() => {
     if (mutedDevices.size === 0) return;
     const id = setInterval(() => {
@@ -662,10 +631,9 @@ export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onJamActiv
 
   return (
     <aside
-      className={`absolute top-0 bottom-0 right-0 bg-[#141414] border-l border-white/10 flex flex-col z-10 font-sans ${noTransition ? '' : 'transition-transform duration-300 ease-out'} ${open ? 'translate-x-0' : 'translate-x-full pointer-events-none'}`}
+      className={`absolute top-0 bottom-0 right-0 bg-zinc-950 border-l border-white/10 flex flex-col z-10 font-sans ${noTransition ? '' : 'transition-transform duration-300 ease-out'} ${open ? 'translate-x-0' : 'translate-x-full pointer-events-none'}`}
       style={{ width: width ?? LAYOUT_TOKENS.sidebarWidthPx }}
     >
-      {/* Header */}
       <div className="flex flex-col gap-2 px-4 pt-3 pb-2 border-b border-white/10 shrink-0">
         <div className="flex items-center justify-between">
           <h2 className="text-xs font-medium text-white uppercase tracking-wider" dir="rtl">
@@ -673,14 +641,13 @@ export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onJamActiv
           </h2>
           <button
             onClick={onClose}
-            className="p-2 -m-1 rounded hover:bg-white/10 text-zinc-500 hover:text-zinc-300 transition-colors active:scale-95"
+            className="p-2 -m-1 rounded hover:bg-white/10 text-zinc-500 hover:text-zinc-300 transition-colors active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
             aria-label="סגור"
           >
             <X size={14} />
           </button>
         </div>
 
-        {/* Search */}
         <div className="relative" dir="rtl">
           <Search size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
           <input
@@ -693,7 +660,7 @@ export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onJamActiv
           {query && (
             <button
               onClick={() => setQuery('')}
-              className="absolute left-1 top-1/2 -translate-y-1/2 p-1 text-zinc-500 hover:text-zinc-300 transition-colors"
+              className="absolute left-1 top-1/2 -translate-y-1/2 p-1 text-zinc-500 hover:text-zinc-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
               aria-label="נקה חיפוש"
             >
               <X size={12} />
@@ -701,7 +668,6 @@ export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onJamActiv
           )}
         </div>
 
-        {/* Type filter toggles */}
         <TooltipProvider delayDuration={150}>
           <div className="flex items-center gap-1">
             {TYPE_ORDER.map(type => {
@@ -714,7 +680,8 @@ export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onJamActiv
                   <TooltipTrigger asChild>
                     <button
                       onClick={() => handleTypeToggle(type)}
-                      className={`p-2 rounded transition-colors cursor-pointer active:scale-95 ${
+                      aria-label={TYPE_LABELS[type]}
+                      className={`p-2 rounded transition-colors cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
                         isActive && !allActive
                           ? 'bg-white/15 text-white ring-1 ring-white/30'
                           : 'text-white hover:text-zinc-300 hover:bg-white/[0.06]'
@@ -739,8 +706,7 @@ export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onJamActiv
             {hasActiveFilters && (
               <button
                 onClick={handleReset}
-                className="mr-auto px-2 py-1 rounded text-[11px] text-white/70 hover:text-zinc-300 hover:bg-white/[0.06] transition-colors"
-                title="איפוס"
+                className="mr-auto px-2 py-1 rounded text-[11px] text-white/70 hover:text-zinc-300 hover:bg-white/[0.06] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
                 aria-label="איפוס סינון"
               >
                 ניקוי
@@ -750,8 +716,7 @@ export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onJamActiv
         </TooltipProvider>
       </div>
 
-      {/* Device list */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar">
+      <div className="flex-1 overflow-y-auto">
         {grouped.length === 0 ? (
           <div className="px-3 py-8 text-center text-[12px] text-zinc-600" dir="rtl">
             אין מכשירים תואמים

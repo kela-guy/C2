@@ -45,7 +45,7 @@ export function CardDetails({
           ))}
           <button
             onClick={copyAll}
-            className="absolute top-0.5 left-0.5 opacity-0 group-hover/copy:opacity-100 transition-opacity p-1 rounded hover:bg-white/10"
+            className="absolute top-0.5 left-0.5 opacity-0 group-hover/copy:opacity-100 transition-opacity p-1 rounded hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
             aria-label="העתק טלמטריה"
             title="העתק טלמטריה"
           >

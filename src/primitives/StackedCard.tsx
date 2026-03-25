@@ -1,6 +1,10 @@
 import React, { useRef, useEffect } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Layers, ChevronDown } from 'lucide-react';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/app/components/ui/collapsible';
 import { JamWaveIcon } from './MapIcons';
 import { CARD_TOKENS } from './tokens';
 import { ActionButton } from './ActionButton';
@@ -53,8 +57,6 @@ export function StackedCard({
   onTargetHover,
 }: StackedCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const prevCountRef = useRef(burst.targets.length);
-  const prefersReducedMotion = useReducedMotion();
 
   const count = burst.targets.length;
 
@@ -68,11 +70,6 @@ export function StackedCard({
     }
   }, [hasActiveChild, expanded, onToggleExpanded]);
 
-  const isGrowing = count > prevCountRef.current && expanded;
-  useEffect(() => {
-    prevCountRef.current = count;
-  }, [count]);
-
   const timeRange =
     burst.firstTimestamp === burst.lastTimestamp
       ? formatTime(burst.firstTimestamp)
@@ -82,7 +79,6 @@ export function StackedCard({
 
   return (
     <div ref={cardRef} className="relative" dir="rtl">
-      {/* Ghost layers for stacking effect */}
       {!expanded && (
         <>
           <div
@@ -108,148 +104,135 @@ export function StackedCard({
         </>
       )}
 
-      {/* Main card */}
-      <div
-        className="relative w-full text-white overflow-hidden transition-colors"
-        style={{
-          backgroundColor: d.container.bgColor,
-          borderRadius: `${d.container.borderRadius}px`,
-          marginBottom: expanded ? `${d.container.marginBottom}px` : `${d.container.marginBottom + 5}px`,
-          boxShadow: d.elevation.shadow,
+      <Collapsible
+        open={expanded}
+        onOpenChange={(next) => {
+          if (next !== expanded) onToggleExpanded();
         }}
+        className="group"
       >
-        {/* Header — always visible */}
         <div
-          className="flex items-center gap-2 cursor-pointer hover:bg-white/[0.03] transition-colors focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
+          className="relative w-full text-white overflow-hidden transition-colors"
           style={{
-            padding: `${d.header.paddingY + 2}px ${d.header.paddingX}px`,
-            backgroundColor: expanded ? `rgba(255,255,255,${d.header.selectedBgOpacity})` : undefined,
+            backgroundColor: d.container.bgColor,
+            borderRadius: `${d.container.borderRadius}px`,
+            marginBottom: `${d.container.marginBottom}px`,
+            boxShadow: d.elevation.shadow,
           }}
-          onClick={onToggleExpanded}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggleExpanded(); } }}
-          role="button"
-          tabIndex={0}
-          aria-expanded={expanded}
-          aria-label={`${count} איתורים — ${expanded ? 'סגור' : 'הרחב'}`}
         >
-          <div
-            className="flex items-center justify-center shrink-0"
-            style={{
-              width: d.iconBox.size,
-              height: d.iconBox.size,
-              borderRadius: d.iconBox.borderRadius,
-              backgroundColor: d.iconBox.defaultBg,
-            }}
-          >
-            <Layers size={d.iconBox.iconSize} className="text-zinc-400" aria-hidden="true" />
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span
-                className="font-semibold truncate"
-                style={{ fontSize: d.title.fontSize, color: d.title.color }}
-              >
-                {count} איתורים
-              </span>
-              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold tabular-nums bg-white/[0.06] text-zinc-400">
-                {count}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-              {breakdownEntries.map(([label, c]) => (
-                <span
-                  key={label}
-                  className="text-[9px] text-zinc-400 font-mono"
-                >
-                  {label}
-                  <span className="text-zinc-400 mr-0.5">×{c}</span>
-                </span>
-              ))}
-              <span className="text-[9px] text-zinc-400 font-mono">
-                {timeRange}
-              </span>
-            </div>
-          </div>
-
-          <ChevronDown
-            size={d.animation.chevronSize}
-            className={`text-zinc-400 shrink-0 transition-transform duration-200 ${
-              expanded ? 'rotate-180' : ''
-            }`}
-            aria-hidden="true"
-          />
-        </div>
-
-        {/* Expanded content */}
-        <AnimatePresence initial={false}>
-          {expanded && (
-            <motion.div
-              initial={prefersReducedMotion || isGrowing ? false : { height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={prefersReducedMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
-              transition={{
-                duration: prefersReducedMotion || isGrowing ? 0 : d.animation.expandDuration,
-                ease: 'easeOut',
+          <CollapsibleTrigger asChild>
+            <div
+              className="flex w-full items-center gap-2 cursor-pointer hover:bg-white/[0.03] transition-colors focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
+              style={{
+                padding: `${d.header.paddingY + 2}px ${d.header.paddingX}px`,
+                backgroundColor: expanded ? `rgba(255,255,255,${d.header.selectedBgOpacity})` : undefined,
               }}
-              className="overflow-visible"
+              aria-expanded={expanded}
+              aria-label={`${count} איתורים — ${expanded ? 'סגור' : 'הרחב'}`}
             >
               <div
+                className="flex items-center justify-center shrink-0"
                 style={{
-                  boxShadow: `inset 0 1px 0 0 ${d.content.borderColor}`,
+                  width: d.iconBox.size,
+                  height: d.iconBox.size,
+                  borderRadius: d.iconBox.borderRadius,
+                  backgroundColor: d.iconBox.defaultBg,
                 }}
               >
-                {/* Bulk Actions */}
-                {onBulkMitigate && (() => {
-                  const mitigatingCount = burst.targets.filter(t => t.mitigationStatus === 'mitigating').length;
-                  const isBulkMitigating = mitigatingCount > 0;
-                  return (
-                    <div className="px-2 py-2 flex items-center gap-1.5" style={{ boxShadow: `inset 0 -1px 0 0 ${d.surface.level2}`, backgroundColor: `rgba(255,255,255,${d.elevation.overlay.level2})` }}>
-                      <ActionButton
-                        label={isBulkMitigating ? `משבש אות... (${mitigatingCount}/${count})` : `שיבוש הכל (${count})`}
-                        icon={JamWaveIcon}
-                        variant="danger"
-                        size="sm"
-                        loading={isBulkMitigating}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onBulkMitigate(burst.targets);
-                        }}
-                      />
-                    </div>
-                  );
-                })()}
+                <Layers size={d.iconBox.iconSize} className="text-zinc-400" aria-hidden="true" />
+              </div>
 
-                {/* Individual cards — no enter/exit animation to avoid jumping */}
-                <div className="max-h-[480px] overflow-y-auto custom-scrollbar">
-                  <div className="flex flex-col gap-2 px-2 py-2">
-                    {burst.targets.map((target) => {
-                      const isActive = target.id === activeTargetId;
-                      return (
-                        <div
-                          key={target.id}
-                          id={`detection-card-${target.id}`}
-                          className="cursor-pointer [&>*]:!mb-0"
-                          onMouseEnter={() => onTargetHover?.(target.id)}
-                          onMouseLeave={() => onTargetHover?.(null)}
-                        >
-                          {renderCard(
-                            target,
-                            isActive,
-                            buildCallbacks(target),
-                            buildCtx(target),
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className="font-semibold truncate tabular-nums"
+                    style={{ fontSize: d.title.fontSize, color: d.title.color }}
+                  >
+                    {count} איתורים
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold tabular-nums bg-white/[0.06] text-zinc-400">
+                    {count}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                  {breakdownEntries.map(([label, c]) => (
+                    <span
+                      key={label}
+                      className="text-[9px] text-zinc-400 font-mono tabular-nums"
+                    >
+                      {label}
+                      <span className="text-zinc-400 mr-0.5">×{c}</span>
+                    </span>
+                  ))}
+                  <span className="text-[9px] text-zinc-400 font-mono">
+                    {timeRange}
+                  </span>
                 </div>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+
+              <ChevronDown
+                size={d.animation.chevronSize}
+                className="text-zinc-400 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180"
+                aria-hidden="true"
+              />
+            </div>
+          </CollapsibleTrigger>
+
+          <CollapsibleContent className="overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
+            <div
+              style={{
+                boxShadow: `inset 0 1px 0 0 ${d.content.borderColor}`,
+              }}
+            >
+              {onBulkMitigate && (() => {
+                const mitigatingCount = burst.targets.filter(t => t.mitigationStatus === 'mitigating').length;
+                const isBulkMitigating = mitigatingCount > 0;
+                return (
+                  <div className="px-2 py-2 flex items-center gap-1.5" style={{ boxShadow: `inset 0 -1px 0 0 ${d.surface.level2}`, backgroundColor: `rgba(255,255,255,${d.elevation.overlay.level2})` }}>
+                    <ActionButton
+                      label={isBulkMitigating ? `משבש אות... (${mitigatingCount}/${count})` : `שיבוש הכל (${count})`}
+                      icon={JamWaveIcon}
+                      variant="danger"
+                      size="sm"
+                      loading={isBulkMitigating}
+                      className="[&_span]:tabular-nums"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onBulkMitigate(burst.targets);
+                      }}
+                    />
+                  </div>
+                );
+              })()}
+
+              <div className="max-h-[480px] overflow-y-auto">
+                <div className="flex flex-col gap-2 px-2 py-2">
+                  {burst.targets.map((target) => {
+                    const isActive = target.id === activeTargetId;
+                    return (
+                      <div
+                        key={target.id}
+                        id={`detection-card-${target.id}`}
+                        className="cursor-pointer [&>*]:!mb-0"
+                        onMouseEnter={() => onTargetHover?.(target.id)}
+                        onMouseLeave={() => onTargetHover?.(null)}
+                      >
+                        {renderCard(
+                          target,
+                          isActive,
+                          buildCallbacks(target),
+                          buildCtx(target),
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </CollapsibleContent>
+        </div>
+      </Collapsible>
     </div>
   );
 }

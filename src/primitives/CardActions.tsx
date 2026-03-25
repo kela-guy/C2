@@ -126,7 +126,6 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
                     <motion.div
                       key={motionKey}
                       className="w-full"
-                      layout
                       transition={springTransition}
                       initial={prefersReducedMotion ? false : { opacity: 0, y: -20 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -301,14 +300,14 @@ function renderConfirmDialog(
           <div className="flex gap-2">
             <button
               onClick={handleConfirm}
-              className="flex-1 h-8 rounded bg-[oklch(0.348_0.111_17)] hover:bg-[oklch(0.445_0.151_17)] active:bg-[oklch(0.295_0.082_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)] text-[11px] font-semibold transition-[background-color,transform] duration-150 ease-out active:scale-[0.98]"
+              className="flex-1 h-8 rounded bg-[oklch(0.348_0.111_17)] hover:bg-[oklch(0.445_0.151_17)] active:bg-[oklch(0.295_0.082_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)] text-[11px] font-semibold transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
               aria-label={confirmingAction.confirm!.confirmLabel ?? 'אישור'}
             >
               {confirmingAction.confirm!.confirmLabel ?? 'אישור'}
             </button>
             <button
               onClick={handleCancel}
-              className="flex-1 h-8 rounded bg-[oklch(0.302_0_0)] hover:bg-[oklch(0.388_0_0)] active:bg-[oklch(0.238_0_0)] text-white text-[11px] font-medium transition-[background-color,transform] duration-150 ease-out active:scale-[0.98]"
+              className="flex-1 h-8 rounded bg-[oklch(0.302_0_0)] hover:bg-[oklch(0.388_0_0)] active:bg-[oklch(0.238_0_0)] text-white text-[11px] font-medium transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
               aria-label="ביטול"
             >
               ביטול
@@ -321,14 +320,14 @@ function renderConfirmDialog(
           <div className="flex gap-2">
             <button
               onClick={handleConfirm}
-              className="flex-1 h-8 rounded bg-[oklch(0.348_0.111_17)] hover:bg-[oklch(0.445_0.151_17)] active:bg-[oklch(0.295_0.082_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)] text-[11px] font-bold transition-[background-color,transform] duration-150 ease-out active:scale-[0.98]"
+              className="flex-1 h-8 rounded bg-[oklch(0.348_0.111_17)] hover:bg-[oklch(0.445_0.151_17)] active:bg-[oklch(0.295_0.082_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)] text-[11px] font-bold transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
               aria-label={confirmingAction.confirm!.confirmLabel ?? 'הפעל'}
             >
               {confirmingAction.confirm!.confirmLabel ?? 'הפעל'}
             </button>
             <button
               onClick={handleCancel}
-              className="flex-1 h-8 rounded bg-[oklch(0.302_0_0)] hover:bg-[oklch(0.388_0_0)] active:bg-[oklch(0.238_0_0)] text-white text-[11px] font-medium transition-[background-color,transform] duration-150 ease-out active:scale-[0.98]"
+              className="flex-1 h-8 rounded bg-[oklch(0.302_0_0)] hover:bg-[oklch(0.388_0_0)] active:bg-[oklch(0.238_0_0)] text-white text-[11px] font-medium transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
               aria-label="ביטול"
             >
               ביטול

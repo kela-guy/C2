@@ -1,6 +1,7 @@
 import React from 'react';
 import { ChevronDown, Loader2 } from 'lucide-react';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { Button } from '@/app/components/ui/button';
+import { cn } from '@/app/components/ui/utils';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -31,48 +32,70 @@ export interface SplitActionButtonProps {
   dataTour?: string;
 }
 
-/** Solid fills (not outline rings). Chevron uses same ramp for a single control read. */
 const colorByVariant: Record<
   string,
   { base: string; hover: string; active: string; text: string }
 > = {
   primary: {
-    base: 'bg-[rgba(34,139,230,0.15)]',
-    hover: 'hover:bg-[rgba(34,139,230,0.25)]',
-    active: 'active:bg-[rgba(34,139,230,0.35)]',
-    text: 'text-[#74c0fc]',
+    base: 'bg-sky-500/15',
+    hover: 'hover:bg-sky-500/25',
+    active: 'active:bg-sky-500/35',
+    text: 'text-sky-300',
   },
-  /* Literal OKLCH so JIT always emits rules (matches :root tactical red scale, hue 17) */
   danger: {
-    base: 'bg-[oklch(0.348_0.111_17)]',
-    hover: 'hover:bg-[oklch(0.445_0.151_17)]',
-    active: 'active:bg-[oklch(0.295_0.082_17)]',
-    text: 'text-[oklch(0.927_0.062_17)]',
+    base: 'bg-red-950/80',
+    hover: 'hover:bg-red-900/85',
+    active: 'active:bg-red-950',
+    text: 'text-red-200',
   },
   amber: {
-    base: 'bg-[oklch(0.348_0.111_70)]',
-    hover: 'hover:bg-[oklch(0.445_0.151_70)]',
-    active: 'active:bg-[oklch(0.295_0.082_70)]',
-    text: 'text-[oklch(0.927_0.062_70)]',
+    base: 'bg-amber-950/60',
+    hover: 'hover:bg-amber-900/70',
+    active: 'active:bg-amber-950/80',
+    text: 'text-amber-200',
   },
   glass: {
-    base: 'bg-zinc-600',
-    hover: 'hover:bg-zinc-500',
-    active: 'active:bg-zinc-700',
+    base: 'bg-white/10',
+    hover: 'hover:bg-white/15',
+    active: 'active:bg-white/20',
     text: 'text-white',
   },
   secondary: {
-    base: 'bg-[oklch(0.302_0_0)]',
-    hover: 'hover:bg-[oklch(0.388_0_0)]',
-    active: 'active:bg-[oklch(0.238_0_0)]',
+    base: 'bg-zinc-800',
+    hover: 'hover:bg-zinc-700',
+    active: 'active:bg-zinc-900',
     text: 'text-white',
   },
 };
 
 const sizeConfig = {
-  sm: { height: 'min-h-[30px] h-[30px]', text: 'text-xs', icon: 11, chevronMin: 'min-w-[30px] w-[30px]', font: 'font-medium' },
-  md: { height: 'min-h-8 h-8', text: 'text-xs', icon: 14, chevronMin: 'min-w-8 w-8', font: 'font-medium' },
-  lg: { height: 'min-h-9 h-9', text: 'text-[13px]', icon: 16, chevronMin: 'min-w-9 w-9', font: 'font-semibold' },
+  sm: {
+    height: 'min-h-[30px] h-[30px]',
+    text: 'text-xs',
+    icon: 11,
+    chevronMin: 'min-w-[30px] w-[30px]',
+    font: 'font-medium',
+    svgOverride: '[&_svg]:!size-[11px]',
+    chevronSvg: '[&_svg]:!size-[10px]',
+  },
+  md: {
+    height: 'min-h-8 h-8',
+    text: 'text-xs',
+    icon: 14,
+    chevronMin: 'min-w-8 w-8',
+    font: 'font-medium',
+    svgOverride: '[&_svg]:!size-3.5',
+    chevronSvg: '[&_svg]:!size-3',
+  },
+  lg: {
+    height: 'min-h-9 h-9',
+    text: 'text-[13px]',
+    icon: 16,
+    chevronMin: 'min-w-9 w-9',
+    font: 'font-semibold',
+    svgOverride: '[&_svg]:!size-4',
+    chevronSvg: '[&_svg]:!size-3.5',
+  },
 };
 
 export function SplitActionButton({
@@ -88,25 +111,30 @@ export function SplitActionButton({
   className = '',
   dataTour,
 }: SplitActionButtonProps) {
-  const prefersReducedMotion = useReducedMotion();
+  const [menuOpen, setMenuOpen] = React.useState(false);
   const isDisabled = disabled || loading;
   const c = colorByVariant[variant] ?? colorByVariant.primary;
   const sz = sizeConfig[size];
 
-  const segmentBase = `
-    ${sz.height} ${sz.text} ${sz.font} ${c.text}
-    ${c.base} ${c.hover} ${c.active}
-    transition-[background-color,transform] duration-150 ease-out
-    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/30
-  `;
+  const segmentClassName = cn(
+    sz.height,
+    sz.text,
+    sz.font,
+    c.text,
+    c.base,
+    c.hover,
+    c.active,
+    'rounded-none shadow-none transition-[background-color,transform] duration-150 ease-out',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/30 focus-visible:ring-offset-0',
+    'border-0 disabled:opacity-100',
+  );
 
   const shellDimmed = dimDisabledShell && !loading && isDisabled;
   const disabledCls = shellDimmed ? 'opacity-45 pointer-events-none' : '';
-  const spinnerCls = prefersReducedMotion ? 'opacity-90' : 'animate-spin opacity-90';
 
   const variantShells: Record<string, string> = {
-    danger: 'rounded-[6px] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.45)]',
-    amber: 'rounded-[6px] ring-1 ring-inset ring-[oklch(0.348_0.111_70_/_0.45)]',
+    danger: 'ring-1 ring-inset ring-red-600/45',
+    amber: 'ring-1 ring-inset ring-amber-600/45',
   };
   const variantShell = variantShells[variant] ?? '';
 
@@ -117,60 +145,63 @@ export function SplitActionButton({
 
   return (
     <div
-      className={`flex w-full items-stretch gap-0.5 ${variantShell} ${disabledCls} ${className}`}
+      className={cn(
+        'flex w-full items-stretch gap-0.5 rounded-[6px]',
+        variantShell,
+        disabledCls,
+        className,
+      )}
       {...(dataTour ? { 'data-tour': dataTour } : {})}
       {...(loading ? { 'aria-busy': true as const } : {})}
     >
-      {/* Primary — logical start (right in RTL) */}
-      <button
+      <Button
         type="button"
-        onClick={isDisabled ? undefined : (e) => { e.stopPropagation(); onClick(e); }}
+        variant="ghost"
         disabled={isDisabled}
-        className={`
-          flex-1 flex items-center justify-center gap-2 px-3
-          rounded-s-[4px] overflow-hidden
-          ${loading ? 'cursor-wait pointer-events-none' : 'active:scale-[0.98] will-change-transform'}
-          ${segmentBase}
-        `}
+        onClick={isDisabled ? undefined : (e) => { e.stopPropagation(); onClick(e); }}
+        className={cn(
+          segmentClassName,
+          sz.svgOverride,
+          'flex-1 min-w-0 justify-center gap-2 px-3 overflow-hidden rounded-s-[4px]',
+          loading ? 'cursor-wait pointer-events-none' : 'active:scale-[0.98] will-change-transform',
+        )}
         {...(loading ? { 'aria-live': 'polite' as const } : {})}
       >
-        <AnimatePresence mode="popLayout" initial={false}>
-          <motion.span
-            key={label}
-            className="flex items-center gap-2"
-            transition={prefersReducedMotion ? { duration: 0 } : { type: 'spring', duration: 0.3, bounce: 0 }}
-            initial={prefersReducedMotion ? false : { opacity: 0, y: -25 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={prefersReducedMotion ? undefined : { opacity: 0, y: 25 }}
-          >
-            {loading ? (
-              <Loader2 size={sz.icon} className={spinnerCls} aria-hidden="true" />
-            ) : (
-              Icon && <Icon size={sz.icon} className="shrink-0 opacity-95" aria-hidden="true" />
-            )}
-            <span>{label}</span>
-          </motion.span>
-        </AnimatePresence>
-      </button>
+        <span className="flex items-center gap-2">
+          {loading ? (
+            <Loader2 size={sz.icon} className="shrink-0 animate-spin opacity-90" aria-hidden="true" />
+          ) : (
+            Icon && <Icon size={sz.icon} className="shrink-0 opacity-95" aria-hidden="true" />
+          )}
+          <span>{label}</span>
+        </span>
+      </Button>
 
-      {/* Chevron — gap-0.5 (2px) mocks divider; shows card surface behind */}
-      <DropdownMenu>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild disabled={isDisabled}>
-          <button
+          <Button
             type="button"
-            className={`
-              ${sz.chevronMin} px-2
-              flex items-center justify-center shrink-0
-              rounded-e-[4px]
-              ${segmentBase}
-              ${chevronExtras}
-            `}
+            variant="ghost"
+            className={cn(
+              segmentClassName,
+              sz.chevronSvg,
+              sz.chevronMin,
+              'px-2 shrink-0 justify-center rounded-e-[4px]',
+              chevronExtras,
+            )}
             aria-label="פעולות נוספות"
             aria-disabled={isDisabled}
             onClick={(e) => e.stopPropagation()}
           >
-            <ChevronDown size={Math.max(sz.icon - 2, 10)} className="opacity-90" aria-hidden="true" />
-          </button>
+            <ChevronDown
+              size={Math.max(sz.icon - 2, 10)}
+              className={cn(
+                'opacity-90 transition-transform duration-200',
+                menuOpen && 'rotate-180',
+              )}
+              aria-hidden="true"
+            />
+          </Button>
         </DropdownMenuTrigger>
 
         <DropdownMenuContent
@@ -178,15 +209,9 @@ export function SplitActionButton({
           side="bottom"
           align="start"
           sideOffset={6}
-          className={`
-            min-w-[140px] p-1 rounded-lg
-            bg-[#1c1c20] text-white
-            shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_8px_30px_rgba(0,0,0,0.5)]
-            border-none
-            ${prefersReducedMotion
-              ? 'data-[state=open]:animate-none data-[state=closed]:animate-none'
-              : ''}
-          `}
+          className={cn(
+            'min-w-[140px] rounded-lg p-1 bg-popover text-popover-foreground border-border shadow-lg',
+          )}
           onCloseAutoFocus={(e) => e.preventDefault()}
         >
           {dropdownItems.map((item) => {
@@ -195,7 +220,7 @@ export function SplitActionButton({
               <DropdownMenuItem
                 key={item.id}
                 disabled={item.disabled}
-                className="flex w-full flex-row items-center justify-start gap-2 px-2.5 py-2 rounded-md text-xs text-zinc-200 cursor-pointer transition-[background-color,color] duration-150 ease-out hover:bg-white/[0.08] hover:text-white focus:bg-white/[0.08] focus:text-white"
+                className="flex w-full flex-row items-center justify-start gap-2 rounded-md px-2.5 py-2 text-xs text-popover-foreground cursor-pointer transition-[background-color,color] duration-150 ease-out hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                 onClick={(e) => {
                   e.stopPropagation();
                   item.onClick(e);

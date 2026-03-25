@@ -1166,7 +1166,7 @@ export const CUASDashboard = () => {
           <div className="px-4 pt-3 pb-2 border-b border-white/10">
             <h2 className="text-[11px] font-medium text-white/70 uppercase tracking-wider" dir="rtl">CUAS — מערכות פעילות ({targets.length})</h2>
           </div>
-          <div className="flex-1 overflow-y-auto custom-scrollbar">
+          <div className="flex-1 overflow-y-auto">
             <ListOfSystems
               className="flex flex-col gap-0"
               targets={targets}

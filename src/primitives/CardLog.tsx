@@ -31,7 +31,11 @@ export function CardLog({
 
   return (
     <AccordionSection
-      title={`לוג (${entries.length})`}
+      title={
+        <>
+          לוג (<span className="tabular-nums">{entries.length}</span>)
+        </>
+      }
       defaultOpen={defaultOpen}
       icon={History}
       className={className}

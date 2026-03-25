@@ -30,7 +30,7 @@ export function CardTimeline({ steps, compact, className = '' }: CardTimelinePro
                 step.status === 'complete'
                   ? 'bg-emerald-400'
                   : step.status === 'active'
-                    ? 'bg-white animate-pulse'
+                    ? 'bg-white animate-pulse motion-reduce:animate-none'
                     : step.status === 'error'
                       ? 'bg-red-500'
                       : 'bg-zinc-600'
@@ -61,7 +61,7 @@ export function CardTimeline({ steps, compact, className = '' }: CardTimelinePro
       {steps.map((step, idx) => (
         <div
           key={idx}
-          className={`flex items-center gap-2.5 text-xs font-mono transition-all duration-300 ${
+          className={`flex items-center gap-2.5 text-xs font-mono transition-colors duration-300 ${
             step.status === 'active'
               ? 'text-white'
               : step.status === 'complete'
@@ -73,7 +73,7 @@ export function CardTimeline({ steps, compact, className = '' }: CardTimelinePro
         >
           {step.status === 'complete' ? (
             <div className="size-4 rounded-full flex-shrink-0 flex items-center justify-center" style={{ border: `1px solid ${CARD_TOKENS.surface.level2}` }} aria-hidden="true">
-              <Check size={10} className="text-[#12b886]" strokeWidth={2.5} />
+              <Check size={10} className="text-emerald-400" strokeWidth={2.5} />
             </div>
           ) : step.status === 'active' ? (
             <div className="size-4 rounded-full flex-shrink-0 flex items-center justify-center" style={{ border: `1px solid ${CARD_TOKENS.surface.level3}` }} aria-hidden="true">
@@ -81,14 +81,14 @@ export function CardTimeline({ steps, compact, className = '' }: CardTimelinePro
             </div>
           ) : step.status === 'error' ? (
             <div className="size-4 rounded-full flex-shrink-0 shadow-[0_0_0_1px_rgba(239,68,68,0.5)] flex items-center justify-center" aria-hidden="true">
-              <Loader2 size={10} className="text-red-400 animate-spin" />
+              <Loader2 size={10} className="text-red-400 animate-spin motion-reduce:animate-none" />
             </div>
           ) : (
             <div className="size-4 rounded-full flex-shrink-0" style={{ boxShadow: `0 0 0 1px ${CARD_TOKENS.surface.level3}` }} aria-hidden="true" />
           )}
           <span>{step.label}</span>
           {step.status === 'active' && (
-            <span className="inline-block w-1 h-3 bg-white/60 animate-blink mr-1" aria-hidden="true" />
+            <span className="inline-block w-1 h-3 bg-white/60 animate-blink motion-reduce:animate-none mr-1" aria-hidden="true" />
           )}
         </div>
       ))}

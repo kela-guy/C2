@@ -118,7 +118,7 @@ export const ActiveFilters: StoryObj = {
   ),
 };
 
-export const SortByConfidence: StoryObj = {
-  name: 'Sort by Confidence',
-  render: () => <FilterBarDemo initialFilters={{ sortBy: 'confidence' }} />,
+export const SortByTime: StoryObj = {
+  name: 'Sort by Time',
+  render: () => <FilterBarDemo initialFilters={{ sortBy: 'time' }} />,
 };

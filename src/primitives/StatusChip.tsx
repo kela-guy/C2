@@ -1,23 +1,17 @@
 import React from "react";
+import { Badge } from "@/app/components/ui/badge";
 
-export function StatusChip({ label, color = "green", className = "" }: { label: string; color?: "green" | "gray" | "red" | "orange"; className?: string }) {
-  let bg = "bg-[rgba(255,255,255,0.15)]";
-  let text = "text-white";
+const VARIANT_MAP = {
+  green: "status-green",
+  gray: "status-gray",
+  red: "status-red",
+  orange: "status-orange",
+} as const;
 
-  if (color === "green") {
-    bg = "bg-[rgba(110,231,183,0.15)]";
-    text = "text-[#6ee7b7]";
-  } else if (color === "red") {
-    bg = "bg-[rgba(252,165,165,0.15)]";
-    text = "text-[#fca5a5]";
-  } else if (color === "orange") {
-    bg = "bg-[rgba(253,186,116,0.15)]";
-    text = "text-[#fdba74]";
-  }
-
+export function StatusChip({ label, color = "green", className }: { label: string; color?: "green" | "gray" | "red" | "orange"; className?: string }) {
   return (
-    <div className={`${bg} flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap min-w-[3.5rem] ${text} ${className}`} role="status">
+    <Badge variant={VARIANT_MAP[color]} className={className} role="status">
       {label}
-    </div>
+    </Badge>
   );
 }
