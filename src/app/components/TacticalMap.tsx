@@ -19,6 +19,7 @@ const TOKEN = 'pk.eyJ1IjoiZ3V5c2hhIiwiYSI6ImNtZ3htODN0dTE2dGMybXFrYWRlZmN5MGMifQ
 const EARTH_RADIUS_M = 6371000;
 export const FOV_RADIUS_M = 1200;
 const MISSILE_FLIGHT_DURATION_MS = 22000; // slower, more visible flight
+const LABEL_PREFIXES = ['poi-label', 'road-label', 'place-label', 'transit-label', 'natural-point-label', 'waterway-label', 'natural-line-label', 'road-number-shield', 'road-exit-shield'];
 
 /** Haversine distance in metres between two lat/lon points. */
 export function haversineDistanceM(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -464,10 +465,6 @@ export const TacticalMap = ({
     }
   };
 
-  const nudgeRepaint = useCallback(() => {
-    try { getInnerMap()?.triggerRepaint?.(); } catch {}
-  }, []);
-
   useLayoutEffect(() => {
     const el = mapContainerRef.current;
     if (!el) return;
@@ -603,29 +600,15 @@ export const TacticalMap = ({
   const [mapStyleId, setMapStyleId] = useState<'dark' | 'satellite'>('satellite');
   const [flickeringSensorId, setFlickeringSensorId] = useState<string | null>(null);
 
-  const HIDDEN_LABEL_PREFIXES = ['poi-label', 'road-label', 'place-label', 'transit-label', 'natural-point-label', 'waterway-label', 'natural-line-label', 'road-number-shield', 'road-exit-shield'];
-  const hideMapLabels = useCallback((mapOrRef: unknown) => {
+  const hideMapLabels = useCallback((map: any) => {
     try {
-      const map = (mapOrRef as { getMap?: () => unknown }).getMap?.() ?? mapOrRef;
-      const m = map as { getStyle: () => { layers: { id: string }[] }; setLayoutProperty: (id: string, prop: string, val: string) => void };
-      const style = m.getStyle();
+      const style = map.getStyle?.();
       if (!style?.layers) return;
-      // #region agent log
-      const allLayerIds = style.layers.map((l: { id: string }) => l.id);
-      const fovLayers = allLayerIds.filter((id: string) => id.includes('fov') || id.includes('trail'));
-      const hiddenIds: string[] = [];
-      // #endregion
       for (const layer of style.layers) {
-        if (HIDDEN_LABEL_PREFIXES.some(p => layer.id.startsWith(p))) {
-          m.setLayoutProperty(layer.id, 'visibility', 'none');
-          // #region agent log
-          hiddenIds.push(layer.id);
-          // #endregion
+        if (LABEL_PREFIXES.some(p => layer.id.startsWith(p))) {
+          map.setLayoutProperty(layer.id, 'visibility', 'none');
         }
       }
-      // #region agent log
-      fetch('http://127.0.0.1:7712/ingest/32f5ffc4-e504-4279-a051-598b5e0df724',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2bab72'},body:JSON.stringify({sessionId:'2bab72',location:'TacticalMap.tsx:hideMapLabels',message:'hideMapLabels executed',data:{totalLayers:allLayerIds.length,fovTrailLayers:fovLayers,hiddenCount:hiddenIds.length,hiddenSample:hiddenIds.slice(0,5)},timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
-      // #endregion
     } catch {}
   }, []);
 
@@ -645,6 +628,51 @@ export const TacticalMap = ({
   }, [sensorFocusId]);
 
   const [hoveredAsset, setHoveredAsset] = useState<MapAsset | null>(null);
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+
+  const FOV_PAINT = {
+    fill: { 'fill-color': 'rgba(34, 211, 238, 0.40)', 'fill-outline-color': 'rgba(34, 211, 238, 1.0)' },
+    line: { 'line-color': 'rgba(34, 211, 238, 1.0)', 'line-width': 2.5 },
+  };
+
+  const ensureFovSource = useCallback((map: any, sourceId: string) => {
+    if (map.getSource(sourceId)) return;
+    map.addSource(sourceId, { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+    map.addLayer({ id: `${sourceId}-fill`, type: 'fill', source: sourceId, paint: FOV_PAINT.fill });
+    map.addLayer({ id: `${sourceId}-line`, type: 'line', source: sourceId, paint: FOV_PAINT.line });
+  }, []);
+
+  const pushFovToMap = useCallback((sourceId: string, data: { type: 'FeatureCollection'; features: any[] }) => {
+    const map = (mapRef.current as any)?.getMap?.() ?? mapRef.current;
+    if (!map) return;
+    try {
+      ensureFovSource(map, sourceId);
+      map.getSource(sourceId).setData(data);
+      map.triggerRepaint?.();
+    } catch {}
+  }, [ensureFovSource]);
+
+  const handleAssetMouseEnter = useCallback((asset: MapAsset) => {
+    clearTimeout(hoverTimeoutRef.current);
+    setHoveredAsset(asset);
+    const ring = fovPolygon(asset.latitude, asset.longitude, asset.fovDeg, asset.bearingDeg, FOV_RADIUS_M);
+    pushFovToMap('hover-fov', {
+      type: 'FeatureCollection' as const,
+      features: [{ type: 'Feature' as const, geometry: { type: 'Polygon' as const, coordinates: [ring] }, properties: {} }],
+    });
+  }, [pushFovToMap]);
+
+  const handleAssetMouseLeave = useCallback(() => {
+    hoverTimeoutRef.current = setTimeout(() => {
+      setHoveredAsset(null);
+      pushFovToMap('hover-fov', { type: 'FeatureCollection' as const, features: [] });
+    }, 150);
+  }, [pushFovToMap]);
+
+  useEffect(() => {
+    return () => clearTimeout(hoverTimeoutRef.current);
+  }, []);
+
   const [activeMissiles, setActiveMissiles] = useState<MissileSim[]>([]);
   const [hoveredMissileId, setHoveredMissileId] = useState<string | null>(null);
   const [hoveredLauncherId, setHoveredLauncherId] = useState<string | null>(null);
@@ -933,120 +961,30 @@ export const TacticalMap = ({
   }, [activeMissiles, onMissilePhaseChange]);
 
   const fovGeoJSON = useMemo(() => {
-    if (!hoveredAsset) {
-      // #region agent log
-      fetch('http://127.0.0.1:7712/ingest/32f5ffc4-e504-4279-a051-598b5e0df724',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2bab72'},body:JSON.stringify({sessionId:'2bab72',location:'TacticalMap.tsx:fovGeoJSON',message:'fovGeoJSON: no hoveredAsset',data:{hasHoveredAsset:false},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
-      // #endregion
-      return EMPTY_FC;
-    }
+    if (!hoveredAsset) return EMPTY_FC;
     if (hoveredAsset.id === cameraLookAtBearing?.cameraId) return EMPTY_FC;
     const ring = fovPolygon(
-      hoveredAsset.latitude,
-      hoveredAsset.longitude,
-      hoveredAsset.fovDeg,
-      hoveredAsset.bearingDeg,
+      hoveredAsset.latitude, hoveredAsset.longitude,
+      hoveredAsset.fovDeg, hoveredAsset.bearingDeg,
       FOV_RADIUS_M
     );
-    // #region agent log
-    const hasNaN = ring.some(p => isNaN(p[0]) || isNaN(p[1]));
-    const bbox = ring.reduce((acc, p) => ({ minLon: Math.min(acc.minLon, p[0]), maxLon: Math.max(acc.maxLon, p[0]), minLat: Math.min(acc.minLat, p[1]), maxLat: Math.max(acc.maxLat, p[1]) }), { minLon: Infinity, maxLon: -Infinity, minLat: Infinity, maxLat: -Infinity });
-    fetch('http://127.0.0.1:7712/ingest/32f5ffc4-e504-4279-a051-598b5e0df724',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2bab72'},body:JSON.stringify({sessionId:'2bab72',location:'TacticalMap.tsx:fovGeoJSON',message:'fovGeoJSON: polygon built',data:{assetId:hoveredAsset.id,fovDeg:hoveredAsset.fovDeg,bearingDeg:hoveredAsset.bearingDeg,radiusM:FOV_RADIUS_M,ringPointCount:ring.length,hasNaN,bbox,firstPoint:ring[0],lastPoint:ring[ring.length-1]},timestamp:Date.now(),hypothesisId:'H4'})}).catch(()=>{});
-    // #endregion
     return {
       type: 'FeatureCollection' as const,
-      features: [
-        {
-          type: 'Feature' as const,
-          geometry: { type: 'Polygon' as const, coordinates: [ring] },
-          properties: {},
-        },
-      ],
+      features: [{
+        type: 'Feature' as const,
+        geometry: { type: 'Polygon' as const, coordinates: [ring] },
+        properties: {},
+      }],
     };
   }, [hoveredAsset, cameraLookAtBearing?.cameraId, EMPTY_FC]);
 
+  useEffect(() => {
+    pushFovToMap('hover-fov', fovGeoJSON);
+  }, [fovGeoJSON, pushFovToMap]);
 
   useEffect(() => {
-    const id = requestAnimationFrame(repaintMap);
-    // #region agent log
-    if (hoveredAsset) {
-      setTimeout(() => {
-        try {
-          const map = (mapRef.current as any)?.getMap?.() ?? mapRef.current;
-          if (map) {
-            const hasFovSource = !!map.getSource?.('fov-source');
-            const fovFillLayer = map.getLayer?.('fov-fill');
-            const fovLineLayer = map.getLayer?.('fov-line');
-            const style = map.getStyle?.();
-            const allLayerIds = style?.layers?.map((l: any) => l.id) ?? [];
-            const fovRelated = allLayerIds.filter((id: string) => id.includes('fov'));
-            const fovFillIdx = allLayerIds.indexOf('fov-fill');
-            const fovLineIdx = allLayerIds.indexOf('fov-line');
-            const src = hasFovSource ? map.getSource('fov-source') : null;
-            const sourceData = src?._data ?? null;
-            const featureCount = sourceData?.features?.length ?? -1;
-            const coordCount = sourceData?.features?.[0]?.geometry?.coordinates?.[0]?.length ?? -1;
-            const fillPaint = fovFillLayer ? { color: map.getPaintProperty?.('fov-fill','fill-color'), opacity: map.getPaintProperty?.('fov-fill','fill-opacity') } : null;
-            const linePaint = fovLineLayer ? { color: map.getPaintProperty?.('fov-line','line-color'), width: map.getPaintProperty?.('fov-line','line-width') } : null;
-            const renderedFeatures = map.queryRenderedFeatures?.(undefined, { layers: ['fov-fill'] }) ?? [];
-            const sourceFeatures = map.querySourceFeatures?.('fov-source') ?? [];
-            const fovFillVisibility = map.getLayoutProperty?.('fov-fill','visibility') ?? 'default';
-            const layersAboveFov = allLayerIds.slice(fovFillIdx + 1).filter((id: string) => !id.includes('fov'));
-            fetch('http://127.0.0.1:7712/ingest/32f5ffc4-e504-4279-a051-598b5e0df724',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2bab72'},body:JSON.stringify({sessionId:'2bab72',location:'TacticalMap.tsx:repaintEffect',message:'GL state on hover',data:{hoveredId:hoveredAsset.id,hasFovSource,glFeatureCount:featureCount,glCoordCount:coordCount,renderedFeatureCount:renderedFeatures.length,sourceFeatureCount:sourceFeatures.length,fovFillVisibility,fovFillLayerIdx:fovFillIdx,totalGlLayers:allLayerIds.length,layersAboveFov:layersAboveFov.slice(0,10),fillPaint,linePaint,canvasSize:[map.getCanvas?.()?.width,map.getCanvas?.()?.height]},timestamp:Date.now(),hypothesisId:'H2-H3-H7'})}).catch(()=>{});
-          }
-        } catch {}
-      }, 100);
-    }
-    // #endregion
-    return () => cancelAnimationFrame(id);
-  }, [hoveredAsset?.id, hoveredSensorIdFromCard, mapStyleId]);
-
-  useEffect(() => {
-    const t1 = setTimeout(nudgeRepaint, 0);
-    const t2 = setTimeout(nudgeRepaint, 60);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, [fovGeoJSON, highlightedFovGeoJSON, targets, nudgeRepaint]);
-
-  // SVG overlay: project FOV polygon coordinates to screen pixels (bypasses Mapbox GL worker)
-  const fovSvgRef = useRef<SVGPolygonElement>(null);
-  const hlFovSvgRef = useRef<SVGPolygonElement>(null);
-
-  const projectGeoJSONToSvg = useCallback((map: any, geojson: any, svgEl: SVGPolygonElement | null) => {
-    if (!svgEl) return;
-    const features = geojson?.features;
-    if (!features?.length) { svgEl.setAttribute('points', ''); return; }
-    const coords = features[0].geometry.coordinates[0];
-    const pts = coords.map(([lon, lat]: [number, number]) => {
-      const p = map.project([lon, lat]);
-      return `${p.x},${p.y}`;
-    }).join(' ');
-    svgEl.setAttribute('points', pts);
-  }, []);
-
-  useEffect(() => {
-    const map = (mapRef.current as any)?.getMap?.() ?? mapRef.current;
-    if (!map) return;
-    const update = () => {
-      projectGeoJSONToSvg(map, fovGeoJSON, fovSvgRef.current);
-      projectGeoJSONToSvg(map, highlightedFovGeoJSON, hlFovSvgRef.current);
-    };
-    update();
-    map.on('move', update);
-    // #region agent log
-    fetch('http://127.0.0.1:7712/ingest/32f5ffc4-e504-4279-a051-598b5e0df724',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2bab72'},body:JSON.stringify({sessionId:'2bab72',location:'TacticalMap.tsx:fovSvgOverlay',message:'SVG overlay update',data:{fovFeatures:fovGeoJSON?.features?.length??0,hlFeatures:highlightedFovGeoJSON?.features?.length??0,hasFovRef:!!fovSvgRef.current,hasHlRef:!!hlFovSvgRef.current},timestamp:Date.now(),hypothesisId:'H12-svg'})}).catch(()=>{});
-    // #endregion
-    return () => { map.off('move', update); };
-  }, [fovGeoJSON, highlightedFovGeoJSON, projectGeoJSONToSvg]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    const timer = setTimeout(() => hideMapLabels(map), 2000);
-    return () => clearTimeout(timer);
-  }, [mapStyleId, hideMapLabels]);
-
-  // #region agent log
-  {const _containerRect = mapContainerRef.current?.getBoundingClientRect(); if (hoveredAsset) { fetch('http://127.0.0.1:7712/ingest/32f5ffc4-e504-4279-a051-598b5e0df724',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2bab72'},body:JSON.stringify({sessionId:'2bab72',location:'TacticalMap.tsx:render',message:'render with hoveredAsset',data:{hoveredAssetId:hoveredAsset.id,fovFeatureCount:fovGeoJSON?.features?.length??0,containerW:_containerRect?Math.round(_containerRect.width):null,containerH:_containerRect?Math.round(_containerRect.height):null,mapMountReady,mapRefExists:!!mapRef.current},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{}); }}
-  // #endregion
+    pushFovToMap('card-hover-fov', highlightedFovGeoJSON);
+  }, [highlightedFovGeoJSON, pushFovToMap]);
 
   return (
     <div ref={mapContainerRef} className={`absolute inset-0 min-h-0 min-w-0 bg-[#0a0a0a] overflow-hidden z-0 ${planningMode ? 'cursor-crosshair' : ''}`}>
@@ -1071,14 +1009,15 @@ export const TacticalMap = ({
           map.once('idle', () => {
             map.resize();
             map.triggerRepaint?.();
-            // #region agent log
-            try { const style = map.getStyle(); const layerIds = style?.layers?.map((l: { id: string }) => l.id) ?? []; const fovTrail = layerIds.filter((id: string) => id.includes('fov') || id.includes('trail')); fetch('http://127.0.0.1:7712/ingest/32f5ffc4-e504-4279-a051-598b5e0df724',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2bab72'},body:JSON.stringify({sessionId:'2bab72',location:'TacticalMap.tsx:onLoad:idle',message:'map idle after load',data:{totalLayers:layerIds.length,fovTrailLayers:fovTrail,canvasW:map.getCanvas?.()?.width,canvasH:map.getCanvas?.()?.height},timestamp:Date.now(),hypothesisId:'H2-H5'})}).catch(()=>{}); } catch {}
-            // #endregion
+            hideMapLabels(map);
           });
-          for (const ms of [100, 300, 600, 1200]) {
-            setTimeout(() => { map.resize(); map.triggerRepaint?.(); }, ms);
-          }
-          setTimeout(() => hideMapLabels(map), 2000);
+          map.on('styledata', () => {
+            hideMapLabels(map);
+            ensureFovSource(map, 'hover-fov');
+            ensureFovSource(map, 'card-hover-fov');
+          });
+          ensureFovSource(map, 'hover-fov');
+          ensureFovSource(map, 'card-hover-fov');
         }}
         onMove={evt => setViewState(prev => ({ ...evt.viewState, transitionDuration: 0 }))}
         onClick={(evt) => {
@@ -1087,7 +1026,7 @@ export const TacticalMap = ({
           }
         }}
         style={{ width: '100%', height: '100%', display: 'block' }}
-        mapStyle={mapStyleId === 'satellite' ? 'mapbox://styles/mapbox/satellite-streets-v12' : 'mapbox://styles/mapbox/dark-v11'}
+        mapStyle={mapStyleId === 'satellite' ? 'mapbox://styles/mapbox/satellite-v9' : 'mapbox://styles/mapbox/dark-v11'}
         mapboxAccessToken={TOKEN}
         attributionControl={false}
         cursor={planningMode ? 'crosshair' : undefined}
@@ -1115,11 +1054,7 @@ export const TacticalMap = ({
           </div>
         </div>
 
-        {/* FOV SVG overlay — renders instantly via DOM, bypasses Mapbox GL worker */}
-        <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}>
-          <polygon ref={fovSvgRef} fill="rgba(34, 211, 238, 0.40)" stroke="rgba(34, 211, 238, 1.0)" strokeWidth={2.5} />
-          <polygon ref={hlFovSvgRef} fill="rgba(34, 211, 238, 0.40)" stroke="rgba(34, 211, 238, 1.0)" strokeWidth={2.5} />
-        </svg>
+        {/* hover-fov and card-hover-fov sources/layers are managed imperatively via ensureFovSource + pushFovToMap */}
 
         {/* Post-jam verification: camera FOV cone pointing at target (hidden when camera look-at is active to avoid duplicates) */}
         {verificationFovGeoJSON && jammingVerification?.method === 'camera' && !cameraLookAtBearing && (
@@ -1668,8 +1603,8 @@ export const TacticalMap = ({
                 className={`relative group cursor-pointer rounded-full p-1.5 transition-all duration-200 ${
                   isHighlighted || isFlickering ? 'scale-110' : ''
                 } ${isHoveredFromCard && !isSelected ? 'ring-2 ring-white/40 ring-offset-1 ring-offset-[#0a0a0a] rounded-full' : ''} ${isJammerActive ? 'scale-110' : ''} ${isHovered && !isHighlighted && !isJammerActive && !isSelected ? 'bg-white/10' : ''} ${isFlickering ? 'animate-pulse ring-2 ring-cyan-400/60 ring-offset-1 ring-offset-[#0a0a0a]' : ''}`}
-                onMouseEnter={(e) => { const rect = (e.currentTarget as HTMLElement).getBoundingClientRect(); fetch('http://127.0.0.1:7712/ingest/32f5ffc4-e504-4279-a051-598b5e0df724',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2bab72'},body:JSON.stringify({sessionId:'2bab72',location:'TacticalMap.tsx:assetMarker:mouseEnter',message:'mouseEnter asset',data:{assetId:asset.id,typeLabel:asset.typeLabel,fovDeg:asset.fovDeg,bearingDeg:asset.bearingDeg,lat:asset.latitude,lon:asset.longitude,cursorX:e.clientX,cursorY:e.clientY,rect:{x:Math.round(rect.x),y:Math.round(rect.y),w:Math.round(rect.width),h:Math.round(rect.height)}},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{}); setHoveredAsset(asset); }}
-                onMouseLeave={(e) => { const rect = (e.currentTarget as HTMLElement).getBoundingClientRect(); const rt = e.relatedTarget as HTMLElement|null; fetch('http://127.0.0.1:7712/ingest/32f5ffc4-e504-4279-a051-598b5e0df724',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2bab72'},body:JSON.stringify({sessionId:'2bab72',location:'TacticalMap.tsx:assetMarker:mouseLeave',message:'mouseLeave asset',data:{assetId:asset.id,cursorX:e.clientX,cursorY:e.clientY,rect:{x:Math.round(rect.x),y:Math.round(rect.y),w:Math.round(rect.width),h:Math.round(rect.height)},relatedTarget:rt?.tagName??'null',relatedTargetClass:(rt?.className??'').toString().slice(0,80)},timestamp:Date.now(),hypothesisId:'H6'})}).catch(()=>{}); setHoveredAsset(null); }}
+                onMouseEnter={() => handleAssetMouseEnter(asset)}
+                onMouseLeave={handleAssetMouseLeave}
               >
                 {isJammerActive && (
                   <div className="absolute -inset-2 rounded-full border border-white/30 animate-pulse" />

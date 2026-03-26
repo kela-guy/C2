@@ -19,7 +19,7 @@ export interface CardSensorsProps {
 }
 
 const rowClassName =
-  'flex items-center gap-2 text-[11px] text-white hover:bg-white/[0.08] hover:shadow-[0_0_0_1px_rgba(6,182,212,0.3)] rounded px-2 py-1.5 transition-colors group/sensor relative w-full text-right shadow-[0_0_0_1px_rgba(255,255,255,0.1)]';
+  'flex items-center gap-2 text-xs text-white hover:bg-white/[0.08] hover:shadow-[0_0_0_1px_rgba(6,182,212,0.3)] rounded px-2 py-1.5 transition-colors group/sensor relative w-full text-right';
 const buttonRowClassName =
   `${rowClassName} cursor-pointer font-sans focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 active:bg-white/[0.04]`;
 const rowStyle = { backgroundColor: CARD_TOKENS.surface.level4 } as const;
@@ -34,7 +34,7 @@ export function CardSensors({
   if (sensors.length === 0) return null;
 
   return (
-    <div className={`flex flex-col gap-1 w-full ${className}`} style={{ boxShadow: `inset 0 1px 0 0 ${CARD_TOKENS.surface.level2}` }} dir="rtl">
+    <div className={`flex flex-col gap-2 w-full ${className}`} style={{ boxShadow: `inset 0 1px 0 0 ${CARD_TOKENS.surface.level2}` }} dir="rtl">
       {sensors.map((sensor) => {
         const SensorIcon = sensor.icon;
         const aria = `${sensor.typeLabel} — ${sensor.id}`;
@@ -51,7 +51,7 @@ export function CardSensors({
             <span className="text-xs">{sensor.typeLabel}</span>
             <span className="flex-1 min-w-0 block" aria-hidden="true" />
             {sensor.detectedAt && (
-              <span className="text-xs text-white font-mono tabular-nums">
+              <span className="text-[11px] text-white font-mono tabular-nums">
                 {sensor.detectedAt}
               </span>
             )}

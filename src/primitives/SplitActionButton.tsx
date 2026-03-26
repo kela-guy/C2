@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChevronDown, Loader2 } from 'lucide-react';
-import { Button } from '@/app/components/ui/button';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { cn } from '@/app/components/ui/utils';
 import {
   DropdownMenu,
@@ -69,33 +69,9 @@ const colorByVariant: Record<
 };
 
 const sizeConfig = {
-  sm: {
-    height: 'min-h-[30px] h-[30px]',
-    text: 'text-xs',
-    icon: 11,
-    chevronMin: 'min-w-[30px] w-[30px]',
-    font: 'font-medium',
-    svgOverride: '[&_svg]:!size-[11px]',
-    chevronSvg: '[&_svg]:!size-[10px]',
-  },
-  md: {
-    height: 'min-h-8 h-8',
-    text: 'text-xs',
-    icon: 14,
-    chevronMin: 'min-w-8 w-8',
-    font: 'font-medium',
-    svgOverride: '[&_svg]:!size-3.5',
-    chevronSvg: '[&_svg]:!size-3',
-  },
-  lg: {
-    height: 'min-h-9 h-9',
-    text: 'text-[13px]',
-    icon: 16,
-    chevronMin: 'min-w-9 w-9',
-    font: 'font-semibold',
-    svgOverride: '[&_svg]:!size-4',
-    chevronSvg: '[&_svg]:!size-3.5',
-  },
+  sm: { height: 'min-h-[30px] h-[30px]', text: 'text-xs', icon: 11, chevronMin: 'min-w-[30px] w-[30px]', font: 'font-medium' },
+  md: { height: 'min-h-8 h-8', text: 'text-xs', icon: 14, chevronMin: 'min-w-8 w-8', font: 'font-medium' },
+  lg: { height: 'min-h-9 h-9', text: 'text-[13px]', icon: 16, chevronMin: 'min-w-9 w-9', font: 'font-semibold' },
 };
 
 export function SplitActionButton({
@@ -111,22 +87,17 @@ export function SplitActionButton({
   className = '',
   dataTour,
 }: SplitActionButtonProps) {
+  const prefersReducedMotion = useReducedMotion();
   const [menuOpen, setMenuOpen] = React.useState(false);
   const isDisabled = disabled || loading;
   const c = colorByVariant[variant] ?? colorByVariant.primary;
   const sz = sizeConfig[size];
 
-  const segmentClassName = cn(
-    sz.height,
-    sz.text,
-    sz.font,
-    c.text,
-    c.base,
-    c.hover,
-    c.active,
-    'rounded-none shadow-none transition-[background-color,transform] duration-150 ease-out',
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/30 focus-visible:ring-offset-0',
-    'border-0 disabled:opacity-100',
+  const segmentBase = cn(
+    sz.height, sz.text, sz.font, c.text,
+    c.base, c.hover, c.active,
+    'transition-[background-color,transform] duration-150 ease-out',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/30',
   );
 
   const shellDimmed = dimDisabledShell && !loading && isDisabled;
@@ -154,39 +125,45 @@ export function SplitActionButton({
       {...(dataTour ? { 'data-tour': dataTour } : {})}
       {...(loading ? { 'aria-busy': true as const } : {})}
     >
-      <Button
+      <button
         type="button"
-        variant="ghost"
-        disabled={isDisabled}
         onClick={isDisabled ? undefined : (e) => { e.stopPropagation(); onClick(e); }}
+        disabled={isDisabled}
         className={cn(
-          segmentClassName,
-          sz.svgOverride,
-          'flex-1 min-w-0 justify-center gap-2 px-3 overflow-hidden rounded-s-[4px]',
+          segmentBase,
+          'flex flex-1 items-center justify-center gap-2 px-3',
+          'min-w-0 overflow-hidden rounded-s-[4px]',
           loading ? 'cursor-wait pointer-events-none' : 'active:scale-[0.98] will-change-transform',
         )}
         {...(loading ? { 'aria-live': 'polite' as const } : {})}
       >
-        <span className="flex items-center gap-2">
-          {loading ? (
-            <Loader2 size={sz.icon} className="shrink-0 animate-spin opacity-90" aria-hidden="true" />
-          ) : (
-            Icon && <Icon size={sz.icon} className="shrink-0 opacity-95" aria-hidden="true" />
-          )}
-          <span>{label}</span>
-        </span>
-      </Button>
+        <AnimatePresence mode="popLayout" initial={false}>
+          <motion.span
+            key={label}
+            className="flex items-center gap-2"
+            transition={prefersReducedMotion ? { duration: 0 } : { type: 'spring', duration: 0.3, bounce: 0 }}
+            initial={prefersReducedMotion ? false : { opacity: 0, y: -25 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={prefersReducedMotion ? undefined : { opacity: 0, y: 25 }}
+          >
+            {loading ? (
+              <Loader2 size={sz.icon} className={cn('shrink-0', prefersReducedMotion ? 'opacity-90' : 'animate-spin opacity-90')} aria-hidden="true" />
+            ) : (
+              Icon && <Icon size={sz.icon} className="shrink-0 opacity-95" aria-hidden="true" />
+            )}
+            <span>{label}</span>
+          </motion.span>
+        </AnimatePresence>
+      </button>
 
       <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild disabled={isDisabled}>
-          <Button
+          <button
             type="button"
-            variant="ghost"
             className={cn(
-              segmentClassName,
-              sz.chevronSvg,
+              segmentBase,
               sz.chevronMin,
-              'px-2 shrink-0 justify-center rounded-e-[4px]',
+              'flex shrink-0 items-center justify-center px-2 rounded-e-[4px]',
               chevronExtras,
             )}
             aria-label="פעולות נוספות"
@@ -201,7 +178,7 @@ export function SplitActionButton({
               )}
               aria-hidden="true"
             />
-          </Button>
+          </button>
         </DropdownMenuTrigger>
 
         <DropdownMenuContent
@@ -210,7 +187,10 @@ export function SplitActionButton({
           align="start"
           sideOffset={6}
           className={cn(
-            'min-w-[140px] rounded-lg p-1 bg-popover text-popover-foreground border-border shadow-lg',
+            'min-w-[140px] rounded-lg border-none p-1 origin-top-right',
+            'bg-[#1c1c20] text-white',
+            'shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_8px_30px_rgba(0,0,0,0.5)]',
+            prefersReducedMotion && 'data-[state=open]:animate-none data-[state=closed]:animate-none',
           )}
           onCloseAutoFocus={(e) => e.preventDefault()}
         >
@@ -220,7 +200,7 @@ export function SplitActionButton({
               <DropdownMenuItem
                 key={item.id}
                 disabled={item.disabled}
-                className="flex w-full flex-row items-center justify-start gap-2 rounded-md px-2.5 py-2 text-xs text-popover-foreground cursor-pointer transition-[background-color,color] duration-150 ease-out hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                className="flex w-full flex-row items-center justify-start gap-2 rounded-md px-2.5 py-2 text-xs text-zinc-200 cursor-pointer transition-[background-color,color] duration-150 ease-out hover:bg-white/[0.08] hover:text-white focus:bg-white/[0.08] focus:text-white"
                 onClick={(e) => {
                   e.stopPropagation();
                   item.onClick(e);
