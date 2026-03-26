@@ -9,7 +9,9 @@ const meta: Meta<typeof CardLog> = {
   component: CardLog,
   tags: ['autodocs'],
   decorators: [
-    (Story) => (
+    (Story, context) => context.parameters?.specDocs ? (
+      <Story />
+    ) : (
       <div style={{ maxWidth: 380, background: '#141414', borderRadius: 8 }}>
         <Story />
       </div>

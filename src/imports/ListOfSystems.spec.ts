@@ -3,7 +3,7 @@ import type { ComponentSpec } from '@/specs/types';
 export const spec: ComponentSpec = {
   name: 'ListOfSystems',
   filePath: 'src/imports/ListOfSystems.tsx',
-  purpose: 'Scrollable detection target list with active/completed tabs, filter bar, burst grouping, animated card layout, and full CUAS workflow actions (verify, engage, dismiss, drone ops, mission planning, mitigation, BDA).',
+  purpose: 'Scrollable detection target list with active/completed tabs, filter bar, animated card layout, and full CUAS workflow actions (verify, engage, dismiss, drone ops, mission planning, mitigation, BDA).',
   location: 'CUAS',
   status: 'prototype',
 
@@ -49,12 +49,6 @@ export const spec: ComponentSpec = {
       name: 'card expanded',
       trigger: 'User clicks a target card',
       description: 'Card expands to show full details: media, actions, timeline, sensors, details, log, closure',
-      implementedInPrototype: true,
-    },
-    {
-      name: 'burst grouped',
-      trigger: 'Multiple targets detected within short time/proximity',
-      description: 'Targets grouped in StackedCard with expand/collapse and bulk mitigate',
       implementedInPrototype: true,
     },
     {
@@ -171,15 +165,6 @@ export const spec: ComponentSpec = {
         { actor: 'system', action: 'Target resolves', result: 'Card moves to completed tab' },
       ],
     },
-    {
-      name: 'Burst handling',
-      type: 'happy',
-      steps: [
-        { actor: 'system', action: 'Multiple targets arrive within burst window', result: 'Targets grouped in StackedCard' },
-        { actor: 'user', action: 'Expands burst stack', result: 'Individual cards shown within group' },
-        { actor: 'user', action: 'Clicks bulk mitigate', result: 'onMitigateAll fired for each target in burst' },
-      ],
-    },
   ],
 
   accessibility: {
@@ -191,20 +176,6 @@ export const spec: ComponentSpec = {
   },
 
   tasks: [
-    {
-      id: 'LS-1',
-      title: 'Remove debug fetch call',
-      priority: 'P0',
-      estimate: 'S',
-      description: 'Remove the agent log fetch call to localhost:7712 that sends debug telemetry.',
-      files: [
-        { path: 'src/imports/ListOfSystems.tsx', action: 'modify', description: 'Remove fetch() call in render body (lines 762-763)' },
-      ],
-      acceptanceCriteria: [
-        'No HTTP requests to localhost:7712 in render',
-        'No side effects in render body',
-      ],
-    },
     {
       id: 'LS-2',
       title: 'Add loading and error states',
@@ -253,16 +224,13 @@ export const spec: ComponentSpec = {
 
   hardcodedData: [
     { current: 'MOCK_TARGETS empty array as default', replaceWith: 'Required prop or data hook', location: 'ListOfSystems.tsx line 189' },
-    { current: 'Debug fetch() to localhost:7712', replaceWith: 'Remove entirely', location: 'ListOfSystems.tsx lines 762-763' },
     { current: 'Hebrew string literals', replaceWith: 'i18n translation keys', location: 'ListOfSystems.tsx throughout' },
   ],
 
   notes: [
-    'Contains a debug fetch() call in the render body that should be removed before production.',
     'Uses framer-motion AnimatePresence with popLayout mode for smooth reorder animations.',
     'New arrivals logic uses refs (seenTargetIdsRef, hasHydratedTargetsRef) to avoid flash on initial mount.',
     'Component has ~60 props — strong candidate for a context-based approach to reduce prop drilling.',
-    'Burst grouping via groupIntoBursts() from useTargetBursts hook.',
     'Reduced motion support via useReducedMotion() from framer-motion.',
   ],
 };

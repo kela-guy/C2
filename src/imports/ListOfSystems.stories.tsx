@@ -12,7 +12,6 @@ import {
   cuas_mitigating,
   cuas_mitigated,
   cuas_bda_complete,
-  burst_targets,
   flow1_suspicion,
   flow2_tracking,
 } from '@/test-utils/mockDetections';
@@ -77,13 +76,6 @@ export const WithTargets: Story = {
   name: 'Active Targets',
   args: {
     targets: CUAS_TARGETS,
-  },
-};
-
-export const WithBurst: Story = {
-  name: 'Swarm Burst',
-  args: {
-    targets: [...burst_targets, cuas_classified],
   },
 };
 

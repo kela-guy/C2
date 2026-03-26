@@ -20,7 +20,9 @@ const meta = {
     backgrounds: { default: 'dark', values: [{ name: 'dark', value: '#141414' }] },
   },
   decorators: [
-    (Story) => (
+    (Story, context) => context.parameters?.specDocs ? (
+      <Story />
+    ) : (
       <div style={{ width: 280, padding: 16 }}>
         <Story />
       </div>
@@ -50,9 +52,9 @@ export const Default: Story = {
 export const AllVariants: Story = {
   name: 'All Variants',
   render: () => {
-    const variants = ['primary', 'secondary', 'danger', 'amber', 'glass'] as const;
-    const icons = [Crosshair, Zap, JamWaveIcon, Eye, Radio];
-    const labels = ['מעקב', 'שיגור', 'שיבוש', 'ניטור', 'תקשורת'];
+    const variants = ['fill', 'ghost', 'danger', 'warning'] as const;
+    const icons = [Crosshair, Zap, JamWaveIcon, Eye];
+    const labels = ['מעקב', 'שיגור', 'שיבוש', 'ניטור'];
     return (
       <div className="flex flex-col gap-3 w-full">
         {variants.map((v, i) => (
@@ -116,7 +118,7 @@ export const Sizes: Story = {
           key={size}
           label={`גודל ${size}`}
           icon={Zap}
-          variant="primary"
+          variant="fill"
           size={size}
           onClick={() => {}}
           dropdownItems={defaultDropdownItems}

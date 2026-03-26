@@ -10,7 +10,7 @@ export const spec: ComponentSpec = {
   props: [
     { name: 'label', type: 'string', required: true, description: 'Primary button label text (Hebrew)' },
     { name: 'icon', type: 'React.ElementType', required: false, description: 'Optional icon rendered before the label' },
-    { name: 'variant', type: "'primary' | 'secondary' | 'danger' | 'amber' | 'glass'", required: false, defaultValue: "'primary'", description: 'Color variant controlling background, hover, and text colors' },
+    { name: 'variant', type: "'fill' | 'ghost' | 'danger' | 'warning'", required: false, defaultValue: "'fill'", description: 'Color variant controlling background, hover, and text colors' },
     { name: 'size', type: "'sm' | 'md' | 'lg'", required: false, defaultValue: "'sm'", description: 'Size variant controlling height, text size, and icon size' },
     { name: 'disabled', type: 'boolean', required: false, defaultValue: 'false', description: 'Disables both primary button and dropdown' },
     { name: 'loading', type: 'boolean', required: false, defaultValue: 'false', description: 'Shows loading spinner, disables interaction, sets cursor to wait' },
@@ -121,13 +121,12 @@ export const spec: ComponentSpec = {
 
   tokens: {
     colors: [
-      { name: 'primary-bg', value: 'rgba(34,139,230,0.15)', usage: 'Primary variant base background' },
-      { name: 'primary-text', value: '#74c0fc', usage: 'Primary variant text color' },
+      { name: 'fill-bg', value: 'rgba(34,139,230,0.15)', usage: 'Fill variant base background' },
+      { name: 'fill-text', value: '#74c0fc', usage: 'Fill variant text color' },
+      { name: 'ghost-bg', value: 'bg-zinc-800', usage: 'Ghost variant base background' },
       { name: 'danger-bg', value: 'oklch(0.348 0.111 17)', usage: 'Danger variant base background' },
       { name: 'danger-text', value: 'oklch(0.927 0.062 17)', usage: 'Danger variant text color' },
-      { name: 'amber-bg', value: 'oklch(0.348 0.111 70)', usage: 'Amber variant base background' },
-      { name: 'glass-bg', value: 'zinc-600', usage: 'Glass variant base background' },
-      { name: 'secondary-bg', value: 'oklch(0.302 0 0)', usage: 'Secondary variant base background' },
+      { name: 'warning-bg', value: 'oklch(0.348 0.111 70)', usage: 'Warning variant base background' },
       { name: 'dropdown-bg', value: '#1c1c20', usage: 'Dropdown menu background' },
       { name: 'dropdown-item-hover', value: 'rgba(255,255,255,0.08)', usage: 'Dropdown item hover' },
     ],
@@ -269,7 +268,7 @@ export const spec: ComponentSpec = {
     'The gap between segments (gap-0.5 = 2px) reveals the card surface behind, creating a visual divider without an explicit border.',
     'Label swap uses AnimatePresence with mode="popLayout" — old label exits downward, new label enters from above.',
     'stopPropagation is used on all click handlers to prevent card toggle from firing.',
-    'The danger and amber variants add an outer ring (ring-1 ring-inset) via variantShells — other variants do not.',
+    'The danger and warning variants add an outer ring (ring-1 ring-inset) via variantShells — other variants do not.',
     'onCloseAutoFocus is prevented on the dropdown to avoid focus jumping back to the chevron after selection.',
   ],
 };

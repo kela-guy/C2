@@ -1,51 +1,49 @@
 import React from "react";
 import { Loader2 } from "lucide-react";
-import { Button } from "@/app/components/ui/button";
 import { cn } from "@/app/components/ui/utils";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/app/components/ui/tooltip";
 
-type ActionButtonVariant = "primary" | "secondary" | "ghost" | "glass" | "danger" | "amber";
-
-const VARIANT_CONFIG: Record<
-  ActionButtonVariant,
-  { buttonVariant: React.ComponentProps<typeof Button>["variant"]; className: string }
+const colorByVariant: Record<
+  string,
+  { base: string; hover: string; active: string; text: string }
 > = {
-  primary: {
-    buttonVariant: "outline",
-    className:
-      "flex-1 border-transparent bg-[rgba(34,139,230,0.15)] hover:bg-[rgba(34,139,230,0.25)] shadow-[0_0_0_1px_#74c0fc] text-[#74c0fc] hover:text-[#74c0fc]",
-  },
-  secondary: {
-    buttonVariant: "secondary",
-    className:
-      "flex-1 bg-[oklch(0.302_0_0)] hover:bg-[oklch(0.388_0_0)] active:bg-[oklch(0.238_0_0)] text-white",
+  fill: {
+    base: 'bg-white/[0.08]',
+    hover: 'hover:bg-white/[0.14]',
+    active: 'active:bg-white/[0.06]',
+    text: 'text-zinc-200',
   },
   ghost: {
-    buttonVariant: "ghost",
-    className: "w-full text-[#909296] hover:text-white hover:bg-white/5",
-  },
-  glass: {
-    buttonVariant: "ghost",
-    className:
-      "flex-1 bg-white/10 hover:bg-white/20 shadow-[0_0_0_1px_rgba(255,255,255,0.2)] text-white",
+    base: 'bg-zinc-800',
+    hover: 'hover:bg-zinc-700',
+    active: 'active:bg-zinc-900',
+    text: 'text-white',
   },
   danger: {
-    buttonVariant: "destructive",
-    className:
-      "flex-1 bg-[oklch(0.348_0.111_17)] hover:bg-[oklch(0.445_0.151_17)] active:bg-[oklch(0.295_0.082_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)] font-semibold",
+    base: 'bg-[oklch(0.435_0.151_25)]',
+    hover: 'hover:bg-[oklch(0.485_0.151_25)]',
+    active: 'active:bg-[oklch(0.385_0.151_25)]',
+    text: 'text-white',
   },
-  amber: {
-    buttonVariant: "secondary",
-    className:
-      "flex-1 bg-[oklch(0.348_0.111_70)] hover:bg-[oklch(0.445_0.151_70)] active:bg-[oklch(0.295_0.082_70)] text-[oklch(0.927_0.062_70)] ring-1 ring-inset ring-[oklch(0.348_0.111_70_/_0.4)] font-semibold",
+  warning: {
+    base: 'bg-[oklch(0.501_0.166_75)]',
+    hover: 'hover:bg-[oklch(0.551_0.166_75)]',
+    active: 'active:bg-[oklch(0.451_0.166_75)]',
+    text: 'text-white',
   },
+};
+
+const sizeConfig = {
+  sm: { height: 'min-h-[30px] h-[30px]', text: 'text-xs', icon: 11, font: 'font-medium' },
+  md: { height: 'min-h-8 h-8', text: 'text-xs', icon: 14, font: 'font-medium' },
+  lg: { height: 'min-h-9 h-9', text: 'text-[13px]', icon: 16, font: 'font-semibold' },
 };
 
 export function ActionButton({
   label,
   icon: Icon,
   onClick,
-  variant = "primary",
+  variant = "fill",
   size = "md",
   className = "",
   disabled = false,
@@ -56,7 +54,7 @@ export function ActionButton({
   label: string;
   icon?: React.ElementType;
   onClick?: (e: React.MouseEvent) => void;
-  variant?: "primary" | "secondary" | "ghost" | "glass" | "danger" | "amber";
+  variant?: "fill" | "ghost" | "danger" | "warning";
   size?: "sm" | "md" | "lg";
   className?: string;
   disabled?: boolean;
@@ -65,59 +63,38 @@ export function ActionButton({
   dataTour?: string;
 }) {
   const isDisabled = disabled || loading;
-  const { buttonVariant, className: variantClass } =
-    VARIANT_CONFIG[variant] ?? VARIANT_CONFIG.primary;
-
-  const sizeProps: Record<
-    "sm" | "md" | "lg",
-    { buttonSize: React.ComponentProps<typeof Button>["size"]; className: string }
-  > = {
-    sm: {
-      buttonSize: "sm",
-      className: "h-[30px] min-h-[30px] text-xs gap-1 px-3 rounded [&_svg]:!size-[11px]",
-    },
-    md: {
-      buttonSize: "sm",
-      className: "h-8 min-h-8 text-xs gap-2 px-3 [&_svg]:!size-[14px]",
-    },
-    lg: {
-      buttonSize: "default",
-      className: "h-9 min-h-9 text-[13px] gap-2 font-semibold px-3 [&_svg]:!size-4",
-    },
-  };
-
-  const { buttonSize, className: sizeClass } = sizeProps[size];
-
-  const iconSize = size === "sm" ? 11 : size === "lg" ? 16 : 14;
+  const c = colorByVariant[variant] ?? colorByVariant.fill;
+  const sz = sizeConfig[size];
 
   const btn = (
-    <Button
+    <button
       type="button"
-      variant={buttonVariant}
-      size={buttonSize}
       onClick={isDisabled ? undefined : onClick}
       disabled={isDisabled}
       className={cn(
-        "justify-center transition-[background-color,transform,box-shadow] duration-150 ease-out active:scale-[0.98] will-change-transform",
-        variantClass,
-        sizeClass,
-        isDisabled && !loading && "disabled:opacity-40 disabled:cursor-not-allowed",
-        loading && "disabled:!opacity-100 cursor-wait",
+        'inline-flex flex-1 items-center justify-center gap-2 px-3 rounded',
+        sz.height, sz.text, sz.font, c.text,
+        c.base, c.hover, c.active,
+        'transition-[background-color,transform] duration-150 ease-out',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/30',
+        !loading && 'active:scale-[0.98] will-change-transform',
+        isDisabled && !loading && 'opacity-45 pointer-events-none',
+        loading && 'cursor-wait',
         className,
       )}
       {...(dataTour ? { "data-tour": dataTour } : {})}
     >
       {loading ? (
         <Loader2
-          size={iconSize}
-          className="animate-spin motion-reduce:animate-none"
+          size={sz.icon}
+          className="shrink-0 animate-spin opacity-90 motion-reduce:animate-none"
           aria-hidden="true"
         />
       ) : (
-        Icon && <Icon size={iconSize} aria-hidden="true" />
+        Icon && <Icon size={sz.icon} className="shrink-0 opacity-95" aria-hidden="true" />
       )}
       <span>{label}</span>
-    </Button>
+    </button>
   );
 
   if (!title) return btn;

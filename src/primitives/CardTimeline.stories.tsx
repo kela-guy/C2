@@ -9,7 +9,9 @@ const meta: Meta<typeof CardTimeline> = {
   component: CardTimeline,
   tags: ['autodocs'],
   decorators: [
-    (Story) => (
+    (Story, context) => context.parameters?.specDocs ? (
+      <Story />
+    ) : (
       <div style={{ maxWidth: 380, background: '#1A1A1A', padding: 12, borderRadius: 8 }}>
         <Story />
       </div>

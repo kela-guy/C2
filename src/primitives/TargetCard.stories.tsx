@@ -12,17 +12,15 @@ const meta: Meta<typeof TargetCard> = {
   component: TargetCard,
   tags: ['autodocs'],
   decorators: [
-    (Story) => (
+    (Story, context) => context.parameters?.specDocs ? (
+      <Story />
+    ) : (
       <div style={{ maxWidth: 380 }}>
         <Story />
       </div>
     ),
   ],
   argTypes: {
-    accent: {
-      control: 'select',
-      options: ['idle', 'suspicion', 'detection', 'tracking', 'mitigating', 'active', 'resolved', 'expired'],
-    },
     open: { control: 'boolean' },
     completed: { control: 'boolean' },
   },
@@ -39,7 +37,6 @@ export const Spec: StoryObj = {
 export const ExpandCollapse: Story = {
   name: 'Expand / Collapse',
   args: {
-    accent: 'detection',
     open: false,
     completed: false,
     onToggle: fn(),
@@ -72,7 +69,6 @@ export const ExpandCollapse: Story = {
 export const KeyboardToggle: Story = {
   name: 'Keyboard — Enter/Space Toggle',
   args: {
-    accent: 'detection',
     open: false,
     onToggle: fn(),
     header: (
@@ -102,7 +98,6 @@ export const KeyboardToggle: Story = {
 export const ExpandedContent: Story = {
   name: 'Expanded — Content Visible',
   args: {
-    accent: 'tracking',
     open: true,
     completed: false,
     onToggle: fn(),
@@ -129,7 +124,6 @@ export const ExpandedContent: Story = {
 export const CompletedState: Story = {
   name: 'Completed — Reduced Opacity',
   args: {
-    accent: 'resolved',
     open: false,
     completed: true,
     onToggle: fn(),
@@ -145,31 +139,5 @@ export const CompletedState: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByText('אירוע הושלם')).toBeInTheDocument();
     await expect(canvas.getByText('הושלם')).toBeInTheDocument();
-  },
-};
-
-export const AllAccents: Story = {
-  name: 'All Accent Colors',
-  render: () => {
-    const accents = ['idle', 'suspicion', 'detection', 'tracking', 'mitigating', 'active', 'resolved', 'expired'] as const;
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {accents.map((a) => (
-          <TargetCard
-            key={a}
-            accent={a}
-            open={false}
-            onToggle={() => {}}
-            header={
-              <CardHeader
-                icon={Target}
-                title={`Accent: ${a}`}
-                open={false}
-              />
-            }
-          />
-        ))}
-      </div>
-    );
   },
 };

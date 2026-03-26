@@ -76,7 +76,9 @@ const meta: Meta = {
   title: 'Sidebar/FilterBar',
   tags: ['autodocs'],
   decorators: [
-    (Story) => (
+    (Story, context) => context.parameters?.specDocs ? (
+      <Story />
+    ) : (
       <div style={{ maxWidth: 384, background: '#161616', borderRadius: 8 }}>
         <Story />
       </div>

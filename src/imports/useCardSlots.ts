@@ -140,14 +140,14 @@ const CLASSIFIED_TYPE_LABELS: Record<string, string> = {
 
 function buildConfidenceBadge(confidence: number | undefined, classifiedType?: string): React.ReactNode {
   if (confidence == null) return null;
-  const bg = confidence >= 80 ? 'bg-red-500/20 text-red-400 shadow-[0_0_0_1px_rgba(239,68,68,0.3)]'
-    : confidence >= 40 ? 'bg-amber-500/20 text-amber-400 shadow-[0_0_0_1px_rgba(245,158,11,0.3)]'
-    : 'bg-zinc-500/20 text-zinc-400 shadow-[0_0_0_1px_rgba(113,113,122,0.3)]';
+  const bg = confidence >= 80 ? 'bg-red-500/20 text-red-400'
+    : confidence >= 40 ? 'bg-amber-500/20 text-amber-400'
+    : 'bg-zinc-500/20 text-zinc-400';
   const typeLabel = CLASSIFIED_TYPE_LABELS[classifiedType ?? 'unknown'] ?? 'לא ידוע';
   return React.createElement(Tooltip, null,
     React.createElement(TooltipTrigger, { asChild: true },
       React.createElement('span', {
-        className: `text-[10px] font-bold font-mono tabular-nums px-1.5 py-0.5 rounded ${bg} cursor-default`,
+        className: `text-xs font-semibold font-sans tabular-nums px-1.5 py-0.5 rounded-sm flex flex-col items-center justify-center h-[22px] ${bg} cursor-default`,
       }, `${confidence}%`),
     ),
     React.createElement(TooltipContent, {
@@ -277,7 +277,7 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
         id: 'bda-camera',
         label: `${countdown} שניות לשליטה...`,
         icon: Timer,
-        variant: 'secondary' as const,
+        variant: 'ghost' as const,
         size: 'sm' as const,
         group: 'investigation' as const,
         disabled: true,
@@ -289,7 +289,7 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
         id: 'bda-camera',
         label: 'בקש שליטה על מצלמה',
         icon: Lock,
-        variant: 'secondary' as const,
+        variant: 'ghost' as const,
         size: 'sm' as const,
         group: 'investigation' as const,
         onClick: (e: React.MouseEvent) => { e.stopPropagation(); callbacks.onRequestCameraControl?.(); },
@@ -300,7 +300,7 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
         id: 'bda-camera',
         label: 'בטל מצלמה',
         icon: EyeOff,
-        variant: 'secondary' as const,
+        variant: 'ghost' as const,
         size: 'sm' as const,
         group: 'investigation' as const,
         onClick: (e: React.MouseEvent) => { e.stopPropagation(); callbacks.onBdaCamera?.(); },
@@ -310,7 +310,7 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
         id: 'bda-camera',
         label: 'הפנה מצלמה',
         icon: Eye,
-        variant: 'secondary' as const,
+        variant: 'fill' as const,
         size: 'sm' as const,
         group: 'investigation' as const,
         dataTour: 'cuas-cta-bda',
@@ -319,7 +319,7 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
     }
 
     actions.push(
-      { id: 'complete-mission', label: 'סיום משימה', icon: Check, variant: 'secondary', size: 'sm',
+      { id: 'complete-mission', label: 'סיום משימה', icon: Check, variant: 'fill', size: 'sm',
         group: 'investigation',
         dataTour: 'cuas-cta-complete',
         onClick: (e) => { e.stopPropagation(); callbacks.onCompleteMission?.(); },
@@ -346,7 +346,7 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
         id: 'investigate-bda',
         label: 'תחקור — מעקב PTZ',
         icon: Eye,
-        variant: 'primary',
+        variant: 'fill',
         size: 'sm',
         group: 'investigation',
         dataTour: 'cuas-cta-bda',
@@ -360,7 +360,7 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
           id: 'start-bda',
           label: 'אימות פגיעה — נעילת רחפן',
           icon: Crosshair,
-          variant: 'secondary',
+          variant: 'ghost',
           size: 'sm',
           group: 'investigation',
           onClick: (e) => { e.stopPropagation(); callbacks.onSendDroneVerification?.(); },
@@ -370,7 +370,7 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
           id: 'dismiss-target',
           label: 'ביטול',
           icon: X,
-          variant: 'secondary',
+          variant: 'ghost',
           size: 'sm',
           group: 'investigation',
           onClick: (e) => { e.stopPropagation(); callbacks.onDismiss?.('dismissed'); },
@@ -425,7 +425,7 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
 
     if (cameraPointing) {
       actions.push({
-        id: 'point-camera-pointing', label: 'מפנה מצלמה...', icon: Eye, variant: 'glass', size: 'sm',
+        id: 'point-camera-pointing', label: 'מפנה מצלמה...', icon: Eye, variant: 'ghost', size: 'sm',
         group: 'investigation',
         loading: true,
         onClick: (e) => e.stopPropagation(),
@@ -436,14 +436,14 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
         'aria-hidden': true,
       });
       actions.push({
-        id: 'point-camera-locked', label: 'מצלמה נעולה על היעד', icon: CameraLockedIcon, variant: 'glass', size: 'sm',
+        id: 'point-camera-locked', label: 'מצלמה נעולה על היעד', icon: CameraLockedIcon, variant: 'ghost', size: 'sm',
         group: 'investigation',
         onClick: (e) => { e.stopPropagation(); callbacks.onVerify?.('investigate'); },
         className: 'shadow-[0_0_0_1px_rgba(34,197,94,0.4)] text-emerald-400',
       });
     } else {
       actions.push({
-        id: 'point-camera', label: 'הפנה מצלמה', icon: Eye, variant: 'secondary', size: 'sm',
+        id: 'point-camera', label: 'הפנה מצלמה', icon: Eye, variant: 'fill', size: 'sm',
         group: 'investigation',
         onClick: (e) => { e.stopPropagation(); callbacks.onVerify?.('investigate'); },
         disabled: target.entityStage !== 'classified',
@@ -451,7 +451,7 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
     }
 
     actions.push({
-      id: 'dismiss-target', label: 'ביטול', icon: X, variant: 'secondary', size: 'sm',
+      id: 'dismiss-target', label: 'ביטול', icon: X, variant: 'ghost', size: 'sm',
       group: 'investigation',
       onClick: (e) => { e.stopPropagation(); callbacks.onDismiss?.('dismissed'); },
     });
@@ -462,13 +462,13 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
   // CUAS bird actions
   if (isCuas && target.classifiedType === 'bird') {
     actions.push(
-      { id: 'confirm-bird', label: 'אשר ציפור — סגור זיהוי', icon: Check, variant: 'amber', size: 'sm',
+      { id: 'confirm-bird', label: 'אשר ציפור — סגור זיהוי', icon: Check, variant: 'warning', size: 'sm',
         group: 'effector',
         onClick: (e) => { e.stopPropagation(); callbacks.onDismiss?.('bird_confirmed'); } },
-      { id: 'false-alarm', label: 'שווא', icon: Ban, variant: 'secondary', size: 'sm',
+      { id: 'false-alarm', label: 'שווא', icon: Ban, variant: 'ghost', size: 'sm',
         group: 'investigation',
         onClick: (e) => { e.stopPropagation(); callbacks.onDismiss?.('false_alarm'); } },
-      { id: 'investigate-bird', label: 'תחקור', icon: Eye, variant: 'secondary', size: 'sm',
+      { id: 'investigate-bird', label: 'תחקור', icon: Eye, variant: 'ghost', size: 'sm',
         group: 'investigation',
         onClick: (e) => { e.stopPropagation(); callbacks.onVerify?.('investigate'); } },
     );
@@ -479,9 +479,9 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
   if ((target.flowType === 1 || target.flowType === 2) && target.flowPhase === 'investigate') {
     if (target.flowType === 2) {
       actions.push(
-        { id: 'send-drone', label: 'שגר רחפן', icon: Plane, variant: 'primary', size: 'md',
+        { id: 'send-drone', label: 'שגר רחפן', icon: Plane, variant: 'fill', size: 'md',
           onClick: (e) => { e.stopPropagation(); callbacks.onEscalateSendDrone?.(); } },
-        { id: 'mark-poi', label: 'סמן נ.ע', icon: MapPin, variant: 'secondary', size: 'sm',
+        { id: 'mark-poi', label: 'סמן נ.ע', icon: MapPin, variant: 'ghost', size: 'sm',
           onClick: (e) => { e.stopPropagation(); callbacks.onEscalateCreatePOI?.(); } },
       );
     }
@@ -495,11 +495,11 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
   // Flow 1 decide phase — playbook selection
   if (target.flowType === 1 && target.flowPhase === 'decide') {
     actions.push(
-      { id: 'pb-fast-inspect', label: 'חקירה מהירה', icon: Plane, variant: 'primary', size: 'md',
+      { id: 'pb-fast-inspect', label: 'חקירה מהירה', icon: Plane, variant: 'fill', size: 'md',
         onClick: (e) => { e.stopPropagation(); callbacks.onPlaybookSelect?.('fast-inspect'); } },
       { id: 'pb-full-response', label: 'תגובה מלאה', icon: Shield, variant: 'danger', size: 'sm',
         onClick: (e) => { e.stopPropagation(); callbacks.onPlaybookSelect?.('full-response'); } },
-      { id: 'pb-transfer', label: 'העבר אחריות', icon: Send, variant: 'secondary', size: 'sm',
+      { id: 'pb-transfer', label: 'העבר אחריות', icon: Send, variant: 'ghost', size: 'sm',
         onClick: (e) => { e.stopPropagation(); callbacks.onPlaybookSelect?.('transfer'); } },
       { id: 'close-event', label: 'סגור', icon: Ban, variant: 'ghost', size: 'sm',
         onClick: (e) => { e.stopPropagation(); callbacks.onAdvanceFlowPhase?.(); } },
@@ -512,13 +512,13 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
     const dp = target.droneDeployment;
     if (['flying', 'on_station', 'low_battery'].includes(dp.phase)) {
       if (!dp.overridden) {
-        actions.push({ id: 'drone-pause', label: 'השהה', icon: Pause, variant: 'amber', size: 'sm',
+        actions.push({ id: 'drone-pause', label: 'השהה', icon: Pause, variant: 'warning', size: 'sm',
           onClick: (e) => { e.stopPropagation(); callbacks.onDroneOverride?.(); } });
       } else {
-        actions.push({ id: 'drone-resume', label: 'חדש', icon: Play, variant: 'primary', size: 'md',
+        actions.push({ id: 'drone-resume', label: 'חדש', icon: Play, variant: 'fill', size: 'md',
           onClick: (e) => { e.stopPropagation(); callbacks.onDroneResume?.(); } });
       }
-      actions.push({ id: 'drone-rtb', label: 'חזרה לבסיס', icon: Home, variant: 'secondary', size: 'sm',
+      actions.push({ id: 'drone-rtb', label: 'חזרה לבסיס', icon: Home, variant: 'ghost', size: 'sm',
         onClick: (e) => { e.stopPropagation(); callbacks.onDroneRTB?.(); } });
     }
     return actions;
@@ -529,29 +529,29 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
     const mp = target.plannedMission;
     if (mp.phase === 'planning') {
       actions.push(
-        { id: 'mission-activate', label: 'הפעל משימה', icon: Play, variant: 'primary', size: 'lg',
+        { id: 'mission-activate', label: 'הפעל משימה', icon: Play, variant: 'fill', size: 'lg',
           onClick: (e) => { e.stopPropagation(); callbacks.onMissionActivate?.(); } },
         { id: 'mission-cancel', label: 'ביטול תכנון', icon: X, variant: 'ghost', size: 'sm',
           onClick: (e) => { e.stopPropagation(); callbacks.onMissionCancel?.(); } },
       );
     } else if (mp.phase === 'active' || mp.phase === 'paused') {
       if (mp.phase === 'active') {
-        actions.push({ id: 'mission-pause', label: 'השהה', icon: Pause, variant: 'secondary', size: 'md',
+        actions.push({ id: 'mission-pause', label: 'השהה', icon: Pause, variant: 'ghost', size: 'md',
           onClick: (e) => { e.stopPropagation(); callbacks.onMissionPause?.(); } });
       } else {
-        actions.push({ id: 'mission-resume', label: 'המשך', icon: Play, variant: 'glass', size: 'md',
+        actions.push({ id: 'mission-resume', label: 'המשך', icon: Play, variant: 'ghost', size: 'md',
           onClick: (e) => { e.stopPropagation(); callbacks.onMissionResume?.(); },
           className: 'shadow-[0_0_0_1px_rgba(16,185,129,0.2)] bg-emerald-500/5 hover:bg-emerald-500/10' });
       }
       actions.push(
-        { id: 'mission-override', label: 'שליטה ידנית', icon: Hand, variant: 'secondary', size: 'sm',
+        { id: 'mission-override', label: 'שליטה ידנית', icon: Hand, variant: 'ghost', size: 'sm',
           onClick: (e) => { e.stopPropagation(); callbacks.onMissionOverride?.(); } },
         { id: 'mission-cancel', label: 'ביטול משימה', icon: X, variant: 'ghost', size: 'sm',
           onClick: (e) => { e.stopPropagation(); callbacks.onMissionCancel?.(); } },
       );
     } else if (mp.phase === 'override') {
       actions.push(
-        { id: 'mission-return', label: 'חזור למשימה', icon: Play, variant: 'primary', size: 'lg',
+        { id: 'mission-return', label: 'חזור למשימה', icon: Play, variant: 'fill', size: 'lg',
           onClick: (e) => { e.stopPropagation(); callbacks.onMissionResume?.(); } },
         { id: 'mission-cancel', label: 'ביטול משימה', icon: X, variant: 'ghost', size: 'sm',
           onClick: (e) => { e.stopPropagation(); callbacks.onMissionCancel?.(); } },
@@ -567,10 +567,10 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
       actions.push({ id: 'jam-primary', label: 'שיבוש', icon: JamWaveIcon, variant: 'danger', size: 'lg',
         onClick: (e) => { e.stopPropagation(); callbacks.onEngage?.('jamming'); } });
       actions.push(
-        { id: 'surveillance', label: 'מעקב', icon: Eye, variant: 'secondary', size: 'sm',
+        { id: 'surveillance', label: 'מעקב', icon: Eye, variant: 'ghost', size: 'sm',
           onClick: (e) => { e.stopPropagation(); callbacks.onVerify?.('surveillance'); },
           className: 'shadow-[0_0_0_1px_rgba(255,255,255,0.08)] bg-white/[0.03] text-zinc-400' },
-        { id: 'drone', label: 'רחפן', icon: Plane, variant: 'secondary', size: 'sm',
+        { id: 'drone', label: 'רחפן', icon: Plane, variant: 'ghost', size: 'sm',
           onClick: (e) => e.stopPropagation(),
           className: 'shadow-[0_0_0_1px_rgba(255,255,255,0.08)] bg-white/[0.03] text-zinc-400' },
         { id: 'dismiss', label: 'ביטול', icon: X, variant: 'ghost', size: 'sm',

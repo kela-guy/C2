@@ -33,10 +33,6 @@ export function TargetCard({
   const cardRef = useRef<HTMLDivElement>(null);
   const prevOpen = useRef(open);
   const contentId = useId();
-  const accentColor = d.spine.colors[accent];
-  const accentGlow =
-    accent !== 'idle' ? `0 0 16px ${accentColor}33` : '';
-
   useEffect(() => {
     const prefersReducedMotion =
       typeof window !== 'undefined' &&
@@ -61,14 +57,9 @@ export function TargetCard({
     prevOpen.current = open;
   }, [open]);
 
-  const boxShadow = [
-    open
-      ? `0 0 0 ${d.selectedRing.ringWidth}px ${d.selectedRing.ringColor}${Math.round(d.selectedRing.ringOpacity * 255).toString(16).padStart(2, '0')}, ${d.elevation.shadow}`
-      : d.elevation.shadow,
-    accentGlow,
-  ]
-    .filter(Boolean)
-    .join(', ');
+  const boxShadow = open
+    ? `0 0 0 ${d.selectedRing.ringWidth}px ${d.selectedRing.ringColor}${Math.round(d.selectedRing.ringOpacity * 255).toString(16).padStart(2, '0')}, ${d.elevation.shadow}`
+    : d.elevation.shadow;
 
   return (
     <div

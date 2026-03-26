@@ -11,7 +11,9 @@ const meta: Meta<typeof CardHeader> = {
   component: CardHeader,
   tags: ['autodocs'],
   decorators: [
-    (Story) => (
+    (Story, context) => context.parameters?.specDocs ? (
+      <Story />
+    ) : (
       <div dir="rtl" style={{ maxWidth: 380, background: '#1A1A1A', padding: 8, borderRadius: 8 }}>
         <Story />
       </div>

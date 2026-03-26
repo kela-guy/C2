@@ -8,7 +8,7 @@ export interface CardAction {
   id: string;
   label: string;
   icon?: React.ElementType;
-  variant?: 'primary' | 'secondary' | 'ghost' | 'glass' | 'danger' | 'amber';
+  variant?: 'fill' | 'ghost' | 'danger' | 'warning';
   size?: 'sm' | 'md' | 'lg';
   onClick: (e: React.MouseEvent) => void;
   confirm?: {
@@ -137,7 +137,7 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
                         <SplitActionButton
                           label={action.label}
                           icon={action.icon}
-                          variant={action.variant as 'primary' | 'secondary' | 'danger' | 'amber' | 'glass'}
+                          variant={action.variant as 'fill' | 'ghost' | 'danger' | 'warning'}
                           size={action.size ?? 'sm'}
                           disabled={action.disabled}
                           loading={action.loading}
@@ -157,7 +157,7 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
                         <ActionButton
                           label={action.label}
                           icon={action.icon}
-                          variant={action.variant ?? 'primary'}
+                          variant={action.variant ?? 'fill'}
                           size={action.size ?? 'md'}
                           onClick={(e) => handleClick(action, e!)}
                           disabled={action.disabled}
@@ -182,7 +182,7 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
                   key={action.id}
                   label={action.label}
                   icon={action.icon}
-                  variant={action.variant ?? 'secondary'}
+                  variant={action.variant ?? 'ghost'}
                   size={action.size ?? 'sm'}
                   onClick={(e) => handleClick(action, e!)}
                   disabled={action.disabled}
@@ -203,7 +203,7 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
                   key={action.id}
                   label={action.label}
                   icon={action.icon}
-                  variant={action.variant ?? 'secondary'}
+                  variant={action.variant ?? 'ghost'}
                   size={action.size ?? 'sm'}
                   onClick={(e) => handleClick(action, e!)}
                   disabled={action.disabled}
@@ -238,7 +238,7 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
             <ActionButton
               label={action.label}
               icon={action.icon}
-              variant={action.variant ?? 'primary'}
+              variant={action.variant ?? 'fill'}
               size="lg"
               onClick={(e) => handleClick(action, e!)}
               disabled={action.disabled}
@@ -255,7 +255,7 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
             key={action.id}
             label={action.label}
             icon={action.icon}
-            variant={action.variant ?? 'secondary'}
+            variant={action.variant ?? 'ghost'}
             size={action.size ?? 'sm'}
             onClick={(e) => handleClick(action, e!)}
             disabled={action.disabled}

@@ -12,7 +12,9 @@ const meta: Meta<typeof CardSensors> = {
   component: CardSensors,
   tags: ['autodocs'],
   decorators: [
-    (Story) => (
+    (Story, context) => context.parameters?.specDocs ? (
+      <Story />
+    ) : (
       <div style={{ maxWidth: 380, background: '#141414', padding: 8, borderRadius: 8 }}>
         <Story />
       </div>

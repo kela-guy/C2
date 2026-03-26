@@ -79,7 +79,7 @@ export const CARD_TOKENS = {
   },
   iconBox: {
     size: 30,
-    borderRadius: 4,
+    borderRadius: 6,
     iconSize: 20,
     defaultBg: SURFACE.level3,
     activeBg: '#ef4444',

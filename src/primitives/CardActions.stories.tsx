@@ -11,7 +11,9 @@ const meta: Meta<typeof CardActions> = {
   component: CardActions,
   tags: ['autodocs'],
   decorators: [
-    (Story) => (
+    (Story, context) => context.parameters?.specDocs ? (
+      <Story />
+    ) : (
       <div style={{ maxWidth: 380, background: '#1A1A1A', borderRadius: 8 }}>
         <Story />
       </div>
@@ -31,9 +33,9 @@ export const PrimaryWithSecondary: Story = {
   args: {
     actions: [
       { id: 'jam-primary', label: 'שיבוש', icon: JamWaveIcon, variant: 'danger', size: 'lg', onClick: fn() },
-      { id: 'surveil', label: 'מעקב', icon: Eye, variant: 'secondary', size: 'sm', onClick: fn() },
-      { id: 'drone', label: 'רחפן', icon: Plane, variant: 'secondary', size: 'sm', onClick: fn() },
-      { id: 'dismiss', label: 'ביטול', icon: X, variant: 'secondary', size: 'sm', onClick: fn() },
+      { id: 'surveil', label: 'מעקב', icon: Eye, variant: 'ghost', size: 'sm', onClick: fn() },
+      { id: 'drone', label: 'רחפן', icon: Plane, variant: 'ghost', size: 'sm', onClick: fn() },
+      { id: 'dismiss', label: 'ביטול', icon: X, variant: 'ghost', size: 'sm', onClick: fn() },
     ],
   },
   play: async ({ args, canvas, userEvent }) => {
@@ -149,9 +151,9 @@ export const PlaybookSelection: Story = {
   name: 'Playbook Selection (Flow 1 Decide)',
   args: {
     actions: [
-      { id: 'pb-fast-inspect', label: 'חקירה מהירה', icon: Plane, variant: 'primary', size: 'md', onClick: fn() },
+      { id: 'pb-fast-inspect', label: 'חקירה מהירה', icon: Plane, variant: 'fill', size: 'md', onClick: fn() },
       { id: 'pb-full-response', label: 'תגובה מלאה', icon: JamWaveIcon, variant: 'danger', size: 'sm', onClick: fn() },
-      { id: 'pb-transfer', label: 'העבר אחריות', icon: Radio, variant: 'secondary', size: 'sm', onClick: fn() },
+      { id: 'pb-transfer', label: 'העבר אחריות', icon: Radio, variant: 'ghost', size: 'sm', onClick: fn() },
       { id: 'close-event', label: 'סגור', icon: X, variant: 'ghost', size: 'sm', onClick: fn() },
     ],
   },
@@ -161,8 +163,8 @@ export const InvestigationActions: Story = {
   name: 'Investigation Actions (Flow 2)',
   args: {
     actions: [
-      { id: 'send-drone', label: 'שגר רחפן', icon: Plane, variant: 'primary', size: 'md', onClick: fn() },
-      { id: 'mark-poi', label: 'סמן נ.ע', icon: Crosshair, variant: 'secondary', size: 'sm', onClick: fn() },
+      { id: 'send-drone', label: 'שגר רחפן', icon: Plane, variant: 'fill', size: 'md', onClick: fn() },
+      { id: 'mark-poi', label: 'סמן נ.ע', icon: Crosshair, variant: 'ghost', size: 'sm', onClick: fn() },
       { id: 'close-event', label: 'סגור אירוע', icon: X, variant: 'ghost', size: 'sm', onClick: fn() },
     ],
   },
@@ -172,7 +174,7 @@ export const Disabled: Story = {
   args: {
     actions: [
       { id: 'mitigate', label: 'שיבוש', icon: JamWaveIcon, variant: 'danger', size: 'lg', onClick: fn(), disabled: true },
-      { id: 'regional', label: 'מרחבי', icon: Radio, variant: 'secondary', size: 'sm', onClick: fn(), disabled: true },
+      { id: 'regional', label: 'מרחבי', icon: Radio, variant: 'ghost', size: 'sm', onClick: fn(), disabled: true },
     ],
   },
   play: async ({ args, canvas }) => {

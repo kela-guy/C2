@@ -14,7 +14,6 @@ import {
   MissionPhaseChip,
   FilterBar,
   NewUpdatesPill,
-  StackedCard,
   AccordionSection,
   TelemetryRow,
 } from '@/primitives';
@@ -26,7 +25,6 @@ import {
 } from 'lucide-react';
 import { useCardSlots, type CardCallbacks, type CardContext } from './useCardSlots';
 import { ACTIVITY_STATUS_LABELS, useTargetFilters } from './useTargetFilters';
-import { groupIntoBursts, isBurst } from './useTargetBursts';
 import { getActivityStatus, isCompletedActivityStatus, useActivityStatus } from './useActivityStatus';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -333,7 +331,7 @@ export function SystemCard({
   onToggle: () => void;
   loopActive?: boolean;
   onToggleLoop?: () => void;
-  quickAction?: { label: string; variant: 'primary' | 'danger' | 'amber' | 'glass' | 'ghost' | 'secondary'; icon?: React.ElementType; onClick: (e: React.MouseEvent) => void };
+  quickAction?: { label: string; variant: 'fill' | 'ghost' | 'danger' | 'warning'; icon?: React.ElementType; onClick: (e: React.MouseEvent) => void };
 }) {
   const accent = (() => {
     if (target.mitigationStatus === 'mitigating') return 'mitigating' as const;
@@ -483,7 +481,6 @@ export default function ListOfSystems({
 }: ListOfSystemsProps) {
   const prefersReducedMotion = useReducedMotion();
   const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
-  const [expandedBurstTargets, setExpandedBurstTargets] = useState<Set<string>>(new Set());
   const [newArrivalIds, setNewArrivalIds] = useState<string[]>([]);
   const [isScrolledToTop, setIsScrolledToTop] = useState(true);
   const listScrollRef = useRef<HTMLDivElement>(null);
@@ -650,26 +647,7 @@ export default function ListOfSystems({
     setIsScrolledToTop(top <= 16);
   };
 
-  const renderSingleCard = (
-    target: Detection,
-    isActive: boolean,
-    callbacks: CardCallbacks,
-    ctx: CardContext,
-  ) => (
-    <UnifiedCard
-      target={target}
-      isOpen={isActive}
-      onToggle={() => handleTargetToggle(target)}
-      callbacks={callbacks}
-      ctx={ctx}
-      onFocus={onTargetFocus ? () => onTargetFocus(target.id) : undefined}
-      thinMode={thinMode}
-    />
-  );
 
-  const handleBulkMitigate = (targets: Detection[]) => {
-    for (const t of targets) onMitigateAll?.(t.id);
-  };
 
   const renderTargetList = (
     list: Detection[],
@@ -680,51 +658,9 @@ export default function ListOfSystems({
       return <div className="p-2 text-center text-xs text-white">{emptyLabel}</div>;
     }
 
-    const items = groupIntoBursts(list);
-
     return (
       <AnimatePresence mode={disableLayout ? undefined : 'popLayout'}>
-        {items.map((item, idx) => {
-          if (isBurst(item)) {
-            return (
-              <motion.div
-                key={item.id}
-                layout={disableLayout ? false : 'position'}
-                initial={false}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-                {...(idx === 0 ? { 'data-tour': 'first-card' } : {})}
-              >
-                <StackedCard
-                  burst={item}
-                  expanded={item.targets.some(t => expandedBurstTargets.has(t.id))}
-                  onToggleExpanded={() => {
-                    setExpandedBurstTargets(prev => {
-                      const next = new Set(prev);
-                      const ids = item.targets.map(t => t.id);
-                      const isExpanded = ids.some(id => next.has(id));
-                      if (isExpanded) {
-                        ids.forEach(id => next.delete(id));
-                      } else {
-                        ids.forEach(id => next.add(id));
-                      }
-                      return next;
-                    });
-                  }}
-                  activeTargetId={activeTargetId ?? null}
-                  onTargetClick={handleTargetToggle}
-                  buildCallbacks={buildCallbacks}
-                  buildCtx={buildCtx}
-                  renderCard={renderSingleCard}
-                  onBulkMitigate={onMitigateAll ? handleBulkMitigate : undefined}
-                  onTargetHover={onTargetHover}
-                />
-              </motion.div>
-            );
-          }
-
-          const target = item;
+        {list.map((target, idx) => {
           const isActive = target.id === activeTargetId;
           return (
             <motion.div
@@ -757,11 +693,7 @@ export default function ListOfSystems({
   };
 
   const showNewUpdatesPill = activeTab === 'active' && visibleArrivalTargets.length > 0;
-  const newUpdateEntityTypes = visibleArrivalTargets.map((target) => target.type);
 
-  // #region agent log
-  fetch('http://127.0.0.1:7712/ingest/32f5ffc4-e504-4279-a051-598b5e0df724',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d56552'},body:JSON.stringify({sessionId:'d56552',location:'ListOfSystems.tsx:pill-state',message:'pill state check',data:{activeTab,isScrolledToTop,showNewUpdatesPill,visibleArrivalCount:visibleArrivalTargets.length,newArrivalIdCount:newArrivalIds.length,mainActiveCount:mainActiveTargets.length,totalTargets:targets.length},timestamp:Date.now(),hypothesisId:'H4-H5'})}).catch(()=>{});
-  // #endregion
 
   return (
     <div className={`w-full flex flex-col ${className}`}>
@@ -816,7 +748,6 @@ export default function ListOfSystems({
               <div className="pointer-events-auto">
                 <NewUpdatesPill
                   count={visibleArrivalTargets.length}
-                  entityTypes={newUpdateEntityTypes}
                   onClick={() => {
                     setNewArrivalIds([]);
                     listScrollRef.current?.scrollTo({

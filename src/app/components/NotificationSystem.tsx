@@ -90,7 +90,7 @@ const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
 
   return (
     <div
-      className="relative w-[356px] rounded-lg bg-[#1c1c20] shadow-[0_0_0_1px_rgba(255,255,255,0.12),0_8px_30px_rgba(0,0,0,0.5)] overflow-hidden"
+      className="relative w-[356px] rounded-lg bg-[#1c1c20] overflow-hidden"
       dir="rtl"
     >
       <div className="py-3 px-3">

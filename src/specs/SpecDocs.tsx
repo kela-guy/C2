@@ -64,7 +64,7 @@ export function SpecDocs({ spec }: { spec: ComponentSpec }) {
         boxSizing: 'border-box',
       }}
     >
-      <div style={{ padding: '56px 40px', maxWidth: 1400, boxSizing: 'border-box' }}>
+      <div style={{ padding: '56px 40px', boxSizing: 'border-box' }}>
 
         {/* ── Header ── */}
         <header className="mb-14">

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { ActionButton } from './ActionButton';
-import { Eye, Crosshair, X, Check, Radio, Rocket } from 'lucide-react';
+import { Eye, Crosshair, X, Rocket } from 'lucide-react';
 import { SpecDocs } from '@/specs/SpecDocs';
 import { spec } from './ActionButton.spec';
 
@@ -12,9 +12,9 @@ const meta = {
   argTypes: {
     variant: {
       control: 'select',
-      options: ['primary', 'secondary', 'ghost', 'glass', 'danger', 'amber'],
+      options: ['fill', 'ghost', 'danger', 'warning'],
       description: 'Visual style variant',
-      table: { defaultValue: { summary: 'primary' } },
+      table: { defaultValue: { summary: 'fill' } },
     },
     size: {
       control: 'radio',
@@ -38,18 +38,16 @@ export const Spec: StoryObj = {
 };
 
 export const Default: Story = {
-  args: { label: 'חקירה', variant: 'primary', size: 'md', disabled: false, icon: Eye },
+  args: { label: 'חקירה', variant: 'fill', size: 'md', disabled: false, icon: Eye },
 };
 
 export const AllVariants: Story = {
   render: () => (
     <div className="grid grid-cols-2 gap-3" style={{ width: 400 }}>
-      <ActionButton label="ראשי" variant="primary" icon={Eye} />
-      <ActionButton label="משני" variant="secondary" icon={Check} />
-      <ActionButton label="זכוכית" variant="glass" icon={Radio} />
+      <ActionButton label="ראשי" variant="fill" icon={Eye} />
       <ActionButton label="שקוף" variant="ghost" icon={X} />
       <ActionButton label="סכנה" variant="danger" icon={Crosshair} />
-      <ActionButton label="אזהרה" variant="amber" icon={Rocket} />
+      <ActionButton label="אזהרה" variant="warning" icon={Rocket} />
     </div>
   ),
 };

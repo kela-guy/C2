@@ -3,7 +3,7 @@ import type { ComponentSpec } from '@/specs/types';
 export const spec: ComponentSpec = {
   name: 'CardActions',
   filePath: 'src/primitives/CardActions.tsx',
-  purpose: 'Renders a grid of action buttons for target cards — supports primary/secondary layouts, grouped effector/investigation rows, confirm dialogs, double-confirm flows, split-action dropdowns, and status strips.',
+  purpose: 'Renders a grid of action buttons for target cards — supports fill/ghost layouts, grouped effector/investigation rows, confirm dialogs, double-confirm flows, split-action dropdowns, and status strips.',
   location: 'TargetCard/Slots',
   status: 'prototype',
 
@@ -17,13 +17,13 @@ export const spec: ComponentSpec = {
     {
       name: 'default',
       trigger: 'actions[] passed with at least one action',
-      description: 'Grid of action buttons: primary (lg) spans full width, secondary (sm) in columns',
+      description: 'Grid of action buttons: fill (lg) spans full width, ghost (sm) in columns',
       implementedInPrototype: true,
       storyProps: {
         actions: [
           { id: 'jam', label: 'שיבוש', variant: 'danger', size: 'lg' },
-          { id: 'surveil', label: 'מעקב', variant: 'secondary', size: 'sm' },
-          { id: 'drone', label: 'רחפן', variant: 'secondary', size: 'sm' },
+          { id: 'surveil', label: 'מעקב', variant: 'ghost', size: 'sm' },
+          { id: 'drone', label: 'רחפן', variant: 'ghost', size: 'sm' },
         ],
       },
     },
@@ -299,7 +299,7 @@ export const spec: ComponentSpec = {
   ],
 
   notes: [
-    'The component handles two rendering paths: grouped (effector/investigation) and legacy (primary/rest). Both share the same confirm dialog logic.',
+    'The component handles two rendering paths: grouped (effector/investigation) and legacy (fill/rest). Both share the same confirm dialog logic.',
     'AnimatePresence with mode="popLayout" is used for effector rows — spring animations with bounce: 0.',
     'The renderConfirmDialog function is extracted but receives state via closure — consider refactoring to a ConfirmDialog sub-component for reuse.',
     'stopPropagation is called on all click handlers to prevent card toggle from firing when clicking actions.',

@@ -16,4 +16,3 @@ export { CardLog, type LogEntry, type CardLogProps } from './CardLog';
 export { CardClosure, type ClosureOutcome, type CardClosureProps } from './CardClosure';
 export { FilterBar } from './FilterBar';
 export { NewUpdatesPill } from './NewUpdatesPill';
-export { StackedCard } from './StackedCard';

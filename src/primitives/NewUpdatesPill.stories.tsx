@@ -35,25 +35,14 @@ export const Spec: StoryObj = {
 export const Default: Story = {
   args: {
     count: 5,
-    entityTypes: ['uav', 'missile'],
     onClick: fn(),
   },
 };
 
-export const SingleType: Story = {
-  name: 'Single Entity Type',
+export const SingleAlert: Story = {
+  name: 'Single Alert',
   args: {
-    count: 3,
-    entityTypes: ['uav'],
-    onClick: fn(),
-  },
-};
-
-export const MultipleTypes: Story = {
-  name: 'Multiple Entity Types',
-  args: {
-    count: 12,
-    entityTypes: ['uav', 'missile', 'aircraft', 'naval'],
+    count: 1,
     onClick: fn(),
   },
 };
@@ -62,7 +51,6 @@ export const LargeCount: Story = {
   name: 'Large Count',
   args: {
     count: 147,
-    entityTypes: ['uav', 'unknown'],
     onClick: fn(),
   },
 };

@@ -19,7 +19,7 @@ export interface CardSensorsProps {
 }
 
 const rowClassName =
-  'flex items-center gap-2 text-xs text-white hover:bg-white/[0.08] hover:shadow-[0_0_0_1px_rgba(6,182,212,0.3)] rounded px-2 py-1.5 transition-colors group/sensor relative w-full text-right';
+  'flex items-center gap-2 text-xs text-white hover:bg-white/[0.08] rounded px-2 py-1.5 transition-colors group/sensor relative w-full text-right';
 const buttonRowClassName =
   `${rowClassName} cursor-pointer font-sans focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 active:bg-white/[0.04]`;
 const rowStyle = { backgroundColor: CARD_TOKENS.surface.level4 } as const;

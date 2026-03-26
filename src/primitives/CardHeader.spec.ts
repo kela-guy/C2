@@ -3,7 +3,7 @@ import type { ComponentSpec } from '@/specs/types';
 export const spec: ComponentSpec = {
   name: 'CardHeader',
   filePath: 'src/primitives/CardHeader.tsx',
-  purpose: 'Card header row with icon, title, subtitle, status/badge slots, quick action, and animated chevron — serves as the clickable expand/collapse trigger for StackedCard.',
+  purpose: 'Card header row with icon, title, subtitle, status/badge slots, quick action, and animated chevron — serves as the clickable expand/collapse trigger for TargetCard.',
   location: 'TargetCard/Slots',
   status: 'prototype',
 
@@ -87,7 +87,7 @@ export const spec: ComponentSpec = {
     {
       trigger: 'click',
       element: 'Header row (parent handles)',
-      result: 'Parent StackedCard toggles open state — CardHeader itself has no onClick',
+      result: 'Parent TargetCard toggles open state — CardHeader itself has no onClick',
       keyboard: 'Enter/Space on parent trigger (native button or div with role)',
     },
     {
@@ -138,7 +138,7 @@ export const spec: ComponentSpec = {
     ],
     keyboardNav: [
       'Tab: focuses quickAction slot if present (native)',
-      'Header click is handled by parent StackedCard — no direct keyboard role on CardHeader',
+      'Header click is handled by parent TargetCard — no direct keyboard role on CardHeader',
     ],
     focusManagement: 'quickAction click/keydown events stopPropagation to prevent card toggle. No focus indicator on the header itself — parent provides interactive wrapper.',
     screenReaderNotes: 'Title is an h2 — ensure proper heading hierarchy within the card. Chevron state (open/closed) is not announced — parent should use aria-expanded.',
@@ -239,7 +239,7 @@ export const spec: ComponentSpec = {
   ],
 
   notes: [
-    'CardHeader is a controlled component — it does not manage open state. Parent StackedCard provides the open prop and handles toggling.',
+    'CardHeader is a controlled component — it does not manage open state. Parent TargetCard provides the open prop and handles toggling.',
     'useReducedMotion from framer-motion is used to disable the chevron animation for accessibility.',
     'quickAction is only rendered when the card is collapsed — this prevents action buttons from competing with expanded card content.',
     'The h2 title element should be considered in the page heading hierarchy — if cards are inside a section with an h2, this creates duplicate heading levels.',

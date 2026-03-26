@@ -169,7 +169,7 @@ function FilterPopoverButton({
   children: React.ReactNode;
 }) {
   return (
-    <Popover open={open} onOpenChange={onOpenChange}>
+    <Popover open={open} onOpenChange={onOpenChange} dir="rtl">
       <PopoverTrigger asChild>
         <button
           type="button"

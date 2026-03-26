@@ -20,7 +20,7 @@ export interface SplitDropdownItem {
 export interface SplitActionButtonProps {
   label: string;
   icon?: React.ElementType;
-  variant?: 'primary' | 'secondary' | 'danger' | 'amber' | 'glass';
+  variant?: 'fill' | 'ghost' | 'danger' | 'warning';
   size?: 'sm' | 'md' | 'lg';
   disabled?: boolean;
   loading?: boolean;
@@ -36,34 +36,28 @@ const colorByVariant: Record<
   string,
   { base: string; hover: string; active: string; text: string }
 > = {
-  primary: {
-    base: 'bg-sky-500/15',
-    hover: 'hover:bg-sky-500/25',
-    active: 'active:bg-sky-500/35',
-    text: 'text-sky-300',
+  fill: {
+    base: 'bg-white/[0.08]',
+    hover: 'hover:bg-white/[0.14]',
+    active: 'active:bg-white/[0.06]',
+    text: 'text-zinc-200',
   },
-  danger: {
-    base: 'bg-red-950/80',
-    hover: 'hover:bg-red-900/85',
-    active: 'active:bg-red-950',
-    text: 'text-red-200',
-  },
-  amber: {
-    base: 'bg-amber-950/60',
-    hover: 'hover:bg-amber-900/70',
-    active: 'active:bg-amber-950/80',
-    text: 'text-amber-200',
-  },
-  glass: {
-    base: 'bg-white/10',
-    hover: 'hover:bg-white/15',
-    active: 'active:bg-white/20',
-    text: 'text-white',
-  },
-  secondary: {
+  ghost: {
     base: 'bg-zinc-800',
     hover: 'hover:bg-zinc-700',
     active: 'active:bg-zinc-900',
+    text: 'text-white',
+  },
+  danger: {
+    base: 'bg-[oklch(0.435_0.151_25)]',
+    hover: 'hover:bg-[oklch(0.485_0.151_25)]',
+    active: 'active:bg-[oklch(0.385_0.151_25)]',
+    text: 'text-white',
+  },
+  warning: {
+    base: 'bg-[oklch(0.501_0.166_75)]',
+    hover: 'hover:bg-[oklch(0.551_0.166_75)]',
+    active: 'active:bg-[oklch(0.451_0.166_75)]',
     text: 'text-white',
   },
 };
@@ -77,7 +71,7 @@ const sizeConfig = {
 export function SplitActionButton({
   label,
   icon: Icon,
-  variant = 'primary',
+  variant = 'fill',
   size = 'sm',
   disabled = false,
   loading = false,
@@ -90,7 +84,7 @@ export function SplitActionButton({
   const prefersReducedMotion = useReducedMotion();
   const [menuOpen, setMenuOpen] = React.useState(false);
   const isDisabled = disabled || loading;
-  const c = colorByVariant[variant] ?? colorByVariant.primary;
+  const c = colorByVariant[variant] ?? colorByVariant.fill;
   const sz = sizeConfig[size];
 
   const segmentBase = cn(
@@ -104,8 +98,8 @@ export function SplitActionButton({
   const disabledCls = shellDimmed ? 'opacity-45 pointer-events-none' : '';
 
   const variantShells: Record<string, string> = {
-    danger: 'ring-1 ring-inset ring-red-600/45',
-    amber: 'ring-1 ring-inset ring-amber-600/45',
+    danger: '',
+    warning: '',
   };
   const variantShell = variantShells[variant] ?? '';
 
@@ -117,7 +111,7 @@ export function SplitActionButton({
   return (
     <div
       className={cn(
-        'flex w-full items-stretch gap-0.5 rounded-[6px]',
+        'flex w-full items-stretch gap-0.5 rounded',
         variantShell,
         disabledCls,
         className,

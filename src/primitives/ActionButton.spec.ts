@@ -3,7 +3,7 @@ import type { ComponentSpec } from '@/specs/types';
 export const spec: ComponentSpec = {
   name: 'ActionButton',
   filePath: 'src/primitives/ActionButton.tsx',
-  purpose: 'Versatile action button with 6 visual variants, 3 sizes, loading state, optional tooltip, and icon support — primary CTA in target cards and toolbars.',
+  purpose: 'Versatile action button with 4 visual variants (fill, ghost, danger, warning), 3 sizes, loading state, optional tooltip, and icon support — primary CTA in target cards and toolbars.',
   location: 'Primitives',
   status: 'prototype',
 
@@ -11,7 +11,7 @@ export const spec: ComponentSpec = {
     { name: 'label', type: 'string', required: true, description: 'Button text content' },
     { name: 'icon', type: 'React.ElementType', required: false, description: 'Lucide or custom icon component rendered before the label' },
     { name: 'onClick', type: '(e: React.MouseEvent) => void', required: false, description: 'Click handler — skipped when disabled or loading' },
-    { name: 'variant', type: "'primary' | 'secondary' | 'ghost' | 'glass' | 'danger' | 'amber'", required: false, defaultValue: "'primary'", description: 'Visual style variant controlling colors, background, and border' },
+    { name: 'variant', type: "'fill' | 'ghost' | 'danger' | 'warning'", required: false, defaultValue: "'fill'", description: 'Visual style variant controlling colors, background, and border' },
     { name: 'size', type: "'sm' | 'md' | 'lg'", required: false, defaultValue: "'md'", description: 'Button size: sm (30px), md (32px), lg (36px)' },
     { name: 'className', type: 'string', required: false, defaultValue: "''", description: 'Additional CSS classes merged onto the button element' },
     { name: 'disabled', type: 'boolean', required: false, defaultValue: 'false', description: 'Disables button interaction and applies dimmed styling' },
@@ -24,35 +24,16 @@ export const spec: ComponentSpec = {
     {
       name: 'default',
       trigger: 'Rendered with label and optional icon',
-      description: 'Button in primary variant at md size, idle styling',
+      description: 'Button in fill variant at md size, idle styling',
       implementedInPrototype: true,
-      storyProps: { label: 'חקירה', variant: 'primary', icon: 'Eye' },
+      storyProps: { label: 'חקירה', variant: 'fill', icon: 'Eye' },
     },
     {
-      name: 'primary variant',
-      trigger: 'variant="primary"',
-      description: 'Blue tinted background with sky ring and #74c0fc text, flex-1 width',
+      name: 'fill variant',
+      trigger: 'variant="fill"',
+      description: 'Gray filled background, no border or ring, flex-1 width',
       implementedInPrototype: true,
-      visualNotes: 'bg-[rgba(34,139,230,0.15)] shadow-[0_0_0_1px_#74c0fc]',
-    },
-    {
-      name: 'danger variant',
-      trigger: 'variant="danger"',
-      description: 'Red oklch background with inset ring, white text, semibold',
-      implementedInPrototype: true,
-      visualNotes: 'oklch(0.348 0.111 17) bg with hover/active states',
-    },
-    {
-      name: 'amber variant',
-      trigger: 'variant="amber"',
-      description: 'Amber oklch background with inset ring, semibold text',
-      implementedInPrototype: true,
-    },
-    {
-      name: 'glass variant',
-      trigger: 'variant="glass"',
-      description: 'White 10% bg with white 20% ring, white text',
-      implementedInPrototype: true,
+      visualNotes: 'bg-white/10 border-0 text-zinc-200',
     },
     {
       name: 'ghost variant',
@@ -62,9 +43,16 @@ export const spec: ComponentSpec = {
       visualNotes: 'w-full instead of flex-1, #909296 → white on hover',
     },
     {
-      name: 'secondary variant',
-      trigger: 'variant="secondary"',
-      description: 'Neutral dark background, white text',
+      name: 'danger variant',
+      trigger: 'variant="danger"',
+      description: 'Red oklch background with inset ring, white text, semibold',
+      implementedInPrototype: true,
+      visualNotes: 'oklch(0.348 0.111 17) bg with hover/active states',
+    },
+    {
+      name: 'warning variant',
+      trigger: 'variant="warning"',
+      description: 'Amber oklch background with inset ring, semibold text',
       implementedInPrototype: true,
     },
     {
@@ -129,15 +117,13 @@ export const spec: ComponentSpec = {
 
   tokens: {
     colors: [
-      { name: 'primary-bg', value: 'rgba(34,139,230,0.15)', usage: 'Primary variant background' },
-      { name: 'primary-ring', value: '#74c0fc', usage: 'Primary variant border ring' },
-      { name: 'primary-text', value: '#74c0fc', usage: 'Primary variant text' },
+      { name: 'fill-bg', value: 'white/0.08', usage: 'Fill variant background' },
+      { name: 'fill-ring', value: 'white/0.12', usage: 'Fill variant border ring' },
+      { name: 'fill-text', value: 'zinc-200', usage: 'Fill variant text' },
+      { name: 'ghost-text', value: '#909296', usage: 'Ghost variant idle text' },
       { name: 'danger-bg', value: 'oklch(0.348 0.111 17)', usage: 'Danger variant background' },
       { name: 'danger-text', value: 'oklch(0.927 0.062 17)', usage: 'Danger variant text' },
-      { name: 'amber-bg', value: 'oklch(0.348 0.111 70)', usage: 'Amber variant background' },
-      { name: 'glass-bg', value: 'rgba(255,255,255,0.10)', usage: 'Glass variant background' },
-      { name: 'ghost-text', value: '#909296', usage: 'Ghost variant idle text' },
-      { name: 'secondary-bg', value: 'oklch(0.302 0 0)', usage: 'Secondary variant background' },
+      { name: 'warning-bg', value: 'oklch(0.348 0.111 70)', usage: 'Warning variant background' },
       { name: 'disabled-opacity', value: '0.40', usage: 'Disabled state opacity' },
       { name: 'focus-ring', value: 'rgba(255,255,255,0.25)', usage: 'Focus-visible ring' },
     ],
@@ -214,10 +200,10 @@ export const spec: ComponentSpec = {
   ],
 
   hardcodedData: [
-    { current: 'rgba(34,139,230,0.15)', replaceWith: 'Token constant', location: 'Primary variant bg' },
+    { current: 'white/0.08', replaceWith: 'Token constant', location: 'Fill variant bg' },
     { current: 'oklch(0.348 0.111 17)', replaceWith: 'Token constant', location: 'Danger variant bg' },
-    { current: 'oklch(0.348 0.111 70)', replaceWith: 'Token constant', location: 'Amber variant bg' },
+    { current: 'oklch(0.348 0.111 70)', replaceWith: 'Token constant', location: 'Warning variant bg' },
     { current: '#909296', replaceWith: 'Token constant', location: 'Ghost variant text color' },
-    { current: '#74c0fc', replaceWith: 'Token constant', location: 'Primary variant ring + text' },
+    { current: 'white/0.12', replaceWith: 'Token constant', location: 'Fill variant ring' },
   ],
 };
