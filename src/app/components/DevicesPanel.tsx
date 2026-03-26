@@ -117,7 +117,7 @@ const DEVICE_HEALTH: Record<string, OperationalStatus> = {
   'REG-NVT-SOUTH': 'malfunctioning',
 };
 
-const DEVICE_CONNECTION: Record<string, ConnectionState> = {
+export const DEVICE_CONNECTION: Record<string, ConnectionState> = {
   'SENS-NVT-MAGOS-S': 'warning',
   'REG-NVT-SOUTH': 'error',
   'FRIENDLY-02': 'offline',

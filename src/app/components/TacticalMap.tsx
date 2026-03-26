@@ -363,6 +363,8 @@ interface TacticalMapProps {
   hoveredTargetIdFromCard?: string | null;
   /** Click on a sensor/effector/launcher icon to open its device card */
   onAssetClick?: (assetId: string) => void;
+  /** Asset IDs that are offline — show a gray badge on the map */
+  offlineAssetIds?: string[];
 }
 
 const JAM_VERIFICATION_DURATION_MS = 4500;
@@ -415,6 +417,7 @@ export const TacticalMap = ({
   smoothFocusRequest,
   hoveredTargetIdFromCard,
   onAssetClick,
+  offlineAssetIds = [],
 }: TacticalMapProps) => {
   const mapRef = useRef<MapRef>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -957,9 +960,14 @@ export const TacticalMap = ({
     }
   }, [activeMissiles, onMissilePhaseChange]);
 
-  const fovGeoJSON = useMemo(() => {
+  const selectedAsset = useMemo(() =>
+    selectedAssetId ? ALL_RENDERABLE_ASSETS.find(a => a.id === selectedAssetId) ?? null : null,
+  [selectedAssetId]);
+
+  const hoverFovGeoJSON = useMemo(() => {
     if (!hoveredAsset) return EMPTY_FC;
     if (hoveredAsset.id === cameraLookAtBearing?.cameraId) return EMPTY_FC;
+    if (hoveredAsset.id === selectedAssetId) return EMPTY_FC;
     const ring = fovPolygon(
       hoveredAsset.latitude, hoveredAsset.longitude,
       hoveredAsset.fovDeg, hoveredAsset.bearingDeg,
@@ -973,11 +981,33 @@ export const TacticalMap = ({
         properties: {},
       }],
     };
-  }, [hoveredAsset, cameraLookAtBearing?.cameraId, EMPTY_FC]);
+  }, [hoveredAsset, selectedAssetId, cameraLookAtBearing?.cameraId, EMPTY_FC]);
+
+  const selectedFovGeoJSON = useMemo(() => {
+    if (!selectedAsset) return EMPTY_FC;
+    if (selectedAsset.id === cameraLookAtBearing?.cameraId) return EMPTY_FC;
+    const ring = fovPolygon(
+      selectedAsset.latitude, selectedAsset.longitude,
+      selectedAsset.fovDeg, selectedAsset.bearingDeg,
+      FOV_RADIUS_M
+    );
+    return {
+      type: 'FeatureCollection' as const,
+      features: [{
+        type: 'Feature' as const,
+        geometry: { type: 'Polygon' as const, coordinates: [ring] },
+        properties: {},
+      }],
+    };
+  }, [selectedAsset, cameraLookAtBearing?.cameraId, EMPTY_FC]);
 
   useEffect(() => {
-    pushFovToMap('hover-fov', fovGeoJSON);
-  }, [fovGeoJSON, pushFovToMap]);
+    pushFovToMap('hover-fov', hoverFovGeoJSON);
+  }, [hoverFovGeoJSON, pushFovToMap]);
+
+  useEffect(() => {
+    pushFovToMap('selected-fov', selectedFovGeoJSON);
+  }, [selectedFovGeoJSON, pushFovToMap]);
 
   useEffect(() => {
     pushFovToMap('card-hover-fov', highlightedFovGeoJSON);
@@ -1451,6 +1481,8 @@ export const TacticalMap = ({
         {LAUNCHER_ASSETS.map(launcher => {
           const isHoveredFromCard = launcher.id === hoveredSensorIdFromCard;
           const isHovered = hoveredLauncherId === launcher.id;
+          const isOffline = offlineAssetIds.includes(launcher.id);
+          const isSelected = launcher.id === selectedAssetId;
           return (
             <Marker
               key={launcher.id}
@@ -1459,12 +1491,12 @@ export const TacticalMap = ({
               anchor="bottom"
             >
               <div
-                className={`relative group cursor-pointer rounded-full p-2 flex items-center justify-center transition-all duration-200 ${isHovered || isHoveredFromCard ? 'scale-110' : ''} ${isHoveredFromCard ? 'ring-2 ring-white/40 ring-offset-1 ring-offset-[#0a0a0a]' : ''} ${isHovered && !isHoveredFromCard ? 'bg-white/10' : ''}`}
+                className={`relative group cursor-pointer rounded-full p-2 flex items-center justify-center transition-all duration-200 ${isOffline ? 'opacity-50 grayscale' : ''} ${isSelected || isHovered || isHoveredFromCard ? 'scale-110' : ''} ${isHoveredFromCard && !isSelected ? 'ring-2 ring-white/40 ring-offset-1 ring-offset-[#0a0a0a]' : ''} ${(isHovered || isSelected) && !isHoveredFromCard ? 'bg-white/10' : ''}`}
                 onMouseEnter={() => setHoveredLauncherId(launcher.id)}
                 onMouseLeave={() => setHoveredLauncherId(null)}
                 onClick={(e) => { e.stopPropagation(); onAssetClick?.(launcher.id); }}
               >
-                {isHoveredFromCard && (
+                {isHoveredFromCard && !isSelected && (
                   <div className="absolute -inset-2 rounded-full border-2 border-white/50 animate-pulse" />
                 )}
                 <div
@@ -1472,16 +1504,21 @@ export const TacticalMap = ({
                   style={{
                     width: 42,
                     height: 42,
-                    border: `1px solid ${isHovered || isHoveredFromCard ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.2)'}`,
+                    border: `1px solid ${isSelected || isHovered || isHoveredFromCard ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.2)'}`,
                     boxShadow: '0px 0px 0px 2px rgba(0,0,0,1)',
                   }}
                 />
-                {(isHovered || isHoveredFromCard) && (
+                {isOffline && (
+                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap bg-zinc-700 text-[9px] text-zinc-300 font-medium px-1.5 py-0.5 rounded pointer-events-none" style={{ boxShadow: '0 0 0 1px rgba(0,0,0,0.8)' }}>
+                    לא מקוון
+                  </div>
+                )}
+                {(isHovered || isSelected || isHoveredFromCard) && !isOffline && (
                   <div className={TOOLTIP_HOVER}>
                     <div>משגר טילים</div>
                   </div>
                 )}
-                <LauncherIcon />
+                <LauncherIcon fill={isOffline ? '#71717a' : undefined} />
               </div>
             </Marker>
           );
@@ -1518,12 +1555,14 @@ export const TacticalMap = ({
           const isHovered = hoveredRegulusId === reg.id;
           const isActive = reg.status === 'active';
           const isHoveredFromCard = reg.id === hoveredSensorIdFromCard;
+          const isOffline = offlineAssetIds.includes(reg.id);
+          const isSelected = reg.id === selectedAssetId;
           return (
             <Marker key={reg.id} longitude={reg.lon} latitude={reg.lat} anchor="bottom">
               <ContextMenu>
               <ContextMenuTrigger asChild>
               <div
-                className={`relative group cursor-pointer rounded-full p-2 flex items-center justify-center transition-all duration-200 ${isActive ? 'scale-110 drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]' : ''} ${isHoveredFromCard && !isActive ? 'scale-110 ring-2 ring-white/40 ring-offset-1 ring-offset-[#0a0a0a]' : ''} ${(isHovered || isHoveredFromCard) && !isActive ? 'bg-white/10' : ''}`}
+                className={`relative group cursor-pointer rounded-full p-2 flex items-center justify-center transition-all duration-200 ${isOffline ? 'opacity-50 grayscale' : ''} ${isSelected || isHovered ? 'scale-110' : ''} ${isActive ? 'scale-110 drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]' : ''} ${isHoveredFromCard && !isActive && !isSelected ? 'scale-110 ring-2 ring-white/40 ring-offset-1 ring-offset-[#0a0a0a]' : ''} ${(isHovered || isSelected || isHoveredFromCard) && !isActive ? 'bg-white/10' : ''}`}
                 onMouseEnter={() => setHoveredRegulusId(reg.id)}
                 onMouseLeave={() => setHoveredRegulusId(null)}
                 onClick={(e) => { e.stopPropagation(); onAssetClick?.(reg.id); }}
@@ -1531,7 +1570,7 @@ export const TacticalMap = ({
                 {isActive && (
                   <div className="absolute -inset-2 rounded-full border border-green-400/60 animate-pulse bg-green-500/10" />
                 )}
-                {isHoveredFromCard && !isActive && (
+                {isHoveredFromCard && !isActive && !isSelected && (
                   <div className="absolute -inset-2 rounded-full border-2 border-white/50 animate-pulse" />
                 )}
                 <div
@@ -1539,12 +1578,17 @@ export const TacticalMap = ({
                   style={{
                     width: 42,
                     height: 42,
-                    border: `1px solid ${isActive ? 'rgba(74,222,128,0.6)' : isHovered || isHoveredFromCard ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.2)'}`,
+                    border: `1px solid ${isSelected || isHovered || isActive ? (isActive ? 'rgba(74,222,128,0.6)' : 'rgba(255,255,255,1)') : isHoveredFromCard ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.2)'}`,
                     boxShadow: '0px 0px 0px 2px rgba(0,0,0,1)',
                   }}
                 />
-                <SensorIcon fill={isActive ? '#4ade80' : undefined} />
-                {(isHovered || isActive || isHoveredFromCard) && (
+                <SensorIcon fill={isActive ? '#4ade80' : isOffline ? '#71717a' : undefined} />
+                {isOffline && (
+                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap bg-zinc-700 text-[9px] text-zinc-300 font-medium px-1.5 py-0.5 rounded pointer-events-none" style={{ boxShadow: '0 0 0 1px rgba(0,0,0,0.8)' }}>
+                    לא מקוון
+                  </div>
+                )}
+                {(isHovered || isSelected || isActive || isHoveredFromCard) && !isOffline && (
                   <div className={TOOLTIP_HOVER} style={{ minWidth: 'max-content' }}>
                     <div>{reg.name}</div>
                     <div className="text-xs text-white/70 mt-0.5">
@@ -1607,6 +1651,7 @@ export const TacticalMap = ({
           const isFlickering = asset.id === flickeringSensorId;
           const isCamera = asset.typeLabel === 'Camera';
           const isInUse = asset.id === cameraLookAtBearing?.cameraId || asset.id === jammingJammerAssetId || (asset.id === verificationCameraAsset?.id && !!jammingVerification);
+          const isOffline = offlineAssetIds.includes(asset.id);
           return (
             <Marker
               key={asset.id}
@@ -1618,8 +1663,8 @@ export const TacticalMap = ({
               <ContextMenuTrigger asChild>
               <div
                 className={`relative group cursor-pointer rounded-full p-2 flex items-center justify-center transition-all duration-200 ${
-                  isHighlighted || isFlickering ? 'scale-110' : ''
-                } ${isHoveredFromCard && !isSelected ? 'ring-2 ring-white/40 ring-offset-1 ring-offset-[#0a0a0a] rounded-full' : ''} ${isJammerActive ? 'scale-110' : ''} ${isHovered && !isHighlighted && !isJammerActive && !isSelected ? 'bg-white/10' : ''} ${isFlickering ? 'animate-pulse ring-2 ring-cyan-400/60 ring-offset-1 ring-offset-[#0a0a0a]' : ''}`}
+                  isOffline ? 'opacity-50 grayscale' : ''
+                } ${isHighlighted || isFlickering || isSelected ? 'scale-110' : ''} ${isHoveredFromCard && !isSelected ? 'ring-2 ring-white/40 ring-offset-1 ring-offset-[#0a0a0a] rounded-full' : ''} ${isJammerActive ? 'scale-110' : ''} ${(isHovered || isSelected) && !isHighlighted && !isJammerActive ? 'bg-white/10' : ''} ${isFlickering ? 'animate-pulse ring-2 ring-cyan-400/60 ring-offset-1 ring-offset-[#0a0a0a]' : ''}`}
                 onMouseEnter={() => handleAssetMouseEnter(asset)}
                 onMouseLeave={handleAssetMouseLeave}
                 onClick={(e) => { e.stopPropagation(); onAssetClick?.(asset.id); }}
@@ -1635,17 +1680,27 @@ export const TacticalMap = ({
                   style={{
                     width: 42,
                     height: 42,
-                    border: `1px solid ${isHovered || isHighlighted || isHoveredFromCard || isJammerActive ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.2)'}`,
+                    border: `1px solid ${isSelected || isHovered || isHighlighted || isHoveredFromCard || isJammerActive ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.2)'}`,
                     boxShadow: '0px 0px 0px 2px rgba(0,0,0,1)',
                   }}
                 />
-                <Icon fill={isSelected ? '#a78bfa' : undefined} />
-                {(isHovered || isHighlighted || isInUse) && (
+                <Icon fill={isOffline ? '#71717a' : undefined} />
+                {isOffline && (
+                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap bg-zinc-700 text-[9px] text-zinc-300 font-medium px-1.5 py-0.5 rounded pointer-events-none" style={{ boxShadow: '0 0 0 1px rgba(0,0,0,0.8)' }}>
+                    לא מקוון
+                  </div>
+                )}
+                {(isHovered || isSelected || isHighlighted || isInUse) && !isOffline && (
                   <div
                     className={isInUse ? TOOLTIP_HOVER_CYAN : TOOLTIP_HOVER}
                     style={{ minWidth: 'max-content' }}
                   >
                     <div>{asset.typeLabel}</div>
+                  </div>
+                )}
+                {isOffline && (isHovered || isSelected || isHighlighted) && (
+                  <div className={TOOLTIP_HOVER}>
+                    <div>{asset.typeLabel} — לא מקוון</div>
                   </div>
                 )}
               </div>
@@ -1991,13 +2046,15 @@ export const TacticalMap = ({
         {/* Friendly drone markers (cyan, highlight on device card hover) */}
         {friendlyDrones.map(drone => {
           const isHoveredFromCard = drone.id === hoveredSensorIdFromCard;
+          const isOffline = offlineAssetIds.includes(drone.id);
+          const isSelected = drone.id === selectedAssetId;
           return (
             <Marker key={drone.id} longitude={drone.lon} latitude={drone.lat} anchor="center">
               <div
-                className={`relative group cursor-pointer p-2 flex items-center justify-center transition-all duration-200 drop-shadow-[0_0_8px_rgba(6,182,212,0.5)] ${isHoveredFromCard ? 'scale-125 drop-shadow-[0_0_14px_rgba(6,182,212,0.8)]' : ''}`}
+                className={`relative group cursor-pointer p-2 flex items-center justify-center transition-all duration-200 ${isOffline ? 'opacity-50 grayscale' : 'drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]'} ${isSelected || isHoveredFromCard ? 'scale-125 drop-shadow-[0_0_14px_rgba(6,182,212,0.8)]' : ''}`}
                 onClick={(e) => { e.stopPropagation(); onAssetClick?.(drone.id); }}
               >
-                {isHoveredFromCard && (
+                {isHoveredFromCard && !isSelected && (
                   <div className="absolute -inset-2 rounded-full border-2 border-cyan-400/60 animate-pulse" />
                 )}
                 <div
@@ -2005,13 +2062,18 @@ export const TacticalMap = ({
                   style={{
                     width: 42,
                     height: 42,
-                    border: `1px solid ${isHoveredFromCard ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.2)'}`,
+                    border: `1px solid ${isSelected || isHoveredFromCard ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.2)'}`,
                     boxShadow: '0px 0px 0px 2px rgba(0,0,0,1)',
                   }}
                 />
-                <DroneIcon color="#22d3ee" rotationDeg={drone.headingDeg ?? 0} />
-                <div className={`${TOOLTIP_HOVER} transition-opacity ${isHoveredFromCard ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                  <span>{drone.name}</span>
+                <DroneIcon color={isOffline ? '#71717a' : '#22d3ee'} rotationDeg={drone.headingDeg ?? 0} />
+                {isOffline && (
+                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap bg-zinc-700 text-[9px] text-zinc-300 font-medium px-1.5 py-0.5 rounded pointer-events-none" style={{ boxShadow: '0 0 0 1px rgba(0,0,0,0.8)' }}>
+                    לא מקוון
+                  </div>
+                )}
+                <div className={`${TOOLTIP_HOVER} transition-opacity ${isSelected || isHoveredFromCard ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                  <span>{drone.name}{isOffline ? ' — לא מקוון' : ''}</span>
                 </div>
               </div>
             </Marker>

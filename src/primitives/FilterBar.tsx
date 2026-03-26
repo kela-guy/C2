@@ -99,7 +99,7 @@ export function FilterBar({
         </button>
       </div>
 
-      <div className="grid grid-cols-[1fr_1fr_auto] items-center gap-1.5 mt-1.5">
+      <div className="grid grid-cols-3 items-center gap-1.5 mt-1.5">
         <FilterPopoverButton
           open={statusOpen}
           onOpenChange={setStatusOpen}

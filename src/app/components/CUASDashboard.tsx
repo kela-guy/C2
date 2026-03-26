@@ -7,7 +7,7 @@ import { NotificationCenter } from './NotificationCenter';
 import ListOfSystems from '@/imports/ListOfSystems';
 import type { Detection, RegulusEffector } from '@/imports/ListOfSystems';
 import { List, Bell, Radar, BookOpen, HelpCircle, Target, Video } from 'lucide-react';
-import { DevicesPanel, DevicesIcon, DEVICE_CAMERA_DRAG_TYPE } from './DevicesPanel';
+import { DevicesPanel, DevicesIcon, DEVICE_CAMERA_DRAG_TYPE, DEVICE_CONNECTION } from './DevicesPanel';
 import type { DeviceCameraDragItem } from './DevicesPanel';
 import { CameraViewerPanel } from './CameraViewerPanel';
 import type { CameraFeed } from './CameraViewerPanel';
@@ -135,6 +135,7 @@ export const CUASDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [devicesPanelOpen, setDevicesPanelOpen] = useState(false);
   const [focusedDeviceId, setFocusedDeviceId] = useState<string | null>(null);
+  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [panelSwitching, setPanelSwitching] = useState(false);
 
   useEffect(() => {
@@ -201,6 +202,12 @@ export const CUASDashboard = () => {
       headingDeg: 0,
     }))
   );
+
+  const offlineAssetIds = useMemo(() =>
+    Object.entries(DEVICE_CONNECTION)
+      .filter(([, state]) => state === 'offline')
+      .map(([id]) => id),
+  []);
 
   const highlightedSensorIds = useMemo(() => {
     const ids = new Set<string>();
@@ -915,6 +922,7 @@ export const CUASDashboard = () => {
     setSidebarOpen(false);
     setDevicesPanelOpen(true);
     setFocusedDeviceId(assetId);
+    setSelectedAssetId(assetId);
     setTimeout(() => setFocusedDeviceId(null), 500);
   }, [sidebarOpen]);
 
@@ -1089,7 +1097,7 @@ export const CUASDashboard = () => {
               <TacticalMap
                 targets={targets}
                 activeTargetId={activeTargetId}
-                onMarkerClick={(id) => { setActiveTargetId(id); setSidebarOpen(true); setDevicesPanelOpen(false); }}
+                onMarkerClick={(id) => { setActiveTargetId(id); setSidebarOpen(true); setDevicesPanelOpen(false); setSelectedAssetId(null); }}
                 highlightedSensorIds={highlightedSensorIds}
                 hoveredSensorIdFromCard={hoveredSensorIdFromCard}
                 sensorFocusId={sensorFocusId}
@@ -1130,12 +1138,13 @@ export const CUASDashboard = () => {
                 planningMode={false}
                 planningMissionType={undefined}
                 planningScanViz={null}
-                selectedAssetId={null}
+                selectedAssetId={selectedAssetId}
                 onMapClick={() => {}}
                 friendlyDrones={friendlyDrones}
                 smoothFocusRequest={mapFocusRequest}
                 hoveredTargetIdFromCard={hoveredTargetIdFromCard}
                 onAssetClick={handleAssetClick}
+                offlineAssetIds={offlineAssetIds}
               />
             </div>
           </ResizablePanel>
@@ -1249,7 +1258,7 @@ export const CUASDashboard = () => {
 
         <DevicesPanel
           open={devicesPanelOpen}
-          onClose={() => setDevicesPanelOpen(false)}
+          onClose={() => { setDevicesPanelOpen(false); setSelectedAssetId(null); }}
           onFlyTo={handleDeviceFlyTo}
           onDeviceHover={setHoveredSensorIdFromCard}
           onJamActivate={(jammerId) => {
