@@ -119,21 +119,29 @@ Primary action trigger. All sizes use `rounded` (4px) border-radius.
 Import: `import { SplitActionButton } from '@/primitives/SplitActionButton'`
 Styleguide: `/styleguide#split-action`
 
-Two-segment button: primary action + dropdown menu. Used for effector controls.
+Two-segment button: primary action + dropdown menu. Used for effector controls. Dropdown is RTL with `dir="rtl"`.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `label` | `string` | — | Primary button text |
+| `badge` | `string` | — | Inline chip after the label (e.g. effector name) |
+| `subtitle` | `string` | — | Second line below the label (stacked layout) |
 | `icon` | `React.ElementType` | — | Lucide icon |
 | `variant` | `'fill' \| 'ghost' \| 'danger' \| 'warning'` | `'fill'` | Color treatment |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'sm'` | Height scale |
 | `dropdownItems` | `SplitDropdownItem[]` | — | Sub-action menu items |
+| `dropdownGroups` | `SplitDropdownGroup[]` | — | Grouped dropdown sections with labels and separators |
 | `disabled` | `boolean` | `false` | Disable both segments |
 | `loading` | `boolean` | `false` | Show spinner on primary |
 | `dimDisabledShell` | `boolean` | `true` | Reduce opacity when disabled |
 | `onClick` | `(e: MouseEvent) => void` | — | Primary click handler |
+| `onHover` | `(hovering: boolean) => void` | — | Fires on mouseEnter/Leave — highlights effector on map |
 
-`SplitDropdownItem`: `{ id, label, icon?, disabled?, onClick }`
+`SplitDropdownItem`: `{ id, label, icon?, disabled?, checked?, onClick }`
+
+`SplitDropdownGroup`: `{ label?, items: SplitDropdownItem[] }`
+
+**Effector selection pattern**: Dropdown groups separate effector choices (with `checked` state) from jam mode options. Selecting an effector updates the badge and checked state without triggering the action — only the primary button fires `onMitigate`.
 
 ---
 
@@ -232,7 +240,7 @@ Action bar with grouped effector/investigation layout, flat grid, and confirm di
 | `actions` | `CardAction[]` | — | Action definitions |
 | `layout` | `'row' \| 'grid' \| 'stack'` | `'row'` | Fallback layout (no groups) |
 
-`CardAction` fields: `{ id, label, icon?, variant?, size?, onClick, confirm?, disabled?, loading?, className?, group?, dropdownActions?, effectorStatusStrip?, dimSplitWhenDisabled? }`
+`CardAction` fields: `{ id, label, badge?, icon?, variant?, size?, onClick, onHover?, confirm?, disabled?, loading?, className?, group?, dropdownActions?, dropdownGroups?, effectorStatusStrip?, dimSplitWhenDisabled? }`
 
 Groups: `'effector'` (top row, split buttons) and `'investigation'` (bottom grid).
 
@@ -350,6 +358,10 @@ Adapted for card headers. All take a `size` prop and use `currentColor`.
 Import: `import { useCardSlots, type CardCallbacks, type CardContext } from '@/imports/useCardSlots'`
 
 Takes a `Detection` object + callbacks + context, returns all card slot data (`accent`, `header`, `media`, `actions`, `details`, `sensors`, `log`, `closure`, `laserPosition`, `timeline`, `completed`, `closureType`).
+
+Key callbacks: `onMitigate(effectorId)` fires the jam action, `onEffectorSelect(effectorId)` switches the selected effector without triggering, `onSensorHover(id | null)` highlights assets on map.
+
+`CardContext.selectedEffectorId` overrides the auto-selected nearest effector for a target's jam button.
 
 ### useTargetFilters
 

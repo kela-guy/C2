@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { fn } from 'storybook/test';
-import { Zap, Eye, Radio, Crosshair } from 'lucide-react';
-import { SplitActionButton } from './SplitActionButton';
+import { Zap, Eye, Radio, Crosshair, ScanLine } from 'lucide-react';
+import { SplitActionButton, type SplitDropdownGroup } from './SplitActionButton';
 import { JamWaveIcon } from './MapIcons';
 import { SpecDocs } from '@/specs/SpecDocs';
 import { spec } from './SplitActionButton.spec';
@@ -9,6 +9,25 @@ import { spec } from './SplitActionButton.spec';
 const defaultDropdownItems = [
   { id: 'option-1', label: 'מעקב מתמשך', icon: Eye, onClick: fn() },
   { id: 'option-2', label: 'שיגור רחפן', icon: Radio, onClick: fn() },
+];
+
+const jamDropdownGroups: SplitDropdownGroup[] = [
+  {
+    label: 'בחירת ג׳אמר',
+    items: [
+      { id: 'eff-north', label: 'Regulus North (1.2 ק״מ)', checked: true, onClick: fn() },
+      { id: 'eff-east', label: 'Regulus East (2.4 ק״מ)', checked: false, onClick: fn() },
+      { id: 'eff-south', label: 'Regulus South (3.1 ק״מ)', checked: false, onClick: fn() },
+      { id: 'eff-west', label: 'Regulus West', checked: false, disabled: true, onClick: fn() },
+    ],
+  },
+  {
+    items: [
+      { id: 'mitigate-all', label: 'שיבוש כללי', icon: Radio, onClick: fn() },
+      { id: 'mitigate-dir', label: 'שיבוש ממוקד', icon: Crosshair, onClick: fn() },
+      { id: 'mitigate-spec', label: 'שיבוש ספקטרום רחב', icon: ScanLine, onClick: fn() },
+    ],
+  },
 ];
 
 const meta = {
@@ -126,4 +145,43 @@ export const Sizes: Story = {
       ))}
     </div>
   ),
+};
+
+export const WithBadge: Story = {
+  name: 'With Effector Badge',
+  args: {
+    label: 'שיבוש',
+    badge: 'Regulus North',
+    icon: JamWaveIcon,
+    variant: 'danger',
+    onClick: fn(),
+    dropdownItems: defaultDropdownItems,
+  },
+};
+
+export const WithGroupedDropdown: Story = {
+  name: 'Grouped Dropdown — Effector + Modes',
+  args: {
+    label: 'שיבוש',
+    badge: 'Regulus North',
+    icon: JamWaveIcon,
+    variant: 'danger',
+    onClick: fn(),
+    dropdownItems: defaultDropdownItems,
+    dropdownGroups: jamDropdownGroups,
+  },
+};
+
+export const LoadingWithBadge: Story = {
+  name: 'Loading — With Effector',
+  args: {
+    label: 'משבש אות...',
+    badge: 'Regulus North',
+    icon: JamWaveIcon,
+    variant: 'danger',
+    loading: true,
+    onClick: fn(),
+    dropdownItems: defaultDropdownItems,
+    dropdownGroups: jamDropdownGroups,
+  },
 };

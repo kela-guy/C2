@@ -1528,7 +1528,8 @@ export const TacticalMap = ({
         {regulusEffectors.map(reg => {
           const isHovered = hoveredRegulusId === reg.id;
           const isActive = reg.status === 'active';
-          if (!isHovered && !isActive) return null;
+          const isHoveredFromCard = reg.id === hoveredSensorIdFromCard;
+          if (!isHovered && !isActive && !isHoveredFromCard) return null;
           const ring = fovPolygon(reg.lat, reg.lon, 360, 0, reg.coverageRadiusM);
           return (
             <Source key={`reg-coverage-${reg.id}`} id={`reg-coverage-${reg.id}`} type="geojson" data={{

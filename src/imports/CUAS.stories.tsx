@@ -39,7 +39,7 @@ const noopCallbacks: CardCallbacks = {
   onDroneResume: noop, onDroneRTB: noop, onMissionActivate: noop,
   onMissionPause: noop, onMissionResume: noop, onMissionOverride: noop,
   onMissionCancel: noop, onMitigate: noop, onMitigateAll: noop,
-  onBdaOutcome: noop, onSensorFocus: noop,
+  onEffectorSelect: noop, onBdaOutcome: noop, onSensorFocus: noop,
 };
 
 function buildStatusChip(target: Detection) {
@@ -83,6 +83,7 @@ function InteractiveCuasFlow() {
     { id: 'eff-1', name: 'Regulus-1', lat: 32.09, lon: 34.78, coverageRadiusM: 5000, status: 'available' },
     { id: 'eff-2', name: 'Regulus-2', lat: 32.10, lon: 34.79, coverageRadiusM: 5000, status: 'available' },
   ]);
+  const [selectedEffectorId, setSelectedEffectorId] = useState<string | undefined>(undefined);
 
   const appendLog = useCallback((label: string) => {
     const time = new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -111,6 +112,9 @@ function InteractiveCuasFlow() {
         setEffectors(prev => prev.map(r => ({ ...r, status: 'available' as const })));
       }, 3000);
     },
+    onEffectorSelect: (effectorId) => {
+      setSelectedEffectorId(effectorId);
+    },
     onMitigateAll: () => {
       appendLog('שיבוש כללי');
       setTarget(prev => ({ ...prev, mitigationStatus: 'mitigating', mitigatingEffectorId: 'ALL' }));
@@ -136,7 +140,7 @@ function InteractiveCuasFlow() {
     },
   };
 
-  const ctx: CardContext = { regulusEffectors: effectors };
+  const ctx: CardContext = { regulusEffectors: effectors, selectedEffectorId };
 
   const slots = useCardSlots(target, callbacks, ctx);
   const isSuccess = target.status === 'event_resolved' || target.status === 'event_neutralized';

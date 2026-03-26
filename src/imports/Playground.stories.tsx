@@ -129,6 +129,7 @@ const noopCallbacks: CardCallbacks = {
   onMissionCancel: noop,
   onMitigate: noop,
   onMitigateAll: noop,
+  onEffectorSelect: noop,
   onBdaOutcome: noop,
   onSensorFocus: noop,
 };

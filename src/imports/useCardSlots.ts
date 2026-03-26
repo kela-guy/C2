@@ -32,6 +32,7 @@ import {
 import { DroneCardIcon, MissileCardIcon } from '@/primitives/MapIcons';
 import type { ThreatAccent } from '@/primitives/tokens';
 import type { CardAction } from '@/primitives/CardActions';
+import type { SplitDropdownGroup } from '@/primitives/SplitActionButton';
 import type { TimelineStep } from '@/primitives/CardTimeline';
 import type { DetailRow, CardDetailsClassification } from '@/primitives/CardDetails';
 import type { CardSensor } from '@/primitives/CardSensors';
@@ -76,6 +77,7 @@ export interface CardCallbacks {
   onMissionCancel?: () => void;
   onMitigate?: (effectorId: string) => void;
   onMitigateAll?: () => void;
+  onEffectorSelect?: (effectorId: string) => void;
   onBdaOutcome?: (outcome: 'neutralized' | 'active' | 'lost') => void;
   onSensorFocus?: (sensorId: string) => void;
   onBdaCamera?: () => void;
@@ -89,6 +91,7 @@ export interface CardContext {
   allCamerasBusy?: boolean;
   controlRequestCountdown?: number | null;
   regulusEffectors?: RegulusEffector[];
+  selectedEffectorId?: string;
   nearbyCameras?: { id: string; typeLabel: string; distanceM: number }[];
   nearbyHives?: { id: string; latitude: number; longitude: number; distanceM: number; battery: number; status: string }[];
 }
@@ -228,6 +231,15 @@ function buildMedia(target: Detection, ctx: CardContext): CardMediaProps | null 
   };
 }
 
+function distKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 function cuasJamDropdown(
   callbacks: CardCallbacks,
   opts: { classified: boolean; busy: boolean },
@@ -245,6 +257,31 @@ function cuasJamDropdown(
       onClick: (e) => e.stopPropagation(),
       disabled: !opts.classified || opts.busy,
     },
+  ];
+}
+
+function buildJamDropdownGroups(
+  sortedEffectors: { eff: RegulusEffector; km: number }[],
+  activeId: string,
+  callbacks: CardCallbacks,
+  opts: { classified: boolean; busy: boolean },
+): SplitDropdownGroup[] {
+  const effectorItems = sortedEffectors.map(({ eff, km }) => ({
+    id: `eff-${eff.id}`,
+    label: `${eff.name} (${km.toFixed(1)} ק״מ)`,
+    checked: eff.id === activeId,
+    disabled: eff.status !== 'available' || opts.busy,
+    onClick: (e: React.MouseEvent) => {
+      e.stopPropagation();
+      callbacks.onEffectorSelect?.(eff.id);
+    },
+  }));
+
+  const modeItems = cuasJamDropdown(callbacks, opts);
+
+  return [
+    { label: 'בחירת ג׳אמר', items: effectorItems },
+    { items: modeItems },
   ];
 }
 
@@ -384,10 +421,22 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
     const investigationDisabled = isMitigating;
     const investigationHoldTitle = isMitigating ? 'זמין לאחר סיום השיבוש' : undefined;
 
+    const [tLat, tLon] = target.coordinates.split(',').map(s => parseFloat(s.trim()));
+    const allEffectors = (ctx.regulusEffectors ?? [])
+      .map(eff => ({ eff, km: distKm(tLat, tLon, eff.lat, eff.lon) }))
+      .sort((a, b) => a.km - b.km);
+    const availableEffectors = allEffectors.filter(e => e.eff.status === 'available');
+    const nearest = availableEffectors[0] ?? null;
+    const overridden = ctx.selectedEffectorId
+      ? allEffectors.find(e => e.eff.id === ctx.selectedEffectorId && e.eff.status === 'available')
+      : null;
+    const active = overridden ?? nearest;
+
     if (isMitigating) {
       actions.push({
         id: 'mitigate',
         label: 'משבש אות...',
+        badge: active ? active.eff.name : undefined,
         icon: JamWaveIcon,
         variant: 'danger',
         size: 'sm',
@@ -396,12 +445,17 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
         loading: true,
         disabled: true,
         onClick: (e) => e.stopPropagation(),
+        onHover: active ? (hovering) => callbacks.onSensorHover?.(hovering ? active.eff.id : null) : undefined,
         dropdownActions: cuasJamDropdown(callbacks, { classified: true, busy: true }),
+        dropdownGroups: allEffectors.length > 0
+          ? buildJamDropdownGroups(allEffectors, active?.eff.id ?? '', callbacks, { classified: true, busy: true })
+          : undefined,
       });
     } else {
       actions.push({
         id: 'mitigate',
         label: 'שיבוש',
+        badge: active ? active.eff.name : undefined,
         icon: JamWaveIcon,
         variant: 'danger',
         size: 'sm',
@@ -409,14 +463,13 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
         dataTour: 'cuas-cta-mitigate',
         onClick: (e) => {
           e.stopPropagation();
-          const effs = ctx.regulusEffectors?.filter(r => r.status === 'available') ?? [];
-          if (effs.length > 0) {
-            const [latS, lonS] = target.coordinates.split(',').map(s => parseFloat(s.trim()));
-            const sorted = effs.sort((a, b) => Math.hypot(a.lat - latS, a.lon - lonS) - Math.hypot(b.lat - latS, b.lon - lonS));
-            callbacks.onMitigate?.(sorted[0].id);
-          }
+          if (active) callbacks.onMitigate?.(active.eff.id);
         },
+        onHover: active ? (hovering) => callbacks.onSensorHover?.(hovering ? active.eff.id : null) : undefined,
         dropdownActions: cuasJamDropdown(callbacks, { classified: true, busy: false }),
+        dropdownGroups: allEffectors.length > 0
+          ? buildJamDropdownGroups(allEffectors, active?.eff.id ?? '', callbacks, { classified: true, busy: false })
+          : undefined,
       });
     }
 

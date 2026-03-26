@@ -138,6 +138,7 @@ export const CUASDashboard = () => {
   const [activeTargetId, setActiveTargetId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [devicesPanelOpen, setDevicesPanelOpen] = useState(false);
+  const [simulationMenuOpen, setSimulationMenuOpen] = useState(false);
   const [focusedDeviceId, setFocusedDeviceId] = useState<string | null>(null);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [panelSwitching, setPanelSwitching] = useState(false);
@@ -161,6 +162,7 @@ export const CUASDashboard = () => {
   const [sensorFocusId, setSensorFocusId] = useState<string | null>(null);
   const [cameraLookAtRequest, setCameraLookAtRequest] = useState<{ cameraId: string; targetLat: number; targetLon: number; fovOverrideDeg?: number } | null>(null);
   const [regulusEffectors, setRegulusEffectors] = useState<RegulusEffector[]>(REGULUS_EFFECTORS);
+  const [selectedEffectorIds, setSelectedEffectorIds] = useState<Map<string, string>>(new Map());
   const [mapFocusRequest, setMapFocusRequest] = useState<{ lat: number; lon: number } | null>(null);
   const [allCamerasBusyForTarget, setAllCamerasBusyForTarget] = useState<string | null>(null);
   const [cameraPointingTargetId, setCameraPointingTargetId] = useState<string | null>(null);
@@ -542,14 +544,13 @@ export const CUASDashboard = () => {
             updated.type = 'unknown';
             updated.name = `ציפור — ${tgt.name}`;
             updated.confidence = 85;
-            updated.status = 'suspicion';
           } else {
             updated.classifiedType = 'drone';
             updated.type = 'uav';
             updated.name = `רחפן — ${tgt.name}`;
             updated.confidence = 92;
-            updated.status = 'event';
           }
+          updated.status = 'detection';
           updated.priority = getPriorityBaseline(updated);
           updated.actionLog = [...(updated.actionLog || []), { time: t, label: opts.isBird ? 'סווג כציפור — ביטחון 85%' : 'סווג כרחפן — ביטחון 92%' }];
           setTimeout(() => {
@@ -671,6 +672,10 @@ export const CUASDashboard = () => {
       });
     }, 300);
   }, [spawnCuasTarget]);
+
+  const handleEffectorSelect = useCallback((targetId: string, effectorId: string) => {
+    setSelectedEffectorIds(prev => new Map(prev).set(targetId, effectorId));
+  }, []);
 
   // --- CUAS Mitigation Handlers ---
   const handleMitigate = useCallback((targetId: string, effectorId: string) => {
@@ -1056,7 +1061,7 @@ export const CUASDashboard = () => {
               side="left"
               align="start"
               sideOffset={8}
-              className="w-52 rounded bg-[#202020] border-white/15 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)]"
+              className="w-52 rounded bg-[#202020] border-0 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)]"
             >
               <DropdownMenuLabel className="text-[11px] text-white/70 uppercase tracking-wider">CUAS</DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-white/10" />
@@ -1290,7 +1295,9 @@ export const CUASDashboard = () => {
               onPlanningZoomCameras={noopStr}
               onMitigate={handleMitigate}
               onMitigateAll={handleMitigateAll}
+              onEffectorSelect={handleEffectorSelect}
               regulusEffectors={regulusEffectors}
+              selectedEffectorIds={selectedEffectorIds}
               onBdaOutcome={handleBdaOutcome}
               cameraActiveTargetId={cameraLookAtRequest ? targets.find(t => {
                 const [lat, lon] = t.coordinates.split(',').map(s => parseFloat(s.trim()));

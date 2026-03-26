@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ActionButton } from './ActionButton';
-import { SplitActionButton } from './SplitActionButton';
+import { SplitActionButton, type SplitDropdownGroup } from './SplitActionButton';
 import { CARD_TOKENS } from './tokens';
 
 export interface CardAction {
   id: string;
   label: string;
+  subtitle?: string;
+  badge?: string;
   icon?: React.ElementType;
   variant?: 'fill' | 'ghost' | 'danger' | 'warning';
   size?: 'sm' | 'md' | 'lg';
   onClick: (e: React.MouseEvent) => void;
+  onHover?: (hovering: boolean) => void;
   confirm?: {
     title: string;
     description?: string;
@@ -23,6 +26,7 @@ export interface CardAction {
   title?: string;
   dataTour?: string;
   dropdownActions?: CardAction[];
+  dropdownGroups?: SplitDropdownGroup[];
   group?: 'effector' | 'investigation';
   /** Passed to SplitActionButton when disabled (e.g. false = full-opacity “completed” jam row). */
   dimSplitWhenDisabled?: boolean;
@@ -136,6 +140,8 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
                       ) : action.dropdownActions ? (
                         <SplitActionButton
                           label={action.label}
+                          subtitle={action.subtitle}
+                          badge={action.badge}
                           icon={action.icon}
                           variant={action.variant as 'fill' | 'ghost' | 'danger' | 'warning'}
                           size={action.size ?? 'sm'}
@@ -143,6 +149,7 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
                           loading={action.loading}
                           dimDisabledShell={action.dimSplitWhenDisabled !== false}
                           onClick={(e) => handleClick(action, e)}
+                          onHover={action.onHover}
                           className={action.className ?? ''}
                           dataTour={action.dataTour}
                           dropdownItems={action.dropdownActions.map(da => ({
@@ -152,6 +159,7 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
                             disabled: da.disabled,
                             onClick: (e: React.MouseEvent) => handleClick(da, e),
                           }))}
+                          dropdownGroups={action.dropdownGroups}
                         />
                       ) : (
                         <ActionButton

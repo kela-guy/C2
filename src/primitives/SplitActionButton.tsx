@@ -1,12 +1,15 @@
 import React from 'react';
-import { ChevronDown, Loader2 } from 'lucide-react';
+import { Check, ChevronDown, Loader2 } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { cn } from '@/app/components/ui/utils';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
   DropdownMenuItem,
+  DropdownMenuSeparator,
 } from '@/app/components/ui/dropdown-menu';
 
 export interface SplitDropdownItem {
@@ -14,11 +17,19 @@ export interface SplitDropdownItem {
   label: string;
   icon?: React.ElementType;
   disabled?: boolean;
+  checked?: boolean;
   onClick: (e: React.MouseEvent) => void;
+}
+
+export interface SplitDropdownGroup {
+  label?: string;
+  items: SplitDropdownItem[];
 }
 
 export interface SplitActionButtonProps {
   label: string;
+  subtitle?: string;
+  badge?: string;
   icon?: React.ElementType;
   variant?: 'fill' | 'ghost' | 'danger' | 'warning';
   size?: 'sm' | 'md' | 'lg';
@@ -27,7 +38,9 @@ export interface SplitActionButtonProps {
   /** When false, a disabled (non-loading) control stays at full opacity — e.g. completed jam. Default true. */
   dimDisabledShell?: boolean;
   onClick: (e: React.MouseEvent) => void;
+  onHover?: (hovering: boolean) => void;
   dropdownItems: SplitDropdownItem[];
+  dropdownGroups?: SplitDropdownGroup[];
   className?: string;
   dataTour?: string;
 }
@@ -70,6 +83,8 @@ const sizeConfig = {
 
 export function SplitActionButton({
   label,
+  subtitle,
+  badge,
   icon: Icon,
   variant = 'fill',
   size = 'sm',
@@ -77,7 +92,9 @@ export function SplitActionButton({
   loading = false,
   dimDisabledShell = true,
   onClick,
+  onHover,
   dropdownItems,
+  dropdownGroups,
   className = '',
   dataTour,
 }: SplitActionButtonProps) {
@@ -87,8 +104,11 @@ export function SplitActionButton({
   const c = colorByVariant[variant] ?? colorByVariant.fill;
   const sz = sizeConfig[size];
 
+  const hasSubtitle = !!subtitle && !loading;
+  const hasBadge = !!badge && !loading;
+
   const segmentBase = cn(
-    sz.height, sz.text, sz.font, c.text,
+    !hasSubtitle && sz.height, sz.text, sz.font, c.text,
     c.base, c.hover, c.active,
     'transition-[background-color,transform] duration-150 ease-out',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/30',
@@ -123,6 +143,8 @@ export function SplitActionButton({
         type="button"
         onClick={isDisabled ? undefined : (e) => { e.stopPropagation(); onClick(e); }}
         disabled={isDisabled}
+        onMouseEnter={onHover ? () => onHover(true) : undefined}
+        onMouseLeave={onHover ? () => onHover(false) : undefined}
         className={cn(
           segmentBase,
           'flex flex-1 items-center justify-center gap-2 px-3',
@@ -134,7 +156,7 @@ export function SplitActionButton({
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.span
             key={label}
-            className="flex items-center gap-2"
+            className={cn('flex items-center gap-2', hasSubtitle && 'py-1')}
             transition={prefersReducedMotion ? { duration: 0 } : { type: 'spring', duration: 0.3, bounce: 0 }}
             initial={prefersReducedMotion ? false : { opacity: 0, y: -25 }}
             animate={{ opacity: 1, y: 0 }}
@@ -145,7 +167,19 @@ export function SplitActionButton({
             ) : (
               Icon && <Icon size={sz.icon} className="shrink-0 opacity-95" aria-hidden="true" />
             )}
-            <span>{label}</span>
+            {hasSubtitle ? (
+              <span className="flex flex-col items-start leading-tight">
+                <span>{label}</span>
+                <span className="text-[10px] opacity-60 font-normal">{subtitle}</span>
+              </span>
+            ) : (
+              <span>{label}</span>
+            )}
+            {hasBadge && (
+              <span className="text-[10px] font-medium bg-white/[0.12] px-1.5 py-0.5 rounded leading-none whitespace-nowrap">
+                {badge}
+              </span>
+            )}
           </motion.span>
         </AnimatePresence>
       </button>
@@ -177,33 +211,72 @@ export function SplitActionButton({
 
         <DropdownMenuContent
           side="bottom"
-          align="start"
+          align="end"
           sideOffset={6}
+          dir="rtl"
           className={cn(
-            'min-w-[140px] rounded-lg border-none p-1 origin-top-right',
+            'min-w-[140px] rounded-lg border-none p-1 origin-top-left',
             'bg-[#1c1c20] text-white',
             'shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_8px_30px_rgba(0,0,0,0.5)]',
             prefersReducedMotion && 'data-[state=open]:animate-none data-[state=closed]:animate-none',
           )}
           onCloseAutoFocus={(e) => e.preventDefault()}
         >
-          {dropdownItems.map((item) => {
-            const ItemIcon = item.icon;
-            return (
-              <DropdownMenuItem
-                key={item.id}
-                disabled={item.disabled}
-                className="flex w-full flex-row items-center justify-start gap-2 rounded-md px-2.5 py-2 text-xs text-zinc-200 cursor-pointer transition-[background-color,color] duration-150 ease-out hover:bg-white/[0.08] hover:text-white focus:bg-white/[0.08] focus:text-white"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  item.onClick(e);
-                }}
-              >
-                {ItemIcon && <ItemIcon size={14} className="shrink-0" aria-hidden="true" />}
-                <span className="min-w-0 flex-1 text-start">{item.label}</span>
-              </DropdownMenuItem>
-            );
-          })}
+          {dropdownGroups ? (
+            dropdownGroups.map((group, gi) => (
+              <React.Fragment key={group.label ?? gi}>
+                {gi > 0 && <DropdownMenuSeparator className="my-1 bg-white/10" />}
+                <DropdownMenuGroup>
+                  {group.label && (
+                    <DropdownMenuLabel className="px-2.5 py-1.5 text-[10px] font-medium text-zinc-500 uppercase tracking-wider">
+                      {group.label}
+                    </DropdownMenuLabel>
+                  )}
+                  {group.items.map((item) => {
+                    const ItemIcon = item.icon;
+                    return (
+                      <DropdownMenuItem
+                        key={item.id}
+                        disabled={item.disabled}
+                        className="flex w-full flex-row items-center justify-start gap-2 rounded-md px-2.5 py-2 text-xs text-zinc-200 cursor-pointer transition-[background-color,color] duration-150 ease-out hover:bg-white/[0.08] hover:text-white focus:bg-white/[0.08] focus:text-white"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          item.onClick(e);
+                        }}
+                      >
+                        {item.checked != null ? (
+                          <span className="w-3.5 shrink-0 flex items-center justify-center">
+                            {item.checked && <Check size={12} className="text-emerald-400" aria-hidden="true" />}
+                          </span>
+                        ) : (
+                          ItemIcon && <ItemIcon size={14} className="shrink-0" aria-hidden="true" />
+                        )}
+                        <span className="min-w-0 flex-1 text-start">{item.label}</span>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuGroup>
+              </React.Fragment>
+            ))
+          ) : (
+            dropdownItems.map((item) => {
+              const ItemIcon = item.icon;
+              return (
+                <DropdownMenuItem
+                  key={item.id}
+                  disabled={item.disabled}
+                  className="flex w-full flex-row items-center justify-start gap-2 rounded-md px-2.5 py-2 text-xs text-zinc-200 cursor-pointer transition-[background-color,color] duration-150 ease-out hover:bg-white/[0.08] hover:text-white focus:bg-white/[0.08] focus:text-white"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    item.onClick(e);
+                  }}
+                >
+                  {ItemIcon && <ItemIcon size={14} className="shrink-0" aria-hidden="true" />}
+                  <span className="min-w-0 flex-1 text-start">{item.label}</span>
+                </DropdownMenuItem>
+              );
+            })
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

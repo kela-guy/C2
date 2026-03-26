@@ -409,7 +409,9 @@ export interface ListOfSystemsProps {
   onPlanningZoomCameras?: () => void;
   onMitigate?: (targetId: string, effectorId: string) => void;
   onMitigateAll?: (targetId: string) => void;
+  onEffectorSelect?: (targetId: string, effectorId: string) => void;
   regulusEffectors?: RegulusEffector[];
+  selectedEffectorIds?: Map<string, string>;
   onBdaOutcome?: (targetId: string, outcome: 'neutralized' | 'active' | 'lost') => void;
   onBdaCamera?: (targetId: string) => void;
   cameraActiveTargetId?: string | null;
@@ -459,7 +461,9 @@ export default function ListOfSystems({
   onMissionCancel,
   onMitigate,
   onMitigateAll,
+  onEffectorSelect,
   regulusEffectors,
+  selectedEffectorIds,
   onBdaOutcome,
   onBdaCamera,
   cameraActiveTargetId,
@@ -614,6 +618,7 @@ export default function ListOfSystems({
     onMissionCancel: () => onMissionCancel?.(target.id),
     onMitigate: (effectorId) => onMitigate?.(target.id, effectorId),
     onMitigateAll: () => onMitigateAll?.(target.id),
+    onEffectorSelect: (effectorId) => onEffectorSelect?.(target.id, effectorId),
     onBdaOutcome: (outcome) => onBdaOutcome?.(target.id, outcome),
     onBdaCamera: () => onBdaCamera?.(target.id),
     onRequestCameraControl: () => onRequestCameraControl?.(target.id),
@@ -627,6 +632,7 @@ export default function ListOfSystems({
     allCamerasBusy: allCamerasBusyForTarget === target.id,
     controlRequestCountdown: controlRequestTargetId === target.id ? controlRequestCountdown : null,
     regulusEffectors,
+    selectedEffectorId: selectedEffectorIds?.get(target.id),
     nearbyCameras: (target.flowType === 1 || target.flowType === 2) ? nearbyCameras : undefined,
     nearbyHives: target.flowType === 3 ? nearbyHives : undefined,
   });

@@ -577,7 +577,7 @@ const noopCallbacks: CardCallbacks = {
   onDroneResume: noop, onDroneRTB: noop, onMissionActivate: noop,
   onMissionPause: noop, onMissionResume: noop, onMissionOverride: noop,
   onMissionCancel: noop, onMitigate: noop, onMitigateAll: noop,
-  onBdaOutcome: noop, onSensorFocus: noop,
+  onEffectorSelect: noop, onBdaOutcome: noop, onSensorFocus: noop,
 };
 
 const styleguideEffectors: RegulusEffector[] = [
@@ -915,13 +915,16 @@ export default function StyleguidePage() {
 
               <PropsTable items={[
                 { name: 'label', type: 'string', description: 'Primary button text' },
+                { name: 'badge', type: 'string', description: 'Inline chip displayed after the label (e.g. effector name)' },
                 { name: 'icon', type: 'React.ElementType', description: 'Lucide icon' },
                 { name: 'variant', type: '"fill" | "ghost" | "danger" | "warning"', default: '"fill"', description: 'Color treatment' },
                 { name: 'size', type: '"sm" | "md" | "lg"', default: '"sm"', description: 'Height scale' },
                 { name: 'dropdownItems', type: 'SplitDropdownItem[]', description: 'Sub-action menu items' },
+                { name: 'dropdownGroups', type: 'SplitDropdownGroup[]', description: 'Grouped dropdown sections with labels and separators' },
                 { name: 'disabled', type: 'boolean', default: 'false', description: 'Disable both segments' },
                 { name: 'loading', type: 'boolean', default: 'false', description: 'Show spinner on primary' },
                 { name: 'dimDisabledShell', type: 'boolean', default: 'true', description: 'Reduce opacity when disabled' },
+                { name: 'onHover', type: '(hovering: boolean) => void', description: 'Fires on mouseEnter/Leave of primary segment — used to highlight effector on map' },
               ]} />
 
               <ExampleBlock title="Size Scale">
@@ -947,6 +950,37 @@ export default function StyleguidePage() {
               <ExampleBlock title="Loading (click to test)">
                 <div className="w-48">
                   <SplitActionButton label="שולח..." icon={Zap} variant="fill" size="sm" loading={loading === 'split-fill'} onClick={() => simulateLoading('split-fill')} dropdownItems={[{ id: '1', label: 'אפשרות א׳', onClick: noop }]} />
+                </div>
+              </ExampleBlock>
+
+              <ExampleBlock title="With Badge (effector name inline)">
+                <div className="flex flex-wrap items-start gap-3">
+                  <div className="w-56">
+                    <SplitActionButton label="שיבוש" badge="Regulus North" icon={Radio} variant="danger" size="sm" onClick={noop} dropdownItems={[
+                      { id: '1', label: 'שיבוש כללי', icon: Radio, onClick: noop },
+                      { id: '2', label: 'שיבוש ממוקד', icon: Crosshair, onClick: noop },
+                    ]} />
+                  </div>
+                  <div className="w-56">
+                    <SplitActionButton label="משבש אות..." badge="Regulus South" icon={Radio} variant="danger" size="sm" loading onClick={noop} dropdownItems={[
+                      { id: '1', label: 'שיבוש כללי', onClick: noop },
+                    ]} />
+                  </div>
+                </div>
+              </ExampleBlock>
+
+              <ExampleBlock title="Grouped Dropdown (RTL, effector selection)">
+                <div className="w-56">
+                  <SplitActionButton label="שיבוש" badge="Regulus North" icon={Radio} variant="danger" size="sm" onClick={noop} dropdownItems={[]} dropdownGroups={[
+                    { label: 'בחירת ג׳אמר', items: [
+                      { id: 'eff-1', label: 'Regulus North (1.2 ק״מ)', checked: true, onClick: noop },
+                      { id: 'eff-2', label: 'Regulus South (3.8 ק״מ)', checked: false, onClick: noop },
+                    ]},
+                    { items: [
+                      { id: 'mode-1', label: 'שיבוש כללי', icon: Radio, onClick: noop },
+                      { id: 'mode-2', label: 'שיבוש ממוקד', icon: Crosshair, onClick: noop },
+                    ]},
+                  ]} />
                 </div>
               </ExampleBlock>
             </ComponentSection>
