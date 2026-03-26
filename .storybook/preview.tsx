@@ -6,21 +6,19 @@ import './storybook.css';
 function RTLWrapper({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     document.documentElement.setAttribute('dir', 'rtl');
-    document.body.setAttribute('dir', 'rtl');
+    document.documentElement.setAttribute('lang', 'he');
     return () => {
       document.documentElement.removeAttribute('dir');
-      document.body.removeAttribute('dir');
+      document.documentElement.removeAttribute('lang');
     };
   }, []);
 
   return (
     <div
-      dir="rtl"
       style={{
         background: '#0b0d10',
         color: '#ffffff',
         padding: '24px',
-        direction: 'rtl',
         textAlign: 'right',
       }}
     >

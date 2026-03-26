@@ -34,7 +34,7 @@ export default function ButtonsPlayground() {
 
   return (
     <TooltipProvider>
-      <div className="min-h-screen bg-[#0e0e0e] text-white p-8 font-sans" dir="rtl">
+      <div className="min-h-screen bg-[#0e0e0e] text-white p-8 font-sans">
         <div className="mx-auto max-w-[400px] space-y-12">
           <div>
             <h1 className="text-lg font-bold text-white">Button Playground</h1>

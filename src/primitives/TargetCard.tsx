@@ -66,7 +66,6 @@ export function TargetCard({
       ref={cardRef}
       className={cn('w-full', className)}
       style={{ marginBottom: `${d.container.marginBottom + 2}px` }}
-      dir="rtl"
     >
       <Collapsible
         open={open}

@@ -123,7 +123,7 @@ export function CardMedia({
         )}
 
         {trackingLabel && (
-          <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-cyan-900/80 shadow-[0_0_0_1px_rgba(34,211,238,0.3)] px-2 py-0.5 rounded" dir="rtl">
+          <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-cyan-900/80 shadow-[0_0_0_1px_rgba(34,211,238,0.3)] px-2 py-0.5 rounded">
             <Camera size={10} className="text-cyan-300" aria-hidden="true" />
             <span className="text-[9px] font-semibold text-cyan-200">{trackingLabel}</span>
           </div>

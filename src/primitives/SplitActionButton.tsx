@@ -176,7 +176,6 @@ export function SplitActionButton({
         </DropdownMenuTrigger>
 
         <DropdownMenuContent
-          dir="rtl"
           side="bottom"
           align="start"
           sideOffset={6}

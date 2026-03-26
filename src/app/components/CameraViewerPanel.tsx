@@ -35,7 +35,6 @@ function CameraPickerContent({
       align="start"
       sideOffset={6}
       className="min-w-[180px] p-1 rounded-lg bg-[#1a1a1a]/95 backdrop-blur-xl shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_25px_50px_-12px_rgba(0,0,0,0.5)] border-none"
-      dir="rtl"
     >
       {CAMERA_ASSETS.map(cam => {
         const inUse = usedIds.includes(cam.id);
@@ -121,7 +120,7 @@ function FeedSlot({
                          focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
             >
               <Plus size={14} className="text-white/40 shrink-0" aria-hidden="true" />
-              <span className="text-xs text-white/50" dir="rtl">בחר תוכן</span>
+              <span className="text-xs text-white/50">בחר תוכן</span>
               <ChevronDown size={12} className="text-white/30 shrink-0" />
             </button>
           </DropdownMenuTrigger>
@@ -130,7 +129,6 @@ function FeedSlot({
             align="center"
             sideOffset={6}
             className="min-w-[180px] p-1 rounded-lg bg-[#1a1a1a]/95 backdrop-blur-xl shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_25px_50px_-12px_rgba(0,0,0,0.5)] border-none"
-            dir="rtl"
           >
             {CAMERA_ASSETS.map(cam => {
               const inUse = usedIds.includes(cam.id);
@@ -187,7 +185,7 @@ function FeedSlot({
       <div className="absolute inset-x-0 top-0">
         <div className="h-16 bg-gradient-to-b from-black/60 to-transparent opacity-0 group-hover/feed:opacity-100 transition-opacity duration-200 ease-out" />
 
-        <div className="absolute top-0 inset-x-0 px-2.5 pt-2 flex items-center gap-1.5" dir="rtl">
+        <div className="absolute top-0 inset-x-0 px-2.5 pt-2 flex items-center gap-1.5">
           {/* Always-visible: LIVE badge */}
           <div className="flex items-center gap-1 bg-black/70 px-1.5 py-0.5 rounded-sm">
             <div className="size-1.5 rounded-full bg-red-500 animate-pulse motion-reduce:animate-none" />
@@ -346,7 +344,7 @@ export function CameraViewerPanel({ feeds, onFeedsChange, onCameraHover }: Camer
             aria-label="פצל מסך"
           >
             <SplitSquareHorizontal size={14} className="text-white" />
-            <span className="text-xs text-white" dir="rtl">פצל מסך</span>
+            <span className="text-xs text-white">פצל מסך</span>
           </motion.button>
         </div>
       )}

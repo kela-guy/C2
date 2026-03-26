@@ -28,7 +28,7 @@ export function CardHeader({
   const d = CARD_TOKENS;
 
   return (
-    <div className="flex justify-between items-center" dir="rtl" style={{ gap: `${d.header.gap}px` }}>
+    <div className="flex justify-between items-center" style={{ gap: `${d.header.gap}px` }}>
       <div className="flex items-center gap-2 shrink-0">
         {Icon && (
           <div

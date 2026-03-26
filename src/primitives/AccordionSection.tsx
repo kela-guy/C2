@@ -26,7 +26,6 @@ export function AccordionSection({
     <Collapsible
       defaultOpen={defaultOpen}
       className={["group", className].filter(Boolean).join(" ")}
-      dir="rtl"
     >
       <CollapsibleTrigger
         className="flex w-full cursor-pointer items-center justify-between rounded-none bg-white/[0.05] p-[8px] transition-colors hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"

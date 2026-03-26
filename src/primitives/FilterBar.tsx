@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ArrowUpDown, ChevronDown, Radio, Search, SlidersHorizontal, TimerReset, X } from 'lucide-react';
+import { ChevronDown, Radio, Search, SlidersHorizontal, TimerReset, X } from 'lucide-react';
 import type { ActivityStatus } from '@/imports/ListOfSystems';
 import { ACTIVITY_STATUS_LABELS, type FilterState } from '@/imports/useTargetFilters';
 import { Checkbox } from '@/app/components/ui/checkbox';
@@ -23,15 +23,6 @@ const STATUS_OPTIONS: ActivityStatus[] = [
   'mitigated',
 ];
 
-const SORT_LABELS: Record<FilterState['sortBy'], string> = {
-  priority: 'עדיפות',
-  time: 'זמן',
-};
-
-const NEXT_SORT: Record<FilterState['sortBy'], FilterState['sortBy']> = {
-  priority: 'time',
-  time: 'priority',
-};
 
 export function FilterBar({
   filters,
@@ -63,7 +54,7 @@ export function FilterBar({
   }, [availableSensors, filters.detectedByDeviceIds]);
 
   return (
-    <div className="border-b border-white/5 px-2 py-1.5" dir="rtl">
+    <div className="border-b border-white/5 px-2 py-1.5">
       <div className="flex items-center gap-1.5">
         <div className="relative flex-1">
           <Search size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" aria-hidden="true" />
@@ -86,17 +77,6 @@ export function FilterBar({
             </button>
           )}
         </div>
-
-        <button
-          type="button"
-          onClick={() => onUpdate('sortBy', NEXT_SORT[filters.sortBy])}
-          className="inline-flex h-7 min-w-[5rem] shrink-0 items-center justify-center gap-1.5 rounded-sm px-2 text-xs font-medium text-white bg-transparent transition-colors duration-150 hover:bg-white/[0.10] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 active:scale-[0.97]"
-          title={`מיון לפי ${SORT_LABELS[filters.sortBy]}`}
-          aria-label={`מיון לפי ${SORT_LABELS[filters.sortBy]}`}
-        >
-          <ArrowUpDown size={11} aria-hidden="true" />
-          <span>{SORT_LABELS[filters.sortBy]}</span>
-        </button>
       </div>
 
       <div className="grid grid-cols-3 items-center gap-1.5 mt-1.5">
@@ -169,7 +149,7 @@ function FilterPopoverButton({
   children: React.ReactNode;
 }) {
   return (
-    <Popover open={open} onOpenChange={onOpenChange} dir="rtl">
+    <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -192,7 +172,7 @@ function FilterPopoverButton({
         side="bottom"
         align="start"
         sideOffset={4}
-        className="w-64 overflow-hidden rounded-lg p-0.5 shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_16px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl"
+        className="w-64 origin-top-right overflow-hidden rounded-lg p-0.5 shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_16px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl"
       >
         <div className="overflow-y-auto p-0.5">{children}</div>
       </PopoverContent>

@@ -1,5 +1,6 @@
 import React from "react";
 import { Loader2 } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/app/components/ui/utils";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/app/components/ui/tooltip";
 
@@ -62,6 +63,7 @@ export function ActionButton({
   title?: string;
   dataTour?: string;
 }) {
+  const prefersReducedMotion = useReducedMotion();
   const isDisabled = disabled || loading;
   const c = colorByVariant[variant] ?? colorByVariant.fill;
   const sz = sizeConfig[size];
@@ -72,7 +74,7 @@ export function ActionButton({
       onClick={isDisabled ? undefined : onClick}
       disabled={isDisabled}
       className={cn(
-        'inline-flex flex-1 items-center justify-center gap-2 px-3 rounded',
+        'inline-flex flex-1 items-center justify-center gap-2 px-3 rounded overflow-hidden',
         sz.height, sz.text, sz.font, c.text,
         c.base, c.hover, c.active,
         'transition-[background-color,transform] duration-150 ease-out',
@@ -83,17 +85,29 @@ export function ActionButton({
         className,
       )}
       {...(dataTour ? { "data-tour": dataTour } : {})}
+      {...(loading ? { "aria-live": "polite" as const } : {})}
     >
-      {loading ? (
-        <Loader2
-          size={sz.icon}
-          className="shrink-0 animate-spin opacity-90 motion-reduce:animate-none"
-          aria-hidden="true"
-        />
-      ) : (
-        Icon && <Icon size={sz.icon} className="shrink-0 opacity-95" aria-hidden="true" />
-      )}
-      <span>{label}</span>
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.span
+          key={label}
+          className="flex items-center gap-2"
+          transition={prefersReducedMotion ? { duration: 0 } : { type: 'spring', duration: 0.3, bounce: 0 }}
+          initial={prefersReducedMotion ? false : { opacity: 0, y: -25 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={prefersReducedMotion ? undefined : { opacity: 0, y: 25 }}
+        >
+          {loading ? (
+            <Loader2
+              size={sz.icon}
+              className={cn('shrink-0', prefersReducedMotion ? 'opacity-90' : 'animate-spin opacity-90')}
+              aria-hidden="true"
+            />
+          ) : (
+            Icon && <Icon size={sz.icon} className="shrink-0 opacity-95" aria-hidden="true" />
+          )}
+          <span>{label}</span>
+        </motion.span>
+      </AnimatePresence>
     </button>
   );
 

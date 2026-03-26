@@ -14,7 +14,7 @@ export const spec: ComponentSpec = {
     { name: 'title', type: 'string', required: true, description: 'Primary heading text (h2) — target name or incident description' },
     { name: 'subtitle', type: 'string', required: false, description: 'Secondary text below title — typically a target ID in mono font' },
     { name: 'status', type: 'React.ReactNode', required: false, description: 'Status slot — typically a StatusChip component' },
-    { name: 'badge', type: 'React.ReactNode', required: false, description: 'Badge slot — typically a MissionPhaseChip component' },
+    { name: 'badge', type: 'React.ReactNode', required: false, description: 'Badge slot — optional badge element' },
     { name: 'quickAction', type: 'React.ReactNode', required: false, description: 'Quick action slot — shown only when card is collapsed (open=false), click events are stopped from propagating' },
     { name: 'open', type: 'boolean', required: false, description: 'Controls chevron rotation (180° when open) and quickAction visibility' },
   ],

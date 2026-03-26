@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { CardHeader } from './CardHeader';
 import { StatusChip } from './StatusChip';
-import { MissionPhaseChip } from './MissionPhaseChip';
 import { Plane, Target, Rocket, Ship, ScanLine } from 'lucide-react';
 import { SpecDocs } from '@/specs/SpecDocs';
 import { spec } from './CardHeader.spec';
@@ -14,7 +13,7 @@ const meta: Meta<typeof CardHeader> = {
     (Story, context) => context.parameters?.specDocs ? (
       <Story />
     ) : (
-      <div dir="rtl" style={{ maxWidth: 380, background: '#1A1A1A', padding: 8, borderRadius: 8 }}>
+      <div style={{ maxWidth: 380, background: '#1A1A1A', padding: 8, borderRadius: 8 }}>
         <Story />
       </div>
     ),
@@ -55,7 +54,6 @@ export const MissionHeader: Story = {
     iconColor: '#a78bfa',
     title: 'סריקת מצלמה',
     subtitle: 't-030',
-    badge: <MissionPhaseChip phase="active" />,
     open: false,
   },
 };

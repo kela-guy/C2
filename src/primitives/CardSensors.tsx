@@ -34,7 +34,7 @@ export function CardSensors({
   if (sensors.length === 0) return null;
 
   return (
-    <div className={`flex flex-col gap-2 w-full ${className}`} style={{ boxShadow: `inset 0 1px 0 0 ${CARD_TOKENS.surface.level2}` }} dir="rtl">
+    <div className={`flex flex-col gap-2 w-full ${className}`} style={{ boxShadow: `inset 0 1px 0 0 ${CARD_TOKENS.surface.level2}` }}>
       {sensors.map((sensor) => {
         const SensorIcon = sensor.icon;
         const aria = `${sensor.typeLabel} — ${sensor.id}`;

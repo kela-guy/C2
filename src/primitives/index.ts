@@ -3,8 +3,6 @@ export { StatusChip } from './StatusChip';
 export { ActionButton } from './ActionButton';
 export { AccordionSection } from './AccordionSection';
 export { TelemetryRow } from './TelemetryRow';
-export { MissionPhaseChip } from './MissionPhaseChip';
-
 export { TargetCard, type TargetCardProps } from './TargetCard';
 export { CardHeader, type CardHeaderProps } from './CardHeader';
 export { CardActions, type CardAction, type CardActionsProps } from './CardActions';

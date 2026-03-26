@@ -110,7 +110,7 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
     const ungrouped = actions.filter(a => !a.group && !a.dropdownActions);
 
     return (
-      <div className={`px-2 py-2 ${className}`} dir="rtl">
+      <div className={`px-2 py-2 ${className}`}>
         <div className="flex flex-col gap-1.5">
           {/* Effector row */}
           {effectorActions.length > 0 && (
@@ -228,7 +228,7 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
   const cols = Math.min(rest.length || primary.length, 4);
 
   return (
-    <div className={`px-2 py-2 ${className}`} dir="rtl">
+    <div className={`px-2 py-2 ${className}`}>
       <div
         className="grid gap-1.5"
         style={{ gridTemplateColumns: `repeat(${cols || 1}, 1fr)` }}

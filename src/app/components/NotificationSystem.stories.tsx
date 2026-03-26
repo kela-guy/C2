@@ -39,7 +39,6 @@ function DemoWrapper() {
           gap: 12,
           padding: 40,
         }}
-        dir="rtl"
       >
         <h2 style={{ color: '#e4e4e7', fontSize: 16, fontWeight: 600, marginBottom: 8 }}>
           Notification System Demo

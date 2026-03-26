@@ -3,15 +3,15 @@ import type { ComponentSpec } from '@/specs/types';
 export const spec: ComponentSpec = {
   name: 'FilterBar',
   filePath: 'src/primitives/FilterBar.tsx',
-  purpose: 'Sidebar filter controls for target list — search input, multi-select status/sensor popovers, sort toggle, and reset button with active filter count badge.',
+  purpose: 'Sidebar filter controls for target list — search input, multi-select status/sensor popovers, and reset button with active filter count badge.',
   location: 'Sidebar',
   status: 'prototype',
 
   props: [
-    { name: 'filters', type: 'FilterState', required: true, description: 'Current filter state: query, activityStatus[], detectedByDeviceIds[], sortBy' },
+    { name: 'filters', type: 'FilterState', required: true, description: 'Current filter state: query, activityStatus[], detectedByDeviceIds[]' },
     { name: 'activeFilterCount', type: 'number', required: true, description: 'Number of active non-default filters — controls reset button visibility and badge count' },
     { name: 'availableSensors', type: '{ id: string; label: string }[]', required: true, description: 'List of available sensor devices for the sensor filter popover' },
-    { name: 'onUpdate', type: '<K extends keyof FilterState>(key: K, value: FilterState[K]) => void', required: true, description: 'Generic filter update callback — used for query and sortBy changes' },
+    { name: 'onUpdate', type: '<K extends keyof FilterState>(key: K, value: FilterState[K]) => void', required: true, description: 'Generic filter update callback — used for query changes' },
     { name: 'onToggleActivity', type: '(status: ActivityStatus) => void', required: true, description: 'Toggles a status in the activityStatus filter array' },
     { name: 'onToggleSensor', type: '(id: string) => void', required: true, description: 'Toggles a sensor in the detectedByDeviceIds filter array' },
     { name: 'onReset', type: '() => void', required: true, description: 'Resets all filters to default state' },
@@ -21,23 +21,23 @@ export const spec: ComponentSpec = {
     {
       name: 'default',
       trigger: 'Rendered with default filters (no active overrides)',
-      description: 'Search input empty, status/sensor buttons in idle state, sort shows "עדיפות", no reset button',
+      description: 'Search input empty, status/sensor buttons in idle state, no reset button',
       implementedInPrototype: true,
-      storyProps: { filters: { query: '', activityStatus: ['active', 'recently_active'], detectedByDeviceIds: [], sortBy: 'priority' } },
+      storyProps: { filters: { query: '', activityStatus: ['active', 'recently_active'], detectedByDeviceIds: [] } },
     },
     {
       name: 'with search query',
       trigger: 'filters.query is non-empty',
       description: 'Search input filled, clear (X) button appears at input end',
       implementedInPrototype: true,
-      storyProps: { filters: { query: 'רחפן', activityStatus: [], detectedByDeviceIds: [], sortBy: 'priority' } },
+      storyProps: { filters: { query: 'רחפן', activityStatus: [], detectedByDeviceIds: [] } },
     },
     {
       name: 'status popover open',
       trigger: 'User clicks status filter button',
       description: 'Popover opens below button showing multi-select list of activity statuses with checkboxes',
       implementedInPrototype: true,
-      visualNotes: 'Radix Popover with backdrop-blur-xl, dark glassy surface',
+      visualNotes: 'Radix Popover with backdrop-blur-xl, dark glassy surface. Enter animation uses origin-top-right (RTL-aware) with zoom-in-95 + slide-in-from-top-2 + fade-in.',
     },
     {
       name: 'sensor popover open',
@@ -111,12 +111,6 @@ export const spec: ComponentSpec = {
     },
     {
       trigger: 'click',
-      element: 'Sort button',
-      result: 'Cycles sortBy: priority → time → priority',
-      keyboard: 'Enter/Space to cycle',
-    },
-    {
-      trigger: 'click',
       element: 'Reset button',
       result: 'Fires onReset() — resets all filters to defaults',
       keyboard: 'Enter/Space to reset',
@@ -157,12 +151,16 @@ export const spec: ComponentSpec = {
     ],
     borderRadius: [
       { name: 'search', value: 'rounded-md (6px)', usage: 'Search input radius' },
-      { name: 'button', value: 'rounded (4px) / rounded-sm (2px)', usage: 'Filter and sort buttons' },
+      { name: 'button', value: 'rounded (4px)', usage: 'Filter buttons' },
       { name: 'popover', value: 'rounded-lg (8px)', usage: 'Popover container' },
       { name: 'checkbox', value: 'rounded (4px)', usage: 'Multi-select checkbox indicator' },
     ],
     shadows: [
       { name: 'popover', value: '0 0 0 1px rgba(255,255,255,0.1), 0 16px 40px rgba(0,0,0,0.45)', usage: 'Popover elevation shadow' },
+    ],
+    animations: [
+      { name: 'popover-enter', property: 'opacity, transform', duration: '150ms', easing: 'ease-out (tailwind animate-in)', usage: 'Popover open: fade-in-0 + zoom-in-95 + slide-in-from-top-2, origin-top-right for RTL layout' },
+      { name: 'popover-exit', property: 'opacity, transform', duration: '150ms', easing: 'ease-in (tailwind animate-out)', usage: 'Popover close: fade-out-0 + zoom-out-95' },
     ],
   },
 
@@ -173,17 +171,17 @@ export const spec: ComponentSpec = {
       'aria-label="נקה חיפוש" on clear button',
       'aria-haspopup="dialog" on popover triggers',
       'aria-expanded on popover triggers',
-      'aria-label on popover triggers and sort/reset buttons',
+      'aria-label on popover triggers and reset button',
       'aria-pressed on multi-select items',
       'aria-hidden on decorative icons',
     ],
     keyboardNav: [
-      'Tab — move between search, filter buttons, sort, reset',
+      'Tab — move between search, filter buttons, reset',
       'Enter/Space — activate buttons, toggle popover items',
       'Escape — close open popover (Radix built-in)',
     ],
     focusManagement: 'Focus ring on all interactive elements via focus-visible:ring-1. Popover focus trap managed by Radix.',
-    screenReaderNotes: 'Hebrew labels throughout. Sort button label includes current sort field. Reset button label is "איפוס פילטרים".',
+    screenReaderNotes: 'Hebrew labels throughout. Reset button label is "איפוס פילטרים".',
   },
 
   tasks: [
@@ -230,7 +228,6 @@ export const spec: ComponentSpec = {
 
   hardcodedData: [
     { current: 'חיפוש יעד, מזהה או סוג...', replaceWith: 'i18n key or LABELS constant', location: 'Search input placeholder' },
-    { current: 'SORT_LABELS (עדיפות, זמן, ביטחון)', replaceWith: 'i18n keys', location: 'Sort button label map' },
     { current: 'סטטוס, מזהה, איפוס', replaceWith: 'i18n keys', location: 'Filter button labels' },
     { current: 'אין מזהים זמינים, אין אפשרויות', replaceWith: 'i18n keys', location: 'Empty state labels in MultiSelectList' },
     { current: 'STATUS_OPTIONS array', replaceWith: 'Derive from ActivityStatus type or API', location: 'Module-level constant' },

@@ -6,7 +6,11 @@ import { NotificationSystem, showTacticalNotification } from './NotificationSyst
 import { NotificationCenter } from './NotificationCenter';
 import ListOfSystems from '@/imports/ListOfSystems';
 import type { Detection, RegulusEffector } from '@/imports/ListOfSystems';
-import { List, Bell, Radar, BookOpen, HelpCircle, Target, Video } from 'lucide-react';
+import { List, Bell, Radar, BookOpen, HelpCircle, Palette, Target, Video } from 'lucide-react';
+import { Toggle } from '@/app/components/ui/toggle';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/app/components/ui/tooltip';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/app/components/ui/dropdown-menu';
+import { Separator } from '@/app/components/ui/separator';
 import { DevicesPanel, DevicesIcon, DEVICE_CAMERA_DRAG_TYPE, DEVICE_CONNECTION } from './DevicesPanel';
 import type { DeviceCameraDragItem } from './DevicesPanel';
 import { CameraViewerPanel } from './CameraViewerPanel';
@@ -38,7 +42,7 @@ function appendLog(targets: Detection[], targetId: string, label: string): Detec
 }
 
 const C2Logo = ({ className }: { className?: string }) => (
-  <svg width={48} height={48} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+  <svg width={32} height={32} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
     <path
       fillRule="evenodd"
       clipRule="evenodd"
@@ -119,7 +123,7 @@ function SplitDropZone({
         <SplitLeftIcon className={`transition-colors duration-150 ease-out
           ${isOver ? 'text-white/60' : 'text-white/25'}`} />
         <span className={`text-[11px] transition-colors duration-150 ease-out
-          ${isOver ? 'text-white/60' : 'text-white/30'}`} dir="rtl">
+          ${isOver ? 'text-white/60' : 'text-white/30'}`}>
           {isOver ? 'שחרר כדי לצפות' : 'גרור לכאן'}
         </span>
       </motion.div>
@@ -157,7 +161,6 @@ export const CUASDashboard = () => {
   const [sensorFocusId, setSensorFocusId] = useState<string | null>(null);
   const [cameraLookAtRequest, setCameraLookAtRequest] = useState<{ cameraId: string; targetLat: number; targetLon: number; fovOverrideDeg?: number } | null>(null);
   const [regulusEffectors, setRegulusEffectors] = useState<RegulusEffector[]>(REGULUS_EFFECTORS);
-  const [simulationMenuOpen, setSimulationMenuOpen] = useState(false);
   const [mapFocusRequest, setMapFocusRequest] = useState<{ lat: number; lon: number } | null>(null);
   const [allCamerasBusyForTarget, setAllCamerasBusyForTarget] = useState<string | null>(null);
   const [cameraPointingTargetId, setCameraPointingTargetId] = useState<string | null>(null);
@@ -291,16 +294,6 @@ export const CUASDashboard = () => {
     }, 1000);
     return () => clearInterval(iv);
   }, [cameraControlRequest?.targetId]);
-
-  useEffect(() => {
-    if (!simulationMenuOpen) return;
-    const handler = (e: MouseEvent) => {
-      const el = e.target as HTMLElement;
-      if (!el.closest('[data-cuas-sim-menu]')) setSimulationMenuOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [simulationMenuOpen]);
 
   // --- Friendly drone patrol simulation ---
   const patrolProgressRef = useRef<number[]>(FRIENDLY_PATROL_ROUTES.map(() => 0));
@@ -975,111 +968,174 @@ export const CUASDashboard = () => {
   const noopStrStr = (_a: string, _b: string) => {};
 
   return (
-    <div className="relative flex w-full h-screen overflow-hidden text-white font-sans selection:bg-red-500/30" dir="rtl">
+    <div className="relative flex w-full h-screen overflow-hidden text-white font-sans selection:bg-red-500/30">
       {/* Minimal Left Nav */}
-      <nav className="flex flex-col w-14 sm:w-16 flex-shrink-0 h-full bg-[#1a1a1a] border-l border-white/10 z-20" dir="ltr">
-        <div className="flex items-center justify-center py-4 border-b border-white/10 h-[60px] w-full">
+      <TooltipProvider delayDuration={200}>
+      <nav className="flex flex-col justify-start items-center w-11 flex-shrink-0 h-full bg-[#1a1a1a] border-l border-white/10 z-20" dir="ltr">
+        <div className="flex items-center justify-center py-4 h-[60px] w-full">
           <div className="text-white scale-75 origin-center">
             <C2Logo />
           </div>
         </div>
+        <Separator className="bg-white/10" />
 
-        <div className="flex flex-col items-center gap-0.5 py-3 flex-1">
-          <button
-            onClick={() => { const next = !sidebarOpen; if (next && devicesPanelOpen) setPanelSwitching(true); setSidebarOpen(next); if (next) setDevicesPanelOpen(false); }}
-            className="p-2.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
-            title={sidebarOpen ? 'סגור רשימת מערכות' : 'פתח רשימת מערכות'}
-          >
-            <List size={20} strokeWidth={1.5} />
-          </button>
-
-          <button
-            onClick={() => { const next = !devicesPanelOpen; if (next && sidebarOpen) setPanelSwitching(true); setDevicesPanelOpen(next); if (next) setSidebarOpen(false); }}
-            className={`p-2.5 rounded-lg transition-colors ${devicesPanelOpen ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
-            title={devicesPanelOpen ? 'סגור מכשירים' : 'מכשירים'}
-          >
-            <DevicesIcon size={20} />
-          </button>
-
-          <button
-            onClick={() => {
-              if (isCameraViewerOpen) {
-                setCameraViewerFeeds([]);
-              } else {
-                setCameraViewerFeeds([{ cameraId: CAMERA_ASSETS[0]?.id ?? '' }]);
-              }
-            }}
-            className={`p-2.5 rounded-lg transition-colors ${isCameraViewerOpen ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
-            title={isCameraViewerOpen ? 'סגור מצלמות' : 'מצלמות'}
-          >
-            <Video size={20} strokeWidth={1.5} />
-          </button>
-
-          <div className="relative" data-cuas-sim-menu>
-            <button
-              onClick={() => {
-                const next = !simulationMenuOpen;
-                setSimulationMenuOpen(next);
-                if (next) tour.notifySimMenuOpened();
-              }}
-              className="p-2.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
-              title="תרחישי CUAS"
-            >
-              <CuasIcon size={20} />
-            </button>
-            {simulationMenuOpen && (
-              <div
-                className="absolute top-0 right-full mr-2 w-52 rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_25px_50px_-12px_rgba(0,0,0,0.5)] bg-[#1a1a1a]/95 backdrop-blur-xl py-1.5 select-none z-50"
-                dir="rtl"
+        <div className="flex flex-col items-center gap-0.5 py-0 w-fit flex-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Toggle
+                size="sm"
+                pressed={sidebarOpen}
+                onPressedChange={() => { const next = !sidebarOpen; if (next && devicesPanelOpen) setPanelSwitching(true); setSidebarOpen(next); if (next) setDevicesPanelOpen(false); }}
+                className="size-8 rounded bg-transparent text-gray-400 data-[state=on]:bg-white/10 data-[state=on]:text-white hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                aria-label={sidebarOpen ? 'סגור רשימת מערכות' : 'פתח רשימת מערכות'}
               >
-                <div className="px-3 py-1.5 text-[11px] font-medium text-white/70 uppercase tracking-wider border-b border-white/10 mb-1">CUAS</div>
-                <button data-tour="cuas-single-sim" onClick={handleCUASSingle} className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-zinc-300 hover:bg-white/10 hover:text-white transition-colors text-right">
-                  <Target size={14} className="shrink-0 text-zinc-400" />
-                  <span>יעד בודד</span>
-                </button>
-                <button onClick={handleCUASFlow} className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-zinc-300 hover:bg-white/10 hover:text-white transition-colors text-right">
-                  <CuasIcon size={14} className="shrink-0 text-zinc-400" />
-                  <span>תרחיש מלא (3 יעדים)</span>
-                </button>
-                <button onClick={handleCUASMassDetection} className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-zinc-300 hover:bg-white/10 hover:text-white transition-colors text-right">
-                  <Radar size={14} className="shrink-0 text-zinc-400" />
-                  <span>תרחיש נחיל (20 יעדים)</span>
-                </button>
-              </div>
-            )}
-          </div>
+                <List size={20} strokeWidth={1.5} />
+              </Toggle>
+            </TooltipTrigger>
+            <TooltipContent side="left" sideOffset={8}>
+              {sidebarOpen ? 'סגור רשימת מערכות' : 'פתח רשימת מערכות'}
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Toggle
+                size="sm"
+                pressed={devicesPanelOpen}
+                onPressedChange={() => { const next = !devicesPanelOpen; if (next && sidebarOpen) setPanelSwitching(true); setDevicesPanelOpen(next); if (next) setSidebarOpen(false); }}
+                className="size-8 rounded bg-transparent text-gray-400 data-[state=on]:bg-white/10 data-[state=on]:text-white hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                aria-label={devicesPanelOpen ? 'סגור מכשירים' : 'מכשירים'}
+              >
+                <DevicesIcon size={20} />
+              </Toggle>
+            </TooltipTrigger>
+            <TooltipContent side="left" sideOffset={8}>
+              {devicesPanelOpen ? 'סגור מכשירים' : 'מכשירים'}
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Toggle
+                size="sm"
+                pressed={isCameraViewerOpen}
+                onPressedChange={() => {
+                  if (isCameraViewerOpen) {
+                    setCameraViewerFeeds([]);
+                  } else {
+                    setCameraViewerFeeds([{ cameraId: CAMERA_ASSETS[0]?.id ?? '' }]);
+                  }
+                }}
+                className="size-8 rounded bg-transparent text-gray-400 data-[state=on]:bg-white/10 data-[state=on]:text-white hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                aria-label={isCameraViewerOpen ? 'סגור מצלמות' : 'מצלמות'}
+              >
+                <Video size={20} strokeWidth={1.5} />
+              </Toggle>
+            </TooltipTrigger>
+            <TooltipContent side="left" sideOffset={8}>
+              {isCameraViewerOpen ? 'סגור מצלמות' : 'מצלמות'}
+            </TooltipContent>
+          </Tooltip>
+
+          <DropdownMenu onOpenChange={(open) => { if (open) tour.notifySimMenuOpened(); }}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    data-cuas-sim-menu
+                    className="size-8 rounded flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                    aria-label="תרחישי CUAS"
+                  >
+                    <CuasIcon size={20} />
+                  </button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent side="left" sideOffset={8}>תרחישי CUAS</TooltipContent>
+            </Tooltip>
+            <DropdownMenuContent
+              side="left"
+              align="start"
+              sideOffset={8}
+              className="w-52 rounded bg-[#202020] border-white/15 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)]"
+            >
+              <DropdownMenuLabel className="text-[11px] text-white/70 uppercase tracking-wider">CUAS</DropdownMenuLabel>
+              <DropdownMenuSeparator className="bg-white/10" />
+              <DropdownMenuItem data-tour="cuas-single-sim" onSelect={handleCUASSingle} className="gap-2.5 text-xs text-zinc-300 focus:bg-white/10 focus:text-white">
+                <Target size={14} className="shrink-0 text-zinc-400" />
+                <span>יעד בודד</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={handleCUASFlow} className="gap-2.5 text-xs text-zinc-300 focus:bg-white/10 focus:text-white">
+                <CuasIcon size={14} className="shrink-0 text-zinc-400" />
+                <span>תרחיש מלא (3 יעדים)</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={handleCUASMassDetection} className="gap-2.5 text-xs text-zinc-300 focus:bg-white/10 focus:text-white">
+                <Radar size={14} className="shrink-0 text-zinc-400" />
+                <span>תרחיש נחיל (20 יעדים)</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
-        <div className="border-t border-white/10 flex flex-col items-center gap-0.5 py-2">
-          <button
-            onClick={tour.startTour}
-            className="p-2.5 rounded-lg text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 transition-colors"
-            title="סיור הדרכה"
-            aria-label="סיור הדרכה"
-          >
-            <HelpCircle size={20} strokeWidth={1.5} />
-          </button>
-          <a
-            href={import.meta.env.DEV ? 'http://localhost:6006' : 'https://main--69b81d2c2b313942c613995e.chromatic.com/'}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-2.5 rounded-lg text-gray-400 hover:text-pink-400 hover:bg-pink-500/10 transition-colors w-10 flex justify-center"
-            title="Storybook"
-          >
-            <BookOpen size={20} strokeWidth={1.5} />
-          </a>
-          <NotificationCenter
-            trigger={
+        <Separator className="bg-white/10" />
+        <div className="flex flex-col items-center gap-0.5 py-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
               <button
-                className="p-2.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors w-full flex justify-center"
-                title="התראות"
+                onClick={tour.startTour}
+                className="size-8 rounded flex items-center justify-center text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                aria-label="סיור הדרכה"
               >
-                <Bell size={20} strokeWidth={1.5} />
+                <HelpCircle size={20} strokeWidth={1.5} />
               </button>
-            }
-          />
+            </TooltipTrigger>
+            <TooltipContent side="left" sideOffset={8}>סיור הדרכה</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <a
+                href="/styleguide"
+                className="size-8 rounded flex items-center justify-center text-gray-400 hover:text-amber-400 hover:bg-amber-500/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                aria-label="Style Guide"
+              >
+                <Palette size={20} strokeWidth={1.5} />
+              </a>
+            </TooltipTrigger>
+            <TooltipContent side="left" sideOffset={8}>Style Guide</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <a
+                href={import.meta.env.DEV ? 'http://localhost:6006' : 'https://main--69b81d2c2b313942c613995e.chromatic.com/'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="size-8 rounded flex items-center justify-center text-gray-400 hover:text-pink-400 hover:bg-pink-500/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                aria-label="Storybook"
+              >
+                <BookOpen size={20} strokeWidth={1.5} />
+              </a>
+            </TooltipTrigger>
+            <TooltipContent side="left" sideOffset={8}>Storybook</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span>
+                <NotificationCenter
+                  trigger={
+                    <button
+                      className="size-8 rounded flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                      aria-label="התראות"
+                    >
+                      <Bell size={20} strokeWidth={1.5} />
+                    </button>
+                  }
+                />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="left" sideOffset={8}>התראות</TooltipContent>
+          </Tooltip>
         </div>
       </nav>
+      </TooltipProvider>
 
       {/* Map + Camera Viewer Split */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0 relative" data-tour="cuas-map">
@@ -1183,7 +1239,7 @@ export const CUASDashboard = () => {
             />
           )}
           <div className="px-4 pt-3 pb-2 border-b border-white/10">
-            <h2 className="text-[11px] font-medium text-white/70 uppercase tracking-wider" dir="rtl">CUAS — מערכות פעילות ({targets.length})</h2>
+            <h2 className="text-[11px] font-medium text-white/70 uppercase tracking-wider">CUAS — מערכות פעילות ({targets.length})</h2>
           </div>
           <div className="flex-1 overflow-y-auto">
             <ListOfSystems

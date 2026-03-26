@@ -1021,7 +1021,7 @@ export const TacticalMap = ({
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
           <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-lg bg-violet-500/15 shadow-[0_0_0_1px_rgba(139,92,246,0.3),0_10px_15px_-3px_rgba(0,0,0,0.3)] backdrop-blur-sm">
             <div className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" />
-            <span className="text-[12px] font-medium text-violet-200" dir="rtl">לחץ על המפה להוספת נקודות ציון</span>
+            <span className="text-[12px] font-medium text-violet-200">לחץ על המפה להוספת נקודות ציון</span>
           </div>
         </div>
       )}
@@ -1407,7 +1407,7 @@ export const TacticalMap = ({
                               ${TARGET_CARD_BASE}
                               ${isHoveredFromCard ? TARGET_SHADOW_HOVERED : isBird ? TARGET_SHADOW_BIRD : isMitigated ? TARGET_SHADOW_MITIGATED : TARGET_SHADOW_THREAT}
                             `}>
-                              <div className="flex items-center gap-1.5" dir="rtl">
+                              <div className="flex items-center gap-1.5">
                                 <span className="font-semibold truncate max-w-[120px]">{target.name}</span>
                               </div>
                             </div>
@@ -1433,7 +1433,7 @@ export const TacticalMap = ({
                         )}
                     </div>
                     </ContextMenuTrigger>
-                    <ContextMenuContent className="min-w-[200px]" dir="rtl">
+                    <ContextMenuContent className="min-w-[200px]">
                       {target.classifiedType !== 'bird' && target.mitigationStatus !== 'mitigated' && (
                         <>
                           <ContextMenuItem onSelect={() => onContextMenuAction?.('mitigate', 'target', target.id)}>
@@ -1598,7 +1598,7 @@ export const TacticalMap = ({
                 )}
               </div>
               </ContextMenuTrigger>
-              <ContextMenuContent className="min-w-[200px]" dir="rtl">
+              <ContextMenuContent className="min-w-[200px]">
                 <ContextMenuLabel>{reg.name}</ContextMenuLabel>
                 <ContextMenuSeparator />
                 <ContextMenuItem onSelect={() => {
@@ -1705,7 +1705,7 @@ export const TacticalMap = ({
                 )}
               </div>
               </ContextMenuTrigger>
-              <ContextMenuContent className="min-w-[200px]" dir="rtl">
+              <ContextMenuContent className="min-w-[200px]">
                 <ContextMenuLabel>{asset.typeLabel} — {asset.id}</ContextMenuLabel>
                 <ContextMenuSeparator />
                 {isCamera && (

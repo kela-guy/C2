@@ -11,7 +11,6 @@ const DEFAULT_FILTERS: FilterState = {
   query: '',
   activityStatus: ['active', 'recently_active'],
   detectedByDeviceIds: [],
-  sortBy: 'priority',
 };
 
 const MOCK_SENSORS = [
@@ -120,7 +119,3 @@ export const ActiveFilters: StoryObj = {
   ),
 };
 
-export const SortByTime: StoryObj = {
-  name: 'Sort by Time',
-  render: () => <FilterBarDemo initialFilters={{ sortBy: 'time' }} />,
-};

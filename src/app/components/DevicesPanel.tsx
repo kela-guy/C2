@@ -315,7 +315,6 @@ function DeviceRow({
         className={`flex items-center justify-center gap-2.5 px-4 py-2.5 text-right transition-[background-color,border-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25 border-b border-white/[0.06] ${
           isExpanded ? 'bg-white/[0.04]' : 'hover:bg-white/[0.04] active:bg-white/[0.06]'
         } ${isCamera ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
-        dir="rtl"
         onMouseEnter={() => onHover(device.id)}
         onMouseLeave={() => onHover(null)}
       >
@@ -334,7 +333,6 @@ function DeviceRow({
                 sideOffset={6}
                 showArrow={false}
                 className="px-2 py-1 text-[10px] text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
-                dir="rtl"
               >
                 {CONNECTION_STATE_LABELS[device.connectionState]}
               </TooltipContent>
@@ -397,7 +395,6 @@ function DeviceRow({
                 sideOffset={6}
                 showArrow={false}
                 className="px-2 py-1 text-[10px] text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
-                dir="rtl"
               >
                 {disabledReason}
               </TooltipContent>
@@ -407,9 +404,9 @@ function DeviceRow({
       </div>
 
       <CollapsibleContent className="overflow-hidden animate-in fade-in-0 duration-200">
-        <div className="flex flex-col bg-white/[0.03]" dir="rtl">
+        <div className="flex flex-col bg-white/[0.03]">
           {isCamera && presets && (
-            <Tabs value={activePreset} onValueChange={setActivePreset} onClick={(e) => e.stopPropagation()} dir="rtl">
+            <Tabs value={activePreset} onValueChange={setActivePreset} onClick={(e) => e.stopPropagation()}>
               <TabsList variant="line" className="px-3" aria-label="מצב מצלמה">
                 {presets.map((preset) => (
                   <TabsTrigger key={preset} value={preset}>
@@ -439,7 +436,7 @@ function DeviceRow({
             ))}
           </div>
 
-          <div className="flex items-center gap-2 px-4 py-2.5 border-t border-white/[0.06]">
+          <div className="flex items-center gap-2 px-2 py-1.5 border-t border-white/[0.06]">
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onFlyTo(device.lat, device.lon); }}
@@ -656,7 +653,7 @@ export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onJamActiv
     >
       <div className="flex flex-col gap-2 px-4 pt-3 pb-2 border-b border-white/10 shrink-0">
         <div className="flex items-center justify-between">
-          <h2 className="text-xs font-medium text-white uppercase tracking-wider" dir="rtl">
+          <h2 className="text-xs font-medium text-white uppercase tracking-wider">
             מכשירים ({ALL_DEVICES.length})
           </h2>
           <button
@@ -668,7 +665,7 @@ export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onJamActiv
           </button>
         </div>
 
-        <div className="relative" dir="rtl">
+        <div className="relative">
           <Search size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
           <input
             type="text"
@@ -715,7 +712,6 @@ export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onJamActiv
                     sideOffset={6}
                     showArrow={false}
                     className="px-2 py-1 text-[10px] text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
-                    dir="rtl"
                   >
                     {TYPE_LABELS[type]} ({count})
                   </TooltipContent>
@@ -738,13 +734,13 @@ export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onJamActiv
 
       <div className="flex-1 overflow-y-auto">
         {grouped.length === 0 ? (
-          <div className="px-3 py-8 text-center text-[12px] text-zinc-600" dir="rtl">
+          <div className="px-3 py-8 text-center text-[12px] text-zinc-600">
             אין מכשירים תואמים
           </div>
         ) : (
           grouped.map(group => (
             <div key={group.type}>
-              <div className="px-4 py-1.5 text-xs font-normal uppercase tracking-wider text-white border-b border-white/5 bg-white/5" dir="rtl">
+              <div className="px-4 py-1.5 text-xs font-normal uppercase tracking-wider text-white border-b border-white/5 bg-white/5">
                 {group.label} ({group.devices.length})
               </div>
               {group.devices.map(device => (

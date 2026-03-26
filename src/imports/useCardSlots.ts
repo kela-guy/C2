@@ -300,7 +300,7 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
         id: 'bda-camera',
         label: 'בטל מצלמה',
         icon: EyeOff,
-        variant: 'ghost' as const,
+        variant: 'fill' as const,
         size: 'sm' as const,
         group: 'investigation' as const,
         onClick: (e: React.MouseEvent) => { e.stopPropagation(); callbacks.onBdaCamera?.(); },
@@ -423,32 +423,20 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
     const cameraPointing = !!ctx.isCameraPointing;
     const cameraActive = !!ctx.isCameraActive;
 
-    if (cameraPointing) {
-      actions.push({
-        id: 'point-camera-pointing', label: 'מפנה מצלמה...', icon: Eye, variant: 'ghost', size: 'sm',
-        group: 'investigation',
-        loading: true,
-        onClick: (e) => e.stopPropagation(),
-      });
-    } else if (cameraActive) {
-      const CameraLockedIcon = () => React.createElement('span', {
-        className: 'inline-block size-2.5 rounded-full bg-emerald-400 animate-subtle-pulse',
-        'aria-hidden': true,
-      });
-      actions.push({
-        id: 'point-camera-locked', label: 'מצלמה נעולה על היעד', icon: CameraLockedIcon, variant: 'ghost', size: 'sm',
-        group: 'investigation',
-        onClick: (e) => { e.stopPropagation(); callbacks.onVerify?.('investigate'); },
-        className: 'shadow-[0_0_0_1px_rgba(34,197,94,0.4)] text-emerald-400',
-      });
-    } else {
-      actions.push({
-        id: 'point-camera', label: 'הפנה מצלמה', icon: Eye, variant: 'fill', size: 'sm',
-        group: 'investigation',
-        onClick: (e) => { e.stopPropagation(); callbacks.onVerify?.('investigate'); },
-        disabled: target.entityStage !== 'classified',
-      });
-    }
+    const CameraLockedIcon = (props: React.SVGProps<SVGSVGElement>) =>
+      React.createElement(Check, { ...props, className: `${props.className ?? ''} text-emerald-400` });
+
+    actions.push({
+      id: 'point-camera',
+      label: cameraPointing ? 'מפנה מצלמה...' : cameraActive ? 'מצלמה נעולה על היעד' : 'הפנה מצלמה',
+      icon: cameraActive ? CameraLockedIcon : Eye,
+      variant: cameraPointing || cameraActive ? 'ghost' : 'fill',
+      size: 'sm',
+      group: 'investigation',
+      loading: cameraPointing,
+      onClick: (e) => { e.stopPropagation(); if (!cameraActive) callbacks.onVerify?.('investigate'); },
+      className: cameraActive ? 'text-white cursor-default' : '',
+    });
 
     actions.push({
       id: 'dismiss-target', label: 'ביטול', icon: X, variant: 'ghost', size: 'sm',

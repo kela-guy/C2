@@ -79,17 +79,6 @@ Real labels used in app:
 | `dismissed` | נדחה | `gray` |
 | `mitigated` | טופל | `green` |
 
-### MissionPhaseChip
-
-Import: `import { MissionPhaseChip } from '@/primitives'`
-Styleguide: `/styleguide#mission-phase`
-
-Animated phase indicator with pulse dot for active states.
-
-| Prop | Type | Description |
-|---|---|---|
-| `phase` | `'planning' \| 'active' \| 'paused' \| 'override' \| 'completed'` | Current mission phase |
-
 ### NewUpdatesPill
 
 Import: `import { NewUpdatesPill } from '@/primitives'`
@@ -163,7 +152,7 @@ Styleguide: `/styleguide#card-header`
 | `icon` | `React.ElementType` | — | Threat type icon |
 | `iconColor` | `string` | — | Icon color override |
 | `iconBgActive` | `boolean` | `false` | Use active (red) background |
-| `status` | `ReactNode` | — | StatusChip or MissionPhaseChip |
+| `status` | `ReactNode` | — | StatusChip or similar |
 | `badge` | `ReactNode` | — | Confidence badge or similar |
 | `quickAction` | `ReactNode` | — | Action visible when card is collapsed |
 | `open` | `boolean` | — | Controls chevron rotation |

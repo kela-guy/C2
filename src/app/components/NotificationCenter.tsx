@@ -232,7 +232,6 @@ export const NotificationCenter = ({ trigger: customTrigger }: NotificationCente
 
         <SheetContent
           side="right"
-          dir="rtl"
           className="w-[380px] sm:max-w-[380px] p-0 gap-0 bg-zinc-950 border-border font-sans"
         >
           <SheetHeader className="px-4 py-3 pr-10 border-b border-border flex-row justify-between items-center space-y-0">

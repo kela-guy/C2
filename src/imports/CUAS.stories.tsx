@@ -11,7 +11,6 @@ import {
   CardMedia,
   CardClosure,
   StatusChip,
-  MissionPhaseChip,
   AccordionSection,
   TelemetryRow,
 } from '@/primitives';
@@ -140,7 +139,6 @@ function InteractiveCuasFlow() {
   const ctx: CardContext = { regulusEffectors: effectors };
 
   const slots = useCardSlots(target, callbacks, ctx);
-  const isMission = target.flowType === 4;
   const isSuccess = target.status === 'event_resolved' || target.status === 'event_neutralized';
   const isExpired = target.status === 'expired';
   const showDetails = !isSuccess && !isExpired && target.flowType !== 4;
@@ -163,11 +161,7 @@ function InteractiveCuasFlow() {
         header={
           <CardHeader
             {...slots.header}
-            status={
-              isMission && target.plannedMission
-                ? <MissionPhaseChip phase={target.plannedMission.phase} />
-                : buildStatusChip(target)
-            }
+            status={buildStatusChip(target)}
             open
           />
         }

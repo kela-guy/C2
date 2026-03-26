@@ -11,7 +11,6 @@ import {
   CardLog,
   CardClosure,
   StatusChip,
-  MissionPhaseChip,
   FilterBar,
   NewUpdatesPill,
   AccordionSection,
@@ -223,7 +222,6 @@ function UnifiedCard({
   thinMode?: boolean;
 }) {
   const slots = useCardSlots(target, callbacks, ctx);
-  const isMission = target.flowType === 4;
   const isSuccess = target.status === 'event_resolved' || target.status === 'event_neutralized';
   const isExpired = target.status === 'expired';
   const showDetails = !isSuccess && !isExpired && target.flowType !== 4;
@@ -239,17 +237,13 @@ function UnifiedCard({
       header={
         <CardHeader
           {...slots.header}
-          status={
-            isMission && target.plannedMission
-              ? <MissionPhaseChip phase={target.plannedMission.phase} />
-              : buildStatusChip(target)
-          }
+          status={buildStatusChip(target)}
           open={isOpen}
         />
       }
     >
       {slots.closureType && (
-        <div className="px-2 pt-1.5 flex items-center gap-1" dir="rtl">
+        <div className="px-2 pt-1.5 flex items-center gap-1">
           {slots.closureType === 'manual' ? (
             <div className="flex items-center gap-1 text-[9px] text-zinc-500">
               <Hand size={10} className="text-zinc-500" aria-hidden="true" />
@@ -699,7 +693,7 @@ export default function ListOfSystems({
     <div className={`w-full flex flex-col ${className}`}>
       <div className="sticky top-0 z-10 bg-[#141414]">
         {/* Tab bar */}
-        <div data-tour="detection-tabs" className="flex border-b border-white/10 px-1" dir="rtl" role="tablist">
+        <div data-tour="detection-tabs" className="flex border-b border-white/10 px-1" role="tablist">
           <button
             id="tab-active"
             onClick={() => setActiveTab('active')}

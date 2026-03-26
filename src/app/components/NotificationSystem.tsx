@@ -67,7 +67,6 @@ const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.dispatchEvent(new CustomEvent('toast-clicked', { detail: data })); } }}
         role="button"
         tabIndex={0}
-        dir="rtl"
       >
         <div className="py-3 px-3 flex gap-3">
           <div className="flex-1 min-w-0">
@@ -91,7 +90,6 @@ const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
   return (
     <div
       className="relative w-[356px] rounded-lg bg-[#1c1c20] overflow-hidden"
-      dir="rtl"
     >
       <div className="py-3 px-3">
         <div className="flex items-center justify-between">

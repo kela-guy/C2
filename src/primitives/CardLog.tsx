@@ -40,7 +40,7 @@ export function CardLog({
       icon={History}
       className={className}
     >
-      <div className="flex flex-col py-2 px-1" dir="rtl">
+      <div className="flex flex-col py-2 px-1">
         <div className="flex flex-col justify-center items-start">
           {visible.map((entry, idx) => (
             <div key={idx} className="flex items-center justify-center gap-2.5 mb-2 relative w-full">

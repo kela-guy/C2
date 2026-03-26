@@ -57,7 +57,7 @@ export function CardTimeline({ steps, compact, className = '' }: CardTimelinePro
   }
 
   return (
-    <div className={`flex flex-col gap-1.5 py-2 ${className}`} dir="rtl">
+    <div className={`flex flex-col gap-1.5 py-2 ${className}`}>
       {steps.map((step, idx) => (
         <div
           key={idx}

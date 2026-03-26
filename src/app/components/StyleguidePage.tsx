@@ -1,14 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Eye, Radio, ShieldAlert, Zap, Crosshair, Ban, AlertTriangle,
   Trash2, Send, Compass, Gauge, Navigation, MapPin, CheckCircle2,
-  Bird, Activity, History, Radar, Hand,
+  Bird, Activity, History, Radar, Hand, Copy, Check,
 } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { TooltipProvider } from '@/app/components/ui/tooltip';
 import {
   CARD_TOKENS, ELEVATION, SURFACE, surfaceAt,
   StatusChip, ActionButton, AccordionSection, TelemetryRow,
-  MissionPhaseChip, TargetCard, CardHeader, CardActions,
+  TargetCard, CardHeader, CardActions,
   CardDetails, CardSensors, CardMedia, CardLog, CardClosure,
   FilterBar, NewUpdatesPill,
   type CardAction, type CardSensor,
@@ -21,8 +22,25 @@ import {
 } from '@/app/components/TacticalMap';
 import { useCardSlots, type CardCallbacks, type CardContext } from '@/imports/useCardSlots';
 import { cuas_classified, cuas_mitigating, cuas_bda_complete } from '@/test-utils/mockDetections';
-import type { MissionPhaseType, Detection, RegulusEffector } from '@/imports/ListOfSystems';
+import type { Detection, RegulusEffector } from '@/imports/ListOfSystems';
 import { getActivityStatus } from '@/imports/useActivityStatus';
+
+import statusChipSrc from '@/primitives/StatusChip.tsx?raw';
+import actionButtonSrc from '@/primitives/ActionButton.tsx?raw';
+import splitActionButtonSrc from '@/primitives/SplitActionButton.tsx?raw';
+import accordionSectionSrc from '@/primitives/AccordionSection.tsx?raw';
+import telemetryRowSrc from '@/primitives/TelemetryRow.tsx?raw';
+import targetCardSrc from '@/primitives/TargetCard.tsx?raw';
+import cardHeaderSrc from '@/primitives/CardHeader.tsx?raw';
+import cardActionsSrc from '@/primitives/CardActions.tsx?raw';
+import cardDetailsSrc from '@/primitives/CardDetails.tsx?raw';
+import cardSensorsSrc from '@/primitives/CardSensors.tsx?raw';
+import cardMediaSrc from '@/primitives/CardMedia.tsx?raw';
+import cardLogSrc from '@/primitives/CardLog.tsx?raw';
+import cardClosureSrc from '@/primitives/CardClosure.tsx?raw';
+import filterBarSrc from '@/primitives/FilterBar.tsx?raw';
+import newUpdatesPillSrc from '@/primitives/NewUpdatesPill.tsx?raw';
+import tacticalMapSrc from '@/app/components/TacticalMap.tsx?raw';
 
 // ─── Sidebar nav structure ───────────────────────────────────────────────────
 
@@ -37,7 +55,6 @@ const NAV: NavGroup[] = [
     label: 'Indicators',
     items: [
       { id: 'status-chip', label: 'StatusChip' },
-      { id: 'mission-phase', label: 'MissionPhaseChip' },
       { id: 'new-updates', label: 'NewUpdatesPill' },
     ],
   },
@@ -174,6 +191,352 @@ function PropsTable({ items }: { items: PropDef[] }) {
   );
 }
 
+// ─── Syntax highlighting ──────────────────────────────────────────────────────
+
+type Highlighter = Awaited<ReturnType<typeof import('shiki')['createHighlighter']>>;
+
+let highlighterPromise: Promise<Highlighter> | null = null;
+
+function getHighlighter() {
+  if (!highlighterPromise) {
+    highlighterPromise = import('shiki').then(({ createHighlighter }) =>
+      createHighlighter({ themes: ['vitesse-dark'], langs: ['tsx'] }),
+    );
+  }
+  return highlighterPromise;
+}
+
+function HighlightedCode({ code }: { code: string }) {
+  const [html, setHtml] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getHighlighter().then((highlighter) => {
+      if (cancelled) return;
+      setHtml(
+        highlighter.codeToHtml(code, {
+          lang: 'tsx',
+          theme: 'vitesse-dark',
+        }),
+      );
+    });
+    return () => { cancelled = true; };
+  }, [code]);
+
+  if (!html) {
+    return (
+      <pre className="text-[12px] leading-[1.7] font-mono text-zinc-300 whitespace-pre" dir="ltr">
+        {code}
+      </pre>
+    );
+  }
+
+  return (
+    <div
+      className="[&_pre]:!bg-transparent [&_pre]:text-[12px] [&_pre]:leading-[1.7] [&_pre]:font-mono [&_code]:font-mono"
+      dir="ltr"
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
+}
+
+// ─── Tailwind class extraction ────────────────────────────────────────────────
+
+const TW_CATEGORIES: [string, RegExp][] = [
+  ['Layout',      /^(flex|grid|block|inline|hidden|relative|absolute|sticky|fixed|overflow|z-|order-|col-|row-|place-|justify-|items-|self-|content-|float-|clear-|isolat|object-|box-|display|table|aspect-|columns-)/],
+  ['Sizing',      /^(w-|h-|min-w-|min-h-|max-w-|max-h-|size-)/],
+  ['Spacing',     /^(p-|px-|py-|pt-|pr-|pb-|pl-|m-|mx-|my-|mt-|mr-|mb-|ml-|gap-|space-|-m)/],
+  ['Typography',  /^(text-\[?\d|text-xs|text-sm|text-base|text-lg|text-xl|text-2xl|text-3xl|font-|leading-|tracking-|whitespace-|break-|truncat|uppercase|lowercase|capitalize|italic|not-italic|underline|overline|line-through|no-underline|tabular-nums|oldstyle-nums|lining-nums|proportional-nums|slashed-zero|ordinal|diagonal)/],
+  ['Colors',      /^(text-(?!xs|sm|base|lg|xl|2xl|3xl|\[?\d)|bg-|from-|via-|to-|border-(?!0|2|4|8|\[)|outline-(?!none|offset)|ring-(?!0|1|2|4|8|\[)|accent-|caret-|fill-|stroke-|decoration-|shadow-\[|placeholder-)/],
+  ['Borders',     /^(border|rounded|outline|ring-(?:0|1|2|4|8|\[)|divide|border-(?:0|2|4|8|\[))/],
+  ['Effects',     /^(shadow(?!-\[)|opacity-|mix-blend-|backdrop-|blur|brightness|contrast|grayscale|hue-rotate|invert|saturate|sepia|drop-shadow|animate-|will-change)/],
+  ['Transitions', /^(transition|duration-|ease-|delay-)/],
+  ['Transforms',  /^(transform|scale-|rotate-|translate-|skew-|origin-)/],
+  ['Interactivity', /^(cursor-|pointer-events-|resize|select-|scroll-|snap-|touch-|appearance-)/],
+];
+
+function extractTailwindClasses(source: string): { category: string; classes: string[] }[] {
+  const classStrings: string[] = [];
+
+  const patterns = [
+    /className="([^"]+)"/g,
+    /className=\{`([^`]+)`\}/g,
+    /className=\{cn\(([^)]+)\)\}/g,
+    /'([^']+)'/g,
+  ];
+
+  for (const pattern of patterns) {
+    let match;
+    while ((match = pattern.exec(source)) !== null) {
+      classStrings.push(match[1]);
+    }
+  }
+
+  const allClasses = new Set<string>();
+  for (const str of classStrings) {
+    for (const token of str.split(/\s+/)) {
+      const cleaned = token.replace(/^['",]+|['",]+$/g, '').trim();
+      if (cleaned && /^[a-z!-]/.test(cleaned) && !cleaned.includes('(') && !cleaned.includes('{')) {
+        allClasses.add(cleaned);
+      }
+    }
+  }
+
+  const categorized = new Map<string, Set<string>>();
+  const used = new Set<string>();
+
+  for (const cls of allClasses) {
+    const base = cls.replace(/^(hover:|focus:|active:|focus-visible:|focus-within:|disabled:|group-hover:|peer-|dark:|sm:|md:|lg:|xl:|2xl:)+/, '');
+    for (const [category, regex] of TW_CATEGORIES) {
+      if (regex.test(base)) {
+        if (!categorized.has(category)) categorized.set(category, new Set());
+        categorized.get(category)!.add(cls);
+        used.add(cls);
+        break;
+      }
+    }
+  }
+
+  const uncategorized = [...allClasses].filter((c) => !used.has(c));
+  if (uncategorized.length > 0) {
+    categorized.set('Other', new Set(uncategorized));
+  }
+
+  return [...categorized.entries()].map(([category, classes]) => ({
+    category,
+    classes: [...classes].sort(),
+  }));
+}
+
+function TailwindClassesPanel({ code }: { code: string }) {
+  const groups = useMemo(() => extractTailwindClasses(code), [code]);
+
+  if (groups.length === 0) {
+    return <p className="text-[12px] text-zinc-500 p-4">No Tailwind classes found.</p>;
+  }
+
+  return (
+    <div className="space-y-4" dir="ltr">
+      {groups.map(({ category, classes }) => (
+        <div key={category}>
+          <span className="block text-[10px] font-semibold uppercase tracking-widest text-zinc-500 mb-1.5">
+            {category}
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {classes.map((cls) => (
+              <code
+                key={cls}
+                className="inline-block px-1.5 py-0.5 rounded bg-white/[0.06] text-[11px] font-mono text-zinc-300 whitespace-nowrap"
+              >
+                {cls}
+              </code>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── LLM markdown generation ──────────────────────────────────────────────────
+
+function extractPropsInterface(source: string): string | null {
+  const fnMatch = source.match(/export\s+function\s+\w+\(\{[^}]*\}:\s*\{([\s\S]*?)\}\s*\)/);
+  if (fnMatch) return fnMatch[1].trim();
+
+  const interfaceMatch = source.match(/(?:export\s+)?interface\s+\w+Props\s*\{([\s\S]*?)\}/);
+  if (interfaceMatch) return interfaceMatch[1].trim();
+
+  const typeMatch = source.match(/(?:export\s+)?type\s+\w+Props\s*=\s*\{([\s\S]*?)\}/);
+  if (typeMatch) return typeMatch[1].trim();
+
+  return null;
+}
+
+function extractDependencies(source: string): { external: string[]; internal: string[] } {
+  const external: string[] = [];
+  const internal: string[] = [];
+  const importRegex = /^import\s+.*?from\s+['"]([^'"]+)['"]/gm;
+  let match;
+  while ((match = importRegex.exec(source)) !== null) {
+    const line = match[0];
+    const path = match[1];
+    if (path.startsWith('.') || path.startsWith('@/')) {
+      internal.push(line);
+    } else {
+      external.push(line);
+    }
+  }
+  return { external, internal };
+}
+
+function generateComponentMarkdown(name: string, description: string, source: string): string {
+  const lines: string[] = [];
+
+  lines.push(`# ${name}\n`);
+  lines.push(`> ${description}\n`);
+
+  const props = extractPropsInterface(source);
+  if (props) {
+    lines.push(`## Props Interface\n`);
+    lines.push('```typescript');
+    lines.push(props);
+    lines.push('```\n');
+  }
+
+  lines.push(`## Source Code\n`);
+  lines.push('```tsx');
+  lines.push(source.trim());
+  lines.push('```\n');
+
+  const twGroups = extractTailwindClasses(source);
+  if (twGroups.length > 0) {
+    lines.push(`## Tailwind Classes\n`);
+    for (const { category, classes } of twGroups) {
+      lines.push(`- **${category}**: \`${classes.join('`, `')}\``);
+    }
+    lines.push('');
+  }
+
+  const deps = extractDependencies(source);
+  if (deps.external.length > 0 || deps.internal.length > 0) {
+    lines.push(`## Dependencies\n`);
+    if (deps.external.length > 0) {
+      lines.push('**External:**');
+      for (const d of deps.external) lines.push(`- \`${d}\``);
+      lines.push('');
+    }
+    if (deps.internal.length > 0) {
+      lines.push('**Internal:**');
+      for (const d of deps.internal) lines.push(`- \`${d}\``);
+      lines.push('');
+    }
+  }
+
+  return lines.join('\n');
+}
+
+// ─── Animated copy button ─────────────────────────────────────────────────────
+
+function CopyIconButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [text]);
+
+  const iconTransition = prefersReducedMotion
+    ? { duration: 0 }
+    : { duration: 0.15, ease: [0, 0, 0.2, 1] };
+
+  return (
+    <button
+      onClick={handleCopy}
+      aria-label={copied ? 'Copied' : 'Copy component as markdown'}
+      className="flex items-center gap-1.5 h-7 px-2.5 rounded-[10px_4px_4px_4px] cursor-pointer text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.06] active:scale-[0.96] transition-[color,background-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/30"
+    >
+      <AnimatePresence mode="wait" initial={false}>
+        {copied ? (
+          <motion.span
+            key="check"
+            className="flex items-center gap-1.5"
+            initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={prefersReducedMotion ? undefined : { opacity: 0, scale: 0.9 }}
+            transition={iconTransition}
+          >
+            <Check size={13} className="text-emerald-400" />
+            <span className="text-[11px] font-medium text-emerald-400">Copied</span>
+          </motion.span>
+        ) : (
+          <motion.span
+            key="copy"
+            className="flex items-center gap-1.5"
+            initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={prefersReducedMotion ? undefined : { opacity: 0, scale: 0.9 }}
+            transition={iconTransition}
+          >
+            <Copy size={13} />
+            <span className="text-[11px] font-medium">Copy .md</span>
+          </motion.span>
+        )}
+      </AnimatePresence>
+    </button>
+  );
+}
+
+// ─── Code preview with tabs ───────────────────────────────────────────────────
+
+type CodeTab = 'preview' | 'source' | 'tailwind';
+
+function CodePreviewBlock({
+  name,
+  description,
+  code,
+  children,
+  tight = false,
+}: {
+  name: string;
+  description: string;
+  code: string;
+  children: React.ReactNode;
+  tight?: boolean;
+}) {
+  const [tab, setTab] = useState<CodeTab>('preview');
+
+  const tabs: { id: CodeTab; label: string }[] = [
+    { id: 'preview', label: 'Preview' },
+    { id: 'source', label: 'Source' },
+    { id: 'tailwind', label: 'Tailwind' },
+  ];
+
+  const markdown = useMemo(
+    () => generateComponentMarkdown(name, description, code),
+    [name, description, code],
+  );
+
+  return (
+    <div className="rounded-xl shadow-[0_0_0_1px_rgba(255,255,255,0.06)] overflow-hidden" style={{ backgroundColor: SURFACE.level0 }}>
+      <div className="flex items-center border-b border-white/[0.06]">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`px-4 py-2.5 text-[12px] font-medium cursor-pointer transition-[color,border-color] duration-150 ease-out active:scale-[0.97] ${
+              tab === t.id
+                ? 'text-zinc-100 border-b border-zinc-100'
+                : 'text-zinc-500 hover:text-zinc-300 border-b border-transparent'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+        <div className="ml-auto w-full flex flex-col justify-center items-end pl-1.5">
+          <CopyIconButton text={markdown} />
+        </div>
+      </div>
+      {tab === 'preview' && (
+        <div className={tight ? 'p-3' : 'p-6'}>{children}</div>
+      )}
+      {tab === 'source' && (
+        <div className="p-4 overflow-x-auto max-h-[600px] overflow-y-auto">
+          <HighlightedCode code={code} />
+        </div>
+      )}
+      {tab === 'tailwind' && (
+        <div className="p-4 overflow-y-auto max-h-[600px]">
+          <TailwindClassesPanel code={code} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ColorSwatch({ color, label }: { color: string; label: string }) {
   return (
     <div className="flex flex-col items-center gap-1.5">
@@ -225,7 +588,6 @@ function StyleguideUnifiedCard({ detection, defaultOpen = true }: { detection: D
   const [open, setOpen] = useState(defaultOpen);
   const ctx: CardContext = { regulusEffectors: styleguideEffectors };
   const slots = useCardSlots(detection, noopCallbacks, ctx);
-  const isMission = detection.flowType === 4;
   const isSuccess = detection.status === 'event_resolved' || detection.status === 'event_neutralized';
   const isExpired = detection.status === 'expired';
   const showDetails = !isSuccess && !isExpired && detection.flowType !== 4;
@@ -239,17 +601,13 @@ function StyleguideUnifiedCard({ detection, defaultOpen = true }: { detection: D
       header={
         <CardHeader
           {...slots.header}
-          status={
-            isMission && detection.plannedMission
-              ? <MissionPhaseChip phase={detection.plannedMission.phase} />
-              : styleguideStatusChip(detection)
-          }
+          status={styleguideStatusChip(detection)}
           open={open}
         />
       }
     >
       {slots.closureType && (
-        <div className="px-2 pt-1.5 flex items-center gap-1" dir="rtl">
+        <div className="px-2 pt-1.5 flex items-center gap-1">
           {slots.closureType === 'manual' ? (
             <div className="flex items-center gap-1 text-[9px] text-zinc-500">
               <Hand size={10} className="text-zinc-500" aria-hidden="true" />
@@ -349,7 +707,6 @@ export default function StyleguidePage() {
 
   const [filterState, setFilterState] = useState({
     query: '',
-    sortBy: 'priority' as 'priority' | 'time',
     activityStatus: [] as string[],
     detectedByDeviceIds: [] as string[],
   });
@@ -362,7 +719,7 @@ export default function StyleguidePage() {
 
   return (
     <TooltipProvider>
-      <div className="flex min-h-screen bg-[#0a0a0b] text-white font-sans" dir="rtl">
+      <div className="flex min-h-screen bg-[#0a0a0b] text-white font-sans">
 
         {/* ── Sidebar ── */}
         <nav className="sticky top-0 h-screen w-52 shrink-0 overflow-y-auto border-l border-white/[0.04] bg-[#0f0f10] py-6 px-4">
@@ -431,7 +788,7 @@ export default function StyleguidePage() {
             {/* ────────────────────────────────────────────────────────────── */}
 
             <ComponentSection id="status-chip" name="StatusChip" description="Compact colored badge indicating operational status of a target or system.">
-              <PreviewPanel>
+              <CodePreviewBlock name="StatusChip" description="Compact colored badge indicating operational status of a target or system." code={statusChipSrc}>
                 <div className="flex flex-wrap items-center gap-3">
                   <StatusChip label="פעיל" color="green" />
                   <StatusChip label="פעיל לאחרונה" color="orange" />
@@ -439,7 +796,7 @@ export default function StyleguidePage() {
                   <StatusChip label="נדחה" color="gray" />
                   <StatusChip label="טופל" color="green" />
                 </div>
-              </PreviewPanel>
+              </CodePreviewBlock>
               <PropsTable items={[
                 { name: 'label', type: 'string', description: 'Display text' },
                 { name: 'color', type: '"green" | "gray" | "red" | "orange"', default: '"green"', description: 'Semantic color variant' },
@@ -447,28 +804,15 @@ export default function StyleguidePage() {
               ]} />
             </ComponentSection>
 
-            <ComponentSection id="mission-phase" name="MissionPhaseChip" description="Indicates mission lifecycle phase with animated pulse dot for active states.">
-              <PreviewPanel>
-                <div className="flex flex-wrap items-center gap-3">
-                  {(['planning', 'active', 'paused', 'override', 'completed'] as MissionPhaseType[]).map((phase) => (
-                    <MissionPhaseChip key={phase} phase={phase} />
-                  ))}
-                </div>
-              </PreviewPanel>
-              <PropsTable items={[
-                { name: 'phase', type: '"planning" | "active" | "paused" | "override" | "completed"', description: 'Current mission phase' },
-              ]} />
-            </ComponentSection>
-
             <ComponentSection id="new-updates" name="NewUpdatesPill" description="Floating pill that appears above the list to surface new incoming detections.">
-              <PreviewPanel>
+              <CodePreviewBlock name="NewUpdatesPill" description="Floating pill that appears above the list to surface new incoming detections." code={newUpdatesPillSrc}>
                 <div className="flex flex-wrap items-center gap-4">
                   <NewUpdatesPill count={1} onClick={noop} />
                   <NewUpdatesPill count={5} onClick={noop} />
                   <NewUpdatesPill count={42} onClick={noop} />
                   <NewUpdatesPill count={147} onClick={noop} />
                 </div>
-              </PreviewPanel>
+              </CodePreviewBlock>
               <PropsTable items={[
                 { name: 'count', type: 'number', description: 'Number of new updates to display' },
                 { name: 'onClick', type: '() => void', description: 'Scroll-to-top handler' },
@@ -480,14 +824,14 @@ export default function StyleguidePage() {
             {/* ────────────────────────────────────────────────────────────── */}
 
             <ComponentSection id="action-button" name="ActionButton" description="Tactical action trigger with variant, size, icon, and loading states. Used in card action rows and standalone controls.">
-              <PreviewPanel>
+              <CodePreviewBlock name="ActionButton" description="Tactical action trigger with variant, size, icon, and loading states. Used in card action rows and standalone controls." code={actionButtonSrc}>
                 <div className="flex flex-wrap items-center gap-2">
                   <ActionButton label="הפנה מצלמה" icon={Eye} variant="fill" size="md" />
                   <ActionButton label="ביטול" icon={Ban} variant="ghost" size="md" />
                   <ActionButton label="מחק" icon={Trash2} variant="danger" size="md" />
                   <ActionButton label="אזהרה" icon={AlertTriangle} variant="warning" size="md" />
                 </div>
-              </PreviewPanel>
+              </CodePreviewBlock>
 
               <PropsTable items={[
                 { name: 'label', type: 'string', description: 'Button text' },
@@ -548,7 +892,7 @@ export default function StyleguidePage() {
             </ComponentSection>
 
             <ComponentSection id="split-action" name="SplitActionButton" description="Two-segment button: primary action on the left, dropdown menu on the right. Used for effector controls with sub-options.">
-              <PreviewPanel>
+              <CodePreviewBlock name="SplitActionButton" description="Two-segment button: primary action on the left, dropdown menu on the right. Used for effector controls with sub-options." code={splitActionButtonSrc}>
                 <div className="flex flex-wrap items-center gap-3">
                   <div className="w-48">
                     <SplitActionButton label="שיגור" icon={Zap} variant="fill" size="sm" onClick={noop} dropdownItems={[
@@ -567,7 +911,7 @@ export default function StyleguidePage() {
                     ]} />
                   </div>
                 </div>
-              </PreviewPanel>
+              </CodePreviewBlock>
 
               <PropsTable items={[
                 { name: 'label', type: 'string', description: 'Primary button text' },
@@ -612,7 +956,7 @@ export default function StyleguidePage() {
             {/* ────────────────────────────────────────────────────────────── */}
 
             <ComponentSection id="card-header" name="CardHeader" description="Top row of a TargetCard — icon, title, subtitle, status chip, badge, and chevron.">
-              <PreviewPanel tight>
+              <CodePreviewBlock name="CardHeader" description="Top row of a TargetCard — icon, title, subtitle, status chip, badge, and chevron." tight code={cardHeaderSrc}>
                 <div className="rounded-lg p-2" style={{ backgroundColor: SURFACE.level1 }}>
                   <CardHeader
                     icon={ShieldAlert}
@@ -621,11 +965,10 @@ export default function StyleguidePage() {
                     title="רחפן DJI Mavic 3"
                     subtitle="TGT-0042"
                     status={<StatusChip label="פעיל" color="red" />}
-                    badge={<MissionPhaseChip phase="active" />}
                     open={false}
                   />
                 </div>
-              </PreviewPanel>
+              </CodePreviewBlock>
 
               <PropsTable items={[
                 { name: 'title', type: 'string', description: 'Target display name' },
@@ -634,7 +977,7 @@ export default function StyleguidePage() {
                 { name: 'iconColor', type: 'string', description: 'Icon color override' },
                 { name: 'iconBgActive', type: 'boolean', default: 'false', description: 'Use active (red) icon background' },
                 { name: 'status', type: 'ReactNode', description: 'StatusChip or similar' },
-                { name: 'badge', type: 'ReactNode', description: 'MissionPhaseChip or similar' },
+                { name: 'badge', type: 'ReactNode', description: 'Optional badge element' },
                 { name: 'open', type: 'boolean', description: 'Controls chevron rotation' },
               ]} />
 
@@ -652,11 +995,11 @@ export default function StyleguidePage() {
             </ComponentSection>
 
             <ComponentSection id="card-details" name="CardDetails" description="Collapsible telemetry accordion displaying key target metrics with a copy-all button.">
-              <PreviewPanel tight>
+              <CodePreviewBlock name="CardDetails" description="Collapsible telemetry accordion displaying key target metrics with a copy-all button." tight code={cardDetailsSrc}>
                 <div className="max-w-sm rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level1 }}>
                   <CardDetails rows={sampleDetailRows} defaultOpen />
                 </div>
-              </PreviewPanel>
+              </CodePreviewBlock>
 
               <PropsTable items={[
                 { name: 'rows', type: 'DetailRow[]', description: 'Array of { label, value, icon }' },
@@ -665,11 +1008,11 @@ export default function StyleguidePage() {
             </ComponentSection>
 
             <ComponentSection id="card-sensors" name="CardSensors" description="Lists detecting sensors for a target with type, distance, and timestamp. Supports read-only and interactive modes.">
-              <PreviewPanel tight>
+              <CodePreviewBlock name="CardSensors" description="Lists detecting sensors for a target with type, distance, and timestamp. Supports read-only and interactive modes." tight code={cardSensorsSrc}>
                 <div className="max-w-sm rounded-lg overflow-hidden p-1" style={{ backgroundColor: SURFACE.level1 }}>
                   <CardSensors sensors={sampleSensors} />
                 </div>
-              </PreviewPanel>
+              </CodePreviewBlock>
 
               <PropsTable items={[
                 { name: 'sensors', type: 'CardSensor[]', description: 'Array of sensor entries' },
@@ -685,7 +1028,7 @@ export default function StyleguidePage() {
             </ComponentSection>
 
             <ComponentSection id="card-media" name="CardMedia" description="Image or video slot for target surveillance feed. Supports live badge, playback controls, and lightbox expansion.">
-              <PreviewPanel>
+              <CodePreviewBlock name="CardMedia" description="Image or video slot for target surveillance feed. Supports live badge, playback controls, and lightbox expansion." code={cardMediaSrc}>
                 <div className="flex flex-wrap gap-4">
                   <div className="w-64 rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level0 }}>
                     <CardMedia
@@ -704,7 +1047,7 @@ export default function StyleguidePage() {
                     />
                   </div>
                 </div>
-              </PreviewPanel>
+              </CodePreviewBlock>
 
               <PropsTable items={[
                 { name: 'src', type: 'string', description: 'Image or video URL' },
@@ -716,11 +1059,11 @@ export default function StyleguidePage() {
             </ComponentSection>
 
             <ComponentSection id="card-log" name="CardLog" description="Chronological event log accordion with newest-first ordering and expand-all.">
-              <PreviewPanel tight>
+              <CodePreviewBlock name="CardLog" description="Chronological event log accordion with newest-first ordering and expand-all." tight code={cardLogSrc}>
                 <div className="max-w-sm rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level1 }}>
                   <CardLog entries={sampleLogEntries} maxVisible={4} defaultOpen />
                 </div>
-              </PreviewPanel>
+              </CodePreviewBlock>
 
               <PropsTable items={[
                 { name: 'entries', type: 'LogEntry[]', description: 'Array of { time, label }' },
@@ -730,11 +1073,11 @@ export default function StyleguidePage() {
             </ComponentSection>
 
             <ComponentSection id="card-closure" name="CardClosure" description="Outcome selection grid for closing a detection event. Operator picks the resolution reason.">
-              <PreviewPanel tight>
+              <CodePreviewBlock name="CardClosure" description="Outcome selection grid for closing a detection event. Operator picks the resolution reason." tight code={cardClosureSrc}>
                 <div className="max-w-sm rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level1 }}>
                   <CardClosure outcomes={sampleClosureOutcomes} onSelect={(id) => console.log('closure:', id)} />
                 </div>
-              </PreviewPanel>
+              </CodePreviewBlock>
 
               <PropsTable items={[
                 { name: 'outcomes', type: 'ClosureOutcome[]', description: 'Array of { id, label, icon }' },
@@ -744,11 +1087,11 @@ export default function StyleguidePage() {
             </ComponentSection>
 
             <ComponentSection id="card-actions" name="CardActions" description="Action bar for TargetCard. Supports grouped effector/investigation layout, flat grid, and confirm dialogs with double-confirm.">
-              <PreviewPanel tight>
+              <CodePreviewBlock name="CardActions" description="Action bar for TargetCard. Supports grouped effector/investigation layout, flat grid, and confirm dialogs with double-confirm." tight code={cardActionsSrc}>
                 <div className="max-w-sm rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level1 }}>
                   <CardActions actions={sampleActions} />
                 </div>
-              </PreviewPanel>
+              </CodePreviewBlock>
 
               <PropsTable items={[
                 { name: 'actions', type: 'CardAction[]', description: 'Action definitions with group, variant, confirm' },
@@ -784,11 +1127,11 @@ export default function StyleguidePage() {
             {/* ────────────────────────────────────────────────────────────── */}
 
             <ComponentSection id="target-card" name="TargetCard" description="The core card shell. Composes CardHeader with slot children via the useCardSlots hook. These examples use real Detection mock data and the same composition as the main app.">
-              <PreviewPanel tight>
+              <CodePreviewBlock name="TargetCard" description="The core card shell. Composes CardHeader with slot children via the useCardSlots hook." tight code={targetCardSrc}>
                 <div className="max-w-sm mx-auto">
                   <StyleguideUnifiedCard detection={cuas_classified} defaultOpen />
                 </div>
-              </PreviewPanel>
+              </CodePreviewBlock>
 
               <PropsTable items={[
                 { name: 'header', type: 'ReactNode', description: 'CardHeader element' },
@@ -813,7 +1156,7 @@ export default function StyleguidePage() {
             </ComponentSection>
 
             <ComponentSection id="filter-bar" name="FilterBar" description="Search, sort, and multi-select filter controls for the target list sidebar.">
-              <PreviewPanel tight>
+              <CodePreviewBlock name="FilterBar" description="Search, sort, and multi-select filter controls for the target list sidebar." tight code={filterBarSrc}>
                 <div className="max-w-sm rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level1 }}>
                   <FilterBar
                     filters={filterState}
@@ -832,10 +1175,10 @@ export default function StyleguidePage() {
                         ? prev.detectedByDeviceIds.filter(s => s !== id)
                         : [...prev.detectedByDeviceIds, id],
                     }))}
-                    onReset={() => setFilterState({ query: '', sortBy: 'priority', activityStatus: [], detectedByDeviceIds: [] })}
+                    onReset={() => setFilterState({ query: '', activityStatus: [], detectedByDeviceIds: [] })}
                   />
                 </div>
-              </PreviewPanel>
+              </CodePreviewBlock>
 
               <PropsTable items={[
                 { name: 'filters', type: 'FilterState', description: 'Current filter values' },
@@ -849,7 +1192,7 @@ export default function StyleguidePage() {
             </ComponentSection>
 
             <ComponentSection id="accordion" name="AccordionSection" description="Collapsible section with animated expand/collapse. Used inside cards for details, logs, and sensors.">
-              <PreviewPanel tight>
+              <CodePreviewBlock name="AccordionSection" description="Collapsible section with animated expand/collapse. Used inside cards for details, logs, and sensors." tight code={accordionSectionSrc}>
                 <div className="max-w-sm rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level1 }}>
                   <AccordionSection title="ברירת מחדל (סגור)" icon={Eye}>
                     <div className="p-3 text-xs text-zinc-400">תוכן AccordionSection</div>
@@ -861,7 +1204,7 @@ export default function StyleguidePage() {
                     <div className="p-3 text-xs text-zinc-400">AccordionSection עם badge בכותרת</div>
                   </AccordionSection>
                 </div>
-              </PreviewPanel>
+              </CodePreviewBlock>
 
               <PropsTable items={[
                 { name: 'title', type: 'ReactNode', description: 'Section heading' },
@@ -876,7 +1219,7 @@ export default function StyleguidePage() {
             {/* ────────────────────────────────────────────────────────────── */}
 
             <ComponentSection id="map-icons" name="MapIcons" description="Full icon catalog — map-layer icons from TacticalMap and card-layer icons from MapIcons. All support a size prop.">
-              <ExampleBlock title="Map Icons (TacticalMap.tsx)">
+              <CodePreviewBlock name="MapIcons" description="Full icon catalog — map-layer icons from TacticalMap and card-layer icons from MapIcons. All support a size prop." code={tacticalMapSrc}>
                 <div className="grid grid-cols-4 gap-6">
                   {([
                     { Icon: CameraIcon, label: 'CameraIcon', fill: true },
@@ -912,20 +1255,20 @@ export default function StyleguidePage() {
                     <span className="text-[10px] font-mono text-zinc-500">MissileIcon</span>
                   </div>
                 </div>
-              </ExampleBlock>
+              </CodePreviewBlock>
 
 
             </ComponentSection>
 
             <ComponentSection id="telemetry" name="TelemetryRow" description="Single telemetry metric display with icon, label, and monospace value. Laid out in a 3-column grid — rows wrap automatically based on item count.">
-              <PreviewPanel tight>
+              <CodePreviewBlock name="TelemetryRow" description="Single telemetry metric display with icon, label, and monospace value. Laid out in a 3-column grid." tight code={telemetryRowSrc}>
                 <div className="grid grid-cols-3 gap-x-4 gap-y-2 rounded-lg p-3" style={{ backgroundColor: SURFACE.level1 }}>
                   <TelemetryRow label="גובה" value="120m" icon={Navigation} />
                   <TelemetryRow label="מהירות" value="45 km/h" icon={Gauge} />
                   <TelemetryRow label="כיוון" value="270°" icon={Compass} />
                   <TelemetryRow label="מרחק" value="1.2 km" icon={MapPin} />
                 </div>
-              </PreviewPanel>
+              </CodePreviewBlock>
 
               <PropsTable items={[
                 { name: 'label', type: 'string', description: 'Metric name' },

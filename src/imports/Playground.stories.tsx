@@ -11,7 +11,6 @@ import {
   CardLog,
   CardClosure,
   StatusChip,
-  MissionPhaseChip,
   type ThreatAccent,
 } from '@/primitives';
 import { useCardSlots, type CardCallbacks, type CardContext } from './useCardSlots';
@@ -181,7 +180,6 @@ function Playground() {
   }, []);
 
   const accent = accentOverride ?? slots.accent;
-  const isMission = target.flowType === 4;
   const isSuccess = target.status === 'event_resolved' || target.status === 'event_neutralized';
   const isExpired = target.status === 'expired';
   const showDetails = !isSuccess && !isExpired && target.flowType !== 4;
@@ -332,11 +330,7 @@ function Playground() {
             header={
               <CardHeader
                 {...slots.header}
-                status={
-                  isMission && target.plannedMission
-                    ? <MissionPhaseChip phase={target.plannedMission.phase} />
-                    : buildStatusChip(target)
-                }
+                status={buildStatusChip(target)}
                 open={open}
               />
             }

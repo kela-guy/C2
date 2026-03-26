@@ -1,13 +1,12 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { CAMERA_ASSETS, LIDAR_ASSETS, RADAR_ASSETS } from '@/app/components/TacticalMap';
 import type { ActivityStatus, Detection } from './ListOfSystems';
-import { compareTargetsByPriority, getActivityStatus, getCreatedAtMs } from './useActivityStatus';
+import { compareTargetsByPriority, getActivityStatus } from './useActivityStatus';
 
 export interface FilterState {
   query: string;
   activityStatus: ActivityStatus[];
   detectedByDeviceIds: string[];
-  sortBy: 'priority' | 'time';
 }
 
 export type FilterScope = 'active' | 'completed';
@@ -48,7 +47,6 @@ export function useTargetFilters(targets: Detection[], scope: FilterScope) {
     query: '',
     activityStatus: getDefaultActivityStatuses(scope),
     detectedByDeviceIds: [],
-    sortBy: 'priority',
   }));
 
   useEffect(() => {
@@ -152,13 +150,7 @@ export function useTargetFilters(targets: Detection[], scope: FilterScope) {
       });
     }
 
-    result = [...result].sort((a, b) => {
-      if (filters.sortBy === 'time') {
-        return getCreatedAtMs(b) - getCreatedAtMs(a);
-      }
-
-      return compareTargetsByPriority(a, b, nowMs);
-    });
+    result = [...result].sort((a, b) => compareTargetsByPriority(a, b, nowMs));
 
     return result;
   }, [filters]);
@@ -181,7 +173,6 @@ export function useTargetFilters(targets: Detection[], scope: FilterScope) {
       query: '',
       activityStatus: getDefaultActivityStatuses(scope),
       detectedByDeviceIds: [],
-      sortBy: 'priority',
     });
   }, [scope]);
 
