@@ -134,6 +134,7 @@ export const CUASDashboard = () => {
   const [activeTargetId, setActiveTargetId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [devicesPanelOpen, setDevicesPanelOpen] = useState(false);
+  const [focusedDeviceId, setFocusedDeviceId] = useState<string | null>(null);
   const [panelSwitching, setPanelSwitching] = useState(false);
 
   useEffect(() => {
@@ -909,6 +910,14 @@ export const CUASDashboard = () => {
     setTimeout(() => setMapFocusRequest(null), 100);
   }, []);
 
+  const handleAssetClick = useCallback((assetId: string) => {
+    if (sidebarOpen) setPanelSwitching(true);
+    setSidebarOpen(false);
+    setDevicesPanelOpen(true);
+    setFocusedDeviceId(assetId);
+    setTimeout(() => setFocusedDeviceId(null), 500);
+  }, [sidebarOpen]);
+
   const handleResizePointerDown = useCallback((e: React.PointerEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -1126,6 +1135,7 @@ export const CUASDashboard = () => {
                 friendlyDrones={friendlyDrones}
                 smoothFocusRequest={mapFocusRequest}
                 hoveredTargetIdFromCard={hoveredTargetIdFromCard}
+                onAssetClick={handleAssetClick}
               />
             </div>
           </ResizablePanel>
@@ -1247,6 +1257,7 @@ export const CUASDashboard = () => {
           }}
           noTransition={panelSwitching}
           width={sidebarWidth}
+          focusedDeviceId={focusedDeviceId}
         />
 
       </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useDrag } from 'react-dnd';
 import { X, Search, Camera, AlertTriangle, MapPin, BellOff, Wrench, Check, Loader2 } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './ui/tooltip';
@@ -521,12 +521,32 @@ interface DevicesPanelProps {
   onJamActivate?: (jammerId: string) => void;
   noTransition?: boolean;
   width?: number;
+  focusedDeviceId?: string | null;
 }
 
-export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onJamActivate, noTransition, width }: DevicesPanelProps) {
+export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onJamActivate, noTransition, width, focusedDeviceId }: DevicesPanelProps) {
   const [query, setQuery] = useState('');
   const [activeTypes, setActiveTypes] = useState<Set<DeviceType>>(new Set(TYPE_ORDER));
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const focusedRowRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!focusedDeviceId) return;
+    const device = ALL_DEVICES.find(d => d.id === focusedDeviceId);
+    if (!device) return;
+    setExpandedId(focusedDeviceId);
+    setActiveTypes(prev => {
+      if (prev.has(device.type)) return prev;
+      const next = new Set(prev);
+      next.add(device.type);
+      return next;
+    });
+    setQuery('');
+    requestAnimationFrame(() => {
+      focusedRowRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }, [focusedDeviceId]);
+
   const [mutedDevices, setMutedDevices] = useState<Map<string, number>>(new Map());
   const [, setTick] = useState(0);
 
@@ -728,18 +748,19 @@ export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onJamActiv
                 {group.label} ({group.devices.length})
               </div>
               {group.devices.map(device => (
-                <DeviceRow
-                  key={device.id}
-                  device={device}
-                  isExpanded={expandedId === device.id}
-                  onToggle={() => handleRowClick(device)}
-                  onHover={onDeviceHover ?? (() => {})}
-                  onJamActivate={onJamActivate}
-                  onFlyTo={onFlyTo}
-                  isMuted={mutedDevices.has(device.id)}
-                  muteRemaining={getMuteRemaining(device.id)}
-                  onToggleMute={handleToggleMute}
-                />
+                <div key={device.id} ref={device.id === focusedDeviceId ? focusedRowRef : undefined}>
+                  <DeviceRow
+                    device={device}
+                    isExpanded={expandedId === device.id}
+                    onToggle={() => handleRowClick(device)}
+                    onHover={onDeviceHover ?? (() => {})}
+                    onJamActivate={onJamActivate}
+                    onFlyTo={onFlyTo}
+                    isMuted={mutedDevices.has(device.id)}
+                    muteRemaining={getMuteRemaining(device.id)}
+                    onToggleMute={handleToggleMute}
+                  />
+                </div>
               ))}
             </div>
           ))

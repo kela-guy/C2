@@ -361,6 +361,8 @@ interface TacticalMapProps {
   smoothFocusRequest?: { lat: number; lon: number } | null;
   /** Target ID hovered from card sidebar — highlight on map */
   hoveredTargetIdFromCard?: string | null;
+  /** Click on a sensor/effector/launcher icon to open its device card */
+  onAssetClick?: (assetId: string) => void;
 }
 
 const JAM_VERIFICATION_DURATION_MS = 4500;
@@ -412,6 +414,7 @@ export const TacticalMap = ({
   friendlyDrones = [],
   smoothFocusRequest,
   hoveredTargetIdFromCard,
+  onAssetClick,
 }: TacticalMapProps) => {
   const mapRef = useRef<MapRef>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -1456,13 +1459,23 @@ export const TacticalMap = ({
               anchor="bottom"
             >
               <div
-                className={`relative group cursor-pointer rounded-full p-1.5 transition-all duration-200 ${isHovered || isHoveredFromCard ? 'scale-110' : ''} ${isHoveredFromCard ? 'ring-2 ring-white/40 ring-offset-1 ring-offset-[#0a0a0a]' : ''} ${isHovered && !isHoveredFromCard ? 'bg-white/10' : ''}`}
+                className={`relative group cursor-pointer rounded-full p-2 flex items-center justify-center transition-all duration-200 ${isHovered || isHoveredFromCard ? 'scale-110' : ''} ${isHoveredFromCard ? 'ring-2 ring-white/40 ring-offset-1 ring-offset-[#0a0a0a]' : ''} ${isHovered && !isHoveredFromCard ? 'bg-white/10' : ''}`}
                 onMouseEnter={() => setHoveredLauncherId(launcher.id)}
                 onMouseLeave={() => setHoveredLauncherId(null)}
+                onClick={(e) => { e.stopPropagation(); onAssetClick?.(launcher.id); }}
               >
                 {isHoveredFromCard && (
                   <div className="absolute -inset-2 rounded-full border-2 border-white/50 animate-pulse" />
                 )}
+                <div
+                  className="absolute rounded-full pointer-events-none transition-[border-color] duration-200"
+                  style={{
+                    width: 42,
+                    height: 42,
+                    border: `1px solid ${isHovered || isHoveredFromCard ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.2)'}`,
+                    boxShadow: '0px 0px 0px 2px rgba(0,0,0,1)',
+                  }}
+                />
                 {(isHovered || isHoveredFromCard) && (
                   <div className={TOOLTIP_HOVER}>
                     <div>משגר טילים</div>
@@ -1510,9 +1523,10 @@ export const TacticalMap = ({
               <ContextMenu>
               <ContextMenuTrigger asChild>
               <div
-                className={`relative group cursor-pointer rounded-full p-1.5 transition-all duration-200 ${isActive ? 'scale-110 drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]' : ''} ${isHoveredFromCard && !isActive ? 'scale-110 ring-2 ring-white/40 ring-offset-1 ring-offset-[#0a0a0a]' : ''} ${(isHovered || isHoveredFromCard) && !isActive ? 'bg-white/10' : ''}`}
+                className={`relative group cursor-pointer rounded-full p-2 flex items-center justify-center transition-all duration-200 ${isActive ? 'scale-110 drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]' : ''} ${isHoveredFromCard && !isActive ? 'scale-110 ring-2 ring-white/40 ring-offset-1 ring-offset-[#0a0a0a]' : ''} ${(isHovered || isHoveredFromCard) && !isActive ? 'bg-white/10' : ''}`}
                 onMouseEnter={() => setHoveredRegulusId(reg.id)}
                 onMouseLeave={() => setHoveredRegulusId(null)}
+                onClick={(e) => { e.stopPropagation(); onAssetClick?.(reg.id); }}
               >
                 {isActive && (
                   <div className="absolute -inset-2 rounded-full border border-green-400/60 animate-pulse bg-green-500/10" />
@@ -1520,6 +1534,15 @@ export const TacticalMap = ({
                 {isHoveredFromCard && !isActive && (
                   <div className="absolute -inset-2 rounded-full border-2 border-white/50 animate-pulse" />
                 )}
+                <div
+                  className="absolute rounded-full pointer-events-none transition-[border-color] duration-200"
+                  style={{
+                    width: 42,
+                    height: 42,
+                    border: `1px solid ${isActive ? 'rgba(74,222,128,0.6)' : isHovered || isHoveredFromCard ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.2)'}`,
+                    boxShadow: '0px 0px 0px 2px rgba(0,0,0,1)',
+                  }}
+                />
                 <SensorIcon fill={isActive ? '#4ade80' : undefined} />
                 {(isHovered || isActive || isHoveredFromCard) && (
                   <div className={TOOLTIP_HOVER} style={{ minWidth: 'max-content' }}>
@@ -1594,11 +1617,12 @@ export const TacticalMap = ({
               <ContextMenu>
               <ContextMenuTrigger asChild>
               <div
-                className={`relative group cursor-pointer rounded-full p-1.5 transition-all duration-200 ${
+                className={`relative group cursor-pointer rounded-full p-2 flex items-center justify-center transition-all duration-200 ${
                   isHighlighted || isFlickering ? 'scale-110' : ''
                 } ${isHoveredFromCard && !isSelected ? 'ring-2 ring-white/40 ring-offset-1 ring-offset-[#0a0a0a] rounded-full' : ''} ${isJammerActive ? 'scale-110' : ''} ${isHovered && !isHighlighted && !isJammerActive && !isSelected ? 'bg-white/10' : ''} ${isFlickering ? 'animate-pulse ring-2 ring-cyan-400/60 ring-offset-1 ring-offset-[#0a0a0a]' : ''}`}
                 onMouseEnter={() => handleAssetMouseEnter(asset)}
                 onMouseLeave={handleAssetMouseLeave}
+                onClick={(e) => { e.stopPropagation(); onAssetClick?.(asset.id); }}
               >
                 {isJammerActive && (
                   <div className="absolute -inset-2 rounded-full border border-white/30 animate-pulse" />
@@ -1606,6 +1630,15 @@ export const TacticalMap = ({
                 {isHighlighted && !isJammerActive && (
                   <div className={`absolute -inset-2 rounded-full border animate-pulse ${isHoveredFromCard ? 'border-white/50 border-2' : 'border-white/30'}`} />
                 )}
+                <div
+                  className="absolute rounded-full pointer-events-none transition-[border-color] duration-200"
+                  style={{
+                    width: 42,
+                    height: 42,
+                    border: `1px solid ${isHovered || isHighlighted || isHoveredFromCard || isJammerActive ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.2)'}`,
+                    boxShadow: '0px 0px 0px 2px rgba(0,0,0,1)',
+                  }}
+                />
                 <Icon fill={isSelected ? '#a78bfa' : undefined} />
                 {(isHovered || isHighlighted || isInUse) && (
                   <div
@@ -1960,10 +1993,22 @@ export const TacticalMap = ({
           const isHoveredFromCard = drone.id === hoveredSensorIdFromCard;
           return (
             <Marker key={drone.id} longitude={drone.lon} latitude={drone.lat} anchor="center">
-              <div className={`relative group cursor-default transition-all duration-200 drop-shadow-[0_0_8px_rgba(6,182,212,0.5)] ${isHoveredFromCard ? 'scale-125 drop-shadow-[0_0_14px_rgba(6,182,212,0.8)]' : ''}`}>
+              <div
+                className={`relative group cursor-pointer p-2 flex items-center justify-center transition-all duration-200 drop-shadow-[0_0_8px_rgba(6,182,212,0.5)] ${isHoveredFromCard ? 'scale-125 drop-shadow-[0_0_14px_rgba(6,182,212,0.8)]' : ''}`}
+                onClick={(e) => { e.stopPropagation(); onAssetClick?.(drone.id); }}
+              >
                 {isHoveredFromCard && (
                   <div className="absolute -inset-2 rounded-full border-2 border-cyan-400/60 animate-pulse" />
                 )}
+                <div
+                  className="absolute rounded-full pointer-events-none transition-[border-color] duration-200"
+                  style={{
+                    width: 42,
+                    height: 42,
+                    border: `1px solid ${isHoveredFromCard ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.2)'}`,
+                    boxShadow: '0px 0px 0px 2px rgba(0,0,0,1)',
+                  }}
+                />
                 <DroneIcon color="#22d3ee" rotationDeg={drone.headingDeg ?? 0} />
                 <div className={`${TOOLTIP_HOVER} transition-opacity ${isHoveredFromCard ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                   <span>{drone.name}</span>
