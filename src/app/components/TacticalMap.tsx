@@ -4,6 +4,9 @@ import Map, { Marker, NavigationControl, Source, Layer, type MapRef } from 'reac
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Crosshair, AlertTriangle, ShieldAlert, Camera, CheckCircle2, Radio, Search, Eye, MapPin, X, Compass, Circle, Video, Info, Settings, BellOff, Wrench, ExternalLink, Maximize2 } from 'lucide-react';
 import { JamWaveIcon } from '@/primitives/MapIcons';
+import { MapMarker } from '@/primitives/MapMarker';
+import { type Affiliation, type InteractionState, resolveMarkerStyle } from '@/primitives/mapMarkerStates';
+import { OFFLINE_VISIBILITY_VARIANT } from '@/app/config/offlineVisibility';
 import {
   ContextMenu,
   ContextMenuTrigger,
@@ -18,6 +21,8 @@ const TOKEN = 'pk.eyJ1IjoiZ3V5c2hhIiwiYSI6ImNtZ3htODN0dTE2dGMybXFrYWRlZmN5MGMifQ
 
 const EARTH_RADIUS_M = 6371000;
 export const FOV_RADIUS_M = 1200;
+const DRONE_FOV_RADIUS_M = 400;
+const DRONE_FOV_DEG = 90;
 const MISSILE_FLIGHT_DURATION_MS = 22000; // slower, more visible flight
 const LABEL_PREFIXES = ['poi-label', 'road-label', 'place-label', 'transit-label', 'natural-point-label', 'waterway-label', 'natural-line-label', 'road-number-shield', 'road-exit-shield'];
 
@@ -356,7 +361,7 @@ interface TacticalMapProps {
   /** Context menu action callbacks */
   onContextMenuAction?: (action: string, elementType: 'target' | 'effector' | 'sensor', elementId: string) => void;
   /** Friendly drones shown as cyan markers with tooltip only */
-  friendlyDrones?: { id: string; name: string; lat: number; lon: number; altitude: string; headingDeg?: number }[];
+  friendlyDrones?: { id: string; name: string; lat: number; lon: number; altitude: string; headingDeg?: number; fovDeg?: number; trail?: [number, number][] }[];
   /** Smooth pan to a target without zoom change */
   smoothFocusRequest?: { lat: number; lon: number } | null;
   /** Target ID hovered from card sidebar — highlight on map */
@@ -376,6 +381,7 @@ const TOOLTIP_SHADOW_CYAN = 'shadow-[0_0_0_1px_rgba(34,211,238,0.4),0_4px_12px_r
 const TOOLTIP_POS_ABOVE = 'absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5';
 const TOOLTIP_HOVER = `${TOOLTIP_BASE} ${TOOLTIP_SHADOW} ${TOOLTIP_POS_ABOVE} z-50`;
 const TOOLTIP_HOVER_CYAN = `${TOOLTIP_BASE} ${TOOLTIP_SHADOW_CYAN} ${TOOLTIP_POS_ABOVE} z-50`;
+const OFFLINE_FOV_DIMMING_ENABLED = OFFLINE_VISIBILITY_VARIANT === 'B';
 
 const TARGET_CARD_BASE = 'bg-black/60 backdrop-blur-md rounded px-2 py-1 text-xs font-medium text-white whitespace-nowrap';
 const TARGET_SHADOW_THREAT = 'shadow-[0_0_0_1px_rgba(239,68,68,0.25),0_4px_12px_rgba(0,0,0,0.4)]';
@@ -631,8 +637,22 @@ export const TacticalMap = ({
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   const FOV_PAINT = {
-    fill: { 'fill-color': 'rgba(34, 211, 238, 0.40)', 'fill-outline-color': 'rgba(34, 211, 238, 1.0)' },
-    line: { 'line-color': 'rgba(34, 211, 238, 1.0)', 'line-width': 2.5 },
+    fill: {
+      'fill-color': OFFLINE_FOV_DIMMING_ENABLED
+        ? ['case', ['==', ['get', 'offline'], 1], 'rgba(113, 113, 122, 0.22)', 'rgba(34, 211, 238, 0.40)']
+        : 'rgba(34, 211, 238, 0.40)',
+      'fill-outline-color': OFFLINE_FOV_DIMMING_ENABLED
+        ? ['case', ['==', ['get', 'offline'], 1], 'rgba(161, 161, 170, 0.7)', 'rgba(34, 211, 238, 1.0)']
+        : 'rgba(34, 211, 238, 1.0)',
+    },
+    line: {
+      'line-color': OFFLINE_FOV_DIMMING_ENABLED
+        ? ['case', ['==', ['get', 'offline'], 1], 'rgba(161, 161, 170, 0.7)', 'rgba(34, 211, 238, 1.0)']
+        : 'rgba(34, 211, 238, 1.0)',
+      'line-width': OFFLINE_FOV_DIMMING_ENABLED
+        ? ['case', ['==', ['get', 'offline'], 1], 1.5, 2.5]
+        : 2.5,
+    },
   };
 
   const ensureFovSource = useCallback((map: any, sourceId: string) => {
@@ -656,11 +676,16 @@ export const TacticalMap = ({
     clearTimeout(hoverTimeoutRef.current);
     setHoveredAsset(asset);
     const ring = fovPolygon(asset.latitude, asset.longitude, asset.fovDeg, asset.bearingDeg, FOV_RADIUS_M);
+    const isOffline = offlineAssetIds.includes(asset.id);
     pushFovToMap('hover-fov', {
       type: 'FeatureCollection' as const,
-      features: [{ type: 'Feature' as const, geometry: { type: 'Polygon' as const, coordinates: [ring] }, properties: {} }],
+      features: [{
+        type: 'Feature' as const,
+        geometry: { type: 'Polygon' as const, coordinates: [ring] },
+        properties: { offline: isOffline ? 1 : 0 },
+      }],
     });
-  }, [pushFovToMap]);
+  }, [pushFovToMap, offlineAssetIds]);
 
   const handleAssetMouseLeave = useCallback(() => {
     hoverTimeoutRef.current = setTimeout(() => {
@@ -677,6 +702,8 @@ export const TacticalMap = ({
   const [hoveredMissileId, setHoveredMissileId] = useState<string | null>(null);
   const [hoveredLauncherId, setHoveredLauncherId] = useState<string | null>(null);
   const [hoveredRegulusId, setHoveredRegulusId] = useState<string | null>(null);
+  const [hoveredFriendlyDroneId, setHoveredFriendlyDroneId] = useState<string | null>(null);
+  const [hoveredTargetId, setHoveredTargetId] = useState<string | null>(null);
 
   // Moving drone + trail for jamming target
   const [jammingDroneState, setJammingDroneState] = useState<{ lat: number; lon: number; trail: [number, number][] } | null>(null);
@@ -880,10 +907,10 @@ export const TacticalMap = ({
       features: [{
         type: 'Feature' as const,
         geometry: { type: 'Polygon' as const, coordinates: [ring] },
-        properties: {},
+        properties: { offline: offlineAssetIds.includes(asset.id) ? 1 : 0 },
       }],
     };
-  }, [hoveredSensorIdFromCard, cameraLookAtBearing?.cameraId, EMPTY_FC]);
+  }, [hoveredSensorIdFromCard, cameraLookAtBearing?.cameraId, EMPTY_FC, offlineAssetIds]);
 
   const highlightedAssets = useMemo(() => {
     return ALL_MAP_ASSETS.filter(a =>
@@ -978,10 +1005,10 @@ export const TacticalMap = ({
       features: [{
         type: 'Feature' as const,
         geometry: { type: 'Polygon' as const, coordinates: [ring] },
-        properties: {},
+        properties: { offline: offlineAssetIds.includes(hoveredAsset.id) ? 1 : 0 },
       }],
     };
-  }, [hoveredAsset, selectedAssetId, cameraLookAtBearing?.cameraId, EMPTY_FC]);
+  }, [hoveredAsset, selectedAssetId, cameraLookAtBearing?.cameraId, EMPTY_FC, offlineAssetIds]);
 
   const selectedFovGeoJSON = useMemo(() => {
     if (!selectedAsset) return EMPTY_FC;
@@ -996,10 +1023,10 @@ export const TacticalMap = ({
       features: [{
         type: 'Feature' as const,
         geometry: { type: 'Polygon' as const, coordinates: [ring] },
-        properties: {},
+        properties: { offline: offlineAssetIds.includes(selectedAsset.id) ? 1 : 0 },
       }],
     };
-  }, [selectedAsset, cameraLookAtBearing?.cameraId, EMPTY_FC]);
+  }, [selectedAsset, cameraLookAtBearing?.cameraId, EMPTY_FC, offlineAssetIds]);
 
   useEffect(() => {
     pushFovToMap('hover-fov', hoverFovGeoJSON);
@@ -1330,6 +1357,7 @@ export const TacticalMap = ({
 
             const isActive = target.id === activeTargetId;
             const isHoveredFromCard = target.id === hoveredTargetIdFromCard;
+            const isHoveredTarget = target.id === hoveredTargetId;
             const stage = target.entityStage;
             const isCritical = target.status === 'detection' || target.status === 'event';
             const isClassified = stage === 'classified';
@@ -1339,18 +1367,6 @@ export const TacticalMap = ({
             const isMitigated = target.mitigationStatus === 'mitigated';
             const isExpiredCuas = target.status === 'expired' && !!target.entityStage;
 
-            const dotSize = isExpiredCuas ? 'w-3 h-3'
-              : isClassified ? 'w-5 h-5'
-              : 'w-4 h-4';
-
-            const dotColor = isExpiredCuas ? 'bg-zinc-600/50 border-zinc-600/30'
-              : isMitigating ? 'bg-red-500 border-red-400'
-              : isMitigated ? 'bg-zinc-500 border-zinc-400'
-              : isClassified && isBird ? 'bg-amber-400 border-amber-300'
-              : isClassified ? 'bg-red-500 border-white'
-              : isCritical ? 'bg-red-500 border-white'
-              : 'bg-amber-500 border-white';
-
             const showPulse = !isExpiredCuas && (isMitigating || (stage === 'raw_detection' && !isClassified));
             const pulseColor = isMitigating ? 'bg-red-500' : 'bg-amber-500';
 
@@ -1359,8 +1375,30 @@ export const TacticalMap = ({
               const t = target.trail;
               const p0 = t[t.length - 2];
               const p1 = t[t.length - 1];
-              droneHeadingDeg = bearingDegrees(p0.lat, p0.lon, p1.lat, p1.lon) - 90;
+              droneHeadingDeg = bearingDegrees(p0.lat, p0.lon, p1.lat, p1.lon);
             }
+
+            const targetAffiliation: Affiliation =
+              isBird ? 'unknown' :
+              isClassified || isCritical ? 'hostile' :
+              'possibleThreat';
+
+            const targetState: InteractionState =
+              isExpiredCuas ? 'expired' :
+              isMitigated ? 'disabled' :
+              isMitigating ? 'active' :
+              isActive || isHoveredFromCard ? 'selected' :
+              isHoveredTarget ? 'hovered' :
+              'default';
+
+            const targetStyle = resolveMarkerStyle(targetState, targetAffiliation);
+
+            const targetGlyph = isClassified && isDrone
+              ? <DroneIcon rotationDeg={droneHeadingDeg - 90} color={targetStyle.glyphColor} disabled={isMitigated} />
+              : <div className="w-2.5 h-2.5 rounded-full" style={{ background: targetStyle.glyphColor }} />;
+
+            const targetSurfaceSize = isExpiredCuas ? 24 : isClassified ? 32 : 28;
+            const targetRingSize = isExpiredCuas ? 20 : isClassified ? 26 : 22;
 
             return (
                 <Marker
@@ -1376,24 +1414,22 @@ export const TacticalMap = ({
                     <ContextMenu>
                     <ContextMenuTrigger asChild>
                     <div
-                      className={`relative group cursor-pointer transition-all duration-200 ${isActive || isHoveredFromCard ? 'z-50' : 'z-10'} ${isExpiredCuas && !isHoveredFromCard ? 'opacity-40' : ''} ${isHoveredFromCard ? 'scale-125' : ''}`}
+                      className={`relative group cursor-pointer transition-all duration-200 ${isActive || isHoveredFromCard ? 'z-50' : 'z-10'}`}
                     >
                         {showPulse && (
                             <div className={`absolute -inset-3 rounded-full opacity-40 animate-ping ${pulseColor}`} />
                         )}
 
-                        {isHoveredFromCard && (
-                          <div className="absolute -inset-3 rounded-full border-2 border-white/60 animate-pulse pointer-events-none" />
-                        )}
-
-                        {/* Hover backdrop */}
-                        <div className="absolute -inset-2.5 rounded-full bg-white/0 group-hover:bg-white/[0.08] transition-colors duration-150 pointer-events-none" />
-
-                        {isClassified && isDrone ? (
-                          <DroneIcon rotationDeg={droneHeadingDeg} color={isMitigated ? undefined : '#fa5252'} disabled={isMitigated} />
-                        ) : (
-                          <div className={`${dotSize} rounded-full border-2 shadow-lg transition-all ${dotColor} ${isActive || isHoveredFromCard ? 'ring-2 ring-white ring-offset-2 ring-offset-black' : ''}`} />
-                        )}
+                        <MapMarker
+                          icon={targetGlyph}
+                          style={targetStyle}
+                          surfaceSize={targetSurfaceSize}
+                          ringSize={targetRingSize}
+                          label={target.name || target.id}
+                          showLabel={isActive || isHoveredTarget}
+                          onMouseEnter={() => setHoveredTargetId(target.id)}
+                          onMouseLeave={() => setHoveredTargetId(null)}
+                        />
 
                         {/* Map Info Card — only shown when card is open */}
                         {isClassified ? (
@@ -1491,34 +1527,28 @@ export const TacticalMap = ({
               anchor="bottom"
             >
               <div
-                className={`relative group cursor-pointer rounded-full p-2 flex items-center justify-center transition-all duration-200 ${isOffline ? 'opacity-50 grayscale' : ''} ${isSelected || isHovered || isHoveredFromCard ? 'scale-110' : ''} ${isHoveredFromCard && !isSelected ? 'ring-2 ring-white/40 ring-offset-1 ring-offset-[#0a0a0a]' : ''} ${(isHovered || isSelected) && !isHoveredFromCard ? 'bg-white/10' : ''}`}
                 onMouseEnter={() => setHoveredLauncherId(launcher.id)}
                 onMouseLeave={() => setHoveredLauncherId(null)}
                 onClick={(e) => { e.stopPropagation(); onAssetClick?.(launcher.id); }}
               >
-                {isHoveredFromCard && !isSelected && (
-                  <div className="absolute -inset-2 rounded-full border-2 border-white/50 animate-pulse" />
-                )}
-                <div
-                  className="absolute rounded-full pointer-events-none transition-[border-color] duration-200"
-                  style={{
-                    width: 42,
-                    height: 42,
-                    border: `1px solid ${isSelected || isHovered || isHoveredFromCard ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.2)'}`,
-                    boxShadow: '0px 0px 0px 2px rgba(0,0,0,1)',
-                  }}
-                />
-                {isOffline && (
-                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap bg-zinc-700 text-[9px] text-zinc-300 font-medium px-1.5 py-0.5 rounded pointer-events-none" style={{ boxShadow: '0 0 0 1px rgba(0,0,0,0.8)' }}>
-                    לא מקוון
-                  </div>
-                )}
-                {(isHovered || isSelected || isHoveredFromCard) && !isOffline && (
-                  <div className={TOOLTIP_HOVER}>
-                    <div>משגר טילים</div>
-                  </div>
-                )}
-                <LauncherIcon fill={isOffline ? '#71717a' : undefined} />
+                {(() => {
+                  const markerState: InteractionState =
+                    isOffline ? 'disabled' :
+                    isSelected ? 'selected' :
+                    isHovered || isHoveredFromCard ? 'hovered' :
+                    'default';
+                  const style = resolveMarkerStyle(markerState, 'friendly');
+                  return (
+                    <MapMarker
+                      icon={<LauncherIcon fill={style.glyphColor} />}
+                      style={style}
+                      surfaceSize={36}
+                      ringSize={28}
+                      label={isOffline ? 'משגר טילים — לא מקוון' : 'משגר טילים'}
+                      showLabel={isHovered || isSelected || isHoveredFromCard}
+                    />
+                  );
+                })()}
               </div>
             </Marker>
           );
@@ -1529,6 +1559,8 @@ export const TacticalMap = ({
           const isHovered = hoveredRegulusId === reg.id;
           const isActive = reg.status === 'active';
           const isHoveredFromCard = reg.id === hoveredSensorIdFromCard;
+          const isOffline = offlineAssetIds.includes(reg.id);
+          const dimCoverage = OFFLINE_FOV_DIMMING_ENABLED && isOffline;
           if (!isHovered && !isActive && !isHoveredFromCard) return null;
           const ring = fovPolygon(reg.lat, reg.lon, 360, 0, reg.coverageRadiusM);
           return (
@@ -1538,14 +1570,14 @@ export const TacticalMap = ({
               geometry: { type: 'Polygon', coordinates: [ring] },
             }}>
               <Layer id={`reg-coverage-fill-${reg.id}`} type="fill" paint={{
-                'fill-color': isActive ? '#4ade80' : '#12b886',
-                'fill-opacity': isActive ? 0.12 : 0.08,
+                'fill-color': dimCoverage ? '#a1a1aa' : (isActive ? '#4ade80' : '#12b886'),
+                'fill-opacity': dimCoverage ? 0.04 : (isActive ? 0.12 : 0.08),
               }} />
               <Layer id={`reg-coverage-line-${reg.id}`} type="line" paint={{
-                'line-color': isActive ? '#4ade80' : '#12b886',
-                'line-width': isActive ? 1.5 : 1,
+                'line-color': dimCoverage ? '#a1a1aa' : (isActive ? '#4ade80' : '#12b886'),
+                'line-width': dimCoverage ? 1 : (isActive ? 1.5 : 1),
                 'line-dasharray': isActive ? [1, 0] : [4, 4],
-                'line-opacity': 0.5,
+                'line-opacity': dimCoverage ? 0.3 : 0.5,
               }} />
             </Source>
           );
@@ -1563,40 +1595,30 @@ export const TacticalMap = ({
               <ContextMenu>
               <ContextMenuTrigger asChild>
               <div
-                className={`relative group cursor-pointer rounded-full p-2 flex items-center justify-center transition-all duration-200 ${isOffline ? 'opacity-50 grayscale' : ''} ${isSelected || isHovered ? 'scale-110' : ''} ${isActive ? 'scale-110 drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]' : ''} ${isHoveredFromCard && !isActive && !isSelected ? 'scale-110 ring-2 ring-white/40 ring-offset-1 ring-offset-[#0a0a0a]' : ''} ${(isHovered || isSelected || isHoveredFromCard) && !isActive ? 'bg-white/10' : ''}`}
                 onMouseEnter={() => setHoveredRegulusId(reg.id)}
                 onMouseLeave={() => setHoveredRegulusId(null)}
                 onClick={(e) => { e.stopPropagation(); onAssetClick?.(reg.id); }}
               >
-                {isActive && (
-                  <div className="absolute -inset-2 rounded-full border border-green-400/60 animate-pulse bg-green-500/10" />
-                )}
-                {isHoveredFromCard && !isActive && !isSelected && (
-                  <div className="absolute -inset-2 rounded-full border-2 border-white/50 animate-pulse" />
-                )}
-                <div
-                  className="absolute rounded-full pointer-events-none transition-[border-color] duration-200"
-                  style={{
-                    width: 42,
-                    height: 42,
-                    border: `1px solid ${isSelected || isHovered || isActive ? (isActive ? 'rgba(74,222,128,0.6)' : 'rgba(255,255,255,1)') : isHoveredFromCard ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.2)'}`,
-                    boxShadow: '0px 0px 0px 2px rgba(0,0,0,1)',
-                  }}
-                />
-                <SensorIcon fill={isActive ? '#4ade80' : isOffline ? '#71717a' : undefined} />
-                {isOffline && (
-                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap bg-zinc-700 text-[9px] text-zinc-300 font-medium px-1.5 py-0.5 rounded pointer-events-none" style={{ boxShadow: '0 0 0 1px rgba(0,0,0,0.8)' }}>
-                    לא מקוון
-                  </div>
-                )}
-                {(isHovered || isSelected || isActive || isHoveredFromCard) && !isOffline && (
-                  <div className={TOOLTIP_HOVER} style={{ minWidth: 'max-content' }}>
-                    <div>{reg.name}</div>
-                    <div className="text-xs text-white/70 mt-0.5">
-                      {isActive ? 'פעיל — שיבוש' : reg.id}
-                    </div>
-                  </div>
-                )}
+                {(() => {
+                  const markerState: InteractionState =
+                    isOffline ? 'disabled' :
+                    isActive ? 'jammer' :
+                    isSelected ? 'selected' :
+                    isHovered || isHoveredFromCard ? 'hovered' :
+                    'default';
+                  const style = resolveMarkerStyle(markerState, 'friendly');
+                  const showTooltip = (isHovered || isSelected || isActive || isHoveredFromCard) && !isOffline;
+                  return (
+                    <MapMarker
+                      icon={<SensorIcon fill={style.glyphColor} />}
+                      style={style}
+                      surfaceSize={36}
+                      ringSize={28}
+                      label={showTooltip ? (isActive ? `${reg.name} — פעיל` : reg.name) : isOffline ? `${reg.name} — לא מקוון` : undefined}
+                      showLabel={showTooltip || (isOffline && (isHovered || isSelected))}
+                    />
+                  );
+                })()}
               </div>
               </ContextMenuTrigger>
               <ContextMenuContent className="min-w-[200px]">
@@ -1614,24 +1636,24 @@ export const TacticalMap = ({
                   <Circle className="size-4" />
                   הצג כיסוי
                 </ContextMenuItem>
-                <ContextMenuItem onSelect={() => onContextMenuAction?.('activate', 'effector', reg.id)}>
+                <ContextMenuItem disabled={isOffline} onSelect={() => onContextMenuAction?.('activate', 'effector', reg.id)}>
                   <JamWaveIcon size={16} />
                   הפעל שיבוש
                 </ContextMenuItem>
                 <ContextMenuSeparator />
-                <ContextMenuItem onSelect={() => onContextMenuAction?.('mute-alerts', 'effector', reg.id)}>
+                <ContextMenuItem disabled={isOffline} onSelect={() => onContextMenuAction?.('mute-alerts', 'effector', reg.id)}>
                   <BellOff className="size-4" />
                   השתקת התראות
                 </ContextMenuItem>
-                <ContextMenuItem onSelect={() => onContextMenuAction?.('settings', 'effector', reg.id)}>
+                <ContextMenuItem disabled={isOffline} onSelect={() => onContextMenuAction?.('settings', 'effector', reg.id)}>
                   <Settings className="size-4" />
                   הגדרות מתקדמות
                 </ContextMenuItem>
-                <ContextMenuItem onSelect={() => onContextMenuAction?.('calibrate', 'effector', reg.id)}>
+                <ContextMenuItem disabled={isOffline} onSelect={() => onContextMenuAction?.('calibrate', 'effector', reg.id)}>
                   <Wrench className="size-4" />
                   כיול
                 </ContextMenuItem>
-                <ContextMenuItem onSelect={() => onContextMenuAction?.('edit', 'effector', reg.id)}>
+                <ContextMenuItem disabled={isOffline} onSelect={() => onContextMenuAction?.('edit', 'effector', reg.id)}>
                   <ExternalLink className="size-4" />
                   עריכת מערכת
                 </ContextMenuItem>
@@ -1663,47 +1685,30 @@ export const TacticalMap = ({
               <ContextMenu>
               <ContextMenuTrigger asChild>
               <div
-                className={`relative group cursor-pointer rounded-full p-2 flex items-center justify-center transition-all duration-200 ${
-                  isOffline ? 'opacity-50 grayscale' : ''
-                } ${isHighlighted || isFlickering || isSelected ? 'scale-110' : ''} ${isHoveredFromCard && !isSelected ? 'ring-2 ring-white/40 ring-offset-1 ring-offset-[#0a0a0a] rounded-full' : ''} ${isJammerActive ? 'scale-110' : ''} ${(isHovered || isSelected) && !isHighlighted && !isJammerActive ? 'bg-white/10' : ''} ${isFlickering ? 'animate-pulse ring-2 ring-cyan-400/60 ring-offset-1 ring-offset-[#0a0a0a]' : ''}`}
                 onMouseEnter={() => handleAssetMouseEnter(asset)}
                 onMouseLeave={handleAssetMouseLeave}
                 onClick={(e) => { e.stopPropagation(); onAssetClick?.(asset.id); }}
               >
-                {isJammerActive && (
-                  <div className="absolute -inset-2 rounded-full border border-white/30 animate-pulse" />
-                )}
-                {isHighlighted && !isJammerActive && (
-                  <div className={`absolute -inset-2 rounded-full border animate-pulse ${isHoveredFromCard ? 'border-white/50 border-2' : 'border-white/30'}`} />
-                )}
-                <div
-                  className="absolute rounded-full pointer-events-none transition-[border-color] duration-200"
-                  style={{
-                    width: 42,
-                    height: 42,
-                    border: `1px solid ${isSelected || isHovered || isHighlighted || isHoveredFromCard || isJammerActive ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.2)'}`,
-                    boxShadow: '0px 0px 0px 2px rgba(0,0,0,1)',
-                  }}
-                />
-                <Icon fill={isOffline ? '#71717a' : undefined} />
-                {isOffline && (
-                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap bg-zinc-700 text-[9px] text-zinc-300 font-medium px-1.5 py-0.5 rounded pointer-events-none" style={{ boxShadow: '0 0 0 1px rgba(0,0,0,0.8)' }}>
-                    לא מקוון
-                  </div>
-                )}
-                {(isHovered || isSelected || isHighlighted || isInUse) && !isOffline && (
-                  <div
-                    className={isInUse ? TOOLTIP_HOVER_CYAN : TOOLTIP_HOVER}
-                    style={{ minWidth: 'max-content' }}
-                  >
-                    <div>{asset.typeLabel}</div>
-                  </div>
-                )}
-                {isOffline && (isHovered || isSelected || isHighlighted) && (
-                  <div className={TOOLTIP_HOVER}>
-                    <div>{asset.typeLabel} — לא מקוון</div>
-                  </div>
-                )}
+                {(() => {
+                  const markerState: InteractionState =
+                    isOffline ? 'disabled' :
+                    isJammerActive ? 'jammer' :
+                    isFlickering ? 'alert' :
+                    isSelected ? 'selected' :
+                    isHovered || isHighlighted || isHoveredFromCard ? 'hovered' :
+                    'default';
+                  const style = resolveMarkerStyle(markerState, 'friendly');
+                  return (
+                    <MapMarker
+                      icon={<Icon fill={style.glyphColor} />}
+                      style={style}
+                      surfaceSize={36}
+                      ringSize={28}
+                      label={isOffline ? `${asset.typeLabel} — לא מקוון` : asset.typeLabel}
+                      showLabel={isHovered || isSelected || isHighlighted || isInUse || (isOffline && (isHovered || isSelected || isHighlighted))}
+                    />
+                  );
+                })()}
               </div>
               </ContextMenuTrigger>
               <ContextMenuContent className="min-w-[200px]">
@@ -1711,17 +1716,17 @@ export const TacticalMap = ({
                 <ContextMenuSeparator />
                 {isCamera && (
                   <>
-                    <ContextMenuItem onSelect={() => onContextMenuAction?.('show-video', 'sensor', asset.id)}>
+                    <ContextMenuItem disabled={isOffline} onSelect={() => onContextMenuAction?.('show-video', 'sensor', asset.id)}>
                       <Maximize2 className="size-4" />
                       הצג שידור
                     </ContextMenuItem>
-                    <ContextMenuItem onSelect={() => onContextMenuAction?.('view-feed', 'sensor', asset.id)}>
+                    <ContextMenuItem disabled={isOffline} onSelect={() => onContextMenuAction?.('view-feed', 'sensor', asset.id)}>
                       <Video className="size-4" />
                       צפייה בפאנל מצלמות
                     </ContextMenuItem>
                   </>
                 )}
-                <ContextMenuItem onSelect={() => onContextMenuAction?.('open-tab', 'sensor', asset.id)}>
+                <ContextMenuItem disabled={isOffline} onSelect={() => onContextMenuAction?.('open-tab', 'sensor', asset.id)}>
                   <ExternalLink className="size-4" />
                   צפייה בכרטיסייה חדשה
                 </ContextMenuItem>
@@ -1738,19 +1743,19 @@ export const TacticalMap = ({
                   הצג כיסוי
                 </ContextMenuItem>
                 <ContextMenuSeparator />
-                <ContextMenuItem onSelect={() => onContextMenuAction?.('mute-alerts', 'sensor', asset.id)}>
+                <ContextMenuItem disabled={isOffline} onSelect={() => onContextMenuAction?.('mute-alerts', 'sensor', asset.id)}>
                   <BellOff className="size-4" />
                   השתקת התראות
                 </ContextMenuItem>
-                <ContextMenuItem onSelect={() => onContextMenuAction?.('settings', 'sensor', asset.id)}>
+                <ContextMenuItem disabled={isOffline} onSelect={() => onContextMenuAction?.('settings', 'sensor', asset.id)}>
                   <Settings className="size-4" />
                   הגדרות מתקדמות
                 </ContextMenuItem>
-                <ContextMenuItem onSelect={() => onContextMenuAction?.('calibrate', 'sensor', asset.id)}>
+                <ContextMenuItem disabled={isOffline} onSelect={() => onContextMenuAction?.('calibrate', 'sensor', asset.id)}>
                   <Wrench className="size-4" />
                   כיול
                 </ContextMenuItem>
-                <ContextMenuItem onSelect={() => onContextMenuAction?.('edit', 'sensor', asset.id)}>
+                <ContextMenuItem disabled={isOffline} onSelect={() => onContextMenuAction?.('edit', 'sensor', asset.id)}>
                   <ExternalLink className="size-4" />
                   עריכת מערכת
                 </ContextMenuItem>
@@ -2044,38 +2049,78 @@ export const TacticalMap = ({
           </>
         )}
 
+        {/* Friendly drone trail lines */}
+        {friendlyDrones.filter(d => d.trail && d.trail.length >= 2).map(drone => (
+          <Source key={`friendly-trail-${drone.id}`} id={`friendly-trail-${drone.id}`} type="geojson" data={{
+            type: 'Feature', properties: {},
+            geometry: { type: 'LineString', coordinates: drone.trail!.map(([lat, lon]) => [lon, lat]) },
+          }}>
+            <Layer id={`friendly-trail-casing-${drone.id}`} type="line" paint={{
+              'line-color': '#000000',
+              'line-width': 5,
+            }} />
+            <Layer id={`friendly-trail-line-${drone.id}`} type="line" paint={{
+              'line-color': '#ffffff',
+              'line-width': 2,
+            }} />
+          </Source>
+        ))}
+
+        {/* Friendly drone FOV cones (shown on hover or selected) */}
+        {friendlyDrones.filter(d =>
+          d.headingDeg != null &&
+          !offlineAssetIds.includes(d.id) &&
+          (d.id === hoveredFriendlyDroneId || d.id === selectedAssetId || d.id === hoveredSensorIdFromCard)
+        ).map(drone => {
+          const ring = fovPolygon(drone.lat, drone.lon, drone.fovDeg ?? DRONE_FOV_DEG, drone.headingDeg!, DRONE_FOV_RADIUS_M);
+          return (
+            <Source key={`friendly-fov-${drone.id}`} id={`friendly-fov-${drone.id}`} type="geojson" data={{
+              type: 'Feature', properties: {},
+              geometry: { type: 'Polygon', coordinates: [ring] },
+            }}>
+              <Layer id={`friendly-fov-fill-${drone.id}`} type="fill" paint={{
+                'fill-color': 'rgba(34, 211, 238, 0.40)',
+                'fill-outline-color': 'rgba(34, 211, 238, 1.0)',
+              }} />
+              <Layer id={`friendly-fov-line-${drone.id}`} type="line" paint={{
+                'line-color': 'rgba(34, 211, 238, 1.0)',
+                'line-width': 2.5,
+              }} />
+            </Source>
+          );
+        })}
+
         {/* Friendly drone markers (cyan, highlight on device card hover) */}
         {friendlyDrones.map(drone => {
           const isHoveredFromCard = drone.id === hoveredSensorIdFromCard;
+          const isHovered = drone.id === hoveredFriendlyDroneId;
           const isOffline = offlineAssetIds.includes(drone.id);
           const isSelected = drone.id === selectedAssetId;
           return (
             <Marker key={drone.id} longitude={drone.lon} latitude={drone.lat} anchor="center">
               <div
-                className={`relative group cursor-pointer p-2 flex items-center justify-center transition-all duration-200 ${isOffline ? 'opacity-50 grayscale' : 'drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]'} ${isSelected || isHoveredFromCard ? 'scale-125 drop-shadow-[0_0_14px_rgba(6,182,212,0.8)]' : ''}`}
                 onClick={(e) => { e.stopPropagation(); onAssetClick?.(drone.id); }}
               >
-                {isHoveredFromCard && !isSelected && (
-                  <div className="absolute -inset-2 rounded-full border-2 border-cyan-400/60 animate-pulse" />
-                )}
-                <div
-                  className="absolute rounded-full pointer-events-none transition-[border-color] duration-200"
-                  style={{
-                    width: 42,
-                    height: 42,
-                    border: `1px solid ${isSelected || isHoveredFromCard ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.2)'}`,
-                    boxShadow: '0px 0px 0px 2px rgba(0,0,0,1)',
-                  }}
-                />
-                <DroneIcon color={isOffline ? '#71717a' : '#22d3ee'} rotationDeg={drone.headingDeg ?? 0} />
-                {isOffline && (
-                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap bg-zinc-700 text-[9px] text-zinc-300 font-medium px-1.5 py-0.5 rounded pointer-events-none" style={{ boxShadow: '0 0 0 1px rgba(0,0,0,0.8)' }}>
-                    לא מקוון
-                  </div>
-                )}
-                <div className={`${TOOLTIP_HOVER} transition-opacity ${isSelected || isHoveredFromCard ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                  <span>{drone.name}{isOffline ? ' — לא מקוון' : ''}</span>
-                </div>
+                {(() => {
+                  const droneState: InteractionState =
+                    isOffline ? 'disabled' :
+                    isSelected || isHoveredFromCard ? 'selected' :
+                    isHovered ? 'hovered' :
+                    'default';
+                  const droneStyle = resolveMarkerStyle(droneState, 'friendly');
+                  return (
+                    <MapMarker
+                      icon={<DroneIcon color={droneStyle.glyphColor} rotationDeg={(drone.headingDeg ?? 0) - 90} />}
+                      style={droneStyle}
+                      surfaceSize={36}
+                      ringSize={28}
+                      label={`${drone.name}${isOffline ? ' — לא מקוון' : ''}`}
+                      showLabel={isSelected || isHoveredFromCard || isHovered}
+                      onMouseEnter={() => setHoveredFriendlyDroneId(drone.id)}
+                      onMouseLeave={() => setHoveredFriendlyDroneId(null)}
+                    />
+                  );
+                })()}
               </div>
             </Marker>
           );

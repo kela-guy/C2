@@ -11,6 +11,8 @@ export interface MapMarkerProps {
   badgeSize?: number;
   badgeFill?: string;
   badgeOpacity?: number;
+  statusBadgeText?: string;
+  statusBadgeTone?: 'neutral' | 'danger';
   label?: string;
   showLabel?: boolean;
   onMouseEnter?: () => void;
@@ -29,6 +31,8 @@ export function MapMarker({
   badgeSize = 16,
   badgeFill = '#0a0a0a',
   badgeOpacity = 0.85,
+  statusBadgeText,
+  statusBadgeTone = 'neutral',
   label,
   showLabel = false,
   onMouseEnter,
@@ -70,36 +74,10 @@ export function MapMarker({
           }}
         />
 
-        {/* Layer 2 (middle): Glyph */}
-        <div
-          className="relative flex items-center justify-center z-[1]"
-          style={{
-            opacity: s.glyphOpacity,
-            transition: 'opacity 200ms ease',
-          }}
-        >
-          {icon}
-        </div>
-
-        {/* Inner glow circle — on top of glyph */}
-        {s.innerGlow && (
-          <div
-            className="absolute rounded-full pointer-events-none z-[1]"
-            style={{
-              width: ringSize * 0.78,
-              height: ringSize * 0.78,
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              background: `rgba(255,255,255,${s.innerGlowOpacity})`,
-            }}
-          />
-        )}
-
-        {/* Layer 3 (top): Ring */}
+        {/* Layer 2: Ring */}
         {s.ringWidth > 0 && (
           <div
-            className={`absolute rounded-full pointer-events-none z-[2] ${s.ringPulse ? 'animate-pulse' : ''}`}
+            className={`absolute rounded-full pointer-events-none z-[1] ${s.ringPulse ? 'animate-pulse' : ''}`}
             style={{
               width: ringSize,
               height: ringSize,
@@ -108,6 +86,32 @@ export function MapMarker({
               transform: 'translate(-50%, -50%)',
               border: `${s.ringWidth}px ${s.ringDash === 'dashed' ? 'dashed' : 'solid'} ${borderColor}`,
               transition: 'border-color 200ms ease, border-width 200ms ease',
+            }}
+          />
+        )}
+
+        {/* Layer 3: Glyph */}
+        <div
+          className="relative flex items-center justify-center z-[2]"
+          style={{
+            opacity: s.glyphOpacity,
+            transition: 'opacity 200ms ease',
+          }}
+        >
+          {icon}
+        </div>
+
+        {/* Layer 4 (top): Inner circle */}
+        {s.innerGlow && (
+          <div
+            className="absolute rounded-full pointer-events-none z-[3]"
+            style={{
+              width: ringSize * 0.6,
+              height: ringSize * 0.6,
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              background: `rgba(255,255,255,${s.innerGlowOpacity})`,
             }}
           />
         )}
@@ -121,7 +125,7 @@ export function MapMarker({
           const fontSize = Math.max(6, Math.round(badgeSize * 0.5));
           return (
             <div
-              className="absolute flex items-center justify-center rounded-full pointer-events-none z-[3]"
+              className="absolute flex items-center justify-center rounded-full pointer-events-none z-[4]"
               style={{
                 width: badgeSize,
                 height: badgeSize,
@@ -141,6 +145,24 @@ export function MapMarker({
             </div>
           );
         })()}
+
+        {/* Badge (Status) */}
+        {statusBadgeText && (
+          <div
+            className="absolute rounded-[4px] px-1 py-[1px] pointer-events-none z-[5]"
+            style={{
+              right: -2,
+              bottom: -2,
+              background: statusBadgeTone === 'danger' ? 'rgba(239,68,68,0.9)' : 'rgba(24,24,27,0.9)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              boxShadow: '0px 0px 0px 1px rgba(0,0,0,0.7)',
+            }}
+          >
+            <span className="text-[9px] font-bold leading-none text-white">
+              {statusBadgeText}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Label/Tooltip — floats top-right of the marker */}

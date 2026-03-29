@@ -115,7 +115,7 @@ const STATE_MATRIX: Record<InteractionState, (p: AffiliationPalette) => MarkerSt
     innerGlow: false,
     innerGlowOpacity: 0,
     ringColor: p.ring,
-    ringWidth: 2,
+    ringWidth: 1.5,
     ringOpacity: p.ringOpacity,
     ringDash: 'solid',
     ringPulse: false,

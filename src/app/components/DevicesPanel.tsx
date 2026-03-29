@@ -6,6 +6,7 @@ import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 import { Switch } from './ui/switch';
 import { Collapsible, CollapsibleContent } from './ui/collapsible';
 import { LAYOUT_TOKENS } from '@/primitives/tokens';
+import { StatusChip } from '@/primitives/StatusChip';
 import {
   CAMERA_ASSETS,
   RADAR_ASSETS,
@@ -231,6 +232,13 @@ const CONNECTION_STATE_COLORS: Record<ConnectionState, string> = {
   warning: 'bg-amber-400',
 };
 
+const CONNECTION_STATE_CHIP_COLORS: Record<ConnectionState, 'green' | 'gray' | 'red' | 'orange'> = {
+  online: 'green',
+  offline: 'gray',
+  error: 'red',
+  warning: 'orange',
+};
+
 function DeviceRow({
   device,
   isExpanded,
@@ -303,6 +311,7 @@ function DeviceRow({
   }
 
   const showStatusDot = device.connectionState !== 'online';
+  const isOffline = device.connectionState === 'offline';
 
   return (
     <Collapsible open={isExpanded} style={isDragging ? { opacity: 0.4 } : undefined}>
@@ -344,6 +353,13 @@ function DeviceRow({
             <div className="flex items-center gap-1.5 min-w-0">
               <span className={`text-[13px] font-medium truncate ${isMalfunctioning ? 'text-orange-300' : 'text-zinc-300'}`}>{device.name}</span>
               {isMalfunctioning && <AlertTriangle size={11} className="text-orange-400 shrink-0" />}
+              {device.connectionState !== 'online' && (
+                <StatusChip
+                  label={CONNECTION_STATE_LABELS[device.connectionState]}
+                  color={CONNECTION_STATE_CHIP_COLORS[device.connectionState]}
+                  className="h-5 px-1.5 text-[10px] leading-none"
+                />
+              )}
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
               {isMuted && muteRemaining && (
@@ -367,8 +383,8 @@ function DeviceRow({
           )}
         </div>
         {device.type === 'ecm' && (() => {
-          const isDisabled = isMalfunctioning || device.status === 'active';
-          const disabledReason = isMalfunctioning ? 'המכשיר בתקלה' : device.status === 'active' ? 'שיבוש כבר פעיל' : undefined;
+          const isDisabled = isOffline || isMalfunctioning || device.status === 'active';
+          const disabledReason = isOffline ? 'המכשיר לא מקוון' : isMalfunctioning ? 'המכשיר בתקלה' : device.status === 'active' ? 'שיבוש כבר פעיל' : undefined;
           const btn = (
             <button
               type="button"
@@ -451,11 +467,12 @@ function DeviceRow({
               type="button"
               onClick={(e) => { e.stopPropagation(); onToggleMute(device.id); }}
               aria-pressed={isMuted}
+              disabled={isOffline}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium transition-[background-color,color,transform] duration-150 ease-out cursor-pointer active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none ${
                 isMuted
                   ? 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/25'
                   : 'text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90'
-              }`}
+              } ${isOffline ? 'disabled:opacity-50 disabled:cursor-not-allowed' : ''}`}
               aria-label={isMuted ? 'בטל השתקה' : 'השתק'}
             >
               <BellOff size={12} />
@@ -471,13 +488,14 @@ function DeviceRow({
                     checked={wipersOn}
                     onCheckedChange={setWipersOn}
                     onClick={(e) => e.stopPropagation()}
+                    disabled={isOffline}
                     aria-label="מגבים"
                     className="h-[18px] w-8 data-[state=checked]:bg-sky-500/80 data-[state=unchecked]:bg-white/10"
                   />
                 </div>
                 <button
                   type="button"
-                  disabled={calibState !== 'idle'}
+                  disabled={isOffline || calibState !== 'idle'}
                   aria-busy={calibState === 'running'}
                   onClick={(e) => { e.stopPropagation(); setCalibState('running'); }}
                   className="ml-auto flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90 active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"

@@ -2486,7 +2486,7 @@ export default function StyleguidePage() {
             {activeItem === 'devices-panel' && (
             <ComponentSection id="devices-panel" name="DevicesPanel" description="Right-hand sidebar listing all connected field devices grouped by type. Supports search, type-filter isolation, device expansion with stats grid, camera preview with presets, ECM jam activation, mute with 30-min countdown, drone wipers/calibration, and drag-to-camera-viewer for camera rows.">
               <CodePreviewBlock name="DevicesPanel" description="Full interactive panel — try searching, filtering by type, expanding rows, and clicking actions." tight code={devicesPanelSrc}>
-                <div className="relative mx-auto overflow-hidden rounded-lg border border-white/10" style={{ width: LAYOUT_TOKENS.sidebarWidthPx, height: 1100 }}>
+                <div className="relative mx-auto overflow-hidden rounded-lg border border-white/10" style={{ width: LAYOUT_TOKENS.sidebarWidthPx, height: 400 }}>
                   <DevicesPanel open onClose={() => {}} onFlyTo={() => {}} noTransition />
                 </div>
               </CodePreviewBlock>

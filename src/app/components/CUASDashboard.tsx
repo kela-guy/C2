@@ -59,16 +59,30 @@ export interface FriendlyDrone {
   lon: number;
   altitude: string;
   headingDeg?: number;
+  fovDeg?: number;
+  trail?: [number, number][];
 }
 
-const FRIENDLY_PATROL_ROUTES: { id: string; name: string; altitude: string; waypoints: [number, number][] }[] = [
+const FRIENDLY_PATROL_ROUTES: { id: string; name: string; altitude: string; fovDeg: number; waypoints: [number, number][] }[] = [
   {
-    id: 'FRIENDLY-01', name: 'סיור-3', altitude: '80 מ׳',
+    id: 'FRIENDLY-01', name: 'סיור-3', altitude: '80 מ׳', fovDeg: 78,
     waypoints: [[32.4746, 34.9883], [32.4766, 34.9923], [32.4786, 34.9903], [32.4756, 34.9863]],
   },
   {
-    id: 'FRIENDLY-02', name: 'תצפית-7', altitude: '110 מ׳',
+    id: 'FRIENDLY-02', name: 'תצפית-7', altitude: '110 מ׳', fovDeg: 105,
     waypoints: [[32.4816, 35.0143], [32.4836, 35.0113], [32.4806, 35.0083], [32.4796, 35.0123]],
+  },
+  {
+    id: 'FRIENDLY-03', name: 'סיור-11', altitude: '95 מ׳', fovDeg: 62,
+    waypoints: [[32.4680, 34.9940], [32.4700, 34.9980], [32.4720, 34.9960], [32.4695, 34.9920]],
+  },
+  {
+    id: 'FRIENDLY-04', name: 'תצפית-2', altitude: '120 מ׳', fovDeg: 118,
+    waypoints: [[32.4590, 35.0020], [32.4610, 35.0060], [32.4630, 35.0030], [32.4605, 35.0000]],
+  },
+  {
+    id: 'FRIENDLY-05', name: 'סיור-9', altitude: '70 מ׳', fovDeg: 88,
+    waypoints: [[32.4850, 34.9980], [32.4870, 35.0020], [32.4890, 34.9990], [32.4860, 34.9960]],
   },
 ];
 
@@ -299,10 +313,17 @@ export const CUASDashboard = () => {
 
   // --- Friendly drone patrol simulation ---
   const patrolProgressRef = useRef<number[]>(FRIENDLY_PATROL_ROUTES.map(() => 0));
-  const PATROL_SPEED = 0.004; // progress per tick (0..1 per leg)
+  const friendlyTrailRef = useRef<[number, number][][]>(FRIENDLY_PATROL_ROUTES.map(() => []));
+  const trailTickRef = useRef(0);
+  const PATROL_SPEED = 0.004;
+  const TRAIL_SAMPLE_EVERY = 3;
+  const TRAIL_MAX_POINTS = 40;
 
   useEffect(() => {
     const tick = setInterval(() => {
+      trailTickRef.current += 1;
+      const sampleTrail = trailTickRef.current % TRAIL_SAMPLE_EVERY === 0;
+
       patrolProgressRef.current = patrolProgressRef.current.map((p) => {
         const next = p + PATROL_SPEED;
         return next >= FRIENDLY_PATROL_ROUTES[0].waypoints.length ? 0 : next;
@@ -318,7 +339,11 @@ export const CUASDashboard = () => {
 
           const lat = from[0] + (to[0] - from[0]) * legFrac;
           const lon = from[1] + (to[1] - from[1]) * legFrac;
-          const heading = bearingDegrees(from[0], from[1], to[0], to[1]) - 90;
+          const heading = bearingDegrees(from[0], from[1], to[0], to[1]);
+
+          if (sampleTrail) {
+            friendlyTrailRef.current[i] = [...friendlyTrailRef.current[i], [lat, lon]].slice(-TRAIL_MAX_POINTS);
+          }
 
           return {
             id: route.id,
@@ -327,6 +352,8 @@ export const CUASDashboard = () => {
             lon,
             altitude: route.altitude,
             headingDeg: heading,
+            fovDeg: route.fovDeg,
+            trail: friendlyTrailRef.current[i],
           };
         })
       );
