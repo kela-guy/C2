@@ -1,7 +1,7 @@
 import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowUp } from 'lucide-react';
-import { Button } from '@/app/components/ui/button';
-import { cn } from '@/app/components/ui/utils';
+import { Button } from '@/shared/components/ui/button';
+import { cn } from '@/shared/components/ui/utils';
 
 interface NewUpdatesPillProps {
   count: number;

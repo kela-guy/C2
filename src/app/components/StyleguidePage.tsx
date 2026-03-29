@@ -6,9 +6,9 @@ import {
   BellOff, Camera, Wrench, Loader2, Search, X,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Toaster } from '@/app/components/ui/sonner';
+import { Toaster } from '@/shared/components/ui/sonner';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { TooltipProvider } from '@/app/components/ui/tooltip';
+import { TooltipProvider } from '@/shared/components/ui/tooltip';
 import {
   CARD_TOKENS, ELEVATION, SURFACE, LAYOUT_TOKENS, surfaceAt, overlayAt,
   StatusChip, ActionButton, AccordionSection, TelemetryRow,
@@ -22,10 +22,10 @@ import { SplitActionButton } from '@/primitives/SplitActionButton';
 import {
   CameraIcon, SensorIcon, RadarIcon, DroneIcon, DroneHiveIcon,
   LidarIcon, LauncherIcon, MissileIcon,
-} from '@/app/components/TacticalMap';
+} from '@/shared/components/TacticalMap';
 import { DroneCardIcon, MissileCardIcon } from '@/primitives/MapIcons';
 import { downloadAllStyleguideIcons, iconPublicUrl } from '@/lib/styleguideIconAssets';
-import { DevicesPanel } from '@/app/components/DevicesPanel';
+import { DevicesPanel } from '@/shared/components/DevicesPanel';
 import { useCardSlots, type CardCallbacks, type CardContext } from '@/imports/useCardSlots';
 import {
   cuas_raw, cuas_classified, cuas_classified_bird, cuas_mitigating, cuas_mitigated, cuas_bda_complete,
@@ -52,8 +52,8 @@ import cardLogSrc from '@/primitives/CardLog.tsx?raw';
 import cardClosureSrc from '@/primitives/CardClosure.tsx?raw';
 import filterBarSrc from '@/primitives/FilterBar.tsx?raw';
 import newUpdatesPillSrc from '@/primitives/NewUpdatesPill.tsx?raw';
-import tacticalMapSrc from '@/app/components/TacticalMap.tsx?raw';
-import devicesPanelSrc from '@/app/components/DevicesPanel.tsx?raw';
+import tacticalMapSrc from '@/shared/components/TacticalMap.tsx?raw';
+import devicesPanelSrc from '@/shared/components/DevicesPanel.tsx?raw';
 
 // ─── Sidebar nav structure ───────────────────────────────────────────────────
 
@@ -2492,7 +2492,7 @@ export default function StyleguidePage() {
               </CodePreviewBlock>
 
               <SectionHeading>Import</SectionHeading>
-              <ImportBlock path="@/app/components/DevicesPanel" names={['DevicesPanel']} />
+              <ImportBlock path="@/shared/components/DevicesPanel" names={['DevicesPanel']} />
 
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={devicesPanelSrc} name="DevicesPanel" />
@@ -2969,7 +2969,7 @@ export default function StyleguidePage() {
                 <span className="text-[11px] text-zinc-600">Browsers may limit bulk saves; use per-file links if some downloads are blocked.</span>
               </div>
               <SectionHeading>Import</SectionHeading>
-              <ImportBlock path="@/app/components/TacticalMap" names={['CameraIcon', 'RadarIcon', 'SensorIcon', 'DroneIcon', 'DroneHiveIcon', 'LidarIcon', 'LauncherIcon', 'MissileIcon']} />
+              <ImportBlock path="@/shared/components/TacticalMap" names={['CameraIcon', 'RadarIcon', 'SensorIcon', 'DroneIcon', 'DroneHiveIcon', 'LidarIcon', 'LauncherIcon', 'MissileIcon']} />
 
               <SectionHeading>Preview</SectionHeading>
               <CodePreviewBlock name="MapIcons" description="Full icon catalog — map-layer icons from TacticalMap and card-layer icons from MapIcons. All support a size prop." code={tacticalMapSrc}>

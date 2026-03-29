@@ -2,8 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { ChevronDown, Radio, Search, SlidersHorizontal, TimerReset, X } from 'lucide-react';
 import type { ActivityStatus } from '@/imports/ListOfSystems';
 import { ACTIVITY_STATUS_LABELS, type FilterState } from '@/imports/useTargetFilters';
-import { Checkbox } from '@/app/components/ui/checkbox';
-import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover';
+import { Checkbox } from '@/shared/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover';
 
 interface FilterBarProps {
   filters: FilterState;

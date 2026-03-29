@@ -1,5 +1,5 @@
 import React from "react";
-import { Badge } from "@/app/components/ui/badge";
+import { Badge } from "@/shared/components/ui/badge";
 
 const VARIANT_MAP = {
   green: "status-green",

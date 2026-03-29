@@ -1,7 +1,7 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { Camera, ShieldAlert, AlertTriangle, Play, Pause, SkipBack, SkipForward, Maximize2 } from 'lucide-react';
-import { Dialog, DialogContent, DialogTitle } from '@/app/components/ui/dialog';
-import { cn } from '@/app/components/ui/utils';
+import { Dialog, DialogContent, DialogTitle } from '@/shared/components/ui/dialog';
+import { cn } from '@/shared/components/ui/utils';
 
 export interface CardMediaProps {
   src?: string;

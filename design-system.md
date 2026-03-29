@@ -4,6 +4,18 @@ Single source of truth for all UI primitives, design tokens, composition pattern
 
 Live styleguide: `/styleguide`
 
+### Styleguide map
+
+In-app docs at `/styleguide` are grouped by composition depth (sidebar matches scroll order):
+
+1. **Foundations** — design tokens  
+2. **Primitives** — `StatusChip`, `NewUpdatesPill`, `ActionButton`, `SplitActionButton`, `AccordionSection`, `TelemetryRow`  
+3. **Card building blocks** — `CardHeader`, `CardMedia`, `CardActions`, `CardDetails`, `CardSensors`, `CardLog`, `CardClosure` (same order as `UnifiedCard` body, after the header prop)  
+4. **Assemblies & list chrome** — `TargetCard` examples, `FilterBar`  
+5. **Tactical** — map icons  
+
+**Gap:** `CardTimeline` is rendered in the app between actions and details but does not yet have a dedicated styleguide section (only appears inside full `TargetCard` demos).
+
 ---
 
 ## Design Tokens
@@ -269,11 +281,12 @@ The core card shell. Always use `useCardSlots` hook to build slot data from a `D
 1. Closure type badge (manual/auto)
 2. `CardMedia`
 3. `CardActions`
-4. `CardDetails`
-5. Laser position (`AccordionSection` with `TelemetryRow` grid)
-6. `CardSensors` (wrapped in `AccordionSection` with count)
-7. `CardLog`
-8. `CardClosure`
+4. `CardTimeline` (when `!thinMode` and steps exist)
+5. `CardDetails` (when `showDetails`)
+6. Laser position (`AccordionSection` with `TelemetryRow` grid)
+7. `CardSensors` (wrapped in `AccordionSection` with count)
+8. `CardLog` (when `!thinMode` and entries exist)
+9. `CardClosure`
 
 ### FilterBar
 

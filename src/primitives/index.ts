@@ -14,3 +14,17 @@ export { CardLog, type LogEntry, type CardLogProps } from './CardLog';
 export { CardClosure, type ClosureOutcome, type CardClosureProps } from './CardClosure';
 export { FilterBar } from './FilterBar';
 export { NewUpdatesPill } from './NewUpdatesPill';
+export { MapMarker, type MapMarkerProps } from './MapMarker';
+export {
+  type Affiliation,
+  type InteractionState,
+  type MarkerStyle,
+  INTERACTION_STATES,
+  AFFILIATIONS,
+  INTERACTION_STATE_LABELS,
+  AFFILIATION_LABELS,
+  AFFILIATION_PALETTES,
+  resolveMarkerStyle,
+  hexToRgba,
+  headingToCompass,
+} from './mapMarkerStates';

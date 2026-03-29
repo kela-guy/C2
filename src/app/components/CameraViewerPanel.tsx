@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-} from '@/app/components/ui/dropdown-menu';
+} from '@/shared/components/ui/dropdown-menu';
 
 export interface CameraFeed {
   cameraId: string;

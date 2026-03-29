@@ -39,7 +39,7 @@ import type { CardSensor } from '@/primitives/CardSensors';
 import type { LogEntry } from '@/primitives/CardLog';
 import type { ClosureOutcome } from '@/primitives/CardClosure';
 import type { CardHeaderProps } from '@/primitives/CardHeader';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/app/components/ui/tooltip';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/shared/components/ui/tooltip';
 import type { CardMediaProps } from '@/primitives/CardMedia';
 import type {
   Detection,

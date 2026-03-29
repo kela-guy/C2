@@ -26,7 +26,7 @@ import {
 } from '@/test-utils/mockDetections';
 import ListOfSystems from './ListOfSystems';
 import type { Detection, RegulusEffector } from './ListOfSystems';
-import { DevicesPanel } from '@/app/components/DevicesPanel';
+import { DevicesPanel } from '@/shared/components/DevicesPanel';
 
 const noop = () => {};
 const noopCallbacks: CardCallbacks = {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Check, ChevronDown, Loader2 } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { cn } from '@/app/components/ui/utils';
+import { cn } from '@/shared/components/ui/utils';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -10,7 +10,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuItem,
   DropdownMenuSeparator,
-} from '@/app/components/ui/dropdown-menu';
+} from '@/shared/components/ui/dropdown-menu';
 
 export interface SplitDropdownItem {
   id: string;

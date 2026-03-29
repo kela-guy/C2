@@ -11,13 +11,13 @@ import {
   LidarIcon,
   LauncherIcon,
   MissileIcon,
-} from '@/app/components/TacticalMap';
+} from '@/shared/components/TacticalMap';
 import {
   DroneCardIcon,
   MissileCardIcon,
   JamWaveIcon,
 } from '@/primitives/MapIcons';
-import { cn } from '@/app/components/ui/utils';
+import { cn } from '@/shared/components/ui/utils';
 
 const TOKEN =
   'pk.eyJ1IjoiZ3V5c2hhIiwiYSI6ImNtZ3htODN0dTE2dGMybXFrYWRlZmN5MGMifQ.dIQzO3kIdQaES0pfedlRvA';

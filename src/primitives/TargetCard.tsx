@@ -3,9 +3,9 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from '@/app/components/ui/collapsible';
-import { Card } from '@/app/components/ui/card';
-import { cn } from '@/app/components/ui/utils';
+} from '@/shared/components/ui/collapsible';
+import { Card } from '@/shared/components/ui/card';
+import { cn } from '@/shared/components/ui/utils';
 import { CARD_TOKENS, type ThreatAccent } from './tokens';
 
 export interface TargetCardProps {
@@ -57,9 +57,7 @@ export function TargetCard({
     prevOpen.current = open;
   }, [open]);
 
-  const boxShadow = open
-    ? `0 0 0 ${d.selectedRing.ringWidth}px ${d.selectedRing.ringColor}${Math.round(d.selectedRing.ringOpacity * 255).toString(16).padStart(2, '0')}, ${d.elevation.shadow}`
-    : d.elevation.shadow;
+  const boxShadow = d.elevation.shadow;
 
   return (
     <div

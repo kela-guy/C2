@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Eye, Radio, ShieldAlert, Zap, Crosshair, Ban, CheckCircle2, AlertTriangle, Trash2, Send } from 'lucide-react';
-import { Button } from '@/app/components/ui/button';
+import { Button } from '@/shared/components/ui/button';
 import { ActionButton } from '@/primitives/ActionButton';
 import { SplitActionButton } from '@/primitives/SplitActionButton';
 import { NewUpdatesPill } from '@/primitives/NewUpdatesPill';
-import { TooltipProvider } from '@/app/components/ui/tooltip';
+import { TooltipProvider } from '@/shared/components/ui/tooltip';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (

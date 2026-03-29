@@ -4,7 +4,7 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/app/components/ui/collapsible";
+} from "@/shared/components/ui/collapsible";
 import { CARD_TOKENS } from "./tokens";
 
 export function AccordionSection({

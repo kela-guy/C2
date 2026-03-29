@@ -1,6 +1,6 @@
 import React from 'react';
 import { CheckCircle2 } from 'lucide-react';
-import { Button } from '@/app/components/ui/button';
+import { Button } from '@/shared/components/ui/button';
 import { CARD_TOKENS } from './tokens';
 
 export interface ClosureOutcome {

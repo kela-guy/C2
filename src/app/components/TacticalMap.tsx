@@ -11,7 +11,7 @@ import {
   ContextMenuItem,
   ContextMenuSeparator,
   ContextMenuLabel,
-} from '@/app/components/ui/context-menu';
+} from '@/shared/components/ui/context-menu';
 import type { Detection, RegulusEffector } from '@/imports/ListOfSystems';
 
 const TOKEN = 'pk.eyJ1IjoiZ3V5c2hhIiwiYSI6ImNtZ3htODN0dTE2dGMybXFrYWRlZmN5MGMifQ.dIQzO3kIdQaES0pfedlRvA';

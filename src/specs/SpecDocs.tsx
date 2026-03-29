@@ -1,8 +1,8 @@
 import React from 'react';
-import { Badge } from '@/app/components/ui/badge';
-import { Checkbox } from '@/app/components/ui/checkbox';
-import { Card } from '@/app/components/ui/card';
-import { cn } from '@/app/components/ui/utils';
+import { Badge } from '@/shared/components/ui/badge';
+import { Checkbox } from '@/shared/components/ui/checkbox';
+import { Card } from '@/shared/components/ui/card';
+import { cn } from '@/shared/components/ui/utils';
 import type { ComponentSpec } from './types';
 
 const SPEC_CARD_CLASS =

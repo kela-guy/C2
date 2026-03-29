@@ -1,8 +1,8 @@
 import React from "react";
 import { Loader2 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { cn } from "@/app/components/ui/utils";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/app/components/ui/tooltip";
+import { cn } from "@/shared/components/ui/utils";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/shared/components/ui/tooltip";
 
 const colorByVariant: Record<
   string,
