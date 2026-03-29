@@ -125,7 +125,7 @@ export const DEVICE_CONNECTION: Record<string, ConnectionState> = {
 };
 
 const CAMERA_PRESETS: Record<string, string[]> = {
-  'CAM-NVT-PTZ-N': ['רגיל', 'לילה', 'זום'],
+  'CAM-NVT-PTZ-N': ['זום', 'לילה', 'רגיל'],
   'CAM-NVT-PIXELSIGHT': ['רגיל', 'תרמי'],
 };
 
@@ -407,7 +407,7 @@ function DeviceRow({
         <div className="flex flex-col bg-white/[0.03]">
           {isCamera && presets && (
             <Tabs value={activePreset} onValueChange={setActivePreset} onClick={(e) => e.stopPropagation()}>
-              <TabsList variant="line" className="px-3" aria-label="מצב מצלמה">
+              <TabsList variant="line" className="justify-end items-end px-3" aria-label="מצב מצלמה">
                 {presets.map((preset) => (
                   <TabsTrigger key={preset} value={preset}>
                     {preset}
