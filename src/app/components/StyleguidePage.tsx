@@ -296,6 +296,97 @@ function PropsTable({ items }: { items: PropDef[] }) {
   );
 }
 
+// ─── Section layout helpers (shadcn-style) ───────────────────────────────────
+
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <h3 className="text-[15px] font-semibold text-zinc-200 tracking-tight pt-4 first:pt-0">
+      {children}
+    </h3>
+  );
+}
+
+function InlineCopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [text]);
+
+  return (
+    <button
+      onClick={handleCopy}
+      aria-label={copied ? 'Copied' : 'Copy code'}
+      className="p-1.5 rounded cursor-pointer text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.08] active:scale-[0.94] transition-[color,background-color,transform] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+    >
+      {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
+    </button>
+  );
+}
+
+function ImportBlock({ path, names }: { path: string; names: string[] }) {
+  const code = `import { ${names.join(', ')} } from '${path}'`;
+  return (
+    <div className="flex items-center rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)] overflow-hidden" style={{ backgroundColor: SURFACE.level0 }}>
+      <div className="flex-1 min-w-0 px-4 py-3 overflow-x-auto">
+        <HighlightedCode code={code} />
+      </div>
+      <div className="shrink-0 pr-2">
+        <InlineCopyButton text={code} />
+      </div>
+    </div>
+  );
+}
+
+function UsageBlock({ code, name }: { code: string; name: string }) {
+  const snippet = useMemo(() => {
+    const exportMatch = code.match(/export\s+(?:function|const)\s+(\w+)/);
+    const componentName = exportMatch?.[1] ?? name;
+
+    const propsBlock = extractPropsInterface(code);
+    if (!propsBlock) return `<${componentName} />`;
+
+    const lines = propsBlock.split('\n').map(l => l.trim()).filter(Boolean);
+    const requiredProps: string[] = [];
+    for (const line of lines) {
+      if (line.startsWith('//') || line.startsWith('/*')) continue;
+      const propMatch = line.match(/^(\w+)(\?)?:\s*(.*?)(?:;|$)/);
+      if (propMatch && !propMatch[2]) {
+        const propName = propMatch[1];
+        const propType = propMatch[3].trim();
+        if (propName === 'children') continue;
+        let value: string;
+        if (propType.includes('string')) value = `"..."`;
+        else if (propType.includes('boolean')) value = '';
+        else if (propType.includes('number')) value = `{0}`;
+        else if (propType === 'ReactNode' || propType === 'React.ReactNode') value = `{...}`;
+        else if (propType.includes('=>') || propType.includes('Function')) value = `{() => {}}`;
+        else if (propType.includes('ElementType') || propType.includes('FC') || propType.includes('ComponentType')) value = `{Icon}`;
+        else value = `{...}`;
+
+        requiredProps.push(value ? `${propName}=${value}` : propName);
+      }
+    }
+
+    if (requiredProps.length === 0) return `<${componentName} />`;
+    if (requiredProps.length <= 2) return `<${componentName} ${requiredProps.join(' ')} />`;
+    return `<${componentName}\n  ${requiredProps.join('\n  ')}\n/>`;
+  }, [code, name]);
+
+  return (
+    <div className="flex items-start rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)] overflow-hidden" style={{ backgroundColor: SURFACE.level0 }}>
+      <div className="flex-1 min-w-0 px-4 py-3 overflow-x-auto">
+        <HighlightedCode code={snippet} />
+      </div>
+      <div className="shrink-0 pt-2.5 pr-2">
+        <InlineCopyButton text={snippet} />
+      </div>
+    </div>
+  );
+}
+
 // ─── Syntax highlighting ──────────────────────────────────────────────────────
 
 type Highlighter = Awaited<ReturnType<typeof import('shiki')['createHighlighter']>>;
@@ -1753,6 +1844,14 @@ export default function StyleguidePage() {
                   <StatusChip label="טופל" color="green" />
                 </div>
               </CodePreviewBlock>
+
+              <SectionHeading>Import</SectionHeading>
+              <ImportBlock path="@/primitives" names={['StatusChip']} />
+
+              <SectionHeading>Usage</SectionHeading>
+              <UsageBlock code={statusChipSrc} name="StatusChip" />
+
+              <SectionHeading>API Reference</SectionHeading>
               <PropsTable items={[
                 { name: 'label', type: 'string', description: 'Display text' },
                 { name: 'color', type: '"green" | "gray" | "red" | "orange"', default: '"green"', description: 'Semantic color variant' },
@@ -1771,6 +1870,14 @@ export default function StyleguidePage() {
                   <NewUpdatesPill count={147} onClick={noop} />
                 </div>
               </CodePreviewBlock>
+
+              <SectionHeading>Import</SectionHeading>
+              <ImportBlock path="@/primitives" names={['NewUpdatesPill']} />
+
+              <SectionHeading>Usage</SectionHeading>
+              <UsageBlock code={newUpdatesPillSrc} name="NewUpdatesPill" />
+
+              <SectionHeading>API Reference</SectionHeading>
               <PropsTable items={[
                 { name: 'count', type: 'number', description: 'Number of new updates to display' },
                 { name: 'onClick', type: '() => void', description: 'Scroll-to-top handler' },
@@ -1793,6 +1900,13 @@ export default function StyleguidePage() {
                 </div>
               </CodePreviewBlock>
 
+              <SectionHeading>Import</SectionHeading>
+              <ImportBlock path="@/primitives" names={['ActionButton']} />
+
+              <SectionHeading>Usage</SectionHeading>
+              <UsageBlock code={actionButtonSrc} name="ActionButton" />
+
+              <SectionHeading>API Reference</SectionHeading>
               <PropsTable items={[
                 { name: 'label', type: 'string', description: 'Button text' },
                 { name: 'icon', type: 'React.ElementType', description: 'Lucide icon component' },
@@ -1803,6 +1917,7 @@ export default function StyleguidePage() {
                 { name: 'onClick', type: '(e: MouseEvent) => void', description: 'Click handler' },
               ]} />
 
+              <SectionHeading>Examples</SectionHeading>
               <ExampleBlock title="Size Scale">
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
@@ -1875,6 +1990,13 @@ export default function StyleguidePage() {
                 </div>
               </CodePreviewBlock>
 
+              <SectionHeading>Import</SectionHeading>
+              <ImportBlock path="@/primitives/SplitActionButton" names={['SplitActionButton']} />
+
+              <SectionHeading>Usage</SectionHeading>
+              <UsageBlock code={splitActionButtonSrc} name="SplitActionButton" />
+
+              <SectionHeading>API Reference</SectionHeading>
               <PropsTable items={[
                 { name: 'label', type: 'string', description: 'Primary button text' },
                 { name: 'badge', type: 'string', description: 'Inline chip displayed after the label (e.g. effector name)' },
@@ -1889,6 +2011,7 @@ export default function StyleguidePage() {
                 { name: 'onHover', type: '(hovering: boolean) => void', description: 'Fires on mouseEnter/Leave of primary segment — used to highlight effector on map' },
               ]} />
 
+              <SectionHeading>Examples</SectionHeading>
               <ExampleBlock title="Size Scale">
                 <div className="flex flex-wrap items-start gap-3">
                   <div className="w-44">
@@ -1968,6 +2091,13 @@ export default function StyleguidePage() {
                 </div>
               </CodePreviewBlock>
 
+              <SectionHeading>Import</SectionHeading>
+              <ImportBlock path="@/primitives" names={['AccordionSection']} />
+
+              <SectionHeading>Usage</SectionHeading>
+              <UsageBlock code={accordionSectionSrc} name="AccordionSection" />
+
+              <SectionHeading>API Reference</SectionHeading>
               <PropsTable items={[
                 { name: 'title', type: 'ReactNode', description: 'Section heading' },
                 { name: 'icon', type: 'React.ElementType | null', description: 'Leading icon' },
@@ -1988,12 +2118,20 @@ export default function StyleguidePage() {
                 </div>
               </CodePreviewBlock>
 
+              <SectionHeading>Import</SectionHeading>
+              <ImportBlock path="@/primitives" names={['TelemetryRow']} />
+
+              <SectionHeading>Usage</SectionHeading>
+              <UsageBlock code={telemetryRowSrc} name="TelemetryRow" />
+
+              <SectionHeading>API Reference</SectionHeading>
               <PropsTable items={[
                 { name: 'label', type: 'string', description: 'Metric name' },
                 { name: 'value', type: 'string', description: 'Metric value (monospace, tabular-nums)' },
                 { name: 'icon', type: 'React.ElementType', description: 'Leading icon' },
               ]} />
 
+              <SectionHeading>Examples</SectionHeading>
               <ExampleBlock title="3 items (single row)" tight>
                 <div className="grid grid-cols-3 gap-x-4 gap-y-2 rounded-lg p-3" style={{ backgroundColor: SURFACE.level1 }}>
                   <TelemetryRow label="גובה" value="120m" icon={Navigation} />
@@ -2038,6 +2176,13 @@ export default function StyleguidePage() {
                 </div>
               </CodePreviewBlock>
 
+              <SectionHeading>Import</SectionHeading>
+              <ImportBlock path="@/primitives" names={['CardHeader']} />
+
+              <SectionHeading>Usage</SectionHeading>
+              <UsageBlock code={cardHeaderSrc} name="CardHeader" />
+
+              <SectionHeading>API Reference</SectionHeading>
               <PropsTable items={[
                 { name: 'title', type: 'string', description: 'Target display name' },
                 { name: 'subtitle', type: 'string', description: 'Target ID or secondary label' },
@@ -2049,6 +2194,7 @@ export default function StyleguidePage() {
                 { name: 'open', type: 'boolean', description: 'Controls chevron rotation' },
               ]} />
 
+              <SectionHeading>Examples</SectionHeading>
               <ExampleBlock title="Open State" tight>
                 <div className="rounded-lg p-2" style={{ backgroundColor: SURFACE.level1 }}>
                   <CardHeader icon={Eye} title="עצם לא מזוהה" subtitle="TGT-0099" status={<StatusChip label="חשוד" color="orange" />} open />
@@ -2086,6 +2232,13 @@ export default function StyleguidePage() {
                 </div>
               </CodePreviewBlock>
 
+              <SectionHeading>Import</SectionHeading>
+              <ImportBlock path="@/primitives" names={['CardMedia']} />
+
+              <SectionHeading>Usage</SectionHeading>
+              <UsageBlock code={cardMediaSrc} name="CardMedia" />
+
+              <SectionHeading>API Reference</SectionHeading>
               <PropsTable items={[
                 { name: 'src', type: 'string', description: 'Image or video URL' },
                 { name: 'type', type: '"video" | "image"', default: '"image"', description: 'Media type' },
@@ -2104,11 +2257,19 @@ export default function StyleguidePage() {
                 </div>
               </CodePreviewBlock>
 
+              <SectionHeading>Import</SectionHeading>
+              <ImportBlock path="@/primitives" names={['CardActions']} />
+
+              <SectionHeading>Usage</SectionHeading>
+              <UsageBlock code={cardActionsSrc} name="CardActions" />
+
+              <SectionHeading>API Reference</SectionHeading>
               <PropsTable items={[
                 { name: 'actions', type: 'CardAction[]', description: 'Action definitions with group, variant, confirm' },
                 { name: 'layout', type: '"row" | "grid" | "stack"', default: '"row"', description: 'Fallback layout when no groups' },
               ]} />
 
+              <SectionHeading>Examples</SectionHeading>
               <ExampleBlock title="Flat Grid (no groups)" tight>
                 <div className="max-w-sm rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level1 }}>
                   <CardActions actions={[
@@ -2142,6 +2303,13 @@ export default function StyleguidePage() {
                 </div>
               </CodePreviewBlock>
 
+              <SectionHeading>Import</SectionHeading>
+              <ImportBlock path="@/primitives" names={['CardDetails']} />
+
+              <SectionHeading>Usage</SectionHeading>
+              <UsageBlock code={cardDetailsSrc} name="CardDetails" />
+
+              <SectionHeading>API Reference</SectionHeading>
               <PropsTable items={[
                 { name: 'rows', type: 'DetailRow[]', description: 'Array of { label, value, icon }' },
                 { name: 'defaultOpen', type: 'boolean', default: 'false', description: 'Start expanded' },
@@ -2157,12 +2325,20 @@ export default function StyleguidePage() {
                 </div>
               </CodePreviewBlock>
 
+              <SectionHeading>Import</SectionHeading>
+              <ImportBlock path="@/primitives" names={['CardSensors']} />
+
+              <SectionHeading>Usage</SectionHeading>
+              <UsageBlock code={cardSensorsSrc} name="CardSensors" />
+
+              <SectionHeading>API Reference</SectionHeading>
               <PropsTable items={[
                 { name: 'sensors', type: 'CardSensor[]', description: 'Array of sensor entries' },
                 { name: 'onSensorClick', type: '(id: string) => void', description: 'Makes rows clickable buttons' },
                 { name: 'onSensorHover', type: '(id: string | null) => void', description: 'Hover callback for map highlighting' },
               ]} />
 
+              <SectionHeading>Examples</SectionHeading>
               <ExampleBlock title="Clickable (interactive)" tight>
                 <div className="max-w-sm rounded-lg overflow-hidden p-1" style={{ backgroundColor: SURFACE.level1 }}>
                   <CardSensors sensors={sampleSensors} onSensorClick={(id) => console.log('sensor clicked:', id)} />
@@ -2179,6 +2355,13 @@ export default function StyleguidePage() {
                 </div>
               </CodePreviewBlock>
 
+              <SectionHeading>Import</SectionHeading>
+              <ImportBlock path="@/primitives" names={['CardLog']} />
+
+              <SectionHeading>Usage</SectionHeading>
+              <UsageBlock code={cardLogSrc} name="CardLog" />
+
+              <SectionHeading>API Reference</SectionHeading>
               <PropsTable items={[
                 { name: 'entries', type: 'LogEntry[]', description: 'Array of { time, label }' },
                 { name: 'maxVisible', type: 'number', default: '5', description: 'Entries shown before "show more"' },
@@ -2195,6 +2378,13 @@ export default function StyleguidePage() {
                 </div>
               </CodePreviewBlock>
 
+              <SectionHeading>Import</SectionHeading>
+              <ImportBlock path="@/primitives" names={['CardClosure']} />
+
+              <SectionHeading>Usage</SectionHeading>
+              <UsageBlock code={cardClosureSrc} name="CardClosure" />
+
+              <SectionHeading>API Reference</SectionHeading>
               <PropsTable items={[
                 { name: 'outcomes', type: 'ClosureOutcome[]', description: 'Array of { id, label, icon }' },
                 { name: 'onSelect', type: '(outcomeId: string) => void', description: 'Selection handler' },
@@ -2217,6 +2407,13 @@ export default function StyleguidePage() {
                 </div>
               </CodePreviewBlock>
 
+              <SectionHeading>Import</SectionHeading>
+              <ImportBlock path="@/primitives" names={['TargetCard']} />
+
+              <SectionHeading>Usage</SectionHeading>
+              <UsageBlock code={targetCardSrc} name="TargetCard" />
+
+              <SectionHeading>API Reference</SectionHeading>
               <PropsTable items={[
                 { name: 'header', type: 'ReactNode', description: 'CardHeader element' },
                 { name: 'children', type: 'ReactNode', description: 'Slot components (media, actions, timeline, details, sensors, log, closure)' },
@@ -2226,6 +2423,7 @@ export default function StyleguidePage() {
                 { name: 'completed', type: 'boolean', description: 'Desaturate card' },
               ]} />
 
+              <SectionHeading>Examples</SectionHeading>
               <ExampleBlock title="Mitigating (active jam)" tight>
                 <div className="max-w-sm mx-auto">
                   <StyleguideUnifiedCard detection={cuas_mitigating} defaultOpen />
@@ -2266,6 +2464,13 @@ export default function StyleguidePage() {
                 </div>
               </CodePreviewBlock>
 
+              <SectionHeading>Import</SectionHeading>
+              <ImportBlock path="@/primitives" names={['FilterBar']} />
+
+              <SectionHeading>Usage</SectionHeading>
+              <UsageBlock code={filterBarSrc} name="FilterBar" />
+
+              <SectionHeading>API Reference</SectionHeading>
               <PropsTable items={[
                 { name: 'filters', type: 'FilterState', description: 'Current filter values' },
                 { name: 'activeFilterCount', type: 'number', description: 'Controls reset button visibility' },
@@ -2286,6 +2491,13 @@ export default function StyleguidePage() {
                 </div>
               </CodePreviewBlock>
 
+              <SectionHeading>Import</SectionHeading>
+              <ImportBlock path="@/app/components/DevicesPanel" names={['DevicesPanel']} />
+
+              <SectionHeading>Usage</SectionHeading>
+              <UsageBlock code={devicesPanelSrc} name="DevicesPanel" />
+
+              <SectionHeading>API Reference</SectionHeading>
               <PropsTable items={[
                 { name: 'open', type: 'boolean', description: 'Controls sidebar visibility (slide in/out)' },
                 { name: 'onClose', type: '() => void', description: 'Called when the X close button is clicked' },
@@ -2297,6 +2509,7 @@ export default function StyleguidePage() {
                 { name: 'focusedDeviceId', type: 'string | null', default: 'undefined', description: 'Auto-expand this device, ensure its type filter is active, clear search, and scroll it into view' },
               ]} />
 
+              <SectionHeading>Examples</SectionHeading>
               {/* ── Empty state ─────────────────────────────────── */}
               <ExampleBlock id="devices-empty" title="Empty state" tight>
                 <StyleguideDeviceTile label="When no devices match the current search or filter, the panel shows this placeholder.">
@@ -2755,6 +2968,10 @@ export default function StyleguidePage() {
                 </button>
                 <span className="text-[11px] text-zinc-600">Browsers may limit bulk saves; use per-file links if some downloads are blocked.</span>
               </div>
+              <SectionHeading>Import</SectionHeading>
+              <ImportBlock path="@/app/components/TacticalMap" names={['CameraIcon', 'RadarIcon', 'SensorIcon', 'DroneIcon', 'DroneHiveIcon', 'LidarIcon', 'LauncherIcon', 'MissileIcon']} />
+
+              <SectionHeading>Preview</SectionHeading>
               <CodePreviewBlock name="MapIcons" description="Full icon catalog — map-layer icons from TacticalMap and card-layer icons from MapIcons. All support a size prop." code={tacticalMapSrc}>
                 <div className="space-y-8">
                   <div>
