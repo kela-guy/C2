@@ -356,7 +356,7 @@ interface TacticalMapProps {
   /** Context menu action callbacks */
   onContextMenuAction?: (action: string, elementType: 'target' | 'effector' | 'sensor', elementId: string) => void;
   /** Friendly drones shown as cyan markers with tooltip only */
-  friendlyDrones?: { id: string; name: string; lat: number; lon: number; altitude: string; headingDeg?: number }[];
+  friendlyDrones?: { id: string; name: string; lat: number; lon: number; altitude: string; headingDeg?: number; trail?: [number, number][] }[];
   /** Smooth pan to a target without zoom change */
   smoothFocusRequest?: { lat: number; lon: number } | null;
   /** Target ID hovered from card sidebar — highlight on map */
@@ -2043,6 +2043,25 @@ export const TacticalMap = ({
             )}
           </>
         )}
+
+        {/* Friendly drone trail lines */}
+        {friendlyDrones.filter(d => d.trail && d.trail.length >= 2).map(drone => (
+          <Source key={`friendly-trail-${drone.id}`} id={`friendly-trail-${drone.id}`} type="geojson" data={{
+            type: 'Feature', properties: {},
+            geometry: { type: 'LineString', coordinates: drone.trail!.map(([lat, lon]) => [lon, lat]) },
+          }}>
+            <Layer id={`friendly-trail-casing-${drone.id}`} type="line" paint={{
+              'line-color': '#000000',
+              'line-width': 7,
+              'line-opacity': 1,
+            }} />
+            <Layer id={`friendly-trail-line-${drone.id}`} type="line" paint={{
+              'line-color': '#22d3ee',
+              'line-width': 3,
+              'line-opacity': 1,
+            }} />
+          </Source>
+        ))}
 
         {/* Friendly drone markers (cyan, highlight on device card hover) */}
         {friendlyDrones.map(drone => {

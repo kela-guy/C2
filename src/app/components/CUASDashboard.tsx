@@ -6,7 +6,7 @@ import { NotificationSystem, showTacticalNotification } from './NotificationSyst
 import { NotificationCenter } from './NotificationCenter';
 import ListOfSystems from '@/imports/ListOfSystems';
 import type { Detection, RegulusEffector } from '@/imports/ListOfSystems';
-import { List, Bell, Radar, BookOpen, HelpCircle, Palette, Target, Video } from 'lucide-react';
+import { List, Bell, Radar, HelpCircle, Palette, Target, Video } from 'lucide-react';
 import { Toggle } from '@/shared/components/ui/toggle';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/shared/components/ui/tooltip';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/shared/components/ui/dropdown-menu';
@@ -59,6 +59,7 @@ export interface FriendlyDrone {
   lon: number;
   altitude: string;
   headingDeg?: number;
+  trail?: [number, number][];
 }
 
 const FRIENDLY_PATROL_ROUTES: { id: string; name: string; altitude: string; waypoints: [number, number][] }[] = [
@@ -299,10 +300,17 @@ export const CUASDashboard = () => {
 
   // --- Friendly drone patrol simulation ---
   const patrolProgressRef = useRef<number[]>(FRIENDLY_PATROL_ROUTES.map(() => 0));
+  const friendlyTrailRef = useRef<[number, number][][]>(FRIENDLY_PATROL_ROUTES.map(() => []));
   const PATROL_SPEED = 0.004; // progress per tick (0..1 per leg)
+  const TRAIL_MAX_POINTS = 40;
+  const TRAIL_SAMPLE_EVERY = 3;
+  const trailTickRef = useRef(0);
 
   useEffect(() => {
     const tick = setInterval(() => {
+      trailTickRef.current += 1;
+      const sampleTrail = trailTickRef.current % TRAIL_SAMPLE_EVERY === 0;
+
       patrolProgressRef.current = patrolProgressRef.current.map((p) => {
         const next = p + PATROL_SPEED;
         return next >= FRIENDLY_PATROL_ROUTES[0].waypoints.length ? 0 : next;
@@ -320,6 +328,10 @@ export const CUASDashboard = () => {
           const lon = from[1] + (to[1] - from[1]) * legFrac;
           const heading = bearingDegrees(from[0], from[1], to[0], to[1]) - 90;
 
+          if (sampleTrail) {
+            friendlyTrailRef.current[i] = [...friendlyTrailRef.current[i], [lat, lon]].slice(-TRAIL_MAX_POINTS);
+          }
+
           return {
             id: route.id,
             name: route.name,
@@ -327,6 +339,7 @@ export const CUASDashboard = () => {
             lon,
             altitude: route.altitude,
             headingDeg: heading,
+            trail: friendlyTrailRef.current[i],
           };
         })
       );
@@ -1106,20 +1119,6 @@ export const CUASDashboard = () => {
               </a>
             </TooltipTrigger>
             <TooltipContent side="left" sideOffset={8}>Style Guide</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <a
-                href={import.meta.env.DEV ? 'http://localhost:6006' : 'https://main--69b81d2c2b313942c613995e.chromatic.com/'}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="size-8 rounded flex items-center justify-center text-gray-400 hover:text-pink-400 hover:bg-pink-500/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
-                aria-label="Storybook"
-              >
-                <BookOpen size={20} strokeWidth={1.5} />
-              </a>
-            </TooltipTrigger>
-            <TooltipContent side="left" sideOffset={8}>Storybook</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>

@@ -221,22 +221,19 @@ export default function MapIconsPlayground() {
 
   const [overrides, setOverrides] = useState<Partial<MarkerStyle>>(saved.overrides);
 
-  const saveAll = useCallback(() => {
-    const config: SavedConfig = {
-      selectedIconId, activeState, affiliation,
-      iconSize, surfaceSize, ringSize, glyphRotation,
-      heading, showBadge, badgeSize, badgeFill, badgeOpacity,
-      fovAngle, fovRange, overrides,
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-    setJustSaved(true);
-    setTimeout(() => setJustSaved(false), 1500);
-  }, [
+  const configRef = useRef<SavedConfig>(DEFAULTS);
+  configRef.current = {
     selectedIconId, activeState, affiliation,
     iconSize, surfaceSize, ringSize, glyphRotation,
     heading, showBadge, badgeSize, badgeFill, badgeOpacity,
     fovAngle, fovRange, overrides,
-  ]);
+  };
+
+  const saveAll = useCallback(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(configRef.current));
+    setJustSaved(true);
+    setTimeout(() => setJustSaved(false), 1500);
+  }, []);
 
   const setOverride = useCallback(<K extends keyof MarkerStyle>(key: K, value: MarkerStyle[K]) => {
     setOverrides((prev) => ({ ...prev, [key]: value }));
@@ -252,7 +249,7 @@ export default function MapIconsPlayground() {
   const iconNode = selectedIcon.render(iconSize, resolved.glyphColor, glyphRotation);
 
   const interactiveStates: InteractionState[] = ['hovered', 'selected', 'active'];
-  const showLabel = isHovered || interactiveStates.includes(activeState);
+  const showLabel = isHovered || interactiveStates.includes(activeState) || affiliation === 'hostile';
   const showFov = (isHovered || interactiveStates.includes(activeState)) && selectedIcon.hasFov;
 
   const hasOverrides = Object.keys(overrides).length > 0;
@@ -299,7 +296,7 @@ export default function MapIconsPlayground() {
                 <button
                   key={aff}
                   type="button"
-                  onClick={() => { setAffiliation(aff); clearOverrides(); }}
+                  onClick={() => setAffiliation(aff)}
                   className={cn(
                     'flex items-center gap-2 px-2.5 py-1.5 rounded text-left transition-all text-xs',
                     affiliation === aff
@@ -329,7 +326,7 @@ export default function MapIconsPlayground() {
                   <button
                     key={state}
                     type="button"
-                    onClick={() => { setActiveState(state); clearOverrides(); }}
+                    onClick={() => setActiveState(state)}
                     className={cn(
                       'flex items-center gap-2 px-2.5 py-1.5 rounded text-left transition-all text-xs',
                       activeState === state
