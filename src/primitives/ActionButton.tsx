@@ -4,10 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/shared/components/ui/utils";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/shared/components/ui/tooltip";
 
-const colorByVariant: Record<
-  string,
-  { base: string; hover: string; active: string; text: string }
-> = {
+export const ACTION_BUTTON_VARIANTS = {
   fill: {
     base: 'bg-white/[0.08]',
     hover: 'hover:bg-white/[0.14]',
@@ -32,13 +29,17 @@ const colorByVariant: Record<
     active: 'active:bg-[oklch(0.451_0.166_75)]',
     text: 'text-white',
   },
-};
+} as const;
 
-const sizeConfig = {
+export type ActionButtonVariant = keyof typeof ACTION_BUTTON_VARIANTS;
+
+export const ACTION_BUTTON_SIZES = {
   sm: { height: 'min-h-[30px] h-[30px]', text: 'text-xs', icon: 11, font: 'font-medium' },
   md: { height: 'min-h-8 h-8', text: 'text-xs', icon: 14, font: 'font-medium' },
   lg: { height: 'min-h-9 h-9', text: 'text-[13px]', icon: 16, font: 'font-semibold' },
-};
+} as const;
+
+export type ActionButtonSize = keyof typeof ACTION_BUTTON_SIZES;
 
 export function ActionButton({
   label,
@@ -55,8 +56,8 @@ export function ActionButton({
   label: string;
   icon?: React.ElementType;
   onClick?: (e: React.MouseEvent) => void;
-  variant?: "fill" | "ghost" | "danger" | "warning";
-  size?: "sm" | "md" | "lg";
+  variant?: ActionButtonVariant;
+  size?: ActionButtonSize;
   className?: string;
   disabled?: boolean;
   loading?: boolean;
@@ -65,8 +66,8 @@ export function ActionButton({
 }) {
   const prefersReducedMotion = useReducedMotion();
   const isDisabled = disabled || loading;
-  const c = colorByVariant[variant] ?? colorByVariant.fill;
-  const sz = sizeConfig[size];
+  const c = ACTION_BUTTON_VARIANTS[variant];
+  const sz = ACTION_BUTTON_SIZES[size];
 
   const btn = (
     <button

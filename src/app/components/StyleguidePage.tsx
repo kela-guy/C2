@@ -11,14 +11,16 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { TooltipProvider } from '@/shared/components/ui/tooltip';
 import {
   CARD_TOKENS, ELEVATION, SURFACE, LAYOUT_TOKENS, surfaceAt, overlayAt,
-  StatusChip, ActionButton, AccordionSection, TelemetryRow,
+  StatusChip, STATUS_CHIP_COLORS, type StatusChipColor,
+  ActionButton, ACTION_BUTTON_VARIANTS, ACTION_BUTTON_SIZES, type ActionButtonVariant,
+  SplitActionButton, SPLIT_BUTTON_VARIANTS,
+  AccordionSection, TelemetryRow,
   TargetCard, CardHeader, CardActions,
-  CardDetails, CardSensors, CardMedia, CardLog, CardClosure,
+  CardDetails, CardSensors, CardMedia, MEDIA_BADGE_CONFIG, CardLog, CardClosure,
   FilterBar, NewUpdatesPill,
   type CardAction, type CardSensor,
   type LogEntry, type ClosureOutcome, type DetailRow,
 } from '@/primitives';
-import { SplitActionButton } from '@/primitives/SplitActionButton';
 import {
   CameraIcon, SensorIcon, RadarIcon, DroneIcon, DroneHiveIcon,
   LidarIcon, LauncherIcon, MissileIcon,
@@ -803,6 +805,23 @@ function TokenTable({ rows }: { rows: { token: string; value: string | number; n
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function VariantGrid({ entries, renderSample }: {
+  entries: { key: string; usage?: string }[];
+  renderSample: (key: string) => React.ReactNode;
+}) {
+  return (
+    <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))' }}>
+      {entries.map(({ key, usage }) => (
+        <div key={key} className="flex flex-col items-center gap-2 rounded-lg p-3" style={{ backgroundColor: SURFACE.level1 }}>
+          {renderSample(key)}
+          <span className="text-[11px] font-mono text-zinc-300">{key}</span>
+          {usage && <span className="text-[10px] text-zinc-500 text-center leading-tight">{usage}</span>}
+        </div>
+      ))}
     </div>
   );
 }
@@ -1837,16 +1856,14 @@ export default function StyleguidePage() {
             <ComponentSection id="status-chip" name="StatusChip" description="Compact colored badge indicating operational status of a target or system.">
               <CodePreviewBlock name="StatusChip" description="Compact colored badge indicating operational status of a target or system." code={statusChipSrc}>
                 <div className="flex flex-wrap items-center gap-3">
-                  <StatusChip label="פעיל" color="green" />
-                  <StatusChip label="פעיל לאחרונה" color="orange" />
-                  <StatusChip label="פג תוקף" color="gray" />
-                  <StatusChip label="נדחה" color="gray" />
-                  <StatusChip label="טופל" color="green" />
+                  {(Object.keys(STATUS_CHIP_COLORS) as StatusChipColor[]).map((color) => (
+                    <StatusChip key={color} label={color} color={color} />
+                  ))}
                 </div>
               </CodePreviewBlock>
 
               <SectionHeading>Import</SectionHeading>
-              <ImportBlock path="@/primitives" names={['StatusChip']} />
+              <ImportBlock path="@/primitives" names={['StatusChip', 'STATUS_CHIP_COLORS', 'type StatusChipColor']} />
 
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={statusChipSrc} name="StatusChip" />
@@ -1854,9 +1871,15 @@ export default function StyleguidePage() {
               <SectionHeading>API Reference</SectionHeading>
               <PropsTable items={[
                 { name: 'label', type: 'string', description: 'Display text' },
-                { name: 'color', type: '"green" | "gray" | "red" | "orange"', default: '"green"', description: 'Semantic color variant' },
+                { name: 'color', type: 'StatusChipColor', default: '"green"', description: 'Semantic color variant' },
                 { name: 'className', type: 'string', description: 'Additional Tailwind classes' },
               ]} />
+
+              <SectionHeading>Color Variants</SectionHeading>
+              <VariantGrid
+                entries={Object.entries(STATUS_CHIP_COLORS).map(([key, val]) => ({ key, usage: val.usage }))}
+                renderSample={(key) => <StatusChip label={key} color={key as StatusChipColor} />}
+              />
             </ComponentSection>
             )}
 
@@ -1901,7 +1924,7 @@ export default function StyleguidePage() {
               </CodePreviewBlock>
 
               <SectionHeading>Import</SectionHeading>
-              <ImportBlock path="@/primitives" names={['ActionButton']} />
+              <ImportBlock path="@/primitives" names={['ActionButton', 'ACTION_BUTTON_VARIANTS', 'ACTION_BUTTON_SIZES', 'type ActionButtonVariant', 'type ActionButtonSize']} />
 
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={actionButtonSrc} name="ActionButton" />
@@ -1910,12 +1933,24 @@ export default function StyleguidePage() {
               <PropsTable items={[
                 { name: 'label', type: 'string', description: 'Button text' },
                 { name: 'icon', type: 'React.ElementType', description: 'Lucide icon component' },
-                { name: 'variant', type: '"fill" | "ghost" | "danger" | "warning"', default: '"fill"', description: 'Visual treatment' },
-                { name: 'size', type: '"sm" | "md" | "lg"', default: '"md"', description: 'Height and padding scale' },
+                { name: 'variant', type: 'ActionButtonVariant', default: '"fill"', description: 'Visual treatment' },
+                { name: 'size', type: 'ActionButtonSize', default: '"md"', description: 'Height and padding scale' },
                 { name: 'disabled', type: 'boolean', default: 'false', description: 'Disable interaction' },
                 { name: 'loading', type: 'boolean', default: 'false', description: 'Show spinner, disable click' },
                 { name: 'onClick', type: '(e: MouseEvent) => void', description: 'Click handler' },
               ]} />
+
+              <SectionHeading>Variants</SectionHeading>
+              <VariantGrid
+                entries={(Object.keys(ACTION_BUTTON_VARIANTS) as ActionButtonVariant[]).map((key) => ({ key }))}
+                renderSample={(key) => <ActionButton label={key} icon={Eye} variant={key as ActionButtonVariant} size="sm" />}
+              />
+
+              <SectionHeading>Sizes</SectionHeading>
+              <VariantGrid
+                entries={Object.keys(ACTION_BUTTON_SIZES).map((key) => ({ key }))}
+                renderSample={(key) => <ActionButton label={key} icon={Eye} variant="fill" size={key as keyof typeof ACTION_BUTTON_SIZES} />}
+              />
 
               <SectionHeading>Examples</SectionHeading>
               <ExampleBlock title="Size Scale">
@@ -1991,7 +2026,7 @@ export default function StyleguidePage() {
               </CodePreviewBlock>
 
               <SectionHeading>Import</SectionHeading>
-              <ImportBlock path="@/primitives/SplitActionButton" names={['SplitActionButton']} />
+              <ImportBlock path="@/primitives" names={['SplitActionButton', 'SPLIT_BUTTON_VARIANTS', 'type SplitButtonVariant']} />
 
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={splitActionButtonSrc} name="SplitActionButton" />
@@ -2001,8 +2036,8 @@ export default function StyleguidePage() {
                 { name: 'label', type: 'string', description: 'Primary button text' },
                 { name: 'badge', type: 'string', description: 'Inline chip displayed after the label (e.g. effector name)' },
                 { name: 'icon', type: 'React.ElementType', description: 'Lucide icon' },
-                { name: 'variant', type: '"fill" | "ghost" | "danger" | "warning"', default: '"fill"', description: 'Color treatment' },
-                { name: 'size', type: '"sm" | "md" | "lg"', default: '"sm"', description: 'Height scale' },
+                { name: 'variant', type: 'SplitButtonVariant', default: '"fill"', description: 'Color treatment' },
+                { name: 'size', type: 'SplitButtonSize', default: '"sm"', description: 'Height scale' },
                 { name: 'dropdownItems', type: 'SplitDropdownItem[]', description: 'Sub-action menu items' },
                 { name: 'dropdownGroups', type: 'SplitDropdownGroup[]', description: 'Grouped dropdown sections with labels and separators' },
                 { name: 'disabled', type: 'boolean', default: 'false', description: 'Disable both segments' },
@@ -2010,6 +2045,16 @@ export default function StyleguidePage() {
                 { name: 'dimDisabledShell', type: 'boolean', default: 'true', description: 'Reduce opacity when disabled' },
                 { name: 'onHover', type: '(hovering: boolean) => void', description: 'Fires on mouseEnter/Leave of primary segment — used to highlight effector on map' },
               ]} />
+
+              <SectionHeading>Variants</SectionHeading>
+              <VariantGrid
+                entries={Object.keys(SPLIT_BUTTON_VARIANTS).map((key) => ({ key }))}
+                renderSample={(key) => (
+                  <div className="w-36">
+                    <SplitActionButton label={key} icon={Zap} variant={key as keyof typeof SPLIT_BUTTON_VARIANTS} size="sm" onClick={noop} dropdownItems={[{ id: '1', label: 'Option', onClick: noop }]} />
+                  </div>
+                )}
+              />
 
               <SectionHeading>Examples</SectionHeading>
               <ExampleBlock title="Size Scale">
@@ -2233,7 +2278,7 @@ export default function StyleguidePage() {
               </CodePreviewBlock>
 
               <SectionHeading>Import</SectionHeading>
-              <ImportBlock path="@/primitives" names={['CardMedia']} />
+              <ImportBlock path="@/primitives" names={['CardMedia', 'MEDIA_BADGE_CONFIG', 'type MediaBadgeType']} />
 
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={cardMediaSrc} name="CardMedia" />
@@ -2242,10 +2287,20 @@ export default function StyleguidePage() {
               <PropsTable items={[
                 { name: 'src', type: 'string', description: 'Image or video URL' },
                 { name: 'type', type: '"video" | "image"', default: '"image"', description: 'Media type' },
-                { name: 'badge', type: '"threat" | "warning" | "bird" | null', description: 'Overlay badge icon' },
+                { name: 'badge', type: 'MediaBadgeType | null', description: 'Overlay badge icon' },
                 { name: 'showControls', type: 'boolean', default: 'false', description: 'Show video playback controls' },
                 { name: 'trackingLabel', type: 'string', description: 'Bottom-left tracking status label' },
               ]} />
+
+              <SectionHeading>Badge Types</SectionHeading>
+              <VariantGrid
+                entries={Object.entries(MEDIA_BADGE_CONFIG).map(([key, val]) => ({ key, usage: val.usage }))}
+                renderSample={(key) => {
+                  const bc = MEDIA_BADGE_CONFIG[key as keyof typeof MEDIA_BADGE_CONFIG];
+                  const Icon = bc.icon;
+                  return <Icon size={20} className={bc.color} />;
+                }}
+              />
             </ComponentSection>
             )}
 

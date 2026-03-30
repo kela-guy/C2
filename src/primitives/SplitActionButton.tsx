@@ -26,29 +26,7 @@ export interface SplitDropdownGroup {
   items: SplitDropdownItem[];
 }
 
-export interface SplitActionButtonProps {
-  label: string;
-  subtitle?: string;
-  badge?: string;
-  icon?: React.ElementType;
-  variant?: 'fill' | 'ghost' | 'danger' | 'warning';
-  size?: 'sm' | 'md' | 'lg';
-  disabled?: boolean;
-  loading?: boolean;
-  /** When false, a disabled (non-loading) control stays at full opacity — e.g. completed jam. Default true. */
-  dimDisabledShell?: boolean;
-  onClick: (e: React.MouseEvent) => void;
-  onHover?: (hovering: boolean) => void;
-  dropdownItems: SplitDropdownItem[];
-  dropdownGroups?: SplitDropdownGroup[];
-  className?: string;
-  dataTour?: string;
-}
-
-const colorByVariant: Record<
-  string,
-  { base: string; hover: string; active: string; text: string }
-> = {
+export const SPLIT_BUTTON_VARIANTS = {
   fill: {
     base: 'bg-white/[0.08]',
     hover: 'hover:bg-white/[0.14]',
@@ -73,13 +51,36 @@ const colorByVariant: Record<
     active: 'active:bg-[oklch(0.451_0.166_75)]',
     text: 'text-white',
   },
-};
+} as const;
 
-const sizeConfig = {
+export type SplitButtonVariant = keyof typeof SPLIT_BUTTON_VARIANTS;
+
+export const SPLIT_BUTTON_SIZES = {
   sm: { height: 'min-h-[30px] h-[30px]', text: 'text-xs', icon: 11, chevronMin: 'min-w-[30px] w-[30px]', font: 'font-medium' },
   md: { height: 'min-h-8 h-8', text: 'text-xs', icon: 14, chevronMin: 'min-w-8 w-8', font: 'font-medium' },
   lg: { height: 'min-h-9 h-9', text: 'text-[13px]', icon: 16, chevronMin: 'min-w-9 w-9', font: 'font-semibold' },
-};
+} as const;
+
+export type SplitButtonSize = keyof typeof SPLIT_BUTTON_SIZES;
+
+export interface SplitActionButtonProps {
+  label: string;
+  subtitle?: string;
+  badge?: string;
+  icon?: React.ElementType;
+  variant?: SplitButtonVariant;
+  size?: SplitButtonSize;
+  disabled?: boolean;
+  loading?: boolean;
+  /** When false, a disabled (non-loading) control stays at full opacity -- e.g. completed jam. Default true. */
+  dimDisabledShell?: boolean;
+  onClick: (e: React.MouseEvent) => void;
+  onHover?: (hovering: boolean) => void;
+  dropdownItems: SplitDropdownItem[];
+  dropdownGroups?: SplitDropdownGroup[];
+  className?: string;
+  dataTour?: string;
+}
 
 export function SplitActionButton({
   label,
@@ -101,8 +102,8 @@ export function SplitActionButton({
   const prefersReducedMotion = useReducedMotion();
   const [menuOpen, setMenuOpen] = React.useState(false);
   const isDisabled = disabled || loading;
-  const c = colorByVariant[variant] ?? colorByVariant.fill;
-  const sz = sizeConfig[size];
+  const c = SPLIT_BUTTON_VARIANTS[variant];
+  const sz = SPLIT_BUTTON_SIZES[size];
 
   const hasSubtitle = !!subtitle && !loading;
   const hasBadge = !!badge && !loading;

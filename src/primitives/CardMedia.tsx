@@ -3,12 +3,20 @@ import { Camera, ShieldAlert, AlertTriangle, Play, Pause, SkipBack, SkipForward,
 import { Dialog, DialogContent, DialogTitle } from '@/shared/components/ui/dialog';
 import { cn } from '@/shared/components/ui/utils';
 
+export const MEDIA_BADGE_CONFIG = {
+  threat: { icon: ShieldAlert, color: 'text-red-500', usage: 'Confirmed threat detection' },
+  warning: { icon: AlertTriangle, color: 'text-zinc-400', usage: 'Unconfirmed or low-confidence' },
+  bird: { icon: ShieldAlert, color: 'text-amber-400', usage: 'Bird / false positive' },
+} as const;
+
+export type MediaBadgeType = keyof typeof MEDIA_BADGE_CONFIG;
+
 export interface CardMediaProps {
   src?: string;
   type?: 'video' | 'image';
   placeholder?: 'camera' | 'none';
   overlay?: React.ReactNode;
-  badge?: 'threat' | 'warning' | 'bird' | null;
+  badge?: MediaBadgeType | null;
   trackingLabel?: string;
   aspectRatio?: string;
   showControls?: boolean;
@@ -76,15 +84,17 @@ export function CardMedia({
 
         <div className="absolute inset-0 bg-black/20 pointer-events-none" />
 
-        {badge && (
-          <div className="absolute bottom-0 inset-x-0 p-2 flex justify-between items-end">
-            <div className="flex gap-1">
-              {badge === 'bird' && <ShieldAlert size={14} className="text-amber-400" aria-hidden="true" />}
-              {badge === 'threat' && <ShieldAlert size={14} className="text-red-500" aria-hidden="true" />}
-              {badge === 'warning' && <AlertTriangle size={14} className="text-zinc-400" aria-hidden="true" />}
+        {badge && MEDIA_BADGE_CONFIG[badge] && (() => {
+          const bc = MEDIA_BADGE_CONFIG[badge];
+          const BadgeIcon = bc.icon;
+          return (
+            <div className="absolute bottom-0 inset-x-0 p-2 flex justify-between items-end">
+              <div className="flex gap-1">
+                <BadgeIcon size={14} className={bc.color} aria-hidden="true" />
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {isVideo && !showControls && (
           <>

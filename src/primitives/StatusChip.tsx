@@ -1,17 +1,47 @@
 import React from "react";
-import { Badge } from "@/shared/components/ui/badge";
+import { cn } from "@/shared/components/ui/utils";
 
-const VARIANT_MAP = {
-  green: "status-green",
-  gray: "status-gray",
-  red: "status-red",
-  orange: "status-orange",
+export const STATUS_CHIP_COLORS = {
+  green: {
+    bg: 'bg-emerald-400/15',
+    text: 'text-emerald-400',
+    dot: '#34d399',
+    usage: 'Active, resolved, handled',
+  },
+  red: {
+    bg: 'bg-red-400/15',
+    text: 'text-red-400',
+    dot: '#f87171',
+    usage: 'Threat, alert, critical',
+  },
+  orange: {
+    bg: 'bg-orange-300/15',
+    text: 'text-orange-300',
+    dot: '#fdba74',
+    usage: 'Warning, recently active',
+  },
+  gray: {
+    bg: 'bg-white/15',
+    text: 'text-white',
+    dot: '#a1a1aa',
+    usage: 'Expired, dismissed, inactive',
+  },
 } as const;
 
-export function StatusChip({ label, color = "green", className }: { label: string; color?: "green" | "gray" | "red" | "orange"; className?: string }) {
+export type StatusChipColor = keyof typeof STATUS_CHIP_COLORS;
+
+export function StatusChip({ label, color = "green", className }: { label: string; color?: StatusChipColor; className?: string }) {
+  const c = STATUS_CHIP_COLORS[color];
   return (
-    <Badge variant={VARIANT_MAP[color]} className={className} role="status">
+    <span
+      role="status"
+      className={cn(
+        'inline-flex items-center justify-center rounded border border-transparent px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 gap-1',
+        c.bg, c.text,
+        className,
+      )}
+    >
       {label}
-    </Badge>
+    </span>
   );
 }

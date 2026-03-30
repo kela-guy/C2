@@ -15,7 +15,7 @@ interface FilterBarProps {
   onReset: () => void;
 }
 
-const STATUS_OPTIONS: ActivityStatus[] = [
+export const STATUS_OPTIONS: ActivityStatus[] = [
   'active',
   'recently_active',
   'timeout',
