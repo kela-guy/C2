@@ -1233,6 +1233,7 @@ export const CUASDashboard = () => {
                 hoveredTargetIdFromCard={hoveredTargetIdFromCard}
                 onAssetClick={handleAssetClick}
                 offlineAssetIds={offlineAssetIds}
+                selectedEffectorIds={selectedEffectorIds}
               />
             </div>
           </ResizablePanel>
@@ -1351,6 +1352,7 @@ export const CUASDashboard = () => {
           onClose={() => { setDevicesPanelOpen(false); setSelectedAssetId(null); }}
           onFlyTo={handleDeviceFlyTo}
           onDeviceHover={setHoveredSensorIdFromCard}
+          onDeviceSelect={setSelectedAssetId}
           onJamActivate={(jammerId) => {
             toast.success(`שיבוש הופעל — ${jammerId}`, { duration: 3000 });
           }}

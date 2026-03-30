@@ -3,7 +3,7 @@ import Map, { Marker, NavigationControl, Source, Layer, type MapRef } from 'reac
 
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Crosshair, AlertTriangle, ShieldAlert, Camera, CheckCircle2, Radio, Search, Eye, MapPin, X, Compass, Circle, Video, Info, Settings, BellOff, Wrench, ExternalLink, Maximize2 } from 'lucide-react';
-import { JamWaveIcon } from '@/primitives/MapIcons';
+import { JamWaveIcon, DRONE_PATH, MISSILE_PATH } from '@/primitives/MapIcons';
 import { MapMarker } from '@/primitives/MapMarker';
 import { type Affiliation, type InteractionState, resolveMarkerStyle } from '@/primitives/mapMarkerStates';
 import { OFFLINE_VISIBILITY_VARIANT } from '@/app/config/offlineVisibility';
@@ -153,7 +153,7 @@ export const RadarIcon = ({ size = 28, fill = "white" }: { size?: number; fill?:
   </svg>
 );
 
-export const MissileIcon = ({ rotationDeg = 0 }: { rotationDeg?: number }) => (
+export const MissileIcon = ({ rotationDeg = 0, fill = '#15FFF6' }: { rotationDeg?: number; fill?: string }) => (
   <svg
     width="42"
     height="30"
@@ -162,7 +162,7 @@ export const MissileIcon = ({ rotationDeg = 0 }: { rotationDeg?: number }) => (
     xmlns="http://www.w3.org/2000/svg"
     style={{ transform: `rotate(${rotationDeg}deg)` }}
   >
-    <path d="M35.7881 8.51465L33.9658 14.873L33.9268 15.0107L33.9658 15.1484L35.7793 21.4941L34.5547 21.4873C32.4701 19.9119 30.3741 18.3513 28.2656 16.8076L28.1338 16.7119L27.9707 16.7109C26.6359 16.7083 23.6595 16.7249 21.0195 16.7422C19.699 16.7508 18.4618 16.7599 17.5547 16.7666C17.1013 16.7699 16.7303 16.7725 16.4727 16.7744C16.3439 16.7754 16.2431 16.7768 16.1748 16.7773C16.1407 16.7776 16.1142 16.7772 16.0967 16.7773C16.0881 16.7774 16.0816 16.7783 16.0771 16.7783H16.0703L15.5225 16.7822L15.5762 17.3271L15.7178 18.7539L13.7783 17.0059L13.6299 16.8721L13.4307 16.8779H13.4189C10.0969 16.9674 7.22056 17.026 4.76758 15.0088C7.26362 13.0467 10.1759 13.0243 13.4678 13.1396L13.6748 13.1475L13.8252 13.0068L15.7217 11.249L15.5762 12.7812L15.5244 13.3291H28.1211L28.25 13.2402C30.3251 11.8056 32.595 10.0053 34.6641 8.50195L35.7881 8.51465Z" fill="#15FFF6" stroke="black"/>
+    <path d={MISSILE_PATH} fill={fill} stroke="black"/>
   </svg>
 );
 
@@ -178,7 +178,7 @@ export const DroneIcon = ({ rotationDeg = 0, disabled = false, color }: { rotati
     style={{ transform: `rotate(${rotationDeg}deg)` }}
   >
     <path
-      d="M23.334 15.7502L9.33696 0.583495L5.86139 4.0835L10.5007 11.0835L9.32456 15.7502L10.5007 20.4168L5.86139 27.4168L9.32456 30.6801L23.334 15.7502Z"
+      d={DRONE_PATH}
       fill={disabled ? '#6b7280' : color || '#15FFF6'}
       stroke="#0a0a0a"
       strokeWidth="1"
@@ -370,6 +370,8 @@ interface TacticalMapProps {
   onAssetClick?: (assetId: string) => void;
   /** Asset IDs that are offline — show a gray badge on the map */
   offlineAssetIds?: string[];
+  /** User-overridden effector selection per target (targetId -> effectorId) */
+  selectedEffectorIds?: Map<string, string>;
 }
 
 const JAM_VERIFICATION_DURATION_MS = 4500;
@@ -392,6 +394,8 @@ const TARGET_SHADOW_HOVERED = 'shadow-[0_0_0_1px_rgba(255,255,255,0.35),0_4px_12
 const TELEMETRY_BASE = 'bg-black/60 backdrop-blur-md rounded px-2 py-1 font-mono text-xs tabular-nums whitespace-nowrap pointer-events-none select-none';
 const TELEMETRY_SHADOW_CYAN = 'shadow-[0_0_0_1px_rgba(34,211,238,0.4),0_4px_12px_rgba(0,0,0,0.4)]';
 const TELEMETRY_SHADOW_ZINC = 'shadow-[0_0_0_1px_rgba(113,113,122,0.4),0_4px_12px_rgba(0,0,0,0.4)]';
+const TELEMETRY_SHADOW_GREEN = 'shadow-[0_0_0_1px_rgba(18,184,134,0.4),0_4px_12px_rgba(0,0,0,0.4)]';
+const TELEMETRY_SHADOW_RED = 'shadow-[0_0_0_1px_rgba(239,68,68,0.4),0_4px_12px_rgba(0,0,0,0.4)]';
 
 export const TacticalMap = ({ 
   focusCoords, 
@@ -424,6 +428,7 @@ export const TacticalMap = ({
   hoveredTargetIdFromCard,
   onAssetClick,
   offlineAssetIds = [],
+  selectedEffectorIds,
 }: TacticalMapProps) => {
   const mapRef = useRef<MapRef>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -602,6 +607,163 @@ export const TacticalMap = ({
           return true;
       });
   }, [targets]);
+
+  const engagementPair = useMemo(() => {
+    if (!activeTargetId) return null;
+    const target = targets.find(t => t.id === activeTargetId);
+    if (!target) return null;
+    if (target.entityStage !== 'classified' || target.classifiedType !== 'drone') return null;
+    if (target.mitigationStatus === 'mitigated') return null;
+    if (target.status === 'expired') return null;
+    if (target.id === jammingTargetId) return null;
+    if (target.mitigatingEffectorId === 'ALL') return null;
+
+    const [tLat, tLon] = target.coordinates.split(',').map(s => parseFloat(s.trim()));
+    if (isNaN(tLat) || isNaN(tLon)) return null;
+
+    const isMitigating = target.mitigationStatus === 'mitigating';
+
+    if (isMitigating && target.mitigatingEffectorId) {
+      const eff = regulusEffectors.find(r => r.id === target.mitigatingEffectorId);
+      if (eff) {
+        const distM = haversineDistanceM(tLat, tLon, eff.lat, eff.lon);
+        return { targetLat: tLat, targetLon: tLon, effectorLat: eff.lat, effectorLon: eff.lon, effectorId: eff.id, distanceM: distM, isMitigating: true };
+      }
+    }
+
+    const overrideId = selectedEffectorIds?.get(activeTargetId);
+    const sorted = regulusEffectors
+      .filter(r => r.status === 'available')
+      .map(r => ({ eff: r, dist: haversineDistanceM(tLat, tLon, r.lat, r.lon) }))
+      .sort((a, b) => a.dist - b.dist);
+
+    const overridden = overrideId ? sorted.find(e => e.eff.id === overrideId) : null;
+    const active = overridden ?? sorted[0] ?? null;
+    if (!active) return null;
+
+    return {
+      targetLat: tLat, targetLon: tLon,
+      effectorLat: active.eff.lat, effectorLon: active.eff.lon,
+      effectorId: active.eff.id,
+      distanceM: active.dist,
+      isMitigating: false,
+    };
+  }, [activeTargetId, targets, regulusEffectors, selectedEffectorIds, jammingTargetId]);
+
+  const engagementActive = !!engagementPair;
+  useEffect(() => {
+    if (!engagementActive) return;
+    const prefersReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReduced) return;
+
+    const D = 4;
+    const PERIOD = D + D;
+    const TOTAL_STEPS = 32;
+    let step = 0;
+    let lastTime = 0;
+    let frameId: number;
+
+    const animate = (time: number) => {
+      if (time - lastTime > 20) {
+        lastTime = time;
+        step = (step + 1) % TOTAL_STEPS;
+        const s = (step / TOTAL_STEPS) * PERIOD;
+        const pattern: number[] =
+          s < 0.01       ? [D, D] :
+          s < D          ? [0, s, D, D - s] :
+          s > PERIOD - 0.01 ? [D, D] :
+                           [s - D, D, PERIOD - s, 0.01];
+        try {
+          const map = (mapRef.current as any)?.getMap?.() ?? mapRef.current;
+          if (map?.getLayer?.('engagement-line-dash')) {
+            map.setPaintProperty('engagement-line-dash', 'line-dasharray', pattern);
+          }
+        } catch {}
+      }
+      frameId = requestAnimationFrame(animate);
+    };
+    frameId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frameId);
+  }, [engagementActive]);
+
+  // Traveling particles on the engagement line
+  const engParticleTRef = useRef<number[]>(Array.from({ length: 3 }, (_, i) => i / 3));
+  const [engParticleGeoJson, setEngParticleGeoJson] = useState<{
+    type: 'FeatureCollection'; features: Array<{ type: 'Feature'; properties: Record<string, never>; geometry: { type: 'Point'; coordinates: [number, number] } }>;
+  }>({ type: 'FeatureCollection', features: [] });
+
+  const engSpringLut = useMemo(() => {
+    const stiffness = 160, damping = 70, mass = 1;
+    const steps = 300;
+    const dt = 1 / 120;
+    let x = 0, v = 0;
+    const lut: number[] = [];
+    for (let i = 0; i <= steps; i++) {
+      lut.push(Math.max(0, Math.min(x, 1.5)));
+      const a = (-stiffness * (x - 1) - damping * v) / mass;
+      v += a * dt;
+      x += v * dt;
+    }
+    return lut;
+  }, []);
+
+  const engPairRef = useRef(engagementPair);
+  engPairRef.current = engagementPair;
+
+  useEffect(() => {
+    if (!engagementActive) {
+      setEngParticleGeoJson({ type: 'FeatureCollection', features: [] });
+      return;
+    }
+    const prefersReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReduced) return;
+
+    let frameId: number;
+    let lastTime = 0;
+    const SPEED = 0.25;
+    const COUNT = 3;
+    const ts = engParticleTRef.current;
+    const lut = engSpringLut;
+
+    const easeSpring = (t: number) => {
+      const idx = t * (lut.length - 1);
+      const lo = Math.floor(idx);
+      const hi = Math.min(lo + 1, lut.length - 1);
+      return lut[lo] + (lut[hi] - lut[lo]) * (idx - lo);
+    };
+
+    const animate = (time: number) => {
+      const dt = lastTime ? (time - lastTime) / 1000 : 0;
+      lastTime = time;
+      const pair = engPairRef.current;
+      if (!pair) { frameId = requestAnimationFrame(animate); return; }
+
+      for (let i = 0; i < COUNT; i++) {
+        ts[i] = (ts[i] + SPEED * dt) % 1;
+      }
+
+      const features = ts.map((t) => {
+        const eased = easeSpring(t);
+        return {
+          type: 'Feature' as const,
+          properties: {} as Record<string, never>,
+          geometry: {
+            type: 'Point' as const,
+            coordinates: [
+              pair.effectorLon + (pair.targetLon - pair.effectorLon) * eased,
+              pair.effectorLat + (pair.targetLat - pair.effectorLat) * eased,
+            ] as [number, number],
+          },
+        };
+      });
+
+      setEngParticleGeoJson({ type: 'FeatureCollection', features });
+      frameId = requestAnimationFrame(animate);
+    };
+
+    frameId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frameId);
+  }, [engagementActive, engSpringLut]);
 
   const [mapStyleId, setMapStyleId] = useState<'dark' | 'satellite'>('satellite');
   const [flickeringSensorId, setFlickeringSensorId] = useState<string | null>(null);
@@ -1329,6 +1491,69 @@ export const TacticalMap = ({
           </>
         )}
 
+        {/* Effector-to-target engagement line + distance badge */}
+        {engagementPair && (
+          <>
+            <Source id="engagement-line" type="geojson" data={{
+              type: 'Feature' as const,
+              properties: {},
+              geometry: {
+                type: 'LineString' as const,
+                coordinates: [
+                  [engagementPair.effectorLon, engagementPair.effectorLat],
+                  [engagementPair.targetLon, engagementPair.targetLat],
+                ],
+              },
+            }}>
+              <Layer
+                id="engagement-line-dash"
+                type="line"
+                paint={{
+                  'line-color': engagementPair.isMitigating ? '#ef4444' : '#ffffff',
+                  'line-width': 2,
+                  'line-dasharray': [4, 4],
+                }}
+              />
+            </Source>
+            <Source id="engagement-particles" type="geojson" data={engParticleGeoJson}>
+              <Layer
+                id="engagement-particle-glow"
+                type="circle"
+                paint={{
+                  'circle-radius': 14,
+                  'circle-color': engagementPair.isMitigating ? '#ef4444' : '#ffffff',
+                  'circle-opacity': 0.225,
+                  'circle-blur': 1,
+                }}
+              />
+              <Layer
+                id="engagement-particle-core"
+                type="circle"
+                paint={{
+                  'circle-radius': 4,
+                  'circle-color': engagementPair.isMitigating ? '#ef4444' : '#ffffff',
+                  'circle-opacity': 0.9,
+                }}
+              />
+            </Source>
+            <Marker
+              latitude={(engagementPair.targetLat + engagementPair.effectorLat) / 2}
+              longitude={(engagementPair.targetLon + engagementPair.effectorLon) / 2}
+              anchor="center"
+            >
+              <div
+                className="rounded px-2 py-1 font-mono text-xs tabular-nums whitespace-nowrap pointer-events-none select-none shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
+                style={{
+                  backgroundColor: engagementPair.isMitigating ? '#ef4444' : '#ffffff',
+                  color: engagementPair.isMitigating ? '#ffffff' : '#000000',
+                }}
+              >
+                {engagementPair.distanceM < 1000 ? `${Math.round(engagementPair.distanceM)}m` : `${(engagementPair.distanceM / 1000).toFixed(1)} km`}
+              </div>
+            </Marker>
+          </>
+        )}
+
         {/* Dynamic Target Markers */}
         {/* Target trail lines for classified entities */}
         {uniqueTargets.filter(t => t.entityStage === 'classified' && t.trail && t.trail.length >= 2).map(target => (
@@ -1425,8 +1650,9 @@ export const TacticalMap = ({
                           style={targetStyle}
                           surfaceSize={targetSurfaceSize}
                           ringSize={targetRingSize}
+                          pulse={isActive}
                           label={target.name || target.id}
-                          showLabel={isActive || isHoveredTarget}
+                          showLabel={!isActive && isHoveredTarget}
                           onMouseEnter={() => setHoveredTargetId(target.id)}
                           onMouseLeave={() => setHoveredTargetId(null)}
                         />
@@ -1441,7 +1667,7 @@ export const TacticalMap = ({
                           >
                             <div className={`
                               ${TARGET_CARD_BASE}
-                              ${isHoveredFromCard ? TARGET_SHADOW_HOVERED : isBird ? TARGET_SHADOW_BIRD : isMitigated ? TARGET_SHADOW_MITIGATED : TARGET_SHADOW_THREAT}
+                              ${TOOLTIP_SHADOW}
                             `}>
                               <div className="flex items-center gap-1.5">
                                 <span className="font-semibold truncate max-w-[120px]">{target.name}</span>
@@ -1544,6 +1770,7 @@ export const TacticalMap = ({
                       style={style}
                       surfaceSize={36}
                       ringSize={28}
+                      pulse={isSelected}
                       label={isOffline ? 'משגר טילים — לא מקוון' : 'משגר טילים'}
                       showLabel={isHovered || isSelected || isHoveredFromCard}
                     />
@@ -1554,14 +1781,16 @@ export const TacticalMap = ({
           );
         })}
 
-        {/* Regulus effector coverage rings (shown on hover or when active) */}
+        {/* Regulus effector coverage rings (shown on hover, selected, engagement, or when active) */}
         {regulusEffectors.map(reg => {
           const isHovered = hoveredRegulusId === reg.id;
           const isActive = reg.status === 'active';
           const isHoveredFromCard = reg.id === hoveredSensorIdFromCard;
+          const isEngaged = engagementPair?.effectorId === reg.id;
+          const isSelected = reg.id === selectedAssetId;
           const isOffline = offlineAssetIds.includes(reg.id);
           const dimCoverage = OFFLINE_FOV_DIMMING_ENABLED && isOffline;
-          if (!isHovered && !isActive && !isHoveredFromCard) return null;
+          if (!isHovered && !isActive && !isHoveredFromCard && !isEngaged && !isSelected) return null;
           const ring = fovPolygon(reg.lat, reg.lon, 360, 0, reg.coverageRadiusM);
           return (
             <Source key={`reg-coverage-${reg.id}`} id={`reg-coverage-${reg.id}`} type="geojson" data={{
@@ -1571,13 +1800,13 @@ export const TacticalMap = ({
             }}>
               <Layer id={`reg-coverage-fill-${reg.id}`} type="fill" paint={{
                 'fill-color': dimCoverage ? '#a1a1aa' : (isActive ? '#4ade80' : '#12b886'),
-                'fill-opacity': dimCoverage ? 0.04 : (isActive ? 0.12 : 0.08),
+                'fill-opacity': dimCoverage ? 0.08 : (isActive ? 0.4 : 0.2),
               }} />
               <Layer id={`reg-coverage-line-${reg.id}`} type="line" paint={{
                 'line-color': dimCoverage ? '#a1a1aa' : (isActive ? '#4ade80' : '#12b886'),
-                'line-width': dimCoverage ? 1 : (isActive ? 1.5 : 1),
+                'line-width': dimCoverage ? 1 : (isActive ? 1.5 : 2),
                 'line-dasharray': isActive ? [1, 0] : [4, 4],
-                'line-opacity': dimCoverage ? 0.3 : 0.5,
+                'line-opacity': dimCoverage ? 0.3 : 1,
               }} />
             </Source>
           );
@@ -1588,6 +1817,7 @@ export const TacticalMap = ({
           const isHovered = hoveredRegulusId === reg.id;
           const isActive = reg.status === 'active';
           const isHoveredFromCard = reg.id === hoveredSensorIdFromCard;
+          const isEngaged = engagementPair?.effectorId === reg.id;
           const isOffline = offlineAssetIds.includes(reg.id);
           const isSelected = reg.id === selectedAssetId;
           return (
@@ -1604,16 +1834,17 @@ export const TacticalMap = ({
                     isOffline ? 'disabled' :
                     isActive ? 'jammer' :
                     isSelected ? 'selected' :
-                    isHovered || isHoveredFromCard ? 'hovered' :
+                    isHovered || isHoveredFromCard || isEngaged ? 'hovered' :
                     'default';
                   const style = resolveMarkerStyle(markerState, 'friendly');
-                  const showTooltip = (isHovered || isSelected || isActive || isHoveredFromCard) && !isOffline;
+                  const showTooltip = (isHovered || isSelected || isActive || isHoveredFromCard || isEngaged) && !isOffline;
                   return (
                     <MapMarker
                       icon={<SensorIcon fill={style.glyphColor} />}
                       style={style}
                       surfaceSize={36}
                       ringSize={28}
+                      pulse={isSelected}
                       label={showTooltip ? (isActive ? `${reg.name} — פעיל` : reg.name) : isOffline ? `${reg.name} — לא מקוון` : undefined}
                       showLabel={showTooltip || (isOffline && (isHovered || isSelected))}
                     />
@@ -1704,6 +1935,7 @@ export const TacticalMap = ({
                       style={style}
                       surfaceSize={36}
                       ringSize={28}
+                      pulse={isSelected}
                       label={isOffline ? `${asset.typeLabel} — לא מקוון` : asset.typeLabel}
                       showLabel={isHovered || isSelected || isHighlighted || isInUse || (isOffline && (isHovered || isSelected || isHighlighted))}
                     />
@@ -2114,6 +2346,7 @@ export const TacticalMap = ({
                       style={droneStyle}
                       surfaceSize={36}
                       ringSize={28}
+                      pulse={isSelected}
                       label={`${drone.name}${isOffline ? ' — לא מקוון' : ''}`}
                       showLabel={isSelected || isHoveredFromCard || isHovered}
                       onMouseEnter={() => setHoveredFriendlyDroneId(drone.id)}

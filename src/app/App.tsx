@@ -21,7 +21,7 @@ export default function App() {
           <Route path="/map-icons" element={<MapIconsPlayground />} />
         </Routes>
       </BrowserRouter>
-      <DialRoot position="bottom-left" />
+      <DialRoot position="bottom-right" />
     </DndProvider>
   );
 }

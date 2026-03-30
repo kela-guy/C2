@@ -533,13 +533,14 @@ interface DevicesPanelProps {
   onClose: () => void;
   onFlyTo: (lat: number, lon: number) => void;
   onDeviceHover?: (id: string | null) => void;
+  onDeviceSelect?: (id: string | null) => void;
   onJamActivate?: (jammerId: string) => void;
   noTransition?: boolean;
   width?: number;
   focusedDeviceId?: string | null;
 }
 
-export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onJamActivate, noTransition, width, focusedDeviceId }: DevicesPanelProps) {
+export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onDeviceSelect, onJamActivate, noTransition, width, focusedDeviceId }: DevicesPanelProps) {
   const [query, setQuery] = useState('');
   const [activeTypes, setActiveTypes] = useState<Set<DeviceType>>(new Set(TYPE_ORDER));
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -661,8 +662,10 @@ export function DevicesPanel({ open, onClose, onFlyTo, onDeviceHover, onJamActiv
   }, [filtered]);
 
   const handleRowClick = useCallback((device: Device) => {
-    setExpandedId(prev => prev === device.id ? null : device.id);
-  }, []);
+    const next = expandedId === device.id ? null : device.id;
+    setExpandedId(next);
+    onDeviceSelect?.(next);
+  }, [expandedId, onDeviceSelect]);
 
   return (
     <aside

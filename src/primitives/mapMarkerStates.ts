@@ -8,8 +8,7 @@ export type InteractionState =
   | 'disabled'
   | 'expired'
   | 'alert'
-  | 'jammer'
-  | 'missionPlanning';
+  | 'jammer';
 
 export const INTERACTION_STATES: InteractionState[] = [
   'default',
@@ -20,7 +19,6 @@ export const INTERACTION_STATES: InteractionState[] = [
   'expired',
   'alert',
   'jammer',
-  'missionPlanning',
 ];
 
 export const AFFILIATIONS: Affiliation[] = ['friendly', 'hostile', 'possibleThreat', 'neutral', 'unknown'];
@@ -42,7 +40,6 @@ export const INTERACTION_STATE_LABELS: Record<InteractionState, string> = {
   expired: 'Expired',
   alert: 'Alert',
   jammer: 'Jammer',
-  missionPlanning: 'Mission Planning',
 };
 
 export interface MarkerStyle {
@@ -50,6 +47,7 @@ export interface MarkerStyle {
   surfaceOpacity: number;
   surfaceBlur: number;
   innerGlow: boolean;
+  innerGlowColor: string;
   innerGlowOpacity: number;
   ringColor: string;
   ringWidth: number;
@@ -74,7 +72,7 @@ export const AFFILIATION_PALETTES: Record<Affiliation, AffiliationPalette> = {
     glyph: '#ffffff',
     surface: '#ffffff',
     surfaceOpacity: 0.1,
-    ring: '#000000',
+    ring: '#222222',
     ringOpacity: 1,
   },
   hostile: {
@@ -95,14 +93,14 @@ export const AFFILIATION_PALETTES: Record<Affiliation, AffiliationPalette> = {
     glyph: '#4ade80',
     surface: '#ffffff',
     surfaceOpacity: 0.1,
-    ring: '#000000',
+    ring: '#222222',
     ringOpacity: 1,
   },
   unknown: {
     glyph: '#facc15',
     surface: '#ffffff',
     surfaceOpacity: 0.1,
-    ring: '#000000',
+    ring: '#222222',
     ringOpacity: 1,
   },
 };
@@ -113,9 +111,10 @@ const STATE_MATRIX: Record<InteractionState, (p: AffiliationPalette) => MarkerSt
     surfaceOpacity: p.surfaceOpacity,
     surfaceBlur: 1,
     innerGlow: false,
+    innerGlowColor: p.glyph,
     innerGlowOpacity: 0,
     ringColor: p.ring,
-    ringWidth: 1.5,
+    ringWidth: 2,
     ringOpacity: p.ringOpacity,
     ringDash: 'solid',
     ringPulse: false,
@@ -128,9 +127,10 @@ const STATE_MATRIX: Record<InteractionState, (p: AffiliationPalette) => MarkerSt
     surfaceOpacity: p.surfaceOpacity,
     surfaceBlur: 1,
     innerGlow: true,
+    innerGlowColor: p.glyph,
     innerGlowOpacity: 0.4,
     ringColor: '#ffffff',
-    ringWidth: 1.5,
+    ringWidth: 2,
     ringOpacity: 1,
     ringDash: 'solid',
     ringPulse: false,
@@ -143,9 +143,10 @@ const STATE_MATRIX: Record<InteractionState, (p: AffiliationPalette) => MarkerSt
     surfaceOpacity: p.surfaceOpacity,
     surfaceBlur: 1,
     innerGlow: true,
+    innerGlowColor: p.glyph,
     innerGlowOpacity: 0.4,
     ringColor: '#ffffff',
-    ringWidth: 1.5,
+    ringWidth: 2,
     ringOpacity: 1,
     ringDash: 'solid',
     ringPulse: false,
@@ -158,9 +159,10 @@ const STATE_MATRIX: Record<InteractionState, (p: AffiliationPalette) => MarkerSt
     surfaceOpacity: p.surfaceOpacity,
     surfaceBlur: 1,
     innerGlow: true,
+    innerGlowColor: p.glyph,
     innerGlowOpacity: 0.4,
     ringColor: '#ffffff',
-    ringWidth: 1.5,
+    ringWidth: 2,
     ringOpacity: 1,
     ringDash: 'solid',
     ringPulse: false,
@@ -173,6 +175,7 @@ const STATE_MATRIX: Record<InteractionState, (p: AffiliationPalette) => MarkerSt
     surfaceOpacity: p.surfaceOpacity,
     surfaceBlur: 1,
     innerGlow: false,
+    innerGlowColor: '#8c8c8c',
     innerGlowOpacity: 0,
     ringColor: '#8c8c8c',
     ringWidth: 2,
@@ -188,6 +191,7 @@ const STATE_MATRIX: Record<InteractionState, (p: AffiliationPalette) => MarkerSt
     surfaceOpacity: Math.max(p.surfaceOpacity - 0.05, 0),
     surfaceBlur: 1,
     innerGlow: false,
+    innerGlowColor: '#52525b',
     innerGlowOpacity: 0,
     ringColor: '#3f3f46',
     ringWidth: 1,
@@ -203,6 +207,7 @@ const STATE_MATRIX: Record<InteractionState, (p: AffiliationPalette) => MarkerSt
     surfaceOpacity: p.surfaceOpacity,
     surfaceBlur: 1,
     innerGlow: false,
+    innerGlowColor: '#ffffff',
     innerGlowOpacity: 0,
     ringColor: '#ff3d40',
     ringWidth: 2,
@@ -218,6 +223,7 @@ const STATE_MATRIX: Record<InteractionState, (p: AffiliationPalette) => MarkerSt
     surfaceOpacity: p.surfaceOpacity,
     surfaceBlur: 1,
     innerGlow: false,
+    innerGlowColor: '#4ade80',
     innerGlowOpacity: 0,
     ringColor: '#4ade80',
     ringWidth: 2,
@@ -225,21 +231,6 @@ const STATE_MATRIX: Record<InteractionState, (p: AffiliationPalette) => MarkerSt
     ringDash: 'solid',
     ringPulse: true,
     glyphColor: '#4ade80',
-    glyphOpacity: 1,
-    markerScale: 1,
-  }),
-  missionPlanning: (p) => ({
-    surfaceFill: p.surface,
-    surfaceOpacity: p.surfaceOpacity,
-    surfaceBlur: 1,
-    innerGlow: false,
-    innerGlowOpacity: 0,
-    ringColor: '#a78bfa',
-    ringWidth: 2,
-    ringOpacity: 1,
-    ringDash: 'dashed',
-    ringPulse: false,
-    glyphColor: '#a78bfa',
     glyphOpacity: 1,
     markerScale: 1,
   }),

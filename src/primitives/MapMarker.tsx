@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, useRef, useEffect, type ReactNode } from 'react';
 import { type MarkerStyle, hexToRgba, headingToCompass } from './mapMarkerStates';
 
 export interface MapMarkerProps {
@@ -13,8 +13,11 @@ export interface MapMarkerProps {
   badgeOpacity?: number;
   statusBadgeText?: string;
   statusBadgeTone?: 'neutral' | 'danger';
+  pulse?: boolean;
   label?: string;
   showLabel?: boolean;
+  /** When set, dims all layers except the specified one (1=Surface, 2=Ring, 3=Glyph, 4=InnerGlow, 5=Overlays). */
+  highlightLayer?: number | null;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
   onClick?: () => void;
@@ -33,8 +36,10 @@ export function MapMarker({
   badgeOpacity = 0.85,
   statusBadgeText,
   statusBadgeTone = 'neutral',
+  pulse = false,
   label,
   showLabel = false,
+  highlightLayer,
   onMouseEnter,
   onMouseLeave,
   onClick,
@@ -44,6 +49,41 @@ export function MapMarker({
   const outerSize = Math.max(surfaceSize, ringSize);
   const compassLetter = heading != null ? headingToCompass(heading) : null;
   const borderColor = hexToRgba(s.ringColor, s.ringOpacity);
+  const [hovered, setHovered] = useState(false);
+  const pulseRef = useRef<HTMLDivElement>(null);
+
+  const shouldPulse = hovered || pulse;
+  const hl = highlightLayer ?? null;
+  const layerDim = (layer: number) =>
+    hl != null && hl !== layer ? 0.15 : 1;
+
+  useEffect(() => {
+    if (!shouldPulse || !pulseRef.current) return;
+    const el = pulseRef.current;
+
+    const anim = el.animate(
+      [
+        { opacity: 0.7, transform: 'translate(-50%, -50%) scale(1)' },
+        { opacity: 0, transform: 'translate(-50%, -50%) scale(3)' },
+      ],
+      {
+        duration: 1650,
+        iterations: Infinity,
+        easing: 'cubic-bezier(0.0, 0, 0.2, 1)',
+      },
+    );
+
+    return () => anim.cancel();
+  }, [shouldPulse]);
+
+  const handleMouseEnter = () => {
+    setHovered(true);
+    onMouseEnter?.();
+  };
+  const handleMouseLeave = () => {
+    setHovered(false);
+    onMouseLeave?.();
+  };
 
   return (
     <div className={`relative inline-flex flex-col items-center ${className ?? ''}`}>
@@ -55,8 +95,8 @@ export function MapMarker({
           transform: `scale(${s.markerScale})`,
           transition: 'transform 200ms ease',
         }}
-        onMouseEnter={onMouseEnter}
-        onMouseLeave={onMouseLeave}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
         onClick={onClick}
       >
         {/* Layer 1 (bottom): Surface */}
@@ -71,6 +111,8 @@ export function MapMarker({
             background: hexToRgba(s.surfaceFill, s.surfaceOpacity),
             backdropFilter: s.surfaceBlur > 0 ? `blur(${s.surfaceBlur}px)` : undefined,
             WebkitBackdropFilter: s.surfaceBlur > 0 ? `blur(${s.surfaceBlur}px)` : undefined,
+            opacity: layerDim(1),
+            transition: 'opacity 300ms ease',
           }}
         />
 
@@ -85,36 +127,42 @@ export function MapMarker({
               left: '50%',
               transform: 'translate(-50%, -50%)',
               border: `${s.ringWidth}px ${s.ringDash === 'dashed' ? 'dashed' : 'solid'} ${borderColor}`,
-              transition: 'border-color 200ms ease, border-width 200ms ease',
+              opacity: layerDim(2),
+              transition: 'border-color 200ms ease, border-width 200ms ease, opacity 300ms ease',
             }}
           />
         )}
 
-        {/* Layer 3: Glyph */}
-        <div
-          className="relative flex items-center justify-center z-[2]"
-          style={{
-            opacity: s.glyphOpacity,
-            transition: 'opacity 200ms ease',
-          }}
-        >
-          {icon}
-        </div>
-
-        {/* Layer 4 (top): Inner circle */}
-        {s.innerGlow && (
+        {/* Layer 3: Inner circle (styleguide Layer 4 — Inner Glow) */}
+        {(s.innerGlow || shouldPulse || hl === 4) && (
           <div
-            className="absolute rounded-full pointer-events-none z-[3]"
+            ref={pulseRef}
+            className="absolute rounded-full pointer-events-none z-[2]"
             style={{
               width: ringSize * 0.6,
               height: ringSize * 0.6,
               top: '50%',
               left: '50%',
               transform: 'translate(-50%, -50%)',
-              background: `rgba(255,255,255,${s.innerGlowOpacity})`,
+              background: shouldPulse
+                ? hexToRgba(s.innerGlowColor, 1)
+                : hexToRgba(s.innerGlowColor, (hl === 4 && !s.innerGlow) ? 0.5 : (s.innerGlowOpacity || 0.4)),
+              opacity: layerDim(4),
+              transition: 'opacity 300ms ease',
             }}
           />
         )}
+
+        {/* Layer 4 (top): Glyph (styleguide Layer 3) */}
+        <div
+          className="relative flex items-center justify-center z-[3]"
+          style={{
+            opacity: s.glyphOpacity * layerDim(3),
+            transition: 'opacity 300ms ease',
+          }}
+        >
+          {icon}
+        </div>
 
         {/* Badge (Compass) */}
         {showBadge && compassLetter && (() => {
@@ -134,6 +182,8 @@ export function MapMarker({
                 background: hexToRgba(badgeFill, badgeOpacity),
                 border: '1px solid rgba(255,255,255,0.2)',
                 boxShadow: '0px 0px 0px 1px rgba(0,0,0,1)',
+                opacity: layerDim(5),
+                transition: 'opacity 300ms ease',
               }}
             >
               <span
@@ -156,6 +206,8 @@ export function MapMarker({
               background: statusBadgeTone === 'danger' ? 'rgba(239,68,68,0.9)' : 'rgba(24,24,27,0.9)',
               border: '1px solid rgba(255,255,255,0.2)',
               boxShadow: '0px 0px 0px 1px rgba(0,0,0,0.7)',
+              opacity: layerDim(5),
+              transition: 'opacity 300ms ease',
             }}
           >
             <span className="text-[9px] font-bold leading-none text-white">
@@ -172,14 +224,16 @@ export function MapMarker({
           style={{
             left: outerSize / 2 + 6,
             bottom: outerSize / 2 + 2,
-            background: 'rgba(0,0,0,0.7)',
-            backdropFilter: 'blur(8px)',
+            background: 'rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(12px)',
             borderRadius: 4,
             padding: '3px 8px',
             boxShadow: '0 0 0 1px rgba(255,255,255,0.1), 0 4px 12px rgba(0,0,0,0.4)',
+            opacity: layerDim(5),
+            transition: 'opacity 300ms ease',
           }}
         >
-          <span className="text-[11px] font-medium text-white/80">{label}</span>
+          <span className="text-xs font-medium text-white">{label}</span>
         </div>
       )}
     </div>

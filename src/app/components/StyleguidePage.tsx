@@ -25,8 +25,16 @@ import {
   CameraIcon, SensorIcon, RadarIcon, DroneIcon, DroneHiveIcon,
   LidarIcon, LauncherIcon, MissileIcon,
 } from '@/shared/components/TacticalMap';
-import { DroneCardIcon, MissileCardIcon } from '@/primitives/MapIcons';
-import { downloadAllStyleguideIcons, iconPublicUrl } from '@/lib/styleguideIconAssets';
+import { DroneCardIcon, JamWaveIcon, MissileCardIcon } from '@/primitives/MapIcons';
+import { MapMarker } from '@/primitives/MapMarker';
+import winterTheme from './winter-is-coming-theme.json';
+import {
+  resolveMarkerStyle,
+  INTERACTION_STATES, AFFILIATIONS,
+  INTERACTION_STATE_LABELS, AFFILIATION_LABELS,
+  type Affiliation, type InteractionState,
+} from '@/primitives/mapMarkerStates';
+import { iconPublicUrl } from '@/lib/styleguideIconAssets';
 import { DevicesPanel } from '@/shared/components/DevicesPanel';
 import { useCardSlots, type CardCallbacks, type CardContext } from '@/imports/useCardSlots';
 import {
@@ -56,6 +64,8 @@ import filterBarSrc from '@/primitives/FilterBar.tsx?raw';
 import newUpdatesPillSrc from '@/primitives/NewUpdatesPill.tsx?raw';
 import tacticalMapSrc from '@/shared/components/TacticalMap.tsx?raw';
 import devicesPanelSrc from '@/shared/components/DevicesPanel.tsx?raw';
+import mapMarkerSrc from '@/primitives/MapMarker.tsx?raw';
+import mapIconsSrc from '@/primitives/MapIcons.tsx?raw';
 
 // ─── Sidebar nav structure ───────────────────────────────────────────────────
 
@@ -118,7 +128,16 @@ const NAV: NavGroup[] = [
   },
   {
     label: 'Tactical',
-    items: [{ id: 'map-icons', label: 'MapIcons' }],
+    items: [
+      {
+        id: 'map-markers', label: 'Map Markers',
+        children: [
+          { id: 'layer-anatomy', label: 'Layer Anatomy' },
+          { id: 'state-matrix', label: 'State Matrix' },
+          { id: 'icon-catalog', label: 'Icon Catalog' },
+        ],
+      },
+    ],
   },
 ];
 
@@ -200,32 +219,45 @@ function ExampleBlock({
   );
 }
 
-function StyleguideIconDownloadTile({
-  label,
-  subdir,
-  fileName,
-  children,
-}: {
-  label: string;
-  subdir: 'tactical' | 'card';
-  fileName: string;
-  children: React.ReactNode;
-}) {
-  const href = iconPublicUrl(subdir, fileName);
+function IconCatalogTile({ name, icon }: { name: string; icon: React.ReactNode }) {
+  const svgRef = useRef<HTMLDivElement>(null);
+  const [copied, setCopied] = useState(false);
+
+  const copySvg = useCallback(() => {
+    const svg = svgRef.current?.querySelector('svg');
+    if (!svg) return;
+    navigator.clipboard.writeText(svg.outerHTML).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, []);
+
+  const downloadHref = iconPublicUrl('tactical', `${name}.svg`);
+
   return (
-    <div className="flex flex-col items-center gap-2 rounded-lg border border-white/[0.06] bg-black/20 p-3">
-      <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-black/40 shadow-[inset_0_1px_2px_rgba(0,0,0,0.3)] text-zinc-200">
-        {children}
+    <div className="group flex flex-col items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
+      <div ref={svgRef} className="flex items-center justify-center size-12">
+        {icon}
       </div>
-      <span className="text-center text-[10px] font-mono text-zinc-400">{label}</span>
-      <a
-        href={href}
-        download={fileName}
-        className="inline-flex max-w-full items-center justify-center gap-1 text-[10px] font-medium text-white underline-offset-2 hover:text-zinc-200 hover:underline"
-      >
-        <Download className="size-3 shrink-0 opacity-90" aria-hidden />
-        <span className="truncate">{fileName}</span>
-      </a>
+      <span className="text-xs font-mono text-zinc-400">{name}</span>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={copySvg}
+          aria-label={copied ? 'Copied' : 'Copy SVG'}
+          className="p-1.5 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.08] active:scale-[0.92] transition-all duration-150 cursor-pointer"
+        >
+          {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+        </button>
+        <a
+          href={downloadHref}
+          download={`${name}.svg`}
+          aria-label="Download SVG"
+          className="p-1.5 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.08] active:scale-[0.92] transition-all duration-150"
+        >
+          <Download size={14} />
+        </a>
+      </div>
     </div>
   );
 }
@@ -398,7 +430,7 @@ let highlighterPromise: Promise<Highlighter> | null = null;
 function getHighlighter() {
   if (!highlighterPromise) {
     highlighterPromise = import('shiki').then(({ createHighlighter }) =>
-      createHighlighter({ themes: ['vitesse-dark'], langs: ['tsx'] }),
+      createHighlighter({ themes: [winterTheme as Parameters<typeof createHighlighter>[0]['themes'][number]], langs: ['tsx'] }),
     );
   }
   return highlighterPromise;
@@ -414,7 +446,7 @@ function HighlightedCode({ code }: { code: string }) {
       setHtml(
         highlighter.codeToHtml(code, {
           lang: 'tsx',
-          theme: 'vitesse-dark',
+          theme: 'winter-is-coming-dark-blue',
         }),
       );
     });
@@ -431,7 +463,7 @@ function HighlightedCode({ code }: { code: string }) {
 
   return (
     <div
-      className="[&_pre]:!bg-transparent [&_pre]:text-[12px] [&_pre]:leading-[1.7] [&_pre]:font-mono [&_code]:font-mono"
+      className="[&_pre]:!bg-transparent [&_pre]:text-[12px] [&_pre]:leading-[1.7] [&_pre]:font-mono [&_pre]:font-medium [&_code]:font-mono [&_code]:font-medium"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
@@ -1382,6 +1414,39 @@ export default function StyleguidePage() {
   const [loading, setLoading] = useState<string | null>(null);
   const [activeItem, setActiveItem] = useState<string>(NAV[0].items[0].id);
   const [activeAnchor, setActiveAnchor] = useState<string | null>(null);
+  const [hoveredLayer, setHoveredLayer] = useState<number | null>(null);
+  const layerLeaveTimer = useRef<ReturnType<typeof setTimeout>>();
+  const handleLayerEnter = useCallback((num: number) => {
+    clearTimeout(layerLeaveTimer.current);
+    setHoveredLayer(num);
+  }, []);
+  const handleLayerLeave = useCallback(() => {
+    layerLeaveTimer.current = setTimeout(() => setHoveredLayer(null), 100);
+  }, []);
+  const [explorerState, setExplorerState] = useState<InteractionState>('default');
+  const [explorerAff, setExplorerAff] = useState<Affiliation>('friendly');
+  const [hoveredAff, setHoveredAff] = useState<Affiliation | null>(null);
+  const explorerLeaveTimer = useRef<ReturnType<typeof setTimeout>>();
+  const handleStateEnter = useCallback((state: InteractionState, aff: Affiliation) => {
+    clearTimeout(explorerLeaveTimer.current);
+    setExplorerState(state);
+    setHoveredAff(aff);
+  }, []);
+  const handleStateLeave = useCallback(() => {
+    explorerLeaveTimer.current = setTimeout(() => {
+      setExplorerState('default');
+      setHoveredAff(null);
+    }, 100);
+  }, []);
+  const [activeOverlay, setActiveOverlay] = useState<string | null>(null);
+  const overlayLeaveTimer = useRef<ReturnType<typeof setTimeout>>();
+  const handleOverlayEnter = useCallback((id: string) => {
+    clearTimeout(overlayLeaveTimer.current);
+    setActiveOverlay(id);
+  }, []);
+  const handleOverlayLeave = useCallback(() => {
+    overlayLeaveTimer.current = setTimeout(() => setActiveOverlay(null), 100);
+  }, []);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
   const navigateTo = useCallback((id: string) => {
@@ -3004,76 +3069,200 @@ export default function StyleguidePage() {
             </ComponentSection>
             )}
 
-            {activeItem === 'map-icons' && (
-            <ComponentSection id="map-icons" name="MapIcons" description="Tactical map icons (TacticalMap.tsx) and card-scale icons (MapIcons.tsx). SVGs are available under /icons with filenames matching each React export.">
-              <p className="text-[13px] leading-relaxed text-zinc-500">
-                Download individual <span className="font-mono text-zinc-400">.svg</span> files named after the component (
-                <span className="font-mono text-zinc-400">CameraIcon.svg</span>
-                , etc.). Tactical assets use white fill and black stroke like the map; card assets use{' '}
-                <span className="font-mono text-zinc-400">currentColor</span>. When you change path data in code, update the matching file under{' '}
-                <span className="font-mono text-zinc-400">public/icons/</span>.
-              </p>
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => void downloadAllStyleguideIcons()}
-                  className="rounded-lg border border-white/10 bg-white/[0.06] px-3 py-1.5 text-[12px] font-medium text-zinc-200 transition-colors hover:bg-white/[0.1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400/80"
-                >
-                  Download all SVGs
-                </button>
-                <span className="text-[11px] text-zinc-600">Browsers may limit bulk saves; use per-file links if some downloads are blocked.</span>
-              </div>
-              <SectionHeading>Import</SectionHeading>
-              <ImportBlock path="@/shared/components/TacticalMap" names={['CameraIcon', 'RadarIcon', 'SensorIcon', 'DroneIcon', 'DroneHiveIcon', 'LidarIcon', 'LauncherIcon', 'MissileIcon']} />
+            {activeItem === 'map-markers' && (
+            <ComponentSection id="map-markers" name="Map Markers" description="Tactical marker system: SVG icons, composited layers, interaction states, affiliation palettes, and map-level overlays.">
 
-              <SectionHeading>Preview</SectionHeading>
-              <CodePreviewBlock name="MapIcons" description="Full icon catalog — map-layer icons from TacticalMap and card-layer icons from MapIcons. All support a size prop." code={tacticalMapSrc}>
-                <div className="space-y-8">
-                  <div>
-                    <h3 className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-zinc-400">TacticalMap.tsx — /icons/tactical/</h3>
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                      <StyleguideIconDownloadTile label="CameraIcon" subdir="tactical" fileName="CameraIcon.svg">
-                        <CameraIcon size={28} fill="white" />
-                      </StyleguideIconDownloadTile>
-                      <StyleguideIconDownloadTile label="SensorIcon" subdir="tactical" fileName="SensorIcon.svg">
-                        <SensorIcon size={28} fill="white" />
-                      </StyleguideIconDownloadTile>
-                      <StyleguideIconDownloadTile label="RadarIcon" subdir="tactical" fileName="RadarIcon.svg">
-                        <RadarIcon size={28} fill="white" />
-                      </StyleguideIconDownloadTile>
-                      <StyleguideIconDownloadTile label="LidarIcon" subdir="tactical" fileName="LidarIcon.svg">
-                        <LidarIcon size={28} fill="white" />
-                      </StyleguideIconDownloadTile>
-                      <StyleguideIconDownloadTile label="LauncherIcon" subdir="tactical" fileName="LauncherIcon.svg">
-                        <LauncherIcon size={28} fill="white" />
-                      </StyleguideIconDownloadTile>
-                      <StyleguideIconDownloadTile label="DroneHiveIcon" subdir="tactical" fileName="DroneHiveIcon.svg">
-                        <DroneHiveIcon size={28} fill="white" />
-                      </StyleguideIconDownloadTile>
-                      <StyleguideIconDownloadTile label="DroneIcon" subdir="tactical" fileName="DroneIcon.svg">
-                        <DroneIcon />
-                      </StyleguideIconDownloadTile>
-                      <StyleguideIconDownloadTile label="DroneIcon (enemy)" subdir="tactical" fileName="DroneIcon-enemy.svg">
-                        <DroneIcon color="#ef4444" />
-                      </StyleguideIconDownloadTile>
-                      <StyleguideIconDownloadTile label="MissileIcon" subdir="tactical" fileName="MissileIcon.svg">
-                        <MissileIcon />
-                      </StyleguideIconDownloadTile>
+              <SectionHeading>Source</SectionHeading>
+              <CodePreviewBlock name="MapMarker" description="Composites 4 visual layers controlled by a style+affiliation matrix" code={mapMarkerSrc}>
+                <div className="flex items-center justify-start gap-6">
+                  {AFFILIATIONS.map(aff => {
+                    const s = resolveMarkerStyle('default', aff);
+                    return (
+                      <div key={aff} className="flex flex-col items-center gap-2">
+                        <MapMarker icon={<SensorIcon size={34} fill={s.glyphColor} />} style={s} surfaceSize={48} ringSize={38} />
+                        <span className="text-xs font-mono font-normal text-white">{aff}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CodePreviewBlock>
+
+              <SectionHeading>Imports</SectionHeading>
+              <div className="space-y-2">
+                <ImportBlock path="@/primitives/MapMarker" names={['MapMarker']} />
+                <ImportBlock path="@/primitives/mapMarkerStates" names={['resolveMarkerStyle', 'INTERACTION_STATES', 'AFFILIATIONS']} />
+                <ImportBlock path="@/shared/components/TacticalMap" names={['CameraIcon', 'RadarIcon', 'SensorIcon', 'DroneIcon', 'DroneHiveIcon', 'LidarIcon', 'LauncherIcon', 'MissileIcon']} />
+              </div>
+
+              {/* ── Layer Anatomy ── */}
+              <div id="layer-anatomy" className="scroll-mt-12 space-y-6 pt-10">
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold text-zinc-100">Layer Anatomy</h3>
+                  <p className="text-sm leading-relaxed text-zinc-400">
+                    Each marker composites 4 concentric layers plus optional overlays. Hover a layer card to spotlight it on the preview.
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex items-center justify-center rounded-xl border border-white/10 p-8" style={{ background: 'radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.25) 0%, rgba(0, 0, 0, 1) 61%)' }}>
+                    <div className="relative" style={{ transition: 'filter 300ms ease' }}>
+                      {(() => {
+                        const style = resolveMarkerStyle('default', 'friendly');
+                        return (
+                          <MapMarker
+                            icon={<SensorIcon size={48} fill="#ffffff" />}
+                            style={style}
+                            surfaceSize={72}
+                            ringSize={56}
+                            label="Tooltip"
+                            showLabel
+                            heading={45}
+                            showBadge
+                            highlightLayer={hoveredLayer}
+                          />
+                        );
+                      })()}
                     </div>
                   </div>
-                  <div>
-                    <h3 className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-zinc-400">MapIcons.tsx — /icons/card/</h3>
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                      <StyleguideIconDownloadTile label="DroneCardIcon" subdir="card" fileName="DroneCardIcon.svg">
-                        <DroneCardIcon size={28} />
-                      </StyleguideIconDownloadTile>
-                      <StyleguideIconDownloadTile label="MissileCardIcon" subdir="card" fileName="MissileCardIcon.svg">
-                        <MissileCardIcon size={28} />
-                      </StyleguideIconDownloadTile>
+                  <div className="space-y-2">
+                    {([
+                      { num: 1, layer: '1 — Surface' },
+                      { num: 2, layer: '2 — Ring' },
+                      { num: 3, layer: '3 — Glyph' },
+                      { num: 4, layer: '4 — Inner Glow' },
+                    ] as const).map(({ num, layer }) => (
+                      <div
+                        key={layer}
+                        className={`rounded-lg border px-3 py-2.5 cursor-default transition-all duration-200 ${
+                          hoveredLayer === num
+                            ? 'border-white/20 bg-white/[0.06]'
+                            : 'border-white/[0.06] bg-white/[0.03]'
+                        }`}
+                        onMouseEnter={() => handleLayerEnter(num)}
+                        onMouseLeave={handleLayerLeave}
+                      >
+                        <span className="text-sm font-semibold text-zinc-200">Layer {layer}</span>
+                      </div>
+                    ))}
+                    <div
+                      className={`rounded-lg border px-3 py-2.5 cursor-default transition-all duration-200 ${
+                        hoveredLayer === 5
+                          ? 'border-white/20 bg-white/[0.06]'
+                          : 'border-white/[0.06] bg-white/[0.03]'
+                      }`}
+                      onMouseEnter={() => handleLayerEnter(5)}
+                      onMouseLeave={handleLayerLeave}
+                    >
+                      <span className="text-sm font-semibold text-zinc-200">Overlays</span>
                     </div>
                   </div>
                 </div>
-              </CodePreviewBlock>
+              </div>
+
+              {/* ── State Matrix ── */}
+              <div id="state-matrix" className="scroll-mt-12 space-y-6 pt-10">
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold text-zinc-100">Interaction State Matrix</h3>
+                  <p className="text-sm leading-relaxed text-zinc-400">
+                    {INTERACTION_STATES.length} interaction states &times; {AFFILIATIONS.length} affiliations = {INTERACTION_STATES.length * AFFILIATIONS.length} visual combinations. Hover a state card to preview it. Click an affiliation dot to change the hero.
+                  </p>
+                </div>
+                <div className="flex gap-6">
+
+                  {/* State cards column */}
+                  <div className="w-full space-y-2">
+                    {(() => {
+                      const stateAffMap: Record<InteractionState, Affiliation> = {
+                        default: 'friendly',
+                        hovered: 'friendly',
+                        selected: 'friendly',
+                        active: 'hostile',
+                        disabled: 'neutral',
+                        expired: 'unknown',
+                        alert: 'hostile',
+                        jammer: 'possibleThreat',
+                      };
+                      return INTERACTION_STATES.map(state => {
+                        const isHovered = explorerState === state;
+                        const aff = stateAffMap[state];
+                        const s = resolveMarkerStyle(state, aff);
+                        return (
+                          <div
+                            key={state}
+                            className={`flex items-center gap-4 rounded-lg border px-3 py-2.5 cursor-default transition-all duration-200 w-full justify-start ${
+                              isHovered
+                                ? 'border-white/20 bg-white/[0.06]'
+                                : 'border-white/[0.06] bg-white/[0.03]'
+                            }`}
+                            onMouseEnter={() => handleStateEnter(state, aff)}
+                            onMouseLeave={handleStateLeave}
+                          >
+                            <MapMarker
+                              icon={<SensorIcon fill={s.glyphColor} />}
+                              style={s}
+                              surfaceSize={36}
+                              ringSize={28}
+                              pulse={isHovered && (state === 'hovered' || state === 'selected' || state === 'active')}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-baseline gap-2">
+                                <span className="text-sm font-semibold text-zinc-200">{INTERACTION_STATE_LABELS[state]}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+
+                  {/* Hero column */}
+                  <div className="flex flex-col items-center gap-5 rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 self-start sticky top-4 w-[280px] shrink-0">
+                    {(() => {
+                      const heroStyle = resolveMarkerStyle(explorerState, hoveredAff ?? explorerAff);
+                      return (
+                        <MapMarker
+                          icon={<SensorIcon size={48} fill={heroStyle.glyphColor} />}
+                          style={heroStyle}
+                          surfaceSize={72}
+                          ringSize={56}
+                          pulse={explorerState === 'hovered' || explorerState === 'selected' || explorerState === 'active'}
+                        />
+                      );
+                    })()}
+                    <div className="text-center space-y-1">
+                      <span className="block text-sm font-semibold text-zinc-100">{INTERACTION_STATE_LABELS[explorerState]}</span>
+                    </div>
+                    <span className="text-[10px] text-zinc-500">{AFFILIATION_LABELS[hoveredAff ?? explorerAff]}</span>
+                  </div>
+
+                </div>
+              </div>
+
+              {/* ── Icon Catalog ── */}
+              <div id="icon-catalog" className="scroll-mt-12 space-y-6 pt-10">
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold text-zinc-100">Icon Catalog</h3>
+                  <p className="text-sm leading-relaxed text-zinc-400">
+                    Tactical SVG icons used inside map markers on the Mapbox canvas. Each icon accepts a <code className="text-zinc-300">fill</code> prop.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                  {([
+                    { name: 'SensorIcon', el: <SensorIcon size={32} fill="white" /> },
+                    { name: 'CameraIcon', el: <CameraIcon size={32} fill="white" /> },
+                    { name: 'RadarIcon', el: <RadarIcon size={32} fill="white" /> },
+                    { name: 'LidarIcon', el: <LidarIcon size={32} fill="white" /> },
+                    { name: 'LauncherIcon', el: <LauncherIcon size={32} fill="white" /> },
+                    { name: 'DroneHiveIcon', el: <DroneHiveIcon size={32} fill="white" /> },
+                    { name: 'DroneIcon', el: <DroneIcon color="white" /> },
+                    { name: 'MissileIcon', el: <MissileIcon fill="white" /> },
+                  ] as { name: string; el: React.ReactNode }[]).map(({ name, el }) => (
+                    <IconCatalogTile key={name} name={name} icon={el} />
+                  ))}
+                </div>
+
+              </div>
+
             </ComponentSection>
             )}
 
