@@ -35,7 +35,7 @@ import {
   type Affiliation, type InteractionState,
 } from '@/primitives/mapMarkerStates';
 import { iconPublicUrl } from '@/lib/styleguideIconAssets';
-import { DevicesPanel } from '@/shared/components/DevicesPanel';
+import { DevicesPanel, DeviceRow, type Device } from '@/shared/components/DevicesPanel';
 import { useCardSlots, type CardCallbacks, type CardContext } from '@/imports/useCardSlots';
 import {
   cuas_raw, cuas_classified, cuas_classified_bird, cuas_mitigating, cuas_mitigated, cuas_bda_complete,
@@ -122,6 +122,28 @@ const NAV: NavGroup[] = [
           { id: 'devices-ecm', label: 'ECM device' },
           { id: 'devices-drone', label: 'Drone device' },
           { id: 'devices-actions', label: 'Action bar' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Interactions',
+    items: [
+      {
+        id: 'target-card-flows', label: 'Target Card + Map',
+        children: [
+          { id: 'flow-hover-card', label: 'Hover Card' },
+          { id: 'flow-open-card', label: 'Open Card' },
+          { id: 'flow-click-marker', label: 'Click Marker' },
+          { id: 'flow-hover-sensor', label: 'Hover Sensor' },
+        ],
+      },
+      {
+        id: 'device-card-flows', label: 'Device Card + Map',
+        children: [
+          { id: 'flow-hover-device', label: 'Hover Device' },
+          { id: 'flow-click-asset', label: 'Click Asset' },
+          { id: 'flow-camera-lookat', label: 'Camera Look-At' },
         ],
       },
     ],
@@ -337,6 +359,783 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
     <h3 className="text-[15px] font-semibold text-zinc-200 tracking-tight pt-4 first:pt-0">
       {children}
     </h3>
+  );
+}
+
+// ─── Interaction Flow block ──────────────────────────────────────────────────
+
+interface FlowStep {
+  label: string;
+  detail?: string;
+}
+
+function InteractionFlowBlock({
+  id,
+  title,
+  description,
+  cardZone,
+  mapZone,
+  steps,
+}: {
+  id: string;
+  title: string;
+  description: string;
+  cardZone: React.ReactNode;
+  mapZone: React.ReactNode;
+  steps: FlowStep[];
+}) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <div id={id} className="scroll-mt-20 space-y-2.5">
+      <div className="space-y-1">
+        <h4 className="text-[15px] font-semibold text-zinc-100 tracking-tight">{title}</h4>
+        <p className="text-[13px] text-zinc-400 leading-relaxed">{description}</p>
+      </div>
+
+      <div
+        className="rounded-xl overflow-hidden transition-[box-shadow] duration-200 ease-out"
+        style={{
+          backgroundColor: SURFACE.level0,
+          boxShadow: hovered
+            ? '0 0 0 1px rgba(255,255,255,0.1)'
+            : '0 0 0 1px rgba(255,255,255,0.06)',
+        }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        <div className="relative flex min-h-[200px]">
+          {/* "Interactive" hint */}
+          <span
+            className="absolute bottom-2.5 left-3 z-10 text-[10px] font-medium text-zinc-500 uppercase tracking-[0.06em] transition-opacity duration-150 ease-out pointer-events-none"
+            style={{ opacity: hovered ? 1 : 0 }}
+          >
+            Interactive
+          </span>
+
+          {/* Map zone */}
+          <div
+            className="flex-1 flex flex-col min-w-0"
+            style={{ background: `radial-gradient(circle at 50% 50%, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0.4) 100%), ${SURFACE.level0}` }}
+          >
+            <span className="block text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.08em] px-4 pt-3 pb-1.5">Map</span>
+            <div className="flex-1 relative px-4 pb-4 flex items-center justify-center">{mapZone}</div>
+          </div>
+
+          {/* Card zone */}
+          <div className="w-[280px] shrink-0 border-l border-white/[0.06] flex flex-col" style={{ backgroundColor: SURFACE.level1 }}>
+            <span className="block text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.08em] px-4 pt-3 pb-1.5">Card</span>
+            <div dir="rtl" className="flex-1 px-4 pb-4 flex flex-col justify-center">{cardZone}</div>
+          </div>
+        </div>
+
+        {/* Step sequence */}
+        <div className="border-t border-white/[0.06] px-5 py-4">
+          <div className="space-y-3">
+            {steps.map((step, i) => (
+              <div key={i} className="flex gap-3">
+                <span className="text-[11px] font-bold text-sky-400 tabular-nums font-mono leading-[1.6] shrink-0 w-4 text-right">{i + 1}</span>
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <span className="text-[13px] font-medium text-zinc-200">{step.label}</span>
+                  {step.detail && (
+                    <span className="text-[12px] text-zinc-400 leading-relaxed font-mono font-medium" style={{ fontVariantNumeric: 'slashed-zero' }}>
+                      {step.detail}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TargetCardFlows() {
+  const [flow1Hovered, setFlow1Hovered] = useState(false);
+  const [flow2Hovered, setFlow2Hovered] = useState(false);
+  const [flow2Open, setFlow2Open] = useState(false);
+  const [flow3Open, setFlow3Open] = useState(false);
+  const [flow5HoveredSensor, setFlow5HoveredSensor] = useState<string | null>(null);
+
+  const prefersReducedMotion = useReducedMotion();
+
+  const defaultStyle = resolveMarkerStyle('default', 'hostile');
+  const hoveredStyle = resolveMarkerStyle('selected', 'hostile');
+  const activeStyle = resolveMarkerStyle('active', 'hostile');
+  const friendlyDefault = resolveMarkerStyle('default', 'friendly');
+  const friendlyHovered = resolveMarkerStyle('hovered', 'friendly');
+
+  return (
+    <div className="space-y-8">
+
+      {/* ── Flow 1: Hover Card → Map Highlight ── */}
+      <InteractionFlowBlock
+        id="flow-hover-card"
+        title="Hover Card → Map Highlight"
+        description="Hovering a detection card in the sidebar highlights its corresponding marker on the map."
+        cardZone={
+          <div
+            className="overflow-hidden cursor-default"
+            style={{
+              backgroundColor: CARD_TOKENS.container.bgColor,
+              borderRadius: CARD_TOKENS.container.borderRadius,
+              boxShadow: ELEVATION.shadow,
+            }}
+            onMouseEnter={() => setFlow1Hovered(true)}
+            onMouseLeave={() => setFlow1Hovered(false)}
+          >
+            <div
+              className="transition-colors hover:bg-white/5"
+              style={{ padding: `${CARD_TOKENS.header.paddingY}px ${CARD_TOKENS.header.paddingX}px` }}
+            >
+              <CardHeader
+                icon={ShieldAlert}
+                iconColor="#f97316"
+                title="רחפן חשוד"
+                subtitle="DJI Mavic 3"
+                status={<StatusChip label="active" color="red" />}
+                open={false}
+              />
+            </div>
+          </div>
+        }
+        mapZone={
+          <div className="flex items-center gap-8">
+            <div className="flex flex-col items-center gap-2">
+              <MapMarker
+                icon={<SensorIcon size={28} fill={flow1Hovered ? hoveredStyle.glyphColor : defaultStyle.glyphColor} />}
+                style={flow1Hovered ? hoveredStyle : defaultStyle}
+                surfaceSize={42}
+                ringSize={34}
+                pulse={flow1Hovered}
+              />
+              <span className="text-[10px] font-medium text-zinc-500 tabular-nums">Target</span>
+            </div>
+            <div className="flex flex-col items-center gap-2 opacity-40">
+              <MapMarker
+                icon={<SensorIcon size={28} fill={friendlyDefault.glyphColor} />}
+                style={friendlyDefault}
+                surfaceSize={42}
+                ringSize={34}
+              />
+              <span className="text-[10px] font-medium text-zinc-500 tabular-nums">Other</span>
+            </div>
+          </div>
+        }
+        steps={[
+          { label: 'User hovers detection card in sidebar' },
+          { label: 'onTargetHover(targetId) fires' },
+          { label: 'Map marker resolves to selected state' },
+          { label: 'Mouse leaves → marker returns to default' },
+        ]}
+      />
+
+      {/* ── Flow 2: Open Card → Map Pulse + Pan ── */}
+      <InteractionFlowBlock
+        id="flow-open-card"
+        title="Open Card → Map Pulse + Pan"
+        description="Hovering a card activates the map marker pulse. Clicking expands the card and pans the map."
+        cardZone={
+          <div
+            className="overflow-hidden cursor-pointer"
+            style={{
+              backgroundColor: CARD_TOKENS.container.bgColor,
+              borderRadius: CARD_TOKENS.container.borderRadius,
+              boxShadow: ELEVATION.shadow,
+            }}
+            onMouseEnter={() => setFlow2Hovered(true)}
+            onMouseLeave={() => setFlow2Hovered(false)}
+            onClick={() => setFlow2Open(prev => !prev)}
+          >
+            <div
+              className="transition-colors hover:bg-white/5"
+              style={{
+                padding: `${CARD_TOKENS.header.paddingY}px ${CARD_TOKENS.header.paddingX}px`,
+                backgroundColor: flow2Open ? `rgba(255,255,255,${CARD_TOKENS.header.selectedBgOpacity})` : undefined,
+              }}
+            >
+              <CardHeader
+                icon={ShieldAlert}
+                iconColor="#f97316"
+                title="רחפן חשוד"
+                subtitle="DJI Mavic 3"
+                status={<StatusChip label="active" color="red" />}
+                open={flow2Open}
+              />
+            </div>
+            <AnimatePresence initial={false}>
+              {flow2Open && (
+                <motion.div
+                  initial={prefersReducedMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+                  animate={prefersReducedMotion ? { opacity: 1 } : { height: 'auto', opacity: 1 }}
+                  exit={prefersReducedMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+                  transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+                  className="overflow-hidden"
+                >
+                  <div
+                    className="px-3 py-3 text-[11px] text-zinc-400"
+                    style={{ backgroundColor: CARD_TOKENS.content.bgColor, boxShadow: `inset 0 1px 0 0 ${CARD_TOKENS.content.borderColor}` }}
+                  >
+                    Card content expanded
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        }
+        mapZone={
+          <div className="flex flex-col items-center gap-2">
+            <MapMarker
+              icon={<SensorIcon size={28} fill={(flow2Hovered || flow2Open) ? activeStyle.glyphColor : defaultStyle.glyphColor} />}
+              style={(flow2Hovered || flow2Open) ? activeStyle : defaultStyle}
+              surfaceSize={42}
+              ringSize={34}
+              pulse={flow2Hovered || flow2Open}
+            />
+            <span className="text-[10px] font-medium text-zinc-500 tabular-nums">
+              {flow2Open ? 'Active (open)' : flow2Hovered ? 'Pulsing (hover)' : 'Idle'}
+            </span>
+          </div>
+        }
+        steps={[
+          { label: 'User hovers detection card in sidebar' },
+          { label: 'Marker immediately enters active state with pulse' },
+          { label: 'User clicks card header to expand' },
+          { label: 'Map pans to target coordinates' },
+        ]}
+      />
+
+      {/* ── Flow 3: Click Map Marker → Open Card ── */}
+      <InteractionFlowBlock
+        id="flow-click-marker"
+        title="Click Map Marker → Open Card"
+        description="Clicking a target marker on the map opens its corresponding card in the sidebar."
+        cardZone={
+          <div
+            className="overflow-hidden"
+            style={{
+              backgroundColor: CARD_TOKENS.container.bgColor,
+              borderRadius: CARD_TOKENS.container.borderRadius,
+              boxShadow: ELEVATION.shadow,
+            }}
+          >
+            <div
+              className="transition-colors"
+              style={{
+                padding: `${CARD_TOKENS.header.paddingY}px ${CARD_TOKENS.header.paddingX}px`,
+                backgroundColor: flow3Open ? `rgba(255,255,255,${CARD_TOKENS.header.selectedBgOpacity})` : undefined,
+              }}
+            >
+              <CardHeader
+                icon={ShieldAlert}
+                iconColor="#f97316"
+                title="רחפן חשוד"
+                subtitle="DJI Mavic 3"
+                status={<StatusChip label="active" color="red" />}
+                open={flow3Open}
+              />
+            </div>
+            <AnimatePresence initial={false}>
+              {flow3Open && (
+                <motion.div
+                  initial={prefersReducedMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+                  animate={prefersReducedMotion ? { opacity: 1 } : { height: 'auto', opacity: 1 }}
+                  exit={prefersReducedMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+                  transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+                  className="overflow-hidden"
+                >
+                  <div
+                    className="px-3 py-3 text-[11px] text-zinc-400"
+                    style={{ backgroundColor: CARD_TOKENS.content.bgColor, boxShadow: `inset 0 1px 0 0 ${CARD_TOKENS.content.borderColor}` }}
+                  >
+                    Card opens from map click
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        }
+        mapZone={
+          <div className="flex items-center gap-8">
+            <div
+              className="flex flex-col items-center gap-2 cursor-pointer"
+              onClick={() => setFlow3Open(prev => !prev)}
+            >
+              <MapMarker
+                icon={<SensorIcon size={28} fill={flow3Open ? activeStyle.glyphColor : defaultStyle.glyphColor} />}
+                style={flow3Open ? activeStyle : defaultStyle}
+                surfaceSize={42}
+                ringSize={34}
+                pulse={flow3Open}
+              />
+              <span className="text-[10px] font-medium text-zinc-400">Click me</span>
+            </div>
+            <div className="flex flex-col items-center gap-2 opacity-40">
+              <MapMarker
+                icon={<SensorIcon size={28} fill={friendlyDefault.glyphColor} />}
+                style={friendlyDefault}
+                surfaceSize={42}
+                ringSize={34}
+              />
+              <span className="text-[10px] font-medium text-zinc-500">Other</span>
+            </div>
+          </div>
+        }
+        steps={[
+          { label: 'User clicks target marker on map' },
+          { label: 'onMarkerClick(targetId) fires' },
+          { label: 'Card scrolls into view and expands' },
+          { label: 'Marker activates pulse state' },
+        ]}
+      />
+
+      {/* ── Flow 5: Hover Sensor in Card → Map Highlight ── */}
+      <InteractionFlowBlock
+        id="flow-hover-sensor"
+        title="Hover Sensor in Card → Map Highlight"
+        description="Hovering a sensor row inside a detection card highlights that sensor's marker on the map."
+        cardZone={
+          <div
+            className="overflow-hidden"
+            style={{ backgroundColor: CARD_TOKENS.container.bgColor, borderRadius: CARD_TOKENS.container.borderRadius, boxShadow: ELEVATION.shadow }}
+          >
+            <CardSensors
+              sensors={[
+                { id: 'rf-01', typeLabel: 'RF Scanner', icon: Radio, distanceLabel: '1.2 km', detectedAt: '14:32:01' },
+                { id: 'radar-01', typeLabel: 'Radar X-Band', icon: Activity, distanceLabel: '0.8 km', detectedAt: '14:32:05' },
+              ]}
+              onSensorHover={setFlow5HoveredSensor}
+            />
+          </div>
+        }
+        mapZone={
+          <div className="flex items-center gap-6">
+            <div className="flex flex-col items-center gap-2">
+              <MapMarker
+                icon={<RadarIcon size={24} fill={flow5HoveredSensor === 'rf-01' ? friendlyHovered.glyphColor : friendlyDefault.glyphColor} />}
+                style={flow5HoveredSensor === 'rf-01' ? friendlyHovered : friendlyDefault}
+                surfaceSize={38}
+                ringSize={30}
+                pulse={flow5HoveredSensor === 'rf-01'}
+                showLabel={flow5HoveredSensor === 'rf-01'}
+                label="RF Scanner"
+              />
+              <span className="text-[10px] font-medium text-zinc-500">rf-01</span>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <MapMarker
+                icon={<RadarIcon size={24} fill={flow5HoveredSensor === 'radar-01' ? friendlyHovered.glyphColor : friendlyDefault.glyphColor} />}
+                style={flow5HoveredSensor === 'radar-01' ? friendlyHovered : friendlyDefault}
+                surfaceSize={38}
+                ringSize={30}
+                pulse={flow5HoveredSensor === 'radar-01'}
+                showLabel={flow5HoveredSensor === 'radar-01'}
+                label="Radar X-Band"
+              />
+              <span className="text-[10px] font-medium text-zinc-500">radar-01</span>
+            </div>
+          </div>
+        }
+        steps={[
+          { label: 'User hovers sensor row inside detection card' },
+          { label: 'onSensorHover(sensorId) fires' },
+          { label: 'Sensor marker on map enters hovered state' },
+        ]}
+      />
+
+    </div>
+  );
+}
+
+function DeviceCardFlows() {
+  const [flowHoverDeviceId, setFlowHoverDeviceId] = useState<string | null>(null);
+  const [flow4Selected, setFlow4Selected] = useState(false);
+  const [flow4HoveredRow, setFlow4HoveredRow] = useState<string | null>(null);
+  const flow7CamPos = { x: 50, y: 70 };
+  const flow7TargetPos = { x: 230, y: 70 };
+  const [flow7FovTip, setFlow7FovTip] = useState({ x: 140, y: 10 });
+  const [flow7Dragging, setFlow7Dragging] = useState(false);
+  const flow7MapRef = useRef<HTMLDivElement>(null);
+
+  const flow7Dx = flow7FovTip.x - flow7CamPos.x;
+  const flow7Dy = flow7FovTip.y - flow7CamPos.y;
+  const flow7Angle = Math.atan2(flow7Dy, flow7Dx);
+  const flow7ConeLen = Math.sqrt(flow7Dx * flow7Dx + flow7Dy * flow7Dy);
+  const flow7FovHalf = 30 * (Math.PI / 180);
+  const flow7ConeP1 = {
+    x: flow7CamPos.x + flow7ConeLen * Math.cos(flow7Angle - flow7FovHalf),
+    y: flow7CamPos.y + flow7ConeLen * Math.sin(flow7Angle - flow7FovHalf),
+  };
+  const flow7ConeP2 = {
+    x: flow7CamPos.x + flow7ConeLen * Math.cos(flow7Angle + flow7FovHalf),
+    y: flow7CamPos.y + flow7ConeLen * Math.sin(flow7Angle + flow7FovHalf),
+  };
+  const flow7TDx = flow7TargetPos.x - flow7CamPos.x;
+  const flow7TDy = flow7TargetPos.y - flow7CamPos.y;
+  const flow7AngleToTarget = Math.atan2(flow7TDy, flow7TDx);
+  let flow7AngleDiff = flow7AngleToTarget - flow7Angle;
+  if (flow7AngleDiff > Math.PI) flow7AngleDiff -= 2 * Math.PI;
+  if (flow7AngleDiff < -Math.PI) flow7AngleDiff += 2 * Math.PI;
+  const flow7OnTarget = Math.abs(flow7AngleDiff) < flow7FovHalf;
+
+  const flow7HandlePointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    setFlow7Dragging(true);
+  }, []);
+
+  const flow7HandlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!flow7Dragging || !flow7MapRef.current) return;
+    const rect = flow7MapRef.current.getBoundingClientRect();
+    setFlow7FovTip({
+      x: Math.max(0, Math.min(280, e.clientX - rect.left)),
+      y: Math.max(0, Math.min(160, e.clientY - rect.top)),
+    });
+  }, [flow7Dragging]);
+
+  const flow7HandlePointerUp = useCallback(() => {
+    setFlow7Dragging(false);
+  }, []);
+
+  const [flow7Animating, setFlow7Animating] = useState(false);
+  const flow7AnimRef = useRef<number>(0);
+
+  const flow7HandlePointAt = useCallback(() => {
+    const dest = { x: 230, y: 70 };
+    const duration = 800;
+    let start: number | null = null;
+
+    setFlow7Animating(true);
+    setFlow7Dragging(false);
+
+    const tick = (ts: number) => {
+      if (!start) start = ts;
+      const t = Math.min((ts - start) / duration, 1);
+      const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+      setFlow7FovTip(prev => ({
+        x: prev.x + (dest.x - prev.x) * ease * 0.15,
+        y: prev.y + (dest.y - prev.y) * ease * 0.15,
+      }));
+
+      if (t < 1) {
+        flow7AnimRef.current = requestAnimationFrame(tick);
+      } else {
+        setFlow7FovTip(dest);
+        setTimeout(() => {
+          setFlow7FovTip({ x: 140, y: 10 });
+          setFlow7Animating(false);
+        }, 1500);
+      }
+    };
+
+    cancelAnimationFrame(flow7AnimRef.current);
+    flow7AnimRef.current = requestAnimationFrame(tick);
+  }, []);
+
+  const defaultStyle = resolveMarkerStyle('default', 'hostile');
+  const hoveredStyle = resolveMarkerStyle('selected', 'hostile');
+  const friendlyDefault = resolveMarkerStyle('default', 'friendly');
+  const friendlyHovered = resolveMarkerStyle('hovered', 'friendly');
+  const friendlySelected = resolveMarkerStyle('selected', 'friendly');
+
+  const hoverDeviceCam1: Device = useMemo(() => ({
+    id: 'CAM-HOVER-1', name: 'מצלמה PTZ-N', type: 'camera',
+    lat: 32.0853, lon: 34.7818, status: 'available',
+    operationalStatus: 'operational', connectionState: 'online',
+    fovDeg: 120, bearingDeg: 45, Icon: CameraIcon,
+  }), []);
+
+  const hoverDeviceCam2: Device = useMemo(() => ({
+    id: 'CAM-HOVER-2', name: 'מצלמה Pixelsight', type: 'camera',
+    lat: 32.0891, lon: 34.7756, status: 'available',
+    operationalStatus: 'operational', connectionState: 'online',
+    fovDeg: 90, bearingDeg: 180, Icon: CameraIcon,
+  }), []);
+
+  const flow4DeviceCam1: Device = useMemo(() => ({
+    id: 'CAM-FLOW4-1', name: 'מצלמה PTZ-N', type: 'camera',
+    lat: 32.0853, lon: 34.7818, status: 'available',
+    operationalStatus: 'operational', connectionState: 'online',
+    fovDeg: 120, bearingDeg: 45, Icon: CameraIcon,
+  }), []);
+
+  const flow4DeviceCam2: Device = useMemo(() => ({
+    id: 'CAM-FLOW4-2', name: 'מצלמה Pixelsight', type: 'camera',
+    lat: 32.0891, lon: 34.7756, status: 'available',
+    operationalStatus: 'operational', connectionState: 'online',
+    fovDeg: 90, bearingDeg: 180, Icon: CameraIcon,
+  }), []);
+
+  const noop = useCallback(() => {}, []);
+  const noopFlyTo = useCallback((_lat: number, _lon: number) => {}, []);
+  const noopMute = useCallback((_id: string) => {}, []);
+
+  return (
+    <div className="space-y-8">
+
+      {/* ── Flow: Hover Device Row → Map Highlight ── */}
+      <InteractionFlowBlock
+        id="flow-hover-device"
+        title="Hover Device Row → Map Highlight"
+        description="Hovering a device row in the DevicesPanel highlights the corresponding asset marker on the map with inner glow + pulse."
+        cardZone={
+          <div className="overflow-hidden" style={{ backgroundColor: 'rgb(9,9,11)', borderRadius: CARD_TOKENS.container.borderRadius }}>
+            <div dir="rtl" className="px-4 py-1.5 text-xs font-normal uppercase tracking-wider text-white border-b border-white/5 bg-white/5">
+              מצלמות (2)
+            </div>
+            <DeviceRow
+              device={hoverDeviceCam1}
+              isExpanded={false}
+              onToggle={noop}
+              onHover={(id) => setFlowHoverDeviceId(id)}
+              onFlyTo={noopFlyTo}
+              isMuted={false}
+              muteRemaining={null}
+              onToggleMute={noopMute}
+            />
+            <DeviceRow
+              device={hoverDeviceCam2}
+              isExpanded={false}
+              onToggle={noop}
+              onHover={(id) => setFlowHoverDeviceId(id)}
+              onFlyTo={noopFlyTo}
+              isMuted={false}
+              muteRemaining={null}
+              onToggleMute={noopMute}
+            />
+          </div>
+        }
+        mapZone={
+          <div className="flex items-center gap-6">
+            <div className="flex flex-col items-center gap-2">
+              <MapMarker
+                icon={<CameraIcon size={24} fill={flowHoverDeviceId === hoverDeviceCam1.id ? friendlyHovered.glyphColor : friendlyDefault.glyphColor} />}
+                style={flowHoverDeviceId === hoverDeviceCam1.id ? friendlyHovered : friendlyDefault}
+                surfaceSize={38}
+                ringSize={30}
+                pulse={flowHoverDeviceId === hoverDeviceCam1.id}
+              />
+              <span className="text-[10px] font-medium text-zinc-500">PTZ-N</span>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <MapMarker
+                icon={<CameraIcon size={24} fill={flowHoverDeviceId === hoverDeviceCam2.id ? friendlyHovered.glyphColor : friendlyDefault.glyphColor} />}
+                style={flowHoverDeviceId === hoverDeviceCam2.id ? friendlyHovered : friendlyDefault}
+                surfaceSize={38}
+                ringSize={30}
+                pulse={flowHoverDeviceId === hoverDeviceCam2.id}
+              />
+              <span className="text-[10px] font-medium text-zinc-500">Pixelsight</span>
+            </div>
+          </div>
+        }
+        steps={[
+          { label: 'User hovers a device row in DevicesPanel' },
+          { label: 'onDeviceHover(deviceId) fires' },
+          { label: 'Map asset marker resolves to hovered state' },
+          { label: 'Mouse leaves → marker returns to default' },
+        ]}
+      />
+
+      {/* ── Flow 4: Click Asset Icon → Open Device Panel ── */}
+      <InteractionFlowBlock
+        id="flow-click-asset"
+        title="Click Asset Icon → Open Device Panel"
+        description="Clicking a sensor, effector, or launcher icon on the map opens the DevicesPanel with that device focused. Hovering a row highlights the marker."
+        cardZone={
+          <div className="overflow-hidden" style={{ backgroundColor: 'rgb(9,9,11)', borderRadius: CARD_TOKENS.container.borderRadius }}>
+            <div dir="rtl" className="px-4 py-1.5 text-xs font-normal uppercase tracking-wider text-white border-b border-white/5 bg-white/5">
+              מצלמות (2)
+            </div>
+            <DeviceRow
+              device={flow4DeviceCam1}
+              isExpanded={flow4Selected}
+              onToggle={() => setFlow4Selected(prev => !prev)}
+              onHover={(id) => setFlow4HoveredRow(id)}
+              onFlyTo={noopFlyTo}
+              isMuted={false}
+              muteRemaining={null}
+              onToggleMute={noopMute}
+            />
+            <DeviceRow
+              device={flow4DeviceCam2}
+              isExpanded={false}
+              onToggle={noop}
+              onHover={(id) => setFlow4HoveredRow(id)}
+              onFlyTo={noopFlyTo}
+              isMuted={false}
+              muteRemaining={null}
+              onToggleMute={noopMute}
+            />
+          </div>
+        }
+        mapZone={
+          <div className="flex items-center gap-6">
+            <div
+              className="flex flex-col items-center gap-2 cursor-pointer"
+              onClick={() => setFlow4Selected(prev => !prev)}
+            >
+              <MapMarker
+                icon={<CameraIcon size={24} fill={flow4Selected || flow4HoveredRow === flow4DeviceCam1.id ? friendlySelected.glyphColor : friendlyDefault.glyphColor} />}
+                style={flow4Selected || flow4HoveredRow === flow4DeviceCam1.id ? friendlySelected : friendlyDefault}
+                surfaceSize={38}
+                ringSize={30}
+                pulse={flow4Selected || flow4HoveredRow === flow4DeviceCam1.id}
+              />
+              <span className="text-[10px] font-medium text-zinc-400">PTZ-N</span>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <MapMarker
+                icon={<CameraIcon size={24} fill={flow4HoveredRow === flow4DeviceCam2.id ? friendlyHovered.glyphColor : friendlyDefault.glyphColor} />}
+                style={flow4HoveredRow === flow4DeviceCam2.id ? friendlyHovered : friendlyDefault}
+                surfaceSize={38}
+                ringSize={30}
+                pulse={flow4HoveredRow === flow4DeviceCam2.id}
+              />
+              <span className="text-[10px] font-medium text-zinc-500">Pixelsight</span>
+            </div>
+          </div>
+        }
+        steps={[
+          { label: 'User clicks sensor/effector icon on map' },
+          { label: 'onAssetClick(assetId) fires' },
+          { label: 'Device card focused' },
+          { label: 'Asset marker shown as selected' },
+        ]}
+      />
+
+      {/* ── Flow 7: Camera Look-At ── */}
+      <InteractionFlowBlock
+        id="flow-camera-lookat"
+        title="Camera Look-At"
+        description="Drag the FOV cone tip to aim the camera. When the cone covers the target the marker activates."
+        cardZone={
+          <div className="overflow-hidden" style={{ backgroundColor: 'rgb(9,9,11)', borderRadius: CARD_TOKENS.container.borderRadius }}>
+            <div dir="rtl" className="px-4 py-1.5 text-xs font-normal uppercase tracking-wider text-white border-b border-white/5 bg-white/5">
+              מצלמות (1)
+            </div>
+
+            <div dir="rtl" className="flex items-center gap-2.5 px-4 py-2.5 text-right border-b border-white/[0.06] bg-white/[0.04]">
+              <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-white/10">
+                <CameraIcon size={20} fill="white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="text-[13px] font-medium text-zinc-300 block truncate">מצלמה PTZ-N</span>
+                <div className="text-[11px] font-mono tabular-nums text-white/50 truncate">
+                  כיוון {Math.round((flow7Angle * 180) / Math.PI + 90)}° · שדה ראייה 60°
+                </div>
+              </div>
+            </div>
+
+            <div dir="rtl" className="px-4 py-3 flex items-center gap-3">
+              <ActionButton
+                label="הפנה מצלמה"
+                icon={Camera}
+                variant="fill"
+                size="md"
+                onClick={flow7HandlePointAt}
+                disabled={flow7OnTarget || flow7Animating}
+                loading={flow7Animating}
+              />
+              <span className="text-[11px] text-zinc-500">
+                {flow7Animating ? 'מסתובבת...' : flow7OnTarget ? 'מכוון לעבר המטרה' : 'גרור את הקונוס או לחץ'}
+              </span>
+            </div>
+          </div>
+        }
+        mapZone={
+          <div
+            ref={flow7MapRef}
+            className="relative select-none"
+            style={{ width: 280, height: 160, cursor: flow7Dragging ? 'grabbing' : undefined }}
+            onPointerMove={flow7HandlePointerMove}
+            onPointerUp={flow7HandlePointerUp}
+          >
+            {/* FOV cone */}
+            <svg
+              width="280"
+              height="160"
+              viewBox="0 0 280 160"
+              fill="none"
+              className="absolute inset-0"
+              style={{ pointerEvents: 'none' }}
+            >
+              <path
+                d={`M${flow7CamPos.x} ${flow7CamPos.y} L${flow7ConeP1.x} ${flow7ConeP1.y} L${flow7ConeP2.x} ${flow7ConeP2.y} Z`}
+                fill={flow7OnTarget ? 'rgba(56,189,248,0.14)' : 'rgba(56,189,248,0.06)'}
+                stroke={flow7OnTarget ? 'rgba(56,189,248,0.5)' : 'rgba(56,189,248,0.25)'}
+                strokeWidth="1"
+              />
+              <line
+                x1={flow7CamPos.x} y1={flow7CamPos.y}
+                x2={flow7FovTip.x} y2={flow7FovTip.y}
+                stroke="rgba(56,189,248,0.2)"
+                strokeWidth="1"
+                strokeDasharray="4 3"
+              />
+            </svg>
+
+            {/* Drag handle at cone tip */}
+            <div
+              className="absolute z-10 flex items-center justify-center"
+              style={{
+                left: flow7FovTip.x,
+                top: flow7FovTip.y,
+                transform: 'translate(-50%, -50%)',
+                width: 18,
+                height: 18,
+                cursor: flow7Dragging ? 'grabbing' : 'grab',
+                touchAction: 'none',
+              }}
+              onPointerDown={flow7HandlePointerDown}
+            >
+              <div
+                className="rounded-full border-2 border-sky-400"
+                style={{
+                  width: 10,
+                  height: 10,
+                  background: flow7Dragging ? 'rgba(56,189,248,0.6)' : 'rgba(56,189,248,0.3)',
+                  boxShadow: '0 0 6px rgba(56,189,248,0.4)',
+                }}
+              />
+            </div>
+
+            {/* Camera marker — fixed */}
+            <div className="absolute" style={{ left: flow7CamPos.x, top: flow7CamPos.y, transform: 'translate(-50%, -50%)' }}>
+              <MapMarker
+                icon={<CameraIcon size={24} fill={friendlyDefault.glyphColor} />}
+                style={friendlyDefault}
+                surfaceSize={38}
+                ringSize={30}
+              />
+            </div>
+            <span className="absolute text-[10px] font-medium text-zinc-500" style={{ left: flow7CamPos.x, top: flow7CamPos.y + 28, transform: 'translateX(-50%)' }}>Camera</span>
+
+            {/* Target marker — fixed */}
+            <div className="absolute" style={{ left: flow7TargetPos.x, top: flow7TargetPos.y, transform: 'translate(-50%, -50%)' }}>
+              <MapMarker
+                icon={<SensorIcon size={24} fill={flow7OnTarget ? hoveredStyle.glyphColor : defaultStyle.glyphColor} />}
+                style={flow7OnTarget ? hoveredStyle : defaultStyle}
+                surfaceSize={36}
+                ringSize={28}
+                pulse={flow7OnTarget}
+              />
+            </div>
+            <span className="absolute text-[10px] font-medium text-zinc-500" style={{ left: flow7TargetPos.x, top: flow7TargetPos.y + 28, transform: 'translateX(-50%)' }}>Target</span>
+          </div>
+        }
+        steps={[
+          { label: 'User clicks "Point Camera" action' },
+          { label: 'onCameraLookAt fires' },
+          { label: 'Camera FOV cone on map rotates toward target bearing' },
+          { label: 'Target marker activates when inside FOV' },
+        ]}
+      />
+
+    </div>
   );
 }
 
@@ -3066,6 +3865,18 @@ export default function StyleguidePage() {
                   </StyleguideDeviceTile>
                 </div>
               </ExampleBlock>
+            </ComponentSection>
+            )}
+
+            {activeItem === 'target-card-flows' && (
+            <ComponentSection id="target-card-flows" name="Target Card + Map" description="Interaction choreography between detection cards in the sidebar and their corresponding markers on the tactical map. Covers hover highlights, click-to-expand, sensor focus, and bidirectional state sync.">
+              <TargetCardFlows />
+            </ComponentSection>
+            )}
+
+            {activeItem === 'device-card-flows' && (
+            <ComponentSection id="device-card-flows" name="Device Card + Map" description="Interaction choreography between field device rows in the DevicesPanel and their asset markers on the tactical map. Covers asset selection, camera FOV cone rotation, and device focus.">
+              <DeviceCardFlows />
             </ComponentSection>
             )}
 
