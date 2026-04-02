@@ -2,6 +2,6 @@ node_modules
 .cursor/
 dist/
 .next/
-storybook-static/
 .vercel
 .env*.local
+public/r/

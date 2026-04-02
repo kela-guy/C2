@@ -1,0 +1,1356 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "c2-hub",
+  "homepage": "https://c2-hub-three.vercel.app",
+  "items": [
+    {
+      "name": "utils",
+      "type": "registry:lib",
+      "title": "Utilities",
+      "description": "cn() helper — Tailwind class merging utility used by all components.",
+      "version": "1.0.0",
+      "dependencies": [
+        "clsx",
+        "tailwind-merge"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/utils.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "use-mobile",
+      "type": "registry:hook",
+      "title": "useIsMobile",
+      "description": "Hook that detects mobile viewport via matchMedia.",
+      "version": "1.0.0",
+      "files": [
+        {
+          "path": "src/app/components/ui/use-mobile.ts",
+          "type": "registry:hook"
+        }
+      ]
+    },
+    {
+      "name": "accordion",
+      "type": "registry:ui",
+      "title": "Accordion",
+      "description": "Vertically collapsing content panels.",
+      "version": "1.0.0",
+      "dependencies": [
+        "@radix-ui/react-accordion",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/accordion.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "alert",
+      "type": "registry:ui",
+      "title": "Alert",
+      "description": "Callout for important messages.",
+      "version": "1.0.0",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/alert.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "alert-dialog",
+      "type": "registry:ui",
+      "title": "AlertDialog",
+      "description": "Modal dialog for destructive or irreversible actions.",
+      "version": "1.0.0",
+      "dependencies": [
+        "@radix-ui/react-alert-dialog"
+      ],
+      "registryDependencies": [
+        "utils",
+        "button"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/alert-dialog.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "aspect-ratio",
+      "type": "registry:ui",
+      "title": "AspectRatio",
+      "description": "Constrains content to a given aspect ratio.",
+      "version": "1.0.0",
+      "dependencies": [
+        "@radix-ui/react-aspect-ratio"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/aspect-ratio.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "avatar",
+      "type": "registry:ui",
+      "title": "Avatar",
+      "description": "User or entity avatar with fallback.",
+      "version": "1.0.0",
+      "dependencies": [
+        "@radix-ui/react-avatar"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/avatar.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "badge",
+      "type": "registry:ui",
+      "title": "Badge",
+      "description": "Small label for status, category, or count.",
+      "version": "1.0.0",
+      "dependencies": [
+        "@radix-ui/react-slot",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/badge.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "breadcrumb",
+      "type": "registry:ui",
+      "title": "Breadcrumb",
+      "description": "Navigation breadcrumb trail.",
+      "version": "1.0.0",
+      "dependencies": [
+        "@radix-ui/react-slot",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/breadcrumb.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "button",
+      "type": "registry:ui",
+      "title": "Button",
+      "description": "Primary action button with multiple variants and sizes.",
+      "version": "1.0.0",
+      "dependencies": [
+        "@radix-ui/react-slot",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/button.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "calendar",
+      "type": "registry:ui",
+      "title": "Calendar",
+      "description": "Date picker calendar component.",
+      "version": "1.0.0",
+      "dependencies": [
+        "react-day-picker",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils",
+        "button"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/calendar.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "card",
+      "type": "registry:ui",
+      "title": "Card",
+      "description": "Container for grouped content with header, body, and footer.",
+      "version": "1.0.0",
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/card.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "carousel",
+      "type": "registry:ui",
+      "title": "Carousel",
+      "description": "Scrollable carousel with navigation controls.",
+      "version": "1.0.0",
+      "dependencies": [
+        "embla-carousel-react",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils",
+        "button"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/carousel.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "chart",
+      "type": "registry:ui",
+      "title": "Chart",
+      "description": "Chart container with theme-aware tooltip and legend.",
+      "version": "1.0.0",
+      "dependencies": [
+        "recharts"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/chart.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "checkbox",
+      "type": "registry:ui",
+      "title": "Checkbox",
+      "description": "Toggle checkbox control.",
+      "version": "1.0.0",
+      "dependencies": [
+        "@radix-ui/react-checkbox",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/checkbox.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "collapsible",
+      "type": "registry:ui",
+      "title": "Collapsible",
+      "description": "Expandable/collapsible content section.",
+      "version": "1.0.0",
+      "dependencies": [
+        "@radix-ui/react-collapsible"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/collapsible.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "command",
+      "type": "registry:ui",
+      "title": "Command",
+      "description": "Command palette with search and keyboard navigation.",
+      "version": "1.0.0",
+      "dependencies": [
+        "cmdk",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils",
+        "dialog"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/command.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "context-menu",
+      "type": "registry:ui",
+      "title": "ContextMenu",
+      "description": "Right-click context menu.",
+      "version": "1.0.0",
+      "dependencies": [
+        "@radix-ui/react-context-menu",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/context-menu.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "dialog",
+      "type": "registry:ui",
+      "title": "Dialog",
+      "description": "Modal dialog overlay.",
+      "version": "1.0.0",
+      "dependencies": [
+        "@radix-ui/react-dialog",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/dialog.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "drawer",
+      "type": "registry:ui",
+      "title": "Drawer",
+      "description": "Slide-out drawer panel.",
+      "version": "1.0.0",
+      "dependencies": [
+        "vaul"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/drawer.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "dropdown-menu",
+      "type": "registry:ui",
+      "title": "DropdownMenu",
+      "description": "Dropdown menu triggered by a button.",
+      "version": "1.0.0",
+      "dependencies": [
+        "@radix-ui/react-dropdown-menu",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/dropdown-menu.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "form",
+      "type": "registry:ui",
+      "title": "Form",
+      "description": "Form primitives with react-hook-form integration.",
+      "version": "1.0.0",
+      "dependencies": [
+        "@radix-ui/react-label",
+        "@radix-ui/react-slot",
+        "react-hook-form"
+      ],
+      "registryDependencies": [
+        "utils",
+        "label"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/form.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "hover-card",
+      "type": "registry:ui",
+      "title": "HoverCard",
+      "description": "Card that appears on hover.",
+      "version": "1.0.0",
+      "dependencies": [
+        "@radix-ui/react-hover-card"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/hover-card.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "input",
+      "type": "registry:ui",
+      "title": "Input",
+      "description": "Text input field.",
+      "version": "1.0.0",
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/input.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "input-otp",
+      "type": "registry:ui",
+      "title": "InputOTP",
+      "description": "One-time password input with slots.",
+      "version": "1.0.0",
+      "dependencies": [
+        "input-otp",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/input-otp.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "label",
+      "type": "registry:ui",
+      "title": "Label",
+      "description": "Accessible form label.",
+      "version": "1.0.0",
+      "dependencies": [
+        "@radix-ui/react-label"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/label.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "menubar",
+      "type": "registry:ui",
+      "title": "Menubar",
+      "description": "Horizontal menu bar with submenus.",
+      "version": "1.0.0",
+      "dependencies": [
+        "@radix-ui/react-menubar",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/menubar.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "pagination",
+      "type": "registry:ui",
+      "title": "Pagination",
+      "description": "Page navigation controls.",
+      "version": "1.0.0",
+      "registryDependencies": [
+        "utils",
+        "button"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/pagination.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "popover",
+      "type": "registry:ui",
+      "title": "Popover",
+      "description": "Floating popover anchored to a trigger.",
+      "version": "1.0.0",
+      "dependencies": [
+        "@radix-ui/react-popover"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/popover.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "progress",
+      "type": "registry:ui",
+      "title": "Progress",
+      "description": "Horizontal progress bar.",
+      "version": "1.0.0",
+      "dependencies": [
+        "@radix-ui/react-progress"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/progress.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "radio-group",
+      "type": "registry:ui",
+      "title": "RadioGroup",
+      "description": "Radio button group for single selection.",
+      "version": "1.0.0",
+      "dependencies": [
+        "@radix-ui/react-radio-group",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/radio-group.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "resizable",
+      "type": "registry:ui",
+      "title": "Resizable",
+      "description": "Resizable panel layout.",
+      "version": "1.0.0",
+      "dependencies": [
+        "react-resizable-panels",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/resizable.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "scroll-area",
+      "type": "registry:ui",
+      "title": "ScrollArea",
+      "description": "Custom scrollbar container.",
+      "version": "1.0.0",
+      "dependencies": [
+        "@radix-ui/react-scroll-area"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/scroll-area.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "select",
+      "type": "registry:ui",
+      "title": "Select",
+      "description": "Dropdown select menu.",
+      "version": "1.0.0",
+      "dependencies": [
+        "@radix-ui/react-select",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/select.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "separator",
+      "type": "registry:ui",
+      "title": "Separator",
+      "description": "Visual divider between sections.",
+      "version": "1.0.0",
+      "dependencies": [
+        "@radix-ui/react-separator"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/separator.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "sheet",
+      "type": "registry:ui",
+      "title": "Sheet",
+      "description": "Slide-over panel from the edge of the screen.",
+      "version": "1.0.0",
+      "dependencies": [
+        "@radix-ui/react-dialog",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/sheet.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "sidebar",
+      "type": "registry:ui",
+      "title": "Sidebar",
+      "description": "Application sidebar with responsive mobile drawer.",
+      "version": "1.0.0",
+      "dependencies": [
+        "@radix-ui/react-slot",
+        "class-variance-authority",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils",
+        "use-mobile",
+        "button",
+        "input",
+        "separator",
+        "sheet",
+        "skeleton",
+        "tooltip"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/sidebar.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "skeleton",
+      "type": "registry:ui",
+      "title": "Skeleton",
+      "description": "Loading placeholder animation.",
+      "version": "1.0.0",
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/skeleton.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "slider",
+      "type": "registry:ui",
+      "title": "Slider",
+      "description": "Range slider input.",
+      "version": "1.0.0",
+      "dependencies": [
+        "@radix-ui/react-slider"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/slider.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "sonner",
+      "type": "registry:ui",
+      "title": "Sonner",
+      "description": "Toast notification system.",
+      "version": "1.0.0",
+      "dependencies": [
+        "sonner"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/sonner.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "switch",
+      "type": "registry:ui",
+      "title": "Switch",
+      "description": "Toggle switch control.",
+      "version": "1.0.0",
+      "dependencies": [
+        "@radix-ui/react-switch"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/switch.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "table",
+      "type": "registry:ui",
+      "title": "Table",
+      "description": "Data table with header, body, and footer.",
+      "version": "1.0.0",
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/table.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "tabs",
+      "type": "registry:ui",
+      "title": "Tabs",
+      "description": "Tabbed content switcher.",
+      "version": "1.0.0",
+      "dependencies": [
+        "@radix-ui/react-tabs"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/tabs.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "textarea",
+      "type": "registry:ui",
+      "title": "Textarea",
+      "description": "Multi-line text input.",
+      "version": "1.0.0",
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/textarea.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "toggle",
+      "type": "registry:ui",
+      "title": "Toggle",
+      "description": "Two-state toggle button.",
+      "version": "1.0.0",
+      "dependencies": [
+        "@radix-ui/react-toggle",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/toggle.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "toggle-group",
+      "type": "registry:ui",
+      "title": "ToggleGroup",
+      "description": "Group of toggle buttons with single or multi selection.",
+      "version": "1.0.0",
+      "dependencies": [
+        "@radix-ui/react-toggle-group",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "utils",
+        "toggle"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/toggle-group.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "tooltip",
+      "type": "registry:ui",
+      "title": "Tooltip",
+      "description": "Informational popup on hover.",
+      "version": "1.0.0",
+      "dependencies": [
+        "@radix-ui/react-tooltip"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/tooltip.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "tokens",
+      "type": "registry:ui",
+      "title": "Design Tokens",
+      "description": "Surface levels, elevation, card tokens, and threat accent colors for the C2 design system.",
+      "version": "1.0.0",
+      "files": [
+        {
+          "path": "src/primitives/tokens.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "map-marker-states",
+      "type": "registry:ui",
+      "title": "Map Marker States",
+      "description": "Affiliation palettes, interaction states, and marker style resolver for tactical map markers.",
+      "version": "1.0.0",
+      "files": [
+        {
+          "path": "src/primitives/mapMarkerStates.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "status-chip",
+      "type": "registry:ui",
+      "title": "StatusChip",
+      "description": "Activity status indicator chip with semantic color coding.",
+      "version": "1.0.0",
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/StatusChip.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "action-button",
+      "type": "registry:ui",
+      "title": "ActionButton",
+      "description": "Primary action trigger with icon, loading spinner, tooltip, and variant support.",
+      "version": "1.0.0",
+      "dependencies": [
+        "lucide-react",
+        "framer-motion"
+      ],
+      "registryDependencies": [
+        "utils",
+        "tooltip"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/ActionButton.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "split-action-button",
+      "type": "registry:ui",
+      "title": "SplitActionButton",
+      "description": "Two-segment button — primary action + dropdown menu for effector controls.",
+      "version": "1.0.0",
+      "dependencies": [
+        "lucide-react",
+        "framer-motion"
+      ],
+      "registryDependencies": [
+        "utils",
+        "dropdown-menu"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/SplitActionButton.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "accordion-section",
+      "type": "registry:ui",
+      "title": "AccordionSection",
+      "description": "Collapsible section with animated expand/collapse for card interiors.",
+      "version": "1.0.0",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "collapsible",
+        "tokens"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/AccordionSection.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "telemetry-row",
+      "type": "registry:ui",
+      "title": "TelemetryRow",
+      "description": "Single telemetry metric row with icon, label, and monospace value.",
+      "version": "1.0.0",
+      "files": [
+        {
+          "path": "src/primitives/TelemetryRow.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "new-updates-pill",
+      "type": "registry:ui",
+      "title": "NewUpdatesPill",
+      "description": "Floating pill that surfaces new incoming detection count.",
+      "version": "1.0.0",
+      "dependencies": [
+        "framer-motion",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "button",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/NewUpdatesPill.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "filter-bar",
+      "type": "registry:ui",
+      "title": "FilterBar",
+      "description": "Search, sort, and multi-select filter controls. Requires domain types (ActivityStatus, FilterState) from consumer app.",
+      "version": "1.0.0",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "checkbox",
+        "popover"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/FilterBar.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "card-header",
+      "type": "registry:ui",
+      "title": "CardHeader (Primitive)",
+      "description": "Target card header with icon, title, subtitle, status badge, and collapse chevron.",
+      "version": "1.0.0",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "tokens"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/CardHeader.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "card-actions",
+      "type": "registry:ui",
+      "title": "CardActions",
+      "description": "Action bar with grouped effector/investigation layout and confirm dialogs.",
+      "version": "1.0.0",
+      "dependencies": [
+        "framer-motion"
+      ],
+      "registryDependencies": [
+        "action-button",
+        "split-action-button",
+        "tokens"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/CardActions.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "card-details",
+      "type": "registry:ui",
+      "title": "CardDetails",
+      "description": "Collapsible telemetry accordion with copy-all and 3-column grid layout.",
+      "version": "1.0.0",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "accordion-section",
+        "telemetry-row"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/CardDetails.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "card-sensors",
+      "type": "registry:ui",
+      "title": "CardSensors",
+      "description": "Sensor list with type, distance, and timestamp for each detecting sensor.",
+      "version": "1.0.0",
+      "registryDependencies": [
+        "tokens"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/CardSensors.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "card-media",
+      "type": "registry:ui",
+      "title": "CardMedia",
+      "description": "Image/video slot for surveillance feed with live badge, playback controls, and lightbox.",
+      "version": "1.0.0",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "dialog",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/CardMedia.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "card-log",
+      "type": "registry:ui",
+      "title": "CardLog",
+      "description": "Chronological event log accordion with expand-all.",
+      "version": "1.0.0",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "accordion-section",
+        "tokens"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/CardLog.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "card-closure",
+      "type": "registry:ui",
+      "title": "CardClosure",
+      "description": "Outcome selection grid for closing a detection event.",
+      "version": "1.0.0",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "button",
+        "tokens"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/CardClosure.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "card-timeline",
+      "type": "registry:ui",
+      "title": "CardTimeline",
+      "description": "Vertical step timeline showing detection lifecycle stages.",
+      "version": "1.0.0",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "tokens"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/CardTimeline.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "card-footer-dock",
+      "type": "registry:ui",
+      "title": "CardFooterDock",
+      "description": "Sticky footer action dock for card bottom actions.",
+      "version": "1.0.0",
+      "registryDependencies": [
+        "utils",
+        "tokens"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/CardFooterDock.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "target-card",
+      "type": "registry:ui",
+      "title": "TargetCard",
+      "description": "Core detection card shell with accent spine, collapsible body, and slot composition.",
+      "version": "1.0.0",
+      "registryDependencies": [
+        "collapsible",
+        "card",
+        "utils",
+        "tokens"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/TargetCard.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "map-marker",
+      "type": "registry:ui",
+      "title": "MapMarker",
+      "description": "Tactical map marker with affiliation colors, heading indicator, and interaction states.",
+      "version": "1.0.0",
+      "registryDependencies": [
+        "map-marker-states"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/MapMarker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "map-icons",
+      "type": "registry:ui",
+      "title": "MapIcons",
+      "description": "SVG icons for card headers — DroneCardIcon, MissileCardIcon, JamWaveIcon.",
+      "version": "1.0.0",
+      "files": [
+        {
+          "path": "src/primitives/MapIcons.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "all",
+      "type": "registry:ui",
+      "title": "All Components",
+      "description": "Meta-package that installs every C2 Hub component — base UI, domain primitives, tokens, and icons.",
+      "version": "1.0.0",
+      "registryDependencies": [
+        "accordion",
+        "alert",
+        "alert-dialog",
+        "aspect-ratio",
+        "avatar",
+        "badge",
+        "breadcrumb",
+        "button",
+        "calendar",
+        "card",
+        "carousel",
+        "chart",
+        "checkbox",
+        "collapsible",
+        "command",
+        "context-menu",
+        "dialog",
+        "drawer",
+        "dropdown-menu",
+        "form",
+        "hover-card",
+        "input",
+        "input-otp",
+        "label",
+        "menubar",
+        "pagination",
+        "popover",
+        "progress",
+        "radio-group",
+        "resizable",
+        "scroll-area",
+        "select",
+        "separator",
+        "sheet",
+        "sidebar",
+        "skeleton",
+        "slider",
+        "sonner",
+        "switch",
+        "table",
+        "tabs",
+        "textarea",
+        "toggle",
+        "toggle-group",
+        "tooltip",
+        "tokens",
+        "map-marker-states",
+        "status-chip",
+        "action-button",
+        "split-action-button",
+        "accordion-section",
+        "telemetry-row",
+        "new-updates-pill",
+        "filter-bar",
+        "card-header",
+        "card-actions",
+        "card-details",
+        "card-sensors",
+        "card-media",
+        "card-log",
+        "card-closure",
+        "card-timeline",
+        "card-footer-dock",
+        "target-card",
+        "map-marker",
+        "map-icons"
+      ],
+      "files": []
+    }
+  ]
+}

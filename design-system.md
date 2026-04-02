@@ -1,8 +1,112 @@
-# C1 CUAS Design System
+# C2 Hub — CUAS Design System
 
 Single source of truth for all UI primitives, design tokens, composition patterns, and conventions.
 
-Live styleguide: `/styleguide`
+Live styleguide: [c2-hub-three.vercel.app/styleguide](https://c2-hub-three.vercel.app/styleguide)
+
+---
+
+## Component Registry (CLI)
+
+All generic UI components are available via a **shadcn-compatible registry**. Install individual components into any Vite + React project:
+
+```bash
+# One-time setup in your project
+npx shadcn@latest init
+
+# Install everything
+npx shadcn@latest add https://c2-hub-three.vercel.app/r/all.json
+
+# Or install individual components
+npx shadcn@latest add https://c2-hub-three.vercel.app/r/button.json
+
+# Check for updates
+npx shadcn@latest add https://c2-hub-three.vercel.app/r/button.json --diff
+```
+
+During local development, the registry is served at `http://localhost:5173/r/`.
+
+### Available components
+
+| Component | Install |
+|-----------|---------|
+| Accordion | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/accordion.json` |
+| Alert | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/alert.json` |
+| AlertDialog | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/alert-dialog.json` |
+| AspectRatio | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/aspect-ratio.json` |
+| Avatar | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/avatar.json` |
+| Badge | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/badge.json` |
+| Breadcrumb | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/breadcrumb.json` |
+| Button | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/button.json` |
+| Calendar | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/calendar.json` |
+| Card | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/card.json` |
+| Carousel | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/carousel.json` |
+| Chart | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/chart.json` |
+| Checkbox | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/checkbox.json` |
+| Collapsible | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/collapsible.json` |
+| Command | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/command.json` |
+| ContextMenu | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/context-menu.json` |
+| Dialog | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/dialog.json` |
+| Drawer | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/drawer.json` |
+| DropdownMenu | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/dropdown-menu.json` |
+| Form | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/form.json` |
+| HoverCard | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/hover-card.json` |
+| Input | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/input.json` |
+| InputOTP | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/input-otp.json` |
+| Label | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/label.json` |
+| Menubar | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/menubar.json` |
+| Pagination | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/pagination.json` |
+| Popover | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/popover.json` |
+| Progress | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/progress.json` |
+| RadioGroup | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/radio-group.json` |
+| Resizable | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/resizable.json` |
+| ScrollArea | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/scroll-area.json` |
+| Select | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/select.json` |
+| Separator | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/separator.json` |
+| Sheet | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/sheet.json` |
+| Sidebar | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/sidebar.json` |
+| Skeleton | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/skeleton.json` |
+| Slider | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/slider.json` |
+| Sonner | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/sonner.json` |
+| Switch | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/switch.json` |
+| Table | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/table.json` |
+| Tabs | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/tabs.json` |
+| Textarea | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/textarea.json` |
+| Toggle | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/toggle.json` |
+| ToggleGroup | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/toggle-group.json` |
+| Tooltip | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/tooltip.json` |
+
+Dependencies (e.g. `utils`, other ui components) are resolved and installed automatically.
+
+### Domain primitives
+
+| Component | Install |
+|-----------|---------|
+| Tokens | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/tokens.json` |
+| MapMarkerStates | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/map-marker-states.json` |
+| StatusChip | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/status-chip.json` |
+| ActionButton | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/action-button.json` |
+| SplitActionButton | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/split-action-button.json` |
+| AccordionSection | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/accordion-section.json` |
+| TelemetryRow | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/telemetry-row.json` |
+| NewUpdatesPill | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/new-updates-pill.json` |
+| FilterBar | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/filter-bar.json` |
+| CardHeader | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/card-header.json` |
+| CardActions | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/card-actions.json` |
+| CardDetails | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/card-details.json` |
+| CardSensors | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/card-sensors.json` |
+| CardMedia | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/card-media.json` |
+| CardLog | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/card-log.json` |
+| CardClosure | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/card-closure.json` |
+| CardTimeline | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/card-timeline.json` |
+| CardFooterDock | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/card-footer-dock.json` |
+| TargetCard | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/target-card.json` |
+| MapMarker | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/map-marker.json` |
+| MapIcons | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/map-icons.json` |
+
+> **Note:** `FilterBar` imports domain-specific types (`ActivityStatus`, `FilterState`) from `@/imports/`. Consumers will need to provide these types or adapt the imports after installation.
+
+---
 
 ### Styleguide map
 
@@ -10,17 +114,15 @@ In-app docs at `/styleguide` are grouped by composition depth (sidebar matches s
 
 1. **Foundations** — design tokens  
 2. **Primitives** — `StatusChip`, `NewUpdatesPill`, `ActionButton`, `SplitActionButton`, `AccordionSection`, `TelemetryRow`  
-3. **Card building blocks** — `CardHeader`, `CardMedia`, `CardActions`, `CardDetails`, `CardSensors`, `CardLog`, `CardClosure` (same order as `UnifiedCard` body, after the header prop)  
+3. **Card building blocks** — `CardHeader`, `CardMedia`, `CardActions`, `CardDetails`, `CardSensors`, `CardLog`, `CardClosure`, `CardTimeline`, `CardFooterDock`  
 4. **Assemblies & list chrome** — `TargetCard` examples, `FilterBar`  
-5. **Tactical** — map icons  
-
-**Gap:** `CardTimeline` is rendered in the app between actions and details but does not yet have a dedicated styleguide section (only appears inside full `TargetCard` demos).
+5. **Tactical** — `MapMarker`, `mapMarkerStates`, map icons
 
 ---
 
 ## Design Tokens
 
-Import: `import { SURFACE, ELEVATION, CARD_TOKENS, surfaceAt, overlayAt, type ThreatAccent } from '@/primitives'`
+Import: `import { SURFACE, ELEVATION, CARD_TOKENS, LAYOUT_TOKENS, surfaceAt, overlayAt, type ThreatAccent } from '@/primitives'`
 
 ### Surface Levels
 
@@ -128,7 +230,7 @@ Primary action trigger. All sizes use `rounded` (4px) border-radius.
 
 ### SplitActionButton
 
-Import: `import { SplitActionButton } from '@/primitives/SplitActionButton'`
+Import: `import { SplitActionButton } from '@/primitives'`
 Styleguide: `/styleguide#split-action`
 
 Two-segment button: primary action + dropdown menu. Used for effector controls. Dropdown is RTL with `dir="rtl"`.
@@ -256,6 +358,33 @@ Action bar with grouped effector/investigation layout, flat grid, and confirm di
 
 Groups: `'effector'` (top row, split buttons) and `'investigation'` (bottom grid).
 
+### CardTimeline
+
+Import: `import { CardTimeline } from '@/primitives'`
+Styleguide: `/styleguide#card-timeline`
+
+Step-by-step timeline showing detection lifecycle progress. Rendered between CardActions and CardDetails.
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `steps` | `TimelineStep[]` | — | Array of { label, status } |
+| `compact` | `boolean` | `false` | Horizontal dot mode instead of vertical list |
+| `className` | `string` | — | Additional classes |
+
+`TimelineStepStatus`: `'pending' | 'active' | 'complete' | 'error'`
+
+### CardFooterDock
+
+Import: `import { CardFooterDock } from '@/primitives'`
+Styleguide: `/styleguide#card-footer-dock`
+
+Bottom-anchored action bar for cards. Renders equal-width buttons in a tinted dock strip at the card bottom.
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `actions` | `FooterDockAction[]` | — | Array of { id, label, icon?, onClick?, disabled?, loading? } |
+| `className` | `string` | — | Additional classes |
+
 ---
 
 ## Composed Components
@@ -358,9 +487,42 @@ Used on the map layer. Props vary by icon — most take `size` and `fill`. `Dron
 
 ### Card Icons (MapIcons.tsx)
 
-Import: `import { DroneCardIcon, MissileCardIcon, JamWaveIcon } from '@/primitives/MapIcons'`
+Import: `import { DroneCardIcon, MissileCardIcon, JamWaveIcon } from '@/primitives'`
 
 Adapted for card headers. All take a `size` prop and use `currentColor`.
+
+### MapMarker
+
+Import: `import { MapMarker } from '@/primitives'`
+Styleguide: `/styleguide#map-markers`
+
+Composable map marker with layered rendering: surface, ring, glyph, inner glow, and overlays. Driven by `resolveMarkerStyle()` from `mapMarkerStates`.
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `icon` | `ReactNode` | — | Glyph content (SVG icon) |
+| `style` | `MarkerStyle` | — | Visual style from `resolveMarkerStyle()` |
+| `surfaceSize` | `number` | `42` | Surface circle diameter |
+| `ringSize` | `number` | — | Ring circle diameter |
+| `heading` | `number` | — | Rotation in degrees |
+| `showBadge` | `boolean` | `false` | Show top-right badge dot |
+| `pulse` | `boolean` | `false` | Pulsing animation |
+| `label` | `string` | — | Text label below marker |
+| `showLabel` | `boolean` | — | Toggle label visibility |
+| `highlightLayer` | `number \| null` | — | Dims all layers except the specified one (1–5) |
+| `statusBadgeText` | `string` | — | Status badge overlay text |
+| `statusBadgeTone` | `'neutral' \| 'danger'` | `'neutral'` | Status badge color |
+
+### mapMarkerStates
+
+Import: `import { resolveMarkerStyle, AFFILIATIONS, INTERACTION_STATES, AFFILIATION_LABELS, AFFILIATION_PALETTES, type Affiliation, type InteractionState, type MarkerStyle } from '@/primitives'`
+
+Resolves visual styles for map markers based on affiliation and interaction state.
+
+- `resolveMarkerStyle(affiliation, state)` → `MarkerStyle` — returns surface fill/opacity, ring color/width, glow, badge, and pulse config
+- `AFFILIATIONS` — `['friendly', 'hostile', 'possibleThreat', 'neutral', 'unknown']`
+- `INTERACTION_STATES` — `['default', 'hovered', 'selected', 'active', 'disabled', 'expired', 'alert', 'jammer']`
+- `AFFILIATION_PALETTES` — color definitions per affiliation
 
 ---
 
@@ -394,7 +556,7 @@ Derives `ActivityStatus` from a `Detection` for status chip display.
 
 Located in `src/app/components/ui/`. Available primitives:
 
-accordion, alert-dialog, alert, aspect-ratio, avatar, badge, breadcrumb, button, calendar, card, carousel, chart, checkbox, collapsible, command, context-menu, dialog, drawer, dropdown-menu, form, hover-card, input-otp, input, label, menubar, navigation-menu, pagination, popover, progress, radio-group, resizable, scroll-area, select, separator, sheet, sidebar, skeleton, slider, sonner, switch, table, tabs, textarea, toggle-group, toggle, tooltip
+accordion, alert-dialog, alert, aspect-ratio, avatar, badge, breadcrumb, button, calendar, card, carousel, chart, checkbox, collapsible, command, context-menu, dialog, drawer, dropdown-menu, form, hover-card, input-otp, input, label, menubar, pagination, popover, progress, radio-group, resizable, scroll-area, select, separator, sheet, sidebar, skeleton, slider, sonner, switch, table, tabs, textarea, toggle-group, toggle, tooltip
 
 Utility: `import { cn } from '@/app/components/ui/utils'`
 

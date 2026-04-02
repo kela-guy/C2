@@ -1,0 +1,21 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "default",
+  "rsc": false,
+  "tsx": true,
+  "tailwind": {
+    "css": "src/styles/index.css",
+    "baseColor": "neutral",
+    "cssVariables": true
+  },
+  "aliases": {
+    "components": "@/app/components",
+    "ui": "@/app/components/ui",
+    "lib": "@/lib",
+    "hooks": "@/hooks",
+    "utils": "@/app/components/ui/utils"
+  },
+  "registries": {
+    "@c2": "https://c2-hub-three.vercel.app/r/{name}.json"
+  }
+}

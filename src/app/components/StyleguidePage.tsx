@@ -9,6 +9,12 @@ import { toast } from 'sonner';
 import { Toaster } from '@/shared/components/ui/sonner';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { TooltipProvider } from '@/shared/components/ui/tooltip';
+import { NAV, findGroupForId, findParentItemForChild } from '@/app/styleguide/navConfig';
+import { CHANGELOG } from '@/app/styleguide/changelog';
+import { StyleguideSidebar } from '@/app/styleguide/StyleguideSidebar';
+import { StyleguideSearch } from '@/app/styleguide/StyleguideSearch';
+import { StyleguideHeader } from '@/app/styleguide/StyleguideHeader';
+import { StyleguideToc } from '@/app/styleguide/StyleguideToc';
 import {
   CARD_TOKENS, ELEVATION, SURFACE, LAYOUT_TOKENS, surfaceAt, overlayAt,
   StatusChip, STATUS_CHIP_COLORS, type StatusChipColor,
@@ -17,9 +23,11 @@ import {
   AccordionSection, TelemetryRow,
   TargetCard, CardHeader, CardActions,
   CardDetails, CardSensors, CardMedia, MEDIA_BADGE_CONFIG, CardLog, CardClosure,
+  CardTimeline, CardFooterDock,
   FilterBar, NewUpdatesPill,
   type CardAction, type CardSensor,
   type LogEntry, type ClosureOutcome, type DetailRow,
+  type TimelineStep, type FooterDockAction,
 } from '@/primitives';
 import {
   CameraIcon, SensorIcon, RadarIcon, DroneIcon, DroneHiveIcon,
@@ -60,6 +68,8 @@ import cardSensorsSrc from '@/primitives/CardSensors.tsx?raw';
 import cardMediaSrc from '@/primitives/CardMedia.tsx?raw';
 import cardLogSrc from '@/primitives/CardLog.tsx?raw';
 import cardClosureSrc from '@/primitives/CardClosure.tsx?raw';
+import cardTimelineSrc from '@/primitives/CardTimeline.tsx?raw';
+import cardFooterDockSrc from '@/primitives/CardFooterDock.tsx?raw';
 import filterBarSrc from '@/primitives/FilterBar.tsx?raw';
 import newUpdatesPillSrc from '@/primitives/NewUpdatesPill.tsx?raw';
 import tacticalMapSrc from '@/shared/components/TacticalMap.tsx?raw';
@@ -67,116 +77,6 @@ import devicesPanelSrc from '@/shared/components/DevicesPanel.tsx?raw';
 import mapMarkerSrc from '@/primitives/MapMarker.tsx?raw';
 import mapIconsSrc from '@/primitives/MapIcons.tsx?raw';
 
-// ─── Sidebar nav structure ───────────────────────────────────────────────────
-
-interface NavItem { id: string; label: string; children?: { id: string; label: string }[] }
-interface NavGroup { label: string; items: NavItem[] }
-
-const NAV: NavGroup[] = [
-  {
-    label: 'Foundations',
-    items: [
-      { id: 'layout-tokens', label: 'Layout Tokens' },
-      { id: 'elevation', label: 'Elevation System' },
-      { id: 'card-tokens', label: 'Card Tokens' },
-      { id: 'theme-vars', label: 'CSS Theme Variables' },
-    ],
-  },
-  {
-    label: 'Primitives',
-    items: [
-      { id: 'status-chip', label: 'StatusChip' },
-      { id: 'new-updates', label: 'NewUpdatesPill' },
-      { id: 'action-button', label: 'ActionButton' },
-      { id: 'split-action', label: 'SplitActionButton' },
-      { id: 'accordion', label: 'AccordionSection' },
-      { id: 'telemetry', label: 'TelemetryRow' },
-    ],
-  },
-  {
-    label: 'Card building blocks',
-    items: [
-      { id: 'card-header', label: 'CardHeader' },
-      { id: 'card-media', label: 'CardMedia' },
-      { id: 'card-actions', label: 'CardActions' },
-      { id: 'card-details', label: 'CardDetails' },
-      { id: 'card-sensors', label: 'CardSensors' },
-      { id: 'card-log', label: 'CardLog' },
-      { id: 'card-closure', label: 'CardClosure' },
-    ],
-  },
-  {
-    label: 'Assemblies & list chrome',
-    items: [
-      { id: 'card-states', label: 'Card States' },
-      { id: 'target-card', label: 'TargetCard' },
-      { id: 'filter-bar', label: 'FilterBar' },
-      {
-        id: 'devices-panel', label: 'DevicesPanel',
-        children: [
-          { id: 'devices-empty', label: 'Empty state' },
-          { id: 'devices-header', label: 'Header' },
-          { id: 'devices-search', label: 'Search & filters' },
-          { id: 'devices-rows', label: 'Device rows' },
-          { id: 'devices-camera', label: 'Camera device' },
-          { id: 'devices-ecm', label: 'ECM device' },
-          { id: 'devices-drone', label: 'Drone device' },
-          { id: 'devices-actions', label: 'Action bar' },
-        ],
-      },
-    ],
-  },
-  {
-    label: 'Interactions',
-    items: [
-      {
-        id: 'target-card-flows', label: 'Target Card + Map',
-        children: [
-          { id: 'flow-hover-card', label: 'Hover Card' },
-          { id: 'flow-open-card', label: 'Open Card' },
-          { id: 'flow-click-marker', label: 'Click Marker' },
-          { id: 'flow-hover-sensor', label: 'Hover Sensor' },
-        ],
-      },
-      {
-        id: 'device-card-flows', label: 'Device Card + Map',
-        children: [
-          { id: 'flow-hover-device', label: 'Hover Device' },
-          { id: 'flow-click-asset', label: 'Click Asset' },
-          { id: 'flow-camera-lookat', label: 'Camera Look-At' },
-        ],
-      },
-    ],
-  },
-  {
-    label: 'Tactical',
-    items: [
-      {
-        id: 'map-markers', label: 'Map Markers',
-        children: [
-          { id: 'layer-anatomy', label: 'Layer Anatomy' },
-          { id: 'state-matrix', label: 'State Matrix' },
-          { id: 'icon-catalog', label: 'Icon Catalog' },
-        ],
-      },
-    ],
-  },
-];
-
-function findGroupForId(id: string): NavGroup | undefined {
-  return NAV.find((g) =>
-    g.items.some((item) => item.id === id || item.children?.some((c) => c.id === id)),
-  );
-}
-
-function findParentItemForChild(childId: string): NavItem | undefined {
-  for (const g of NAV) {
-    for (const item of g.items) {
-      if (item.children?.some((c) => c.id === childId)) return item;
-    }
-  }
-  return undefined;
-}
 
 // ─── Layout primitives ───────────────────────────────────────────────────────
 
@@ -194,8 +94,8 @@ function ComponentSection({
   return (
     <section id={id} className="scroll-mt-12 space-y-6">
       <div className="flex flex-col gap-1.5">
-        <h2 className="text-[28px] font-semibold tracking-tight text-zinc-50">{name}</h2>
-        <p className="text-[15px] leading-relaxed text-zinc-400">{description}</p>
+        <h2 className="text-[28px] font-semibold tracking-tight text-zinc-50" style={{ textWrap: 'balance' }}>{name}</h2>
+        <p className="text-[15px] leading-relaxed text-zinc-400" style={{ textWrap: 'pretty' }}>{description}</p>
       </div>
       {children}
     </section>
@@ -235,7 +135,7 @@ function ExampleBlock({
 }) {
   return (
     <div id={id} className={`space-y-2.5 ${id ? 'scroll-mt-20' : ''}`}>
-      <h3 className="text-[13px] font-medium text-zinc-300">{title}</h3>
+      <h3 className="text-[14px] font-medium text-zinc-200">{title}</h3>
       <PreviewPanel tight={tight}>{children}</PreviewPanel>
     </div>
   );
@@ -267,7 +167,7 @@ function IconCatalogTile({ name, icon }: { name: string; icon: React.ReactNode }
           type="button"
           onClick={copySvg}
           aria-label={copied ? 'Copied' : 'Copy SVG'}
-          className="p-1.5 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.08] active:scale-[0.92] transition-all duration-150 cursor-pointer"
+          className="p-2.5 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.08] active:scale-[0.92] transition-[color,background-color,transform] duration-150 ease-out cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
         >
           {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
         </button>
@@ -275,7 +175,7 @@ function IconCatalogTile({ name, icon }: { name: string; icon: React.ReactNode }
           href={downloadHref}
           download={`${name}.svg`}
           aria-label="Download SVG"
-          className="p-1.5 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.08] active:scale-[0.92] transition-all duration-150"
+          className="p-2.5 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.08] active:scale-[0.92] transition-[color,background-color,transform] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
         >
           <Download size={14} />
         </a>
@@ -326,14 +226,14 @@ function PropsTable({ items }: { items: PropDef[] }) {
   return (
     <div className="space-y-2.5">
       <h3 className="text-[13px] font-medium text-zinc-300">Props</h3>
-      <div className="overflow-x-auto rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
-        <table className="w-full text-[12px]">
+      <div className="overflow-x-auto rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)]" dir="ltr">
+        <table className="w-full text-[12px]" dir="ltr">
           <thead>
             <tr className="border-b border-white/5" style={{ backgroundColor: SURFACE.level1 }}>
-              <th className="py-2 px-3 text-left font-medium text-zinc-400">Prop</th>
-              <th className="py-2 px-3 text-left font-medium text-zinc-400">Type</th>
-              <th className="py-2 px-3 text-left font-medium text-zinc-400">Default</th>
-              <th className="py-2 px-3 text-left font-medium text-zinc-400">Description</th>
+              <th className="py-2 px-3 text-left font-medium text-zinc-300">Prop</th>
+              <th className="py-2 px-3 text-left font-medium text-zinc-300">Type</th>
+              <th className="py-2 px-3 text-left font-medium text-zinc-300">Default</th>
+              <th className="py-2 px-3 text-left font-medium text-zinc-300">Description</th>
             </tr>
           </thead>
           <tbody>
@@ -356,7 +256,7 @@ function PropsTable({ items }: { items: PropDef[] }) {
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="text-[15px] font-semibold text-zinc-200 tracking-tight pt-4 first:pt-0">
+    <h3 className="text-[15px] font-semibold text-zinc-200 tracking-tight mt-8 first:mt-0 pb-1.5 border-b border-white/[0.04]">
       {children}
     </h3>
   );
@@ -394,12 +294,10 @@ function InteractionFlowBlock({
       </div>
 
       <div
-        className="rounded-xl overflow-hidden transition-[box-shadow] duration-200 ease-out"
+        className="rounded-none overflow-hidden"
         style={{
           backgroundColor: SURFACE.level0,
-          boxShadow: hovered
-            ? '0 0 0 1px rgba(255,255,255,0.1)'
-            : '0 0 0 1px rgba(255,255,255,0.06)',
+          boxShadow: 'none',
         }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
@@ -452,6 +350,25 @@ function InteractionFlowBlock({
   );
 }
 
+/** Tactical `DroneIcon` scaled for `CardHeader`’s icon slot; uses `currentColor` from the header tint box. */
+function CardDroneHeaderIcon({
+  size = 20,
+  ...rest
+}: { size?: number } & React.HTMLAttributes<HTMLSpanElement>) {
+  const scale = size / 28;
+  return (
+    <span
+      className="inline-flex items-center justify-center leading-none"
+      style={{ width: size, height: size }}
+      {...rest}
+    >
+      <span className="inline-block origin-center" style={{ transform: `scale(${scale})` }}>
+        <DroneIcon color="currentColor" rotationDeg={-12} />
+      </span>
+    </span>
+  );
+}
+
 function TargetCardFlows() {
   const [flow1Hovered, setFlow1Hovered] = useState(false);
   const [flow2Hovered, setFlow2Hovered] = useState(false);
@@ -491,7 +408,7 @@ function TargetCardFlows() {
               style={{ padding: `${CARD_TOKENS.header.paddingY}px ${CARD_TOKENS.header.paddingX}px` }}
             >
               <CardHeader
-                icon={ShieldAlert}
+                icon={CardDroneHeaderIcon}
                 iconColor="#f97316"
                 title="רחפן חשוד"
                 subtitle="DJI Mavic 3"
@@ -503,24 +420,22 @@ function TargetCardFlows() {
         }
         mapZone={
           <div className="flex items-center gap-8">
-            <div className="flex flex-col items-center gap-2">
+            <div className="flex flex-col items-center gap-2" aria-label="מטרה — רחפן עוין">
               <MapMarker
-                icon={<SensorIcon size={28} fill={flow1Hovered ? hoveredStyle.glyphColor : defaultStyle.glyphColor} />}
+                icon={<DroneIcon rotationDeg={-22} color={flow1Hovered ? hoveredStyle.glyphColor : defaultStyle.glyphColor} />}
                 style={flow1Hovered ? hoveredStyle : defaultStyle}
                 surfaceSize={42}
                 ringSize={34}
                 pulse={flow1Hovered}
               />
-              <span className="text-[10px] font-medium text-zinc-500 tabular-nums">Target</span>
             </div>
-            <div className="flex flex-col items-center gap-2 opacity-40">
+            <div className="flex flex-col items-center gap-2 opacity-40" aria-label="כלי נוסף">
               <MapMarker
-                icon={<SensorIcon size={28} fill={friendlyDefault.glyphColor} />}
+                icon={<DroneIcon rotationDeg={18} color={friendlyDefault.glyphColor} />}
                 style={friendlyDefault}
                 surfaceSize={42}
                 ringSize={34}
               />
-              <span className="text-[10px] font-medium text-zinc-500 tabular-nums">Other</span>
             </div>
           </div>
         }
@@ -557,7 +472,7 @@ function TargetCardFlows() {
               }}
             >
               <CardHeader
-                icon={ShieldAlert}
+                icon={CardDroneHeaderIcon}
                 iconColor="#f97316"
                 title="רחפן חשוד"
                 subtitle="DJI Mavic 3"
@@ -588,7 +503,7 @@ function TargetCardFlows() {
         mapZone={
           <div className="flex flex-col items-center gap-2">
             <MapMarker
-              icon={<SensorIcon size={28} fill={(flow2Hovered || flow2Open) ? activeStyle.glyphColor : defaultStyle.glyphColor} />}
+              icon={<DroneIcon rotationDeg={-12} color={(flow2Hovered || flow2Open) ? activeStyle.glyphColor : defaultStyle.glyphColor} />}
               style={(flow2Hovered || flow2Open) ? activeStyle : defaultStyle}
               surfaceSize={42}
               ringSize={34}
@@ -629,7 +544,7 @@ function TargetCardFlows() {
               }}
             >
               <CardHeader
-                icon={ShieldAlert}
+                icon={CardDroneHeaderIcon}
                 iconColor="#f97316"
                 title="רחפן חשוד"
                 subtitle="DJI Mavic 3"
@@ -658,13 +573,14 @@ function TargetCardFlows() {
           </div>
         }
         mapZone={
-          <div className="flex items-center gap-8">
+          <div className="flex items-start justify-start gap-8">
             <div
               className="flex flex-col items-center gap-2 cursor-pointer"
               onClick={() => setFlow3Open(prev => !prev)}
+              aria-label="מטרה — לחץ להתאמה עם הכרטיס"
             >
               <MapMarker
-                icon={<SensorIcon size={28} fill={flow3Open ? activeStyle.glyphColor : defaultStyle.glyphColor} />}
+                icon={<DroneIcon rotationDeg={-22} color={flow3Open ? activeStyle.glyphColor : defaultStyle.glyphColor} />}
                 style={flow3Open ? activeStyle : defaultStyle}
                 surfaceSize={42}
                 ringSize={34}
@@ -672,14 +588,13 @@ function TargetCardFlows() {
               />
               <span className="text-[10px] font-medium text-zinc-400">Click me</span>
             </div>
-            <div className="flex flex-col items-center gap-2 opacity-40">
+            <div className="flex flex-col items-center gap-2 opacity-40" aria-label="כלי נוסף">
               <MapMarker
-                icon={<SensorIcon size={28} fill={friendlyDefault.glyphColor} />}
+                icon={<DroneIcon rotationDeg={18} color={friendlyDefault.glyphColor} />}
                 style={friendlyDefault}
                 surfaceSize={42}
                 ringSize={34}
               />
-              <span className="text-[10px] font-medium text-zinc-500">Other</span>
             </div>
           </div>
         }
@@ -1173,6 +1088,36 @@ function ImportBlock({ path, names }: { path: string; names: string[] }) {
   );
 }
 
+function ChangelogLine({ text }: { text: string }) {
+  const parts = text.split(/(`[^`]+`)/g);
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.startsWith('`') && part.endsWith('`') ? (
+          <code key={i} className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">
+            {part.slice(1, -1)}
+          </code>
+        ) : (
+          <span key={i}>{part}</span>
+        ),
+      )}
+    </>
+  );
+}
+
+function QuickStartCodeBlock({ code }: { code: string }) {
+  return (
+    <div className="flex items-start rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)] overflow-hidden" style={{ backgroundColor: SURFACE.level0 }}>
+      <div className="flex-1 min-w-0 px-4 py-3 overflow-x-auto">
+        <HighlightedCode code={code} />
+      </div>
+      <div className="shrink-0 pt-2 pr-2">
+        <InlineCopyButton text={code} />
+      </div>
+    </div>
+  );
+}
+
 function UsageBlock({ code, name }: { code: string; name: string }) {
   const snippet = useMemo(() => {
     const exportMatch = code.match(/export\s+(?:function|const)\s+(\w+)/);
@@ -1268,103 +1213,6 @@ function HighlightedCode({ code }: { code: string }) {
   );
 }
 
-// ─── Tailwind class extraction ────────────────────────────────────────────────
-
-const TW_CATEGORIES: [string, RegExp][] = [
-  ['Layout',      /^(flex|grid|block|inline|hidden|relative|absolute|sticky|fixed|overflow|z-|order-|col-|row-|place-|justify-|items-|self-|content-|float-|clear-|isolat|object-|box-|display|table|aspect-|columns-)/],
-  ['Sizing',      /^(w-|h-|min-w-|min-h-|max-w-|max-h-|size-)/],
-  ['Spacing',     /^(p-|px-|py-|pt-|pr-|pb-|pl-|m-|mx-|my-|mt-|mr-|mb-|ml-|gap-|space-|-m)/],
-  ['Typography',  /^(text-\[?\d|text-xs|text-sm|text-base|text-lg|text-xl|text-2xl|text-3xl|font-|leading-|tracking-|whitespace-|break-|truncat|uppercase|lowercase|capitalize|italic|not-italic|underline|overline|line-through|no-underline|tabular-nums|oldstyle-nums|lining-nums|proportional-nums|slashed-zero|ordinal|diagonal)/],
-  ['Colors',      /^(text-(?!xs|sm|base|lg|xl|2xl|3xl|\[?\d)|bg-|from-|via-|to-|border-(?!0|2|4|8|\[)|outline-(?!none|offset)|ring-(?!0|1|2|4|8|\[)|accent-|caret-|fill-|stroke-|decoration-|shadow-\[|placeholder-)/],
-  ['Borders',     /^(border|rounded|outline|ring-(?:0|1|2|4|8|\[)|divide|border-(?:0|2|4|8|\[))/],
-  ['Effects',     /^(shadow(?!-\[)|opacity-|mix-blend-|backdrop-|blur|brightness|contrast|grayscale|hue-rotate|invert|saturate|sepia|drop-shadow|animate-|will-change)/],
-  ['Transitions', /^(transition|duration-|ease-|delay-)/],
-  ['Transforms',  /^(transform|scale-|rotate-|translate-|skew-|origin-)/],
-  ['Interactivity', /^(cursor-|pointer-events-|resize|select-|scroll-|snap-|touch-|appearance-)/],
-];
-
-function extractTailwindClasses(source: string): { category: string; classes: string[] }[] {
-  const classStrings: string[] = [];
-
-  const patterns = [
-    /className="([^"]+)"/g,
-    /className=\{`([^`]+)`\}/g,
-    /className=\{cn\(([^)]+)\)\}/g,
-    /'([^']+)'/g,
-  ];
-
-  for (const pattern of patterns) {
-    let match;
-    while ((match = pattern.exec(source)) !== null) {
-      classStrings.push(match[1]);
-    }
-  }
-
-  const allClasses = new Set<string>();
-  for (const str of classStrings) {
-    for (const token of str.split(/\s+/)) {
-      const cleaned = token.replace(/^['",]+|['",]+$/g, '').trim();
-      if (cleaned && /^[a-z!-]/.test(cleaned) && !cleaned.includes('(') && !cleaned.includes('{')) {
-        allClasses.add(cleaned);
-      }
-    }
-  }
-
-  const categorized = new Map<string, Set<string>>();
-  const used = new Set<string>();
-
-  for (const cls of allClasses) {
-    const base = cls.replace(/^(hover:|focus:|active:|focus-visible:|focus-within:|disabled:|group-hover:|peer-|dark:|sm:|md:|lg:|xl:|2xl:)+/, '');
-    for (const [category, regex] of TW_CATEGORIES) {
-      if (regex.test(base)) {
-        if (!categorized.has(category)) categorized.set(category, new Set());
-        categorized.get(category)!.add(cls);
-        used.add(cls);
-        break;
-      }
-    }
-  }
-
-  const uncategorized = [...allClasses].filter((c) => !used.has(c));
-  if (uncategorized.length > 0) {
-    categorized.set('Other', new Set(uncategorized));
-  }
-
-  return [...categorized.entries()].map(([category, classes]) => ({
-    category,
-    classes: [...classes].sort(),
-  }));
-}
-
-function TailwindClassesPanel({ code }: { code: string }) {
-  const groups = useMemo(() => extractTailwindClasses(code), [code]);
-
-  if (groups.length === 0) {
-    return <p className="text-[12px] text-zinc-500 p-4">No Tailwind classes found.</p>;
-  }
-
-  return (
-    <div className="space-y-4">
-      {groups.map(({ category, classes }) => (
-        <div key={category}>
-          <span className="block text-[10px] font-semibold uppercase tracking-widest text-zinc-500 mb-1.5">
-            {category}
-          </span>
-          <div className="flex flex-wrap gap-1.5">
-            {classes.map((cls) => (
-              <code
-                key={cls}
-                className="inline-block px-1.5 py-0.5 rounded bg-white/[0.06] text-[11px] font-mono text-zinc-300 whitespace-nowrap"
-              >
-                {cls}
-              </code>
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 // ─── LLM markdown generation ──────────────────────────────────────────────────
 
@@ -1416,15 +1264,6 @@ function generateComponentMarkdown(name: string, description: string, source: st
   lines.push('```tsx');
   lines.push(source.trim());
   lines.push('```\n');
-
-  const twGroups = extractTailwindClasses(source);
-  if (twGroups.length > 0) {
-    lines.push(`## Tailwind Classes\n`);
-    for (const { category, classes } of twGroups) {
-      lines.push(`- **${category}**: \`${classes.join('`, `')}\``);
-    }
-    lines.push('');
-  }
 
   const deps = extractDependencies(source);
   if (deps.external.length > 0 || deps.internal.length > 0) {
@@ -1500,7 +1339,7 @@ function CopyIconButton({ text }: { text: string }) {
 
 // ─── Code preview with tabs ───────────────────────────────────────────────────
 
-type CodeTab = 'preview' | 'source' | 'tailwind';
+type CodeTab = 'preview' | 'source';
 
 function CodePreviewBlock({
   name,
@@ -1518,7 +1357,6 @@ function CodePreviewBlock({
   const [tab, setTab] = useState<CodeTab>('preview');
 
   const tabs: { id: CodeTab; label: string }[] = [
-    { id: 'tailwind', label: 'Tailwind' },
     { id: 'source', label: 'Source' },
     { id: 'preview', label: 'Preview' },
   ];
@@ -1538,7 +1376,7 @@ function CodePreviewBlock({
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`px-4 py-2.5 text-[12px] font-medium cursor-pointer transition-[color,border-color] duration-150 ease-out active:scale-[0.97] ${
+            className={`px-4 py-2.5 text-[12px] font-medium cursor-pointer transition-[color,border-color] duration-150 ease-out active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/25 ${
               tab === t.id
                 ? 'text-zinc-100 border-b border-zinc-100'
                 : 'text-zinc-500 hover:text-zinc-300 border-b border-transparent'
@@ -1552,13 +1390,11 @@ function CodePreviewBlock({
         <div dir="rtl" className={tight ? 'p-3' : 'p-6'}>{children}</div>
       )}
       {tab === 'source' && (
-        <div className="p-4 overflow-x-auto max-h-[600px] overflow-y-auto">
+        <div className="relative p-4 overflow-x-auto max-h-[600px] overflow-y-auto rounded-b-xl">
+          <div className="absolute top-2 right-2 z-10">
+            <InlineCopyButton text={code} />
+          </div>
           <HighlightedCode code={code} />
-        </div>
-      )}
-      {tab === 'tailwind' && (
-        <div className="p-4 overflow-y-auto max-h-[600px]">
-          <TailwindClassesPanel code={code} />
         </div>
       )}
     </div>
@@ -1566,14 +1402,15 @@ function CodePreviewBlock({
 }
 
 function CopyIcon({ copied }: { copied: boolean }) {
+  const prefersReducedMotion = useReducedMotion();
   return (
     <AnimatePresence mode="wait" initial={false}>
       <motion.span
         key={copied ? 'check' : 'copy'}
-        initial={{ opacity: 0, scale: 0.8, filter: 'blur(4px)' }}
-        animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-        exit={{ opacity: 0, scale: 0.8, filter: 'blur(4px)' }}
-        transition={{ type: 'spring', duration: 0.25, bounce: 0 }}
+        initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.8, filter: 'blur(4px)' }}
+        animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1, filter: 'blur(0px)' }}
+        exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.8, filter: 'blur(4px)' }}
+        transition={{ type: 'spring', duration: 0.2, bounce: 0 }}
         className="flex items-center justify-center"
       >
         {copied
@@ -1617,20 +1454,20 @@ function ColorSwatch({ color, label }: { color: string; label: string }) {
 
 function TokenTable({ rows }: { rows: { token: string; value: string | number; note?: string }[] }) {
   return (
-    <div className="overflow-x-auto rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
-      <table className="w-full text-[12px]">
+    <div className="overflow-x-auto rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)]" dir="ltr">
+      <table className="w-full text-[12px]" dir="ltr">
         <thead>
           <tr className="border-b border-white/5" style={{ backgroundColor: SURFACE.level1 }}>
-            <th className="py-2 px-3 text-right font-medium text-zinc-300">Token</th>
-            <th className="py-2 px-3 text-right font-medium text-zinc-300">Value</th>
-            <th className="py-2 px-3 text-right font-medium text-zinc-300">Note</th>
+            <th className="py-2 px-3 text-left font-medium text-zinc-300">Token</th>
+            <th className="py-2 px-3 text-left font-medium text-zinc-300">Value</th>
+            <th className="py-2 px-3 text-left font-medium text-zinc-300">Note</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.token} className="border-b border-white/[0.03] last:border-0">
               <td className="py-2 px-3 font-mono text-sky-300/80">{r.token}</td>
-              <td className="py-2 px-3 font-mono text-zinc-300">{String(r.value)}</td>
+              <td className="py-2 px-3 font-mono text-zinc-300 tabular-nums">{String(r.value)}</td>
               <td className="py-2 px-3 text-zinc-400">{r.note ?? ''}</td>
             </tr>
           ))}
@@ -1773,8 +1610,10 @@ function ElevationRamp() {
 
 function TokenSubSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-3">
-      <span className="text-[11px] font-semibold uppercase tracking-widest text-white">{title}</span>
+    <div className="flex flex-col gap-3">
+      <span className="block text-[11px] font-semibold uppercase tracking-widest text-white">
+        {title}
+      </span>
       {children}
     </div>
   );
@@ -1784,7 +1623,7 @@ function generateAllTokensMarkdown(): string {
   const lines: string[] = [];
 
   lines.push('# Design Token System\n');
-  lines.push('> Complete token reference for the CUAS design system. Two source files define every color, spacing, elevation, and typography value used across the app.\n');
+  lines.push('> Complete token reference for the C2 Hub design system. Two source files define every color, spacing, elevation, and typography value used across the app.\n');
 
   lines.push('## File: src/primitives/tokens.ts\n');
   lines.push('```typescript');
@@ -2100,13 +1939,13 @@ function CardStatePlayground() {
       {/* Visual properties annotation */}
       <div className="space-y-2.5">
         <h3 className="text-[13px] font-medium text-zinc-300">Computed Visual Properties</h3>
-        <div className="overflow-x-auto rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
-          <table className="w-full text-[12px]">
+        <div className="overflow-x-auto rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)]" dir="ltr">
+          <table className="w-full text-[12px]" dir="ltr">
             <thead>
               <tr className="border-b border-white/5" style={{ backgroundColor: SURFACE.level1 }}>
-                <th className="py-2 px-3 text-right font-medium text-zinc-400">Property</th>
-                <th className="py-2 px-3 text-right font-medium text-zinc-400">Value</th>
-                <th className="py-2 px-3 text-right font-medium text-zinc-400">Visual</th>
+                <th className="py-2 px-3 text-left font-medium text-zinc-400">Property</th>
+                <th className="py-2 px-3 text-left font-medium text-zinc-400">Value</th>
+                <th className="py-2 px-3 text-left font-medium text-zinc-400">Visual</th>
               </tr>
             </thead>
             <tbody>
@@ -2213,6 +2052,7 @@ export default function StyleguidePage() {
   const [loading, setLoading] = useState<string | null>(null);
   const [activeItem, setActiveItem] = useState<string>(NAV[0].items[0].id);
   const [activeAnchor, setActiveAnchor] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [hoveredLayer, setHoveredLayer] = useState<number | null>(null);
   const layerLeaveTimer = useRef<ReturnType<typeof setTimeout>>();
   const handleLayerEnter = useCallback((num: number) => {
@@ -2365,59 +2205,162 @@ export default function StyleguidePage() {
     { id: 'eo-01', label: 'EO/IR Camera' },
   ];
 
+  const handleSelectPage = useCallback((id: string) => {
+    setActiveItem(id);
+    window.history.replaceState(null, '', `#${id}`);
+  }, []);
+
+  const prefersReducedMotionRoot = useReducedMotion();
+
   return (
     <TooltipProvider>
       <div dir="ltr" className="flex min-h-screen bg-[#09090b] text-white font-sans antialiased">
 
-        {/* ── Sidebar ── */}
-        <nav className="sticky top-0 h-screen w-60 shrink-0 overflow-y-auto py-6 px-4">
-          <a href="#top" className="flex items-center gap-2 px-2 mb-8">
-            <span className="text-[15px] font-semibold text-white tracking-tight">CUAS</span>
-            <span className="text-[15px] font-normal text-white tracking-tight">Styleguide</span>
-          </a>
-          {NAV.map((group) => (
-            <div key={group.label} className="mb-5">
-              <span className="block text-[11px] font-extrabold uppercase tracking-[0.08em] text-white mb-2 px-2">{group.label}</span>
-              <ul className="space-y-px">
-                {group.items.map((item) => (
-                  <li key={item.id}>
-                    <a
-                      href={`#${item.id}`}
-                      onClick={(e) => { e.preventDefault(); setActiveItem(item.id); window.history.replaceState(null, '', `#${item.id}`); }}
-                      className={`block rounded-lg px-2 py-[6px] text-[13px] transition-colors duration-150 ${
-                        activeItem === item.id
-                          ? 'text-zinc-50 bg-white/[0.06]'
-                          : 'text-white/60 font-medium hover:bg-white/[0.04] hover:text-zinc-300'
-                      }`}
-                    >
-                      {item.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </nav>
+        <StyleguideSidebar
+          activeItem={activeItem}
+          activeAnchor={activeAnchor}
+          onSelectPage={handleSelectPage}
+          onSelectSection={navigateTo}
+          onSearchOpen={() => setSearchOpen(true)}
+        />
 
-        {/* ── Main content ── */}
-        <main id="top" className="flex-1 min-w-0 overflow-y-auto py-4 pr-4">
-          <div
-            className="rounded-2xl border border-white/[0.06] bg-[#0c0c0e] min-h-[calc(100vh-2rem)]"
-            style={{ boxShadow: '0 0 0 1px rgba(255,255,255,0.02), 0 2px 8px rgba(0,0,0,0.2)' }}
-          >
-          <div className="px-6 py-8 sm:px-8 lg:px-10 lg:py-10">
-          <div className="mx-auto max-w-3xl space-y-10">
+        <div className="flex-1 flex flex-col min-w-0">
+          <StyleguideHeader
+            activeItem={activeItem}
+            onSearchOpen={() => setSearchOpen(true)}
+          />
 
-            {findGroupForId(activeItem)?.label === 'Foundations' && (
-              <div className="flex items-center justify-between">
-                <div className="flex flex-col gap-1.5">
-                  <h2 className="text-[28px] font-semibold tracking-tight text-zinc-50">Foundations</h2>
-                  <p className="text-[15px] leading-relaxed text-zinc-400">
-                    All design tokens — source files, computed values, and CSS variables — in one copy.
+          <div className="flex flex-1">
+            <main id="top" className="flex-1 min-w-0 overflow-y-auto py-4 pr-4">
+              <div
+                className="rounded-2xl bg-[#0c0c0e] min-h-[calc(100vh-2rem)]"
+                style={{ boxShadow: '0 0 0 1px rgba(255,255,255,0.06), 0 2px 8px rgba(0,0,0,0.2)' }}
+              >
+              <div className="px-6 py-8 sm:px-8 lg:px-10 lg:py-10">
+              <motion.div
+                key={activeItem}
+                className="mx-auto max-w-3xl space-y-10"
+                initial={prefersReducedMotionRoot ? false : { opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2, ease: [0, 0, 0.2, 1] }}
+              >
+
+            {activeItem === 'quick-start' && (
+            <ComponentSection id="quick-start" name="Quick Start" description="Install C2 Hub components into any Vite + React project via the CLI.">
+              <div className="space-y-8">
+
+                <div className="space-y-3">
+                  <SectionHeading>Install</SectionHeading>
+                  <p className="text-[14px] leading-relaxed text-zinc-400">
+                    Install every component, token, and icon in one command:
+                  </p>
+                  <QuickStartCodeBlock code="npx shadcn@latest add @c2/all" />
+                  <p className="text-[13px] leading-relaxed text-zinc-400 mt-2">
+                    Or pick only what you need:
+                  </p>
+                  <QuickStartCodeBlock code="npx shadcn@latest add @c2/button @c2/target-card @c2/status-chip" />
+                  <p className="text-[13px] leading-relaxed text-zinc-400 mt-2">
+                    Dependencies are resolved automatically — installing <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">target-card</code> pulls in <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">tokens</code>, <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">utils</code>, and any other internal dependencies.
                   </p>
                 </div>
-                <CopyAllTokensButton />
+
+                <div className="space-y-3">
+                  <SectionHeading>Use</SectionHeading>
+                  <QuickStartCodeBlock code={`import { StatusChip, ActionButton } from "@/primitives"
+import { Crosshair } from "lucide-react"
+
+export function DetectionRow() {
+  return (
+    <div className="flex items-center gap-3">
+      <StatusChip label="Active" color="green" />
+      <ActionButton label="Track" icon={Crosshair} variant="fill" />
+    </div>
+  )
+}`} />
+                </div>
+
+                <div className="space-y-3">
+                  <SectionHeading>Project setup</SectionHeading>
+                  <p className="text-[13px] leading-relaxed text-zinc-500 mb-3">
+                    First time? Complete these steps before installing components.
+                  </p>
+
+                  <p className="text-[14px] leading-relaxed text-zinc-400">
+                    <span className="text-zinc-200 font-medium">1.</span>{' '}Requires <span className="text-zinc-200 font-medium">Vite + React + TypeScript + Tailwind CSS v4</span> with <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">@/*</code> path aliases configured.
+                  </p>
+
+                  <p className="text-[14px] leading-relaxed text-zinc-400 mt-4">
+                    <span className="text-zinc-200 font-medium">2.</span>{' '}Initialize shadcn if you don't have a <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">components.json</code> yet:
+                  </p>
+                  <QuickStartCodeBlock code="npx shadcn@latest init" />
+
+                  <p className="text-[14px] leading-relaxed text-zinc-400 mt-4">
+                    <span className="text-zinc-200 font-medium">3.</span>{' '}Add the C2 registry to your <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">components.json</code>:
+                  </p>
+                  <QuickStartCodeBlock code={`// components.json
+{
+  "registries": {
+    "@c2": "https://c2-hub-three.vercel.app/r/{name}.json"
+  }
+}`} />
+
+                  <p className="text-[14px] leading-relaxed text-zinc-400 mt-4">
+                    <span className="text-zinc-200 font-medium">4.</span>{' '}Import the C2 theme in your CSS entry point:
+                  </p>
+                  <QuickStartCodeBlock code={`/* src/styles/index.css */
+@import "tailwindcss";
+@import "./theme.css";
+@import "./fonts.css";`} />
+                  <p className="text-[13px] leading-relaxed text-zinc-400 mt-1.5">
+                    Copy <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">theme.css</code> and <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">fonts.css</code> from the C2 Hub repo into your project's styles directory.
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <SectionHeading>Updating</SectionHeading>
+                  <p className="text-[14px] leading-relaxed text-zinc-400">
+                    Preview changes before updating:
+                  </p>
+                  <QuickStartCodeBlock code="npx shadcn@latest diff @c2/button" />
+                  <p className="text-[14px] leading-relaxed text-zinc-400 mt-3">
+                    Apply the update:
+                  </p>
+                  <QuickStartCodeBlock code="npx shadcn@latest add @c2/button --overwrite" />
+                </div>
+
               </div>
+            </ComponentSection>
+            )}
+
+            {activeItem === 'releases' && (
+            <ComponentSection id="releases" name="Releases" description="Changelogs for each C2 Hub registry release.">
+              <div className="space-y-0 divide-y divide-white/[0.04]">
+                {CHANGELOG.map((entry, i) => (
+                  <div key={entry.version} className={`space-y-3 ${i === 0 ? 'pb-8' : 'py-8'}`}>
+                    <span className="block text-[13px] font-mono text-zinc-500" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                      {entry.date}
+                    </span>
+                    <div className="flex items-center gap-2.5">
+                      <h3 className="text-[20px] font-semibold text-zinc-100 tracking-tight" style={{ fontVariantNumeric: 'tabular-nums', textWrap: 'balance' }}>
+                        v{entry.version}
+                      </h3>
+                      {i === 0 && (
+                        <span className="text-[11px] font-medium bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full select-none">
+                          Latest
+                        </span>
+                      )}
+                    </div>
+                    <ul className="space-y-1.5 pl-4">
+                      {entry.highlights.map((item) => (
+                        <li key={item} className="text-[14px] leading-relaxed text-zinc-400 list-disc marker:text-zinc-600" style={{ textWrap: 'pretty' }}>
+                          <ChangelogLine text={item} />
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </ComponentSection>
             )}
 
             {activeItem === 'layout-tokens' && (
@@ -3312,6 +3255,98 @@ export default function StyleguidePage() {
             </ComponentSection>
             )}
 
+            {activeItem === 'card-timeline' && (
+            <ComponentSection id="card-timeline" name="CardTimeline" description="Step-by-step timeline showing detection lifecycle progress. Supports full and compact (dot) modes.">
+              <CodePreviewBlock name="CardTimeline" description="Step-by-step timeline showing detection lifecycle progress." tight code={cardTimelineSrc}>
+                <div className="max-w-sm rounded-lg overflow-hidden p-4" style={{ backgroundColor: SURFACE.level1 }}>
+                  <CardTimeline steps={[
+                    { label: 'זיהוי ראשוני', status: 'complete' },
+                    { label: 'סיווג', status: 'complete' },
+                    { label: 'מעקב', status: 'active' },
+                    { label: 'השבתה', status: 'pending' },
+                    { label: 'BDA', status: 'pending' },
+                  ] satisfies TimelineStep[]} />
+                </div>
+              </CodePreviewBlock>
+
+              <SectionHeading>Import</SectionHeading>
+              <ImportBlock path="@/primitives" names={['CardTimeline']} />
+
+              <SectionHeading>Usage</SectionHeading>
+              <UsageBlock code={cardTimelineSrc} name="CardTimeline" />
+
+              <SectionHeading>API Reference</SectionHeading>
+              <PropsTable items={[
+                { name: 'steps', type: 'TimelineStep[]', description: 'Array of { label, status } where status is "pending" | "active" | "complete" | "error"' },
+                { name: 'compact', type: 'boolean', default: 'false', description: 'Render as horizontal dots instead of vertical list' },
+                { name: 'className', type: 'string', description: 'Additional classes' },
+              ]} />
+
+              <SectionHeading>Examples</SectionHeading>
+              <ExampleBlock title="Compact mode (dot timeline)" tight>
+                <div className="max-w-sm rounded-lg overflow-hidden p-4" style={{ backgroundColor: SURFACE.level1 }}>
+                  <CardTimeline compact steps={[
+                    { label: 'זיהוי ראשוני', status: 'complete' },
+                    { label: 'סיווג', status: 'complete' },
+                    { label: 'מעקב', status: 'active' },
+                    { label: 'השבתה', status: 'pending' },
+                    { label: 'BDA', status: 'pending' },
+                  ] satisfies TimelineStep[]} />
+                </div>
+              </ExampleBlock>
+
+              <ExampleBlock title="With error state" tight>
+                <div className="max-w-sm rounded-lg overflow-hidden p-4" style={{ backgroundColor: SURFACE.level1 }}>
+                  <CardTimeline steps={[
+                    { label: 'זיהוי ראשוני', status: 'complete' },
+                    { label: 'סיווג', status: 'complete' },
+                    { label: 'השבתה', status: 'error' },
+                    { label: 'BDA', status: 'pending' },
+                  ] satisfies TimelineStep[]} />
+                </div>
+              </ExampleBlock>
+            </ComponentSection>
+            )}
+
+            {activeItem === 'card-footer-dock' && (
+            <ComponentSection id="card-footer-dock" name="CardFooterDock" description="Bottom-anchored action bar for cards. Renders equal-width buttons in a tinted dock strip.">
+              <CodePreviewBlock name="CardFooterDock" description="Bottom-anchored action bar for cards." tight code={cardFooterDockSrc}>
+                <div className="max-w-sm rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level1 }}>
+                  <div className="p-4 text-xs text-zinc-500">Card content above…</div>
+                  <CardFooterDock actions={[
+                    { id: 'details', label: 'פרטים', icon: Eye },
+                    { id: 'track', label: 'מעקב', icon: Crosshair },
+                    { id: 'dismiss', label: 'דחייה', icon: Ban },
+                  ] satisfies FooterDockAction[]} />
+                </div>
+              </CodePreviewBlock>
+
+              <SectionHeading>Import</SectionHeading>
+              <ImportBlock path="@/primitives" names={['CardFooterDock']} />
+
+              <SectionHeading>Usage</SectionHeading>
+              <UsageBlock code={cardFooterDockSrc} name="CardFooterDock" />
+
+              <SectionHeading>API Reference</SectionHeading>
+              <PropsTable items={[
+                { name: 'actions', type: 'FooterDockAction[]', description: 'Array of { id, label, icon?, onClick?, disabled?, loading? }' },
+                { name: 'className', type: 'string', description: 'Additional classes' },
+              ]} />
+
+              <SectionHeading>Examples</SectionHeading>
+              <ExampleBlock title="With disabled and loading states" tight>
+                <div className="max-w-sm rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level1 }}>
+                  <div className="p-4 text-xs text-zinc-500">Card content above…</div>
+                  <CardFooterDock actions={[
+                    { id: 'save', label: 'שמירה', icon: Download, loading: true },
+                    { id: 'cancel', label: 'ביטול', icon: X, disabled: true },
+                    { id: 'send', label: 'שליחה', icon: Send },
+                  ] satisfies FooterDockAction[]} />
+                </div>
+              </ExampleBlock>
+            </ComponentSection>
+            )}
+
             {activeItem === 'card-states' && (
             <ComponentSection id="card-states" name="Card States" description="Interactive playground to explore how each detection lifecycle state affects the card's visual treatment — spine accent, icon design, ring, opacity, status chip, and closure type.">
               <CardStatePlayground />
@@ -3914,26 +3949,6 @@ export default function StyleguidePage() {
                   </p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="flex items-center justify-center rounded-xl border border-white/10 p-8" style={{ background: 'radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.25) 0%, rgba(0, 0, 0, 1) 61%)' }}>
-                    <div className="relative" style={{ transition: 'filter 300ms ease' }}>
-                      {(() => {
-                        const style = resolveMarkerStyle('default', 'friendly');
-                        return (
-                          <MapMarker
-                            icon={<SensorIcon size={48} fill="#ffffff" />}
-                            style={style}
-                            surfaceSize={72}
-                            ringSize={56}
-                            label="Tooltip"
-                            showLabel
-                            heading={45}
-                            showBadge
-                            highlightLayer={hoveredLayer}
-                          />
-                        );
-                      })()}
-                    </div>
-                  </div>
                   <div className="space-y-2">
                     {([
                       { num: 1, layer: '1 — Surface' },
@@ -3964,6 +3979,26 @@ export default function StyleguidePage() {
                       onMouseLeave={handleLayerLeave}
                     >
                       <span className="text-sm font-semibold text-zinc-200">Overlays</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-center rounded-xl border border-white/10 p-8" style={{ background: 'radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.25) 0%, rgba(0, 0, 0, 1) 61%)' }}>
+                    <div className="relative" style={{ transition: 'filter 300ms ease' }}>
+                      {(() => {
+                        const style = resolveMarkerStyle('default', 'friendly');
+                        return (
+                          <MapMarker
+                            icon={<SensorIcon size={48} fill="#ffffff" />}
+                            style={style}
+                            surfaceSize={72}
+                            ringSize={56}
+                            label="Tooltip"
+                            showLabel
+                            heading={45}
+                            showBadge
+                            highlightLayer={hoveredLayer}
+                          />
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -4077,41 +4112,27 @@ export default function StyleguidePage() {
             </ComponentSection>
             )}
 
-          </div>
+          </motion.div>
           </div>
           </div>
         </main>
 
-        {/* ── On This Page (anchor sidebar) ── */}
-        {(() => {
-          const activeNavItem = NAV.flatMap(g => g.items).find(i => i.id === activeItem);
-          const anchors = activeNavItem?.children;
-          if (!anchors) return null;
-          return (
-            <aside className="sticky top-0 h-screen w-48 shrink-0 overflow-y-auto py-6 pl-6 pr-4">
-              <p className="flex h-7 items-center text-[12px] font-medium text-zinc-400 mb-1.5">On This Page</p>
-              <div className="relative flex flex-col ml-3 before:absolute before:inset-y-0 before:right-0 before:w-px before:bg-white/[0.08]">
-                {anchors.map((a) => {
-                  const isActive = activeAnchor === a.id;
-                  return (
-                    <a
-                      key={a.id}
-                      href={`#${a.id}`}
-                      onClick={(e) => { e.preventDefault(); setActiveAnchor(a.id); window.history.replaceState(null, '', `#${a.id}`); document.getElementById(a.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
-                      className={`relative py-1.5 pr-3 text-[13px] leading-snug no-underline transition-colors duration-150 before:absolute before:inset-y-px before:right-0 before:rounded-full before:transition-all before:duration-200 ${
-                        isActive
-                          ? 'text-zinc-100 before:w-[2px] before:bg-sky-400'
-                          : 'text-zinc-500 hover:text-zinc-300 before:w-px before:bg-transparent'
-                      }`}
-                    >
-                      {a.label}
-                    </a>
-                  );
-                })}
-              </div>
-            </aside>
-          );
-        })()}
+            <StyleguideToc
+              activeItem={activeItem}
+              activeAnchor={activeAnchor}
+              onSelect={(id) => {
+                setActiveAnchor(id);
+                window.history.replaceState(null, '', `#${id}`);
+              }}
+            />
+          </div>
+        </div>
+
+        <StyleguideSearch
+          open={searchOpen}
+          onOpenChange={setSearchOpen}
+          onNavigate={navigateTo}
+        />
 
       </div>
       <Toaster />

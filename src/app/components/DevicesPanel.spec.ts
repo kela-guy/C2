@@ -13,7 +13,7 @@ export const spec: ComponentSpec = {
     { name: 'onFlyTo', type: '(lat: number, lon: number) => void', required: true, description: 'Called when "center on map" is clicked for a device' },
     { name: 'onDeviceHover', type: '(id: string | null) => void', required: false, description: 'Called on mouse enter/leave of a device row for map highlighting' },
     { name: 'onJamActivate', type: '(jammerId: string) => void', required: false, description: 'Called when ECM jam button is clicked' },
-    { name: 'noTransition', type: 'boolean', required: false, description: 'Disables slide transition (used in Storybook)' },
+    { name: 'noTransition', type: 'boolean', required: false, description: 'Disables slide transition (used in tests and styleguide)' },
     { name: 'width', type: 'number', required: false, description: 'Override panel width in pixels (defaults to LAYOUT_TOKENS.sidebarWidthPx)' },
   ],
 
@@ -304,7 +304,7 @@ export const spec: ComponentSpec = {
   ],
 
   notes: [
-    'Panel uses react-dnd useDrag for camera rows — must be wrapped in DndProvider in Storybook.',
+    'Panel uses react-dnd useDrag for camera rows — must be wrapped in DndProvider.',
     'Mute timer runs a 1s interval shared across all muted devices — efficient but could drift on heavy loads.',
     'Type filter uses exclusive toggle logic: clicking when all active isolates that type; clicking the isolated type restores all.',
     'Camera rows are the only draggable rows (canDrag: isCamera).',

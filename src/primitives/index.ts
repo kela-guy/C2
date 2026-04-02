@@ -13,9 +13,11 @@ export { CardSensors, type CardSensor, type CardSensorsProps } from './CardSenso
 export { CardMedia, MEDIA_BADGE_CONFIG, type MediaBadgeType, type CardMediaProps } from './CardMedia';
 export { CardLog, type LogEntry, type CardLogProps } from './CardLog';
 export { CardClosure, type ClosureOutcome, type CardClosureProps } from './CardClosure';
+export { CardFooterDock, type FooterDockAction, type CardFooterDockProps } from './CardFooterDock';
 export { FilterBar, STATUS_OPTIONS } from './FilterBar';
 export { NewUpdatesPill } from './NewUpdatesPill';
 export { MapMarker, type MapMarkerProps } from './MapMarker';
+export { DroneCardIcon, JamWaveIcon, MissileCardIcon, DRONE_PATH, MISSILE_PATH } from './MapIcons';
 export {
   type Affiliation,
   type InteractionState,

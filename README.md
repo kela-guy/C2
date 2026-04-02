@@ -1,28 +1,59 @@
 
-# C1Flow — Tactical Target Management Console
+# C2 Hub — Tactical Target Management Console
 
-[![Storybook](https://cdn.jsdelivr.net/gh/storybookjs/brand@main/badge/badge-storybook.svg)](https://main--69b81d2c2b313942c613995e.chromatic.com/)
-
-C1Flow tactical target management console UI (Vite + React). Original design at [Figma](https://www.figma.com/design/5JVDDcHNNMjg6GWqsAkcTc/Compact-Card-Design).
+C2 Hub tactical target management console UI (Vite + React). Original design at [Figma](https://www.figma.com/design/5JVDDcHNNMjg6GWqsAkcTc/Compact-Card-Design).
 
 ## Running the code
 
-Run `npm i` to install the dependencies.
+```bash
+pnpm i
+pnpm dev
+```
 
-Run `npm run dev` to start the development server.
+## Styleguide
 
-Run `npm run storybook` to start Storybook locally on port 6006.
+In-app component documentation and tokens live at **`/styleguide`** when the app is running (see also `design-system.md` in the repo root).
 
-## Storybook
+## Component Registry
 
-- **Local (always matches your code)**: http://localhost:6006 — run `npm run storybook` in a separate terminal (not started by `npm run dev`).
-- **Hosted (Chromatic)**: https://main--69b81d2c2b313942c613995e.chromatic.com/ — this only updates when a **Chromatic publish** completes successfully.
+C2 Hub ships a **shadcn-compatible component registry** at `/r/*.json`. Developers in other Vite/React projects can install everything at once:
 
-### If the hosted Storybook looks out of date
+```bash
+npx shadcn@latest add https://c2-hub-three.vercel.app/r/all.json
+```
 
-1. **GitHub Actions** — Workflow [`.github/workflows/chromatic.yml`](.github/workflows/chromatic.yml) runs on pushes to `main` (and can be run manually: *Actions → Chromatic → Run workflow*). It needs the repository secret **`CHROMATIC_PROJECT_TOKEN`**. If that secret is missing or the workflow fails, Chromatic will not get a new build.
-2. **Publish from your machine** — With the token from Chromatic → your project → **Manage**:
-   ```bash
-   export CHROMATIC_PROJECT_TOKEN=…   # or pass --project-token
-   npm run chromatic
-   ```
+Or install individual components:
+
+```bash
+npx shadcn@latest add https://c2-hub-three.vercel.app/r/button.json
+```
+
+### Building the registry
+
+```bash
+pnpm registry:build
+```
+
+This runs `shadcn build` and a post-build transform, outputting JSON files to `public/r/`.
+
+### Local development
+
+When the dev server is running (`pnpm dev`), the registry is also served locally at `http://localhost:5173/r/`. Test installs with:
+
+```bash
+npx shadcn@latest add http://localhost:5173/r/button.json
+```
+
+### Consumer setup
+
+In the consuming project, run `npx shadcn@latest init` to create a `components.json`, then install components from the registry URL. See `components.json` in this repo for a reference config (Tailwind v4, Vite aliases).
+
+### Hosting
+
+Deploy the `public/r/` directory to any static host:
+
+- **Vercel / Netlify** — deploy the repo; `public/` is served automatically
+- **GitHub Pages** — publish `public/r/` as a static site
+- **S3 + CloudFront** — upload `public/r/` to a bucket
+
+Run `pnpm registry:build` in CI before deploying to keep the JSON in sync with source.

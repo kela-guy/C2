@@ -6,7 +6,7 @@ import { NotificationSystem, showTacticalNotification } from './NotificationSyst
 import { NotificationCenter } from './NotificationCenter';
 import ListOfSystems from '@/imports/ListOfSystems';
 import type { Detection, RegulusEffector } from '@/imports/ListOfSystems';
-import { List, Bell, Radar, BookOpen, HelpCircle, Palette, Target, Video } from 'lucide-react';
+import { List, Bell, Radar, HelpCircle, Palette, Target, Video } from 'lucide-react';
 import { Toggle } from '@/shared/components/ui/toggle';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/shared/components/ui/tooltip';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/shared/components/ui/dropdown-menu';
@@ -145,7 +145,7 @@ function SplitDropZone({
   );
 }
 
-export const CUASDashboard = () => {
+export const Dashboard = () => {
   // #region agent log
   // removed old session log
   // #endregion
@@ -1136,20 +1136,6 @@ export const CUASDashboard = () => {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <a
-                href={import.meta.env.DEV ? 'http://localhost:6006' : 'https://main--69b81d2c2b313942c613995e.chromatic.com/'}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="size-8 rounded flex items-center justify-center text-gray-400 hover:text-pink-400 hover:bg-pink-500/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
-                aria-label="Storybook"
-              >
-                <BookOpen size={20} strokeWidth={1.5} />
-              </a>
-            </TooltipTrigger>
-            <TooltipContent side="left" sideOffset={8}>Storybook</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
               <span>
                 <NotificationCenter
                   trigger={
@@ -1272,7 +1258,7 @@ export const CUASDashboard = () => {
             />
           )}
           <div className="px-4 pt-3 pb-2 border-b border-white/10">
-            <h2 className="text-[11px] font-medium text-white/70 uppercase tracking-wider">CUAS — מערכות פעילות ({targets.length})</h2>
+            <h2 className="text-[11px] font-medium text-white/70 uppercase tracking-wider">Dashboard — מערכות פעילות ({targets.length})</h2>
           </div>
           <div className="flex-1 overflow-y-auto">
             <ListOfSystems

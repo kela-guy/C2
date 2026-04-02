@@ -11,6 +11,7 @@ import { CARD_TOKENS, type ThreatAccent } from './tokens';
 export interface TargetCardProps {
   header: React.ReactNode;
   children?: React.ReactNode;
+  footer?: React.ReactNode;
   open: boolean;
   onToggle: () => void;
   accent?: ThreatAccent;
@@ -22,6 +23,7 @@ export interface TargetCardProps {
 export function TargetCard({
   header,
   children,
+  footer,
   open,
   onToggle,
   accent = 'idle',
@@ -98,20 +100,23 @@ export function TargetCard({
             </div>
           </CollapsibleTrigger>
 
-          {children != null && (
+          {(children != null || footer != null) && (
             <CollapsibleContent
               id={contentId}
               className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down"
             >
-              <div
-                className="flex flex-col gap-px"
-                style={{
-                  backgroundColor: d.content.bgColor,
-                  boxShadow: `inset 0 1px 0 0 ${d.content.borderColor}`,
-                }}
-              >
-                {children}
-              </div>
+              {children != null && (
+                <div
+                  className="flex flex-col gap-px"
+                  style={{
+                    backgroundColor: d.content.bgColor,
+                    boxShadow: `inset 0 1px 0 0 ${d.content.borderColor}`,
+                  }}
+                >
+                  {children}
+                </div>
+              )}
+              {footer}
             </CollapsibleContent>
           )}
         </Card>
