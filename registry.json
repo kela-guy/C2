@@ -1277,6 +1277,52 @@
       ]
     },
     {
+      "name": "domain-primitives",
+      "type": "registry:ui",
+      "title": "Domain primitives",
+      "description": "Default C2 bundle — design tokens, card building blocks, tactical primitives, and map markers (excludes generic shadcn UI and FilterBar).",
+      "version": "1.0.0",
+      "registryDependencies": [
+        "utils",
+        "tokens",
+        "map-marker-states",
+        "status-chip",
+        "action-button",
+        "split-action-button",
+        "accordion-section",
+        "telemetry-row",
+        "new-updates-pill",
+        "card-header",
+        "card-actions",
+        "card-details",
+        "card-sensors",
+        "card-media",
+        "card-log",
+        "card-closure",
+        "card-timeline",
+        "card-footer-dock",
+        "target-card",
+        "map-marker",
+        "map-icons"
+      ],
+      "files": []
+    },
+    {
+      "name": "map-kit",
+      "type": "registry:ui",
+      "title": "Map kit",
+      "description": "Map visualization only — marker state tokens, MapMarker, and MapIcons.",
+      "version": "1.0.0",
+      "registryDependencies": [
+        "utils",
+        "tokens",
+        "map-marker-states",
+        "map-marker",
+        "map-icons"
+      ],
+      "files": []
+    },
+    {
       "name": "all",
       "type": "registry:ui",
       "title": "All Components",

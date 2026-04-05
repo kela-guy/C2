@@ -6,105 +6,86 @@ Live styleguide: [c2-hub-three.vercel.app/styleguide](https://c2-hub-three.verce
 
 ---
 
-## Component Registry (CLI)
+## Component Registry
 
-All generic UI components are available via a **shadcn-compatible registry**. Install individual components into any Vite + React project:
+### Prerequisites
+
+- **React** 18+
+- **Vite** (or compatible bundler)
+- **Tailwind CSS** v4
+
+### Quick start
+
+Add the `@c2` registry to the consuming project’s `components.json` (mirror [this repo](components.json)):
 
 ```bash
-# One-time setup in your project
 npx shadcn@latest init
+npx shadcn@latest add @c2/domain-primitives
+```
 
-# Install everything
-npx shadcn@latest add https://c2-hub-three.vercel.app/r/all.json
+Already using shadcn:
 
-# Or install individual components
-npx shadcn@latest add https://c2-hub-three.vercel.app/r/button.json
+```bash
+npx shadcn@latest add @c2/domain-primitives
+```
 
-# Check for updates
+Full URL fallback (debugging or older tooling):
+
+```bash
+npx shadcn@latest add https://c2-hub-three.vercel.app/r/domain-primitives.json
+```
+
+Check or refresh a single component:
+
+```bash
 npx shadcn@latest add https://c2-hub-three.vercel.app/r/button.json --diff
 ```
 
-During local development, the registry is served at `http://localhost:5173/r/`.
+### Bundles
 
-### Available components
+| Bundle | When to use |
+|--------|-------------|
+| **`domain-primitives`** | **Default.** Tokens, card slots, tactical primitives, map markers/icons (no generic shadcn UI). |
+| **`map-kit`** | Map-only: marker states, `MapMarker`, `MapIcons`. |
+| **`all`** | Everything including generic shadcn components in this registry. |
+| **À la carte** | `npx shadcn@latest add @c2/<name>` — names match [`registry.json`](registry.json) `items[].name`. |
 
-| Component | Install |
-|-----------|---------|
-| Accordion | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/accordion.json` |
-| Alert | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/alert.json` |
-| AlertDialog | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/alert-dialog.json` |
-| AspectRatio | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/aspect-ratio.json` |
-| Avatar | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/avatar.json` |
-| Badge | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/badge.json` |
-| Breadcrumb | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/breadcrumb.json` |
-| Button | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/button.json` |
-| Calendar | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/calendar.json` |
-| Card | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/card.json` |
-| Carousel | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/carousel.json` |
-| Chart | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/chart.json` |
-| Checkbox | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/checkbox.json` |
-| Collapsible | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/collapsible.json` |
-| Command | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/command.json` |
-| ContextMenu | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/context-menu.json` |
-| Dialog | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/dialog.json` |
-| Drawer | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/drawer.json` |
-| DropdownMenu | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/dropdown-menu.json` |
-| Form | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/form.json` |
-| HoverCard | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/hover-card.json` |
-| Input | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/input.json` |
-| InputOTP | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/input-otp.json` |
-| Label | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/label.json` |
-| Menubar | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/menubar.json` |
-| Pagination | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/pagination.json` |
-| Popover | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/popover.json` |
-| Progress | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/progress.json` |
-| RadioGroup | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/radio-group.json` |
-| Resizable | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/resizable.json` |
-| ScrollArea | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/scroll-area.json` |
-| Select | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/select.json` |
-| Separator | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/separator.json` |
-| Sheet | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/sheet.json` |
-| Sidebar | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/sidebar.json` |
-| Skeleton | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/skeleton.json` |
-| Slider | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/slider.json` |
-| Sonner | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/sonner.json` |
-| Switch | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/switch.json` |
-| Table | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/table.json` |
-| Tabs | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/tabs.json` |
-| Textarea | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/textarea.json` |
-| Toggle | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/toggle.json` |
-| ToggleGroup | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/toggle-group.json` |
-| Tooltip | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/tooltip.json` |
+`FilterBar` is **not** in bundles (hard `@/imports/` types). Install only when you adapt those types locally:
 
-Dependencies (e.g. `utils`, other ui components) are resolved and installed automatically.
+```bash
+npx shadcn@latest add @c2/filter-bar
+```
 
-### Domain primitives
+### After install
 
-| Component | Install |
-|-----------|---------|
-| Tokens | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/tokens.json` |
-| MapMarkerStates | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/map-marker-states.json` |
-| StatusChip | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/status-chip.json` |
-| ActionButton | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/action-button.json` |
-| SplitActionButton | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/split-action-button.json` |
-| AccordionSection | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/accordion-section.json` |
-| TelemetryRow | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/telemetry-row.json` |
-| NewUpdatesPill | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/new-updates-pill.json` |
-| FilterBar | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/filter-bar.json` |
-| CardHeader | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/card-header.json` |
-| CardActions | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/card-actions.json` |
-| CardDetails | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/card-details.json` |
-| CardSensors | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/card-sensors.json` |
-| CardMedia | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/card-media.json` |
-| CardLog | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/card-log.json` |
-| CardClosure | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/card-closure.json` |
-| CardTimeline | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/card-timeline.json` |
-| CardFooterDock | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/card-footer-dock.json` |
-| TargetCard | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/target-card.json` |
-| MapMarker | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/map-marker.json` |
-| MapIcons | `npx shadcn@latest add https://c2-hub-three.vercel.app/r/map-icons.json` |
+```tsx
+import { StatusChip, ActionButton } from "@/primitives";
 
-> **Note:** `FilterBar` imports domain-specific types (`ActivityStatus`, `FilterState`) from `@/imports/`. Consumers will need to provide these types or adapt the imports after installation.
+export function Smoke() {
+  return (
+    <div className="flex items-center gap-3 p-4">
+      <StatusChip label="active" color="green" />
+      <ActionButton label="Test" variant="fill" />
+    </div>
+  );
+}
+```
+
+You should see a green chip and a filled button. If imports fail, align `components.json` aliases with [this project](components.json).
+
+### Consumer essentials
+
+- Map `components`, `ui`, `utils`, and `lib` aliases like the reference [`components.json`](components.json).
+- **`FilterBar`:** depends on `@/imports/`; treat as a separate install + type shim, not part of default bundles.
+
+### Local development
+
+From this repo: `pnpm registry:build`, then `pnpm dev` — registry JSON is at `http://localhost:5173/r/<name>.json`. Point `@c2` at `http://localhost:5173/r/{name}.json` while testing consumers against a local build.
+
+### Inventory
+
+- **Items:** [`registry.json`](registry.json) (`items[].name`).
+- **Advanced registry options** (auth, namespaces): [shadcn registry docs](https://ui.shadcn.com/docs/registry).
 
 ---
 
@@ -173,15 +154,8 @@ Type: `ThreatAccent`
 ### StatusChip
 
 Import: `import { StatusChip } from '@/primitives'`
-Styleguide: `/styleguide#status-chip`
 
-Shows activity status of a target. Uses the `Badge` component internally.
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `label` | `string` | — | Display text |
-| `color` | `'green' \| 'gray' \| 'red' \| 'orange'` | `'green'` | Semantic color |
-| `className` | `string` | — | Additional classes |
+Shows activity status of a target. Uses the `Badge` component internally. **Props and variants:** [Live docs — StatusChip](https://c2-hub-three.vercel.app/styleguide#status-chip)
 
 Real labels used in app:
 
@@ -196,14 +170,8 @@ Real labels used in app:
 ### NewUpdatesPill
 
 Import: `import { NewUpdatesPill } from '@/primitives'`
-Styleguide: `/styleguide#new-updates`
 
-Floating pill for new incoming detections.
-
-| Prop | Type | Description |
-|---|---|---|
-| `count` | `number` | Number of new updates |
-| `onClick` | `() => void` | Scroll-to-top handler |
+Floating pill for new incoming detections. **Props:** [Live docs — NewUpdatesPill](https://c2-hub-three.vercel.app/styleguide#new-updates)
 
 ---
 
@@ -212,44 +180,14 @@ Floating pill for new incoming detections.
 ### ActionButton
 
 Import: `import { ActionButton } from '@/primitives'`
-Styleguide: `/styleguide#action-button`
 
-Primary action trigger. All sizes use `rounded` (4px) border-radius.
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `label` | `string` | — | Button text |
-| `icon` | `React.ElementType` | — | Lucide icon component |
-| `variant` | `'fill' \| 'ghost' \| 'danger' \| 'warning'` | `'fill'` | Visual treatment |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Height scale (30px / 32px / 36px) |
-| `disabled` | `boolean` | `false` | Disable interaction |
-| `loading` | `boolean` | `false` | Show spinner |
-| `onClick` | `(e: MouseEvent) => void` | — | Click handler |
-| `title` | `string` | — | Enables tooltip on hover |
-| `dataTour` | `string` | — | Tour step attribute |
+Primary action trigger. All sizes use `rounded` (4px) border-radius. **Props:** [Live docs — ActionButton](https://c2-hub-three.vercel.app/styleguide#action-button)
 
 ### SplitActionButton
 
 Import: `import { SplitActionButton } from '@/primitives'`
-Styleguide: `/styleguide#split-action`
 
-Two-segment button: primary action + dropdown menu. Used for effector controls. Dropdown is RTL with `dir="rtl"`.
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `label` | `string` | — | Primary button text |
-| `badge` | `string` | — | Inline chip after the label (e.g. effector name) |
-| `subtitle` | `string` | — | Second line below the label (stacked layout) |
-| `icon` | `React.ElementType` | — | Lucide icon |
-| `variant` | `'fill' \| 'ghost' \| 'danger' \| 'warning'` | `'fill'` | Color treatment |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'sm'` | Height scale |
-| `dropdownItems` | `SplitDropdownItem[]` | — | Sub-action menu items |
-| `dropdownGroups` | `SplitDropdownGroup[]` | — | Grouped dropdown sections with labels and separators |
-| `disabled` | `boolean` | `false` | Disable both segments |
-| `loading` | `boolean` | `false` | Show spinner on primary |
-| `dimDisabledShell` | `boolean` | `true` | Reduce opacity when disabled |
-| `onClick` | `(e: MouseEvent) => void` | — | Primary click handler |
-| `onHover` | `(hovering: boolean) => void` | — | Fires on mouseEnter/Leave — highlights effector on map |
+Two-segment button: primary action + dropdown menu. Used for effector controls. Dropdown is RTL with `dir="rtl"`. **Props:** [Live docs — SplitActionButton](https://c2-hub-three.vercel.app/styleguide#split-action)
 
 `SplitDropdownItem`: `{ id, label, icon?, disabled?, checked?, onClick }`
 
@@ -265,94 +203,45 @@ All card slot components are designed to compose inside a `TargetCard`. Import f
 
 ### CardHeader
 
-Styleguide: `/styleguide#card-header`
+Import: `import { CardHeader } from '@/primitives'`
 
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `title` | `string` | — | Target display name |
-| `subtitle` | `string` | — | Target ID or timestamp |
-| `icon` | `React.ElementType` | — | Threat type icon |
-| `iconColor` | `string` | — | Icon color override |
-| `iconBgActive` | `boolean` | `false` | Use active (red) background |
-| `status` | `ReactNode` | — | StatusChip or similar |
-| `badge` | `ReactNode` | — | Confidence badge or similar |
-| `quickAction` | `ReactNode` | — | Action visible when card is collapsed |
-| `open` | `boolean` | — | Controls chevron rotation |
+Target identity row (title, icon, status). **Props:** [Live docs — CardHeader](https://c2-hub-three.vercel.app/styleguide#card-header)
 
 ### CardDetails
 
-Styleguide: `/styleguide#card-details`
+Import: `import { CardDetails } from '@/primitives'`
 
-Collapsible telemetry accordion with copy-all button. Displays rows in a 3-column grid via TelemetryRow.
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `rows` | `DetailRow[]` | — | `{ label, value, icon? }` |
-| `classification` | `CardDetailsClassification` | — | `{ type, typeLabel, confidence?, colorClass? }` |
-| `defaultOpen` | `boolean` | `false` | Start expanded |
+Collapsible telemetry accordion with copy-all button. Displays rows in a 3-column grid via TelemetryRow. **Props:** [Live docs — CardDetails](https://c2-hub-three.vercel.app/styleguide#card-details)
 
 ### CardSensors
 
-Styleguide: `/styleguide#card-sensors`
+Import: `import { CardSensors } from '@/primitives'`
 
-Lists detecting sensors with type, distance, and timestamp. Typically wrapped in an `AccordionSection`.
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `sensors` | `CardSensor[]` | — | `{ id, typeLabel, icon?, distanceLabel?, detectedAt? }` |
-| `label` | `string` | `'חיישנים'` | Section label |
-| `onSensorHover` | `(id \| null) => void` | — | Hover callback for map highlighting |
-| `onSensorClick` | `(id) => void` | — | Makes rows clickable buttons |
+Lists detecting sensors with type, distance, and timestamp. Typically wrapped in an `AccordionSection`. **Props:** [Live docs — CardSensors](https://c2-hub-three.vercel.app/styleguide#card-sensors)
 
 ### CardMedia
 
-Styleguide: `/styleguide#card-media`
+Import: `import { CardMedia } from '@/primitives'`
 
-Image or video slot for surveillance feed. Supports live badge, playback controls, and lightbox.
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `src` | `string` | — | Image or video URL |
-| `type` | `'video' \| 'image'` | `'image'` | Media type |
-| `badge` | `'threat' \| 'warning' \| 'bird' \| null` | — | Overlay badge |
-| `showControls` | `boolean` | `false` | Show video playback controls |
-| `trackingLabel` | `string` | — | Bottom-left tracking status label |
-| `alt` | `string` | `'תצפית מטרה'` | Image alt text |
+Image or video slot for surveillance feed. Supports live badge, playback controls, and lightbox. **Props:** [Live docs — CardMedia](https://c2-hub-three.vercel.app/styleguide#card-media)
 
 ### CardLog
 
-Styleguide: `/styleguide#card-log`
+Import: `import { CardLog } from '@/primitives'`
 
-Chronological event log accordion. Newest-first with expand-all.
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `entries` | `LogEntry[]` | — | `{ time, label }` |
-| `maxVisible` | `number` | `5` | Entries before "show more" |
-| `defaultOpen` | `boolean` | `false` | Start expanded |
+Chronological event log accordion. Newest-first with expand-all. **Props:** [Live docs — CardLog](https://c2-hub-three.vercel.app/styleguide#card-log)
 
 ### CardClosure
 
-Styleguide: `/styleguide#card-closure`
+Import: `import { CardClosure } from '@/primitives'`
 
-Outcome selection grid for closing a detection event.
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `outcomes` | `ClosureOutcome[]` | — | `{ id, label, icon? }` |
-| `onSelect` | `(outcomeId) => void` | — | Selection handler |
-| `title` | `string` | `'סגירת אירוע — בחר סיבה'` | Section heading |
+Outcome selection grid for closing a detection event. **Props:** [Live docs — CardClosure](https://c2-hub-three.vercel.app/styleguide#card-closure)
 
 ### CardActions
 
-Styleguide: `/styleguide#card-actions`
+Import: `import { CardActions } from '@/primitives'`
 
-Action bar with grouped effector/investigation layout, flat grid, and confirm dialogs.
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `actions` | `CardAction[]` | — | Action definitions |
-| `layout` | `'row' \| 'grid' \| 'stack'` | `'row'` | Fallback layout (no groups) |
+Action bar with grouped effector/investigation layout, flat grid, and confirm dialogs. **Props:** [Live docs — CardActions](https://c2-hub-three.vercel.app/styleguide#card-actions)
 
 `CardAction` fields: `{ id, label, badge?, icon?, variant?, size?, onClick, onHover?, confirm?, disabled?, loading?, className?, group?, dropdownActions?, dropdownGroups?, effectorStatusStrip?, dimSplitWhenDisabled? }`
 
@@ -361,29 +250,16 @@ Groups: `'effector'` (top row, split buttons) and `'investigation'` (bottom grid
 ### CardTimeline
 
 Import: `import { CardTimeline } from '@/primitives'`
-Styleguide: `/styleguide#card-timeline`
 
-Step-by-step timeline showing detection lifecycle progress. Rendered between CardActions and CardDetails.
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `steps` | `TimelineStep[]` | — | Array of { label, status } |
-| `compact` | `boolean` | `false` | Horizontal dot mode instead of vertical list |
-| `className` | `string` | — | Additional classes |
+Step-by-step timeline showing detection lifecycle progress. Rendered between CardActions and CardDetails. **Props:** [Live docs — CardTimeline](https://c2-hub-three.vercel.app/styleguide#card-timeline)
 
 `TimelineStepStatus`: `'pending' | 'active' | 'complete' | 'error'`
 
 ### CardFooterDock
 
 Import: `import { CardFooterDock } from '@/primitives'`
-Styleguide: `/styleguide#card-footer-dock`
 
-Bottom-anchored action bar for cards. Renders equal-width buttons in a tinted dock strip at the card bottom.
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `actions` | `FooterDockAction[]` | — | Array of { id, label, icon?, onClick?, disabled?, loading? } |
-| `className` | `string` | — | Additional classes |
+Bottom-anchored action bar for cards. Renders equal-width buttons in a tinted dock strip at the card bottom. **Props:** [Live docs — CardFooterDock](https://c2-hub-three.vercel.app/styleguide#card-footer-dock)
 
 ---
 
@@ -392,19 +268,8 @@ Bottom-anchored action bar for cards. Renders equal-width buttons in a tinted do
 ### TargetCard
 
 Import: `import { TargetCard } from '@/primitives'`
-Styleguide: `/styleguide#target-card`
 
-The core card shell. Always use `useCardSlots` hook to build slot data from a `Detection` object.
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `header` | `ReactNode` | — | CardHeader element |
-| `children` | `ReactNode` | — | Slot components |
-| `open` | `boolean` | — | Expanded state |
-| `onToggle` | `() => void` | — | Toggle handler |
-| `accent` | `ThreatAccent` | `'idle'` | Spine color key |
-| `completed` | `boolean` | — | Desaturate card |
-| `onFocus` | `() => void` | — | Focus callback |
+The core card shell. Always use `useCardSlots` hook to build slot data from a `Detection` object. **Props:** [Live docs — TargetCard](https://c2-hub-three.vercel.app/styleguide#target-card)
 
 **Slot ordering** (matches `UnifiedCard` in `ListOfSystems.tsx`):
 1. Closure type badge (manual/auto)
@@ -420,33 +285,14 @@ The core card shell. Always use `useCardSlots` hook to build slot data from a `D
 ### FilterBar
 
 Import: `import { FilterBar } from '@/primitives'`
-Styleguide: `/styleguide#filter-bar`
 
-Search, sort, and multi-select filter controls for the target list.
-
-| Prop | Type | Description |
-|---|---|---|
-| `filters` | `FilterState` | Current filter values |
-| `activeFilterCount` | `number` | Controls reset button |
-| `availableSensors` | `{ id, label }[]` | Sensor options |
-| `onUpdate` | `(key, value) => void` | Generic field update |
-| `onToggleActivity` | `(status) => void` | Toggle activity filter |
-| `onToggleSensor` | `(id) => void` | Toggle sensor filter |
-| `onReset` | `() => void` | Clear all filters |
+Search, sort, and multi-select filter controls for the target list. Not included in `domain-primitives` / `map-kit` because it imports `@/imports/` types — install `@c2/filter-bar` only after providing compatible types. **Props:** [Live docs — FilterBar](https://c2-hub-three.vercel.app/styleguide#filter-bar)
 
 ### AccordionSection
 
 Import: `import { AccordionSection } from '@/primitives'`
-Styleguide: `/styleguide#accordion`
 
-Collapsible section with animated expand/collapse. Used inside cards.
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `title` | `ReactNode` | — | Section heading |
-| `icon` | `React.ElementType \| null` | — | Leading icon |
-| `defaultOpen` | `boolean` | `false` | Start expanded |
-| `headerAction` | `ReactNode` | — | Right-side slot (badge, button) |
+Collapsible section with animated expand/collapse. Used inside cards. **Props:** [Live docs — AccordionSection](https://c2-hub-three.vercel.app/styleguide#accordion)
 
 ---
 
@@ -455,15 +301,8 @@ Collapsible section with animated expand/collapse. Used inside cards.
 ### TelemetryRow
 
 Import: `import { TelemetryRow } from '@/primitives'`
-Styleguide: `/styleguide#telemetry`
 
-Single telemetry metric. Always laid out in a **3-column grid** — rows wrap based on item count.
-
-| Prop | Type | Description |
-|---|---|---|
-| `label` | `string` | Metric name |
-| `value` | `string` | Metric value (monospace, tabular-nums) |
-| `icon` | `React.ElementType` | Leading icon |
+Single telemetry metric. Always laid out in a **3-column grid** — rows wrap based on item count. **Props:** [Live docs — TelemetryRow](https://c2-hub-three.vercel.app/styleguide#telemetry)
 
 Usage pattern:
 ```tsx
@@ -481,9 +320,8 @@ Usage pattern:
 ### Map Icons (TacticalMap.tsx)
 
 Import: `import { CameraIcon, SensorIcon, RadarIcon, DroneIcon, DroneHiveIcon, LidarIcon, LauncherIcon, MissileIcon } from '@/app/components/TacticalMap'`
-Styleguide: `/styleguide#map-icons`
 
-Used on the map layer. Props vary by icon — most take `size` and `fill`. `DroneIcon` takes `rotationDeg`, `disabled`, `color`. `MissileIcon` takes `rotationDeg`.
+Used on the map layer. Props vary by icon — most take `size` and `fill`. `DroneIcon` takes `rotationDeg`, `disabled`, `color`. `MissileIcon` takes `rotationDeg`. **Reference:** [Live docs — map icons](https://c2-hub-three.vercel.app/styleguide#map-icons)
 
 ### Card Icons (MapIcons.tsx)
 
@@ -494,24 +332,8 @@ Adapted for card headers. All take a `size` prop and use `currentColor`.
 ### MapMarker
 
 Import: `import { MapMarker } from '@/primitives'`
-Styleguide: `/styleguide#map-markers`
 
-Composable map marker with layered rendering: surface, ring, glyph, inner glow, and overlays. Driven by `resolveMarkerStyle()` from `mapMarkerStates`.
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `icon` | `ReactNode` | — | Glyph content (SVG icon) |
-| `style` | `MarkerStyle` | — | Visual style from `resolveMarkerStyle()` |
-| `surfaceSize` | `number` | `42` | Surface circle diameter |
-| `ringSize` | `number` | — | Ring circle diameter |
-| `heading` | `number` | — | Rotation in degrees |
-| `showBadge` | `boolean` | `false` | Show top-right badge dot |
-| `pulse` | `boolean` | `false` | Pulsing animation |
-| `label` | `string` | — | Text label below marker |
-| `showLabel` | `boolean` | — | Toggle label visibility |
-| `highlightLayer` | `number \| null` | — | Dims all layers except the specified one (1–5) |
-| `statusBadgeText` | `string` | — | Status badge overlay text |
-| `statusBadgeTone` | `'neutral' \| 'danger'` | `'neutral'` | Status badge color |
+Composable map marker with layered rendering: surface, ring, glyph, inner glow, and overlays. Driven by `resolveMarkerStyle()` from `mapMarkerStates`. **Props:** [Live docs — MapMarker](https://c2-hub-three.vercel.app/styleguide#map-markers)
 
 ### mapMarkerStates
 

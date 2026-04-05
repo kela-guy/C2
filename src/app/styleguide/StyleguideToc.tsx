@@ -57,27 +57,24 @@ export function StyleguideToc({
   if (!anchors || anchors.length === 0) return null;
 
   return (
-    <aside className="sticky top-0 h-screen w-48 shrink-0 overflow-y-auto py-6 pl-6 pr-4 hidden xl:block">
-      <p className="flex h-7 items-center text-[12px] font-medium text-zinc-400 mb-1.5">
+    <aside className="sticky top-0 h-screen w-48 shrink-0 overflow-y-auto py-6 ps-6 pe-4 hidden xl:block">
+      <p className="flex h-7 items-center font-medium text-xs text-n-9">
         On This Page
       </p>
-      <div className="relative flex flex-col ml-3 before:absolute before:inset-y-0 before:right-0 before:w-px before:bg-white/[0.08]">
+      <div className="relative ms-3.5 flex flex-col gap-0.5 before:absolute before:inset-y-0 before:-left-[13px] before:w-px before:bg-white/[0.08]">
         {anchors.map((a) => {
           const isActive = activeAnchor === a.id;
           return (
             <a
               key={a.id}
               href={`#${a.id}`}
+              data-active={isActive}
               onClick={(e) => {
                 e.preventDefault();
                 onSelect(a.id);
                 document.getElementById(a.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
               }}
-              className={`relative py-1.5 pr-3 text-[13px] leading-snug no-underline transition-[color] duration-150 ease-out before:absolute before:inset-y-px before:right-0 before:rounded-full before:transition-all before:duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
-                isActive
-                  ? 'text-zinc-100 before:w-[2px] before:bg-sky-400'
-                  : 'text-zinc-500 hover:text-zinc-300 before:w-px before:bg-transparent'
-              }`}
+              className="relative py-1 text-[.8125rem] leading-[1.125rem] no-underline transition-colors duration-150 ease-out before:absolute before:inset-y-px before:-left-[13px] before:w-px before:rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 hover:text-white data-[active=true]:text-white data-[active=true]:before:w-0.5 data-[active=true]:before:bg-sky-400 data-[active=false]:text-n-8 data-[active=false]:before:bg-transparent"
             >
               {a.label}
             </a>

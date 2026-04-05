@@ -76,7 +76,7 @@ export function StyleguideSearch({
                 >
                   <span className="flex-1">{entry.label}</span>
                   {parentLabel && (
-                    <span className="text-[11px] text-zinc-500 ml-2">{parentLabel}</span>
+                    <span className="text-[11px] text-n-8 ml-2">{parentLabel}</span>
                   )}
                 </CommandItem>
               );

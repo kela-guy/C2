@@ -52,8 +52,8 @@ import {
 import type { Detection, RegulusEffector } from '@/imports/ListOfSystems';
 import { getActivityStatus } from '@/imports/useActivityStatus';
 
-import tokensSrc from '@/primitives/tokens.ts?raw';
 import themeCssSrc from '@/styles/theme.css?raw';
+import indexCssSrc from '@/index.css?raw';
 
 import statusChipSrc from '@/primitives/StatusChip.tsx?raw';
 import actionButtonSrc from '@/primitives/ActionButton.tsx?raw';
@@ -94,8 +94,8 @@ function ComponentSection({
   return (
     <section id={id} className="scroll-mt-12 space-y-6">
       <div className="flex flex-col gap-1.5">
-        <h2 className="text-[28px] font-semibold tracking-tight text-zinc-50" style={{ textWrap: 'balance' }}>{name}</h2>
-        <p className="text-[15px] leading-relaxed text-zinc-400" style={{ textWrap: 'pretty' }}>{description}</p>
+        <h2 className="text-[28px] font-semibold tracking-tight text-n-12" style={{ textWrap: 'balance' }}>{name}</h2>
+        <p className="text-[15px] leading-relaxed text-n-9" style={{ textWrap: 'pretty' }}>{description}</p>
       </div>
       {children}
     </section>
@@ -135,7 +135,7 @@ function ExampleBlock({
 }) {
   return (
     <div id={id} className={`space-y-2.5 ${id ? 'scroll-mt-20' : ''}`}>
-      <h3 className="text-[14px] font-medium text-zinc-200">{title}</h3>
+      <h3 className="text-[14px] font-medium text-n-11">{title}</h3>
       <PreviewPanel tight={tight}>{children}</PreviewPanel>
     </div>
   );
@@ -161,13 +161,13 @@ function IconCatalogTile({ name, icon }: { name: string; icon: React.ReactNode }
       <div ref={svgRef} className="flex items-center justify-center size-12">
         {icon}
       </div>
-      <span className="text-xs font-mono text-zinc-400">{name}</span>
+      <span className="text-xs font-mono text-n-9">{name}</span>
       <div className="flex items-center gap-1">
         <button
           type="button"
           onClick={copySvg}
           aria-label={copied ? 'Copied' : 'Copy SVG'}
-          className="p-2.5 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.08] active:scale-[0.92] transition-[color,background-color,transform] duration-150 ease-out cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+          className="p-2.5 rounded-md text-n-120 hover:text-n-11 hover:bg-white/[0.08] active:scale-[0.92] transition-[color,background-color,transform] duration-150 ease-out cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
         >
           {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
         </button>
@@ -175,7 +175,7 @@ function IconCatalogTile({ name, icon }: { name: string; icon: React.ReactNode }
           href={downloadHref}
           download={`${name}.svg`}
           aria-label="Download SVG"
-          className="p-2.5 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.08] active:scale-[0.92] transition-[color,background-color,transform] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+          className="p-2.5 rounded-md text-n-120 hover:text-n-11 hover:bg-white/[0.08] active:scale-[0.92] transition-[color,background-color,transform] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
         >
           <Download size={14} />
         </a>
@@ -187,8 +187,8 @@ function IconCatalogTile({ name, icon }: { name: string; icon: React.ReactNode }
 function StyleguideDeviceTile({ label, children, width = 380 }: { label: string; children: React.ReactNode; width?: number }) {
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-[11px] font-medium text-zinc-400">{label}</span>
-      <div className="bg-zinc-950 border border-white/10 rounded-lg overflow-hidden" style={{ width }}>
+      <span className="text-[11px] font-medium text-n-9">{label}</span>
+      <div className="bg-n-1 border border-white/10 rounded-lg overflow-hidden" style={{ width }}>
         {children}
       </div>
     </div>
@@ -225,24 +225,24 @@ interface PropDef {
 function PropsTable({ items }: { items: PropDef[] }) {
   return (
     <div className="space-y-2.5">
-      <h3 className="text-[13px] font-medium text-zinc-300">Props</h3>
+      <h3 className="text-[13px] font-medium text-n-10">Props</h3>
       <div className="overflow-x-auto rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)]" dir="ltr">
         <table className="w-full text-[12px]" dir="ltr">
           <thead>
             <tr className="border-b border-white/5" style={{ backgroundColor: SURFACE.level1 }}>
-              <th className="py-2 px-3 text-left font-medium text-zinc-300">Prop</th>
-              <th className="py-2 px-3 text-left font-medium text-zinc-300">Type</th>
-              <th className="py-2 px-3 text-left font-medium text-zinc-300">Default</th>
-              <th className="py-2 px-3 text-left font-medium text-zinc-300">Description</th>
+              <th className="py-2 px-3 text-left font-medium text-n-10">Prop</th>
+              <th className="py-2 px-3 text-left font-medium text-n-10">Type</th>
+              <th className="py-2 px-3 text-left font-medium text-n-10">Default</th>
+              <th className="py-2 px-3 text-left font-medium text-n-10">Description</th>
             </tr>
           </thead>
           <tbody>
             {items.map((p) => (
               <tr key={p.name} className="border-b border-white/[0.03] last:border-0">
                 <td className="py-2 px-3 font-mono text-sky-300/80">{p.name}</td>
-                <td className="py-2 px-3 font-mono text-zinc-400">{p.type}</td>
-                <td className="py-2 px-3 font-mono text-zinc-400">{p.default ?? '—'}</td>
-                <td className="py-2 px-3 text-zinc-400">{p.description}</td>
+                <td className="py-2 px-3 font-mono text-n-9">{p.type}</td>
+                <td className="py-2 px-3 font-mono text-n-9">{p.default ?? '—'}</td>
+                <td className="py-2 px-3 text-n-9">{p.description}</td>
               </tr>
             ))}
           </tbody>
@@ -256,7 +256,7 @@ function PropsTable({ items }: { items: PropDef[] }) {
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="text-[15px] font-semibold text-zinc-200 tracking-tight mt-8 first:mt-0 pb-1.5 border-b border-white/[0.04]">
+    <h3 className="text-[15px] font-semibold text-n-11 tracking-tight mt-8 first:mt-0 pb-1.5 border-b border-white/[0.04]">
       {children}
     </h3>
   );
@@ -276,6 +276,8 @@ function InteractionFlowBlock({
   cardZone,
   mapZone,
   steps,
+  /** When false, the map column is display-only (no marker hover/click); interaction hint follows the card column only. */
+  mapInteractive = false,
 }: {
   id: string;
   title: string;
@@ -283,14 +285,15 @@ function InteractionFlowBlock({
   cardZone: React.ReactNode;
   mapZone: React.ReactNode;
   steps: FlowStep[];
+  mapInteractive?: boolean;
 }) {
   const [hovered, setHovered] = useState(false);
 
   return (
     <div id={id} className="scroll-mt-20 space-y-2.5">
       <div className="space-y-1">
-        <h4 className="text-[15px] font-semibold text-zinc-100 tracking-tight">{title}</h4>
-        <p className="text-[13px] text-zinc-400 leading-relaxed">{description}</p>
+        <h4 className="text-[15px] font-semibold text-n-12 tracking-tight">{title}</h4>
+        <p className="text-[13px] text-n-9 leading-relaxed">{description}</p>
       </div>
 
       <div
@@ -299,13 +302,14 @@ function InteractionFlowBlock({
           backgroundColor: SURFACE.level0,
           boxShadow: 'none',
         }}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        {...(mapInteractive
+          ? { onMouseEnter: () => setHovered(true), onMouseLeave: () => setHovered(false) }
+          : {})}
       >
         <div className="relative flex min-h-[200px]">
           {/* "Interactive" hint */}
           <span
-            className="absolute bottom-2.5 left-3 z-10 text-[10px] font-medium text-zinc-500 uppercase tracking-[0.06em] transition-opacity duration-150 ease-out pointer-events-none"
+            className="absolute bottom-2.5 left-3 z-10 text-[10px] font-medium text-n-120 uppercase tracking-[0.06em] transition-opacity duration-150 ease-out pointer-events-none"
             style={{ opacity: hovered ? 1 : 0 }}
           >
             Interactive
@@ -316,13 +320,23 @@ function InteractionFlowBlock({
             className="flex-1 flex flex-col min-w-0"
             style={{ background: `radial-gradient(circle at 50% 50%, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0.4) 100%), ${SURFACE.level0}` }}
           >
-            <span className="block text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.08em] px-4 pt-3 pb-1.5">Map</span>
-            <div className="flex-1 relative px-4 pb-4 flex items-center justify-center">{mapZone}</div>
+            <span className="block text-[10px] font-semibold text-n-120 uppercase tracking-[0.08em] px-4 pt-3 pb-1.5">Map</span>
+            <div
+              className={`flex-1 relative px-4 pb-4 flex items-center justify-center${mapInteractive ? '' : ' pointer-events-none'}`}
+            >
+              {mapZone}
+            </div>
           </div>
 
           {/* Card zone */}
-          <div className="w-[280px] shrink-0 border-l border-white/[0.06] flex flex-col" style={{ backgroundColor: SURFACE.level1 }}>
-            <span className="block text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.08em] px-4 pt-3 pb-1.5">Card</span>
+          <div
+            className="w-[280px] shrink-0 border-l border-white/[0.06] flex flex-col"
+            style={{ backgroundColor: SURFACE.level1 }}
+            {...(!mapInteractive
+              ? { onMouseEnter: () => setHovered(true), onMouseLeave: () => setHovered(false) }
+              : {})}
+          >
+            <span className="block text-[10px] font-semibold text-n-120 uppercase tracking-[0.08em] px-4 pt-3 pb-1.5">Card</span>
             <div dir="rtl" className="flex-1 px-4 pb-4 flex flex-col justify-center">{cardZone}</div>
           </div>
         </div>
@@ -334,9 +348,9 @@ function InteractionFlowBlock({
               <div key={i} className="flex gap-3">
                 <span className="text-[11px] font-bold text-sky-400 tabular-nums font-mono leading-[1.6] shrink-0 w-4 text-right">{i + 1}</span>
                 <div className="flex flex-col gap-0.5 min-w-0">
-                  <span className="text-[13px] font-medium text-zinc-200">{step.label}</span>
+                  <span className="text-[13px] font-medium text-n-11">{step.label}</span>
                   {step.detail && (
-                    <span className="text-[12px] text-zinc-400 leading-relaxed font-mono font-medium" style={{ fontVariantNumeric: 'slashed-zero' }}>
+                    <span className="text-[12px] text-n-9 leading-relaxed font-mono font-medium" style={{ fontVariantNumeric: 'slashed-zero' }}>
                       {step.detail}
                     </span>
                   )}
@@ -490,7 +504,7 @@ function TargetCardFlows() {
                   className="overflow-hidden"
                 >
                   <div
-                    className="px-3 py-3 text-[11px] text-zinc-400"
+                    className="px-3 py-3 text-[11px] text-n-9"
                     style={{ backgroundColor: CARD_TOKENS.content.bgColor, boxShadow: `inset 0 1px 0 0 ${CARD_TOKENS.content.borderColor}` }}
                   >
                     Card content expanded
@@ -509,7 +523,7 @@ function TargetCardFlows() {
               ringSize={34}
               pulse={flow2Hovered || flow2Open}
             />
-            <span className="text-[10px] font-medium text-zinc-500 tabular-nums">
+            <span className="text-[10px] font-medium text-n-120 tabular-nums">
               {flow2Open ? 'Active (open)' : flow2Hovered ? 'Pulsing (hover)' : 'Idle'}
             </span>
           </div>
@@ -525,6 +539,7 @@ function TargetCardFlows() {
       {/* ── Flow 3: Click Map Marker → Open Card ── */}
       <InteractionFlowBlock
         id="flow-click-marker"
+        mapInteractive
         title="Click Map Marker → Open Card"
         description="Clicking a target marker on the map opens its corresponding card in the sidebar."
         cardZone={
@@ -562,7 +577,7 @@ function TargetCardFlows() {
                   className="overflow-hidden"
                 >
                   <div
-                    className="px-3 py-3 text-[11px] text-zinc-400"
+                    className="px-3 py-3 text-[11px] text-n-9"
                     style={{ backgroundColor: CARD_TOKENS.content.bgColor, boxShadow: `inset 0 1px 0 0 ${CARD_TOKENS.content.borderColor}` }}
                   >
                     Card opens from map click
@@ -586,7 +601,7 @@ function TargetCardFlows() {
                 ringSize={34}
                 pulse={flow3Open}
               />
-              <span className="text-[10px] font-medium text-zinc-400">Click me</span>
+              <span className="text-[10px] font-medium text-n-9">Click me</span>
             </div>
             <div className="flex flex-col items-center gap-2 opacity-40" aria-label="כלי נוסף">
               <MapMarker
@@ -637,7 +652,7 @@ function TargetCardFlows() {
                 showLabel={flow5HoveredSensor === 'rf-01'}
                 label="RF Scanner"
               />
-              <span className="text-[10px] font-medium text-zinc-500">rf-01</span>
+              <span className="text-[10px] font-medium text-n-120">rf-01</span>
             </div>
             <div className="flex flex-col items-center gap-2">
               <MapMarker
@@ -649,7 +664,7 @@ function TargetCardFlows() {
                 showLabel={flow5HoveredSensor === 'radar-01'}
                 label="Radar X-Band"
               />
-              <span className="text-[10px] font-medium text-zinc-500">radar-01</span>
+              <span className="text-[10px] font-medium text-n-120">radar-01</span>
             </div>
           </div>
         }
@@ -833,7 +848,7 @@ function DeviceCardFlows() {
                 ringSize={30}
                 pulse={flowHoverDeviceId === hoverDeviceCam1.id}
               />
-              <span className="text-[10px] font-medium text-zinc-500">PTZ-N</span>
+              <span className="text-[10px] font-medium text-n-120">PTZ-N</span>
             </div>
             <div className="flex flex-col items-center gap-2">
               <MapMarker
@@ -843,7 +858,7 @@ function DeviceCardFlows() {
                 ringSize={30}
                 pulse={flowHoverDeviceId === hoverDeviceCam2.id}
               />
-              <span className="text-[10px] font-medium text-zinc-500">Pixelsight</span>
+              <span className="text-[10px] font-medium text-n-120">Pixelsight</span>
             </div>
           </div>
         }
@@ -858,6 +873,7 @@ function DeviceCardFlows() {
       {/* ── Flow 4: Click Asset Icon → Open Device Panel ── */}
       <InteractionFlowBlock
         id="flow-click-asset"
+        mapInteractive
         title="Click Asset Icon → Open Device Panel"
         description="Clicking a sensor, effector, or launcher icon on the map opens the DevicesPanel with that device focused. Hovering a row highlights the marker."
         cardZone={
@@ -900,7 +916,7 @@ function DeviceCardFlows() {
                 ringSize={30}
                 pulse={flow4Selected || flow4HoveredRow === flow4DeviceCam1.id}
               />
-              <span className="text-[10px] font-medium text-zinc-400">PTZ-N</span>
+              <span className="text-[10px] font-medium text-n-9">PTZ-N</span>
             </div>
             <div className="flex flex-col items-center gap-2">
               <MapMarker
@@ -910,7 +926,7 @@ function DeviceCardFlows() {
                 ringSize={30}
                 pulse={flow4HoveredRow === flow4DeviceCam2.id}
               />
-              <span className="text-[10px] font-medium text-zinc-500">Pixelsight</span>
+              <span className="text-[10px] font-medium text-n-120">Pixelsight</span>
             </div>
           </div>
         }
@@ -925,6 +941,7 @@ function DeviceCardFlows() {
       {/* ── Flow 7: Camera Look-At ── */}
       <InteractionFlowBlock
         id="flow-camera-lookat"
+        mapInteractive
         title="Camera Look-At"
         description="Drag the FOV cone tip to aim the camera. When the cone covers the target the marker activates."
         cardZone={
@@ -938,7 +955,7 @@ function DeviceCardFlows() {
                 <CameraIcon size={20} fill="white" />
               </div>
               <div className="flex-1 min-w-0">
-                <span className="text-[13px] font-medium text-zinc-300 block truncate">מצלמה PTZ-N</span>
+                <span className="text-[13px] font-medium text-n-10 block truncate">מצלמה PTZ-N</span>
                 <div className="text-[11px] font-mono tabular-nums text-white/50 truncate">
                   כיוון {Math.round((flow7Angle * 180) / Math.PI + 90)}° · שדה ראייה 60°
                 </div>
@@ -955,7 +972,7 @@ function DeviceCardFlows() {
                 disabled={flow7OnTarget || flow7Animating}
                 loading={flow7Animating}
               />
-              <span className="text-[11px] text-zinc-500">
+              <span className="text-[11px] text-n-120">
                 {flow7Animating ? 'מסתובבת...' : flow7OnTarget ? 'מכוון לעבר המטרה' : 'גרור את הקונוס או לחץ'}
               </span>
             </div>
@@ -1027,7 +1044,7 @@ function DeviceCardFlows() {
                 ringSize={30}
               />
             </div>
-            <span className="absolute text-[10px] font-medium text-zinc-500" style={{ left: flow7CamPos.x, top: flow7CamPos.y + 28, transform: 'translateX(-50%)' }}>Camera</span>
+            <span className="absolute text-[10px] font-medium text-n-120" style={{ left: flow7CamPos.x, top: flow7CamPos.y + 28, transform: 'translateX(-50%)' }}>Camera</span>
 
             {/* Target marker — fixed */}
             <div className="absolute" style={{ left: flow7TargetPos.x, top: flow7TargetPos.y, transform: 'translate(-50%, -50%)' }}>
@@ -1039,7 +1056,7 @@ function DeviceCardFlows() {
                 pulse={flow7OnTarget}
               />
             </div>
-            <span className="absolute text-[10px] font-medium text-zinc-500" style={{ left: flow7TargetPos.x, top: flow7TargetPos.y + 28, transform: 'translateX(-50%)' }}>Target</span>
+            <span className="absolute text-[10px] font-medium text-n-120" style={{ left: flow7TargetPos.x, top: flow7TargetPos.y + 28, transform: 'translateX(-50%)' }}>Target</span>
           </div>
         }
         steps={[
@@ -1049,6 +1066,317 @@ function DeviceCardFlows() {
           { label: 'Target marker activates when inside FOV' },
         ]}
       />
+
+    </div>
+  );
+}
+
+// ─── Engagement Line Preview + Source ────────────────────────────────────────
+
+const ENGAGEMENT_LINE_SOURCE = `// ── Engagement line animation (from TacticalMap.tsx) ──────────────────────
+
+// Mapbox GL layers: dashed line + traveling particle circles
+// Color: #ffffff (standby) → #ef4444 (mitigating)
+
+// ── 1. Dashed line (marching dash) ──────────────────────────────────────────
+
+const D = 4;
+const PERIOD = D + D;            // 8
+const TOTAL_STEPS = 32;
+// ~20 ms throttle via requestAnimationFrame
+
+const animate = (time: number) => {
+  if (time - lastTime > 20) {
+    lastTime = time;
+    step = (step + 1) % TOTAL_STEPS;
+    const s = (step / TOTAL_STEPS) * PERIOD;
+    const pattern: number[] =
+      s < 0.01       ? [D, D] :
+      s < D          ? [0, s, D, D - s] :
+      s > PERIOD - 0.01 ? [D, D] :
+                       [s - D, D, PERIOD - s, 0.01];
+    map.setPaintProperty('engagement-line-dash', 'line-dasharray', pattern);
+  }
+  frameId = requestAnimationFrame(animate);
+};
+
+// Line layer paint:
+// {
+//   'line-color': isMitigating ? '#ef4444' : '#ffffff',
+//   'line-width': 2,
+//   'line-dasharray': [4, 4],  ← animated
+// }
+
+// ── 2. Traveling particles (spring-eased) ───────────────────────────────────
+
+const COUNT = 3;                  // evenly spaced at 0, 1/3, 2/3
+const SPEED = 0.25;               // normalized units / sec
+
+// Spring lookup table
+const stiffness = 160, damping = 70, mass = 1;
+const steps = 300;
+const dt = 1 / 120;
+let x = 0, v = 0;
+const lut: number[] = [];
+for (let i = 0; i <= steps; i++) {
+  lut.push(Math.max(0, Math.min(x, 1.5)));
+  const a = (-stiffness * (x - 1) - damping * v) / mass;
+  v += a * dt;
+  x += v * dt;
+}
+
+const easeSpring = (t: number) => {
+  const idx = t * (lut.length - 1);
+  const lo = Math.floor(idx);
+  const hi = Math.min(lo + 1, lut.length - 1);
+  return lut[lo] + (lut[hi] - lut[lo]) * (idx - lo);
+};
+
+// Particle layers paint:
+// Glow:  { 'circle-radius': 14, 'circle-opacity': 0.225, 'circle-blur': 1 }
+// Core:  { 'circle-radius': 4,  'circle-opacity': 0.9 }
+
+// ── 3. Distance badge ───────────────────────────────────────────────────────
+
+// Position: midpoint of effector ↔ target
+// Style:    rounded px-2 py-1 font-mono text-xs tabular-nums
+// Shadow:   0 2px 8px rgba(0,0,0,0.4)
+// Format:   < 1000 → \${Math.round(m)}m   |   >= 1000 → \${(m/1000).toFixed(1)} km
+// Bg:       isMitigating ? '#ef4444' : '#ffffff'
+// Text:     isMitigating ? '#ffffff' : '#000000'
+
+// ── 4. Reduced motion ───────────────────────────────────────────────────────
+
+// Both animations bail early when prefers-reduced-motion: reduce
+// Line and particles still render statically — only the motion stops.
+`;
+
+function EngagementLineAnimatedPreview({ color }: { color: string }) {
+  const effectorStyle = resolveMarkerStyle('default', 'friendly');
+  const hostileStyle = resolveMarkerStyle('default', 'hostile');
+  const isRed = color === '#ef4444';
+  const badgeBg = isRed ? '#ef4444' : '#ffffff';
+  const badgeText = isRed ? '#ffffff' : '#000000';
+
+  const lineY = 75;
+  const markerR = 21;
+
+  const prefersReducedMotion = useReducedMotion();
+
+  const springLut = useMemo(() => {
+    const stiffness = 160, damping = 70, mass = 1;
+    const steps = 300;
+    const dt = 1 / 120;
+    let x = 0, v = 0;
+    const lut: number[] = [];
+    for (let i = 0; i <= steps; i++) {
+      lut.push(Math.max(0, Math.min(x, 1.5)));
+      const a = (-stiffness * (x - 1) - damping * v) / mass;
+      v += a * dt;
+      x += v * dt;
+    }
+    return lut;
+  }, []);
+
+  const particleTRef = useRef<number[]>([0, 1 / 3, 2 / 3]);
+  const dashStepRef = useRef(0);
+  const [particlePositions, setParticlePositions] = useState<number[]>([0.17, 0.5, 0.83]);
+  const [dashOffset, setDashOffset] = useState(0);
+
+  useEffect(() => {
+    if (prefersReducedMotion) return;
+    let frameId: number;
+    let lastTime = 0;
+
+    const easeSpring = (t: number) => {
+      const idx = t * (springLut.length - 1);
+      const lo = Math.floor(idx);
+      const hi = Math.min(lo + 1, springLut.length - 1);
+      return springLut[lo] + (springLut[hi] - springLut[lo]) * (idx - lo);
+    };
+
+    const animate = (time: number) => {
+      const dt = lastTime ? (time - lastTime) / 1000 : 0;
+      lastTime = time;
+
+      const ts = particleTRef.current;
+      for (let i = 0; i < 3; i++) {
+        ts[i] = (ts[i] + 0.25 * dt) % 1;
+      }
+      setParticlePositions(ts.map(easeSpring));
+
+      dashStepRef.current = (dashStepRef.current + dt * 50) % 16;
+      setDashOffset(dashStepRef.current);
+
+      frameId = requestAnimationFrame(animate);
+    };
+
+    frameId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frameId);
+  }, [prefersReducedMotion, springLut]);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [cw, setCw] = useState(600);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const ro = new ResizeObserver(([e]) => setCw(e.contentRect.width));
+    ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, []);
+
+  const pad = 32;
+  const leftX = pad + markerR;
+  const rightX = cw - pad - markerR;
+  const lineStart = leftX + markerR + 4;
+  const lineEnd = rightX - markerR - 4;
+  const lineLen = Math.max(lineEnd - lineStart, 1);
+  const midX = (lineStart + lineEnd) / 2;
+  const particleFullLen = rightX - leftX;
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative rounded-xl border border-white/10"
+      style={{
+        background: `radial-gradient(circle at 50% 50%, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0.4) 100%), ${SURFACE.level0}`,
+        height: 150,
+      }}
+    >
+      <svg className="absolute inset-0 w-full h-full" style={{ overflow: 'visible' }}>
+        <line
+          x1={lineStart} y1={lineY} x2={lineEnd} y2={lineY}
+          stroke={color} strokeWidth={2}
+          strokeDasharray="8 8"
+          strokeDashoffset={-dashOffset}
+          strokeOpacity={0.8}
+        />
+        {particlePositions.map((t, i) => {
+          const clamped = Math.min(t, 1);
+          const cx = leftX + particleFullLen * clamped;
+          const fadeIn = Math.min(clamped / 0.08, 1);
+          const fadeOut = Math.min((1 - clamped) / 0.08, 1);
+          const alpha = fadeIn * fadeOut;
+          if (alpha <= 0) return null;
+          return (
+            <g key={i} opacity={alpha}>
+              <circle cx={cx} cy={lineY} r={14} fill={color} opacity={0.15} />
+              <circle cx={cx} cy={lineY} r={4} fill={color} opacity={0.9} />
+            </g>
+          );
+        })}
+      </svg>
+
+      <div className="absolute" style={{ left: leftX - markerR, top: lineY - markerR }}>
+        <MapMarker
+          icon={<LauncherIcon size={20} fill={effectorStyle.glyphColor} />}
+          style={effectorStyle}
+          surfaceSize={42}
+          ringSize={34}
+        />
+      </div>
+
+      <div className="absolute" style={{ left: rightX - markerR, top: lineY - markerR }}>
+        <MapMarker
+          icon={<DroneIcon rotationDeg={-22} color={hostileStyle.glyphColor} />}
+          style={hostileStyle}
+          surfaceSize={42}
+          ringSize={34}
+        />
+      </div>
+
+      <div className="absolute" style={{ left: midX - 28, top: lineY - 14 }}>
+        <div
+          className="rounded px-2 py-1 font-mono text-xs tabular-nums whitespace-nowrap pointer-events-none select-none"
+          style={{ backgroundColor: badgeBg, color: badgeText, boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}
+        >
+          1.2 km
+        </div>
+      </div>
+
+      <div className="absolute text-[10px] text-n-120 font-medium" style={{ left: leftX - 12, top: lineY + 30 }}>Effector</div>
+      <div className="absolute text-[10px] text-n-120 font-medium text-right" style={{ left: rightX - 12, top: lineY + 30 }}>Target</div>
+    </div>
+  );
+}
+
+function EngagementLineFlows() {
+  return (
+    <div className="space-y-8">
+
+      {/* ── Animated preview ── */}
+      <div id="engagement-anatomy" className="scroll-mt-12 space-y-6">
+        <div className="space-y-2">
+          <h3 className="text-lg font-semibold text-n-12">Line Anatomy</h3>
+          <p className="text-sm leading-relaxed text-n-9">
+            Dashed engagement line with spring-eased traveling particles and a midpoint distance badge. Connects the selected effector to the active target via Mapbox GL layers.
+          </p>
+        </div>
+        <div className="space-y-3">
+          <span className="text-[11px] font-semibold text-n-9 uppercase tracking-[0.06em]">Standby (selected)</span>
+          <EngagementLineAnimatedPreview color="#ffffff" />
+        </div>
+        <div className="space-y-3">
+          <span className="text-[11px] font-semibold text-n-9 uppercase tracking-[0.06em]">Mitigating (jam active)</span>
+          <EngagementLineAnimatedPreview color="#ef4444" />
+        </div>
+      </div>
+
+      {/* ── Source / spec ── */}
+      <div id="engagement-spec" className="scroll-mt-12 pt-10">
+        <CodePreviewBlock
+          name="Engagement Line"
+          description="Animation constants, spring LUT, layer paint values, distance badge format, and reduced-motion behavior."
+          code={ENGAGEMENT_LINE_SOURCE}
+        >
+          <div className="space-y-6" dir="ltr">
+            <div className="grid grid-cols-2 gap-4 text-[12px]">
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-semibold text-n-9 uppercase tracking-[0.06em]">Dashed line</span>
+                <div className="space-y-1 font-mono text-n-10">
+                  <div>dash: <span className="text-sky-300/80">[4, 4]</span> period: <span className="text-sky-300/80">8</span></div>
+                  <div>cycle: <span className="text-sky-300/80">32</span> steps, <span className="text-sky-300/80">~20ms</span> throttle</div>
+                  <div>width: <span className="text-sky-300/80">2px</span></div>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-semibold text-n-9 uppercase tracking-[0.06em]">Particles</span>
+                <div className="space-y-1 font-mono text-n-10">
+                  <div>count: <span className="text-sky-300/80">3</span> speed: <span className="text-sky-300/80">0.25</span>/s</div>
+                  <div>spring: <span className="text-sky-300/80">160</span> / <span className="text-sky-300/80">70</span> / <span className="text-sky-300/80">1</span></div>
+                  <div>glow: r<span className="text-sky-300/80">14</span> α<span className="text-sky-300/80">0.225</span> core: r<span className="text-sky-300/80">4</span> α<span className="text-sky-300/80">0.9</span></div>
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4 text-[12px]">
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-semibold text-n-9 uppercase tracking-[0.06em]">Colors</span>
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 font-mono text-n-10">
+                    <span className="inline-block w-3 h-3 rounded-full bg-white border border-white/20" />
+                    standby <span className="text-sky-300/80">#ffffff</span>
+                  </div>
+                  <div className="flex items-center gap-2 font-mono text-n-10">
+                    <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: '#ef4444' }} />
+                    mitigating <span className="text-sky-300/80">#ef4444</span>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-semibold text-n-9 uppercase tracking-[0.06em]">Badge</span>
+                <div className="space-y-1 font-mono text-n-10">
+                  <div>pos: <span className="text-n-9">midpoint</span></div>
+                  <div>shadow: <span className="text-sky-300/80">0 2px 8px</span> rgba(0,0,0,0.4)</div>
+                  <div>&lt;1000m → Xm, else → X.X km</div>
+                </div>
+              </div>
+            </div>
+            <div className="text-[12px] text-n-120">
+              Both animations respect <code className="text-n-9 font-mono">prefers-reduced-motion: reduce</code> — line and particles render statically.
+            </div>
+          </div>
+        </CodePreviewBlock>
+      </div>
 
     </div>
   );
@@ -1067,7 +1395,7 @@ function InlineCopyButton({ text }: { text: string }) {
     <button
       onClick={handleCopy}
       aria-label={copied ? 'Copied' : 'Copy code'}
-      className="p-1.5 rounded cursor-pointer text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.08] active:scale-[0.94] transition-[color,background-color,transform] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+      className="p-1.5 rounded cursor-pointer text-n-7 hover:text-n-10 hover:bg-white/[0.08] active:scale-[0.94] transition-[color,background-color,transform] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
     >
       {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
     </button>
@@ -1199,7 +1527,7 @@ function HighlightedCode({ code }: { code: string }) {
 
   if (!html) {
     return (
-      <pre className="text-[12px] leading-[1.7] font-mono text-zinc-300 whitespace-pre">
+      <pre className="text-[12px] leading-[1.7] font-mono text-n-10 whitespace-pre">
         {code}
       </pre>
     );
@@ -1304,7 +1632,7 @@ function CopyIconButton({ text }: { text: string }) {
     <button
       onClick={handleCopy}
       aria-label={copied ? 'Copied' : 'Copy component as markdown'}
-      className="flex items-center gap-1.5 h-7 px-2.5 rounded-[10px_4px_4px_4px] cursor-pointer text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.06] active:scale-[0.96] transition-[color,background-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/30"
+      className="flex items-center gap-1.5 h-7 px-2.5 rounded-[10px_4px_4px_4px] cursor-pointer text-n-120 hover:text-n-11 hover:bg-white/[0.06] active:scale-[0.96] transition-[color,background-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/30"
     >
       <AnimatePresence mode="wait" initial={false}>
         {copied ? (
@@ -1378,8 +1706,8 @@ function CodePreviewBlock({
             onClick={() => setTab(t.id)}
             className={`px-4 py-2.5 text-[12px] font-medium cursor-pointer transition-[color,border-color] duration-150 ease-out active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/25 ${
               tab === t.id
-                ? 'text-zinc-100 border-b border-zinc-100'
-                : 'text-zinc-500 hover:text-zinc-300 border-b border-transparent'
+                ? 'text-n-12 border-b border-n-12'
+                : 'text-n-120 hover:text-n-10 border-b border-transparent'
             }`}
           >
             {t.label}
@@ -1421,61 +1749,6 @@ function CopyIcon({ copied }: { copied: boolean }) {
   );
 }
 
-function ColorSwatch({ color, label }: { color: string; label: string }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(color).then(() => {
-      setCopied(true);
-      toast.success(`Copied ${color}`, { duration: 1500 });
-      setTimeout(() => setCopied(false), 1500);
-    });
-  };
-
-  return (
-    <div className="flex flex-col items-center gap-2">
-      <button
-        type="button"
-        onClick={handleCopy}
-        className="group relative w-12 h-12 rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.08)] cursor-pointer transition-[box-shadow,transform] duration-150 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.2)] active:scale-95"
-        style={{ backgroundColor: color }}
-      >
-        <span className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/40 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-          <CopyIcon copied={copied} />
-        </span>
-      </button>
-      <div className="flex flex-col items-center gap-0.5">
-        <span className="text-[10px] text-zinc-300 font-mono leading-none">{label}</span>
-        <span className="text-[11px] text-zinc-200 font-mono leading-none tabular-nums">{color}</span>
-      </div>
-    </div>
-  );
-}
-
-function TokenTable({ rows }: { rows: { token: string; value: string | number; note?: string }[] }) {
-  return (
-    <div className="overflow-x-auto rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)]" dir="ltr">
-      <table className="w-full text-[12px]" dir="ltr">
-        <thead>
-          <tr className="border-b border-white/5" style={{ backgroundColor: SURFACE.level1 }}>
-            <th className="py-2 px-3 text-left font-medium text-zinc-300">Token</th>
-            <th className="py-2 px-3 text-left font-medium text-zinc-300">Value</th>
-            <th className="py-2 px-3 text-left font-medium text-zinc-300">Note</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.token} className="border-b border-white/[0.03] last:border-0">
-              <td className="py-2 px-3 font-mono text-sky-300/80">{r.token}</td>
-              <td className="py-2 px-3 font-mono text-zinc-300 tabular-nums">{String(r.value)}</td>
-              <td className="py-2 px-3 text-zinc-400">{r.note ?? ''}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
 
 function VariantGrid({ entries, renderSample }: {
   entries: { key: string; usage?: string }[];
@@ -1486,51 +1759,14 @@ function VariantGrid({ entries, renderSample }: {
       {entries.map(({ key, usage }) => (
         <div key={key} className="flex flex-col items-center gap-2 rounded-lg p-3" style={{ backgroundColor: SURFACE.level1 }}>
           {renderSample(key)}
-          <span className="text-[11px] font-mono text-zinc-300">{key}</span>
-          {usage && <span className="text-[10px] text-zinc-500 text-center leading-tight">{usage}</span>}
+          <span className="text-[11px] font-mono text-n-10">{key}</span>
+          {usage && <span className="text-[10px] text-n-120 text-center leading-tight">{usage}</span>}
         </div>
       ))}
     </div>
   );
 }
 
-function CSSVarSwatch({ varName, label }: { varName: string; label?: string }) {
-  const [computed, setComputed] = useState('');
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    const val = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
-    setComputed(val);
-  }, [varName]);
-
-  const handleCopy = () => {
-    const value = computed || varName;
-    navigator.clipboard.writeText(value).then(() => {
-      setCopied(true);
-      toast.success(`Copied ${value}`, { duration: 1500 });
-      setTimeout(() => setCopied(false), 1500);
-    });
-  };
-
-  return (
-    <div className="flex flex-col items-center gap-2">
-      <button
-        type="button"
-        onClick={handleCopy}
-        className="group relative w-12 h-12 rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.08)] cursor-pointer transition-[box-shadow,transform] duration-150 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.2)] active:scale-95"
-        style={{ backgroundColor: `var(${varName})` }}
-      >
-        <span className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/40 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-          <CopyIcon copied={copied} />
-        </span>
-      </button>
-      <div className="flex flex-col items-center gap-0.5">
-        <span className="text-[10px] text-zinc-300 font-mono leading-none">{label ?? varName}</span>
-        <span className="text-[10px] text-zinc-400 font-mono leading-none max-w-20 truncate" title={computed}>{computed}</span>
-      </div>
-    </div>
-  );
-}
 
 function ElevationRamp() {
   const levels = (Object.keys(ELEVATION.overlay) as Array<keyof typeof ELEVATION.overlay>).map((key) => ({
@@ -1573,9 +1809,9 @@ function ElevationRamp() {
       <div className="flex">
         {levels.map(({ key, opacity, hex }) => (
           <div key={key} className="flex-1 flex flex-col items-center gap-1 min-w-0">
-            <span className="text-[11px] font-medium text-zinc-300 tabular-nums">{key}</span>
-            <span className="text-[10px] font-mono text-zinc-400 tabular-nums">α {opacity}</span>
-            <span className="text-[10px] font-mono text-zinc-400">{hex}</span>
+            <span className="text-[11px] font-medium text-n-10 tabular-nums">{key}</span>
+            <span className="text-[10px] font-mono text-n-9 tabular-nums">α {opacity}</span>
+            <span className="text-[10px] font-mono text-n-9">{hex}</span>
           </div>
         ))}
       </div>
@@ -1588,8 +1824,8 @@ function ElevationRamp() {
             style={{ backgroundColor: ELEVATION.baseSurface }}
           />
           <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] font-medium text-zinc-300">Base surface</span>
-            <span className="text-[11px] font-mono text-zinc-300">{ELEVATION.baseSurface}</span>
+            <span className="text-[10px] font-medium text-n-10">Base surface</span>
+            <span className="text-[11px] font-mono text-n-10">{ELEVATION.baseSurface}</span>
           </div>
         </div>
 
@@ -1599,135 +1835,12 @@ function ElevationRamp() {
             style={{ backgroundColor: SURFACE.level2, boxShadow: ELEVATION.shadow }}
           />
           <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] font-medium text-zinc-300">Shadow</span>
-            <code className="text-[10px] font-mono text-zinc-400 max-w-[220px] truncate" title={ELEVATION.shadow}>{ELEVATION.shadow}</code>
+            <span className="text-[10px] font-medium text-n-10">Shadow</span>
+            <code className="text-[10px] font-mono text-n-9 max-w-[220px] truncate" title={ELEVATION.shadow}>{ELEVATION.shadow}</code>
           </div>
         </div>
       </div>
     </div>
-  );
-}
-
-function TokenSubSection({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-3">
-      <span className="block text-[11px] font-semibold uppercase tracking-widest text-white">
-        {title}
-      </span>
-      {children}
-    </div>
-  );
-}
-
-function generateAllTokensMarkdown(): string {
-  const lines: string[] = [];
-
-  lines.push('# Design Token System\n');
-  lines.push('> Complete token reference for the C2 Hub design system. Two source files define every color, spacing, elevation, and typography value used across the app.\n');
-
-  lines.push('## File: src/primitives/tokens.ts\n');
-  lines.push('```typescript');
-  lines.push(tokensSrc.trim());
-  lines.push('```\n');
-
-  lines.push('## File: src/styles/theme.css\n');
-  lines.push('```css');
-  lines.push(themeCssSrc.trim());
-  lines.push('```\n');
-
-  lines.push('## Quick Reference — Computed Values\n');
-
-  lines.push('### LAYOUT_TOKENS');
-  lines.push(`| Token | Value |`);
-  lines.push(`|-------|-------|`);
-  for (const [k, v] of Object.entries(LAYOUT_TOKENS)) {
-    lines.push(`| ${k} | ${v} |`);
-  }
-  lines.push('');
-
-  lines.push('### SURFACE (computed hex)');
-  lines.push(`| Level | Hex |`);
-  lines.push(`|-------|-----|`);
-  for (const [k, v] of Object.entries(SURFACE)) {
-    lines.push(`| ${k} | ${v} |`);
-  }
-  lines.push('');
-
-  lines.push('### CARD_TOKENS.spine.colors');
-  lines.push(`| State | Hex |`);
-  lines.push(`|-------|-----|`);
-  for (const [k, v] of Object.entries(CARD_TOKENS.spine.colors)) {
-    lines.push(`| ${k} | ${v} |`);
-  }
-  lines.push('');
-
-  lines.push('### Tailwind CSS Variable Mappings');
-  lines.push('Use these as Tailwind utility classes (e.g. `bg-primary`, `text-muted-foreground`, `border-border`):');
-  lines.push('`background`, `foreground`, `card`, `card-foreground`, `popover`, `popover-foreground`, `primary`, `primary-foreground`, `secondary`, `secondary-foreground`, `muted`, `muted-foreground`, `accent`, `accent-foreground`, `destructive`, `destructive-foreground`, `border`, `input`, `ring`, `chart-1`..`chart-5`, `sidebar`, `sidebar-foreground`, `sidebar-primary`, `sidebar-primary-foreground`, `sidebar-accent`, `sidebar-accent-foreground`, `sidebar-border`, `sidebar-ring`\n');
-
-  lines.push('### Radius Scale');
-  lines.push('- `radius-sm`: calc(0.625rem - 4px)');
-  lines.push('- `radius-md`: calc(0.625rem - 2px)');
-  lines.push('- `radius-lg`: 0.625rem');
-  lines.push('- `radius-xl`: calc(0.625rem + 4px)\n');
-
-  lines.push('### Fonts');
-  lines.push('- Sans: "Heebo", sans-serif');
-  lines.push('- Mono: "IBM Plex Mono", monospace\n');
-
-  return lines.join('\n');
-}
-
-function CopyAllTokensButton() {
-  const [copied, setCopied] = useState(false);
-  const prefersReducedMotion = useReducedMotion();
-
-  const markdown = useMemo(() => generateAllTokensMarkdown(), []);
-
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(markdown).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    });
-  }, [markdown]);
-
-  const iconTransition = prefersReducedMotion
-    ? { duration: 0 }
-    : { duration: 0.15, ease: [0, 0, 0.2, 1] };
-
-  return (
-    <button
-      onClick={handleCopy}
-      className="flex items-center gap-2 h-9 px-4 rounded-lg cursor-pointer border border-white/10 bg-white/[0.04] text-zinc-300 hover:text-zinc-100 hover:bg-white/[0.08] active:scale-[0.97] transition-[color,background-color,transform] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/30"
-    >
-      <AnimatePresence mode="wait" initial={false}>
-        {copied ? (
-          <motion.span
-            key="check"
-            className="flex items-center gap-2"
-            initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={prefersReducedMotion ? undefined : { opacity: 0, scale: 0.9 }}
-            transition={iconTransition}
-          >
-            <Check size={14} className="text-emerald-400" />
-            <span className="text-[12px] font-medium text-emerald-400">Copied all tokens</span>
-          </motion.span>
-        ) : (
-          <motion.span
-            key="copy"
-            className="flex items-center gap-2"
-            initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={prefersReducedMotion ? undefined : { opacity: 0, scale: 0.9 }}
-            transition={iconTransition}
-          >
-            <Copy size={14} />
-            <span className="text-[12px] font-medium">Copy all tokens for LLM</span>
-          </motion.span>
-        )}
-      </AnimatePresence>
-    </button>
   );
 }
 
@@ -1790,13 +1903,13 @@ function StyleguideUnifiedCard({ detection, defaultOpen = true }: { detection: D
       {slots.closureType && (
         <div className="px-2 pt-1.5 flex items-center gap-1">
           {slots.closureType === 'manual' ? (
-            <div className="flex items-center gap-1 text-[9px] text-zinc-500">
-              <Hand size={10} className="text-zinc-500" aria-hidden="true" />
+            <div className="flex items-center gap-1 text-[9px] text-n-120">
+              <Hand size={10} className="text-n-120" aria-hidden="true" />
               <span>סגירה ידנית</span>
             </div>
           ) : (
-            <div className="flex items-center gap-1 text-[9px] text-zinc-500">
-              <Zap size={10} className="text-zinc-500" aria-hidden="true" />
+            <div className="flex items-center gap-1 text-[9px] text-n-120">
+              <Zap size={10} className="text-n-120" aria-hidden="true" />
               <span>סגירה אוטומטית</span>
             </div>
           )}
@@ -1899,7 +2012,7 @@ function CardStatePlayground() {
       <div className="space-y-3">
         {STATE_GROUPS.map((group) => (
           <div key={group.label}>
-            <span className="block text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1.5">
+            <span className="block text-[10px] font-semibold uppercase tracking-widest text-n-9 mb-1.5">
               {group.label}
             </span>
             <div className="flex flex-wrap gap-1.5">
@@ -1912,8 +2025,8 @@ function CardStatePlayground() {
                     onClick={() => setActiveId(e.id)}
                     className={`flex items-center gap-1.5 h-7 px-2.5 rounded-md text-[11px] font-medium cursor-pointer transition-[color,background-color,box-shadow] duration-150 ease-out active:scale-[0.97] ${
                       isActive
-                        ? 'bg-white/[0.1] text-zinc-100 shadow-[0_0_0_1px_rgba(255,255,255,0.15)]'
-                        : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04]'
+                        ? 'bg-white/[0.1] text-n-12 shadow-[0_0_0_1px_rgba(255,255,255,0.15)]'
+                        : 'text-n-120 hover:text-n-10 hover:bg-white/[0.04]'
                     }`}
                   >
                     <span
@@ -1938,40 +2051,40 @@ function CardStatePlayground() {
 
       {/* Visual properties annotation */}
       <div className="space-y-2.5">
-        <h3 className="text-[13px] font-medium text-zinc-300">Computed Visual Properties</h3>
+        <h3 className="text-[13px] font-medium text-n-10">Computed Visual Properties</h3>
         <div className="overflow-x-auto rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)]" dir="ltr">
           <table className="w-full text-[12px]" dir="ltr">
             <thead>
               <tr className="border-b border-white/5" style={{ backgroundColor: SURFACE.level1 }}>
-                <th className="py-2 px-3 text-left font-medium text-zinc-400">Property</th>
-                <th className="py-2 px-3 text-left font-medium text-zinc-400">Value</th>
-                <th className="py-2 px-3 text-left font-medium text-zinc-400">Visual</th>
+                <th className="py-2 px-3 text-left font-medium text-n-9">Property</th>
+                <th className="py-2 px-3 text-left font-medium text-n-9">Value</th>
+                <th className="py-2 px-3 text-left font-medium text-n-9">Visual</th>
               </tr>
             </thead>
             <tbody>
               <tr className="border-b border-white/[0.03]">
                 <td className="py-2 px-3 font-mono text-sky-300/80">accent</td>
-                <td className="py-2 px-3 font-mono text-zinc-300">{slots.accent}</td>
+                <td className="py-2 px-3 font-mono text-n-10">{slots.accent}</td>
                 <td className="py-2 px-3">
                   <div className="flex items-center gap-2">
                     <div
                       className="w-4 h-4 rounded shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
                       style={{ backgroundColor: CARD_TOKENS.spine.colors[slots.accent] }}
                     />
-                    <span className="font-mono text-zinc-400 text-[11px]">{CARD_TOKENS.spine.colors[slots.accent]}</span>
+                    <span className="font-mono text-n-9 text-[11px]">{CARD_TOKENS.spine.colors[slots.accent]}</span>
                   </div>
                 </td>
               </tr>
               <tr className="border-b border-white/[0.03]">
                 <td className="py-2 px-3 font-mono text-sky-300/80">completed</td>
-                <td className="py-2 px-3 font-mono text-zinc-300">{slots.completed ? 'true' : 'false'}</td>
-                <td className="py-2 px-3 text-zinc-400">
+                <td className="py-2 px-3 font-mono text-n-10">{slots.completed ? 'true' : 'false'}</td>
+                <td className="py-2 px-3 text-n-9">
                   {slots.completed ? 'saturate(0.4) brightness(0.85)' : 'none'}
                 </td>
               </tr>
               <tr className="border-b border-white/[0.03]">
                 <td className="py-2 px-3 font-mono text-sky-300/80">icon</td>
-                <td className="py-2 px-3 font-mono text-zinc-300">{iconName}</td>
+                <td className="py-2 px-3 font-mono text-n-10">{iconName}</td>
                 <td className="py-2 px-3">
                   {slots.header.icon && (
                     <div
@@ -1993,7 +2106,7 @@ function CardStatePlayground() {
               </tr>
               <tr className="border-b border-white/[0.03]">
                 <td className="py-2 px-3 font-mono text-sky-300/80">iconColor</td>
-                <td className="py-2 px-3 font-mono text-zinc-300">{slots.header.iconColor ?? 'none'}</td>
+                <td className="py-2 px-3 font-mono text-n-10">{slots.header.iconColor ?? 'none'}</td>
                 <td className="py-2 px-3">
                   {slots.header.iconColor && (
                     <div className="flex items-center gap-2">
@@ -2001,15 +2114,15 @@ function CardStatePlayground() {
                         className="w-4 h-4 rounded shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
                         style={{ backgroundColor: slots.header.iconColor }}
                       />
-                      <span className="font-mono text-zinc-400 text-[11px]">{slots.header.iconColor}</span>
+                      <span className="font-mono text-n-9 text-[11px]">{slots.header.iconColor}</span>
                     </div>
                   )}
                 </td>
               </tr>
               <tr className="border-b border-white/[0.03]">
                 <td className="py-2 px-3 font-mono text-sky-300/80">iconBgActive</td>
-                <td className="py-2 px-3 font-mono text-zinc-300">{slots.header.iconBgActive ? 'true' : 'false'}</td>
-                <td className="py-2 px-3 text-zinc-400">
+                <td className="py-2 px-3 font-mono text-n-10">{slots.header.iconBgActive ? 'true' : 'false'}</td>
+                <td className="py-2 px-3 text-n-9">
                   {slots.header.iconBgActive
                     ? `${CARD_TOKENS.iconBox.activeBg} @ ${CARD_TOKENS.iconBox.activeBgOpacity} opacity`
                     : CARD_TOKENS.iconBox.defaultBg}
@@ -2017,25 +2130,25 @@ function CardStatePlayground() {
               </tr>
               <tr className="border-b border-white/[0.03]">
                 <td className="py-2 px-3 font-mono text-sky-300/80">closureType</td>
-                <td className="py-2 px-3 font-mono text-zinc-300">{slots.closureType ?? 'null'}</td>
-                <td className="py-2 px-3 text-zinc-400">
+                <td className="py-2 px-3 font-mono text-n-10">{slots.closureType ?? 'null'}</td>
+                <td className="py-2 px-3 text-n-9">
                   {slots.closureType === 'manual' ? 'Hand icon — manual closure' : slots.closureType === 'auto' ? 'Zap icon — auto closure' : '—'}
                 </td>
               </tr>
               <tr className="border-b border-white/[0.03]">
                 <td className="py-2 px-3 font-mono text-sky-300/80">activityStatus</td>
-                <td className="py-2 px-3 font-mono text-zinc-300">{activityStatus}</td>
+                <td className="py-2 px-3 font-mono text-n-10">{activityStatus}</td>
                 <td className="py-2 px-3">
                   <StatusChip label={chipLabel} color={chipColor} />
                 </td>
               </tr>
               <tr className="border-b border-white/[0.03] last:border-0">
                 <td className="py-2 px-3 font-mono text-sky-300/80">badge</td>
-                <td className="py-2 px-3 font-mono text-zinc-300">
+                <td className="py-2 px-3 font-mono text-n-10">
                   {slots.header.badge ? 'visible' : 'hidden'}
                 </td>
                 <td className="py-2 px-3">
-                  {slots.header.badge ?? <span className="text-zinc-600">—</span>}
+                  {slots.header.badge ?? <span className="text-n-7">—</span>}
                 </td>
               </tr>
             </tbody>
@@ -2218,10 +2331,7 @@ export default function StyleguidePage() {
 
         <StyleguideSidebar
           activeItem={activeItem}
-          activeAnchor={activeAnchor}
           onSelectPage={handleSelectPage}
-          onSelectSection={navigateTo}
-          onSearchOpen={() => setSearchOpen(true)}
         />
 
         <div className="flex-1 flex flex-col min-w-0">
@@ -2251,15 +2361,15 @@ export default function StyleguidePage() {
 
                 <div className="space-y-3">
                   <SectionHeading>Install</SectionHeading>
-                  <p className="text-[14px] leading-relaxed text-zinc-400">
+                  <p className="text-[14px] leading-relaxed text-n-9">
                     Install every component, token, and icon in one command:
                   </p>
                   <QuickStartCodeBlock code="npx shadcn@latest add @c2/all" />
-                  <p className="text-[13px] leading-relaxed text-zinc-400 mt-2">
+                  <p className="text-[13px] leading-relaxed text-n-9 mt-2">
                     Or pick only what you need:
                   </p>
                   <QuickStartCodeBlock code="npx shadcn@latest add @c2/button @c2/target-card @c2/status-chip" />
-                  <p className="text-[13px] leading-relaxed text-zinc-400 mt-2">
+                  <p className="text-[13px] leading-relaxed text-n-9 mt-2">
                     Dependencies are resolved automatically — installing <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">target-card</code> pulls in <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">tokens</code>, <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">utils</code>, and any other internal dependencies.
                   </p>
                 </div>
@@ -2281,21 +2391,21 @@ export function DetectionRow() {
 
                 <div className="space-y-3">
                   <SectionHeading>Project setup</SectionHeading>
-                  <p className="text-[13px] leading-relaxed text-zinc-500 mb-3">
+                  <p className="text-[13px] leading-relaxed text-n-120 mb-3">
                     First time? Complete these steps before installing components.
                   </p>
 
-                  <p className="text-[14px] leading-relaxed text-zinc-400">
-                    <span className="text-zinc-200 font-medium">1.</span>{' '}Requires <span className="text-zinc-200 font-medium">Vite + React + TypeScript + Tailwind CSS v4</span> with <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">@/*</code> path aliases configured.
+                  <p className="text-[14px] leading-relaxed text-n-9">
+                    <span className="text-n-11 font-medium">1.</span>{' '}Requires <span className="text-n-11 font-medium">Vite + React + TypeScript + Tailwind CSS v4</span> with <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">@/*</code> path aliases configured.
                   </p>
 
-                  <p className="text-[14px] leading-relaxed text-zinc-400 mt-4">
-                    <span className="text-zinc-200 font-medium">2.</span>{' '}Initialize shadcn if you don't have a <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">components.json</code> yet:
+                  <p className="text-[14px] leading-relaxed text-n-9 mt-4">
+                    <span className="text-n-11 font-medium">2.</span>{' '}Initialize shadcn if you don't have a <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">components.json</code> yet:
                   </p>
                   <QuickStartCodeBlock code="npx shadcn@latest init" />
 
-                  <p className="text-[14px] leading-relaxed text-zinc-400 mt-4">
-                    <span className="text-zinc-200 font-medium">3.</span>{' '}Add the C2 registry to your <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">components.json</code>:
+                  <p className="text-[14px] leading-relaxed text-n-9 mt-4">
+                    <span className="text-n-11 font-medium">3.</span>{' '}Add the C2 registry to your <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">components.json</code>:
                   </p>
                   <QuickStartCodeBlock code={`// components.json
 {
@@ -2304,25 +2414,25 @@ export function DetectionRow() {
   }
 }`} />
 
-                  <p className="text-[14px] leading-relaxed text-zinc-400 mt-4">
-                    <span className="text-zinc-200 font-medium">4.</span>{' '}Import the C2 theme in your CSS entry point:
+                  <p className="text-[14px] leading-relaxed text-n-9 mt-4">
+                    <span className="text-n-11 font-medium">4.</span>{' '}Import the C2 theme in your CSS entry point:
                   </p>
                   <QuickStartCodeBlock code={`/* src/styles/index.css */
 @import "tailwindcss";
 @import "./theme.css";
 @import "./fonts.css";`} />
-                  <p className="text-[13px] leading-relaxed text-zinc-400 mt-1.5">
+                  <p className="text-[13px] leading-relaxed text-n-9 mt-1.5">
                     Copy <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">theme.css</code> and <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">fonts.css</code> from the C2 Hub repo into your project's styles directory.
                   </p>
                 </div>
 
                 <div className="space-y-3">
                   <SectionHeading>Updating</SectionHeading>
-                  <p className="text-[14px] leading-relaxed text-zinc-400">
+                  <p className="text-[14px] leading-relaxed text-n-9">
                     Preview changes before updating:
                   </p>
                   <QuickStartCodeBlock code="npx shadcn@latest diff @c2/button" />
-                  <p className="text-[14px] leading-relaxed text-zinc-400 mt-3">
+                  <p className="text-[14px] leading-relaxed text-n-9 mt-3">
                     Apply the update:
                   </p>
                   <QuickStartCodeBlock code="npx shadcn@latest add @c2/button --overwrite" />
@@ -2337,11 +2447,11 @@ export function DetectionRow() {
               <div className="space-y-0 divide-y divide-white/[0.04]">
                 {CHANGELOG.map((entry, i) => (
                   <div key={entry.version} className={`space-y-3 ${i === 0 ? 'pb-8' : 'py-8'}`}>
-                    <span className="block text-[13px] font-mono text-zinc-500" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                    <span className="block text-[13px] font-mono text-n-120" style={{ fontVariantNumeric: 'tabular-nums' }}>
                       {entry.date}
                     </span>
                     <div className="flex items-center gap-2.5">
-                      <h3 className="text-[20px] font-semibold text-zinc-100 tracking-tight" style={{ fontVariantNumeric: 'tabular-nums', textWrap: 'balance' }}>
+                      <h3 className="text-[20px] font-semibold text-n-12 tracking-tight" style={{ fontVariantNumeric: 'tabular-nums', textWrap: 'balance' }}>
                         v{entry.version}
                       </h3>
                       {i === 0 && (
@@ -2352,7 +2462,7 @@ export function DetectionRow() {
                     </div>
                     <ul className="space-y-1.5 pl-4">
                       {entry.highlights.map((item) => (
-                        <li key={item} className="text-[14px] leading-relaxed text-zinc-400 list-disc marker:text-zinc-600" style={{ textWrap: 'pretty' }}>
+                        <li key={item} className="text-[14px] leading-relaxed text-n-9 list-disc marker:text-n-7" style={{ textWrap: 'pretty' }}>
                           <ChangelogLine text={item} />
                         </li>
                       ))}
@@ -2363,297 +2473,61 @@ export function DetectionRow() {
             </ComponentSection>
             )}
 
-            {activeItem === 'layout-tokens' && (
-            <ComponentSection id="layout-tokens" name="Layout Tokens" description="Sidebar dimensions and snap grid values used by the resizable layout shell.">
-              <PreviewPanel>
-                <TokenTable rows={[
-                  { token: 'sidebarWidthPx', value: LAYOUT_TOKENS.sidebarWidthPx, note: 'Default sidebar width' },
-                  { token: 'sidebarMinWidth', value: LAYOUT_TOKENS.sidebarMinWidth, note: 'Min resize bound' },
-                  { token: 'sidebarMaxWidth', value: LAYOUT_TOKENS.sidebarMaxWidth, note: 'Max resize bound' },
-                  { token: 'sidebarSnapInterval', value: LAYOUT_TOKENS.sidebarSnapInterval, note: 'Drag snap step' },
-                ]} />
-              </PreviewPanel>
-            </ComponentSection>
-            )}
+            {activeItem === 'styling' && (
+            <ComponentSection id="styling" name="Styling" description="Color tokens, elevation surfaces, and typography setup. Paste the theme CSS into your project to get the full design language.">
+              <SectionHeading>Theme CSS</SectionHeading>
+              <p className="text-[14px] text-n-9 mb-4 leading-relaxed">
+                The design system uses two CSS files: <code className="text-[13px] font-mono text-n-10">theme.css</code> for semantic color tokens (light/dark) and Tailwind bindings, and <code className="text-[13px] font-mono text-n-10">index.css</code> for the neutral scale, tactical red palette, and global resets. Copy each into your project.
+              </p>
+              <div className="space-y-6">
+                <CodePreviewBlock name="theme.css" description="Semantic color tokens, Tailwind @theme bindings, and base typography." code={themeCssSrc} />
+                <CodePreviewBlock name="index.css" description="Neutral scale, tactical red palette, custom theme colors, and global resets." code={indexCssSrc} />
+              </div>
 
-            {activeItem === 'elevation' && (
-            <ComponentSection id="elevation" name="Elevation System" description="Surfaces rise from a dark base (#141414) by mixing white overlays at increasing opacity. Click any level to copy its hex.">
+              <SectionHeading>Neutral Scale</SectionHeading>
+              <p className="text-[14px] text-n-9 mb-4 leading-relaxed">
+                12-step achromatic OKLCH ramp. Use <code className="text-[13px] font-mono text-n-10">text-n-8</code>, <code className="text-[13px] font-mono text-n-10">bg-n-3</code>, etc.
+              </p>
+              <PreviewPanel>
+                <div className="space-y-3">
+                  <div className="flex rounded-xl overflow-hidden shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((step) => (
+                      <div
+                        key={step}
+                        className="flex-1 h-16"
+                        style={{ backgroundColor: `var(--color-n-${step})` }}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex">
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((step) => (
+                      <div key={step} className="flex-1 flex flex-col items-center gap-0.5 min-w-0">
+                        <span className="text-[10px] font-mono text-n-9 tabular-nums">n-{step}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </PreviewPanel>
+
+              <SectionHeading>Elevation</SectionHeading>
+              <p className="text-[14px] text-n-9 mb-4 leading-relaxed">
+                Surfaces rise from a dark base ({ELEVATION.baseSurface}) by mixing white overlays at increasing opacity. Click any level to copy its hex.
+              </p>
               <PreviewPanel>
                 <ElevationRamp />
               </PreviewPanel>
-            </ComponentSection>
-            )}
 
-            {activeItem === 'card-tokens' && (
-            <ComponentSection id="card-tokens" name="Card Tokens" description="All spacing, color, and typography tokens consumed by the card component family (TargetCard, CardHeader, CardActions, etc.).">
+              <SectionHeading>Fonts</SectionHeading>
               <PreviewPanel>
-                <div className="space-y-8">
-                  <TokenSubSection title="Container">
-                    <div className="flex flex-wrap gap-4 mb-3">
-                      <ColorSwatch color={CARD_TOKENS.container.bgColor} label="bgColor" />
-                    </div>
-                    <TokenTable rows={[
-                      { token: 'borderRadius', value: CARD_TOKENS.container.borderRadius, note: 'px' },
-                      { token: 'borderWidth', value: CARD_TOKENS.container.borderWidth, note: 'px' },
-                      { token: 'borderColor', value: CARD_TOKENS.container.borderColor },
-                      { token: 'marginBottom', value: CARD_TOKENS.container.marginBottom, note: 'px — gap between cards' },
-                      { token: 'completedOpacity', value: CARD_TOKENS.container.completedOpacity, note: 'Desaturated resolved cards' },
-                    ]} />
-                  </TokenSubSection>
-
-                  <TokenSubSection title="Header">
-                    <TokenTable rows={[
-                      { token: 'paddingX', value: CARD_TOKENS.header.paddingX, note: 'px' },
-                      { token: 'paddingY', value: CARD_TOKENS.header.paddingY, note: 'px' },
-                      { token: 'gap', value: CARD_TOKENS.header.gap, note: 'px — between elements' },
-                      { token: 'hoverBgOpacity', value: CARD_TOKENS.header.hoverBgOpacity, note: 'White overlay on hover' },
-                      { token: 'selectedBgOpacity', value: CARD_TOKENS.header.selectedBgOpacity, note: 'White overlay when selected' },
-                    ]} />
-                  </TokenSubSection>
-
-                  <TokenSubSection title="Selected Ring">
-                    <div className="flex items-start gap-6 mb-3">
-                      <div
-                        className="w-20 h-14 rounded-lg"
-                        style={{
-                          backgroundColor: SURFACE.level1,
-                          boxShadow: `0 0 0 ${CARD_TOKENS.selectedRing.ringWidth}px rgba(0,0,0,${CARD_TOKENS.selectedRing.ringOpacity})`,
-                        }}
-                      />
-                    </div>
-                    <TokenTable rows={[
-                      { token: 'ringWidth', value: CARD_TOKENS.selectedRing.ringWidth, note: 'px' },
-                      { token: 'ringColor', value: CARD_TOKENS.selectedRing.ringColor },
-                      { token: 'ringOpacity', value: CARD_TOKENS.selectedRing.ringOpacity },
-                    ]} />
-                  </TokenSubSection>
-
-                  <TokenSubSection title="Typography — Title & Subtitle">
-                    <div className="flex items-baseline gap-6 mb-3 rounded-lg p-4" style={{ backgroundColor: SURFACE.level1 }}>
-                      <span style={{ fontSize: CARD_TOKENS.title.fontSize, fontWeight: CARD_TOKENS.title.fontWeight, color: CARD_TOKENS.title.color }}>
-                        Card Title (13px / 600)
-                      </span>
-                      <span style={{ fontSize: CARD_TOKENS.subtitle.fontSize, color: CARD_TOKENS.subtitle.color }}>
-                        Subtitle (10px)
-                      </span>
-                    </div>
-                    <TokenTable rows={[
-                      { token: 'title.fontSize', value: CARD_TOKENS.title.fontSize, note: 'px' },
-                      { token: 'title.fontWeight', value: CARD_TOKENS.title.fontWeight },
-                      { token: 'title.color', value: CARD_TOKENS.title.color },
-                      { token: 'subtitle.fontSize', value: CARD_TOKENS.subtitle.fontSize, note: 'px' },
-                      { token: 'subtitle.color', value: CARD_TOKENS.subtitle.color },
-                    ]} />
-                  </TokenSubSection>
-
-                  <TokenSubSection title="Icon Box">
-                    <div className="flex items-center gap-4 mb-3">
-                      <div className="flex flex-col items-center gap-1.5">
-                        <div
-                          className="flex items-center justify-center rounded-md"
-                          style={{
-                            width: CARD_TOKENS.iconBox.size,
-                            height: CARD_TOKENS.iconBox.size,
-                            borderRadius: CARD_TOKENS.iconBox.borderRadius,
-                            backgroundColor: CARD_TOKENS.iconBox.defaultBg,
-                          }}
-                        >
-                          <ShieldAlert size={CARD_TOKENS.iconBox.iconSize} className="text-zinc-300" />
-                        </div>
-                        <span className="text-[10px] text-zinc-400 font-mono">default</span>
-                      </div>
-                      <div className="flex flex-col items-center gap-1.5">
-                        <div
-                          className="flex items-center justify-center rounded-md"
-                          style={{
-                            width: CARD_TOKENS.iconBox.size,
-                            height: CARD_TOKENS.iconBox.size,
-                            borderRadius: CARD_TOKENS.iconBox.borderRadius,
-                            backgroundColor: CARD_TOKENS.iconBox.activeBg,
-                            opacity: CARD_TOKENS.iconBox.activeBgOpacity,
-                          }}
-                        >
-                          <ShieldAlert size={CARD_TOKENS.iconBox.iconSize} className="text-red-400" />
-                        </div>
-                        <span className="text-[10px] text-zinc-400 font-mono">active</span>
-                      </div>
-                    </div>
-                    <TokenTable rows={[
-                      { token: 'size', value: CARD_TOKENS.iconBox.size, note: 'px — box width & height' },
-                      { token: 'borderRadius', value: CARD_TOKENS.iconBox.borderRadius, note: 'px' },
-                      { token: 'iconSize', value: CARD_TOKENS.iconBox.iconSize, note: 'px — inner icon' },
-                      { token: 'defaultBg', value: CARD_TOKENS.iconBox.defaultBg },
-                      { token: 'activeBg', value: CARD_TOKENS.iconBox.activeBg },
-                      { token: 'activeBgOpacity', value: CARD_TOKENS.iconBox.activeBgOpacity },
-                    ]} />
-                  </TokenSubSection>
-
-                  <TokenSubSection title="Content Area">
-                    <div className="flex flex-wrap gap-4 mb-3">
-                      <ColorSwatch color={CARD_TOKENS.content.bgColor} label="bgColor" />
-                      <ColorSwatch color={CARD_TOKENS.content.borderColor} label="borderColor" />
-                    </div>
-                    <TokenTable rows={[
-                      { token: 'paddingX', value: CARD_TOKENS.content.paddingX, note: 'px' },
-                      { token: 'paddingY', value: CARD_TOKENS.content.paddingY, note: 'px' },
-                    ]} />
-                  </TokenSubSection>
-
-                  <TokenSubSection title="Animation">
-                    <TokenTable rows={[
-                      { token: 'expandDuration', value: CARD_TOKENS.animation.expandDuration, note: 'seconds — expand/collapse' },
-                      { token: 'chevronSize', value: CARD_TOKENS.animation.chevronSize, note: 'px' },
-                    ]} />
-                  </TokenSubSection>
-
-                  <TokenSubSection title="Spine">
-                    <div className="flex flex-wrap gap-4 mb-3">
-                      {Object.entries(CARD_TOKENS.spine.colors).map(([name, color]) => (
-                        <ColorSwatch key={name} color={color} label={name} />
-                      ))}
-                    </div>
-                    <TokenTable rows={[
-                      { token: 'width', value: CARD_TOKENS.spine.width, note: 'px — left accent bar' },
-                    ]} />
-                  </TokenSubSection>
-
-                  <TokenSubSection title="Timeline">
-                    <div className="flex items-center gap-6 mb-3">
-                      {[
-                        { label: 'dot', size: CARD_TOKENS.timeline.dotSize },
-                        { label: 'active dot', size: CARD_TOKENS.timeline.activeDotSize },
-                      ].map((d) => (
-                        <div key={d.label} className="flex flex-col items-center gap-1.5">
-                          <div className="rounded-full bg-zinc-400" style={{ width: d.size, height: d.size }} />
-                          <span className="text-[10px] text-zinc-400 font-mono">{d.label} ({d.size}px)</span>
-                        </div>
-                      ))}
-                      <div className="flex flex-col items-center gap-1.5">
-                        <div className="bg-zinc-600 rounded-full" style={{ width: CARD_TOKENS.timeline.lineWidth, height: 24 }} />
-                        <span className="text-[10px] text-zinc-400 font-mono">line ({CARD_TOKENS.timeline.lineWidth}px)</span>
-                      </div>
-                    </div>
-                    <TokenTable rows={[
-                      { token: 'dotSize', value: CARD_TOKENS.timeline.dotSize, note: 'px' },
-                      { token: 'activeDotSize', value: CARD_TOKENS.timeline.activeDotSize, note: 'px' },
-                      { token: 'lineWidth', value: CARD_TOKENS.timeline.lineWidth, note: 'px' },
-                      { token: 'gap', value: CARD_TOKENS.timeline.gap, note: 'px' },
-                    ]} />
-                  </TokenSubSection>
-
-                  <TokenSubSection title="Actions">
-                    <TokenTable rows={[
-                      { token: 'gap', value: CARD_TOKENS.actions.gap, note: 'px — between action buttons' },
-                      { token: 'gridMinCols', value: CARD_TOKENS.actions.gridMinCols, note: 'Minimum grid columns' },
-                    ]} />
-                  </TokenSubSection>
-                </div>
-              </PreviewPanel>
-            </ComponentSection>
-            )}
-
-            {activeItem === 'theme-vars' && (
-            <ComponentSection id="theme-vars" name="CSS Theme Variables" description="Semantic color tokens defined as CSS custom properties in theme.css. The app uses dark mode — these map to Tailwind utility classes via the @theme inline block.">
-              <PreviewPanel>
-                <div className="space-y-8">
-                  <TokenSubSection title="Core Colors (Dark)">
-                    <div className="flex flex-wrap gap-4">
-                      <CSSVarSwatch varName="--background" label="background" />
-                      <CSSVarSwatch varName="--foreground" label="foreground" />
-                      <CSSVarSwatch varName="--card" label="card" />
-                      <CSSVarSwatch varName="--card-foreground" label="card-fg" />
-                      <CSSVarSwatch varName="--popover" label="popover" />
-                      <CSSVarSwatch varName="--popover-foreground" label="popover-fg" />
-                    </div>
-                  </TokenSubSection>
-
-                  <TokenSubSection title="Interactive Colors">
-                    <div className="flex flex-wrap gap-4">
-                      <CSSVarSwatch varName="--primary" label="primary" />
-                      <CSSVarSwatch varName="--primary-foreground" label="primary-fg" />
-                      <CSSVarSwatch varName="--secondary" label="secondary" />
-                      <CSSVarSwatch varName="--secondary-foreground" label="secondary-fg" />
-                      <CSSVarSwatch varName="--muted" label="muted" />
-                      <CSSVarSwatch varName="--muted-foreground" label="muted-fg" />
-                      <CSSVarSwatch varName="--accent" label="accent" />
-                      <CSSVarSwatch varName="--accent-foreground" label="accent-fg" />
-                      <CSSVarSwatch varName="--destructive" label="destructive" />
-                      <CSSVarSwatch varName="--destructive-foreground" label="destruct-fg" />
-                    </div>
-                  </TokenSubSection>
-
-                  <TokenSubSection title="Border / Input / Ring">
-                    <div className="flex flex-wrap gap-4">
-                      <CSSVarSwatch varName="--border" label="border" />
-                      <CSSVarSwatch varName="--input" label="input" />
-                      <CSSVarSwatch varName="--ring" label="ring" />
-                    </div>
-                  </TokenSubSection>
-
-                  <TokenSubSection title="Chart Palette">
-                    <div className="flex flex-wrap gap-4">
-                      <CSSVarSwatch varName="--chart-1" label="chart-1" />
-                      <CSSVarSwatch varName="--chart-2" label="chart-2" />
-                      <CSSVarSwatch varName="--chart-3" label="chart-3" />
-                      <CSSVarSwatch varName="--chart-4" label="chart-4" />
-                      <CSSVarSwatch varName="--chart-5" label="chart-5" />
-                    </div>
-                  </TokenSubSection>
-
-                  <TokenSubSection title="Sidebar">
-                    <div className="flex flex-wrap gap-4">
-                      <CSSVarSwatch varName="--sidebar" label="sidebar" />
-                      <CSSVarSwatch varName="--sidebar-foreground" label="sidebar-fg" />
-                      <CSSVarSwatch varName="--sidebar-primary" label="sidebar-pri" />
-                      <CSSVarSwatch varName="--sidebar-primary-foreground" label="sidebar-pri-fg" />
-                      <CSSVarSwatch varName="--sidebar-accent" label="sidebar-acc" />
-                      <CSSVarSwatch varName="--sidebar-accent-foreground" label="sidebar-acc-fg" />
-                      <CSSVarSwatch varName="--sidebar-border" label="sidebar-brd" />
-                      <CSSVarSwatch varName="--sidebar-ring" label="sidebar-ring" />
-                    </div>
-                  </TokenSubSection>
-
-                  <TokenSubSection title="Radius Scale">
-                    <div className="flex flex-wrap gap-6">
-                      {(['sm', 'md', 'lg', 'xl'] as const).map((size) => (
-                        <div key={size} className="flex flex-col items-center gap-1.5">
-                          <div
-                            className="w-16 h-12 shadow-[0_0_0_1px_rgba(255,255,255,0.1)]"
-                            style={{ backgroundColor: SURFACE.level2, borderRadius: `var(--radius-${size})` }}
-                          />
-                          <span className="text-[10px] text-zinc-400 font-mono">radius-{size}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </TokenSubSection>
-
-                  <TokenSubSection title="Font Families">
-                    <div className="space-y-3 rounded-lg p-4" style={{ backgroundColor: SURFACE.level1 }}>
-                      <div>
-                        <span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1 block">Sans — Heebo</span>
-                        <p className="font-sans text-base text-zinc-200">אבגדהו The quick brown fox jumps over the lazy dog — 0123456789</p>
-                      </div>
-                      <div className="border-t border-white/5 pt-3">
-                        <span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1 block">Mono — IBM Plex Mono</span>
-                        <p className="font-mono text-base text-zinc-200">const x = 42; // 0123456789 → tabular-nums</p>
-                      </div>
-                    </div>
-                  </TokenSubSection>
-
-                  <TokenSubSection title="Typography Defaults">
-                    <div className="space-y-2 rounded-lg p-4" style={{ backgroundColor: SURFACE.level1 }}>
-                      <h1 className="text-zinc-200">h1 — 2xl / medium</h1>
-                      <h2 className="text-zinc-200">h2 — xl / medium</h2>
-                      <h3 className="text-zinc-200">h3 — lg / medium</h3>
-                      <h4 className="text-zinc-200">h4 — base / medium</h4>
-                      <p className="text-zinc-400 text-sm mt-2">Body text inherits base font-size (16px) from --font-size.</p>
-                    </div>
-                    <TokenTable rows={[
-                      { token: '--font-size', value: '16px', note: 'Root html font-size' },
-                      { token: '--font-weight-medium', value: '500', note: 'Headings, labels, buttons' },
-                      { token: '--font-weight-normal', value: '400', note: 'Body, inputs' },
-                    ]} />
-                  </TokenSubSection>
+                <div className="space-y-3">
+                  <div>
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-n-9 mb-1 block">Sans — Heebo</span>
+                    <p className="font-sans text-base text-n-11">אבגדהו The quick brown fox jumps over the lazy dog — 0123456789</p>
+                  </div>
+                  <div className="border-t border-white/5 pt-3">
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-n-9 mb-1 block">Mono — IBM Plex Mono</span>
+                    <p className="font-mono text-base text-n-11">const x = 42; // 0123456789 → tabular-nums</p>
+                  </div>
                 </div>
               </PreviewPanel>
             </ComponentSection>
@@ -2682,11 +2556,6 @@ export function DetectionRow() {
                 { name: 'className', type: 'string', description: 'Additional Tailwind classes' },
               ]} />
 
-              <SectionHeading>Color Variants</SectionHeading>
-              <VariantGrid
-                entries={Object.entries(STATUS_CHIP_COLORS).map(([key, val]) => ({ key, usage: val.usage }))}
-                renderSample={(key) => <StatusChip label={key} color={key as StatusChipColor} />}
-              />
             </ComponentSection>
             )}
 
@@ -2932,13 +2801,13 @@ export function DetectionRow() {
               <CodePreviewBlock name="AccordionSection" description="Collapsible section with animated expand/collapse. Used inside cards for details, logs, and sensors." tight code={accordionSectionSrc}>
                 <div className="max-w-sm rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level1 }}>
                   <AccordionSection title="ברירת מחדל (סגור)" icon={Eye}>
-                    <div className="p-3 text-xs text-zinc-400">תוכן AccordionSection</div>
+                    <div className="p-3 text-xs text-n-9">תוכן AccordionSection</div>
                   </AccordionSection>
                   <AccordionSection title="פתוח כברירת מחדל" icon={History} defaultOpen>
-                    <div className="p-3 text-xs text-zinc-400">תוכן AccordionSection שנפתח אוטומטית.</div>
+                    <div className="p-3 text-xs text-n-9">תוכן AccordionSection שנפתח אוטומטית.</div>
                   </AccordionSection>
                   <AccordionSection title="עם פעולת כותרת" icon={Activity} headerAction={<StatusChip label="3" color="orange" />}>
-                    <div className="p-3 text-xs text-zinc-400">AccordionSection עם badge בכותרת</div>
+                    <div className="p-3 text-xs text-n-9">AccordionSection עם badge בכותרת</div>
                   </AccordionSection>
                 </div>
               </CodePreviewBlock>
@@ -3312,7 +3181,7 @@ export function DetectionRow() {
             <ComponentSection id="card-footer-dock" name="CardFooterDock" description="Bottom-anchored action bar for cards. Renders equal-width buttons in a tinted dock strip.">
               <CodePreviewBlock name="CardFooterDock" description="Bottom-anchored action bar for cards." tight code={cardFooterDockSrc}>
                 <div className="max-w-sm rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level1 }}>
-                  <div className="p-4 text-xs text-zinc-500">Card content above…</div>
+                  <div className="p-4 text-xs text-n-120">Card content above…</div>
                   <CardFooterDock actions={[
                     { id: 'details', label: 'פרטים', icon: Eye },
                     { id: 'track', label: 'מעקב', icon: Crosshair },
@@ -3336,7 +3205,7 @@ export function DetectionRow() {
               <SectionHeading>Examples</SectionHeading>
               <ExampleBlock title="With disabled and loading states" tight>
                 <div className="max-w-sm rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level1 }}>
-                  <div className="p-4 text-xs text-zinc-500">Card content above…</div>
+                  <div className="p-4 text-xs text-n-120">Card content above…</div>
                   <CardFooterDock actions={[
                     { id: 'save', label: 'שמירה', icon: Download, loading: true },
                     { id: 'cancel', label: 'ביטול', icon: X, disabled: true },
@@ -3470,21 +3339,21 @@ export function DetectionRow() {
                   <div className="flex flex-col gap-2 px-4 pt-3 pb-2 border-b border-white/10">
                     <div className="flex items-center justify-between">
                       <h2 className="text-xs font-medium text-white uppercase tracking-wider">מכשירים (0)</h2>
-                      <div className="p-2 -m-1 rounded text-zinc-500"><X size={14} /></div>
+                      <div className="p-2 -m-1 rounded text-n-120"><X size={14} /></div>
                     </div>
                     <div className="relative">
-                      <Search size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
-                      <div className="w-full bg-white/[0.04] shadow-[0_0_0_1px_rgba(255,255,255,0.1)] rounded text-[12px] text-zinc-600 pr-7 pl-7 py-1.5">חיפוש...</div>
+                      <Search size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-n-120 pointer-events-none" />
+                      <div className="w-full bg-white/[0.04] shadow-[0_0_0_1px_rgba(255,255,255,0.1)] rounded text-[12px] text-n-7 pr-7 pl-7 py-1.5">חיפוש...</div>
                     </div>
                     <div className="flex items-center gap-1">
                       {[CameraIcon, RadarIcon, DroneHiveIcon, SensorIcon, LauncherIcon, LidarIcon].map((Icon, i) => (
-                        <div key={i} className="p-2 rounded text-white hover:text-zinc-300 hover:bg-white/[0.06]">
+                        <div key={i} className="p-2 rounded text-white hover:text-n-10 hover:bg-white/[0.06]">
                           <Icon size={20} fill="currentColor" />
                         </div>
                       ))}
                     </div>
                   </div>
-                  <div className="px-3 py-8 text-center text-[12px] text-zinc-600">אין מכשירים תואמים</div>
+                  <div className="px-3 py-8 text-center text-[12px] text-n-7">אין מכשירים תואמים</div>
                 </StyleguideDeviceTile>
               </ExampleBlock>
 
@@ -3493,7 +3362,7 @@ export function DetectionRow() {
                 <StyleguideDeviceTile label="Panel title with device count and close button.">
                   <div className="flex items-center justify-between px-4 pt-3 pb-2">
                     <h2 className="text-xs font-medium text-white uppercase tracking-wider">מכשירים (16)</h2>
-                    <button className="p-2 -m-1 rounded hover:bg-white/10 text-zinc-500 hover:text-zinc-300 transition-colors">
+                    <button className="p-2 -m-1 rounded hover:bg-white/10 text-n-120 hover:text-n-10 transition-colors">
                       <X size={14} />
                     </button>
                   </div>
@@ -3506,12 +3375,12 @@ export function DetectionRow() {
                   <StyleguideDeviceTile label="Default state — all device types active, search empty.">
                     <div className="flex flex-col gap-2 px-4 py-3">
                       <div className="relative">
-                        <Search size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
-                        <div className="w-full bg-white/[0.04] shadow-[0_0_0_1px_rgba(255,255,255,0.1)] rounded text-[12px] text-zinc-600 pr-7 pl-7 py-1.5">חיפוש...</div>
+                        <Search size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-n-120 pointer-events-none" />
+                        <div className="w-full bg-white/[0.04] shadow-[0_0_0_1px_rgba(255,255,255,0.1)] rounded text-[12px] text-n-7 pr-7 pl-7 py-1.5">חיפוש...</div>
                       </div>
                       <div className="flex items-center gap-1">
                         {[CameraIcon, RadarIcon, DroneHiveIcon, SensorIcon, LauncherIcon, LidarIcon].map((Icon, i) => (
-                          <div key={i} className="p-2 rounded text-white hover:text-zinc-300 hover:bg-white/[0.06]">
+                          <div key={i} className="p-2 rounded text-white hover:text-n-10 hover:bg-white/[0.06]">
                             <Icon size={20} fill="currentColor" />
                           </div>
                         ))}
@@ -3522,9 +3391,9 @@ export function DetectionRow() {
                   <StyleguideDeviceTile label="Isolated filter — only cameras selected. 'ניקוי' reset button appears.">
                     <div className="flex flex-col gap-2 px-4 py-3">
                       <div className="relative">
-                        <Search size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
-                        <div className="w-full bg-white/[0.04] shadow-[0_0_0_1px_rgba(255,255,255,0.1)] rounded text-[12px] text-zinc-300 pr-7 pl-7 py-1.5">MAGOS</div>
-                        <button className="absolute left-1 top-1/2 -translate-y-1/2 p-1 text-zinc-500 hover:text-zinc-300">
+                        <Search size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-n-120 pointer-events-none" />
+                        <div className="w-full bg-white/[0.04] shadow-[0_0_0_1px_rgba(255,255,255,0.1)] rounded text-[12px] text-n-10 pr-7 pl-7 py-1.5">MAGOS</div>
+                        <button className="absolute left-1 top-1/2 -translate-y-1/2 p-1 text-n-120 hover:text-n-10">
                           <X size={12} />
                         </button>
                       </div>
@@ -3533,11 +3402,11 @@ export function DetectionRow() {
                           <CameraIcon size={20} fill="currentColor" />
                         </div>
                         {[RadarIcon, DroneHiveIcon, SensorIcon, LauncherIcon, LidarIcon].map((Icon, i) => (
-                          <div key={i} className="p-2 rounded text-white hover:text-zinc-300 hover:bg-white/[0.06]">
+                          <div key={i} className="p-2 rounded text-white hover:text-n-10 hover:bg-white/[0.06]">
                             <Icon size={20} fill="currentColor" />
                           </div>
                         ))}
-                        <button className="mr-auto px-2 py-1 rounded text-[11px] text-white/70 hover:text-zinc-300 hover:bg-white/[0.06]">
+                        <button className="mr-auto px-2 py-1 rounded text-[11px] text-white/70 hover:text-n-10 hover:bg-white/[0.06]">
                           ניקוי
                         </button>
                       </div>
@@ -3565,7 +3434,7 @@ export function DetectionRow() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[13px] font-medium text-zinc-300">PTZ Camera (North)</span>
+                          <span className="text-[13px] font-medium text-n-10">PTZ Camera (North)</span>
                           <span className="flex items-center gap-1.5 text-[11px] font-['Heebo'] tabular-nums text-white/50">
                             <StyleguideBatteryIcon pct={18} />
                             18%
@@ -3579,7 +3448,7 @@ export function DetectionRow() {
                     <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right border-b border-white/[0.06] hover:bg-white/[0.04] cursor-pointer">
                       <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-orange-900/40">
                         <SensorIcon size={20} fill="#f97316" />
-                        <span className="absolute -bottom-0.5 -right-0.5 size-2 rounded-full ring-2 ring-zinc-950 bg-amber-400" />
+                        <span className="absolute -bottom-0.5 -right-0.5 size-2 rounded-full ring-2 ring-n-1 bg-amber-400" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
@@ -3597,7 +3466,7 @@ export function DetectionRow() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[13px] font-medium text-zinc-300">RADA ieMHR</span>
+                          <span className="text-[13px] font-medium text-n-10">RADA ieMHR</span>
                           <span className="flex items-center gap-1 text-xs font-mono tabular-nums text-white">
                             <BellOff size={12} className="text-white" />
                             28:42
@@ -3613,7 +3482,7 @@ export function DetectionRow() {
                         <SensorIcon size={20} fill="white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <span className="text-[13px] font-medium text-zinc-300">Regulus North</span>
+                        <span className="text-[13px] font-medium text-n-10">Regulus North</span>
                         <div className="text-[11px] font-mono tabular-nums text-white/50">1.5km</div>
                       </div>
                       <button className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium bg-[oklch(0.348_0.111_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)]">
@@ -3631,14 +3500,14 @@ export function DetectionRow() {
                   {([
                     { label: 'Warning (אזהרה)', color: 'bg-amber-400' },
                     { label: 'Error (שגיאה)', color: 'bg-red-400' },
-                    { label: 'Offline (לא מקוון)', color: 'bg-zinc-500' },
+                    { label: 'Offline (לא מקוון)', color: 'bg-n-120' },
                   ] as const).map(({ label, color }) => (
                     <div key={label} className="flex flex-col items-center gap-2 rounded-lg border border-white/[0.06] bg-black/20 p-4">
                       <div className="relative w-8 h-8 rounded flex items-center justify-center bg-white/10">
                         <SensorIcon size={20} fill="white" />
-                        <span className={`absolute -bottom-0.5 -right-0.5 size-2 rounded-full ring-2 ring-zinc-950 ${color}`} />
+                        <span className={`absolute -bottom-0.5 -right-0.5 size-2 rounded-full ring-2 ring-n-1 ${color}`} />
                       </div>
-                      <span className="text-[10px] font-mono text-zinc-400">{label}</span>
+                      <span className="text-[10px] font-mono text-n-9">{label}</span>
                     </div>
                   ))}
                 </div>
@@ -3658,7 +3527,7 @@ export function DetectionRow() {
                         <StyleguideBatteryIcon pct={pct} />
                         {pct}%
                       </span>
-                      <span className="text-[10px] font-mono text-zinc-400">{label}</span>
+                      <span className="text-[10px] font-mono text-n-9">{label}</span>
                     </div>
                   ))}
                 </div>
@@ -3673,7 +3542,7 @@ export function DetectionRow() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-[13px] font-medium text-zinc-300">PTZ Camera (North)</span>
+                        <span className="text-[13px] font-medium text-n-10">PTZ Camera (North)</span>
                         <span className="flex items-center gap-1.5 text-[11px] font-['Heebo'] tabular-nums text-white/50">
                           <StyleguideBatteryIcon pct={18} />
                           18%
@@ -3684,7 +3553,7 @@ export function DetectionRow() {
                   <div className="flex flex-col bg-white/[0.03]">
                     <div className="flex items-center gap-0 px-3 border-b border-white/[0.06]">
                       {['רגיל', 'לילה', 'זום'].map((tab, i) => (
-                        <button key={tab} className={`px-3 py-2 text-[12px] font-medium border-b-2 ${i === 0 ? 'text-white border-white' : 'text-zinc-500 border-transparent hover:text-zinc-300'}`}>
+                        <button key={tab} className={`px-3 py-2 text-[12px] font-medium border-b-2 ${i === 0 ? 'text-white border-white' : 'text-n-120 border-transparent hover:text-n-10'}`}>
                           {tab}
                         </button>
                       ))}
@@ -3735,7 +3604,7 @@ export function DetectionRow() {
                         <SensorIcon size={20} fill="white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <span className="text-[13px] font-medium text-zinc-300">Regulus North</span>
+                        <span className="text-[13px] font-medium text-n-10">Regulus North</span>
                         <div className="text-[11px] font-mono tabular-nums text-white/50">1.5km</div>
                       </div>
                       <button className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium bg-[oklch(0.348_0.111_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)]">
@@ -3775,7 +3644,7 @@ export function DetectionRow() {
                         <SensorIcon size={20} fill="white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <span className="text-[13px] font-medium text-zinc-300">Regulus East</span>
+                        <span className="text-[13px] font-medium text-n-10">Regulus East</span>
                       </div>
                       <button disabled className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium opacity-40 cursor-not-allowed bg-[oklch(0.348_0.111_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)]">
                         <StyleguideJamIcon size={12} />
@@ -3788,7 +3657,7 @@ export function DetectionRow() {
                     <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right bg-white/[0.04] border-b border-white/[0.06]">
                       <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-orange-900/40">
                         <SensorIcon size={20} fill="#f97316" />
-                        <span className="absolute -bottom-0.5 -right-0.5 size-2 rounded-full ring-2 ring-zinc-950 bg-red-400" />
+                        <span className="absolute -bottom-0.5 -right-0.5 size-2 rounded-full ring-2 ring-n-1 bg-red-400" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
@@ -3813,7 +3682,7 @@ export function DetectionRow() {
                       <svg width={20} height={20} viewBox="0 0 28 32" fill="none"><path d="M23.334 15.7502L9.33696 0.583495L5.86139 4.0835L10.5007 11.0835L9.32456 15.7502L10.5007 20.4168L5.86139 27.4168L9.32456 30.6801L23.334 15.7502Z" fill="white" stroke="#0a0a0a" strokeWidth="1"/></svg>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <span className="text-[13px] font-medium text-zinc-300">סיור-3</span>
+                      <span className="text-[13px] font-medium text-n-10">סיור-3</span>
                     </div>
                   </div>
                   <div className="flex flex-col bg-white/[0.03]">
@@ -3864,7 +3733,7 @@ export function DetectionRow() {
                         {icon}
                         {text}
                       </button>
-                      <span className="text-[10px] font-mono text-zinc-400">{label}</span>
+                      <span className="text-[10px] font-mono text-n-9">{label}</span>
                     </div>
                   ))}
                 </div>
@@ -3915,6 +3784,12 @@ export function DetectionRow() {
             </ComponentSection>
             )}
 
+            {activeItem === 'engagement-line-flows' && (
+            <ComponentSection id="engagement-line-flows" name="Engagement Line" description="The dashed engagement line connects an effector asset to the active hostile target on the tactical map. Animated with marching dashes and traveling particles, it shifts from white (standby) to red (mitigating) when a jam is initiated.">
+              <EngagementLineFlows />
+            </ComponentSection>
+            )}
+
             {activeItem === 'map-markers' && (
             <ComponentSection id="map-markers" name="Map Markers" description="Tactical marker system: SVG icons, composited layers, interaction states, affiliation palettes, and map-level overlays.">
 
@@ -3943,8 +3818,8 @@ export function DetectionRow() {
               {/* ── Layer Anatomy ── */}
               <div id="layer-anatomy" className="scroll-mt-12 space-y-6 pt-10">
                 <div className="space-y-2">
-                  <h3 className="text-lg font-semibold text-zinc-100">Layer Anatomy</h3>
-                  <p className="text-sm leading-relaxed text-zinc-400">
+                  <h3 className="text-lg font-semibold text-n-12">Layer Anatomy</h3>
+                  <p className="text-sm leading-relaxed text-n-9">
                     Each marker composites 4 concentric layers plus optional overlays. Hover a layer card to spotlight it on the preview.
                   </p>
                 </div>
@@ -3966,7 +3841,7 @@ export function DetectionRow() {
                         onMouseEnter={() => handleLayerEnter(num)}
                         onMouseLeave={handleLayerLeave}
                       >
-                        <span className="text-sm font-semibold text-zinc-200">Layer {layer}</span>
+                        <span className="text-sm font-semibold text-n-11">Layer {layer}</span>
                       </div>
                     ))}
                     <div
@@ -3978,7 +3853,7 @@ export function DetectionRow() {
                       onMouseEnter={() => handleLayerEnter(5)}
                       onMouseLeave={handleLayerLeave}
                     >
-                      <span className="text-sm font-semibold text-zinc-200">Overlays</span>
+                      <span className="text-sm font-semibold text-n-11">Overlays</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-center rounded-xl border border-white/10 p-8" style={{ background: 'radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.25) 0%, rgba(0, 0, 0, 1) 61%)' }}>
@@ -4007,8 +3882,8 @@ export function DetectionRow() {
               {/* ── State Matrix ── */}
               <div id="state-matrix" className="scroll-mt-12 space-y-6 pt-10">
                 <div className="space-y-2">
-                  <h3 className="text-lg font-semibold text-zinc-100">Interaction State Matrix</h3>
-                  <p className="text-sm leading-relaxed text-zinc-400">
+                  <h3 className="text-lg font-semibold text-n-12">Interaction State Matrix</h3>
+                  <p className="text-sm leading-relaxed text-n-9">
                     {INTERACTION_STATES.length} interaction states &times; {AFFILIATIONS.length} affiliations = {INTERACTION_STATES.length * AFFILIATIONS.length} visual combinations. Hover a state card to preview it. Click an affiliation dot to change the hero.
                   </p>
                 </div>
@@ -4051,7 +3926,7 @@ export function DetectionRow() {
                             />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-baseline gap-2">
-                                <span className="text-sm font-semibold text-zinc-200">{INTERACTION_STATE_LABELS[state]}</span>
+                                <span className="text-sm font-semibold text-n-11">{INTERACTION_STATE_LABELS[state]}</span>
                               </div>
                             </div>
                           </div>
@@ -4075,9 +3950,9 @@ export function DetectionRow() {
                       );
                     })()}
                     <div className="text-center space-y-1">
-                      <span className="block text-sm font-semibold text-zinc-100">{INTERACTION_STATE_LABELS[explorerState]}</span>
+                      <span className="block text-sm font-semibold text-n-12">{INTERACTION_STATE_LABELS[explorerState]}</span>
                     </div>
-                    <span className="text-[10px] text-zinc-500">{AFFILIATION_LABELS[hoveredAff ?? explorerAff]}</span>
+                    <span className="text-[10px] text-n-120">{AFFILIATION_LABELS[hoveredAff ?? explorerAff]}</span>
                   </div>
 
                 </div>
@@ -4086,9 +3961,9 @@ export function DetectionRow() {
               {/* ── Icon Catalog ── */}
               <div id="icon-catalog" className="scroll-mt-12 space-y-6 pt-10">
                 <div className="space-y-2">
-                  <h3 className="text-lg font-semibold text-zinc-100">Icon Catalog</h3>
-                  <p className="text-sm leading-relaxed text-zinc-400">
-                    Tactical SVG icons used inside map markers on the Mapbox canvas. Each icon accepts a <code className="text-zinc-300">fill</code> prop.
+                  <h3 className="text-lg font-semibold text-n-12">Icon Catalog</h3>
+                  <p className="text-sm leading-relaxed text-n-9">
+                    Tactical SVG icons used inside map markers on the Mapbox canvas. Each icon accepts a <code className="text-n-10">fill</code> prop.
                   </p>
                 </div>
 

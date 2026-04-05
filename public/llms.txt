@@ -1,0 +1,6 @@
+# C2 Hub — doc index for assistants
+
+Registry & conventions (markdown): https://raw.githubusercontent.com/kela-guy/C1Flow/main/design-system.md
+Live styleguide (components / props): https://c2-hub-three.vercel.app/styleguide
+
+Key anchors: design-system.md sections "Component Registry", "Design Tokens", "Conventions". Styleguide URLs use fragment IDs matching nav, e.g. #status-chip, #target-card.

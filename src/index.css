@@ -24,6 +24,20 @@
 }
 
 @theme {
+  /* ── Neutral scale (achromatic OKLCH) ── */
+  --color-n-1: oklch(0.162 0 0);
+  --color-n-2: oklch(0.195 0 0);
+  --color-n-3: oklch(0.254 0 0);
+  --color-n-4: oklch(0.302 0 0);
+  --color-n-5: oklch(0.348 0 0);
+  --color-n-6: oklch(0.396 0 0);
+  --color-n-7: oklch(0.459 0 0);
+  --color-n-8: oklch(0.549 0 0);
+  --color-n-9: oklch(0.649 0 0);
+  --color-n-10: oklch(0.72 0 0);
+  --color-n-11: oklch(0.863 0 0);
+  --color-n-12: oklch(0.933 0 0);
+
   /* ── Colors ── */
   --color-surface: rgba(255, 255, 255, 0.1);
   --color-surface-subtle: rgba(255, 255, 255, 0.05);

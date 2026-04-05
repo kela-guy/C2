@@ -25,10 +25,7 @@ export const NAV: NavGroup[] = [
   {
     label: 'Foundations',
     items: [
-      { id: 'layout-tokens', label: 'Layout Tokens' },
-      { id: 'elevation', label: 'Elevation System' },
-      { id: 'card-tokens', label: 'Card Tokens' },
-      { id: 'theme-vars', label: 'CSS Theme Variables' },
+      { id: 'styling', label: 'Styling' },
     ],
   },
   {
@@ -98,6 +95,14 @@ export const NAV: NavGroup[] = [
           { id: 'flow-hover-device', label: 'Hover Device' },
           { id: 'flow-click-asset', label: 'Click Asset' },
           { id: 'flow-camera-lookat', label: 'Camera Look-At' },
+        ],
+      },
+      {
+        id: 'engagement-line-flows',
+        label: 'Engagement Line',
+        children: [
+          { id: 'engagement-anatomy', label: 'Line Anatomy' },
+          { id: 'engagement-spec', label: 'Animation Spec' },
         ],
       },
     ],
