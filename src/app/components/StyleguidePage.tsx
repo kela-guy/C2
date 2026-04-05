@@ -95,7 +95,7 @@ function ComponentSection({
     <section id={id} className="scroll-mt-12 space-y-6">
       <div className="flex flex-col gap-1.5">
         <h2 className="text-[28px] font-semibold tracking-tight text-n-12" style={{ textWrap: 'balance' }}>{name}</h2>
-        <p className="text-[15px] leading-relaxed text-n-9" style={{ textWrap: 'pretty' }}>{description}</p>
+        <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide" style={{ textWrap: 'pretty' }}>{description}</p>
       </div>
       {children}
     </section>
@@ -135,7 +135,7 @@ function ExampleBlock({
 }) {
   return (
     <div id={id} className={`space-y-2.5 ${id ? 'scroll-mt-20' : ''}`}>
-      <h3 className="text-[14px] font-medium text-n-11">{title}</h3>
+      <h3 className="text-[16px] font-normal text-n-11">{title}</h3>
       <PreviewPanel tight={tight}>{children}</PreviewPanel>
     </div>
   );
@@ -293,7 +293,7 @@ function InteractionFlowBlock({
     <div id={id} className="scroll-mt-20 space-y-2.5">
       <div className="space-y-1">
         <h4 className="text-[15px] font-semibold text-n-12 tracking-tight">{title}</h4>
-        <p className="text-[13px] text-n-9 leading-relaxed">{description}</p>
+        <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide">{description}</p>
       </div>
 
       <div
@@ -1308,7 +1308,7 @@ function EngagementLineFlows() {
       <div id="engagement-anatomy" className="scroll-mt-12 space-y-6">
         <div className="space-y-2">
           <h3 className="text-lg font-semibold text-n-12">Line Anatomy</h3>
-          <p className="text-sm leading-relaxed text-n-9">
+          <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide">
             Dashed engagement line with spring-eased traveling particles and a midpoint distance badge. Connects the selected effector to the active target via Mapbox GL layers.
           </p>
         </div>
@@ -1371,8 +1371,8 @@ function EngagementLineFlows() {
                 </div>
               </div>
             </div>
-            <div className="text-[12px] text-n-120">
-              Both animations respect <code className="text-n-9 font-mono">prefers-reduced-motion: reduce</code> — line and particles render statically.
+            <div className="text-[12px] text-white/50">
+              Both animations respect <code className="text-white/60 font-mono">prefers-reduced-motion: reduce</code> — line and particles render statically.
             </div>
           </div>
         </CodePreviewBlock>
@@ -2376,15 +2376,15 @@ export default function StyleguidePage() {
 
                 <div className="space-y-3">
                   <SectionHeading>Install</SectionHeading>
-                  <p className="text-[14px] leading-relaxed text-n-9">
+                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide">
                     Install every component, token, and icon in one command:
                   </p>
                   <QuickStartCodeBlock code="npx shadcn@latest add @c2/all" />
-                  <p className="text-[13px] leading-relaxed text-n-9 mt-2">
+                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide mt-2">
                     Or pick only what you need:
                   </p>
                   <QuickStartCodeBlock code="npx shadcn@latest add @c2/button @c2/target-card @c2/status-chip" />
-                  <p className="text-[13px] leading-relaxed text-n-9 mt-2">
+                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide mt-2">
                     Dependencies are resolved automatically — installing <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">target-card</code> pulls in <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">tokens</code>, <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">utils</code>, and any other internal dependencies.
                   </p>
                 </div>
@@ -2406,20 +2406,20 @@ export function DetectionRow() {
 
                 <div className="space-y-3">
                   <SectionHeading>Project setup</SectionHeading>
-                  <p className="text-[13px] leading-relaxed text-n-120 mb-3">
+                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide mb-3">
                     First time? Complete these steps before installing components.
                   </p>
 
-                  <p className="text-[14px] leading-relaxed text-n-9">
+                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide">
                     <span className="text-n-11 font-medium">1.</span>{' '}Requires <span className="text-n-11 font-medium">Vite + React + TypeScript + Tailwind CSS v4</span> with <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">@/*</code> path aliases configured.
                   </p>
 
-                  <p className="text-[14px] leading-relaxed text-n-9 mt-4">
+                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide mt-4">
                     <span className="text-n-11 font-medium">2.</span>{' '}Initialize shadcn if you don't have a <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">components.json</code> yet:
                   </p>
                   <QuickStartCodeBlock code="npx shadcn@latest init" />
 
-                  <p className="text-[14px] leading-relaxed text-n-9 mt-4">
+                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide mt-4">
                     <span className="text-n-11 font-medium">3.</span>{' '}Add the C2 registry to your <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">components.json</code>:
                   </p>
                   <QuickStartCodeBlock code={`// components.json
@@ -2429,25 +2429,25 @@ export function DetectionRow() {
   }
 }`} />
 
-                  <p className="text-[14px] leading-relaxed text-n-9 mt-4">
+                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide mt-4">
                     <span className="text-n-11 font-medium">4.</span>{' '}Import the C2 theme in your CSS entry point:
                   </p>
                   <QuickStartCodeBlock code={`/* src/styles/index.css */
 @import "tailwindcss";
 @import "./theme.css";
 @import "./fonts.css";`} />
-                  <p className="text-[13px] leading-relaxed text-n-9 mt-1.5">
+                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide mt-1.5">
                     Copy <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">theme.css</code> and <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">fonts.css</code> from the C2 Hub repo into your project's styles directory.
                   </p>
                 </div>
 
                 <div className="space-y-3">
                   <SectionHeading>Updating</SectionHeading>
-                  <p className="text-[14px] leading-relaxed text-n-9">
+                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide">
                     Preview changes before updating:
                   </p>
                   <QuickStartCodeBlock code="npx shadcn@latest diff @c2/button" />
-                  <p className="text-[14px] leading-relaxed text-n-9 mt-3">
+                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide mt-3">
                     Apply the update:
                   </p>
                   <QuickStartCodeBlock code="npx shadcn@latest add @c2/button --overwrite" />
@@ -2477,7 +2477,7 @@ export function DetectionRow() {
                     </div>
                     <ul className="space-y-1.5 pl-4">
                       {entry.highlights.map((item) => (
-                        <li key={item} className="text-[14px] leading-relaxed text-n-9 list-disc marker:text-n-7" style={{ textWrap: 'pretty' }}>
+                        <li key={item} className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide list-disc marker:text-white/30" style={{ textWrap: 'pretty' }}>
                           <ChangelogLine text={item} />
                         </li>
                       ))}
@@ -2491,7 +2491,7 @@ export function DetectionRow() {
             {activeItem === 'styling' && (
             <ComponentSection id="styling" name="Styling" description="Color tokens, elevation surfaces, and typography setup. Paste the theme CSS into your project to get the full design language.">
               <SectionHeading>Theme CSS</SectionHeading>
-              <p className="text-[14px] text-n-9 mb-4 leading-relaxed">
+              <p className="text-[16px] font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
                 The design system uses two CSS files: <code className="text-[13px] font-mono text-n-10">theme.css</code> for semantic color tokens (light/dark) and Tailwind bindings, and <code className="text-[13px] font-mono text-n-10">index.css</code> for the neutral scale, tactical red palette, and global resets. Copy each into your project.
               </p>
               <div className="space-y-6">
@@ -2500,7 +2500,7 @@ export function DetectionRow() {
               </div>
 
               <SectionHeading>Neutral Scale</SectionHeading>
-              <p className="text-[14px] text-n-9 mb-4 leading-relaxed">
+              <p className="text-[16px] font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
                 12-step achromatic OKLCH ramp. Use <code className="text-[13px] font-mono text-n-10">text-n-8</code>, <code className="text-[13px] font-mono text-n-10">bg-n-3</code>, etc.
               </p>
               <PreviewPanel>
@@ -2521,7 +2521,7 @@ export function DetectionRow() {
               </PreviewPanel>
 
               <SectionHeading>Elevation</SectionHeading>
-              <p className="text-[14px] text-n-9 mb-4 leading-relaxed">
+              <p className="text-[16px] font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
                 Surfaces rise from a dark base ({ELEVATION.baseSurface}) by mixing white overlays at increasing opacity. Click any level to copy its hex.
               </p>
               <PreviewPanel>
@@ -3830,7 +3830,7 @@ export function DetectionRow() {
               <div id="layer-anatomy" className="scroll-mt-12 space-y-6 pt-10">
                 <div className="space-y-2">
                   <h3 className="text-lg font-semibold text-n-12">Layer Anatomy</h3>
-                  <p className="text-sm leading-relaxed text-n-9">
+                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide">
                     Each marker composites 4 concentric layers plus optional overlays. Hover a layer card to spotlight it on the preview.
                   </p>
                 </div>
@@ -3894,7 +3894,7 @@ export function DetectionRow() {
               <div id="state-matrix" className="scroll-mt-12 space-y-6 pt-10">
                 <div className="space-y-2">
                   <h3 className="text-lg font-semibold text-n-12">Interaction State Matrix</h3>
-                  <p className="text-sm leading-relaxed text-n-9">
+                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide">
                     {INTERACTION_STATES.length} interaction states &times; {AFFILIATIONS.length} affiliations = {INTERACTION_STATES.length * AFFILIATIONS.length} visual combinations. Hover a state card to preview it. Click an affiliation dot to change the hero.
                   </p>
                 </div>
@@ -3973,7 +3973,7 @@ export function DetectionRow() {
               <div id="icon-catalog" className="scroll-mt-12 space-y-6 pt-10">
                 <div className="space-y-2">
                   <h3 className="text-lg font-semibold text-n-12">Icon Catalog</h3>
-                  <p className="text-sm leading-relaxed text-n-9">
+                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide">
                     Tactical SVG icons used inside map markers on the Mapbox canvas. Each icon accepts a <code className="text-n-10">fill</code> prop.
                   </p>
                 </div>
