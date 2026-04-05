@@ -1679,15 +1679,15 @@ function CodePreviewBlock({
   name: string;
   description: string;
   code: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   tight?: boolean;
 }) {
-  const [tab, setTab] = useState<CodeTab>('preview');
+  const hasPreview = !!children;
+  const [tab, setTab] = useState<CodeTab>(hasPreview ? 'preview' : 'source');
 
-  const tabs: { id: CodeTab; label: string }[] = [
-    { id: 'source', label: 'Source' },
-    { id: 'preview', label: 'Preview' },
-  ];
+  const tabs: { id: CodeTab; label: string }[] = hasPreview
+    ? [{ id: 'source', label: 'Source' }, { id: 'preview', label: 'Preview' }]
+    : [{ id: 'source', label: 'Source' }];
 
   const markdown = useMemo(
     () => generateComponentMarkdown(name, description, code),
@@ -1846,6 +1846,21 @@ function ElevationRamp() {
 
 
 // ─── Shared noop / data ──────────────────────────────────────────────────────
+
+const NEUTRAL_STEPS = [
+  { step: 1, color: 'oklch(0.162 0 0)' },
+  { step: 2, color: 'oklch(0.195 0 0)' },
+  { step: 3, color: 'oklch(0.254 0 0)' },
+  { step: 4, color: 'oklch(0.302 0 0)' },
+  { step: 5, color: 'oklch(0.348 0 0)' },
+  { step: 6, color: 'oklch(0.396 0 0)' },
+  { step: 7, color: 'oklch(0.459 0 0)' },
+  { step: 8, color: 'oklch(0.549 0 0)' },
+  { step: 9, color: 'oklch(0.649 0 0)' },
+  { step: 10, color: 'oklch(0.72 0 0)' },
+  { step: 11, color: 'oklch(0.863 0 0)' },
+  { step: 12, color: 'oklch(0.933 0 0)' },
+];
 
 const noop = () => {};
 
@@ -2489,18 +2504,14 @@ export function DetectionRow() {
                 12-step achromatic OKLCH ramp. Use <code className="text-[13px] font-mono text-n-10">text-n-8</code>, <code className="text-[13px] font-mono text-n-10">bg-n-3</code>, etc.
               </p>
               <PreviewPanel>
-                <div className="space-y-3">
+                <div className="space-y-3" dir="ltr">
                   <div className="flex rounded-xl overflow-hidden shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map((step) => (
-                      <div
-                        key={step}
-                        className="flex-1 h-16"
-                        style={{ backgroundColor: `var(--color-n-${step})` }}
-                      />
+                    {NEUTRAL_STEPS.map(({ step, color }) => (
+                      <div key={step} className="flex-1 h-16" style={{ backgroundColor: color }} />
                     ))}
                   </div>
                   <div className="flex">
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map((step) => (
+                    {NEUTRAL_STEPS.map(({ step }) => (
                       <div key={step} className="flex-1 flex flex-col items-center gap-0.5 min-w-0">
                         <span className="text-[10px] font-mono text-n-9 tabular-nums">n-{step}</span>
                       </div>

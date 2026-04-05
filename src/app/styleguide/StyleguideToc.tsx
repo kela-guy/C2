@@ -61,7 +61,7 @@ export function StyleguideToc({
       <p className="flex h-7 items-center font-medium text-xs text-n-9">
         On This Page
       </p>
-      <div className="relative ms-3.5 flex flex-col gap-0.5 before:absolute before:inset-y-0 before:-left-[13px] before:w-px before:bg-white/[0.08]">
+      <div className="relative ms-3.5 flex flex-col gap-0.5 before:absolute before:inset-y-0 before:-left-[13px] before:w-px before:bg-n-5">
         {anchors.map((a) => {
           const isActive = activeAnchor === a.id;
           return (
@@ -74,7 +74,7 @@ export function StyleguideToc({
                 onSelect(a.id);
                 document.getElementById(a.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
               }}
-              className="relative py-1 text-[.8125rem] leading-[1.125rem] no-underline transition-colors duration-150 ease-out before:absolute before:inset-y-px before:-left-[13px] before:w-px before:rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 hover:text-white data-[active=true]:text-white data-[active=true]:before:w-0.5 data-[active=true]:before:bg-sky-400 data-[active=false]:text-n-8 data-[active=false]:before:bg-transparent"
+              className="relative py-1 text-[.8125rem] leading-[1.125rem] no-underline transition-colors duration-150 ease-out before:absolute before:inset-y-px before:-left-[13px] before:w-px before:rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 hover:text-white data-[active=true]:text-white data-[active=true]:font-semibold data-[active=true]:before:w-0.5 data-[active=true]:before:bg-white data-[active=false]:text-white/50 data-[active=false]:before:bg-transparent"
             >
               {a.label}
             </a>
