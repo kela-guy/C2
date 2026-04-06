@@ -29,10 +29,12 @@ export const ACTIVITY_STATUS_LABELS: Record<ActivityStatus, string> = {
 export const TYPE_LABELS: Record<string, string> = {
   drone: 'רחפן',
   bird: 'ציפור',
+  car: 'רכב',
   unknown: 'לא ידוע',
   uav: 'רחפן',
   missile: 'טיל',
   aircraft: 'מטוס',
+  ground_vehicle: 'רכב',
   naval: 'כלי שיט',
 };
 

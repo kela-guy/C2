@@ -20,6 +20,8 @@ interface CameraViewerPanelProps {
   feeds: CameraFeed[];
   onFeedsChange: (feeds: CameraFeed[]) => void;
   onCameraHover?: (cameraId: string | null) => void;
+  /** When true, shows the weapon targeting feed instead of default camera feed */
+  weaponFeedActive?: boolean;
 }
 
 function CameraPickerContent({
@@ -63,6 +65,7 @@ function FeedSlot({
   onDropNew,
   autoOpenPicker,
   onAutoOpenConsumed,
+  weaponFeedActive,
 }: {
   cameraId: string | null;
   usedIds: string[];
@@ -72,6 +75,7 @@ function FeedSlot({
   onDropNew?: (cameraId: string) => void;
   autoOpenPicker?: boolean;
   onAutoOpenConsumed?: () => void;
+  weaponFeedActive?: boolean;
 }) {
   const [isPickerOpen, setIsPickerOpen] = useState(!!autoOpenPicker);
 
@@ -168,7 +172,8 @@ function FeedSlot({
       onMouseLeave={() => onHover?.(null)}
     >
       <video
-        src="/videos/target-feed.mov"
+        key={weaponFeedActive ? 'weapon' : 'camera'}
+        src={weaponFeedActive ? '/videos/weapon-feed.mp4' : '/videos/target-feed.mov'}
         autoPlay
         loop
         muted
@@ -233,7 +238,7 @@ function FeedSlot({
   );
 }
 
-export function CameraViewerPanel({ feeds, onFeedsChange, onCameraHover }: CameraViewerPanelProps) {
+export function CameraViewerPanel({ feeds, onFeedsChange, onCameraHover, weaponFeedActive }: CameraViewerPanelProps) {
   const MAX_FEEDS = 4;
   const canAddMore = feeds.length < MAX_FEEDS;
   const usedIds = feeds.map(f => f.cameraId);
@@ -313,6 +318,7 @@ export function CameraViewerPanel({ feeds, onFeedsChange, onCameraHover }: Camer
               onDropNew={canAddMore ? handleDropNewFeed : undefined}
               autoOpenPicker={autoOpenSlot === i}
               onAutoOpenConsumed={handleAutoOpenConsumed}
+              weaponFeedActive={weaponFeedActive}
             />
           </React.Fragment>
         ))}

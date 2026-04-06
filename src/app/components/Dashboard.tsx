@@ -5,7 +5,7 @@ import { TacticalMap, CAMERA_ASSETS, REGULUS_EFFECTORS, bearingDegrees, haversin
 import { NotificationSystem, showTacticalNotification } from './NotificationSystem';
 import { NotificationCenter } from './NotificationCenter';
 import ListOfSystems from '@/imports/ListOfSystems';
-import type { Detection, RegulusEffector } from '@/imports/ListOfSystems';
+import type { Detection, RegulusEffector, LauncherEffector } from '@/imports/ListOfSystems';
 import { List, Bell, Radar, HelpCircle, Palette, Target, Video } from 'lucide-react';
 import { Toggle } from '@/shared/components/ui/toggle';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/shared/components/ui/tooltip';
@@ -177,6 +177,12 @@ export const Dashboard = () => {
   const [cameraLookAtRequest, setCameraLookAtRequest] = useState<{ cameraId: string; targetLat: number; targetLon: number; fovOverrideDeg?: number } | null>(null);
   const [regulusEffectors, setRegulusEffectors] = useState<RegulusEffector[]>(REGULUS_EFFECTORS);
   const [selectedEffectorIds, setSelectedEffectorIds] = useState<Map<string, string>>(new Map());
+  const [launcherEffectors, setLauncherEffectors] = useState<LauncherEffector[]>([
+    { id: 'LCHR-NVT-ALPHA', name: 'משגר אלפא', lat: 32.4626, lon: 34.9963, status: 'available' },
+    { id: 'LCHR-NVT-BRAVO', name: 'משגר בראבו', lat: 32.4756, lon: 35.0113, status: 'available' },
+    { id: 'LCHR-NVT-GAMMA', name: 'משגר גאמא', lat: 32.4506, lon: 35.0243, status: 'available' },
+  ]);
+  const [selectedLauncherIds, setSelectedLauncherIds] = useState<Map<string, string>>(new Map());
   const [mapFocusRequest, setMapFocusRequest] = useState<{ lat: number; lon: number } | null>(null);
   const [allCamerasBusyForTarget, setAllCamerasBusyForTarget] = useState<string | null>(null);
   const [cameraPointingTargetId, setCameraPointingTargetId] = useState<string | null>(null);
@@ -241,6 +247,7 @@ export const Dashboard = () => {
   const cuasIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const cuasIntervalRef2 = useRef<NodeJS.Timeout | null>(null);
   const cuasIntervalRef3 = useRef<NodeJS.Timeout | null>(null);
+  const cuasIntervalRef4 = useRef<NodeJS.Timeout | null>(null);
   const cuasMassRefs = useRef<NodeJS.Timeout[]>([]);
   const [tourTargetId, setTourTargetId] = useState<string | null>(null);
   const activeTarget = targets.find(t => t.id === activeTargetId);
@@ -462,23 +469,30 @@ export const Dashboard = () => {
     startLat: number; startLon: number; endLat: number; endLon: number;
     nameSuffix: string; intervalRef: React.MutableRefObject<NodeJS.Timeout | null>;
     isBird?: boolean;
+    isCar?: boolean;
     silent?: boolean;
   }) => {
     const targetId = `CUAS-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const now = () => new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
+    const isCar = !!opts.isCar;
+    const isBird = !!opts.isBird;
+    const targetName = isCar ? `רכב — זיהוי ${opts.nameSuffix}`
+      : isBird ? `ציפור — זיהוי ${opts.nameSuffix}`
+      : `רחפן — זיהוי ${opts.nameSuffix}`;
     const rawDetection: Detection = {
       id: targetId,
-      name: `זיהוי ${opts.nameSuffix}`,
-      type: 'unknown',
+      name: targetName,
+      type: isCar ? 'ground_vehicle' : isBird ? 'unknown' : 'uav',
+      classifiedType: isCar ? 'car' : isBird ? 'bird' : 'drone',
       status: 'detection',
       timestamp: now(),
       createdAtMs: Date.now(),
       coordinates: `${opts.startLat.toFixed(5)}, ${opts.startLon.toFixed(5)}`,
       distance: '3.2 ק״מ',
-      entityStage: 'raw_detection',
-      priority: getPriorityBaseline({ status: 'detection', entityStage: 'raw_detection', flowType: 5 }),
-      confidence: 20,
+      entityStage: 'classified',
+      priority: getPriorityBaseline({ status: 'detection', entityStage: 'classified', flowType: 5 }),
+      confidence: isCar ? 88 : isBird ? 85 : 92,
       contributingSensors: [{
         sensorId: 'RAD-NVT-RADA',
         sensorType: 'Radar',
@@ -486,10 +500,11 @@ export const Dashboard = () => {
         lastDetectedAt: now(),
       }],
       trail: [{ lat: opts.startLat, lon: opts.startLon, timestamp: now() }],
-      actionLog: [{ time: now(), label: 'זיהוי ראשוני — RADA ieMHR' }],
+      actionLog: [{ time: now(), label: isCar ? 'זיהוי ראשוני — רכב עוין' : isBird ? 'זיהוי ראשוני — ציפור' : 'זיהוי ראשוני — רחפן עוין' }],
       flowType: 5,
       mitigationStatus: 'idle',
-      altitude: '120 מ׳',
+      weaponPointingStatus: isCar ? 'idle' : undefined,
+      altitude: isCar ? undefined : '120 מ׳',
       laserDistance: '2,840 מ׳',
       laserAzimuth: '253.44°',
       laserElevation: '2.39°',
@@ -500,14 +515,11 @@ export const Dashboard = () => {
     setTargets(prev => [...prev, rawDetection]);
 
     if (!opts.silent) {
-      const sensors = rawDetection.contributingSensors ?? [];
-      const sensorLabel = sensors[0]?.sensorId ?? 'חיישן';
-      const sensorCount = sensors.length > 1 ? ` (+${sensors.length - 1})` : '';
       showTacticalNotification({
         title: `זיהוי חדש — ${rawDetection.name}`,
-        message: `ביטחון ${rawDetection.confidence}% — ${sensorLabel}${sensorCount}`,
+        message: `ביטחון ${rawDetection.confidence}% — ${isCar ? 'איום קרקעי מסווג' : isBird ? 'סווג כציפור' : 'איום אווירי מסווג'}`,
         code: targetId,
-        level: 'info',
+        level: isBird ? 'suspect' : 'critical',
       });
     }
 
@@ -526,7 +538,7 @@ export const Dashboard = () => {
         updated.coordinates = `${curLat.toFixed(5)}, ${curLon.toFixed(5)}`;
         updated.distance = `${distKm} ק״מ`;
         updated.timestamp = t;
-        updated.altitude = `${Math.round(120 + Math.sin(progress * Math.PI) * 30)} מ׳`;
+        if (tgt.altitude != null) updated.altitude = `${Math.round(120 + Math.sin(progress * Math.PI) * 30)} מ׳`;
         updated.trail = [...(tgt.trail || []), { lat: curLat, lon: curLon, timestamp: t }];
         const currentRange = 2840 - progress * 1800;
         updated.laserDistance = `${Math.round(currentRange)} מ׳`;
@@ -571,6 +583,13 @@ export const Dashboard = () => {
             updated.type = 'unknown';
             updated.name = `ציפור — ${tgt.name}`;
             updated.confidence = 85;
+          } else if (opts.isCar) {
+            updated.classifiedType = 'car';
+            updated.type = 'ground_vehicle';
+            updated.name = `רכב — ${tgt.name}`;
+            updated.confidence = 88;
+            updated.altitude = undefined;
+            updated.weaponPointingStatus = 'idle';
           } else {
             updated.classifiedType = 'drone';
             updated.type = 'uav';
@@ -613,29 +632,36 @@ export const Dashboard = () => {
     if (cuasIntervalRef.current) clearInterval(cuasIntervalRef.current);
     if (cuasIntervalRef2.current) clearInterval(cuasIntervalRef2.current);
     if (cuasIntervalRef3.current) clearInterval(cuasIntervalRef3.current);
+    if (cuasIntervalRef4.current) clearInterval(cuasIntervalRef4.current);
 
-    spawnCuasTarget({
-      startLat: 32.4916, startLon: 35.0313, endLat: 32.4666, endLon: 35.0013,
-      nameSuffix: String(Math.floor(Math.random() * 900) + 100),
-      intervalRef: cuasIntervalRef,
+    const routes = [
+      { startLat: 32.4916, startLon: 35.0313, droneEnd: { lat: 32.4666, lon: 35.0013 }, carEnd: { lat: 32.4836, lon: 35.0233 }, ref: cuasIntervalRef, delay: 0 },
+      { startLat: 32.4466, startLon: 34.9713, droneEnd: { lat: 32.4646, lon: 34.9963 }, carEnd: { lat: 32.4506, lon: 34.9773 }, ref: cuasIntervalRef2, delay: 10000 },
+      { startLat: 32.4966, startLon: 34.9963, droneEnd: { lat: 32.4716, lon: 35.0063 }, carEnd: { lat: 32.4886, lon: 34.9983 }, ref: cuasIntervalRef3, delay: 15000 },
+      { startLat: 32.4416, startLon: 35.0313, droneEnd: { lat: 32.4596, lon: 35.0063 }, carEnd: { lat: 32.4446, lon: 35.0273 }, ref: cuasIntervalRef4, delay: 25000 },
+    ];
+
+    // Randomly assign types: ensure at least 1 car, rest are drones with 30% car chance
+    const types: Array<'drone' | 'car'> = ['drone', 'drone', 'drone', 'drone'];
+    const carIdx = Math.floor(Math.random() * routes.length);
+    types[carIdx] = 'car';
+    for (let i = 0; i < types.length; i++) {
+      if (types[i] === 'drone' && Math.random() < 0.3) types[i] = 'car';
+    }
+
+    routes.forEach((route, i) => {
+      const isCar = types[i] === 'car';
+      const end = isCar ? route.carEnd : route.droneEnd;
+      const spawn = () => spawnCuasTarget({
+        startLat: route.startLat, startLon: route.startLon,
+        endLat: end.lat, endLon: end.lon,
+        nameSuffix: String(Math.floor(Math.random() * 900) + 100),
+        intervalRef: route.ref,
+        isCar,
+      });
+      if (route.delay === 0) spawn();
+      else setTimeout(spawn, route.delay);
     });
-
-    setTimeout(() => {
-      spawnCuasTarget({
-        startLat: 32.4466, startLon: 34.9713, endLat: 32.4646, endLon: 34.9963,
-        nameSuffix: String(Math.floor(Math.random() * 900) + 100),
-        intervalRef: cuasIntervalRef2,
-      });
-    }, 15000);
-
-    setTimeout(() => {
-      spawnCuasTarget({
-        startLat: 32.4966, startLon: 34.9963, endLat: 32.4716, endLon: 35.0063,
-        nameSuffix: String(Math.floor(Math.random() * 900) + 100),
-        intervalRef: cuasIntervalRef3,
-        isBird: true,
-      });
-    }, 25000);
   }, [spawnCuasTarget]);
 
   const handleCUASSingle = useCallback(() => {
@@ -644,10 +670,14 @@ export const Dashboard = () => {
 
     if (cuasIntervalRef.current) clearInterval(cuasIntervalRef.current);
 
+    const isCar = Math.random() < 0.3;
     const id = spawnCuasTarget({
-      startLat: 32.4916, startLon: 35.0313, endLat: 32.4666, endLon: 35.0013,
+      startLat: 32.4916, startLon: 35.0313,
+      endLat: isCar ? 32.4836 : 32.4666,
+      endLon: isCar ? 35.0233 : 35.0013,
       nameSuffix: String(Math.floor(Math.random() * 900) + 100),
       intervalRef: cuasIntervalRef,
+      isCar,
     });
 
     if (tour.run) {
@@ -673,9 +703,14 @@ export const Dashboard = () => {
       const radius = 0.025 + Math.random() * 0.015;
       const startLat = baseLat + Math.cos(angle) * radius;
       const startLon = baseLon + Math.sin(angle) * radius;
-      const endLat = baseLat + (Math.random() - 0.5) * 0.008;
-      const endLon = baseLon + (Math.random() - 0.5) * 0.008;
-      const isBird = Math.random() < 0.3;
+      const isCar = Math.random() < 0.3;
+      const endOffset = isCar ? 0.015 : 0.008;
+      const endLat = isCar
+        ? startLat + (baseLat - startLat) * 0.3
+        : baseLat + (Math.random() - 0.5) * endOffset;
+      const endLon = isCar
+        ? startLon + (baseLon - startLon) * 0.3
+        : baseLon + (Math.random() - 0.5) * endOffset;
 
       setTimeout(() => {
         const ref: React.MutableRefObject<NodeJS.Timeout | null> = { current: null };
@@ -683,7 +718,7 @@ export const Dashboard = () => {
           startLat, startLon, endLat, endLon,
           nameSuffix: String(100 + i),
           intervalRef: ref,
-          isBird,
+          isCar,
           silent: true,
         });
         if (ref.current) cuasMassRefs.current.push(ref.current);
@@ -705,30 +740,62 @@ export const Dashboard = () => {
   }, []);
 
   // --- CUAS Mitigation Handlers ---
-  const handleMitigate = useCallback((targetId: string, effectorId: string) => {
-    toast.success('שיבוש אלקטרוני הופעל');
-    setRegulusEffectors(prev => prev.map(r =>
-      r.id === effectorId ? { ...r, status: 'active' as const, activeTargetId: targetId } : r
-    ));
-    setTargets(prev => appendLog(prev, targetId, `שיבוש — ${effectorId}`).map(t =>
-      t.id === targetId ? { ...t, mitigationStatus: 'mitigating' as const, mitigatingEffectorId: effectorId } : t
-    ));
+  /**
+   * Generic factory for the "activate asset -> set target status -> delay -> advance status" pattern.
+   * Covers both jam (mitigate) and weapon pointing flows.
+   */
+  function createFlowActivateHandler(config: {
+    setAssets: React.Dispatch<React.SetStateAction<any[]>>;
+    assetActiveStatus: string;
+    targetStatusField: 'mitigationStatus' | 'weaponPointingStatus';
+    targetAssetIdField: 'mitigatingEffectorId' | 'pointingLauncherId';
+    startStatus: string;
+    startLog: string;
+    startToast: string;
+    endStatus: string;
+    endLog: string;
+    endToast: string;
+    endAssetStatus?: string;
+    extraEndTargetFields?: Partial<Detection>;
+    delayMs: number;
+  }) {
+    return (targetId: string, assetId: string) => {
+      toast.success(config.startToast);
+      config.setAssets((prev: any[]) => prev.map((a: any) =>
+        a.id === assetId ? { ...a, status: config.assetActiveStatus, activeTargetId: targetId } : a
+      ));
+      setTargets(prev => appendLog(prev, targetId, `${config.startLog} — ${assetId}`).map(t =>
+        t.id === targetId ? { ...t, [config.targetStatusField]: config.startStatus, [config.targetAssetIdField]: assetId } : t
+      ));
+      setTimeout(() => {
+        setTargets(prev => appendLog(prev, targetId, config.endLog).map(t =>
+          t.id === targetId ? { ...t, [config.targetStatusField]: config.endStatus, ...config.extraEndTargetFields } : t
+        ));
+        if (config.endAssetStatus) {
+          config.setAssets((prev: any[]) => prev.map((a: any) =>
+            a.id === assetId ? { ...a, status: config.endAssetStatus, activeTargetId: undefined } : a
+          ));
+        }
+        toast.success(config.endToast);
+      }, config.delayMs);
+    };
+  }
 
-    setTimeout(() => {
-      setTargets(prev => appendLog(prev, targetId, 'שיבוש הושלם — ממתין לאימות').map(t =>
-        t.id === targetId ? {
-          ...t,
-          mitigationStatus: 'mitigated' as const,
-          missionType: 'jamming' as const,
-          missionStatus: 'waiting_confirmation' as const,
-        } : t
-      ));
-      setRegulusEffectors(prev => prev.map(r =>
-        r.id === effectorId ? { ...r, status: 'available' as const, activeTargetId: undefined } : r
-      ));
-      toast.success('שיבוש הושלם — נדרש אימות');
-    }, 3000);
-  }, []);
+  const handleMitigate = useCallback(createFlowActivateHandler({
+    setAssets: setRegulusEffectors,
+    assetActiveStatus: 'active',
+    targetStatusField: 'mitigationStatus',
+    targetAssetIdField: 'mitigatingEffectorId',
+    startStatus: 'mitigating',
+    startLog: 'שיבוש',
+    startToast: 'שיבוש אלקטרוני הופעל',
+    endStatus: 'mitigated',
+    endLog: 'שיבוש הושלם — ממתין לאימות',
+    endToast: 'שיבוש הושלם — נדרש אימות',
+    endAssetStatus: 'available',
+    extraEndTargetFields: { missionType: 'jamming', missionStatus: 'waiting_confirmation' },
+    delayMs: 3000,
+  }), []);
 
   const JAMMABLE_STATUSES = new Set(['suspicion', 'detection', 'tracking', 'event']);
 
@@ -769,13 +836,83 @@ export const Dashboard = () => {
     }, 3000);
   }, [regulusEffectors]);
 
+  // --- Ground Vehicle Weapon Pointing Handlers ---
+  const handleLauncherSelect = useCallback((targetId: string, launcherId: string) => {
+    setSelectedLauncherIds(prev => new Map(prev).set(targetId, launcherId));
+  }, []);
+
+  const handlePointWeapon = useCallback(createFlowActivateHandler({
+    setAssets: setLauncherEffectors,
+    assetActiveStatus: 'pointing',
+    targetStatusField: 'weaponPointingStatus',
+    targetAssetIdField: 'pointingLauncherId',
+    startStatus: 'pointing',
+    startLog: 'כיוון נשק',
+    startToast: 'מכוון נשק למטרה',
+    endStatus: 'pointed',
+    endLog: 'נשק מכוון — ממתין לנעילה',
+    endToast: 'נשק מכוון — ניתן לנעול',
+    delayMs: 3000,
+  }), []);
+
+  const handleLockWeapon = useCallback((targetId: string) => {
+    setTargets(prev => appendLog(prev, targetId, 'נועל על מטרה...').map(t =>
+      t.id === targetId ? { ...t, weaponPointingStatus: 'locking' as const } : t
+    ));
+
+    setTimeout(() => {
+      setTargets(prev => {
+        const tgt = prev.find(t => t.id === targetId);
+        const launcherId = tgt?.pointingLauncherId;
+        if (launcherId) {
+          setLauncherEffectors(lp => lp.map(l =>
+            l.id === launcherId ? { ...l, status: 'locked' as const } : l
+          ));
+        }
+        return appendLog(prev, targetId, 'נעול על מטרה').map(t =>
+          t.id === targetId ? { ...t, weaponPointingStatus: 'locked' as const } : t
+        );
+      });
+      toast.success('נעול על מטרה — עבור למכשיר חיצוני לירי');
+    }, 1500);
+  }, []);
+
+  const handleDismissLock = useCallback((targetId: string) => {
+    const target = targets.find(t => t.id === targetId);
+    const wasLocked = target?.weaponPointingStatus === 'locked';
+    const launcherId = target?.pointingLauncherId;
+    if (launcherId) {
+      setLauncherEffectors(prev => prev.map(l =>
+        l.id === launcherId ? { ...l, status: 'available' as const, activeTargetId: undefined, bearingDeg: undefined } : l
+      ));
+    }
+    setTargets(prev => appendLog(prev, targetId, wasLocked ? 'נעילה בוטלה' : 'כיוון בוטל').map(t =>
+      t.id === targetId ? { ...t, weaponPointingStatus: 'idle' as const, pointingLauncherId: undefined } : t
+    ));
+    toast.info(wasLocked ? 'נעילה בוטלה' : 'כיוון בוטל');
+  }, [targets]);
+
   const handleCompleteMission = useCallback((targetId: string) => {
+    const target = targets.find(t => t.id === targetId);
+    const launcherId = target?.pointingLauncherId;
+    if (launcherId) {
+      setLauncherEffectors(prev => prev.map(l =>
+        l.id === launcherId ? { ...l, status: 'available' as const, activeTargetId: undefined, bearingDeg: undefined } : l
+      ));
+    }
     setTargets(prev => prev.map(t => {
       if (t.id !== targetId) return t;
-      return { ...t, missionStatus: 'complete' as const, status: 'event_neutralized' as const, activityStatus: 'mitigated' as const };
+      return {
+        ...t,
+        missionStatus: 'complete' as const,
+        status: 'event_neutralized' as const,
+        activityStatus: 'mitigated' as const,
+        weaponPointingStatus: 'idle' as const,
+        pointingLauncherId: undefined,
+      };
     }));
     toast.success('משימה הושלמה בהצלחה');
-  }, []);
+  }, [targets]);
 
   const handleBdaCamera = useCallback((targetId: string) => {
     if (cameraLookAtRequest) {
@@ -914,11 +1051,19 @@ export const Dashboard = () => {
       return;
     }
 
+    const target = targets.find(t => t.id === targetId);
+    const launcherId = target?.pointingLauncherId;
+    if (launcherId) {
+      setLauncherEffectors(prev => prev.map(l =>
+        l.id === launcherId ? { ...l, status: 'available' as const, activeTargetId: undefined, bearingDeg: undefined } : l
+      ));
+    }
+
     const isBirdConfirm = reason === 'bird_confirmed';
     const isFalseAlarm = reason === 'false_alarm';
     const newStatus = isBirdConfirm || isFalseAlarm ? 'event_resolved' as const : 'expired' as const;
     setTargets(prev => prev.map(t =>
-      t.id === targetId ? { ...t, status: newStatus, dismissReason: reason, activityStatus: 'dismissed' as const } : t
+      t.id === targetId ? { ...t, status: newStatus, dismissReason: reason, activityStatus: 'dismissed' as const, weaponPointingStatus: 'idle' as const, pointingLauncherId: undefined } : t
     ));
     if (activeTargetId === targetId) setActiveTargetId(null);
     const messages: Record<string, string> = {
@@ -1220,6 +1365,8 @@ export const Dashboard = () => {
                 onAssetClick={handleAssetClick}
                 offlineAssetIds={offlineAssetIds}
                 selectedEffectorIds={selectedEffectorIds}
+                launcherEffectors={launcherEffectors}
+                selectedLauncherIds={selectedLauncherIds}
               />
             </div>
           </ResizablePanel>
@@ -1232,6 +1379,7 @@ export const Dashboard = () => {
                   feeds={cameraViewerFeeds}
                   onFeedsChange={setCameraViewerFeeds}
                   onCameraHover={setHoveredSensorIdFromCard}
+                  weaponFeedActive={targets.some(t => t.weaponPointingStatus && t.weaponPointingStatus !== 'idle')}
                 />
               </ResizablePanel>
             </>
@@ -1312,6 +1460,14 @@ export const Dashboard = () => {
               onEffectorSelect={handleEffectorSelect}
               regulusEffectors={regulusEffectors}
               selectedEffectorIds={selectedEffectorIds}
+              onPointWeapon={handlePointWeapon}
+              onLockWeapon={handleLockWeapon}
+              onDismissLock={handleDismissLock}
+              onLauncherSelect={handleLauncherSelect}
+              launcherEffectors={launcherEffectors}
+              selectedLauncherIds={selectedLauncherIds}
+              flowAssets={{ regulusEffectors, launcherEffectors }}
+              flowSelectedIds={{ regulusEffectors: selectedEffectorIds, launcherEffectors: selectedLauncherIds }}
               onBdaOutcome={handleBdaOutcome}
               cameraActiveTargetId={cameraLookAtRequest ? targets.find(t => {
                 const [lat, lon] = t.coordinates.split(',').map(s => parseFloat(s.trim()));

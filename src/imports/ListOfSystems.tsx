@@ -28,10 +28,11 @@ import { getActivityStatus, isCompletedActivityStatus, useActivityStatus } from 
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type DetectionType = 'uav' | 'missile' | 'aircraft' | 'naval' | 'unknown';
+export type DetectionType = 'uav' | 'missile' | 'aircraft' | 'naval' | 'ground_vehicle' | 'unknown';
 export type EntityStage = 'raw_detection' | 'classified';
-export type ClassifiedType = 'drone' | 'bird' | 'aircraft' | 'unknown';
+export type ClassifiedType = 'drone' | 'bird' | 'aircraft' | 'car' | 'unknown';
 export type MitigationStatus = 'idle' | 'mitigating' | 'mitigated' | 'failed';
+export type WeaponPointingStatus = 'idle' | 'pointing' | 'pointed' | 'locking' | 'locked';
 export type BdaStatus = 'pending' | 'looking' | 'stabilizing' | 'observing' | 'complete';
 export type ActivityStatus = 'active' | 'recently_active' | 'timeout' | 'dismissed' | 'mitigated';
 
@@ -56,6 +57,16 @@ export interface RegulusEffector {
   coverageRadiusM: number;
   status: 'available' | 'active' | 'inactive';
   activeTargetId?: string;
+}
+
+export interface LauncherEffector {
+  id: string;
+  name: string;
+  lat: number;
+  lon: number;
+  status: 'available' | 'pointing' | 'locked' | 'inactive';
+  activeTargetId?: string;
+  bearingDeg?: number;
 }
 
 export interface Detection {
@@ -88,6 +99,8 @@ export interface Detection {
   contributingSensors?: ContributingSensor[];
   mitigationStatus?: MitigationStatus;
   mitigatingEffectorId?: string;
+  weaponPointingStatus?: WeaponPointingStatus;
+  pointingLauncherId?: string;
   bdaStatus?: BdaStatus;
   activityStatus?: ActivityStatus;
   alarmZone?: 'red' | 'yellow' | 'none';
@@ -412,6 +425,16 @@ export interface ListOfSystemsProps {
   onEffectorSelect?: (targetId: string, effectorId: string) => void;
   regulusEffectors?: RegulusEffector[];
   selectedEffectorIds?: Map<string, string>;
+  onPointWeapon?: (targetId: string, launcherId: string) => void;
+  onLockWeapon?: (targetId: string) => void;
+  onDismissLock?: (targetId: string) => void;
+  onLauncherSelect?: (targetId: string, launcherId: string) => void;
+  launcherEffectors?: LauncherEffector[];
+  selectedLauncherIds?: Map<string, string>;
+  /** Generic flow assets keyed by flow ID — use for new flows without adding individual props */
+  flowAssets?: Record<string, { id: string; name: string; lat: number; lon: number; status: string }[]>;
+  /** Generic flow selected asset IDs keyed by flow ID */
+  flowSelectedIds?: Record<string, Map<string, string>>;
   onBdaOutcome?: (targetId: string, outcome: 'neutralized' | 'active' | 'lost') => void;
   onBdaCamera?: (targetId: string) => void;
   cameraActiveTargetId?: string | null;
@@ -464,6 +487,14 @@ export default function ListOfSystems({
   onEffectorSelect,
   regulusEffectors,
   selectedEffectorIds,
+  onPointWeapon,
+  onLockWeapon,
+  onDismissLock,
+  onLauncherSelect,
+  launcherEffectors,
+  selectedLauncherIds,
+  flowAssets,
+  flowSelectedIds,
   onBdaOutcome,
   onBdaCamera,
   cameraActiveTargetId,
@@ -619,6 +650,10 @@ export default function ListOfSystems({
     onMitigate: (effectorId) => onMitigate?.(target.id, effectorId),
     onMitigateAll: () => onMitigateAll?.(target.id),
     onEffectorSelect: (effectorId) => onEffectorSelect?.(target.id, effectorId),
+    onPointWeapon: (launcherId) => onPointWeapon?.(target.id, launcherId),
+    onLockWeapon: () => onLockWeapon?.(target.id),
+    onDismissLock: () => onDismissLock?.(target.id),
+    onLauncherSelect: (launcherId) => onLauncherSelect?.(target.id, launcherId),
     onBdaOutcome: (outcome) => onBdaOutcome?.(target.id, outcome),
     onBdaCamera: () => onBdaCamera?.(target.id),
     onRequestCameraControl: () => onRequestCameraControl?.(target.id),
@@ -631,8 +666,10 @@ export default function ListOfSystems({
     isCameraPointing: cameraPointingTargetId === target.id,
     allCamerasBusy: allCamerasBusyForTarget === target.id,
     controlRequestCountdown: controlRequestTargetId === target.id ? controlRequestCountdown : null,
-    regulusEffectors,
-    selectedEffectorId: selectedEffectorIds?.get(target.id),
+    regulusEffectors: regulusEffectors ?? flowAssets?.['regulusEffectors'] as RegulusEffector[] | undefined,
+    selectedEffectorId: selectedEffectorIds?.get(target.id) ?? flowSelectedIds?.['regulusEffectors']?.get(target.id),
+    launcherEffectors: launcherEffectors ?? flowAssets?.['launcherEffectors'] as LauncherEffector[] | undefined,
+    selectedLauncherId: selectedLauncherIds?.get(target.id) ?? flowSelectedIds?.['launcherEffectors']?.get(target.id),
     nearbyCameras: (target.flowType === 1 || target.flowType === 2) ? nearbyCameras : undefined,
     nearbyHives: target.flowType === 3 ? nearbyHives : undefined,
   });

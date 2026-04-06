@@ -55,3 +55,39 @@ export const MissileCardIcon = ({ size = 15 }: { size?: number }) => (
     <path d={MISSILE_PATH} fill="currentColor" />
   </svg>
 );
+
+export const CAR_PATH =
+  'M19.5 17H21C21.5523 17 22 16.5523 22 16V10.8198C22 10.3431 21.6635 9.93271 21.1961 9.83922L17.3746 9.07493C17.1334 9.02668 16.9184 8.89118 16.7708 8.69435L14.3 5.4C14.1111 5.14819 13.8148 5 13.5 5H3C2.44771 5 2 5.44772 2 6V16C2 16.5523 2.44772 17 3 17H4.5';
+
+export const CarIcon = ({ color = '#ff3d40', size = 22 }: { color?: string; size?: number }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className="drop-shadow-lg"
+    aria-hidden="true"
+  >
+    <path d={CAR_PATH} fill={color} stroke="#0a0a0a" strokeWidth="1" strokeLinecap="round" />
+    <path d="M9.5 17H14.5" stroke="#0a0a0a" strokeWidth="1.5" strokeLinecap="round" />
+    <circle cx="7" cy="16.75" r="2.25" fill={color} />
+    <circle cx="17" cy="16.75" r="2.25" fill={color} />
+  </svg>
+);
+
+export const CarCardIcon = ({ size = 15 }: { size?: number }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    aria-hidden="true"
+  >
+    <path d={CAR_PATH} fill="currentColor" />
+    <path d="M9.5 17H14.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <circle cx="7" cy="16.75" r="2.25" fill="currentColor" />
+    <circle cx="17" cy="16.75" r="2.25" fill="currentColor" />
+  </svg>
+);

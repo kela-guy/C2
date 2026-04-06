@@ -137,7 +137,7 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
                     >
                       {action.effectorStatusStrip ? (
                         <EffectorStatusStrip strip={action.effectorStatusStrip} dataTour={action.dataTour} />
-                      ) : action.dropdownActions ? (
+                      ) : action.dropdownActions || action.dropdownGroups ? (
                         <SplitActionButton
                           label={action.label}
                           subtitle={action.subtitle}
@@ -152,7 +152,7 @@ export function CardActions({ actions, layout = 'row', className = '' }: CardAct
                           onHover={action.onHover}
                           className={action.className ?? ''}
                           dataTour={action.dataTour}
-                          dropdownItems={action.dropdownActions.map(da => ({
+                          dropdownItems={(action.dropdownActions ?? []).map(da => ({
                             id: da.id,
                             label: da.label,
                             icon: da.icon,

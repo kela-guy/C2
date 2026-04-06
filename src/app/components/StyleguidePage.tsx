@@ -3,7 +3,7 @@ import {
   Eye, Radio, ShieldAlert, Zap, Crosshair, Ban, AlertTriangle,
   Trash2, Send, Compass, Gauge, Navigation, MapPin, CheckCircle2,
   Bird, Activity, History, Radar, Hand, Copy, Check, Download,
-  BellOff, Camera, Wrench, Loader2, Search, X,
+  BellOff, Camera, Wrench, Loader2, Search, X, Lock,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Toaster } from '@/shared/components/ui/sonner';
@@ -33,7 +33,7 @@ import {
   CameraIcon, SensorIcon, RadarIcon, DroneIcon, DroneHiveIcon,
   LidarIcon, LauncherIcon, MissileIcon,
 } from '@/shared/components/TacticalMap';
-import { DroneCardIcon, JamWaveIcon, MissileCardIcon } from '@/primitives/MapIcons';
+import { DroneCardIcon, JamWaveIcon, MissileCardIcon, CarIcon } from '@/primitives/MapIcons';
 import { MapMarker } from '@/primitives/MapMarker';
 import winterTheme from './winter-is-coming-theme.json';
 import {
@@ -72,7 +72,6 @@ import cardTimelineSrc from '@/primitives/CardTimeline.tsx?raw';
 import cardFooterDockSrc from '@/primitives/CardFooterDock.tsx?raw';
 import filterBarSrc from '@/primitives/FilterBar.tsx?raw';
 import newUpdatesPillSrc from '@/primitives/NewUpdatesPill.tsx?raw';
-import tacticalMapSrc from '@/shared/components/TacticalMap.tsx?raw';
 import devicesPanelSrc from '@/shared/components/DevicesPanel.tsx?raw';
 import mapMarkerSrc from '@/primitives/MapMarker.tsx?raw';
 import mapIconsSrc from '@/primitives/MapIcons.tsx?raw';
@@ -1073,10 +1072,10 @@ function DeviceCardFlows() {
 
 // ─── Engagement Line Preview + Source ────────────────────────────────────────
 
-const ENGAGEMENT_LINE_SOURCE = `// ── Engagement line animation (from TacticalMap.tsx) ──────────────────────
+const ENGAGEMENT_LINE_SOURCE = `// ── Engagement line animation (from useEngagementLine.ts) ────────────────
 
 // Mapbox GL layers: dashed line + traveling particle circles
-// Color: #ffffff (standby) → #ef4444 (mitigating)
+// Color: #ffffff (standby) → #f59e0b (weapon pointing) → #ef4444 (mitigating / locked)
 
 // ── 1. Dashed line (marching dash) ──────────────────────────────────────────
 
@@ -1102,7 +1101,7 @@ const animate = (time: number) => {
 
 // Line layer paint:
 // {
-//   'line-color': isMitigating ? '#ef4444' : '#ffffff',
+//   'line-color': flowConfig.lineColor(phase),  // #ffffff → #f59e0b → #ef4444
 //   'line-width': 2,
 //   'line-dasharray': [4, 4],  ← animated
 // }
@@ -1142,8 +1141,8 @@ const easeSpring = (t: number) => {
 // Style:    rounded px-2 py-1 font-mono text-xs tabular-nums
 // Shadow:   0 2px 8px rgba(0,0,0,0.4)
 // Format:   < 1000 → \${Math.round(m)}m   |   >= 1000 → \${(m/1000).toFixed(1)} km
-// Bg:       isMitigating ? '#ef4444' : '#ffffff'
-// Text:     isMitigating ? '#ffffff' : '#000000'
+// Bg:       flowConfig.badgeTextColor(phase) drives badge background
+// Text:     contrasts with bg — white on red/amber, black on white
 
 // ── 4. Reduced motion ───────────────────────────────────────────────────────
 
@@ -1317,7 +1316,11 @@ function EngagementLineFlows() {
           <EngagementLineAnimatedPreview color="#ffffff" />
         </div>
         <div className="space-y-3">
-          <span className="text-[11px] font-semibold text-n-9 uppercase tracking-[0.06em]">Mitigating (jam active)</span>
+          <span className="text-[11px] font-semibold text-n-9 uppercase tracking-[0.06em]">Weapon Pointing (aiming)</span>
+          <EngagementLineAnimatedPreview color="#f59e0b" />
+        </div>
+        <div className="space-y-3">
+          <span className="text-[11px] font-semibold text-n-9 uppercase tracking-[0.06em]">Mitigating / Locked</span>
           <EngagementLineAnimatedPreview color="#ef4444" />
         </div>
       </div>
@@ -1357,8 +1360,12 @@ function EngagementLineFlows() {
                     standby <span className="text-sky-300/80">#ffffff</span>
                   </div>
                   <div className="flex items-center gap-2 font-mono text-n-10">
+                    <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: '#f59e0b' }} />
+                    weapon pointing <span className="text-sky-300/80">#f59e0b</span>
+                  </div>
+                  <div className="flex items-center gap-2 font-mono text-n-10">
                     <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: '#ef4444' }} />
-                    mitigating <span className="text-sky-300/80">#ef4444</span>
+                    mitigating / locked <span className="text-sky-300/80">#ef4444</span>
                   </div>
                 </div>
               </div>
@@ -2790,14 +2797,38 @@ export function DetectionRow() {
                 <div className="w-56">
                   <SplitActionButton label="שיבוש" badge="Regulus North" icon={Radio} variant="danger" size="sm" onClick={noop} dropdownItems={[]} dropdownGroups={[
                     { label: 'בחירת ג׳אמר', items: [
-                      { id: 'eff-1', label: 'Regulus North (1.2 ק״מ)', checked: true, onClick: noop },
-                      { id: 'eff-2', label: 'Regulus South (3.8 ק״מ)', checked: false, onClick: noop },
+                      { id: 'eff-1', label: 'Regulus North (1.2 ק״מ)', active: true, onClick: noop },
+                      { id: 'eff-2', label: 'Regulus South (3.8 ק״מ)', active: false, onClick: noop },
                     ]},
                     { items: [
                       { id: 'mode-1', label: 'שיבוש כללי', icon: Radio, onClick: noop },
                       { id: 'mode-2', label: 'שיבוש ממוקד', icon: Crosshair, onClick: noop },
                     ]},
                   ]} />
+                </div>
+              </ExampleBlock>
+
+              <ExampleBlock title="Ground Hostile — Weapon Flow">
+                <div className="flex flex-wrap items-start gap-3">
+                  <div className="w-56">
+                    <SplitActionButton label="כוון נשק" badge="משגר אלפא" icon={Crosshair} variant="danger" size="sm" onClick={noop} dropdownItems={[]} dropdownGroups={[
+                      { label: 'בחירת משגר', items: [
+                        { id: 'lchr-1', label: 'משגר אלפא (0.8 ק״מ)', active: true, onClick: noop },
+                        { id: 'lchr-2', label: 'משגר בראבו (2.1 ק״מ)', active: false, onClick: noop },
+                        { id: 'lchr-3', label: 'משגר גאמא (3.5 ק״מ)', active: false, onClick: noop },
+                      ]},
+                    ]} />
+                  </div>
+                  <div className="w-56">
+                    <SplitActionButton label="מכוון..." badge="משגר אלפא" icon={Crosshair} variant="warning" size="sm" loading onClick={noop} dropdownItems={[]} dropdownGroups={[
+                      { label: 'בחירת משגר', items: [
+                        { id: 'lchr-1', label: 'משגר אלפא (0.8 ק״מ)', active: true, onClick: noop },
+                      ]},
+                    ]} />
+                  </div>
+                  <div className="w-56">
+                    <SplitActionButton label="נעול על מטרה" badge="משגר אלפא" icon={Lock} variant="ghost" size="sm" disabled dimDisabledShell={false} onClick={noop} dropdownItems={[]} />
+                  </div>
                 </div>
               </ExampleBlock>
             </ComponentSection>
@@ -3796,7 +3827,7 @@ export function DetectionRow() {
             )}
 
             {activeItem === 'engagement-line-flows' && (
-            <ComponentSection id="engagement-line-flows" name="Engagement Line" description="The dashed engagement line connects an effector asset to the active hostile target on the tactical map. Animated with marching dashes and traveling particles, it shifts from white (standby) to red (mitigating) when a jam is initiated.">
+            <ComponentSection id="engagement-line-flows" name="Engagement Line" description="The dashed engagement line connects an effector asset to the active hostile target on the tactical map. Animated with marching dashes and traveling particles. Color encodes flow state: white (standby), amber (weapon pointing), red (jam mitigating / weapon locked).">
               <EngagementLineFlows />
             </ComponentSection>
             )}
@@ -3912,6 +3943,8 @@ export function DetectionRow() {
                         expired: 'unknown',
                         alert: 'hostile',
                         jammer: 'possibleThreat',
+                        weaponPointing: 'hostile',
+                        weaponLocked: 'hostile',
                       };
                       return INTERACTION_STATES.map(state => {
                         const isHovered = explorerState === state;
@@ -3933,7 +3966,7 @@ export function DetectionRow() {
                               style={s}
                               surfaceSize={36}
                               ringSize={28}
-                              pulse={isHovered && (state === 'hovered' || state === 'selected' || state === 'active')}
+                              pulse={isHovered && (state === 'hovered' || state === 'selected' || state === 'active' || state === 'weaponPointing' || state === 'weaponLocked')}
                             />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-baseline gap-2">
@@ -3956,7 +3989,7 @@ export function DetectionRow() {
                           style={heroStyle}
                           surfaceSize={72}
                           ringSize={56}
-                          pulse={explorerState === 'hovered' || explorerState === 'selected' || explorerState === 'active'}
+                          pulse={explorerState === 'hovered' || explorerState === 'selected' || explorerState === 'active' || explorerState === 'weaponPointing' || explorerState === 'weaponLocked'}
                         />
                       );
                     })()}
@@ -3988,6 +4021,7 @@ export function DetectionRow() {
                     { name: 'DroneHiveIcon', el: <DroneHiveIcon size={32} fill="white" /> },
                     { name: 'DroneIcon', el: <DroneIcon color="white" /> },
                     { name: 'MissileIcon', el: <MissileIcon fill="white" /> },
+                    { name: 'CarIcon', el: <CarIcon color="white" size={32} /> },
                   ] as { name: string; el: React.ReactNode }[]).map(({ name, el }) => (
                     <IconCatalogTile key={name} name={name} icon={el} />
                   ))}

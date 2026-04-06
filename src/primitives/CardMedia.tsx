@@ -64,6 +64,7 @@ export function CardMedia({
             <VideoWithControls src={src} ref={inlineVideoRef} />
           ) : (
             <video
+              key={src}
               src={src}
               autoPlay
               loop
@@ -337,6 +338,7 @@ const VideoWithControls = React.forwardRef<HTMLVideoElement, { src: string }>(
     return (
       <>
         <video
+          key={src}
           ref={videoRef}
           src={src}
           muted

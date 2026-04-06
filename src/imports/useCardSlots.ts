@@ -4,7 +4,6 @@ import {
   Ship,
   Target,
   Crosshair,
-  Radio,
   Eye,
   Ban,
   MapPin,
@@ -29,7 +28,7 @@ import {
   Compass,
   ArrowUpDown,
 } from 'lucide-react';
-import { DroneCardIcon, MissileCardIcon } from '@/primitives/MapIcons';
+import { DroneCardIcon, MissileCardIcon, CarCardIcon } from '@/primitives/MapIcons';
 import type { ThreatAccent } from '@/primitives/tokens';
 import type { CardAction } from '@/primitives/CardActions';
 import type { SplitDropdownGroup } from '@/primitives/SplitActionButton';
@@ -44,9 +43,16 @@ import type { CardMediaProps } from '@/primitives/CardMedia';
 import type {
   Detection,
   RegulusEffector,
+  LauncherEffector,
   IncidentOutcome,
 } from './ListOfSystems';
 import { INCIDENT_OUTCOMES } from './ListOfSystems';
+import {
+  ENGAGEMENT_FLOWS,
+  resolveNearestAsset,
+  type EngagementFlowDef,
+  type FlowAsset,
+} from './engagementFlows';
 import { JamWaveIcon } from '@/primitives/MapIcons';
 
 export interface CardCallbacks {
@@ -82,6 +88,10 @@ export interface CardCallbacks {
   onSensorFocus?: (sensorId: string) => void;
   onBdaCamera?: () => void;
   onRequestCameraControl?: () => void;
+  onPointWeapon?: (launcherId: string) => void;
+  onLockWeapon?: () => void;
+  onDismissLock?: () => void;
+  onLauncherSelect?: (launcherId: string) => void;
 }
 
 export interface CardContext {
@@ -92,6 +102,8 @@ export interface CardContext {
   controlRequestCountdown?: number | null;
   regulusEffectors?: RegulusEffector[];
   selectedEffectorId?: string;
+  launcherEffectors?: LauncherEffector[];
+  selectedLauncherId?: string;
   nearbyCameras?: { id: string; typeLabel: string; distanceM: number }[];
   nearbyHives?: { id: string; latitude: number; longitude: number; distanceM: number; battery: number; status: string }[];
 }
@@ -112,6 +124,9 @@ export interface CardSlots {
 }
 
 function buildAccent(target: Detection): ThreatAccent {
+  if (target.weaponPointingStatus === 'pointing' || target.weaponPointingStatus === 'locking') return 'mitigating';
+  if (target.weaponPointingStatus === 'locked') return 'active';
+  if (target.weaponPointingStatus === 'pointed') return 'active';
   if (target.mitigationStatus === 'mitigating') return 'mitigating';
   if (target.mitigationStatus === 'mitigated' && target.bdaStatus !== 'complete') return 'active';
   if (target.status === 'event_resolved' || target.status === 'event_neutralized') return 'resolved';
@@ -131,6 +146,7 @@ function buildHeaderIcon(target: Detection): React.ElementType {
   switch (target.type) {
     case 'uav': return DroneCardIcon;
     case 'missile': return MissileCardIcon;
+    case 'ground_vehicle': return CarCardIcon;
     case 'naval': return Ship;
     case 'aircraft': return Plane;
     default: return Target;
@@ -138,7 +154,7 @@ function buildHeaderIcon(target: Detection): React.ElementType {
 }
 
 const CLASSIFIED_TYPE_LABELS: Record<string, string> = {
-  drone: 'רחפן', bird: 'ציפור', aircraft: 'מטוס', unknown: 'לא ידוע',
+  drone: 'רחפן', bird: 'ציפור', aircraft: 'מטוס', car: 'רכב', unknown: 'לא ידוע',
 };
 
 function buildConfidenceBadge(confidence: number | undefined, classifiedType?: string): React.ReactNode {
@@ -207,8 +223,9 @@ function buildMedia(target: Detection, ctx: CardContext): CardMediaProps | null 
 
   if (showVideo) {
     const isBdaActive = target.bdaStatus && target.bdaStatus !== 'complete' && target.bdaStatus !== 'pending';
+    const isCarTarget = target.classifiedType === 'car';
     return {
-      src: '/videos/target-feed.mov',
+      src: isCarTarget ? '/videos/weapon-feed.mp4' : '/videos/target-feed.mov',
       type: 'video',
       badge: isCuas
         ? (target.classifiedType === 'bird' ? 'bird' : 'threat')
@@ -231,58 +248,155 @@ function buildMedia(target: Detection, ctx: CardContext): CardMediaProps | null 
   };
 }
 
-function distKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function cuasJamDropdown(
-  callbacks: CardCallbacks,
-  opts: { classified: boolean; busy: boolean },
-): CardAction[] {
-  return [
-    { id: 'mitigate-all', label: 'שיבוש כללי', icon: Radio,
-      onClick: (e) => { e.stopPropagation(); callbacks.onMitigateAll?.(); },
-      disabled: !opts.classified || opts.busy,
-    },
-    { id: 'mitigate-directional', label: 'שיבוש ממוקד', icon: Crosshair,
-      onClick: (e) => e.stopPropagation(),
-      disabled: !opts.classified || opts.busy,
-    },
-    { id: 'mitigate-spectrum', label: 'שיבוש ספקטרום רחב', icon: ScanLine,
-      onClick: (e) => e.stopPropagation(),
-      disabled: !opts.classified || opts.busy,
-    },
-  ];
-}
-
-function buildJamDropdownGroups(
-  sortedEffectors: { eff: RegulusEffector; km: number }[],
+function buildFlowDropdownGroups(
+  flow: EngagementFlowDef,
+  sortedAssets: { asset: FlowAsset; km: number }[],
   activeId: string,
   callbacks: CardCallbacks,
-  opts: { classified: boolean; busy: boolean },
+  busy: boolean,
 ): SplitDropdownGroup[] {
-  const effectorItems = sortedEffectors.map(({ eff, km }) => ({
-    id: `eff-${eff.id}`,
-    label: `${eff.name} (${km.toFixed(1)} ק״מ)`,
-    checked: eff.id === activeId,
-    disabled: eff.status !== 'available' || opts.busy,
+  const selectCb = callbacks[flow.selectCallbackKey as keyof CardCallbacks] as ((id: string) => void) | undefined;
+  const primaryCb = callbacks[flow.primaryCallbackKey as keyof CardCallbacks] as ((id: string) => void) | undefined;
+  const hoverCb = callbacks.onSensorHover;
+  const assetItems = sortedAssets.map(({ asset, km }) => ({
+    id: `${flow.id}-${asset.id}`,
+    label: `${asset.name} (${km.toFixed(1)} ק״מ)`,
+    active: asset.id === activeId,
+    disabled: !flow.availableFilter(asset) || busy,
     onClick: (e: React.MouseEvent) => {
       e.stopPropagation();
-      callbacks.onEffectorSelect?.(eff.id);
+      selectCb?.(asset.id);
+      primaryCb?.(asset.id);
     },
+    onHoverStart: () => hoverCb?.(asset.id),
+    onHoverEnd: () => hoverCb?.(null),
   }));
 
-  const modeItems = cuasJamDropdown(callbacks, opts);
+  const groups: SplitDropdownGroup[] = [{ label: flow.dropdownGroupLabel, items: assetItems }];
+  if (flow.extraDropdownActions) {
+    groups.push({ items: flow.extraDropdownActions(busy) });
+  }
+  return groups;
+}
 
-  return [
-    { label: 'בחירת ג׳אמר', items: effectorItems },
-    { items: modeItems },
-  ];
+function buildFlowActions(
+  flow: EngagementFlowDef,
+  target: Detection,
+  callbacks: CardCallbacks,
+  ctx: CardContext,
+): CardAction[] {
+  const actions: CardAction[] = [];
+  const phase = flow.getPhase(target);
+  const phaseUI = flow.phases[phase];
+  if (!phaseUI) return actions;
+
+  if (phaseUI.isTerminal) {
+    actions.push({
+      id: `${flow.id}-terminal`,
+      label: phaseUI.buttonLabel,
+      group: 'effector',
+      onClick: (e) => e.stopPropagation(),
+      effectorStatusStrip: phaseUI.stripLabel
+        ? { label: phaseUI.stripLabel, icon: phaseUI.stripIcon!, tone: phaseUI.stripTone! }
+        : undefined,
+    });
+
+    if (phaseUI.terminalActions) {
+      for (const ta of phaseUI.terminalActions) {
+        const cb = callbacks[ta.callbackKey as keyof CardCallbacks] as ((...args: unknown[]) => void) | undefined;
+        actions.push({
+          id: ta.id,
+          label: ta.label,
+          icon: ta.icon,
+          variant: ta.variant,
+          size: 'sm',
+          group: 'investigation',
+          loading: ta.id === 'lock-weapon' && phase === 'locking',
+          onClick: (e) => { e.stopPropagation(); cb?.(); },
+        });
+      }
+    }
+
+    if (flow.showCamera && phase === 'mitigated') {
+      const bdaPending = !target.bdaStatus || target.bdaStatus === 'pending';
+      if (bdaPending) {
+        actions.push({
+          id: 'start-bda',
+          label: 'אימות פגיעה — נעילת רחפן',
+          icon: Crosshair,
+          variant: 'ghost',
+          size: 'sm',
+          group: 'investigation',
+          onClick: (e) => { e.stopPropagation(); callbacks.onSendDroneVerification?.(); },
+        });
+      } else {
+        actions.push({
+          id: 'dismiss-target', label: 'ביטול', icon: X, variant: 'ghost', size: 'sm',
+          group: 'investigation',
+          onClick: (e) => { e.stopPropagation(); callbacks.onDismiss?.('dismissed'); },
+        });
+      }
+    }
+
+    return actions;
+  }
+
+  const [tLat, tLon] = target.coordinates.split(',').map(s => parseFloat(s.trim()));
+  const assets = (ctx[flow.assetContextKey as keyof CardContext] ?? []) as FlowAsset[];
+  const overrideId = ctx[flow.selectedIdContextKey as keyof CardContext] as string | undefined;
+  const { all: sortedAssets, active } = resolveNearestAsset(tLat, tLon, assets, flow.availableFilter, overrideId);
+  const busy = !!phaseUI.loading;
+
+  const primaryCb = callbacks[flow.primaryCallbackKey as keyof CardCallbacks] as ((id: string) => void) | undefined;
+
+  actions.push({
+    id: `${flow.id}-primary`,
+    label: phaseUI.buttonLabel,
+    badge: active ? active.asset.name : undefined,
+    icon: phaseUI.buttonIcon,
+    variant: phaseUI.buttonVariant,
+    size: 'sm',
+    group: 'effector',
+    dataTour: `cuas-cta-${flow.id}`,
+    loading: phaseUI.loading,
+    disabled: phaseUI.disabled,
+    onClick: (e) => {
+      e.stopPropagation();
+      if (!busy && active) primaryCb?.(active.asset.id);
+    },
+    onHover: active ? (hovering) => callbacks.onSensorHover?.(hovering ? active.asset.id : null) : undefined,
+    dropdownActions: flow.extraDropdownActions ? flow.extraDropdownActions(busy) : undefined,
+    dropdownGroups: sortedAssets.length > 0
+      ? buildFlowDropdownGroups(flow, sortedAssets, active?.asset.id ?? '', callbacks, busy)
+      : undefined,
+  });
+
+  if (flow.showCamera) {
+    const cameraPointing = !!ctx.isCameraPointing;
+    const cameraActive = !!ctx.isCameraActive;
+    const CameraLockedIcon = (props: React.SVGProps<SVGSVGElement>) =>
+      React.createElement(Check, { ...props, className: `${props.className ?? ''} text-emerald-400` });
+
+    actions.push({
+      id: 'point-camera',
+      label: cameraPointing ? 'מפנה מצלמה...' : cameraActive ? 'מצלמה נעולה על היעד' : 'הפנה מצלמה',
+      icon: cameraActive ? CameraLockedIcon : Eye,
+      variant: cameraPointing || cameraActive ? 'ghost' : 'fill',
+      size: 'sm',
+      group: 'investigation',
+      loading: cameraPointing,
+      onClick: (e) => { e.stopPropagation(); if (!cameraActive) callbacks.onVerify?.('investigate'); },
+      className: cameraActive ? 'text-white cursor-default' : '',
+    });
+  }
+
+  actions.push({
+    id: 'dismiss-target', label: 'ביטול', icon: X, variant: 'ghost', size: 'sm',
+    group: 'investigation',
+    onClick: (e) => { e.stopPropagation(); callbacks.onDismiss?.('dismissed'); },
+  });
+
+  return actions;
 }
 
 function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardContext): CardAction[] {
@@ -365,139 +479,13 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
     return actions;
   }
 
-  // CUAS mitigation actions (drone, not bird)
-  if (isCuas && target.classifiedType !== 'bird') {
-    // Post-mitigation: same two-row layout (split effector row + investigation grid)
-    if (target.mitigationStatus === 'mitigated') {
-      const bdaPending = !target.bdaStatus || target.bdaStatus === 'pending';
-
-      actions.push({
-        id: 'mitigate',
-        label: 'שיבוש הושלם',
-        group: 'effector',
-        onClick: (e) => e.stopPropagation(),
-        effectorStatusStrip: { label: 'שיבוש הושלם', icon: Check, tone: 'success' },
-      });
-
-      actions.push({
-        id: 'investigate-bda',
-        label: 'תחקור — מעקב PTZ',
-        icon: Eye,
-        variant: 'fill',
-        size: 'sm',
-        group: 'investigation',
-        dataTour: 'cuas-cta-bda',
-        onClick: (e) => { e.stopPropagation(); callbacks.onVerify?.('investigate'); },
-        className:
-          'animate-pulse ring-2 ring-cyan-400/50 shadow-[0_0_12px_rgba(34,211,238,0.3)]',
-      });
-
-      if (bdaPending) {
-        actions.push({
-          id: 'start-bda',
-          label: 'אימות פגיעה — נעילת רחפן',
-          icon: Crosshair,
-          variant: 'ghost',
-          size: 'sm',
-          group: 'investigation',
-          onClick: (e) => { e.stopPropagation(); callbacks.onSendDroneVerification?.(); },
-        });
-      } else {
-        actions.push({
-          id: 'dismiss-target',
-          label: 'ביטול',
-          icon: X,
-          variant: 'ghost',
-          size: 'sm',
-          group: 'investigation',
-          onClick: (e) => { e.stopPropagation(); callbacks.onDismiss?.('dismissed'); },
-        });
+  // Engagement flow actions (jam, weapon, and future flows) — config-driven
+  if (isCuas) {
+    for (const flow of ENGAGEMENT_FLOWS) {
+      if (flow.matchTarget(target)) {
+        return buildFlowActions(flow, target, callbacks, ctx);
       }
-
-      return actions;
     }
-
-    const isMitigating = target.mitigationStatus === 'mitigating';
-    const investigationDisabled = isMitigating;
-    const investigationHoldTitle = isMitigating ? 'זמין לאחר סיום השיבוש' : undefined;
-
-    const [tLat, tLon] = target.coordinates.split(',').map(s => parseFloat(s.trim()));
-    const allEffectors = (ctx.regulusEffectors ?? [])
-      .map(eff => ({ eff, km: distKm(tLat, tLon, eff.lat, eff.lon) }))
-      .sort((a, b) => a.km - b.km);
-    const availableEffectors = allEffectors.filter(e => e.eff.status === 'available');
-    const nearest = availableEffectors[0] ?? null;
-    const overridden = ctx.selectedEffectorId
-      ? allEffectors.find(e => e.eff.id === ctx.selectedEffectorId && e.eff.status === 'available')
-      : null;
-    const active = overridden ?? nearest;
-
-    if (isMitigating) {
-      actions.push({
-        id: 'mitigate',
-        label: 'משבש אות...',
-        badge: active ? active.eff.name : undefined,
-        icon: JamWaveIcon,
-        variant: 'danger',
-        size: 'sm',
-        group: 'effector',
-        dataTour: 'cuas-cta-mitigate',
-        loading: true,
-        disabled: true,
-        onClick: (e) => e.stopPropagation(),
-        onHover: active ? (hovering) => callbacks.onSensorHover?.(hovering ? active.eff.id : null) : undefined,
-        dropdownActions: cuasJamDropdown(callbacks, { classified: true, busy: true }),
-        dropdownGroups: allEffectors.length > 0
-          ? buildJamDropdownGroups(allEffectors, active?.eff.id ?? '', callbacks, { classified: true, busy: true })
-          : undefined,
-      });
-    } else {
-      actions.push({
-        id: 'mitigate',
-        label: 'שיבוש',
-        badge: active ? active.eff.name : undefined,
-        icon: JamWaveIcon,
-        variant: 'danger',
-        size: 'sm',
-        group: 'effector',
-        dataTour: 'cuas-cta-mitigate',
-        onClick: (e) => {
-          e.stopPropagation();
-          if (active) callbacks.onMitigate?.(active.eff.id);
-        },
-        onHover: active ? (hovering) => callbacks.onSensorHover?.(hovering ? active.eff.id : null) : undefined,
-        dropdownActions: cuasJamDropdown(callbacks, { classified: true, busy: false }),
-        dropdownGroups: allEffectors.length > 0
-          ? buildJamDropdownGroups(allEffectors, active?.eff.id ?? '', callbacks, { classified: true, busy: false })
-          : undefined,
-      });
-    }
-
-    const cameraPointing = !!ctx.isCameraPointing;
-    const cameraActive = !!ctx.isCameraActive;
-
-    const CameraLockedIcon = (props: React.SVGProps<SVGSVGElement>) =>
-      React.createElement(Check, { ...props, className: `${props.className ?? ''} text-emerald-400` });
-
-    actions.push({
-      id: 'point-camera',
-      label: cameraPointing ? 'מפנה מצלמה...' : cameraActive ? 'מצלמה נעולה על היעד' : 'הפנה מצלמה',
-      icon: cameraActive ? CameraLockedIcon : Eye,
-      variant: cameraPointing || cameraActive ? 'ghost' : 'fill',
-      size: 'sm',
-      group: 'investigation',
-      loading: cameraPointing,
-      onClick: (e) => { e.stopPropagation(); if (!cameraActive) callbacks.onVerify?.('investigate'); },
-      className: cameraActive ? 'text-white cursor-default' : '',
-    });
-
-    actions.push({
-      id: 'dismiss-target', label: 'ביטול', icon: X, variant: 'ghost', size: 'sm',
-      group: 'investigation',
-      onClick: (e) => { e.stopPropagation(); callbacks.onDismiss?.('dismissed'); },
-    });
-
-    return actions;
   }
 
   // CUAS bird actions
@@ -675,7 +663,23 @@ function buildTimeline(target: Detection, ctx: CardContext): TimelineStep[] {
       },
     ];
     if (target.entityStage === 'classified') {
-      if (target.mitigationStatus === 'mitigating') {
+      if (target.classifiedType === 'car') {
+        const wp = target.weaponPointingStatus;
+        if (wp === 'pointing') {
+          cuasPhases.push({ label: 'כיוון נשק', status: 'active' as TimelineStep['status'] });
+        } else if (wp === 'pointed') {
+          cuasPhases.push({ label: 'נשק מכוון', status: 'complete' as TimelineStep['status'] });
+          cuasPhases.push({ label: 'נעילה', status: 'active' as TimelineStep['status'] });
+        } else if (wp === 'locking') {
+          cuasPhases.push({ label: 'נשק מכוון', status: 'complete' as TimelineStep['status'] });
+          cuasPhases.push({ label: 'נועל...', status: 'active' as TimelineStep['status'] });
+        } else if (wp === 'locked') {
+          cuasPhases.push({ label: 'נשק מכוון', status: 'complete' as TimelineStep['status'] });
+          cuasPhases.push({ label: 'נעול', status: 'complete' as TimelineStep['status'] });
+        } else {
+          cuasPhases.push({ label: 'ממתין לפעולה', status: 'active' as TimelineStep['status'] });
+        }
+      } else if (target.mitigationStatus === 'mitigating') {
         cuasPhases.push({ label: 'שיבוש פעיל', status: 'active' });
       } else if (target.mitigationStatus === 'mitigated') {
         cuasPhases.push({ label: 'נוטרל', status: 'complete' });
@@ -726,10 +730,10 @@ function buildDetails(target: Detection): { rows: DetailRow[]; classification?: 
   let classification: CardDetailsClassification | undefined;
   if (target.entityStage === 'classified') {
     const typeLabels: Record<string, string> = {
-      drone: 'רחפן', bird: 'ציפור', aircraft: 'מטוס', unknown: 'לא ידוע',
+      drone: 'רחפן', bird: 'ציפור', aircraft: 'מטוס', car: 'רכב', unknown: 'לא ידוע',
     };
     const colorClasses: Record<string, string> = {
-      drone: 'text-red-400', bird: 'text-amber-400', aircraft: 'text-zinc-300',
+      drone: 'text-red-400', bird: 'text-amber-400', aircraft: 'text-zinc-300', car: 'text-orange-400',
     };
     classification = {
       type: target.classifiedType ?? 'unknown',
@@ -807,7 +811,7 @@ export function useCardSlots(
   callbacks: CardCallbacks,
   ctx: CardContext = {},
 ): CardSlots {
-  const accent = useMemo(() => buildAccent(target), [target.status, target.mitigationStatus, target.flowType, target.droneDeployment?.phase, target.plannedMission?.phase]);
+  const accent = useMemo(() => buildAccent(target), [target.status, target.mitigationStatus, target.weaponPointingStatus, target.flowType, target.droneDeployment?.phase, target.plannedMission?.phase]);
   const completed = target.status === 'event_resolved' || target.status === 'event_neutralized';
   const closureType = useMemo((): 'manual' | 'auto' | null => {
     const isCompleted = target.status === 'event_resolved'

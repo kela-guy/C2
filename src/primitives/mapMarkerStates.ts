@@ -8,7 +8,9 @@ export type InteractionState =
   | 'disabled'
   | 'expired'
   | 'alert'
-  | 'jammer';
+  | 'jammer'
+  | 'weaponPointing'
+  | 'weaponLocked';
 
 export const INTERACTION_STATES: InteractionState[] = [
   'default',
@@ -19,6 +21,8 @@ export const INTERACTION_STATES: InteractionState[] = [
   'expired',
   'alert',
   'jammer',
+  'weaponPointing',
+  'weaponLocked',
 ];
 
 export const AFFILIATIONS: Affiliation[] = ['friendly', 'hostile', 'possibleThreat', 'neutral', 'unknown'];
@@ -40,6 +44,8 @@ export const INTERACTION_STATE_LABELS: Record<InteractionState, string> = {
   expired: 'Expired',
   alert: 'Alert',
   jammer: 'Jammer',
+  weaponPointing: 'Weapon Pointing',
+  weaponLocked: 'Weapon Locked',
 };
 
 export interface MarkerStyle {
@@ -231,6 +237,38 @@ const STATE_MATRIX: Record<InteractionState, (p: AffiliationPalette) => MarkerSt
     ringDash: 'solid',
     ringPulse: true,
     glyphColor: '#4ade80',
+    glyphOpacity: 1,
+    markerScale: 1,
+  }),
+  weaponPointing: () => ({
+    surfaceFill: '#ffffff',
+    surfaceOpacity: 0.1,
+    surfaceBlur: 1,
+    innerGlow: true,
+    innerGlowColor: '#f59e0b',
+    innerGlowOpacity: 0.4,
+    ringColor: '#f59e0b',
+    ringWidth: 2,
+    ringOpacity: 1,
+    ringDash: 'solid',
+    ringPulse: true,
+    glyphColor: '#f59e0b',
+    glyphOpacity: 1,
+    markerScale: 1,
+  }),
+  weaponLocked: () => ({
+    surfaceFill: '#ffffff',
+    surfaceOpacity: 0.1,
+    surfaceBlur: 1,
+    innerGlow: true,
+    innerGlowColor: '#ef4444',
+    innerGlowOpacity: 0.4,
+    ringColor: '#ef4444',
+    ringWidth: 2,
+    ringOpacity: 1,
+    ringDash: 'solid',
+    ringPulse: false,
+    glyphColor: '#ef4444',
     glyphOpacity: 1,
     markerScale: 1,
   }),

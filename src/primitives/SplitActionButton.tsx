@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, ChevronDown, Loader2 } from 'lucide-react';
+import { ChevronDown, Loader2 } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { cn } from '@/shared/components/ui/utils';
 import {
@@ -17,8 +17,10 @@ export interface SplitDropdownItem {
   label: string;
   icon?: React.ElementType;
   disabled?: boolean;
-  checked?: boolean;
+  active?: boolean;
   onClick: (e: React.MouseEvent) => void;
+  onHoverStart?: () => void;
+  onHoverEnd?: () => void;
 }
 
 export interface SplitDropdownGroup {
@@ -101,7 +103,13 @@ export function SplitActionButton({
 }: SplitActionButtonProps) {
   const prefersReducedMotion = useReducedMotion();
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const shellRef = React.useRef<HTMLDivElement>(null);
+  const [shellWidth, setShellWidth] = React.useState(0);
   const isDisabled = disabled || loading;
+
+  React.useEffect(() => {
+    if (menuOpen && shellRef.current) setShellWidth(shellRef.current.offsetWidth);
+  }, [menuOpen]);
   const c = SPLIT_BUTTON_VARIANTS[variant];
   const sz = SPLIT_BUTTON_SIZES[size];
 
@@ -131,6 +139,7 @@ export function SplitActionButton({
 
   return (
     <div
+      ref={shellRef}
       className={cn(
         'flex w-full items-stretch gap-0.5 rounded',
         variantShell,
@@ -215,8 +224,9 @@ export function SplitActionButton({
           align="end"
           sideOffset={6}
           dir="rtl"
+          style={shellWidth ? { minWidth: shellWidth } : undefined}
           className={cn(
-            'min-w-[140px] rounded-lg border-none p-1 origin-top-left',
+            'rounded-lg border-none p-1 origin-top-left',
             'bg-[#1c1c20] text-white',
             'shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_8px_30px_rgba(0,0,0,0.5)]',
             prefersReducedMotion && 'data-[state=open]:animate-none data-[state=closed]:animate-none',
@@ -239,20 +249,25 @@ export function SplitActionButton({
                       <DropdownMenuItem
                         key={item.id}
                         disabled={item.disabled}
-                        className="flex w-full flex-row items-center justify-start gap-2 rounded-md px-2.5 py-2 text-xs text-zinc-200 cursor-pointer transition-[background-color,color] duration-150 ease-out hover:bg-white/[0.08] hover:text-white focus:bg-white/[0.08] focus:text-white"
+                        className="group flex w-full flex-row items-center justify-start gap-2 rounded-md px-2.5 py-2 text-xs text-zinc-200 cursor-pointer transition-[background-color,color] duration-150 ease-out hover:bg-white/[0.08] hover:text-white focus:bg-white/[0.08] focus:text-white"
                         onClick={(e) => {
                           e.stopPropagation();
                           item.onClick(e);
                         }}
+                        onMouseEnter={item.onHoverStart}
+                        onMouseLeave={item.onHoverEnd}
+                        onFocus={item.onHoverStart}
+                        onBlur={item.onHoverEnd}
                       >
-                        {item.checked != null ? (
-                          <span className="w-3.5 shrink-0 flex items-center justify-center">
-                            {item.checked && <Check size={12} className="text-emerald-400" aria-hidden="true" />}
-                          </span>
-                        ) : (
-                          ItemIcon && <ItemIcon size={14} className="shrink-0" aria-hidden="true" />
-                        )}
+                        <span className={cn(
+                          'w-0.5 self-stretch rounded-full shrink-0',
+                          item.active ? 'bg-white' : 'bg-transparent',
+                        )} />
+                        {ItemIcon && <ItemIcon size={14} className="shrink-0" aria-hidden="true" />}
                         <span className="min-w-0 flex-1 text-start">{item.label}</span>
+                        <span className="text-[10px] text-white/40 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                          בחר
+                        </span>
                       </DropdownMenuItem>
                     );
                   })}

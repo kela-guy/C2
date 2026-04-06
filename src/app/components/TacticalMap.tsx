@@ -3,7 +3,7 @@ import Map, { Marker, NavigationControl, Source, Layer, type MapRef } from 'reac
 
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Crosshair, AlertTriangle, ShieldAlert, Camera, CheckCircle2, Radio, Search, Eye, MapPin, X, Compass, Circle, Video, Info, Settings, BellOff, Wrench, ExternalLink, Maximize2 } from 'lucide-react';
-import { JamWaveIcon, DRONE_PATH, MISSILE_PATH } from '@/primitives/MapIcons';
+import { JamWaveIcon, DRONE_PATH, MISSILE_PATH, CarIcon } from '@/primitives/MapIcons';
 import { MapMarker } from '@/primitives/MapMarker';
 import { type Affiliation, type InteractionState, resolveMarkerStyle } from '@/primitives/mapMarkerStates';
 import { OFFLINE_VISIBILITY_VARIANT } from '@/app/config/offlineVisibility';
@@ -15,7 +15,9 @@ import {
   ContextMenuSeparator,
   ContextMenuLabel,
 } from '@/shared/components/ui/context-menu';
-import type { Detection, RegulusEffector } from '@/imports/ListOfSystems';
+import type { Detection, RegulusEffector, LauncherEffector } from '@/imports/ListOfSystems';
+import { useEngagementLine, type EngagementPairGeo } from './useEngagementLine';
+import { JAM_FLOW, WEAPON_FLOW } from '@/imports/engagementFlows';
 
 const TOKEN = 'pk.eyJ1IjoiZ3V5c2hhIiwiYSI6ImNtZ3htODN0dTE2dGMybXFrYWRlZmN5MGMifQ.dIQzO3kIdQaES0pfedlRvA';
 
@@ -248,11 +250,9 @@ const ALL_MAP_ASSETS = [...CAMERA_ASSETS, ...RADAR_ASSETS, ...LIDAR_ASSETS];
 const ALL_RENDERABLE_ASSETS = [...ALL_MAP_ASSETS, ...DRONE_HIVE_ASSETS, ...WEAPON_SYSTEM_ASSETS];
 
 export const LAUNCHER_ASSETS = [
-  {
-    id: 'LCHR-NVT',
-    latitude: 32.4626,
-    longitude: 34.9963,
-  },
+  { id: 'LCHR-NVT-ALPHA', latitude: 32.4626, longitude: 34.9963 },
+  { id: 'LCHR-NVT-BRAVO', latitude: 32.4756, longitude: 35.0113 },
+  { id: 'LCHR-NVT-GAMMA', latitude: 32.4506, longitude: 35.0243 },
 ];
 
 /** Find all map assets whose FOV covers the given lat/lon. */
@@ -372,6 +372,10 @@ interface TacticalMapProps {
   offlineAssetIds?: string[];
   /** User-overridden effector selection per target (targetId -> effectorId) */
   selectedEffectorIds?: Map<string, string>;
+  /** Launcher effectors for weapon pointing flow */
+  launcherEffectors?: LauncherEffector[];
+  /** User-overridden launcher selection per target (targetId -> launcherId) */
+  selectedLauncherIds?: Map<string, string>;
 }
 
 const JAM_VERIFICATION_DURATION_MS = 4500;
@@ -429,6 +433,8 @@ export const TacticalMap = ({
   onAssetClick,
   offlineAssetIds = [],
   selectedEffectorIds,
+  launcherEffectors = [],
+  selectedLauncherIds,
 }: TacticalMapProps) => {
   const mapRef = useRef<MapRef>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -608,27 +614,33 @@ export const TacticalMap = ({
       });
   }, [targets]);
 
-  const engagementPair = useMemo(() => {
+  const jamPair = useMemo<(EngagementPairGeo & { phase: string }) | null>(() => {
     if (!activeTargetId) return null;
     const target = targets.find(t => t.id === activeTargetId);
     if (!target) return null;
-    if (target.entityStage !== 'classified' || target.classifiedType !== 'drone') return null;
+    if (target.entityStage !== 'classified' || !JAM_FLOW.matchTarget(target)) return null;
     if (target.mitigationStatus === 'mitigated') return null;
-    if (target.status === 'expired') return null;
+    if (target.status === 'expired' || target.status === 'event_neutralized' || target.status === 'event_resolved') return null;
     if (target.id === jammingTargetId) return null;
     if (target.mitigatingEffectorId === 'ALL') return null;
 
     const [tLat, tLon] = target.coordinates.split(',').map(s => parseFloat(s.trim()));
     if (isNaN(tLat) || isNaN(tLon)) return null;
 
-    const isMitigating = target.mitigationStatus === 'mitigating';
+    const phase = JAM_FLOW.getPhase(target);
 
-    if (isMitigating && target.mitigatingEffectorId) {
+    if (phase === 'mitigating' && target.mitigatingEffectorId) {
       const eff = regulusEffectors.find(r => r.id === target.mitigatingEffectorId);
       if (eff) {
         const distM = haversineDistanceM(tLat, tLon, eff.lat, eff.lon);
-        return { targetLat: tLat, targetLon: tLon, effectorLat: eff.lat, effectorLon: eff.lon, effectorId: eff.id, distanceM: distM, isMitigating: true };
+        return { toLat: tLat, toLon: tLon, fromLat: eff.lat, fromLon: eff.lon, assetId: eff.id, distanceM: distM, phase };
       }
+    }
+
+    const hoverEff = hoveredSensorIdFromCard ? regulusEffectors.find(r => r.id === hoveredSensorIdFromCard) : null;
+    if (hoverEff) {
+      const distM = haversineDistanceM(tLat, tLon, hoverEff.lat, hoverEff.lon);
+      return { toLat: tLat, toLon: tLon, fromLat: hoverEff.lat, fromLon: hoverEff.lon, assetId: hoverEff.id, distanceM: distM, phase };
     }
 
     const overrideId = selectedEffectorIds?.get(activeTargetId);
@@ -641,129 +653,51 @@ export const TacticalMap = ({
     const active = overridden ?? sorted[0] ?? null;
     if (!active) return null;
 
-    return {
-      targetLat: tLat, targetLon: tLon,
-      effectorLat: active.eff.lat, effectorLon: active.eff.lon,
-      effectorId: active.eff.id,
-      distanceM: active.dist,
-      isMitigating: false,
-    };
-  }, [activeTargetId, targets, regulusEffectors, selectedEffectorIds, jammingTargetId]);
+    return { toLat: tLat, toLon: tLon, fromLat: active.eff.lat, fromLon: active.eff.lon, assetId: active.eff.id, distanceM: active.dist, phase };
+  }, [activeTargetId, targets, regulusEffectors, selectedEffectorIds, jammingTargetId, hoveredSensorIdFromCard]);
 
-  const engagementActive = !!engagementPair;
-  useEffect(() => {
-    if (!engagementActive) return;
-    const prefersReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReduced) return;
+  const { particleGeoJson: jamParticleGeoJson } = useEngagementLine({ id: 'jam', pair: jamPair, mapRef });
 
-    const D = 4;
-    const PERIOD = D + D;
-    const TOTAL_STEPS = 32;
-    let step = 0;
-    let lastTime = 0;
-    let frameId: number;
+  const weaponPair = useMemo<(EngagementPairGeo & { phase: string }) | null>(() => {
+    if (!activeTargetId) return null;
+    const target = targets.find(t => t.id === activeTargetId);
+    if (!target) return null;
+    if (target.entityStage !== 'classified' || !WEAPON_FLOW.matchTarget(target)) return null;
+    if (target.status === 'expired' || target.status === 'event_neutralized' || target.status === 'event_resolved') return null;
 
-    const animate = (time: number) => {
-      if (time - lastTime > 20) {
-        lastTime = time;
-        step = (step + 1) % TOTAL_STEPS;
-        const s = (step / TOTAL_STEPS) * PERIOD;
-        const pattern: number[] =
-          s < 0.01       ? [D, D] :
-          s < D          ? [0, s, D, D - s] :
-          s > PERIOD - 0.01 ? [D, D] :
-                           [s - D, D, PERIOD - s, 0.01];
-        try {
-          const map = (mapRef.current as any)?.getMap?.() ?? mapRef.current;
-          if (map?.getLayer?.('engagement-line-dash')) {
-            map.setPaintProperty('engagement-line-dash', 'line-dasharray', pattern);
-          }
-        } catch {}
+    const [tLat, tLon] = target.coordinates.split(',').map(s => parseFloat(s.trim()));
+    if (isNaN(tLat) || isNaN(tLon)) return null;
+
+    const phase = WEAPON_FLOW.getPhase(target);
+
+    if (target.pointingLauncherId) {
+      const launcher = launcherEffectors.find(l => l.id === target.pointingLauncherId);
+      if (launcher) {
+        const distM = haversineDistanceM(tLat, tLon, launcher.lat, launcher.lon);
+        return { toLat: tLat, toLon: tLon, fromLat: launcher.lat, fromLon: launcher.lon, assetId: launcher.id, distanceM: distM, phase };
       }
-      frameId = requestAnimationFrame(animate);
-    };
-    frameId = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(frameId);
-  }, [engagementActive]);
-
-  // Traveling particles on the engagement line
-  const engParticleTRef = useRef<number[]>(Array.from({ length: 3 }, (_, i) => i / 3));
-  const [engParticleGeoJson, setEngParticleGeoJson] = useState<{
-    type: 'FeatureCollection'; features: Array<{ type: 'Feature'; properties: Record<string, never>; geometry: { type: 'Point'; coordinates: [number, number] } }>;
-  }>({ type: 'FeatureCollection', features: [] });
-
-  const engSpringLut = useMemo(() => {
-    const stiffness = 160, damping = 70, mass = 1;
-    const steps = 300;
-    const dt = 1 / 120;
-    let x = 0, v = 0;
-    const lut: number[] = [];
-    for (let i = 0; i <= steps; i++) {
-      lut.push(Math.max(0, Math.min(x, 1.5)));
-      const a = (-stiffness * (x - 1) - damping * v) / mass;
-      v += a * dt;
-      x += v * dt;
     }
-    return lut;
-  }, []);
 
-  const engPairRef = useRef(engagementPair);
-  engPairRef.current = engagementPair;
-
-  useEffect(() => {
-    if (!engagementActive) {
-      setEngParticleGeoJson({ type: 'FeatureCollection', features: [] });
-      return;
+    const hoverLauncher = hoveredSensorIdFromCard ? launcherEffectors.find(l => l.id === hoveredSensorIdFromCard) : null;
+    if (hoverLauncher) {
+      const distM = haversineDistanceM(tLat, tLon, hoverLauncher.lat, hoverLauncher.lon);
+      return { toLat: tLat, toLon: tLon, fromLat: hoverLauncher.lat, fromLon: hoverLauncher.lon, assetId: hoverLauncher.id, distanceM: distM, phase };
     }
-    const prefersReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReduced) return;
 
-    let frameId: number;
-    let lastTime = 0;
-    const SPEED = 0.25;
-    const COUNT = 3;
-    const ts = engParticleTRef.current;
-    const lut = engSpringLut;
+    const overrideId = selectedLauncherIds?.get(activeTargetId);
+    const sorted = launcherEffectors
+      .filter(l => l.status === 'available' || l.status === 'pointing')
+      .map(l => ({ launcher: l, dist: haversineDistanceM(tLat, tLon, l.lat, l.lon) }))
+      .sort((a, b) => a.dist - b.dist);
 
-    const easeSpring = (t: number) => {
-      const idx = t * (lut.length - 1);
-      const lo = Math.floor(idx);
-      const hi = Math.min(lo + 1, lut.length - 1);
-      return lut[lo] + (lut[hi] - lut[lo]) * (idx - lo);
-    };
+    const overridden = overrideId ? sorted.find(e => e.launcher.id === overrideId) : null;
+    const active = overridden ?? sorted[0] ?? null;
+    if (!active) return null;
 
-    const animate = (time: number) => {
-      const dt = lastTime ? (time - lastTime) / 1000 : 0;
-      lastTime = time;
-      const pair = engPairRef.current;
-      if (!pair) { frameId = requestAnimationFrame(animate); return; }
+    return { toLat: tLat, toLon: tLon, fromLat: active.launcher.lat, fromLon: active.launcher.lon, assetId: active.launcher.id, distanceM: active.dist, phase };
+  }, [activeTargetId, targets, launcherEffectors, selectedLauncherIds, hoveredSensorIdFromCard]);
 
-      for (let i = 0; i < COUNT; i++) {
-        ts[i] = (ts[i] + SPEED * dt) % 1;
-      }
-
-      const features = ts.map((t) => {
-        const eased = easeSpring(t);
-        return {
-          type: 'Feature' as const,
-          properties: {} as Record<string, never>,
-          geometry: {
-            type: 'Point' as const,
-            coordinates: [
-              pair.effectorLon + (pair.targetLon - pair.effectorLon) * eased,
-              pair.effectorLat + (pair.targetLat - pair.effectorLat) * eased,
-            ] as [number, number],
-          },
-        };
-      });
-
-      setEngParticleGeoJson({ type: 'FeatureCollection', features });
-      frameId = requestAnimationFrame(animate);
-    };
-
-    frameId = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(frameId);
-  }, [engagementActive, engSpringLut]);
+  const { particleGeoJson: weaponParticleGeoJson } = useEngagementLine({ id: 'weapon', pair: weaponPair, mapRef });
 
   const [mapStyleId, setMapStyleId] = useState<'dark' | 'satellite'>('satellite');
   const [flickeringSensorId, setFlickeringSensorId] = useState<string | null>(null);
@@ -1491,68 +1425,61 @@ export const TacticalMap = ({
           </>
         )}
 
-        {/* Effector-to-target engagement line + distance badge */}
-        {engagementPair && (
-          <>
-            <Source id="engagement-line" type="geojson" data={{
-              type: 'Feature' as const,
-              properties: {},
-              geometry: {
-                type: 'LineString' as const,
-                coordinates: [
-                  [engagementPair.effectorLon, engagementPair.effectorLat],
-                  [engagementPair.targetLon, engagementPair.targetLat],
-                ],
-              },
-            }}>
-              <Layer
-                id="engagement-line-dash"
-                type="line"
-                paint={{
-                  'line-color': engagementPair.isMitigating ? '#ef4444' : '#ffffff',
-                  'line-width': 2,
-                  'line-dasharray': [4, 4],
-                }}
-              />
-            </Source>
-            <Source id="engagement-particles" type="geojson" data={engParticleGeoJson}>
-              <Layer
-                id="engagement-particle-glow"
-                type="circle"
-                paint={{
-                  'circle-radius': 14,
-                  'circle-color': engagementPair.isMitigating ? '#ef4444' : '#ffffff',
-                  'circle-opacity': 0.225,
-                  'circle-blur': 1,
-                }}
-              />
-              <Layer
-                id="engagement-particle-core"
-                type="circle"
-                paint={{
-                  'circle-radius': 4,
-                  'circle-color': engagementPair.isMitigating ? '#ef4444' : '#ffffff',
-                  'circle-opacity': 0.9,
-                }}
-              />
-            </Source>
-            <Marker
-              latitude={(engagementPair.targetLat + engagementPair.effectorLat) / 2}
-              longitude={(engagementPair.targetLon + engagementPair.effectorLon) / 2}
-              anchor="center"
-            >
-              <div
-                className="rounded px-2 py-1 font-mono text-xs tabular-nums whitespace-nowrap pointer-events-none select-none shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
-                style={{
-                  backgroundColor: engagementPair.isMitigating ? '#ef4444' : '#ffffff',
-                  color: engagementPair.isMitigating ? '#ffffff' : '#000000',
-                }}
+        {/* Engagement lines — driven by flow config */}
+        {[
+          { flow: JAM_FLOW, pair: jamPair, particles: jamParticleGeoJson },
+          { flow: WEAPON_FLOW, pair: weaponPair, particles: weaponParticleGeoJson },
+        ].map(({ flow, pair, particles }) => {
+          if (!pair) return null;
+          const lineColor = flow.lineColor(pair.phase);
+          const textColor = flow.badgeTextColor(pair.phase);
+          const prefix = `${flow.id}-engagement`;
+          return (
+            <React.Fragment key={flow.id}>
+              <Source id={`${prefix}-line`} type="geojson" data={{
+                type: 'Feature' as const,
+                properties: {},
+                geometry: {
+                  type: 'LineString' as const,
+                  coordinates: [
+                    [pair.fromLon, pair.fromLat],
+                    [pair.toLon, pair.toLat],
+                  ],
+                },
+              }}>
+                <Layer
+                  id={`${flow.id}-engagement-line-dash`}
+                  type="line"
+                  paint={{ 'line-color': lineColor, 'line-width': 2, 'line-dasharray': [4, 4] }}
+                />
+              </Source>
+              <Source id={`${prefix}-particles`} type="geojson" data={particles}>
+                <Layer
+                  id={`${prefix}-particle-glow`}
+                  type="circle"
+                  paint={{ 'circle-radius': 14, 'circle-color': lineColor, 'circle-opacity': 0.225, 'circle-blur': 1 }}
+                />
+                <Layer
+                  id={`${prefix}-particle-core`}
+                  type="circle"
+                  paint={{ 'circle-radius': 4, 'circle-color': lineColor, 'circle-opacity': 0.9 }}
+                />
+              </Source>
+              <Marker
+                latitude={(pair.toLat + pair.fromLat) / 2}
+                longitude={(pair.toLon + pair.fromLon) / 2}
+                anchor="center"
               >
-                {engagementPair.distanceM < 1000 ? `${Math.round(engagementPair.distanceM)}m` : `${(engagementPair.distanceM / 1000).toFixed(1)} km`}
-              </div>
-            </Marker>
-          </>
-        )}
+                <div
+                  className="rounded px-2 py-1 font-mono text-xs tabular-nums whitespace-nowrap pointer-events-none select-none shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
+                  style={{ backgroundColor: lineColor, color: textColor }}
+                >
+                  {pair.distanceM < 1000 ? `${Math.round(pair.distanceM)}m` : `${(pair.distanceM / 1000).toFixed(1)} km`}
+                </div>
+              </Marker>
+            </React.Fragment>
+          );
+        })}
 
         {/* Dynamic Target Markers */}
         {/* Target trail lines for classified entities */}
@@ -1618,8 +1545,11 @@ export const TacticalMap = ({
 
             const targetStyle = resolveMarkerStyle(targetState, targetAffiliation);
 
+            const isCar = target.classifiedType === 'car';
             const targetGlyph = isClassified && isDrone
               ? <DroneIcon rotationDeg={droneHeadingDeg - 90} color={targetStyle.glyphColor} disabled={isMitigated} />
+              : isClassified && isCar
+              ? <CarIcon color={targetStyle.glyphColor} size={26} />
               : <div className="w-2.5 h-2.5 rounded-full" style={{ background: targetStyle.glyphColor }} />;
 
             const targetSurfaceSize = isExpiredCuas ? 24 : isClassified ? 32 : 28;
@@ -1739,17 +1669,99 @@ export const TacticalMap = ({
             );
         })}
 
-        {/* Static missile launcher assets (weaponized sites) */}
-        {LAUNCHER_ASSETS.map(launcher => {
+        {/* Unified coverage rings for all engagement flow assets */}
+        {(() => {
+          type CoverageRing = { key: string; lat: number; lon: number; radiusM: number; fovDeg: number; bearing: number; fillColor: string; fillOpacity: number; lineColor: string; lineWidth: number; lineDash: number[]; lineOpacity: number };
+          const rings: CoverageRing[] = [];
+          const WEAPON_FOV_DEG = 135;
+
+          const launchersToRender = launcherEffectors.length > 0
+            ? launcherEffectors
+            : LAUNCHER_ASSETS.map(a => ({ id: a.id, name: 'משגר טילים', lat: a.latitude, lon: a.longitude, status: 'available' as const }));
+          for (const launcher of launchersToRender) {
+            const isHovered = hoveredLauncherId === launcher.id;
+            const isHoveredFromCard = launcher.id === hoveredSensorIdFromCard;
+            const isSelected = launcher.id === selectedAssetId;
+            const isEngaged = weaponPair?.assetId === launcher.id;
+            const isPointing = launcher.status === 'pointing';
+            const isLocked = launcher.status === 'locked';
+            if (!isHovered && !isHoveredFromCard && !isSelected && !isEngaged && !isPointing && !isLocked) continue;
+            const isActive = isPointing || isLocked;
+            const color = isLocked ? '#ef4444' : WEAPON_FLOW.coverageColor;
+            const targetBearing = (isActive || isEngaged) && weaponPair
+              ? bearingDegrees(launcher.lat, launcher.lon, weaponPair.toLat, weaponPair.toLon)
+              : 0;
+            rings.push({
+              key: `launcher-${launcher.id}`, lat: launcher.lat, lon: launcher.lon, radiusM: FOV_RADIUS_M,
+              fovDeg: isActive ? WEAPON_FOV_DEG : 360,
+              bearing: targetBearing,
+              fillColor: color, fillOpacity: isActive ? 0.3 : 0.15,
+              lineColor: color, lineWidth: isActive ? 1.5 : 2, lineDash: isActive ? [1, 0] : [4, 4], lineOpacity: 1,
+            });
+          }
+
+          for (const reg of regulusEffectors) {
+            const isHovered = hoveredRegulusId === reg.id;
+            const isActive = reg.status === 'active';
+            const isHoveredFromCard = reg.id === hoveredSensorIdFromCard;
+            const isEngaged = jamPair?.assetId === reg.id;
+            const isSelected = reg.id === selectedAssetId;
+            const isOffline = offlineAssetIds.includes(reg.id);
+            const dim = OFFLINE_FOV_DIMMING_ENABLED && isOffline;
+            if (!isHovered && !isActive && !isHoveredFromCard && !isEngaged && !isSelected) continue;
+            const color = dim ? '#a1a1aa' : isActive ? '#4ade80' : JAM_FLOW.coverageColor;
+            rings.push({
+              key: `reg-${reg.id}`, lat: reg.lat, lon: reg.lon, radiusM: reg.coverageRadiusM,
+              fovDeg: 360, bearing: 0,
+              fillColor: color, fillOpacity: dim ? 0.08 : (isActive ? 0.4 : 0.2),
+              lineColor: color, lineWidth: dim ? 1 : (isActive ? 1.5 : 2), lineDash: isActive ? [1, 0] : [4, 4], lineOpacity: dim ? 0.3 : 1,
+            });
+          }
+
+          return rings.map(r => {
+            const ring = fovPolygon(r.lat, r.lon, r.fovDeg, r.bearing, r.radiusM);
+            return (
+              <Source key={`coverage-${r.key}`} id={`coverage-${r.key}`} type="geojson" data={{
+                type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [ring] },
+              }}>
+                <Layer id={`coverage-fill-${r.key}`} type="fill" paint={{ 'fill-color': r.fillColor, 'fill-opacity': r.fillOpacity }} />
+                <Layer id={`coverage-line-${r.key}`} type="line" paint={{
+                  'line-color': r.lineColor, 'line-width': r.lineWidth, 'line-dasharray': r.lineDash, 'line-opacity': r.lineOpacity,
+                }} />
+              </Source>
+            );
+          });
+        })()}
+
+        {/* Missile launcher markers — use dynamic launcherEffectors when provided, fallback to static */}
+        {(launcherEffectors.length > 0 ? launcherEffectors : LAUNCHER_ASSETS.map(a => ({ id: a.id, name: 'משגר טילים', lat: a.latitude, lon: a.longitude, status: 'available' as const }))).map(launcher => {
           const isHoveredFromCard = launcher.id === hoveredSensorIdFromCard;
           const isHovered = hoveredLauncherId === launcher.id;
-          const isOffline = offlineAssetIds.includes(launcher.id);
+          const isOffline = offlineAssetIds.includes(launcher.id) || launcher.status === 'inactive';
           const isSelected = launcher.id === selectedAssetId;
+          const isPointing = launcher.status === 'pointing';
+          const isLocked = launcher.status === 'locked';
+          const isEngaged = weaponPair?.assetId === launcher.id;
+          const launcherBearing = isEngaged && weaponPair
+            ? bearingDegrees(launcher.lat, launcher.lon, weaponPair.toLat, weaponPair.toLon)
+            : launcher.bearingDeg;
+          const markerState: InteractionState =
+            isOffline ? 'disabled' :
+            isLocked ? 'weaponLocked' :
+            isPointing ? 'weaponPointing' :
+            isSelected || isEngaged ? 'selected' :
+            isHovered || isHoveredFromCard ? 'hovered' :
+            'default';
+          const style = resolveMarkerStyle(markerState, 'friendly');
+          const label = isOffline ? `${launcher.name} — לא מקוון`
+            : isLocked ? `${launcher.name} — נעול`
+            : isPointing ? `${launcher.name} — מכוון`
+            : launcher.name;
           return (
             <Marker
               key={launcher.id}
-              longitude={launcher.longitude}
-              latitude={launcher.latitude}
+              longitude={launcher.lon}
+              latitude={launcher.lat}
               anchor="bottom"
             >
               <div
@@ -1757,58 +1769,18 @@ export const TacticalMap = ({
                 onMouseLeave={() => setHoveredLauncherId(null)}
                 onClick={(e) => { e.stopPropagation(); onAssetClick?.(launcher.id); }}
               >
-                {(() => {
-                  const markerState: InteractionState =
-                    isOffline ? 'disabled' :
-                    isSelected ? 'selected' :
-                    isHovered || isHoveredFromCard ? 'hovered' :
-                    'default';
-                  const style = resolveMarkerStyle(markerState, 'friendly');
-                  return (
-                    <MapMarker
-                      icon={<LauncherIcon fill={style.glyphColor} />}
-                      style={style}
-                      surfaceSize={36}
-                      ringSize={28}
-                      pulse={isSelected}
-                      label={isOffline ? 'משגר טילים — לא מקוון' : 'משגר טילים'}
-                      showLabel={isHovered || isSelected || isHoveredFromCard}
-                    />
-                  );
-                })()}
+                <MapMarker
+                  icon={<LauncherIcon fill={style.glyphColor} />}
+                  style={style}
+                  surfaceSize={36}
+                  ringSize={28}
+                  pulse={isSelected || isPointing || isEngaged}
+                  heading={launcherBearing}
+                  label={label}
+                  showLabel={isHovered || isSelected || isHoveredFromCard || isPointing || isLocked || isEngaged}
+                />
               </div>
             </Marker>
-          );
-        })}
-
-        {/* Regulus effector coverage rings (shown on hover, selected, engagement, or when active) */}
-        {regulusEffectors.map(reg => {
-          const isHovered = hoveredRegulusId === reg.id;
-          const isActive = reg.status === 'active';
-          const isHoveredFromCard = reg.id === hoveredSensorIdFromCard;
-          const isEngaged = engagementPair?.effectorId === reg.id;
-          const isSelected = reg.id === selectedAssetId;
-          const isOffline = offlineAssetIds.includes(reg.id);
-          const dimCoverage = OFFLINE_FOV_DIMMING_ENABLED && isOffline;
-          if (!isHovered && !isActive && !isHoveredFromCard && !isEngaged && !isSelected) return null;
-          const ring = fovPolygon(reg.lat, reg.lon, 360, 0, reg.coverageRadiusM);
-          return (
-            <Source key={`reg-coverage-${reg.id}`} id={`reg-coverage-${reg.id}`} type="geojson" data={{
-              type: 'Feature',
-              properties: {},
-              geometry: { type: 'Polygon', coordinates: [ring] },
-            }}>
-              <Layer id={`reg-coverage-fill-${reg.id}`} type="fill" paint={{
-                'fill-color': dimCoverage ? '#a1a1aa' : (isActive ? '#4ade80' : '#12b886'),
-                'fill-opacity': dimCoverage ? 0.08 : (isActive ? 0.4 : 0.2),
-              }} />
-              <Layer id={`reg-coverage-line-${reg.id}`} type="line" paint={{
-                'line-color': dimCoverage ? '#a1a1aa' : (isActive ? '#4ade80' : '#12b886'),
-                'line-width': dimCoverage ? 1 : (isActive ? 1.5 : 2),
-                'line-dasharray': isActive ? [1, 0] : [4, 4],
-                'line-opacity': dimCoverage ? 0.3 : 1,
-              }} />
-            </Source>
           );
         })}
 
@@ -1817,7 +1789,7 @@ export const TacticalMap = ({
           const isHovered = hoveredRegulusId === reg.id;
           const isActive = reg.status === 'active';
           const isHoveredFromCard = reg.id === hoveredSensorIdFromCard;
-          const isEngaged = engagementPair?.effectorId === reg.id;
+          const isEngaged = jamPair?.assetId === reg.id;
           const isOffline = offlineAssetIds.includes(reg.id);
           const isSelected = reg.id === selectedAssetId;
           return (
@@ -1833,8 +1805,8 @@ export const TacticalMap = ({
                   const markerState: InteractionState =
                     isOffline ? 'disabled' :
                     isActive ? 'jammer' :
-                    isSelected ? 'selected' :
-                    isHovered || isHoveredFromCard || isEngaged ? 'hovered' :
+                    isSelected || isEngaged ? 'selected' :
+                    isHovered || isHoveredFromCard ? 'hovered' :
                     'default';
                   const style = resolveMarkerStyle(markerState, 'friendly');
                   const showTooltip = (isHovered || isSelected || isActive || isHoveredFromCard || isEngaged) && !isOffline;
@@ -1844,7 +1816,7 @@ export const TacticalMap = ({
                       style={style}
                       surfaceSize={36}
                       ringSize={28}
-                      pulse={isSelected}
+                      pulse={isSelected || isEngaged}
                       label={showTooltip ? (isActive ? `${reg.name} — פעיל` : reg.name) : isOffline ? `${reg.name} — לא מקוון` : undefined}
                       showLabel={showTooltip || (isOffline && (isHovered || isSelected))}
                     />
