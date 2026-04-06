@@ -75,7 +75,47 @@ import newUpdatesPillSrc from '@/primitives/NewUpdatesPill.tsx?raw';
 import devicesPanelSrc from '@/shared/components/DevicesPanel.tsx?raw';
 import mapMarkerSrc from '@/primitives/MapMarker.tsx?raw';
 import mapIconsSrc from '@/primitives/MapIcons.tsx?raw';
+import tokensSrc from '@/primitives/tokens.ts?raw';
+import markerStylesSrc from '@/primitives/markerStyles.ts?raw';
+import barrelIndexSrc from '@/primitives/index.ts?raw';
 
+interface RelatedFile {
+  file: string;
+  code: string;
+}
+
+const BARREL_FILE: RelatedFile = { file: 'index.ts', code: barrelIndexSrc };
+const TOKENS_FILE: RelatedFile = { file: 'tokens.ts', code: tokensSrc };
+
+const COMMON_FILES: RelatedFile[] = [TOKENS_FILE, BARREL_FILE];
+
+const CARD_ACTIONS_FILES: RelatedFile[] = [
+  { file: 'ActionButton.tsx', code: actionButtonSrc },
+  { file: 'SplitActionButton.tsx', code: splitActionButtonSrc },
+  TOKENS_FILE, BARREL_FILE,
+];
+
+const CARD_DETAILS_FILES: RelatedFile[] = [
+  { file: 'AccordionSection.tsx', code: accordionSectionSrc },
+  { file: 'TelemetryRow.tsx', code: telemetryRowSrc },
+  TOKENS_FILE, BARREL_FILE,
+];
+
+const CARD_LOG_FILES: RelatedFile[] = [
+  { file: 'AccordionSection.tsx', code: accordionSectionSrc },
+  TOKENS_FILE, BARREL_FILE,
+];
+
+const DEVICES_PANEL_FILES: RelatedFile[] = [
+  { file: 'StatusChip.tsx', code: statusChipSrc },
+  TOKENS_FILE, BARREL_FILE,
+];
+
+const MARKER_FILES: RelatedFile[] = [
+  { file: 'markerStyles.ts', code: markerStylesSrc },
+  { file: 'MapIcons.tsx', code: mapIconsSrc },
+  TOKENS_FILE, BARREL_FILE,
+];
 
 // ─── Layout primitives ───────────────────────────────────────────────────────
 
@@ -1423,6 +1463,7 @@ function ImportBlock({ path, names }: { path: string; names: string[] }) {
   );
 }
 
+
 function ChangelogLine({ text }: { text: string }) {
   const parts = text.split(/(`[^`]+`)/g);
   return (
@@ -1674,7 +1715,7 @@ function CopyIconButton({ text }: { text: string }) {
 
 // ─── Code preview with tabs ───────────────────────────────────────────────────
 
-type CodeTab = 'preview' | 'source';
+type CodeTab = 'preview' | 'source' | 'files';
 
 function CodePreviewBlock({
   name,
@@ -1682,19 +1723,25 @@ function CodePreviewBlock({
   code,
   children,
   tight = false,
+  relatedFiles,
 }: {
   name: string;
   description: string;
   code: string;
   children?: React.ReactNode;
   tight?: boolean;
+  relatedFiles?: RelatedFile[];
 }) {
   const hasPreview = !!children;
+  const hasFiles = relatedFiles && relatedFiles.length > 0;
   const [tab, setTab] = useState<CodeTab>(hasPreview ? 'preview' : 'source');
+  const [activeFile, setActiveFile] = useState(0);
 
-  const tabs: { id: CodeTab; label: string }[] = hasPreview
-    ? [{ id: 'source', label: 'Source' }, { id: 'preview', label: 'Preview' }]
-    : [{ id: 'source', label: 'Source' }];
+  const tabs: { id: CodeTab; label: string }[] = [
+    ...(hasPreview ? [{ id: 'preview' as CodeTab, label: 'Preview' }] : []),
+    { id: 'source', label: 'Source' },
+    ...(hasFiles ? [{ id: 'files' as CodeTab, label: 'Files' }] : []),
+  ];
 
   const markdown = useMemo(
     () => generateComponentMarkdown(name, description, code),
@@ -1730,6 +1777,31 @@ function CodePreviewBlock({
             <InlineCopyButton text={code} />
           </div>
           <HighlightedCode code={code} />
+        </div>
+      )}
+      {tab === 'files' && hasFiles && (
+        <div className="flex">
+          <div className="shrink-0 border-r border-white/[0.06] py-2 min-w-[180px] max-w-[220px]">
+            {relatedFiles.map((f, i) => (
+              <button
+                key={f.file}
+                onClick={() => setActiveFile(i)}
+                className={`block w-full text-left px-3 py-1.5 text-[12px] font-mono cursor-pointer transition-colors duration-100 ${
+                  activeFile === i
+                    ? 'text-sky-300/90 bg-white/[0.04]'
+                    : 'text-white/40 hover:text-white/70 hover:bg-white/[0.02]'
+                }`}
+              >
+                {f.file}
+              </button>
+            ))}
+          </div>
+          <div className="relative flex-1 p-4 overflow-x-auto max-h-[600px] overflow-y-auto">
+            <div className="absolute top-2 right-2 z-10">
+              <InlineCopyButton text={relatedFiles[activeFile].code} />
+            </div>
+            <HighlightedCode code={relatedFiles[activeFile].code} />
+          </div>
         </div>
       )}
     </div>
@@ -2553,7 +2625,7 @@ export function DetectionRow() {
 
             {activeItem === 'status-chip' && (
             <ComponentSection id="status-chip" name="StatusChip" description="Compact colored badge indicating operational status of a target or system.">
-              <CodePreviewBlock name="StatusChip" description="Compact colored badge indicating operational status of a target or system." code={statusChipSrc}>
+              <CodePreviewBlock name="StatusChip" description="Compact colored badge indicating operational status of a target or system." code={statusChipSrc} relatedFiles={COMMON_FILES}>
                 <div className="flex flex-wrap items-center gap-3">
                   {(Object.keys(STATUS_CHIP_COLORS) as StatusChipColor[]).map((color) => (
                     <StatusChip key={color} label={color} color={color} />
@@ -2579,7 +2651,7 @@ export function DetectionRow() {
 
             {activeItem === 'new-updates' && (
             <ComponentSection id="new-updates" name="NewUpdatesPill" description="Floating pill that appears above the list to surface new incoming detections.">
-              <CodePreviewBlock name="NewUpdatesPill" description="Floating pill that appears above the list to surface new incoming detections." code={newUpdatesPillSrc}>
+              <CodePreviewBlock name="NewUpdatesPill" description="Floating pill that appears above the list to surface new incoming detections." code={newUpdatesPillSrc} relatedFiles={COMMON_FILES}>
                 <div className="flex flex-wrap items-center gap-4">
                   <NewUpdatesPill count={1} onClick={noop} />
                   <NewUpdatesPill count={5} onClick={noop} />
@@ -2608,7 +2680,7 @@ export function DetectionRow() {
 
             {activeItem === 'action-button' && (
             <ComponentSection id="action-button" name="ActionButton" description="Tactical action trigger with variant, size, icon, and loading states. Used in card action rows and standalone controls.">
-              <CodePreviewBlock name="ActionButton" description="Tactical action trigger with variant, size, icon, and loading states. Used in card action rows and standalone controls." code={actionButtonSrc}>
+              <CodePreviewBlock name="ActionButton" description="Tactical action trigger with variant, size, icon, and loading states. Used in card action rows and standalone controls." code={actionButtonSrc} relatedFiles={COMMON_FILES}>
                 <div className="flex flex-wrap items-center gap-2">
                   <ActionButton label="הפנה מצלמה" icon={Eye} variant="fill" size="md" />
                   <ActionButton label="ביטול" icon={Ban} variant="ghost" size="md" />
@@ -2698,7 +2770,7 @@ export function DetectionRow() {
 
             {activeItem === 'split-action' && (
             <ComponentSection id="split-action" name="SplitActionButton" description="Two-segment button: primary action on the left, dropdown menu on the right. Used for effector controls with sub-options.">
-              <CodePreviewBlock name="SplitActionButton" description="Two-segment button: primary action on the left, dropdown menu on the right. Used for effector controls with sub-options." code={splitActionButtonSrc}>
+              <CodePreviewBlock name="SplitActionButton" description="Two-segment button: primary action on the left, dropdown menu on the right. Used for effector controls with sub-options." code={splitActionButtonSrc} relatedFiles={COMMON_FILES}>
                 <div className="flex flex-wrap items-center gap-3">
                   <div className="w-48">
                     <SplitActionButton label="שיגור" icon={Zap} variant="fill" size="sm" onClick={noop} dropdownItems={[
@@ -2840,7 +2912,7 @@ export function DetectionRow() {
 
             {activeItem === 'accordion' && (
             <ComponentSection id="accordion" name="AccordionSection" description="Collapsible section with animated expand/collapse. Used inside cards for details, logs, and sensors.">
-              <CodePreviewBlock name="AccordionSection" description="Collapsible section with animated expand/collapse. Used inside cards for details, logs, and sensors." tight code={accordionSectionSrc}>
+              <CodePreviewBlock name="AccordionSection" description="Collapsible section with animated expand/collapse. Used inside cards for details, logs, and sensors." tight code={accordionSectionSrc} relatedFiles={COMMON_FILES}>
                 <div className="max-w-sm rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level1 }}>
                   <AccordionSection title="ברירת מחדל (סגור)" icon={Eye}>
                     <div className="p-3 text-xs text-n-9">תוכן AccordionSection</div>
@@ -2872,7 +2944,7 @@ export function DetectionRow() {
 
             {activeItem === 'telemetry' && (
             <ComponentSection id="telemetry" name="TelemetryRow" description="Single telemetry metric display with icon, label, and monospace value. Laid out in a 3-column grid — rows wrap automatically based on item count.">
-              <CodePreviewBlock name="TelemetryRow" description="Single telemetry metric display with icon, label, and monospace value. Laid out in a 3-column grid." tight code={telemetryRowSrc}>
+              <CodePreviewBlock name="TelemetryRow" description="Single telemetry metric display with icon, label, and monospace value. Laid out in a 3-column grid." tight code={telemetryRowSrc} relatedFiles={COMMON_FILES}>
                 <div className="grid grid-cols-3 gap-x-4 gap-y-2 rounded-lg p-3" style={{ backgroundColor: SURFACE.level1 }}>
                   <TelemetryRow label="גובה" value="120m" icon={Navigation} />
                   <TelemetryRow label="מהירות" value="45 km/h" icon={Gauge} />
@@ -2925,7 +2997,7 @@ export function DetectionRow() {
 
             {activeItem === 'card-header' && (
             <ComponentSection id="card-header" name="CardHeader" description="Top row of a TargetCard — icon, title, subtitle, status chip, badge, and chevron.">
-              <CodePreviewBlock name="CardHeader" description="Top row of a TargetCard — icon, title, subtitle, status chip, badge, and chevron." tight code={cardHeaderSrc}>
+              <CodePreviewBlock name="CardHeader" description="Top row of a TargetCard — icon, title, subtitle, status chip, badge, and chevron." tight code={cardHeaderSrc} relatedFiles={COMMON_FILES}>
                 <div className="rounded-lg p-2" style={{ backgroundColor: SURFACE.level1 }}>
                   <CardHeader
                     icon={ShieldAlert}
@@ -2974,7 +3046,7 @@ export function DetectionRow() {
 
             {activeItem === 'card-media' && (
             <ComponentSection id="card-media" name="CardMedia" description="Image or video slot for target surveillance feed. Supports live badge, playback controls, and lightbox expansion.">
-              <CodePreviewBlock name="CardMedia" description="Image or video slot for target surveillance feed. Supports live badge, playback controls, and lightbox expansion." code={cardMediaSrc}>
+              <CodePreviewBlock name="CardMedia" description="Image or video slot for target surveillance feed. Supports live badge, playback controls, and lightbox expansion." code={cardMediaSrc} relatedFiles={COMMON_FILES}>
                 <div className="flex flex-wrap gap-4">
                   <div className="w-64 rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level0 }}>
                     <CardMedia
@@ -3024,7 +3096,7 @@ export function DetectionRow() {
 
             {activeItem === 'card-actions' && (
             <ComponentSection id="card-actions" name="CardActions" description="Action bar for TargetCard. Composes ActionButton, SplitActionButton, and the confirm pattern. Grouped effector/investigation layout, flat grid, and double-confirm dialogs.">
-              <CodePreviewBlock name="CardActions" description="Action bar for TargetCard. Composes ActionButton, SplitActionButton, and the confirm pattern." tight code={cardActionsSrc}>
+              <CodePreviewBlock name="CardActions" description="Action bar for TargetCard. Composes ActionButton, SplitActionButton, and the confirm pattern." tight code={cardActionsSrc} relatedFiles={CARD_ACTIONS_FILES}>
                 <div className="max-w-sm rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level1 }}>
                   <CardActions actions={sampleActions} />
                 </div>
@@ -3070,7 +3142,7 @@ export function DetectionRow() {
 
             {activeItem === 'card-details' && (
             <ComponentSection id="card-details" name="CardDetails" description="Collapsible telemetry accordion with a copy-all button. Composes AccordionSection and TelemetryRow in a grid layout for metrics.">
-              <CodePreviewBlock name="CardDetails" description="Collapsible telemetry accordion with a copy-all button; uses AccordionSection and TelemetryRow." tight code={cardDetailsSrc}>
+              <CodePreviewBlock name="CardDetails" description="Collapsible telemetry accordion with a copy-all button; uses AccordionSection and TelemetryRow." tight code={cardDetailsSrc} relatedFiles={CARD_DETAILS_FILES}>
                 <div className="max-w-sm rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level1 }}>
                   <CardDetails rows={sampleDetailRows} defaultOpen />
                 </div>
@@ -3092,7 +3164,7 @@ export function DetectionRow() {
 
             {activeItem === 'card-sensors' && (
             <ComponentSection id="card-sensors" name="CardSensors" description="Lists detecting sensors for a target with type, distance, and timestamp. Supports read-only and interactive modes.">
-              <CodePreviewBlock name="CardSensors" description="Lists detecting sensors for a target with type, distance, and timestamp. Supports read-only and interactive modes." tight code={cardSensorsSrc}>
+              <CodePreviewBlock name="CardSensors" description="Lists detecting sensors for a target with type, distance, and timestamp. Supports read-only and interactive modes." tight code={cardSensorsSrc} relatedFiles={COMMON_FILES}>
                 <div className="max-w-sm rounded-lg overflow-hidden p-1" style={{ backgroundColor: SURFACE.level1 }}>
                   <CardSensors sensors={sampleSensors} />
                 </div>
@@ -3122,7 +3194,7 @@ export function DetectionRow() {
 
             {activeItem === 'card-log' && (
             <ComponentSection id="card-log" name="CardLog" description="Chronological event log accordion with newest-first ordering and expand-all.">
-              <CodePreviewBlock name="CardLog" description="Chronological event log accordion with newest-first ordering and expand-all." tight code={cardLogSrc}>
+              <CodePreviewBlock name="CardLog" description="Chronological event log accordion with newest-first ordering and expand-all." tight code={cardLogSrc} relatedFiles={CARD_LOG_FILES}>
                 <div className="max-w-sm rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level1 }}>
                   <CardLog entries={sampleLogEntries} maxVisible={4} defaultOpen />
                 </div>
@@ -3145,7 +3217,7 @@ export function DetectionRow() {
 
             {activeItem === 'card-closure' && (
             <ComponentSection id="card-closure" name="CardClosure" description="Outcome selection grid for closing a detection event. Operator picks the resolution reason.">
-              <CodePreviewBlock name="CardClosure" description="Outcome selection grid for closing a detection event. Operator picks the resolution reason." tight code={cardClosureSrc}>
+              <CodePreviewBlock name="CardClosure" description="Outcome selection grid for closing a detection event. Operator picks the resolution reason." tight code={cardClosureSrc} relatedFiles={COMMON_FILES}>
                 <div className="max-w-sm rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level1 }}>
                   <CardClosure outcomes={sampleClosureOutcomes} onSelect={(id) => console.log('closure:', id)} />
                 </div>
@@ -3168,7 +3240,7 @@ export function DetectionRow() {
 
             {activeItem === 'card-timeline' && (
             <ComponentSection id="card-timeline" name="CardTimeline" description="Step-by-step timeline showing detection lifecycle progress. Supports full and compact (dot) modes.">
-              <CodePreviewBlock name="CardTimeline" description="Step-by-step timeline showing detection lifecycle progress." tight code={cardTimelineSrc}>
+              <CodePreviewBlock name="CardTimeline" description="Step-by-step timeline showing detection lifecycle progress." tight code={cardTimelineSrc} relatedFiles={COMMON_FILES}>
                 <div className="max-w-sm rounded-lg overflow-hidden p-4" style={{ backgroundColor: SURFACE.level1 }}>
                   <CardTimeline steps={[
                     { label: 'זיהוי ראשוני', status: 'complete' },
@@ -3221,7 +3293,7 @@ export function DetectionRow() {
 
             {activeItem === 'card-footer-dock' && (
             <ComponentSection id="card-footer-dock" name="CardFooterDock" description="Bottom-anchored action bar for cards. Renders equal-width buttons in a tinted dock strip.">
-              <CodePreviewBlock name="CardFooterDock" description="Bottom-anchored action bar for cards." tight code={cardFooterDockSrc}>
+              <CodePreviewBlock name="CardFooterDock" description="Bottom-anchored action bar for cards." tight code={cardFooterDockSrc} relatedFiles={COMMON_FILES}>
                 <div className="max-w-sm rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level1 }}>
                   <div className="p-4 text-xs text-n-120">Card content above…</div>
                   <CardFooterDock actions={[
@@ -3266,7 +3338,7 @@ export function DetectionRow() {
 
             {activeItem === 'target-card' && (
             <ComponentSection id="target-card" name="TargetCard" description="The core card shell. Composes CardHeader with slot children via the useCardSlots hook. These examples use real Detection mock data and the same composition as the main app.">
-              <CodePreviewBlock name="TargetCard" description="The core card shell. Composes CardHeader with slot children via the useCardSlots hook." tight code={targetCardSrc}>
+              <CodePreviewBlock name="TargetCard" description="The core card shell. Composes CardHeader with slot children via the useCardSlots hook." tight code={targetCardSrc} relatedFiles={COMMON_FILES}>
                 <div className="max-w-sm mx-auto">
                   <StyleguideUnifiedCard detection={cuas_classified} defaultOpen />
                 </div>
@@ -3305,7 +3377,7 @@ export function DetectionRow() {
 
             {activeItem === 'filter-bar' && (
             <ComponentSection id="filter-bar" name="FilterBar" description="Search, sort, and multi-select filter controls for the target list sidebar.">
-              <CodePreviewBlock name="FilterBar" description="Search, sort, and multi-select filter controls for the target list sidebar." tight code={filterBarSrc}>
+              <CodePreviewBlock name="FilterBar" description="Search, sort, and multi-select filter controls for the target list sidebar." tight code={filterBarSrc} relatedFiles={COMMON_FILES}>
                 <div className="max-w-sm rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level1 }}>
                   <FilterBar
                     filters={filterState}
@@ -3350,7 +3422,7 @@ export function DetectionRow() {
 
             {activeItem === 'devices-panel' && (
             <ComponentSection id="devices-panel" name="DevicesPanel" description="Right-hand sidebar listing all connected field devices grouped by type. Supports search, type-filter isolation, device expansion with stats grid, camera preview with presets, ECM jam activation, mute with 30-min countdown, drone wipers/calibration, and drag-to-camera-viewer for camera rows.">
-              <CodePreviewBlock name="DevicesPanel" description="Full interactive panel — try searching, filtering by type, expanding rows, and clicking actions." tight code={devicesPanelSrc}>
+              <CodePreviewBlock name="DevicesPanel" description="Full interactive panel — try searching, filtering by type, expanding rows, and clicking actions." tight code={devicesPanelSrc} relatedFiles={DEVICES_PANEL_FILES}>
                 <div className="relative mx-auto overflow-hidden rounded-lg border border-white/10" style={{ width: LAYOUT_TOKENS.sidebarWidthPx, height: 400 }}>
                   <DevicesPanel open onClose={() => {}} onFlyTo={() => {}} noTransition />
                 </div>
@@ -3836,7 +3908,7 @@ export function DetectionRow() {
             <ComponentSection id="map-markers" name="Map Markers" description="Tactical marker system: SVG icons, composited layers, interaction states, affiliation palettes, and map-level overlays.">
 
               <SectionHeading>Source</SectionHeading>
-              <CodePreviewBlock name="MapMarker" description="Composites 4 visual layers controlled by a style+affiliation matrix" code={mapMarkerSrc}>
+              <CodePreviewBlock name="MapMarker" description="Composites 4 visual layers controlled by a style+affiliation matrix" code={mapMarkerSrc} relatedFiles={MARKER_FILES}>
                 <div className="flex items-center justify-start gap-6">
                   {AFFILIATIONS.map(aff => {
                     const s = resolveMarkerStyle('default', aff);
