@@ -97,7 +97,7 @@ In-app docs at `/styleguide` are grouped by composition depth (sidebar matches s
 2. **Primitives** — `StatusChip`, `NewUpdatesPill`, `ActionButton`, `SplitActionButton`, `AccordionSection`, `TelemetryRow`  
 3. **Card building blocks** — `CardHeader`, `CardMedia`, `CardActions`, `CardDetails`, `CardSensors`, `CardLog`, `CardClosure`, `CardTimeline`, `CardFooterDock`  
 4. **Assemblies & list chrome** — `TargetCard` examples, `FilterBar`  
-5. **Tactical** — `MapMarker`, `mapMarkerStates`, map icons
+5. **Tactical** — `MapMarker`, `markerStyles`, map icons
 
 ---
 
@@ -333,9 +333,9 @@ Adapted for card headers. All take a `size` prop and use `currentColor`.
 
 Import: `import { MapMarker } from '@/primitives'`
 
-Composable map marker with layered rendering: surface, ring, glyph, inner glow, and overlays. Driven by `resolveMarkerStyle()` from `mapMarkerStates`. **Props:** [Live docs — MapMarker](https://c2-hub-three.vercel.app/styleguide#map-markers)
+Composable map marker with layered rendering: surface, ring, glyph, inner glow, and overlays. Driven by `resolveMarkerStyle()` from `markerStyles`. **Props:** [Live docs — MapMarker](https://c2-hub-three.vercel.app/styleguide#map-markers)
 
-### mapMarkerStates
+### markerStyles
 
 Import: `import { resolveMarkerStyle, AFFILIATIONS, INTERACTION_STATES, AFFILIATION_LABELS, AFFILIATION_PALETTES, type Affiliation, type InteractionState, type MarkerStyle } from '@/primitives'`
 

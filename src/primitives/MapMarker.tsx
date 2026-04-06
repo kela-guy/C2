@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, type ReactNode } from 'react';
-import { type MarkerStyle, hexToRgba, headingToCompass } from './mapMarkerStates';
+import { type MarkerStyle, headingToCompass } from './markerStyles';
+import { hexToRgba } from './tokens';
 
 export interface MapMarkerProps {
   icon: ReactNode;

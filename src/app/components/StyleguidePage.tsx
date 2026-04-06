@@ -41,7 +41,7 @@ import {
   INTERACTION_STATES, AFFILIATIONS,
   INTERACTION_STATE_LABELS, AFFILIATION_LABELS,
   type Affiliation, type InteractionState,
-} from '@/primitives/mapMarkerStates';
+} from '@/primitives/markerStyles';
 import { iconPublicUrl } from '@/lib/styleguideIconAssets';
 import { DevicesPanel, DeviceRow, type Device } from '@/shared/components/DevicesPanel';
 import { useCardSlots, type CardCallbacks, type CardContext } from '@/imports/useCardSlots';
@@ -3853,7 +3853,7 @@ export function DetectionRow() {
               <SectionHeading>Imports</SectionHeading>
               <div className="space-y-2">
                 <ImportBlock path="@/primitives/MapMarker" names={['MapMarker']} />
-                <ImportBlock path="@/primitives/mapMarkerStates" names={['resolveMarkerStyle', 'INTERACTION_STATES', 'AFFILIATIONS']} />
+                <ImportBlock path="@/primitives/markerStyles" names={['resolveMarkerStyle', 'INTERACTION_STATES', 'AFFILIATIONS']} />
                 <ImportBlock path="@/shared/components/TacticalMap" names={['CameraIcon', 'RadarIcon', 'SensorIcon', 'DroneIcon', 'DroneHiveIcon', 'LidarIcon', 'LauncherIcon', 'MissileIcon']} />
               </div>
 

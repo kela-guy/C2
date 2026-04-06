@@ -919,7 +919,7 @@
       "version": "1.0.0",
       "files": [
         {
-          "path": "src/primitives/mapMarkerStates.ts",
+          "path": "src/primitives/markerStyles.ts",
           "type": "registry:component"
         }
       ]

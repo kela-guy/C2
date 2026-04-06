@@ -5,7 +5,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { Crosshair, AlertTriangle, ShieldAlert, Camera, CheckCircle2, Radio, Search, Eye, MapPin, X, Compass, Circle, Video, Info, Settings, BellOff, Wrench, ExternalLink, Maximize2 } from 'lucide-react';
 import { JamWaveIcon, DRONE_PATH, MISSILE_PATH, CarIcon } from '@/primitives/MapIcons';
 import { MapMarker } from '@/primitives/MapMarker';
-import { type Affiliation, type InteractionState, resolveMarkerStyle } from '@/primitives/mapMarkerStates';
+import { type Affiliation, type InteractionState, resolveMarkerStyle } from '@/primitives/markerStyles';
 import { OFFLINE_VISIBILITY_VARIANT } from '@/app/config/offlineVisibility';
 import {
   ContextMenu,
