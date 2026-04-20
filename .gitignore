@@ -1,7 +1,10 @@
 node_modules
 .cursor/
+.claude/
+.agents/
 dist/
 .next/
+next-env.d.ts
 .vercel
 .env*.local
 public/r/
