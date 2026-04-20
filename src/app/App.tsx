@@ -5,9 +5,7 @@ import { DialRoot } from "dialkit";
 import "dialkit/styles.css";
 import { Dashboard } from "./components/Dashboard";
 import FovTestPage from "./components/FovTestPage";
-import ButtonsPlayground from "./components/ButtonsPlayground";
 import StyleguidePage from "./components/StyleguidePage";
-import MapIconsPlayground from "./components/MapIconsPlayground";
 
 export default function App() {
   return (
@@ -16,9 +14,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/fov-test" element={<FovTestPage />} />
-          <Route path="/buttons" element={<ButtonsPlayground />} />
           <Route path="/styleguide" element={<StyleguidePage />} />
-          <Route path="/map-icons" element={<MapIconsPlayground />} />
         </Routes>
       </BrowserRouter>
       <DialRoot position="bottom-right" />
