@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from 'react';
 import Map, { Marker, NavigationControl, Source, Layer, type MapRef } from 'react-map-gl';
+import type mapboxgl from 'mapbox-gl';
 
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { Crosshair, AlertTriangle, ShieldAlert, Camera, CheckCircle2, Radio, Search, Eye, MapPin, X, Compass, Circle, Video, Info, Settings, BellOff, Wrench, ExternalLink, Maximize2 } from 'lucide-react';
+import { Crosshair, AlertTriangle, ShieldAlert, Camera, CheckCircle2, Radio, Search, Eye, MapPin, X, Compass, Circle, Video, Info, Settings, BellOff, Wrench, ExternalLink, Maximize2, Plane } from 'lucide-react';
 import { JamWaveIcon, DRONE_PATH, MISSILE_PATH, CarIcon } from '@/primitives/MapIcons';
 import { MapMarker } from '@/primitives/MapMarker';
 import { type Affiliation, type InteractionState, resolveMarkerStyle } from '@/primitives/markerStyles';
@@ -18,90 +19,27 @@ import {
 import type { Detection, RegulusEffector, LauncherEffector } from '@/imports/ListOfSystems';
 import { useEngagementLine, type EngagementPairGeo } from './useEngagementLine';
 import { JAM_FLOW, WEAPON_FLOW } from '@/imports/engagementFlows';
+import {
+  haversineDistanceM,
+  bearingDegrees,
+  fovPolygon,
+  pointInPolygon,
+  FOV_RADIUS_M,
+  DRONE_FOV_RADIUS_M,
+  DRONE_FOV_DEG,
+} from '@/app/lib/mapGeo';
+import { MAPBOX_TOKEN, getMapInstance, tryMapOp, logMapError } from '@/app/lib/mapUtils';
 
-const TOKEN = 'pk.eyJ1IjoiZ3V5c2hhIiwiYSI6ImNtZ3htODN0dTE2dGMybXFrYWRlZmN5MGMifQ.dIQzO3kIdQaES0pfedlRvA';
+// Re-export geo helpers for external callers (Dashboard imports them from here).
+export { haversineDistanceM, bearingDegrees, FOV_RADIUS_M };
 
-const EARTH_RADIUS_M = 6371000;
-export const FOV_RADIUS_M = 1200;
-const DRONE_FOV_RADIUS_M = 400;
-const DRONE_FOV_DEG = 90;
 const MISSILE_FLIGHT_DURATION_MS = 22000; // slower, more visible flight
 const LABEL_PREFIXES = ['poi-label', 'road-label', 'place-label', 'transit-label', 'natural-point-label', 'waterway-label', 'natural-line-label', 'road-number-shield', 'road-exit-shield'];
-
-/** Haversine distance in metres between two lat/lon points. */
-export function haversineDistanceM(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const φ1 = (lat1 * Math.PI) / 180;
-  const φ2 = (lat2 * Math.PI) / 180;
-  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
-  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return EARTH_RADIUS_M * c;
-}
 
 /** Slight pulse/surge on top of linear progress (0..1) for more realistic motion. */
 function pulsedProgress(linearProgress: number): number {
   const surge = 0.018 * Math.sin(linearProgress * 35);
   return Math.min(1, Math.max(0, linearProgress + surge));
-}
-
-/** Bearing in degrees from (lat1, lon1) to (lat2, lon2). 0 = north, 90 = east. */
-export function bearingDegrees(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const φ1 = (lat1 * Math.PI) / 180, φ2 = (lat2 * Math.PI) / 180;
-  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
-  const y = Math.sin(Δλ) * Math.cos(φ2);
-  const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
-  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
-}
-
-/** Destination point from (lat, lon) given distance in meters and bearing in degrees (0 = north). */
-function destination(lat: number, lon: number, distM: number, bearingDeg: number): [number, number] {
-  const lat1 = (lat * Math.PI) / 180;
-  const lon1 = (lon * Math.PI) / 180;
-  const brng = (bearingDeg * Math.PI) / 180;
-  const d = distM / EARTH_RADIUS_M;
-  const lat2 = Math.asin(Math.sin(lat1) * Math.cos(d) + Math.cos(lat1) * Math.sin(d) * Math.cos(brng));
-  const lon2 = lon1 + Math.atan2(Math.sin(brng) * Math.sin(d) * Math.cos(lat1), Math.cos(d) - Math.sin(lat1) * Math.sin(lat2));
-  return [(lon2 * 180) / Math.PI, (lat2 * 180) / Math.PI];
-}
-
-/** GeoJSON Polygon coordinates [lon, lat][] for FOV cone (or full circle if fovDeg === 360). */
-function fovPolygon(lat: number, lon: number, fovDeg: number, bearingDeg: number, radiusM: number): [number, number][] {
-  const center: [number, number] = [lon, lat];
-  if (fovDeg >= 360) {
-    const points: [number, number][] = [center];
-    for (let i = 0; i <= 32; i++) {
-      const angle = (i / 32) * 360;
-      points.push(destination(lat, lon, radiusM, angle));
-    }
-    points.push(center);
-    return points;
-  }
-  const startAngle = bearingDeg - fovDeg / 2;
-  const steps = Math.max(8, Math.floor((fovDeg / 360) * 32));
-  const points: [number, number][] = [center];
-  for (let i = 0; i <= steps; i++) {
-    const angle = startAngle + (fovDeg * i) / steps;
-    points.push(destination(lat, lon, radiusM, angle));
-  }
-  points.push(center);
-  return points;
-}
-
-/** Simple point-in-polygon check using ray-casting algorithm. Expects ring as [lon, lat][]. */
-function pointInPolygon(lon: number, lat: number, ring: [number, number][]): boolean {
-  let inside = false;
-  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const xi = ring[i][0], yi = ring[i][1];
-    const xj = ring[j][0], yj = ring[j][1];
-    const intersect =
-      yi > lat !== yj > lat &&
-      lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi;
-    if (intersect) inside = !inside;
-  }
-  return inside;
 }
 
 export type MapAssetType = 'sensor' | 'camera' | 'radar';
@@ -376,6 +314,10 @@ interface TacticalMapProps {
   launcherEffectors?: LauncherEffector[];
   /** User-overridden launcher selection per target (targetId -> launcherId) */
   selectedLauncherIds?: Map<string, string>;
+  /** Connect a Starling drone to PathFinder */
+  onPathFinderConnect?: (droneId: string) => void;
+  /** Currently connected PathFinder drone ID */
+  pathFinderConnectedId?: string | null;
 }
 
 const JAM_VERIFICATION_DURATION_MS = 4500;
@@ -388,6 +330,66 @@ const TOOLTIP_POS_ABOVE = 'absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5
 const TOOLTIP_HOVER = `${TOOLTIP_BASE} ${TOOLTIP_SHADOW} ${TOOLTIP_POS_ABOVE} z-50`;
 const TOOLTIP_HOVER_CYAN = `${TOOLTIP_BASE} ${TOOLTIP_SHADOW_CYAN} ${TOOLTIP_POS_ABOVE} z-50`;
 const OFFLINE_FOV_DIMMING_ENABLED = OFFLINE_VISIBILITY_VARIANT === 'B';
+
+// Module-scope paint constants — reuse across all layers.
+const TRAIL_CASING_PAINT = {
+  'line-color': '#000000',
+  'line-width': 7,
+  'line-opacity': 1,
+} as const;
+
+const TRAIL_LINE_PAINT = {
+  'line-color': '#ffffff',
+  'line-width': 3,
+  'line-opacity': 1,
+} as const;
+
+const FRIENDLY_TRAIL_CASING_PAINT = {
+  'line-color': '#000000',
+  'line-width': 5,
+} as const;
+
+const FRIENDLY_TRAIL_LINE_PAINT = {
+  'line-color': '#ffffff',
+  'line-width': 2,
+} as const;
+
+const FRIENDLY_FOV_FILL_PAINT = {
+  'fill-color': 'rgba(34, 211, 238, 0.40)',
+  'fill-outline-color': 'rgba(34, 211, 238, 1.0)',
+} as const;
+
+const FRIENDLY_FOV_LINE_PAINT = {
+  'line-color': 'rgba(34, 211, 238, 1.0)',
+  'line-width': 2.5,
+} as const;
+
+const EMPTY_FC = { type: 'FeatureCollection' as const, features: [] as any[] };
+
+/**
+ * Module-scope FOV paint config. Previously declared inside the component body so it
+ * allocated a new object every render and — worse — was captured by an empty-deps
+ * useCallback in `ensureFovSource`, making the "latest" paint stale forever.
+ * Hoisting is safe because it depends only on a module-scope constant.
+ */
+const FOV_PAINT = {
+  fill: {
+    'fill-color': OFFLINE_FOV_DIMMING_ENABLED
+      ? ['case', ['==', ['get', 'offline'], 1], 'rgba(113, 113, 122, 0.22)', 'rgba(34, 211, 238, 0.40)']
+      : 'rgba(34, 211, 238, 0.40)',
+    'fill-outline-color': OFFLINE_FOV_DIMMING_ENABLED
+      ? ['case', ['==', ['get', 'offline'], 1], 'rgba(161, 161, 170, 0.7)', 'rgba(34, 211, 238, 1.0)']
+      : 'rgba(34, 211, 238, 1.0)',
+  },
+  line: {
+    'line-color': OFFLINE_FOV_DIMMING_ENABLED
+      ? ['case', ['==', ['get', 'offline'], 1], 'rgba(161, 161, 170, 0.7)', 'rgba(34, 211, 238, 1.0)']
+      : 'rgba(34, 211, 238, 1.0)',
+    'line-width': OFFLINE_FOV_DIMMING_ENABLED
+      ? ['case', ['==', ['get', 'offline'], 1], 1.5, 2.5]
+      : 2.5,
+  },
+} as const;
 
 const TARGET_CARD_BASE = 'bg-black/60 backdrop-blur-md rounded px-2 py-1 text-xs font-medium text-white whitespace-nowrap';
 const TARGET_SHADOW_THREAT = 'shadow-[0_0_0_1px_rgba(239,68,68,0.25),0_4px_12px_rgba(0,0,0,0.4)]';
@@ -435,51 +437,27 @@ export const TacticalMap = ({
   selectedEffectorIds,
   launcherEffectors = [],
   selectedLauncherIds,
+  onPathFinderConnect,
+  pathFinderConnectedId,
 }: TacticalMapProps) => {
   const mapRef = useRef<MapRef>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   /** Defer Map mount until container has real size (RO + flex parent must expose height — see dashboard `h-0 flex-1`). */
   const [mapMountReady, setMapMountReady] = useState(false);
 
-  type MapboxMapLike = { resize: () => void; triggerRepaint?: () => void };
-
-  const getInnerMap = (): MapboxMapLike | null => {
-    try {
-      const ref = mapRef.current as unknown as
-        | { resize?: () => void; getMap?: () => MapboxMapLike }
-        | null;
-      if (!ref) return null;
-      if (typeof ref.getMap === 'function') return ref.getMap() ?? null;
-      if (typeof ref.resize === 'function') return ref as unknown as MapboxMapLike;
-    } catch {
-      /* noop */
-    }
-    return null;
-  };
+  const getInnerMap = (): mapboxgl.Map | null => getMapInstance(mapRef);
 
   const resizeMap = () => {
-    try {
-      const ref = mapRef.current as unknown as
-        | { resize?: () => void; getMap?: () => { resize: () => void } }
-        | null;
-      if (!ref) return;
-      if (typeof ref.resize === 'function') {
-        ref.resize();
-        return;
-      }
-      ref.getMap?.()?.resize();
-    } catch {
-      /* map not ready */
-    }
+    tryMapOp('resizeMap', () => {
+      getInnerMap()?.resize();
+    });
   };
 
   const repaintMap = () => {
     resizeMap();
-    try {
-      getInnerMap()?.triggerRepaint?.();
-    } catch {
-      /* noop */
-    }
+    tryMapOp('repaintMap', () => {
+      getInnerMap()?.triggerRepaint();
+    });
   };
 
   useLayoutEffect(() => {
@@ -534,7 +512,12 @@ export const TacticalMap = ({
   useEffect(() => {
     const onResize = () => repaintMap();
     const onVisible = () => {
-      if (document.visibilityState === 'visible') repaintMap();
+      if (document.visibilityState === 'visible') {
+        repaintMap();
+      } else {
+        // Pause any in-progress animations to free CPU when tab is hidden
+        tryMapOp('visibility.stop', () => getInnerMap()?.stop());
+      }
     };
     window.addEventListener('resize', onResize);
     document.addEventListener('visibilitychange', onVisible);
@@ -702,8 +685,8 @@ export const TacticalMap = ({
   const [mapStyleId, setMapStyleId] = useState<'dark' | 'satellite'>('satellite');
   const [flickeringSensorId, setFlickeringSensorId] = useState<string | null>(null);
 
-  const hideMapLabels = useCallback((map: any) => {
-    try {
+  const hideMapLabels = useCallback((map: mapboxgl.Map) => {
+    tryMapOp('hideMapLabels', () => {
       const style = map.getStyle?.();
       if (!style?.layers) return;
       for (const layer of style.layers) {
@@ -711,7 +694,7 @@ export const TacticalMap = ({
           map.setLayoutProperty(layer.id, 'visibility', 'none');
         }
       }
-    } catch {}
+    });
   }, []);
 
   useEffect(() => {
@@ -732,40 +715,21 @@ export const TacticalMap = ({
   const [hoveredAsset, setHoveredAsset] = useState<MapAsset | null>(null);
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
-  const FOV_PAINT = {
-    fill: {
-      'fill-color': OFFLINE_FOV_DIMMING_ENABLED
-        ? ['case', ['==', ['get', 'offline'], 1], 'rgba(113, 113, 122, 0.22)', 'rgba(34, 211, 238, 0.40)']
-        : 'rgba(34, 211, 238, 0.40)',
-      'fill-outline-color': OFFLINE_FOV_DIMMING_ENABLED
-        ? ['case', ['==', ['get', 'offline'], 1], 'rgba(161, 161, 170, 0.7)', 'rgba(34, 211, 238, 1.0)']
-        : 'rgba(34, 211, 238, 1.0)',
-    },
-    line: {
-      'line-color': OFFLINE_FOV_DIMMING_ENABLED
-        ? ['case', ['==', ['get', 'offline'], 1], 'rgba(161, 161, 170, 0.7)', 'rgba(34, 211, 238, 1.0)']
-        : 'rgba(34, 211, 238, 1.0)',
-      'line-width': OFFLINE_FOV_DIMMING_ENABLED
-        ? ['case', ['==', ['get', 'offline'], 1], 1.5, 2.5]
-        : 2.5,
-    },
-  };
-
-  const ensureFovSource = useCallback((map: any, sourceId: string) => {
+  const ensureFovSource = useCallback((map: mapboxgl.Map, sourceId: string) => {
     if (map.getSource(sourceId)) return;
     map.addSource(sourceId, { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-    map.addLayer({ id: `${sourceId}-fill`, type: 'fill', source: sourceId, paint: FOV_PAINT.fill });
-    map.addLayer({ id: `${sourceId}-line`, type: 'line', source: sourceId, paint: FOV_PAINT.line });
+    map.addLayer({ id: `${sourceId}-fill`, type: 'fill', source: sourceId, paint: FOV_PAINT.fill as mapboxgl.FillPaint });
+    map.addLayer({ id: `${sourceId}-line`, type: 'line', source: sourceId, paint: FOV_PAINT.line as mapboxgl.LinePaint });
   }, []);
 
   const pushFovToMap = useCallback((sourceId: string, data: { type: 'FeatureCollection'; features: any[] }) => {
-    const map = (mapRef.current as any)?.getMap?.() ?? mapRef.current;
-    if (!map) return;
-    try {
+    tryMapOp('pushFovToMap', () => {
+      const map = getMapInstance(mapRef);
+      if (!map) return;
       ensureFovSource(map, sourceId);
-      map.getSource(sourceId).setData(data);
-      map.triggerRepaint?.();
-    } catch {}
+      (map.getSource(sourceId) as mapboxgl.GeoJSONSource | undefined)?.setData(data);
+      map.triggerRepaint();
+    });
   }, [ensureFovSource]);
 
   const handleAssetMouseEnter = useCallback((asset: MapAsset) => {
@@ -898,6 +862,10 @@ export const TacticalMap = ({
   const [verificationDroneProgress, setVerificationDroneProgress] = useState(0);
   const [verificationDroneStart, setVerificationDroneStart] = useState<{ startLat: number; startLon: number } | null>(null);
 
+  // Keep the callback in a ref so parent re-renders don't tear down our rAF loop.
+  const onJammingVerificationCompleteRef = useRef(onJammingVerificationComplete);
+  onJammingVerificationCompleteRef.current = onJammingVerificationComplete;
+
   useEffect(() => {
     if (!jammingVerification || !verificationTargetCoords) {
       setVerificationDroneProgress(0);
@@ -905,7 +873,7 @@ export const TacticalMap = ({
       return;
     }
     if (jammingVerification.method === 'camera') {
-      const t = setTimeout(() => onJammingVerificationComplete?.(), JAM_VERIFICATION_DURATION_MS);
+      const t = setTimeout(() => onJammingVerificationCompleteRef.current?.(), JAM_VERIFICATION_DURATION_MS);
       return () => clearTimeout(t);
     }
     if (jammingVerification.method === 'drone') {
@@ -928,13 +896,13 @@ export const TacticalMap = ({
         if (p < 1) {
           frame = requestAnimationFrame(animate);
         } else {
-          setTimeout(() => onJammingVerificationComplete?.(), 1500);
+          setTimeout(() => onJammingVerificationCompleteRef.current?.(), 1500);
         }
       };
       frame = requestAnimationFrame(animate);
       return () => cancelAnimationFrame(frame);
     }
-  }, [jammingVerification?.targetId, jammingVerification?.method, verificationTargetCoords?.lat, verificationTargetCoords?.lon, onJammingVerificationComplete]);
+  }, [jammingVerification?.targetId, jammingVerification?.method, verificationTargetCoords?.lat, verificationTargetCoords?.lon]);
 
   // --- Camera Look-At: animate a camera's FOV to rotate toward a target ---
   const [cameraLookAtBearing, setCameraLookAtBearing] = useState<{ cameraId: string; bearing: number } | null>(null);
@@ -991,7 +959,7 @@ export const TacticalMap = ({
     };
   }, [cameraLookAtBearing, cameraLookAtRequest]);
 
-  const EMPTY_FC = useMemo(() => ({ type: 'FeatureCollection' as const, features: [] as any[] }), []);
+  // EMPTY_FC is now module-scope (single allocation, not per-render).
 
   const highlightedFovGeoJSON = useMemo(() => {
     if (!hoveredSensorIdFromCard) return EMPTY_FC;
@@ -1006,7 +974,7 @@ export const TacticalMap = ({
         properties: { offline: offlineAssetIds.includes(asset.id) ? 1 : 0 },
       }],
     };
-  }, [hoveredSensorIdFromCard, cameraLookAtBearing?.cameraId, EMPTY_FC, offlineAssetIds]);
+  }, [hoveredSensorIdFromCard, cameraLookAtBearing?.cameraId, offlineAssetIds]);
 
   const highlightedAssets = useMemo(() => {
     return ALL_MAP_ASSETS.filter(a =>
@@ -1104,7 +1072,7 @@ export const TacticalMap = ({
         properties: { offline: offlineAssetIds.includes(hoveredAsset.id) ? 1 : 0 },
       }],
     };
-  }, [hoveredAsset, selectedAssetId, cameraLookAtBearing?.cameraId, EMPTY_FC, offlineAssetIds]);
+  }, [hoveredAsset, selectedAssetId, cameraLookAtBearing?.cameraId, offlineAssetIds]);
 
   const selectedFovGeoJSON = useMemo(() => {
     if (!selectedAsset) return EMPTY_FC;
@@ -1122,7 +1090,7 @@ export const TacticalMap = ({
         properties: { offline: offlineAssetIds.includes(selectedAsset.id) ? 1 : 0 },
       }],
     };
-  }, [selectedAsset, cameraLookAtBearing?.cameraId, EMPTY_FC, offlineAssetIds]);
+  }, [selectedAsset, cameraLookAtBearing?.cameraId, offlineAssetIds]);
 
   useEffect(() => {
     pushFovToMap('hover-fov', hoverFovGeoJSON);
@@ -1135,6 +1103,51 @@ export const TacticalMap = ({
   useEffect(() => {
     pushFovToMap('card-hover-fov', highlightedFovGeoJSON);
   }, [highlightedFovGeoJSON, pushFovToMap]);
+
+  // ── Aggregated FeatureCollections for per-entity overlays ──────────────
+  // Previously each target/drone had its own <Source>, which caused Mapbox
+  // to add/remove sources on join/leave (expensive flicker). Now we batch
+  // them into one FeatureCollection per category.
+
+  const targetTrailsGeoJSON = useMemo(() => ({
+    type: 'FeatureCollection' as const,
+    features: uniqueTargets
+      .filter(t => t.entityStage === 'classified' && t.trail && t.trail.length >= 2)
+      .map(t => ({
+        type: 'Feature' as const,
+        properties: { id: t.id },
+        geometry: { type: 'LineString' as const, coordinates: t.trail!.map(p => [p.lon, p.lat]) },
+      })),
+  }), [uniqueTargets]);
+
+  const friendlyTrailsGeoJSON = useMemo(() => ({
+    type: 'FeatureCollection' as const,
+    features: friendlyDrones
+      .filter(d => d.trail && d.trail.length >= 2)
+      .map(d => ({
+        type: 'Feature' as const,
+        properties: { id: d.id },
+        geometry: { type: 'LineString' as const, coordinates: d.trail!.map(([lat, lon]) => [lon, lat]) },
+      })),
+  }), [friendlyDrones]);
+
+  const friendlyFovGeoJSON = useMemo(() => ({
+    type: 'FeatureCollection' as const,
+    features: friendlyDrones
+      .filter(d =>
+        d.headingDeg != null &&
+        !offlineAssetIds.includes(d.id) &&
+        (d.id === hoveredFriendlyDroneId || d.id === selectedAssetId || d.id === hoveredSensorIdFromCard)
+      )
+      .map(d => {
+        const ring = fovPolygon(d.lat, d.lon, d.fovDeg ?? DRONE_FOV_DEG, d.headingDeg!, DRONE_FOV_RADIUS_M);
+        return {
+          type: 'Feature' as const,
+          properties: { id: d.id },
+          geometry: { type: 'Polygon' as const, coordinates: [ring] },
+        };
+      }),
+  }), [friendlyDrones, offlineAssetIds, hoveredFriendlyDroneId, selectedAssetId, hoveredSensorIdFromCard]);
 
   return (
     <div ref={mapContainerRef} className={`absolute inset-0 min-h-0 min-w-0 bg-[#0a0a0a] overflow-hidden z-0 ${planningMode ? 'cursor-crosshair' : ''}`}>
@@ -1177,9 +1190,13 @@ export const TacticalMap = ({
         }}
         style={{ width: '100%', height: '100%', display: 'block' }}
         mapStyle={mapStyleId === 'satellite' ? 'mapbox://styles/mapbox/satellite-v9' : 'mapbox://styles/mapbox/dark-v11'}
-        mapboxAccessToken={TOKEN}
+        mapboxAccessToken={MAPBOX_TOKEN}
         attributionControl={false}
         cursor={planningMode ? 'crosshair' : undefined}
+        reuseMaps
+        antialias={false}
+        renderWorldCopies={false}
+        maxTileCacheSize={50}
       >
         {/* Navigation Control (Zoom/Compass) */}
         <div className="absolute top-24 left-4">
@@ -1482,24 +1499,13 @@ export const TacticalMap = ({
         })}
 
         {/* Dynamic Target Markers */}
-        {/* Target trail lines for classified entities */}
-        {uniqueTargets.filter(t => t.entityStage === 'classified' && t.trail && t.trail.length >= 2).map(target => (
-          <Source key={`trail-${target.id}`} id={`trail-${target.id}`} type="geojson" data={{
-            type: 'Feature', properties: {},
-            geometry: { type: 'LineString', coordinates: target.trail!.map(p => [p.lon, p.lat]) },
-          }}>
-            <Layer id={`trail-casing-${target.id}`} type="line" paint={{
-              'line-color': '#000000',
-              'line-width': 7,
-              'line-opacity': 1,
-            }} />
-            <Layer id={`trail-line-${target.id}`} type="line" paint={{
-              'line-color': '#ffffff',
-              'line-width': 3,
-              'line-opacity': 1,
-            }} />
+        {/* Aggregated target trail lines for classified entities (single Source) */}
+        {targetTrailsGeoJSON.features.length > 0 && (
+          <Source id="target-trails" type="geojson" data={targetTrailsGeoJSON}>
+            <Layer id="target-trails-casing" type="line" paint={TRAIL_CASING_PAINT} />
+            <Layer id="target-trails-line" type="line" paint={TRAIL_LINE_PAINT} />
           </Source>
-        ))}
+        )}
 
         {uniqueTargets.map(target => {
             const [lat, lon] = target.coordinates.split(',').map(c => parseFloat(c.trim()));
@@ -2253,46 +2259,21 @@ export const TacticalMap = ({
           </>
         )}
 
-        {/* Friendly drone trail lines */}
-        {friendlyDrones.filter(d => d.trail && d.trail.length >= 2).map(drone => (
-          <Source key={`friendly-trail-${drone.id}`} id={`friendly-trail-${drone.id}`} type="geojson" data={{
-            type: 'Feature', properties: {},
-            geometry: { type: 'LineString', coordinates: drone.trail!.map(([lat, lon]) => [lon, lat]) },
-          }}>
-            <Layer id={`friendly-trail-casing-${drone.id}`} type="line" paint={{
-              'line-color': '#000000',
-              'line-width': 5,
-            }} />
-            <Layer id={`friendly-trail-line-${drone.id}`} type="line" paint={{
-              'line-color': '#ffffff',
-              'line-width': 2,
-            }} />
+        {/* Aggregated friendly drone trail lines (single Source) */}
+        {friendlyTrailsGeoJSON.features.length > 0 && (
+          <Source id="friendly-trails" type="geojson" data={friendlyTrailsGeoJSON}>
+            <Layer id="friendly-trails-casing" type="line" paint={FRIENDLY_TRAIL_CASING_PAINT} />
+            <Layer id="friendly-trails-line" type="line" paint={FRIENDLY_TRAIL_LINE_PAINT} />
           </Source>
-        ))}
+        )}
 
-        {/* Friendly drone FOV cones (shown on hover or selected) */}
-        {friendlyDrones.filter(d =>
-          d.headingDeg != null &&
-          !offlineAssetIds.includes(d.id) &&
-          (d.id === hoveredFriendlyDroneId || d.id === selectedAssetId || d.id === hoveredSensorIdFromCard)
-        ).map(drone => {
-          const ring = fovPolygon(drone.lat, drone.lon, drone.fovDeg ?? DRONE_FOV_DEG, drone.headingDeg!, DRONE_FOV_RADIUS_M);
-          return (
-            <Source key={`friendly-fov-${drone.id}`} id={`friendly-fov-${drone.id}`} type="geojson" data={{
-              type: 'Feature', properties: {},
-              geometry: { type: 'Polygon', coordinates: [ring] },
-            }}>
-              <Layer id={`friendly-fov-fill-${drone.id}`} type="fill" paint={{
-                'fill-color': 'rgba(34, 211, 238, 0.40)',
-                'fill-outline-color': 'rgba(34, 211, 238, 1.0)',
-              }} />
-              <Layer id={`friendly-fov-line-${drone.id}`} type="line" paint={{
-                'line-color': 'rgba(34, 211, 238, 1.0)',
-                'line-width': 2.5,
-              }} />
-            </Source>
-          );
-        })}
+        {/* Aggregated friendly drone FOV cones (single Source, filtered upstream) */}
+        {friendlyFovGeoJSON.features.length > 0 && (
+          <Source id="friendly-fov" type="geojson" data={friendlyFovGeoJSON}>
+            <Layer id="friendly-fov-fill" type="fill" paint={FRIENDLY_FOV_FILL_PAINT} />
+            <Layer id="friendly-fov-line" type="line" paint={FRIENDLY_FOV_LINE_PAINT} />
+          </Source>
+        )}
 
         {/* Friendly drone markers (cyan, highlight on device card hover) */}
         {friendlyDrones.map(drone => {
@@ -2300,32 +2281,63 @@ export const TacticalMap = ({
           const isHovered = drone.id === hoveredFriendlyDroneId;
           const isOffline = offlineAssetIds.includes(drone.id);
           const isSelected = drone.id === selectedAssetId;
+          const isDroneStarling = drone.id.startsWith('STARLING-');
+          const isConnectedToPathFinder = pathFinderConnectedId === drone.id;
+
+          const markerContent = (() => {
+            const droneState: InteractionState =
+              isOffline ? 'disabled' :
+              isSelected || isHoveredFromCard ? 'selected' :
+              isHovered ? 'hovered' :
+              'default';
+            const droneStyle = resolveMarkerStyle(droneState, 'friendly');
+            return (
+              <MapMarker
+                icon={<DroneIcon color={droneStyle.glyphColor} rotationDeg={(drone.headingDeg ?? 0) - 90} />}
+                style={droneStyle}
+                surfaceSize={36}
+                ringSize={28}
+                pulse={isSelected || isConnectedToPathFinder}
+                label={`${drone.name}${isConnectedToPathFinder ? ' — PathFinder' : ''}${isOffline ? ' — לא מקוון' : ''}`}
+                showLabel={isSelected || isHoveredFromCard || isHovered || isConnectedToPathFinder}
+                onMouseEnter={() => setHoveredFriendlyDroneId(drone.id)}
+                onMouseLeave={() => setHoveredFriendlyDroneId(null)}
+              />
+            );
+          })();
+
+          if (isDroneStarling && onPathFinderConnect) {
+            return (
+              <Marker key={drone.id} longitude={drone.lon} latitude={drone.lat} anchor="center">
+                <ContextMenu>
+                  <ContextMenuTrigger asChild>
+                    <div onClick={(e) => { e.stopPropagation(); onAssetClick?.(drone.id); }}>
+                      {markerContent}
+                    </div>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent className="min-w-[180px]">
+                    <ContextMenuItem
+                      disabled={isOffline || isConnectedToPathFinder || (pathFinderConnectedId != null)}
+                      onSelect={() => onPathFinderConnect(drone.id)}
+                    >
+                      <Plane className="size-4" />
+                      {isConnectedToPathFinder ? 'PathFinder Active' : 'Connect PathFinder'}
+                    </ContextMenuItem>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem onSelect={() => onAssetClick?.(drone.id)}>
+                      <Maximize2 className="size-4" />
+                      Open Device Card
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
+              </Marker>
+            );
+          }
+
           return (
             <Marker key={drone.id} longitude={drone.lon} latitude={drone.lat} anchor="center">
-              <div
-                onClick={(e) => { e.stopPropagation(); onAssetClick?.(drone.id); }}
-              >
-                {(() => {
-                  const droneState: InteractionState =
-                    isOffline ? 'disabled' :
-                    isSelected || isHoveredFromCard ? 'selected' :
-                    isHovered ? 'hovered' :
-                    'default';
-                  const droneStyle = resolveMarkerStyle(droneState, 'friendly');
-                  return (
-                    <MapMarker
-                      icon={<DroneIcon color={droneStyle.glyphColor} rotationDeg={(drone.headingDeg ?? 0) - 90} />}
-                      style={droneStyle}
-                      surfaceSize={36}
-                      ringSize={28}
-                      pulse={isSelected}
-                      label={`${drone.name}${isOffline ? ' — לא מקוון' : ''}`}
-                      showLabel={isSelected || isHoveredFromCard || isHovered}
-                      onMouseEnter={() => setHoveredFriendlyDroneId(drone.id)}
-                      onMouseLeave={() => setHoveredFriendlyDroneId(null)}
-                    />
-                  );
-                })()}
+              <div onClick={(e) => { e.stopPropagation(); onAssetClick?.(drone.id); }}>
+                {markerContent}
               </div>
             </Marker>
           );

@@ -2,10 +2,8 @@ import { useState, useMemo, useCallback, useRef } from 'react';
 import Map, { Marker, Source, Layer, type MapRef } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Camera } from 'lucide-react';
-
-const TOKEN = 'pk.eyJ1IjoiZ3V5c2hhIiwiYSI6ImNtZ3htODN0dTE2dGMybXFrYWRlZmN5MGMifQ.dIQzO3kIdQaES0pfedlRvA';
-const EARTH_RADIUS_M = 6371000;
-const FOV_RADIUS_M = 1200;
+import { fovPolygon, FOV_RADIUS_M } from '@/app/lib/mapGeo';
+import { MAPBOX_TOKEN, getMapInstance, tryMapOp } from '@/app/lib/mapUtils';
 
 const SENSOR = {
   id: 'test-camera',
@@ -13,39 +11,19 @@ const SENSOR = {
   lon: 35.0,
   fovDeg: 90,
   bearingDeg: 45,
-};
+} as const;
 
-function destination(lat: number, lon: number, distM: number, bearingDeg: number): [number, number] {
-  const lat1 = (lat * Math.PI) / 180;
-  const lon1 = (lon * Math.PI) / 180;
-  const brng = (bearingDeg * Math.PI) / 180;
-  const d = distM / EARTH_RADIUS_M;
-  const lat2 = Math.asin(Math.sin(lat1) * Math.cos(d) + Math.cos(lat1) * Math.sin(d) * Math.cos(brng));
-  const lon2 = lon1 + Math.atan2(Math.sin(brng) * Math.sin(d) * Math.cos(lat1), Math.cos(d) - Math.sin(lat1) * Math.sin(lat2));
-  return [(lon2 * 180) / Math.PI, (lat2 * 180) / Math.PI];
-}
+const EMPTY_FC = { type: 'FeatureCollection' as const, features: [] as never[] };
 
-function fovPolygon(lat: number, lon: number, fovDeg: number, bearingDeg: number, radiusM: number): [number, number][] {
-  const center: [number, number] = [lon, lat];
-  if (fovDeg >= 360) {
-    const points: [number, number][] = [center];
-    for (let i = 0; i <= 32; i++) {
-      points.push(destination(lat, lon, radiusM, (i / 32) * 360));
-    }
-    points.push(center);
-    return points;
-  }
-  const startAngle = bearingDeg - fovDeg / 2;
-  const steps = Math.max(8, Math.floor((fovDeg / 360) * 32));
-  const points: [number, number][] = [center];
-  for (let i = 0; i <= steps; i++) {
-    points.push(destination(lat, lon, radiusM, startAngle + (fovDeg * i) / steps));
-  }
-  points.push(center);
-  return points;
-}
+const FOV_FILL_PAINT = {
+  'fill-color': 'rgba(34, 211, 238, 0.40)',
+  'fill-outline-color': 'rgba(34, 211, 238, 1.0)',
+} as const;
 
-const EMPTY_FC = { type: 'FeatureCollection' as const, features: [] as any[] };
+const FOV_LINE_PAINT = {
+  'line-color': 'rgba(34, 211, 238, 1.0)',
+  'line-width': 2.5,
+} as const;
 
 export default function FovTestPage() {
   const mapRef = useRef<MapRef>(null);
@@ -69,14 +47,16 @@ export default function FovTestPage() {
     };
   }, [hovered]);
 
-  const pushFov = useCallback((data: typeof EMPTY_FC) => {
-    const map = (mapRef.current as any)?.getMap?.() ?? mapRef.current;
-    if (!map) return;
-    const src = (map as any).getSource?.('test-fov');
-    if (src && typeof src.setData === 'function') {
-      src.setData(data);
-      (map as any).triggerRepaint?.();
-    }
+  const pushFov = useCallback((data: typeof EMPTY_FC | typeof fovGeoJSON) => {
+    tryMapOp('FovTestPage.pushFov', () => {
+      const map = getMapInstance(mapRef);
+      if (!map) return;
+      const src = map.getSource('test-fov') as mapboxgl.GeoJSONSource | undefined;
+      if (src?.setData) {
+        src.setData(data);
+        map.triggerRepaint();
+      }
+    });
   }, []);
 
   return (
@@ -94,17 +74,15 @@ export default function FovTestPage() {
         onMove={evt => setViewState(evt.viewState)}
         style={{ width: '100%', height: '100%' }}
         mapStyle="mapbox://styles/mapbox/satellite-v9"
-        mapboxAccessToken={TOKEN}
+        mapboxAccessToken={MAPBOX_TOKEN}
+        reuseMaps
+        antialias={false}
+        renderWorldCopies={false}
+        maxTileCacheSize={50}
       >
         <Source id="test-fov" type="geojson" data={fovGeoJSON}>
-          <Layer id="test-fov-fill" type="fill" paint={{
-            'fill-color': 'rgba(34, 211, 238, 0.40)',
-            'fill-outline-color': 'rgba(34, 211, 238, 1.0)',
-          }} />
-          <Layer id="test-fov-line" type="line" paint={{
-            'line-color': 'rgba(34, 211, 238, 1.0)',
-            'line-width': 2.5,
-          }} />
+          <Layer id="test-fov-fill" type="fill" paint={FOV_FILL_PAINT} />
+          <Layer id="test-fov-line" type="line" paint={FOV_LINE_PAINT} />
         </Source>
 
         <Marker

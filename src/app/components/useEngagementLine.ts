@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { MapRef } from 'react-map-gl';
+import { getMapInstance, tryMapOp } from '@/app/lib/mapUtils';
 
 export interface EngagementPairGeo {
   fromLat: number;
@@ -23,11 +24,21 @@ export type ParticleGeoJson = {
 
 const EMPTY_COLLECTION: ParticleGeoJson = { type: 'FeatureCollection', features: [] };
 
-const SPRING_LUT = (() => {
-  const stiffness = 160, damping = 70, mass = 1;
+/**
+ * Lazy-computed spring look-up table.
+ * Previously ran at module import time (300 iters of physics sim), which fired on every
+ * route that transitively imported TacticalMap. Now computed on first use and cached.
+ */
+let SPRING_LUT_CACHE: number[] | null = null;
+function getSpringLUT(): number[] {
+  if (SPRING_LUT_CACHE) return SPRING_LUT_CACHE;
+  const stiffness = 160;
+  const damping = 70;
+  const mass = 1;
   const steps = 300;
   const dt = 1 / 120;
-  let x = 0, v = 0;
+  let x = 0;
+  let v = 0;
   const lut: number[] = [];
   for (let i = 0; i <= steps; i++) {
     lut.push(Math.max(0, Math.min(x, 1.5)));
@@ -35,14 +46,16 @@ const SPRING_LUT = (() => {
     v += a * dt;
     x += v * dt;
   }
+  SPRING_LUT_CACHE = lut;
   return lut;
-})();
+}
 
 function easeSpring(t: number): number {
-  const idx = t * (SPRING_LUT.length - 1);
+  const lut = getSpringLUT();
+  const idx = t * (lut.length - 1);
   const lo = Math.floor(idx);
-  const hi = Math.min(lo + 1, SPRING_LUT.length - 1);
-  return SPRING_LUT[lo] + (SPRING_LUT[hi] - SPRING_LUT[lo]) * (idx - lo);
+  const hi = Math.min(lo + 1, lut.length - 1);
+  return lut[lo] + (lut[hi] - lut[lo]) * (idx - lo);
 }
 
 export function useEngagementLine(config: {
@@ -73,21 +86,26 @@ export function useEngagementLine(config: {
     let frameId: number;
 
     const animate = (time: number) => {
+      // Pause when tab is hidden — no point burning CPU repainting offscreen.
+      if (document.visibilityState !== 'visible') {
+        frameId = requestAnimationFrame(animate);
+        return;
+      }
       if (time - lastTime > 20) {
         lastTime = time;
         step = (step + 1) % TOTAL_STEPS;
         const s = (step / TOTAL_STEPS) * PERIOD;
         const pattern: number[] =
-          s < 0.01       ? [D, D] :
-          s < D          ? [0, s, D, D - s] :
+          s < 0.01        ? [D, D] :
+          s < D           ? [0, s, D, D - s] :
           s > PERIOD - 0.01 ? [D, D] :
-                           [s - D, D, PERIOD - s, 0.01];
-        try {
-          const map = (mapRef.current as any)?.getMap?.() ?? mapRef.current;
+                            [s - D, D, PERIOD - s, 0.01];
+        tryMapOp('engagementLine.dash', () => {
+          const map = getMapInstance(mapRef);
           if (map?.getLayer?.(layerId)) {
             map.setPaintProperty(layerId, 'line-dasharray', pattern);
           }
-        } catch {}
+        });
       }
       frameId = requestAnimationFrame(animate);
     };
@@ -111,6 +129,12 @@ export function useEngagementLine(config: {
     const ts = particleTRef.current;
 
     const animate = (time: number) => {
+      // Pause when tab is hidden.
+      if (document.visibilityState !== 'visible') {
+        lastTime = time;
+        frameId = requestAnimationFrame(animate);
+        return;
+      }
       const dt = lastTime ? (time - lastTime) / 1000 : 0;
       lastTime = time;
       const p = pairRef.current;
