@@ -17,6 +17,12 @@ export const ACTION_BUTTON_VARIANTS = {
     active: 'active:bg-zinc-900',
     text: 'text-white',
   },
+  outline: {
+    base: 'bg-white/[0.03] shadow-[0_0_0_1px_rgba(255,255,255,0.08)]',
+    hover: 'hover:bg-white/[0.06]',
+    active: 'active:bg-white/[0.02]',
+    text: 'text-zinc-400',
+  },
   danger: {
     base: 'bg-[oklch(0.435_0.151_25)]',
     hover: 'hover:bg-[oklch(0.485_0.151_25)]',
@@ -75,7 +81,7 @@ export function ActionButton({
       onClick={isDisabled ? undefined : onClick}
       disabled={isDisabled}
       className={cn(
-        'inline-flex flex-1 items-center justify-center gap-2 px-3 rounded overflow-hidden',
+        'inline-flex items-center justify-center gap-2 px-3 rounded overflow-hidden',
         sz.height, sz.text, sz.font, c.text,
         c.base, c.hover, c.active,
         'transition-[background-color,transform] duration-150 ease-out',
@@ -106,7 +112,7 @@ export function ActionButton({
           ) : (
             Icon && <Icon size={sz.icon} className="shrink-0 opacity-95" aria-hidden="true" />
           )}
-          <span>{label}</span>
+          <span className="whitespace-nowrap">{label}</span>
         </motion.span>
       </AnimatePresence>
     </button>

@@ -15,6 +15,7 @@ import { StyleguideSidebar } from '@/app/styleguide/StyleguideSidebar';
 import { StyleguideSearch } from '@/app/styleguide/StyleguideSearch';
 import { StyleguideHeader } from '@/app/styleguide/StyleguideHeader';
 import { StyleguideToc } from '@/app/styleguide/StyleguideToc';
+import { StyleguidePager } from '@/app/styleguide/StyleguidePager';
 import {
   CARD_TOKENS, ELEVATION, SURFACE, LAYOUT_TOKENS, surfaceAt, overlayAt,
   StatusChip, STATUS_CHIP_COLORS, type StatusChipColor,
@@ -23,11 +24,9 @@ import {
   AccordionSection, TelemetryRow,
   TargetCard, CardHeader, CardActions,
   CardDetails, CardSensors, CardMedia, MEDIA_BADGE_CONFIG, CardLog, CardClosure,
-  CardTimeline, CardFooterDock,
   FilterBar, NewUpdatesPill,
   type CardAction, type CardSensor,
   type LogEntry, type ClosureOutcome, type DetailRow,
-  type TimelineStep, type FooterDockAction,
 } from '@/primitives';
 import {
   CameraIcon, SensorIcon, RadarIcon, DroneIcon, DroneHiveIcon,
@@ -68,8 +67,6 @@ import cardSensorsSrc from '@/primitives/CardSensors.tsx?raw';
 import cardMediaSrc from '@/primitives/CardMedia.tsx?raw';
 import cardLogSrc from '@/primitives/CardLog.tsx?raw';
 import cardClosureSrc from '@/primitives/CardClosure.tsx?raw';
-import cardTimelineSrc from '@/primitives/CardTimeline.tsx?raw';
-import cardFooterDockSrc from '@/primitives/CardFooterDock.tsx?raw';
 import filterBarSrc from '@/primitives/FilterBar.tsx?raw';
 import newUpdatesPillSrc from '@/primitives/NewUpdatesPill.tsx?raw';
 import devicesPanelSrc from '@/shared/components/DevicesPanel.tsx?raw';
@@ -131,10 +128,10 @@ function ComponentSection({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className="scroll-mt-12 space-y-6">
-      <div className="flex flex-col gap-1.5">
-        <h2 className="text-[28px] font-semibold tracking-tight text-n-12" style={{ textWrap: 'balance' }}>{name}</h2>
-        <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide" style={{ textWrap: 'pretty' }}>{description}</p>
+    <section id={id} className="scroll-mt-16 space-y-8">
+      <div className="flex flex-col gap-2">
+        <h2 className="text-[30px] font-bold tracking-tight text-n-12" style={{ textWrap: 'balance' }}>{name}</h2>
+        <p className="text-[16px] font-normal leading-7 text-n-9" style={{ textWrap: 'pretty' }}>{description}</p>
       </div>
       {children}
     </section>
@@ -145,16 +142,31 @@ function PreviewPanel({
   children,
   className = '',
   tight = false,
+  align = 'center',
+  grid = false,
 }: {
   children: React.ReactNode;
   className?: string;
   tight?: boolean;
+  /** How to position the demo inside the frame. `center` flex-centers (default, shadcn-like); `stretch` lets content flow naturally. */
+  align?: 'center' | 'stretch';
+  /** Opt-in dot-grid background for minimalist demos (chips, pills, buttons). */
+  grid?: boolean;
 }) {
+  const isCenter = align === 'center';
+  const gridStyle = grid
+    ? {
+        backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px)',
+        backgroundSize: '16px 16px',
+        backgroundPosition: '0 0',
+      }
+    : undefined;
+
   return (
     <div
       dir="rtl"
-      className={`rounded-xl shadow-[0_0_0_1px_rgba(255,255,255,0.06)] ${tight ? 'p-3' : 'p-6'} ${className}`}
-      style={{ backgroundColor: SURFACE.level0 }}
+      className={`rounded-xl shadow-[0_0_0_1px_rgba(255,255,255,0.06)] ${tight ? 'p-6' : 'p-10'} ${isCenter ? 'flex items-center justify-center min-h-[200px]' : ''} ${className}`}
+      style={{ backgroundColor: SURFACE.level0, ...gridStyle }}
     >
       {children}
     </div>
@@ -173,8 +185,8 @@ function ExampleBlock({
   tight?: boolean;
 }) {
   return (
-    <div id={id} className={`space-y-2.5 ${id ? 'scroll-mt-20' : ''}`}>
-      <h3 className="text-[16px] font-normal text-n-11">{title}</h3>
+    <div id={id} className={`space-y-4 mt-10 first:mt-0 ${id ? 'scroll-mt-20' : ''}`}>
+      <h3 className="text-[14px] font-medium text-n-10">{title}</h3>
       <PreviewPanel tight={tight}>{children}</PreviewPanel>
     </div>
   );
@@ -263,25 +275,24 @@ interface PropDef {
 
 function PropsTable({ items }: { items: PropDef[] }) {
   return (
-    <div className="space-y-2.5">
-      <h3 className="text-[13px] font-medium text-n-10">Props</h3>
+    <div className="space-y-4 mt-6 mb-4">
       <div className="overflow-x-auto rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)]" dir="ltr">
-        <table className="w-full text-[12px]" dir="ltr">
+        <table className="w-full text-[13px]" dir="ltr">
           <thead>
             <tr className="border-b border-white/5" style={{ backgroundColor: SURFACE.level1 }}>
-              <th className="py-2 px-3 text-left font-medium text-n-10">Prop</th>
-              <th className="py-2 px-3 text-left font-medium text-n-10">Type</th>
-              <th className="py-2 px-3 text-left font-medium text-n-10">Default</th>
-              <th className="py-2 px-3 text-left font-medium text-n-10">Description</th>
+              <th className="py-2.5 px-4 text-left font-medium text-n-10">Prop</th>
+              <th className="py-2.5 px-4 text-left font-medium text-n-10">Type</th>
+              <th className="py-2.5 px-4 text-left font-medium text-n-10">Default</th>
+              <th className="py-2.5 px-4 text-left font-medium text-n-10">Description</th>
             </tr>
           </thead>
           <tbody>
             {items.map((p) => (
               <tr key={p.name} className="border-b border-white/[0.03] last:border-0">
-                <td className="py-2 px-3 font-mono text-sky-300/80">{p.name}</td>
-                <td className="py-2 px-3 font-mono text-n-9">{p.type}</td>
-                <td className="py-2 px-3 font-mono text-n-9">{p.default ?? '—'}</td>
-                <td className="py-2 px-3 text-n-9">{p.description}</td>
+                <td className="py-3 px-4 font-mono text-[13px] text-sky-300/90 font-medium">{p.name}</td>
+                <td className="py-3 px-4 font-mono text-n-9">{p.type}</td>
+                <td className="py-3 px-4 font-mono text-n-9">{p.default ?? '—'}</td>
+                <td className="py-3 px-4 text-n-9">{p.description}</td>
               </tr>
             ))}
           </tbody>
@@ -295,7 +306,7 @@ function PropsTable({ items }: { items: PropDef[] }) {
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="text-[15px] font-semibold text-n-11 tracking-tight mt-8 first:mt-0 pb-1.5 border-b border-white/[0.04]">
+    <h3 className="text-[20px] font-semibold text-n-12 tracking-tight mt-12 first:mt-0 mb-3">
       {children}
     </h3>
   );
@@ -1751,28 +1762,37 @@ function CodePreviewBlock({
   return (
     <div className="rounded-xl shadow-[0_0_0_1px_rgba(255,255,255,0.06)] overflow-hidden" style={{ backgroundColor: SURFACE.level0 }}>
       <div className="flex items-center border-b border-white/[0.06]">
-        <div className="ml-auto w-full flex flex-col justify-center items-start pl-1.5">
-          <CopyIconButton text={markdown} />
-        </div>
         {tabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`px-4 py-2.5 text-[12px] font-medium cursor-pointer transition-[color,border-color] duration-150 ease-out active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/25 ${
+            className={`px-3 py-2.5 text-[13px] font-medium cursor-pointer transition-[color,border-color] duration-150 ease-out active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/25 ${
               tab === t.id
-                ? 'text-n-12 border-b border-n-12'
-                : 'text-n-120 hover:text-n-10 border-b border-transparent'
+                ? 'text-n-12 border-b-2 border-n-12'
+                : 'text-n-9 hover:text-n-11 border-b-2 border-transparent'
             }`}
           >
             {t.label}
           </button>
         ))}
+        <div className="ml-auto flex items-center pl-1.5">
+          <CopyIconButton text={markdown} />
+        </div>
       </div>
       {tab === 'preview' && (
-        <div dir="rtl" className={tight ? 'p-3' : 'p-6'}>{children}</div>
+        <div
+          dir="rtl"
+          className={
+            tight
+              ? 'p-6'
+              : 'p-10 flex items-center justify-center min-h-[200px]'
+          }
+        >
+          {children}
+        </div>
       )}
       {tab === 'source' && (
-        <div className="relative p-4 overflow-x-auto max-h-[600px] overflow-y-auto rounded-b-xl">
+        <div className="relative p-4 overflow-x-auto max-h-[600px] overflow-y-auto rounded-b-xl text-[13px]">
           <div className="absolute top-2 right-2 z-10">
             <InlineCopyButton text={code} />
           </div>
@@ -1781,14 +1801,14 @@ function CodePreviewBlock({
       )}
       {tab === 'files' && hasFiles && (
         <div className="flex">
-          <div className="shrink-0 border-r border-white/[0.06] py-2 min-w-[180px] max-w-[220px]">
+          <div className="shrink-0 border-r border-white/[0.06] py-3 min-w-[200px] max-w-[240px]">
             {relatedFiles.map((f, i) => (
               <button
                 key={f.file}
                 onClick={() => setActiveFile(i)}
-                className={`block w-full text-left px-3 py-1.5 text-[12px] font-mono cursor-pointer transition-colors duration-100 ${
+                className={`block w-full text-left px-4 py-2 text-[13px] font-mono cursor-pointer transition-colors duration-100 ${
                   activeFile === i
-                    ? 'text-sky-300/90 bg-white/[0.04]'
+                    ? 'text-sky-300/90 bg-white/[0.06]'
                     : 'text-white/40 hover:text-white/70 hover:bg-white/[0.02]'
                 }`}
               >
@@ -2138,7 +2158,7 @@ function CardStatePlayground() {
 
       {/* Live card preview */}
       <PreviewPanel tight>
-        <div className="max-w-sm mx-auto">
+        <div className="w-96 mx-auto">
           <StyleguideUnifiedCard detection={entry.detection} defaultOpen />
         </div>
       </PreviewPanel>
@@ -2440,10 +2460,10 @@ export default function StyleguidePage() {
                 className="rounded-2xl bg-[#0c0c0e] min-h-[calc(100vh-2rem)]"
                 style={{ boxShadow: '0 0 0 1px rgba(255,255,255,0.06), 0 2px 8px rgba(0,0,0,0.2)' }}
               >
-              <div className="px-6 py-8 sm:px-8 lg:px-10 lg:py-10">
+              <div className="px-8 py-10 sm:px-10 lg:px-14 lg:py-12 pb-24">
               <motion.div
                 key={activeItem}
-                className="mx-auto max-w-3xl space-y-10"
+                className="mx-auto max-w-[880px] space-y-12"
                 initial={prefersReducedMotionRoot ? false : { opacity: 0, y: -6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2, ease: [0, 0, 0.2, 1] }}
@@ -2582,7 +2602,7 @@ export function DetectionRow() {
               <p className="text-[16px] font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
                 12-step achromatic OKLCH ramp. Use <code className="text-[13px] font-mono text-n-10">text-n-8</code>, <code className="text-[13px] font-mono text-n-10">bg-n-3</code>, etc.
               </p>
-              <PreviewPanel>
+              <PreviewPanel align="stretch">
                 <div className="space-y-3" dir="ltr">
                   <div className="flex rounded-xl overflow-hidden shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
                     {NEUTRAL_STEPS.map(({ step, color }) => (
@@ -2603,12 +2623,12 @@ export function DetectionRow() {
               <p className="text-[16px] font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
                 Surfaces rise from a dark base ({ELEVATION.baseSurface}) by mixing white overlays at increasing opacity. Click any level to copy its hex.
               </p>
-              <PreviewPanel>
+              <PreviewPanel align="stretch">
                 <ElevationRamp />
               </PreviewPanel>
 
               <SectionHeading>Fonts</SectionHeading>
-              <PreviewPanel>
+              <PreviewPanel align="stretch">
                 <div className="space-y-3">
                   <div>
                     <span className="text-[10px] font-semibold uppercase tracking-widest text-n-9 mb-1 block">Sans — Heebo</span>
@@ -2738,6 +2758,7 @@ export function DetectionRow() {
                 <div className="flex flex-wrap items-center gap-2">
                   <ActionButton label="הפנה מצלמה" icon={Eye} variant="fill" size="sm" />
                   <ActionButton label="ביטול" icon={Ban} variant="ghost" size="sm" />
+                  <ActionButton label="מעקב" icon={Eye} variant="outline" size="sm" />
                   <ActionButton label="מחק" icon={Trash2} variant="danger" size="sm" />
                   <ActionButton label="אזהרה" icon={AlertTriangle} variant="warning" size="sm" />
                 </div>
@@ -3238,98 +3259,6 @@ export function DetectionRow() {
             </ComponentSection>
             )}
 
-            {activeItem === 'card-timeline' && (
-            <ComponentSection id="card-timeline" name="CardTimeline" description="Step-by-step timeline showing detection lifecycle progress. Supports full and compact (dot) modes.">
-              <CodePreviewBlock name="CardTimeline" description="Step-by-step timeline showing detection lifecycle progress." tight code={cardTimelineSrc} relatedFiles={COMMON_FILES}>
-                <div className="max-w-sm rounded-lg overflow-hidden p-4" style={{ backgroundColor: SURFACE.level1 }}>
-                  <CardTimeline steps={[
-                    { label: 'זיהוי ראשוני', status: 'complete' },
-                    { label: 'סיווג', status: 'complete' },
-                    { label: 'מעקב', status: 'active' },
-                    { label: 'השבתה', status: 'pending' },
-                    { label: 'BDA', status: 'pending' },
-                  ] satisfies TimelineStep[]} />
-                </div>
-              </CodePreviewBlock>
-
-              <SectionHeading>Import</SectionHeading>
-              <ImportBlock path="@/primitives" names={['CardTimeline']} />
-
-              <SectionHeading>Usage</SectionHeading>
-              <UsageBlock code={cardTimelineSrc} name="CardTimeline" />
-
-              <SectionHeading>API Reference</SectionHeading>
-              <PropsTable items={[
-                { name: 'steps', type: 'TimelineStep[]', description: 'Array of { label, status } where status is "pending" | "active" | "complete" | "error"' },
-                { name: 'compact', type: 'boolean', default: 'false', description: 'Render as horizontal dots instead of vertical list' },
-                { name: 'className', type: 'string', description: 'Additional classes' },
-              ]} />
-
-              <SectionHeading>Examples</SectionHeading>
-              <ExampleBlock title="Compact mode (dot timeline)" tight>
-                <div className="max-w-sm rounded-lg overflow-hidden p-4" style={{ backgroundColor: SURFACE.level1 }}>
-                  <CardTimeline compact steps={[
-                    { label: 'זיהוי ראשוני', status: 'complete' },
-                    { label: 'סיווג', status: 'complete' },
-                    { label: 'מעקב', status: 'active' },
-                    { label: 'השבתה', status: 'pending' },
-                    { label: 'BDA', status: 'pending' },
-                  ] satisfies TimelineStep[]} />
-                </div>
-              </ExampleBlock>
-
-              <ExampleBlock title="With error state" tight>
-                <div className="max-w-sm rounded-lg overflow-hidden p-4" style={{ backgroundColor: SURFACE.level1 }}>
-                  <CardTimeline steps={[
-                    { label: 'זיהוי ראשוני', status: 'complete' },
-                    { label: 'סיווג', status: 'complete' },
-                    { label: 'השבתה', status: 'error' },
-                    { label: 'BDA', status: 'pending' },
-                  ] satisfies TimelineStep[]} />
-                </div>
-              </ExampleBlock>
-            </ComponentSection>
-            )}
-
-            {activeItem === 'card-footer-dock' && (
-            <ComponentSection id="card-footer-dock" name="CardFooterDock" description="Bottom-anchored action bar for cards. Renders equal-width buttons in a tinted dock strip.">
-              <CodePreviewBlock name="CardFooterDock" description="Bottom-anchored action bar for cards." tight code={cardFooterDockSrc} relatedFiles={COMMON_FILES}>
-                <div className="max-w-sm rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level1 }}>
-                  <div className="p-4 text-xs text-n-120">Card content above…</div>
-                  <CardFooterDock actions={[
-                    { id: 'details', label: 'פרטים', icon: Eye },
-                    { id: 'track', label: 'מעקב', icon: Crosshair },
-                    { id: 'dismiss', label: 'דחייה', icon: Ban },
-                  ] satisfies FooterDockAction[]} />
-                </div>
-              </CodePreviewBlock>
-
-              <SectionHeading>Import</SectionHeading>
-              <ImportBlock path="@/primitives" names={['CardFooterDock']} />
-
-              <SectionHeading>Usage</SectionHeading>
-              <UsageBlock code={cardFooterDockSrc} name="CardFooterDock" />
-
-              <SectionHeading>API Reference</SectionHeading>
-              <PropsTable items={[
-                { name: 'actions', type: 'FooterDockAction[]', description: 'Array of { id, label, icon?, onClick?, disabled?, loading? }' },
-                { name: 'className', type: 'string', description: 'Additional classes' },
-              ]} />
-
-              <SectionHeading>Examples</SectionHeading>
-              <ExampleBlock title="With disabled and loading states" tight>
-                <div className="max-w-sm rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level1 }}>
-                  <div className="p-4 text-xs text-n-120">Card content above…</div>
-                  <CardFooterDock actions={[
-                    { id: 'save', label: 'שמירה', icon: Download, loading: true },
-                    { id: 'cancel', label: 'ביטול', icon: X, disabled: true },
-                    { id: 'send', label: 'שליחה', icon: Send },
-                  ] satisfies FooterDockAction[]} />
-                </div>
-              </ExampleBlock>
-            </ComponentSection>
-            )}
-
             {activeItem === 'card-states' && (
             <ComponentSection id="card-states" name="Card States" description="Interactive playground to explore how each detection lifecycle state affects the card's visual treatment — spine accent, icon design, ring, opacity, status chip, and closure type.">
               <CardStatePlayground />
@@ -3339,7 +3268,7 @@ export function DetectionRow() {
             {activeItem === 'target-card' && (
             <ComponentSection id="target-card" name="TargetCard" description="The core card shell. Composes CardHeader with slot children via the useCardSlots hook. These examples use real Detection mock data and the same composition as the main app.">
               <CodePreviewBlock name="TargetCard" description="The core card shell. Composes CardHeader with slot children via the useCardSlots hook." tight code={targetCardSrc} relatedFiles={COMMON_FILES}>
-                <div className="max-w-sm mx-auto">
+                <div className="w-96 mx-auto">
                   <StyleguideUnifiedCard detection={cuas_classified} defaultOpen />
                 </div>
               </CodePreviewBlock>
@@ -3362,13 +3291,13 @@ export function DetectionRow() {
 
               <SectionHeading>Examples</SectionHeading>
               <ExampleBlock title="Mitigating (active jam)" tight>
-                <div className="max-w-sm mx-auto">
+                <div className="w-96 mx-auto">
                   <StyleguideUnifiedCard detection={cuas_mitigating} defaultOpen />
                 </div>
               </ExampleBlock>
 
               <ExampleBlock title="Completed (resolved)" tight>
-                <div className="max-w-sm mx-auto">
+                <div className="w-96 mx-auto">
                   <StyleguideUnifiedCard detection={cuas_bda_complete} defaultOpen={false} />
                 </div>
               </ExampleBlock>
@@ -4104,6 +4033,7 @@ export function DetectionRow() {
             </ComponentSection>
             )}
 
+            <StyleguidePager activeItem={activeItem} onNavigate={navigateTo} />
           </motion.div>
           </div>
           </div>

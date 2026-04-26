@@ -57,11 +57,11 @@ export function StyleguideToc({
   if (!anchors || anchors.length === 0) return null;
 
   return (
-    <aside className="sticky top-0 h-screen w-48 shrink-0 overflow-y-auto py-6 ps-6 pe-4 hidden xl:block">
-      <p className="flex h-7 items-center font-medium text-xs text-n-9">
+    <aside className="sticky top-0 h-screen w-[220px] shrink-0 overflow-y-auto py-8 ps-8 pe-6 hidden xl:block">
+      <p className="flex h-7 items-center font-semibold text-[13px] text-n-11">
         On This Page
       </p>
-      <div className="relative ms-3.5 flex flex-col gap-0.5 before:absolute before:inset-y-0 before:-left-[13px] before:w-px before:bg-n-5">
+      <div className="relative ms-3.5 flex flex-col gap-0.5 pb-8 before:absolute before:inset-y-0 before:-left-[13px] before:w-px before:bg-n-5">
         {anchors.map((a) => {
           const isActive = activeAnchor === a.id;
           return (
@@ -81,6 +81,10 @@ export function StyleguideToc({
           );
         })}
       </div>
+      <div
+        aria-hidden
+        className="sticky bottom-0 -mb-8 z-10 h-12 shrink-0 pointer-events-none bg-linear-to-t from-[#111] to-transparent"
+      />
     </aside>
   );
 }

@@ -14,8 +14,8 @@ export function StyleguideSidebar({
   onSelectPage,
 }: StyleguideSidebarProps) {
   return (
-    <nav className="sticky top-0 h-screen w-56 shrink-0 overflow-y-auto py-8 pl-6 pr-4 scrollbar-none">
-      <a href="#top" className="flex items-center gap-1.5 mb-6">
+    <nav className="sticky top-0 h-screen w-[260px] shrink-0 overflow-y-auto py-6 pl-8 pr-6 scrollbar-none">
+      <a href="#top" className="flex items-center gap-1.5 mb-8">
         <span className="text-[14px] font-semibold text-white tracking-tight">C2 Hub</span>
         <span className="text-[14px] font-normal text-n-8 tracking-tight">docs</span>
       </a>
@@ -28,6 +28,11 @@ export function StyleguideSidebar({
           onSelectPage={onSelectPage}
         />
       ))}
+
+      <div
+        aria-hidden
+        className="sticky bottom-0 -mb-6 z-10 h-12 shrink-0 pointer-events-none bg-linear-to-t from-[#111] to-transparent"
+      />
     </nav>
   );
 }
@@ -42,8 +47,8 @@ function SidebarGroup({
   onSelectPage: (id: string) => void;
 }) {
   return (
-    <div className="mb-7">
-      <span className="block text-[13px] font-semibold text-n-12 mb-3">
+    <div className="mb-6">
+      <span className="block text-xs font-semibold text-white/50 mb-2">
         {group.label}
       </span>
       <ul className="space-y-0.5">
@@ -79,10 +84,10 @@ function SidebarItem({
           e.preventDefault();
           onSelectPage(item.id);
         }}
-        className={`block py-[5px] text-[14px] cursor-pointer transition-colors duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent rounded-sm ${
+        className={`block py-[5px] text-xs cursor-pointer transition-colors duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent rounded-md ${
           isActive
-            ? 'text-white font-medium bg-white/[0.07] px-2 -mx-2 rounded-md'
-            : 'text-white/50 font-medium hover:text-n-10'
+            ? 'text-white font-medium bg-white/[0.07] px-2.5 -mx-2.5'
+            : 'text-n-9 font-medium hover:text-n-11 hover:bg-white/[0.03] px-2.5 -mx-2.5'
         }`}
       >
         {item.label}
