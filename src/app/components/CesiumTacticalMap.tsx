@@ -305,9 +305,14 @@ export function CesiumTacticalMap({
           content: (
             <MapMarker
               icon={
-                targetHeading != null
-                  ? <DroneIcon rotationDeg={droneRotationFromHeading(targetHeading)} />
-                  : <DroneIcon />
+                <DroneIcon
+                  color={style.glyphColor}
+                  rotationDeg={
+                    targetHeading != null
+                      ? droneRotationFromHeading(targetHeading)
+                      : 0
+                  }
+                />
               }
               style={style}
               surfaceSize={TARGET_SURFACE}
@@ -394,13 +399,29 @@ export function CesiumTacticalMap({
       });
     }
 
-    // Friendly drones — heading rotation if available.
+    // Friendly drones — heading rotation + offline-state handling. Mirrors
+    // the Mapbox path in `TacticalMap.tsx:2287-2306`: drone state is
+    // `disabled` when offline, `selected` for the active card hover, then
+    // `hovered`, then `default`. Glyph colour is passed through from the
+    // resolved style so the SVG fill matches the affiliation palette
+    // (white at rest, grey when offline) instead of `DroneIcon`'s default
+    // cyan fill, which previously made friendly drones read as hostile.
     if (friendlyDrones) {
       for (const d of friendlyDrones) {
         if (seen.has(d.id)) continue;
         seen.add(d.id);
-        const isHovered = hoveredMarkerId === d.id;
-        const state: InteractionState = isHovered ? 'hovered' : 'default';
+        const isOffline = offlineSet.has(d.id);
+        const isSelected = selectedAssetId === d.id;
+        const isHoveredFromCard = hoveredSensorIdFromCard === d.id;
+        const isHoveredOnMap = hoveredMarkerId === d.id;
+        const isHovered = isHoveredFromCard || isHoveredOnMap;
+        const state: InteractionState = isOffline
+          ? 'disabled'
+          : isSelected
+            ? 'selected'
+            : isHovered
+              ? 'hovered'
+              : 'default';
         const style = resolveMarkerStyle(state, 'friendly');
         out.push({
           id: d.id,
@@ -409,14 +430,20 @@ export function CesiumTacticalMap({
           zIndex: isHovered ? 40 : 25,
           content: (
             <MapMarker
-              icon={<DroneIcon rotationDeg={droneRotationFromHeading(d.headingDeg)} />}
+              icon={
+                <DroneIcon
+                  color={style.glyphColor}
+                  disabled={isOffline}
+                  rotationDeg={droneRotationFromHeading(d.headingDeg)}
+                />
+              }
               style={style}
               surfaceSize={SENSOR_SURFACE}
               ringSize={SENSOR_RING}
               heading={d.headingDeg}
               label={d.name}
-              showLabel={isHovered}
-              pulse={isHovered}
+              showLabel={isHovered || isSelected}
+              pulse={isHovered || isSelected}
             />
           ),
           onClick: () => onAssetClickRef.current?.(d.id),
