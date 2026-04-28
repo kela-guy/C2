@@ -49,6 +49,7 @@ import {
   bearingDegrees,
 } from './TacticalMap';
 import type { TacticalMapProps, MapAsset } from './TacticalMap';
+import { DRONE_FOV_RADIUS_M, DRONE_FOV_DEG } from '@/app/lib/mapGeo';
 import type { Detection } from '@/imports/ListOfSystems';
 
 const CESIUM_ION_TOKEN = (import.meta.env.VITE_CESIUM_ION_TOKEN as string | undefined) ?? '';
@@ -406,6 +407,10 @@ export function CesiumTacticalMap({
     // resolved style so the SVG fill matches the affiliation palette
     // (white at rest, grey when offline) instead of `DroneIcon`'s default
     // cyan fill, which previously made friendly drones read as hostile.
+    //
+    // FOV cone is shown on hover / selection (same details-on-demand
+    // gating as the sensor FOVs), as long as the drone has a heading and
+    // isn't offline — matches the Mapbox condition at TacticalMap.tsx:1136.
     if (friendlyDrones) {
       for (const d of friendlyDrones) {
         if (seen.has(d.id)) continue;
@@ -423,6 +428,8 @@ export function CesiumTacticalMap({
               ? 'hovered'
               : 'default';
         const style = resolveMarkerStyle(state, 'friendly');
+        const showFov =
+          d.headingDeg != null && !isOffline && (isHovered || isSelected);
         out.push({
           id: d.id,
           lat: d.lat,
@@ -446,6 +453,15 @@ export function CesiumTacticalMap({
               pulse={isHovered || isSelected}
             />
           ),
+          fov: showFov
+            ? {
+                rangeM: DRONE_FOV_RADIUS_M,
+                bearingDeg: d.headingDeg!,
+                widthDeg: d.fovDeg ?? DRONE_FOV_DEG,
+                color: '#22b8cf',
+                opacity: 0.28,
+              }
+            : undefined,
           onClick: () => onAssetClickRef.current?.(d.id),
           onMouseEnter: () => setHoveredMarkerId(d.id),
           onMouseLeave: () => setHoveredMarkerId((current) => (current === d.id ? null : current)),
