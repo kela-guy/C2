@@ -1148,7 +1148,7 @@ export const Dashboard = () => {
     <div className="relative flex w-full h-screen overflow-hidden text-white font-sans selection:bg-red-500/30">
       {/* Minimal Left Nav */}
       <TooltipProvider delayDuration={200}>
-      <nav className="flex flex-col justify-start items-center w-11 flex-shrink-0 h-full bg-[#1a1a1a] border-l border-white/10 z-20" dir="ltr">
+      <nav className="flex flex-col justify-start items-center w-8 flex-shrink-0 h-full bg-[#1a1a1a] border-l border-white/10 z-20" dir="ltr">
         <div className="flex items-center justify-center py-4 h-[60px] w-full">
           <div className="text-white scale-75 origin-center">
             <C2Logo />
@@ -1166,7 +1166,7 @@ export const Dashboard = () => {
                 className="size-8 rounded bg-transparent text-gray-400 data-[state=on]:bg-white/10 data-[state=on]:text-white hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
                 aria-label={sidebarOpen ? 'סגור רשימת מערכות' : 'פתח רשימת מערכות'}
               >
-                <List size={20} strokeWidth={1.5} />
+                <List size={24} strokeWidth={1.5} />
               </Toggle>
             </TooltipTrigger>
             <TooltipContent side="left" sideOffset={8}>
@@ -1183,7 +1183,7 @@ export const Dashboard = () => {
                 className="size-8 rounded bg-transparent text-gray-400 data-[state=on]:bg-white/10 data-[state=on]:text-white hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
                 aria-label={devicesPanelOpen ? 'סגור מכשירים' : 'מכשירים'}
               >
-                <DevicesIcon size={20} />
+                <DevicesIcon size={24} />
               </Toggle>
             </TooltipTrigger>
             <TooltipContent side="left" sideOffset={8}>
@@ -1206,7 +1206,7 @@ export const Dashboard = () => {
                 className="size-8 rounded bg-transparent text-gray-400 data-[state=on]:bg-white/10 data-[state=on]:text-white hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
                 aria-label={isCameraViewerOpen ? 'סגור מצלמות' : 'מצלמות'}
               >
-                <Video size={20} strokeWidth={1.5} />
+                <Video size={24} strokeWidth={1.5} />
               </Toggle>
             </TooltipTrigger>
             <TooltipContent side="left" sideOffset={8}>
@@ -1223,7 +1223,7 @@ export const Dashboard = () => {
                     className="size-8 rounded flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
                     aria-label="תרחישי CUAS"
                   >
-                    <CuasIcon size={20} />
+                    <CuasIcon size={24} />
                   </button>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
@@ -1262,7 +1262,7 @@ export const Dashboard = () => {
                 className="size-8 rounded flex items-center justify-center text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
                 aria-label="סיור הדרכה"
               >
-                <HelpCircle size={20} strokeWidth={1.5} />
+                <HelpCircle size={24} strokeWidth={1.5} />
               </button>
             </TooltipTrigger>
             <TooltipContent side="left" sideOffset={8}>סיור הדרכה</TooltipContent>
@@ -1274,7 +1274,7 @@ export const Dashboard = () => {
                 className="size-8 rounded flex items-center justify-center text-gray-400 hover:text-amber-400 hover:bg-amber-500/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
                 aria-label="Style Guide"
               >
-                <Palette size={20} strokeWidth={1.5} />
+                <Palette size={24} strokeWidth={1.5} />
               </a>
             </TooltipTrigger>
             <TooltipContent side="left" sideOffset={8}>Style Guide</TooltipContent>
@@ -1288,7 +1288,7 @@ export const Dashboard = () => {
                       className="size-8 rounded flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
                       aria-label="התראות"
                     >
-                      <Bell size={20} strokeWidth={1.5} />
+                      <Bell size={24} strokeWidth={1.5} />
                     </button>
                   }
                 />
