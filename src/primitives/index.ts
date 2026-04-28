@@ -17,6 +17,13 @@ export { CardFooterDock, type FooterDockAction, type CardFooterDockProps } from 
 export { FilterBar, type FilterBarProps, type FilterDef, type FilterOption } from './FilterBar';
 export { NewUpdatesPill } from './NewUpdatesPill';
 export { MapMarker, type MapMarkerProps } from './MapMarker';
+export {
+  CesiumMap,
+  type CesiumMapProps,
+  type CesiumMarker,
+  type CesiumMapFlyTo,
+  type CesiumSceneMode,
+} from './CesiumMap';
 export { DroneCardIcon, JamWaveIcon, MissileCardIcon, DRONE_PATH, MISSILE_PATH } from './MapIcons';
 export {
   type Affiliation,

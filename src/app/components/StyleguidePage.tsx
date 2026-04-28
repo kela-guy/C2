@@ -26,6 +26,7 @@ import {
   TargetCard, CardHeader, CardActions,
   CardDetails, CardSensors, CardMedia, MEDIA_BADGE_CONFIG, CardLog, CardClosure,
   FilterBar, NewUpdatesPill,
+  CesiumMap, type CesiumMarker,
   type CardAction, type CardSensor,
   type LogEntry, type ClosureOutcome, type DetailRow,
   type FilterDef,
@@ -152,6 +153,95 @@ const FILTER_BAR_DEMO_DEFS: FilterDef[] = [
     ],
   },
 ];
+
+// ─── CesiumMap demo data ─────────────────────────────────────────────────────
+
+const CESIUM_ION_TOKEN = (import.meta.env.VITE_CESIUM_ION_TOKEN as string | undefined) ?? '';
+
+const cesiumDemoBasicMarkers: CesiumMarker[] = [
+  { id: 'm-1', lat: 32.470, lon: 35.005, label: 'Drone', color: '#fa5252' },
+  { id: 'm-2', lat: 32.463, lon: 34.998, label: 'Patrol', color: '#74c0fc' },
+  { id: 'm-3', lat: 32.467, lon: 35.012, label: 'Sensor', color: '#22b8cf' },
+];
+
+const cesiumDemoFovMarkers: CesiumMarker[] = [
+  {
+    id: 'cam-north',
+    lat: 32.4776,
+    lon: 34.9913,
+    label: 'PTZ-N',
+    color: '#74c0fc',
+    fov: { rangeM: 1500, bearingDeg: 135, widthDeg: 60 },
+  },
+  {
+    id: 'cam-south',
+    lat: 32.4526,
+    lon: 35.0013,
+    label: 'PTZ-S',
+    color: '#74c0fc',
+    fov: { rangeM: 1500, bearingDeg: 45, widthDeg: 60 },
+  },
+  {
+    id: 'reg-east',
+    lat: 32.4646,
+    lon: 35.0213,
+    label: 'Regulus East',
+    color: '#fa5252',
+    coverageRadiusM: 2500,
+  },
+];
+
+function CesiumFlyToDemo() {
+  const [target, setTarget] = useState<{ lat: number; lon: number; heightM?: number } | null>({
+    lat: 32.466,
+    lon: 35.005,
+    heightM: 10000,
+  });
+
+  const flyTo = (lat: number, lon: number, heightM: number) => {
+    // Always pass a NEW object so the effect re-runs.
+    setTarget({ lat, lon, heightM });
+  };
+
+  return (
+    <PreviewPanel align="stretch">
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => flyTo(32.4776, 34.9913, 4000)}
+            className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.04] shadow-[0_0_0_1px_rgba(255,255,255,0.06)] px-3 py-1.5 text-[13px] font-medium text-n-11 hover:bg-white/[0.08] hover:text-white transition-colors"
+          >
+            Fly to Camera North
+          </button>
+          <button
+            type="button"
+            onClick={() => flyTo(32.4646, 35.0213, 4000)}
+            className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.04] shadow-[0_0_0_1px_rgba(255,255,255,0.06)] px-3 py-1.5 text-[13px] font-medium text-n-11 hover:bg-white/[0.08] hover:text-white transition-colors"
+          >
+            Fly to Regulus East
+          </button>
+          <button
+            type="button"
+            onClick={() => flyTo(32.466, 35.005, 12000)}
+            className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.04] shadow-[0_0_0_1px_rgba(255,255,255,0.06)] px-3 py-1.5 text-[13px] font-medium text-n-11 hover:bg-white/[0.08] hover:text-white transition-colors"
+          >
+            Zoom out
+          </button>
+        </div>
+        <div className="h-[420px] rounded-lg overflow-hidden">
+          <CesiumMap
+            ionToken={CESIUM_ION_TOKEN}
+            initialView={{ lat: 32.466, lon: 35.005, heightM: 10000 }}
+            markers={cesiumDemoFovMarkers}
+            flyTo={target}
+            sceneMode="2D"
+          />
+        </div>
+      </div>
+    </PreviewPanel>
+  );
+}
 
 // ─── DevicesPanel demo data ──────────────────────────────────────────────────
 
@@ -4109,6 +4199,132 @@ export function DetectionRow() {
 
               </div>
 
+            </ComponentSection>
+            )}
+
+            {activeItem === 'cesium-map' && (
+            <ComponentSection
+              id="cesium-map"
+              name="Cesium Map"
+              description="A CesiumJS-based map primitive — sandbox for replacing the Mapbox-based TacticalMap. Step 1: feature parity with our current map (basemap, markers, FOV, ECM coverage, fly-to). Step 2: Cesium-only capabilities (terrain, time-aware data, true 3D)."
+            >
+              <SectionHeading>Basics — Bing Aerial via Cesium Ion (2D)</SectionHeading>
+              <p className="text-[14px] leading-6 text-n-10">
+                Imagery: Cesium Ion asset id <code className="text-[13px] font-mono bg-white/[0.06] px-1 py-0.5 rounded">2</code>{' '}
+                (Bing Maps Aerial). Token comes from the{' '}
+                <code className="text-[13px] font-mono bg-white/[0.06] px-1 py-0.5 rounded">VITE_CESIUM_ION_TOKEN</code>{' '}
+                env var (see <code className="text-[13px] font-mono bg-white/[0.06] px-1 py-0.5 rounded">.env.example</code>).
+                Scene mode is <code className="text-[13px] font-mono bg-white/[0.06] px-1 py-0.5 rounded">'2D'</code> for parity with the top-down Mapbox view.
+              </p>
+
+              {!CESIUM_ION_TOKEN ? (
+                <div className="rounded-md p-4 text-[13px] text-amber-300 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] bg-amber-500/[0.06]">
+                  <strong>Token missing.</strong> Set <code className="font-mono">VITE_CESIUM_ION_TOKEN</code> in <code className="font-mono">.env.local</code> and restart the dev server.
+                </div>
+              ) : (
+                <div id="cesium-basics" className="scroll-mt-20 space-y-4 mt-10 first:mt-0">
+                  <h3 className="text-[14px] font-medium text-n-10">3 markers, no FOV / coverage</h3>
+                  <PreviewPanel align="stretch">
+                    <div className="h-[420px] rounded-lg overflow-hidden">
+                      <CesiumMap
+                        ionToken={CESIUM_ION_TOKEN}
+                        initialView={{ lat: 32.466, lon: 35.005, heightM: 8000 }}
+                        markers={cesiumDemoBasicMarkers}
+                        sceneMode="2D"
+                      />
+                    </div>
+                  </PreviewPanel>
+                </div>
+              )}
+
+              {CESIUM_ION_TOKEN && (
+                <>
+                  <SectionHeading>FOV + Coverage</SectionHeading>
+                  <div id="cesium-fov" className="scroll-mt-20 space-y-4 mt-10 first:mt-0">
+                    <h3 className="text-[14px] font-medium text-n-10">Sensor FOV cone (sector polygon) and ECM coverage ring (ellipse)</h3>
+                    <PreviewPanel align="stretch">
+                      <div className="h-[420px] rounded-lg overflow-hidden">
+                        <CesiumMap
+                          ionToken={CESIUM_ION_TOKEN}
+                          initialView={{ lat: 32.466, lon: 35.005, heightM: 6000 }}
+                          markers={cesiumDemoFovMarkers}
+                          sceneMode="2D"
+                        />
+                      </div>
+                    </PreviewPanel>
+                  </div>
+
+                  <SectionHeading>Fly-To</SectionHeading>
+                  <div id="cesium-fly-to" className="scroll-mt-20 space-y-4 mt-10 first:mt-0">
+                    <h3 className="text-[14px] font-medium text-n-10">Imperative camera control. Pass a new flyTo prop to trigger an animation.</h3>
+                    <CesiumFlyToDemo />
+                  </div>
+                </>
+              )}
+
+              <SectionHeading>Import</SectionHeading>
+              <ImportBlock
+                path="@/primitives"
+                names={['CesiumMap', 'type CesiumMarker', 'type CesiumMapProps', 'type CesiumSceneMode']}
+              />
+
+              <SectionHeading>API Reference</SectionHeading>
+              <PropsTable
+                items={[
+                  { name: 'ionToken', type: 'string', description: 'Cesium Ion access token (use VITE_CESIUM_ION_TOKEN).' },
+                  { name: 'initialView', type: '{ lat, lon, heightM? }', description: 'First-paint camera target.' },
+                  { name: 'markers', type: 'CesiumMarker[]', description: 'Pins. Each may carry an FOV sector and/or coverage ring.' },
+                  { name: 'flyTo', type: 'CesiumMapFlyTo | null', description: 'Pass a new object to trigger an imperative camera fly.' },
+                  { name: 'sceneMode', type: "'2D' | '2.5D' | '3D'", default: "'2D'", description: 'Cesium scene mode. 2D matches current Mapbox UX.' },
+                  { name: 'ionImageryAssetId', type: 'number', default: '2', description: 'Cesium Ion imagery asset id. 2 = Bing Aerial.' },
+                  { name: 'onMarkerClick', type: '(id: string) => void', description: 'Marker click handler.' },
+                  { name: 'onMarkerHover', type: '(id: string | null) => void', description: 'Hover enter (id) / leave (null).' },
+                  { name: 'className', type: 'string', default: "'w-full h-full'", description: 'Wrapper sizing.' },
+                ]}
+              />
+
+              <SectionHeading>Step 2 — Cesium-only opportunities</SectionHeading>
+              <div id="cesium-step-2" className="scroll-mt-20 space-y-4 mt-10 first:mt-0">
+                <p className="text-[14px] leading-6 text-n-10">
+                  Once parity lands, these are the capabilities Cesium gives us that Mapbox GL JS does not (or that Cesium does much better). They are deliberately documented here, not implemented yet — so we choose deliberately what to ship next.
+                </p>
+                <ul className="space-y-3 text-[14px] leading-6 text-n-10 list-disc ps-6 marker:text-n-9">
+                  <li>
+                    <strong className="text-n-12">True 3D globe + terrain.</strong> Cesium World Terrain (Ion asset 1) renders real elevation. Sensor lines-of-sight, drone altitude, missile trajectories all become visually correct in 3D, not faked with flat overlays.
+                  </li>
+                  <li>
+                    <strong className="text-n-12">Time-dynamic data (CZML).</strong> Replay engagements with a built-in clock + scrub bar. Drone, missile, jam, target tracks all driven by timestamped properties — not hand-rolled <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">requestAnimationFrame</code> loops.
+                  </li>
+                  <li>
+                    <strong className="text-n-12">3D Tiles for assets.</strong> Buildings, photogrammetry, ground stations as 3D-Tiles models. Camera collision, occlusion, and identification become possible.
+                  </li>
+                  <li>
+                    <strong className="text-n-12">Real line-of-sight visualization.</strong> Cesium has <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">Cesium.SensorVolume</code>-style primitives + the <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">cesium-sensor-volumes</code> add-on that draw conic / rectangular / spherical sensor volumes intersected with terrain.
+                  </li>
+                  <li>
+                    <strong className="text-n-12">Atmospheric + sun lighting.</strong> Day/night terminator, cast shadows, atmospheric scattering — useful for surveillance scenarios that depend on sun angle.
+                  </li>
+                  <li>
+                    <strong className="text-n-12">Sub-meter cameras.</strong> Cesium camera supports lookAt / lookAtTransform with smooth easing — better fit for our "camera look-at sensor" interaction than Mapbox's bearing/pitch.
+                  </li>
+                  <li>
+                    <strong className="text-n-12">Geodesic correctness everywhere.</strong> Distances, FOV cones, coverage rings are computed on the WGS-84 ellipsoid — no Mercator distortion at high latitude. Our existing FOV math is already approximate; Cesium handles it natively.
+                  </li>
+                  <li>
+                    <strong className="text-n-12">Vector + raster + mesh in one scene.</strong> No need to layer DOM markers above WebGL — Entities, Primitives, GeoJsonDataSource, KmlDataSource all coexist in one render loop.
+                  </li>
+                </ul>
+
+                <p className="text-[14px] leading-6 text-n-10">
+                  <strong className="text-n-12">Suggested next milestones</strong> (after parity):
+                </p>
+                <ol className="space-y-2 text-[14px] leading-6 text-n-10 list-decimal ps-6 marker:text-n-9">
+                  <li>Switch this primitive to 3D mode behind a toggle, layer in Cesium World Terrain.</li>
+                  <li>Move drone / missile / engagement-line animations to CZML so the clock / scrub UI works.</li>
+                  <li>Replace the flat FOV polygon with a real <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">SensorVolume</code> (terrain-clipped 3D cone).</li>
+                  <li>Wire <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">CesiumMap</code> into <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">Dashboard</code> behind a feature flag, then deprecate <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">TacticalMap</code> when parity is full.</li>
+                </ol>
+              </div>
             </ComponentSection>
             )}
 
