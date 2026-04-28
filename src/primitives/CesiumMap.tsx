@@ -168,12 +168,18 @@ export function CesiumMap({
       baseLayer: false as unknown as Cesium.ImageryLayer,
     });
 
-    // Bing Aerial via Cesium Ion (asset 2 by default).
+    // Bing Aerial via Cesium Ion (asset 2 by default). Guard against the
+    // viewer being destroyed (StrictMode double-mount, fast nav) before the
+    // imagery promise resolves — otherwise we crash inside Cesium internals.
     Cesium.IonImageryProvider.fromAssetId(ionImageryAssetId)
       .then((provider) => {
+        if (viewer.isDestroyed()) return;
         viewer.imageryLayers.addImageryProvider(provider);
       })
-      .catch((err) => console.error('[CesiumMap] failed to load Ion imagery:', err));
+      .catch((err) => {
+        if (viewer.isDestroyed()) return;
+        console.error('[CesiumMap] failed to load Ion imagery:', err);
+      });
 
     viewer.scene.mode = SCENE_MODE_MAP[sceneMode];
 

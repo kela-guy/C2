@@ -35,22 +35,37 @@ Goal: replace the Mapbox-based `TacticalMap` with `CesiumTacticalMap` and valida
 
 ---
 
-## Phase 1 — Static markers  *(next)*
+## Phase 1 — Static markers  *(in progress)*
 
 Render every map element as a Cesium entity with the correct lat/lon. Visual styling minimal; verify count + position + the parsing of every data shape.
 
 | Capability | Mapbox | Cesium | Notes |
 |---|---|---|---|
-| Detection targets | ✓ | ✗ | Phase 1 — full styling moves to Phase 2. |
-| Camera assets (`CAMERA_ASSETS`) | ✓ | ✗ | |
-| Radar assets (`RADAR_ASSETS`) | ✓ | ✗ | |
-| Drone-hive assets (`DRONE_HIVE_ASSETS`) | ✓ | ✗ | |
-| Lidar assets (`LIDAR_ASSETS`) | ✓ | ✗ | |
-| Launcher assets (`LAUNCHER_ASSETS`) | ✓ | ✗ | |
-| Weapon-system assets (`WEAPON_SYSTEM_ASSETS`) | ✓ | ✗ | |
-| Regulus effectors (passed as prop) | ✓ | ✗ | |
-| Friendly drones (passed as prop) | ✓ | ✗ | |
-| Launcher effectors (passed as prop) | ✓ | ✗ | |
+| Detection targets | ✓ | ⏳ | Coordinates parsed from `Detection.coordinates` ("lat, lon" string). Code shipped. |
+| Camera assets (`CAMERA_ASSETS`) | ✓ | ⏳ | Pulled from `TacticalMap` registry. Code shipped. |
+| Radar assets (`RADAR_ASSETS`) | ✓ | ⏳ | Code shipped. |
+| Drone-hive assets (`DRONE_HIVE_ASSETS`) | ✓ | ⏳ | Code shipped. |
+| Lidar assets (`LIDAR_ASSETS`) | ✓ | ⏳ | Code shipped. |
+| Launcher assets (`LAUNCHER_ASSETS`) | ✓ | ⏳ | Code shipped. |
+| Weapon-system assets (`WEAPON_SYSTEM_ASSETS`) | ✓ | ⏳ | Code shipped. |
+| Regulus effectors (prop, fallback to module default) | ✓ | ⏳ | Code shipped. |
+| Friendly drones (prop) | ✓ | ⏳ | Code shipped. |
+| Launcher effectors (prop) | ✓ | ⏳ | Code shipped. |
+
+### Known blocker — Cesium mount fails inside Dashboard's `ResizablePanel`
+
+`CesiumMap` mounts cleanly in the styleguide (`/styleguide#cesium-map`) but throws inside the dashboard's `ResizablePanel` ancestor when `?map=cesium` is set. React's error boundary swallows the underlying exception; the only diagnostic that surfaces is `TypeError: Cannot read properties of undefined (reading 'scene')` from inside `Cesium.Viewer.imageryLayers`. A guard against `viewer.isDestroyed()` was added — same crash persists, suggesting the viewer is mid-construction when the destroy fires.
+
+Likely root cause:
+- React 18 `StrictMode` double-mounts the component in development; the first mount creates a Cesium viewer in a `ResizablePanel`-controlled container that is briefly `0×0`. The viewer's WebGL context fails to initialize, but the constructor doesn't throw — instead it returns a "half-built" viewer whose getters access undefined internals.
+- Cleanup of mount #1 then collides with construction of mount #2 in the same container DOM.
+
+Suggested next steps (Phase 1 continuation, separate PR):
+1. Wrap `new Cesium.Viewer(...)` in a try/catch and surface the actual error to the console.
+2. Defer viewer construction until `containerRef.current.clientWidth > 0` (use a `ResizeObserver`).
+3. Wrap `<CesiumMap>` in an error boundary with a useful fallback so the rest of the dashboard stays functional.
+4. Add `key={IS_CESIUM ? 'cesium' : 'mapbox'}` to the `MapComponent` JSX so React fully unmounts on toggle (already the case at page-load since toggle reads once; this would only matter if we ever support live switching).
+5. If StrictMode is the trigger, evaluate disabling StrictMode for the map subtree (or, better, fix the underlying ordering bug).
 
 ## Phase 2 — Marker icons + state-driven styling
 
