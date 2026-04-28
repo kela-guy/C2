@@ -177,10 +177,13 @@ export function CesiumMap({
 
     viewer.scene.mode = SCENE_MODE_MAP[sceneMode];
 
-    // Initial camera position.
-    viewer.camera.flyTo({
-      destination: toCartesian(initialView),
-      duration: 0,
+    // Initial camera position. Use `setView` (instant) + a deliberately tall
+    // `heightM` because in `SceneMode.SCENE2D` Cesium's camera "height" is
+    // interpreted as the orthographic frustum extent, not a metric distance.
+    // 50_000 m gives a city-scale view; the consumer can re-target with the
+    // imperative `flyTo` prop afterwards.
+    viewer.camera.setView({
+      destination: toCartesian({ ...initialView, heightM: initialView.heightM ?? 50_000 }),
     });
 
     // Click → marker handler.

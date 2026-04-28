@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { motion, useReducedMotion } from 'framer-motion';
 import { useDrop } from 'react-dnd';
 import { TacticalMap, CAMERA_ASSETS, REGULUS_EFFECTORS, bearingDegrees, haversineDistanceM } from './TacticalMap';
+import { CesiumTacticalMap } from './CesiumTacticalMap';
+import { IS_CESIUM } from '@/lib/mapBackend';
 import { NotificationSystem, showTacticalNotification } from './NotificationSystem';
 import { NotificationCenter } from './NotificationCenter';
 import ListOfSystems from '@/imports/ListOfSystems';
@@ -1314,7 +1316,14 @@ export const Dashboard = () => {
             onResize={() => window.dispatchEvent(new Event('resize'))}
           >
             <div ref={mapDropRef} className="relative w-full h-full">
-              <TacticalMap
+              {(() => {
+                // Map backend selector — `?map=cesium` swaps the entire renderer
+                // for the Cesium-based component (parity migration in progress).
+                // Both branches receive the EXACT same props so the dashboard
+                // never has to know which one it's mounting.
+                const MapComponent = IS_CESIUM ? CesiumTacticalMap : TacticalMap;
+                return (
+              <MapComponent
                 targets={targets}
                 activeTargetId={activeTargetId}
                 onMarkerClick={(id) => { setActiveTargetId(id); setSidebarOpen(true); setDevicesPanelOpen(false); setSelectedAssetId(null); }}
@@ -1369,6 +1378,8 @@ export const Dashboard = () => {
                 launcherEffectors={launcherEffectors}
                 selectedLauncherIds={selectedLauncherIds}
               />
+                );
+              })()}
             </div>
           </ResizablePanel>
 
