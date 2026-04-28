@@ -49,8 +49,6 @@ export const NAV: NavGroup[] = [
       { id: 'card-sensors', label: 'CardSensors' },
       { id: 'card-log', label: 'CardLog' },
       { id: 'card-closure', label: 'CardClosure' },
-      { id: 'card-timeline', label: 'CardTimeline' },
-      { id: 'card-footer-dock', label: 'CardFooterDock' },
     ],
   },
   {

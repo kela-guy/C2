@@ -596,15 +596,12 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
       actions.push({ id: 'jam-primary', label: 'שיבוש', icon: JamWaveIcon, variant: 'danger', size: 'lg',
         onClick: (e) => { e.stopPropagation(); callbacks.onEngage?.('jamming'); } });
       actions.push(
-        { id: 'surveillance', label: 'מעקב', icon: Eye, variant: 'ghost', size: 'sm',
-          onClick: (e) => { e.stopPropagation(); callbacks.onVerify?.('surveillance'); },
-          className: 'shadow-[0_0_0_1px_rgba(255,255,255,0.08)] bg-white/[0.03] text-zinc-400' },
-        { id: 'drone', label: 'רחפן', icon: Plane, variant: 'ghost', size: 'sm',
-          onClick: (e) => e.stopPropagation(),
-          className: 'shadow-[0_0_0_1px_rgba(255,255,255,0.08)] bg-white/[0.03] text-zinc-400' },
-        { id: 'dismiss', label: 'ביטול', icon: X, variant: 'ghost', size: 'sm',
-          onClick: (e) => { e.stopPropagation(); callbacks.onDismiss?.(); },
-          className: 'shadow-[0_0_0_1px_rgba(255,255,255,0.08)] bg-white/[0.03] text-zinc-400' },
+        { id: 'surveillance', label: 'מעקב', icon: Eye, variant: 'outline', size: 'sm',
+          onClick: (e) => { e.stopPropagation(); callbacks.onVerify?.('surveillance'); } },
+        { id: 'drone', label: 'רחפן', icon: Plane, variant: 'outline', size: 'sm',
+          onClick: (e) => e.stopPropagation() },
+        { id: 'dismiss', label: 'ביטול', icon: X, variant: 'outline', size: 'sm',
+          onClick: (e) => { e.stopPropagation(); callbacks.onDismiss?.(); } },
       );
     }
   }
