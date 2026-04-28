@@ -60,9 +60,17 @@ const CESIUM_ION_TOKEN = (import.meta.env.VITE_CESIUM_ION_TOKEN as string | unde
  */
 const DEFAULT_INITIAL_VIEW = { lat: 32.4666, lon: 35.0013, heightM: 15_000 };
 
-/** Pixel size for the SVG icon inside each MapMarker shell. */
+/**
+ * Marker shell + ring sizes. Match the values `TacticalMap` uses for the
+ * Mapbox markers so the two backends look interchangeable: assets have a
+ * 36 px surface with a tighter 28 px threat-accent ring; targets are 32 / 26.
+ */
 const SENSOR_SURFACE = 36;
-const TARGET_SURFACE = 40;
+const SENSOR_RING = 28;
+const TARGET_SURFACE = 32;
+const TARGET_RING = 26;
+/** Default LauncherIcon glyph size on Mapbox (`LauncherIcon` defaults to 24). */
+const LAUNCHER_GLYPH = 24;
 
 /**
  * Map a `Detection.status` onto an `InteractionState` so we can reuse the
@@ -179,6 +187,7 @@ export function CesiumTacticalMap({
       label: string,
       surfaceSize: number = SENSOR_SURFACE,
       fov?: { rangeM: number; bearingDeg: number; widthDeg: number },
+      ringSize: number = SENSOR_RING,
     ) => {
       if (seen.has(id)) return;
       seen.add(id);
@@ -217,6 +226,7 @@ export function CesiumTacticalMap({
             icon={icon}
             style={style}
             surfaceSize={surfaceSize}
+            ringSize={ringSize}
             label={label}
             showLabel={isHovered || isSelected}
             pulse={isHovered || isSelected}
@@ -271,6 +281,7 @@ export function CesiumTacticalMap({
               icon={<DroneIcon />}
               style={style}
               surfaceSize={TARGET_SURFACE}
+              ringSize={TARGET_RING}
               label={t.name ?? t.id}
               showLabel={isHovered || isActive}
               pulse={isHovered || isActive || isNewArrival}
@@ -298,10 +309,10 @@ export function CesiumTacticalMap({
       pushFriendlyAsset(a.id, a.latitude, a.longitude, <DroneHiveIcon />, a.typeLabel);
     }
     for (const a of WEAPON_SYSTEM_ASSETS) {
-      pushFriendlyAsset(a.id, a.latitude, a.longitude, <LauncherIcon size={32} />, a.typeLabel, 40);
+      pushFriendlyAsset(a.id, a.latitude, a.longitude, <LauncherIcon size={LAUNCHER_GLYPH} />, a.typeLabel);
     }
     for (const l of LAUNCHER_ASSETS) {
-      pushFriendlyAsset(l.id, l.latitude, l.longitude, <LauncherIcon size={32} />, l.id, 40);
+      pushFriendlyAsset(l.id, l.latitude, l.longitude, <LauncherIcon size={LAUNCHER_GLYPH} />, l.id);
     }
 
     // Regulus effectors — friendly assets but treated as effectors for context menu.
@@ -331,6 +342,7 @@ export function CesiumTacticalMap({
             icon={<SensorIcon />}
             style={style}
             surfaceSize={SENSOR_SURFACE}
+            ringSize={SENSOR_RING}
             label={e.name}
             showLabel={isHovered}
             pulse={isHovered}
@@ -366,6 +378,7 @@ export function CesiumTacticalMap({
               icon={<DroneIcon rotationDeg={d.headingDeg ?? 0} />}
               style={style}
               surfaceSize={SENSOR_SURFACE}
+              ringSize={SENSOR_RING}
               heading={d.headingDeg}
               label={d.name}
               showLabel={isHovered}
@@ -397,9 +410,10 @@ export function CesiumTacticalMap({
           zIndex: isHovered ? 40 : 15,
           content: (
             <MapMarker
-              icon={<LauncherIcon size={32} />}
+              icon={<LauncherIcon size={LAUNCHER_GLYPH} />}
               style={style}
-              surfaceSize={40}
+              surfaceSize={SENSOR_SURFACE}
+              ringSize={SENSOR_RING}
               label={(l as unknown as { name?: string }).name ?? l.id}
               showLabel={isHovered}
               pulse={isHovered}
@@ -451,26 +465,31 @@ export function CesiumTacticalMap({
     /**
      * Push a black "casing" underneath a coloured line so trails stay legible
      * over high-contrast satellite imagery. Mirrors Mapbox's two-layer trail
-     * styling (`TRAIL_CASING_PAINT` + `TRAIL_LINE_PAINT`).
+     * styling (`TRAIL_CASING_PAINT` + `TRAIL_LINE_PAINT` in `TacticalMap.tsx`).
      */
     const pushCasedTrail = (
       id: string,
       points: { lat: number; lon: number }[],
-      color: string,
-      width: number,
+      lineColor: string,
+      lineWidth: number,
+      casingWidth: number,
     ) => {
-      out.push({ id: `${id}-casing`, points, color: '#000000', width: width + 3 });
-      out.push({ id, points, color, width });
+      out.push({ id: `${id}-casing`, points, color: '#000000', width: casingWidth });
+      out.push({ id, points, color: lineColor, width: lineWidth });
     };
 
-    // Active drone deployment trail (Flow 3).
+    // Hostile / drone-deployment / mission-route trails — Mapbox uses
+    // 7 px black casing + 3 px white centre. Friendly drone patrols use the
+    // narrower 5 / 2 pairing (FRIENDLY_TRAIL_*_PAINT in TacticalMap.tsx).
+
+    // Active drone deployment trail (Flow 3) — hostile-style.
     if (activeDrone?.trail && activeDrone.trail.length >= 2) {
-      pushCasedTrail('active-drone-trail', tupleToPoints(activeDrone.trail), '#ffffff', 3);
+      pushCasedTrail('active-drone-trail', tupleToPoints(activeDrone.trail), '#ffffff', 3, 7);
     }
 
-    // Mission route current trail (Flow 4).
+    // Mission route current trail (Flow 4) — hostile-style.
     if (missionRoute?.trail && missionRoute.trail.length >= 2) {
-      pushCasedTrail('mission-route-trail', tupleToPoints(missionRoute.trail), '#22d3ee', 3);
+      pushCasedTrail('mission-route-trail', tupleToPoints(missionRoute.trail), '#ffffff', 3, 7);
     }
 
     // Mission route waypoints — connect them as a planned line so the user
@@ -486,22 +505,22 @@ export function CesiumTacticalMap({
       });
     }
 
-    // Friendly drone trails (PathFinder, Starling, etc.). Cyan to match
-    // friendly affiliation; cased so they stand out over imagery.
+    // Friendly drone patrol trails — narrower 5/2 pairing.
     if (friendlyDrones) {
       for (const d of friendlyDrones) {
         if (!d.trail || d.trail.length < 2) continue;
         pushCasedTrail(
           `friendly-drone-${d.id}-trail`,
           tupleToPoints(d.trail),
-          '#22d3ee',
-          3,
+          '#ffffff',
+          2,
+          5,
         );
       }
     }
 
     // Hostile target trails — only for `classified` entities, matching
-    // Mapbox's filter (raw detections don't draw a track).
+    // Mapbox's filter (raw detections don't draw a track). 7/3 pairing.
     if (targets) {
       for (const t of targets) {
         if (t.entityStage !== 'classified') continue;
@@ -511,6 +530,7 @@ export function CesiumTacticalMap({
           t.trail.map((p) => ({ lat: p.lat, lon: p.lon })),
           '#ffffff',
           3,
+          7,
         );
       }
     }

@@ -217,11 +217,26 @@ export function CesiumMap({
    * Polyline entities (trails, engagement lines, etc.) keyed by their
    * stable `CesiumPolyline.id`. Keyed (not array) so the polylines effect
    * can update positions in place rather than tearing down + recreating
-   * every entity on each tick — that thrash makes drone trails flicker
-   * because Cesium has to re-tessellate ground-clamped polylines from
-   * scratch each time.
+   * every entity on each tick.
    */
   const polylineEntitiesRef = useRef<Map<string, Cesium.Entity>>(new Map());
+
+  /**
+   * Per-polyline content fingerprint. The dashboard re-creates the polylines
+   * memo every second (because the `friendlyDrones` array reference changes
+   * on every tick of its simulation loop), but the underlying trail
+   * coordinates only actually grow every 3 ticks. Without the fingerprint
+   * check, every tick triggers a position update on Cesium's polyline
+   * primitive, which forces it to re-tessellate the line — and that
+   * re-tessellation is what shows up as a 1 Hz visual flicker on the trails.
+   *
+   * Storing length + first + last point catches new-tail-appended,
+   * head-trimmed (trail rotation past max length), and full-replacement
+   * cases without doing a full content compare.
+   */
+  const polylineFingerprintRef = useRef<
+    Map<string, { len: number; firstLat: number; firstLon: number; lastLat: number; lastLon: number; color: string; width: number; dashed: boolean }>
+  >(new Map());
   /**
    * Per-frame screen positions for HTML markers. We compute Cartesian once
    * per `htmlMarkers` change, but project to canvas coordinates every frame
@@ -376,6 +391,7 @@ export function CesiumMap({
       coverageEntitiesRef.current = [];
       htmlGeometryEntitiesRef.current = [];
       polylineEntitiesRef.current.clear();
+      polylineFingerprintRef.current.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mountReady]);
@@ -557,52 +573,84 @@ export function CesiumMap({
   }, [htmlMarkers]);
 
   // ── Polylines (trails, engagement lines, mission routes) ──────────────────
-  // Diffed by id — entities that already exist get their positions / width
-  // / material updated in place; only genuinely-new ids cause an `add`, only
-  // genuinely-removed ids cause a `remove`. Keeping entities alive across
-  // ticks lets Cesium reuse the tessellation cache for ground-clamped
-  // polylines instead of rebuilding from scratch each second, which is what
-  // was making the drone-patrol trails flicker.
+  // Per id: if the content + style fingerprint is identical to the previous
+  // run, skip Cesium entirely. Otherwise update existing positions / material
+  // / width in place, or add a fresh entity for unseen ids. `clampToGround`
+  // is intentionally OFF — in `SCENE2D` mode height is ignored, and the
+  // ground-clamped pipeline forces a stencil-based re-tessellation that
+  // visibly flickers when the trail re-samples.
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer) return;
 
     const existing = polylineEntitiesRef.current;
+    const fingerprints = polylineFingerprintRef.current;
     const desiredIds = new Set<string>();
+    let scheduledRender = false;
 
     if (polylines) {
       for (const line of polylines) {
         if (line.points.length < 2) continue;
         desiredIds.add(line.id);
 
-        const positions = line.points.map((p) => Cesium.Cartesian3.fromDegrees(p.lon, p.lat));
-        const color = Cesium.Color.fromCssColorString(line.color ?? '#22b8cf');
-        const material = line.dashed
-          ? new Cesium.PolylineDashMaterialProperty({ color, dashLength: 14 })
-          : new Cesium.ColorMaterialProperty(color);
+        const first = line.points[0];
+        const last = line.points[line.points.length - 1];
+        const colorCss = line.color ?? '#22b8cf';
         const width = line.width ?? 2;
+        const dashed = line.dashed === true;
+        const next = {
+          len: line.points.length,
+          firstLat: first.lat,
+          firstLon: first.lon,
+          lastLat: last.lat,
+          lastLon: last.lon,
+          color: colorCss,
+          width,
+          dashed,
+        };
 
+        const prev = fingerprints.get(line.id);
         const entity = existing.get(line.id);
+        const sameAsPrev =
+          prev &&
+          prev.len === next.len &&
+          prev.firstLat === next.firstLat &&
+          prev.firstLon === next.firstLon &&
+          prev.lastLat === next.lastLat &&
+          prev.lastLon === next.lastLon &&
+          prev.color === next.color &&
+          prev.width === next.width &&
+          prev.dashed === next.dashed;
+
+        if (entity && sameAsPrev) {
+          // No change → don't touch Cesium at all. This is the hot path that
+          // kills the drone-trail flicker on idle ticks.
+          continue;
+        }
+
+        const positions = line.points.map((p) => Cesium.Cartesian3.fromDegrees(p.lon, p.lat));
+        const cesiumColor = Cesium.Color.fromCssColorString(colorCss);
+        const material = dashed
+          ? new Cesium.PolylineDashMaterialProperty({ color: cesiumColor, dashLength: 14 })
+          : new Cesium.ColorMaterialProperty(cesiumColor);
+
         if (entity?.polyline) {
-          // Update in place. ConstantProperty wrappers let Cesium short-circuit
-          // its internal "did this change?" diff so unchanged frames don't
-          // re-tessellate the polyline.
           entity.polyline.positions = new Cesium.ConstantProperty(positions);
           entity.polyline.material = material;
           entity.polyline.width = new Cesium.ConstantProperty(width);
         } else {
-          // First sighting of this id — add a fresh entity.
           const fresh = viewer.entities.add({
             id: `${line.id}__polyline`,
             polyline: {
               positions,
               width,
               material,
-              clampToGround: true,
             },
           });
           existing.set(line.id, fresh);
         }
+        fingerprints.set(line.id, next);
+        scheduledRender = true;
       }
     }
 
@@ -611,10 +659,12 @@ export function CesiumMap({
       if (!desiredIds.has(id)) {
         viewer.entities.remove(entity);
         existing.delete(id);
+        fingerprints.delete(id);
+        scheduledRender = true;
       }
     }
 
-    viewer.scene.requestRender();
+    if (scheduledRender) viewer.scene.requestRender();
   }, [polylines]);
 
   // ── Imperative fly-to ──────────────────────────────────────────────────────
