@@ -59,16 +59,27 @@ export function CesiumTacticalMap({
    * Compose every asset registry + every dynamic prop into one big
    * `CesiumMarker[]`. Each entry is categorised by colour for now — Phase 2
    * will swap individual entries for real billboard / DOM-overlay icons.
+   *
+   * IDs across registries can collide (e.g. `LAUNCHER_ASSETS` + the
+   * `launcherEffectors` prop both reference the same launcher), and Cesium
+   * throws if the same entity id is added twice. Dedupe by id; the first
+   * source wins (registries before props).
    */
   const allMarkers = useMemo<CesiumMarker[]>(() => {
     const out: CesiumMarker[] = [];
+    const seen = new Set<string>();
+    const push = (m: CesiumMarker) => {
+      if (seen.has(m.id)) return;
+      seen.add(m.id);
+      out.push(m);
+    };
 
     // Targets — coordinates parsed from the "lat, lon" string.
     if (targets) {
       for (const t of targets) {
         const [lat, lon] = (t.coordinates ?? '').split(',').map((s) => parseFloat(s.trim()));
         if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
-        out.push({
+        push({
           id: t.id,
           lat,
           lon,
@@ -80,46 +91,47 @@ export function CesiumTacticalMap({
 
     // Static asset registries.
     for (const a of CAMERA_ASSETS) {
-      out.push({ id: a.id, lat: a.latitude, lon: a.longitude, label: a.typeLabel, color: CATEGORY_COLOR.camera });
+      push({ id: a.id, lat: a.latitude, lon: a.longitude, label: a.typeLabel, color: CATEGORY_COLOR.camera });
     }
     for (const a of RADAR_ASSETS) {
-      out.push({ id: a.id, lat: a.latitude, lon: a.longitude, label: a.typeLabel, color: CATEGORY_COLOR.radar });
+      push({ id: a.id, lat: a.latitude, lon: a.longitude, label: a.typeLabel, color: CATEGORY_COLOR.radar });
     }
     for (const a of LIDAR_ASSETS) {
-      out.push({ id: a.id, lat: a.latitude, lon: a.longitude, label: a.typeLabel, color: CATEGORY_COLOR.lidar });
+      push({ id: a.id, lat: a.latitude, lon: a.longitude, label: a.typeLabel, color: CATEGORY_COLOR.lidar });
     }
     for (const a of DRONE_HIVE_ASSETS) {
-      out.push({ id: a.id, lat: a.latitude, lon: a.longitude, label: a.typeLabel, color: CATEGORY_COLOR.hive });
+      push({ id: a.id, lat: a.latitude, lon: a.longitude, label: a.typeLabel, color: CATEGORY_COLOR.hive });
     }
     for (const a of WEAPON_SYSTEM_ASSETS) {
-      out.push({ id: a.id, lat: a.latitude, lon: a.longitude, label: a.typeLabel, color: CATEGORY_COLOR.weapon });
+      push({ id: a.id, lat: a.latitude, lon: a.longitude, label: a.typeLabel, color: CATEGORY_COLOR.weapon });
     }
     for (const l of LAUNCHER_ASSETS) {
-      out.push({ id: l.id, lat: l.latitude, lon: l.longitude, label: l.id, color: CATEGORY_COLOR.launcher });
+      push({ id: l.id, lat: l.latitude, lon: l.longitude, label: l.id, color: CATEGORY_COLOR.launcher });
     }
 
     // Regulus effectors — pull from props if provided, fall back to module
     // defaults so the map renders consistently with the Mapbox path.
     const effectors = regulusEffectors ?? REGULUS_EFFECTORS;
     for (const e of effectors) {
-      out.push({ id: e.id, lat: e.lat, lon: e.lon, label: e.name, color: CATEGORY_COLOR.regulus });
+      push({ id: e.id, lat: e.lat, lon: e.lon, label: e.name, color: CATEGORY_COLOR.regulus });
     }
 
     // Friendly drones (dashboard prop).
     if (friendlyDrones) {
       for (const d of friendlyDrones) {
-        out.push({ id: d.id, lat: d.lat, lon: d.lon, label: d.name, color: CATEGORY_COLOR.friendlyDrone });
+        push({ id: d.id, lat: d.lat, lon: d.lon, label: d.name, color: CATEGORY_COLOR.friendlyDrone });
       }
     }
 
-    // Launcher effectors (dashboard prop).
+    // Launcher effectors (dashboard prop) — likely overlaps `LAUNCHER_ASSETS`,
+    // dedupe handles it.
     if (launcherEffectors) {
       for (const l of launcherEffectors) {
         // LauncherEffector shape mirrors RegulusEffector — assume lat/lon present.
         const lat = (l as unknown as { lat?: number }).lat;
         const lon = (l as unknown as { lon?: number }).lon;
         if (typeof lat !== 'number' || typeof lon !== 'number') continue;
-        out.push({
+        push({
           id: l.id,
           lat,
           lon,

@@ -3,6 +3,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { useDrop } from 'react-dnd';
 import { TacticalMap, CAMERA_ASSETS, REGULUS_EFFECTORS, bearingDegrees, haversineDistanceM } from './TacticalMap';
 import { CesiumTacticalMap } from './CesiumTacticalMap';
+import { CesiumErrorBoundary } from './CesiumErrorBoundary';
 import { IS_CESIUM } from '@/lib/mapBackend';
 import { NotificationSystem, showTacticalNotification } from './NotificationSystem';
 import { NotificationCenter } from './NotificationCenter';
@@ -1320,9 +1321,11 @@ export const Dashboard = () => {
                 // Map backend selector — `?map=cesium` swaps the entire renderer
                 // for the Cesium-based component (parity migration in progress).
                 // Both branches receive the EXACT same props so the dashboard
-                // never has to know which one it's mounting.
+                // never has to know which one it's mounting. The Cesium branch
+                // is additionally wrapped in an error boundary so a viewer
+                // crash doesn't take the whole dashboard down.
                 const MapComponent = IS_CESIUM ? CesiumTacticalMap : TacticalMap;
-                return (
+                const mapNode = (
               <MapComponent
                 targets={targets}
                 activeTargetId={activeTargetId}
@@ -1379,6 +1382,9 @@ export const Dashboard = () => {
                 selectedLauncherIds={selectedLauncherIds}
               />
                 );
+                return IS_CESIUM
+                  ? <CesiumErrorBoundary>{mapNode}</CesiumErrorBoundary>
+                  : mapNode;
               })()}
             </div>
           </ResizablePanel>

@@ -52,20 +52,15 @@ Render every map element as a Cesium entity with the correct lat/lon. Visual sty
 | Friendly drones (prop) | ✓ | ⏳ | Code shipped. |
 | Launcher effectors (prop) | ✓ | ⏳ | Code shipped. |
 
-### Known blocker — Cesium mount fails inside Dashboard's `ResizablePanel`
+### Mount blocker — resolved
 
-`CesiumMap` mounts cleanly in the styleguide (`/styleguide#cesium-map`) but throws inside the dashboard's `ResizablePanel` ancestor when `?map=cesium` is set. React's error boundary swallows the underlying exception; the only diagnostic that surfaces is `TypeError: Cannot read properties of undefined (reading 'scene')` from inside `Cesium.Viewer.imageryLayers`. A guard against `viewer.isDestroyed()` was added — same crash persists, suggesting the viewer is mid-construction when the destroy fires.
+`CesiumMap` previously crashed inside the dashboard's `ResizablePanel` (cryptic `TypeError: Cannot read properties of undefined (reading 'scene')`). Triage found the root cause: the `ResizablePanel` ancestor briefly measures `0×0` during initial layout, Cesium's WebGL context fails to initialize on a zero-sized container, and the resulting "half-built" viewer (no `_cesiumWidget`) explodes on the first public-getter access. **StrictMode was a red herring** — there's no `<StrictMode>` anywhere in the bootstrap.
 
-Likely root cause:
-- React 18 `StrictMode` double-mounts the component in development; the first mount creates a Cesium viewer in a `ResizablePanel`-controlled container that is briefly `0×0`. The viewer's WebGL context fails to initialize, but the constructor doesn't throw — instead it returns a "half-built" viewer whose getters access undefined internals.
-- Cleanup of mount #1 then collides with construction of mount #2 in the same container DOM.
-
-Suggested next steps (Phase 1 continuation, separate PR):
-1. Wrap `new Cesium.Viewer(...)` in a try/catch and surface the actual error to the console.
-2. Defer viewer construction until `containerRef.current.clientWidth > 0` (use a `ResizeObserver`).
-3. Wrap `<CesiumMap>` in an error boundary with a useful fallback so the rest of the dashboard stays functional.
-4. Add `key={IS_CESIUM ? 'cesium' : 'mapbox'}` to the `MapComponent` JSX so React fully unmounts on toggle (already the case at page-load since toggle reads once; this would only matter if we ever support live switching).
-5. If StrictMode is the trigger, evaluate disabling StrictMode for the map subtree (or, better, fix the underlying ordering bug).
+Fixed by:
+1. Adding a `mountReady` gate in `CesiumMap.tsx` that defers `new Cesium.Viewer(...)` until the container is `> 8×8 px` (mirrors Mapbox's pattern in `TacticalMap.tsx`).
+2. Wrapping the `Viewer` constructor in `try/catch` so any future construction failure surfaces a real error instead of cascading through React.
+3. Calling `viewer.scene.requestRender()` from the same `ResizeObserver` that drives the gate, so the canvas redraws cleanly when the user drags the resize handle.
+4. Adding `CesiumErrorBoundary` around the dashboard's Cesium branch only — Mapbox keeps its existing error semantics. Fallback UI offers a one-click "reload with Mapbox" link.
 
 ## Phase 2 — Marker icons + state-driven styling
 

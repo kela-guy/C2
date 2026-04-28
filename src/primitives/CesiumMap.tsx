@@ -13,9 +13,18 @@
  * No app-domain coupling. Pass your own data via props.
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import * as Cesium from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
+
+/**
+ * Minimum container size (px) before we're willing to construct
+ * `Cesium.Viewer`. Below this, WebGL context init can fail silently and leave
+ * the viewer in a "half-built" state where `_cesiumWidget` is undefined,
+ * which then explodes on the first public-getter access. Mirrors the same
+ * threshold our Mapbox path uses for `mapbox-gl`.
+ */
+const MIN_MOUNT_SIZE_PX = 8;
 
 export type CesiumSceneMode = '2D' | '2.5D' | '3D';
 
@@ -146,27 +155,68 @@ export function CesiumMap({
   const fovEntitiesRef = useRef<Cesium.Entity[]>([]);
   const coverageEntitiesRef = useRef<Cesium.Entity[]>([]);
 
-  // ── Bootstrap viewer (mount once) ──────────────────────────────────────────
+  // ── Mount-readiness gate ──────────────────────────────────────────────────
+  // Defer Viewer construction until the container actually has dimensions.
+  // Without this, `<ResizablePanel>` and other "measure-then-size" parents
+  // can render us at 0×0 on first paint, which silently breaks Cesium's
+  // WebGL context init and leaves us with a half-built viewer.
+  const [mountReady, setMountReady] = useState(false);
+
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const consider = (w: number, h: number) => {
+      if (w > MIN_MOUNT_SIZE_PX && h > MIN_MOUNT_SIZE_PX) {
+        setMountReady(true);
+      }
+    };
+
+    const initial = el.getBoundingClientRect();
+    consider(initial.width, initial.height);
+
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        consider(entry.contentRect.width, entry.contentRect.height);
+        // Cesium's auto-resize handles canvas dimensions, but in 2D mode
+        // the orthographic frustum doesn't always redraw until interaction.
+        // Force a render so the imagery stays sharp on container resize.
+        viewerRef.current?.scene.requestRender();
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // ── Bootstrap viewer (mount once container is sized) ──────────────────────
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!mountReady || !containerRef.current) return;
 
     Cesium.Ion.defaultAccessToken = ionToken;
 
-    const viewer = new Cesium.Viewer(containerRef.current, {
-      // Strip the widgets we don't need (keeps UI minimal).
-      animation: false,
-      timeline: false,
-      geocoder: false,
-      homeButton: false,
-      sceneModePicker: false,
-      baseLayerPicker: false,
-      navigationHelpButton: false,
-      fullscreenButton: false,
-      infoBox: false,
-      selectionIndicator: false,
-      // Imagery loaded below.
-      baseLayer: false as unknown as Cesium.ImageryLayer,
-    });
+    let viewer: Cesium.Viewer;
+    try {
+      viewer = new Cesium.Viewer(containerRef.current, {
+        // Strip the widgets we don't need (keeps UI minimal).
+        animation: false,
+        timeline: false,
+        geocoder: false,
+        homeButton: false,
+        sceneModePicker: false,
+        baseLayerPicker: false,
+        navigationHelpButton: false,
+        fullscreenButton: false,
+        infoBox: false,
+        selectionIndicator: false,
+        // Imagery loaded below.
+        baseLayer: false as unknown as Cesium.ImageryLayer,
+      });
+    } catch (err) {
+      // Surface the real error instead of letting it cascade through React's
+      // boundary as the cryptic "scene of undefined" we used to see.
+      console.error('[CesiumMap] Viewer construction failed:', err);
+      throw err;
+    }
 
     // Bing Aerial via Cesium Ion (asset 2 by default). Guard against the
     // viewer being destroyed (StrictMode double-mount, fast nav) before the
@@ -224,7 +274,7 @@ export function CesiumMap({
       coverageEntitiesRef.current = [];
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [mountReady]);
 
   // ── Token (live update) ────────────────────────────────────────────────────
   useEffect(() => {
