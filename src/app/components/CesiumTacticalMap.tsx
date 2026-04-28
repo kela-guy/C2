@@ -92,12 +92,17 @@ export function CesiumTacticalMap({
   regulusEffectors,
   friendlyDrones,
   launcherEffectors,
+  jammingJammerAssetId,
   onMarkerClick,
   onAssetClick,
   onContextMenuAction,
 }: TacticalMapProps) {
   const offlineSet = useMemo(() => new Set(offlineAssetIds ?? []), [offlineAssetIds]);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  // Tracks which marker the cursor is currently over (DOM-level hover).
+  // Drives the white-on-hover ring + tooltip visibility regardless of
+  // whether the hover came from this map or from the card sidebar.
+  const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null);
   // Stable callbacks, used inside memoised marker arrays.
   const onMarkerClickRef = useRef(onMarkerClick);
   const onAssetClickRef = useRef(onAssetClick);
@@ -151,33 +156,37 @@ export function CesiumTacticalMap({
       seen.add(id);
       const isOffline = offlineSet.has(id);
       const isSelected = selectedAssetId === id;
-      const isHovered = hoveredSensorIdFromCard === id;
+      const isHoveredFromCard = hoveredSensorIdFromCard === id;
+      const isHoveredOnMap = hoveredMarkerId === id;
+      const isHovered = isHoveredFromCard || isHoveredOnMap;
       const affiliation: Affiliation = 'friendly';
       const state: InteractionState = isOffline
         ? 'disabled'
-        : isSelected
-          ? 'selected'
-          : isHovered
-            ? 'hovered'
+        : isHovered
+          ? 'hovered'
+          : isSelected
+            ? 'selected'
             : 'default';
       const style = resolveMarkerStyle(state, affiliation);
       out.push({
         id,
         lat,
         lon,
-        zIndex: isSelected || isHovered ? 30 : 10,
+        zIndex: isHovered ? 40 : isSelected ? 30 : 10,
         content: (
           <MapMarker
             icon={icon}
             style={style}
             surfaceSize={surfaceSize}
             label={label}
-            showLabel={isSelected || isHovered}
+            showLabel={isHovered || isSelected}
             pulse={isHovered || isSelected}
           />
         ),
         onClick: () => onAssetClickRef.current?.(id),
         onContextMenu: (e) => openContextMenu(e, 'sensor', id),
+        onMouseEnter: () => setHoveredMarkerId(id),
+        onMouseLeave: () => setHoveredMarkerId((current) => (current === id ? null : current)),
       });
     };
 
@@ -190,30 +199,34 @@ export function CesiumTacticalMap({
         seen.add(t.id);
         const isActive = activeTargetId === t.id;
         const isHoveredFromCard = hoveredTargetIdFromCard === t.id;
+        const isHoveredOnMap = hoveredMarkerId === t.id;
+        const isHovered = isHoveredFromCard || isHoveredOnMap;
         const baseState = detectionInteractionState(t);
-        const state: InteractionState = isActive
-          ? 'selected'
-          : isHoveredFromCard
-            ? 'hovered'
+        const state: InteractionState = isHovered
+          ? 'hovered'
+          : isActive
+            ? 'selected'
             : baseState;
         const style = resolveMarkerStyle(state, 'hostile');
         out.push({
           id: t.id,
           lat,
           lon,
-          zIndex: isActive ? 50 : isHoveredFromCard ? 40 : 20,
+          zIndex: isHovered ? 60 : isActive ? 50 : 20,
           content: (
             <MapMarker
               icon={<DroneIcon />}
               style={style}
               surfaceSize={TARGET_SURFACE}
               label={t.name ?? t.id}
-              showLabel={isActive || isHoveredFromCard}
-              pulse={isActive || isHoveredFromCard}
+              showLabel={isHovered || isActive}
+              pulse={isHovered || isActive}
             />
           ),
           onClick: () => onMarkerClickRef.current?.(t.id),
           onContextMenu: (e) => openContextMenu(e, 'target', t.id),
+          onMouseEnter: () => setHoveredMarkerId(t.id),
+          onMouseLeave: () => setHoveredMarkerId((current) => (current === t.id ? null : current)),
         });
       }
     }
@@ -232,34 +245,48 @@ export function CesiumTacticalMap({
       pushFriendlyAsset(a.id, a.latitude, a.longitude, <DroneHiveIcon />, a.typeLabel);
     }
     for (const a of WEAPON_SYSTEM_ASSETS) {
-      pushFriendlyAsset(a.id, a.latitude, a.longitude, <LauncherIcon />, a.typeLabel, 40);
+      pushFriendlyAsset(a.id, a.latitude, a.longitude, <LauncherIcon size={32} />, a.typeLabel, 48);
     }
     for (const l of LAUNCHER_ASSETS) {
-      pushFriendlyAsset(l.id, l.latitude, l.longitude, <LauncherIcon />, l.id, 40);
+      pushFriendlyAsset(l.id, l.latitude, l.longitude, <LauncherIcon size={32} />, l.id, 48);
     }
 
     // Regulus effectors — friendly assets but treated as effectors for context menu.
+    // Default state, only flips to `'jammer'` (green ring + pulse) when this
+    // specific Regulus is actively jamming.
     const effectors = regulusEffectors ?? REGULUS_EFFECTORS;
     for (const e of effectors) {
       if (seen.has(e.id)) continue;
       seen.add(e.id);
-      const style = resolveMarkerStyle('jammer', 'friendly');
+      const isJamming = jammingJammerAssetId === e.id;
+      const isHoveredFromCard = hoveredSensorIdFromCard === e.id;
+      const isHoveredOnMap = hoveredMarkerId === e.id;
+      const isHovered = isHoveredFromCard || isHoveredOnMap;
+      const state: InteractionState = isHovered
+        ? 'hovered'
+        : isJamming
+          ? 'jammer'
+          : 'default';
+      const style = resolveMarkerStyle(state, 'friendly');
       out.push({
         id: e.id,
         lat: e.lat,
         lon: e.lon,
-        zIndex: 15,
+        zIndex: isHovered ? 40 : 15,
         content: (
           <MapMarker
             icon={<SensorIcon />}
             style={style}
             surfaceSize={SENSOR_SURFACE}
             label={e.name}
-            showLabel={hoveredSensorIdFromCard === e.id}
+            showLabel={isHovered}
+            pulse={isHovered}
           />
         ),
         onClick: () => onAssetClickRef.current?.(e.id),
         onContextMenu: (ev) => openContextMenu(ev, 'effector', e.id),
+        onMouseEnter: () => setHoveredMarkerId(e.id),
+        onMouseLeave: () => setHoveredMarkerId((current) => (current === e.id ? null : current)),
       });
     }
 
@@ -268,12 +295,14 @@ export function CesiumTacticalMap({
       for (const d of friendlyDrones) {
         if (seen.has(d.id)) continue;
         seen.add(d.id);
-        const style = resolveMarkerStyle('default', 'friendly');
+        const isHovered = hoveredMarkerId === d.id;
+        const state: InteractionState = isHovered ? 'hovered' : 'default';
+        const style = resolveMarkerStyle(state, 'friendly');
         out.push({
           id: d.id,
           lat: d.lat,
           lon: d.lon,
-          zIndex: 25,
+          zIndex: isHovered ? 40 : 25,
           content: (
             <MapMarker
               icon={<DroneIcon rotationDeg={d.headingDeg ?? 0} />}
@@ -281,10 +310,13 @@ export function CesiumTacticalMap({
               surfaceSize={SENSOR_SURFACE}
               heading={d.headingDeg}
               label={d.name}
-              showLabel={false}
+              showLabel={isHovered}
+              pulse={isHovered}
             />
           ),
           onClick: () => onAssetClickRef.current?.(d.id),
+          onMouseEnter: () => setHoveredMarkerId(d.id),
+          onMouseLeave: () => setHoveredMarkerId((current) => (current === d.id ? null : current)),
         });
       }
     }
@@ -297,23 +329,28 @@ export function CesiumTacticalMap({
         if (typeof lat !== 'number' || typeof lon !== 'number') continue;
         if (seen.has(l.id)) continue;
         seen.add(l.id);
-        const style = resolveMarkerStyle('default', 'friendly');
+        const isHovered = hoveredMarkerId === l.id;
+        const state: InteractionState = isHovered ? 'hovered' : 'default';
+        const style = resolveMarkerStyle(state, 'friendly');
         out.push({
           id: l.id,
           lat,
           lon,
-          zIndex: 15,
+          zIndex: isHovered ? 40 : 15,
           content: (
             <MapMarker
-              icon={<LauncherIcon />}
+              icon={<LauncherIcon size={32} />}
               style={style}
-              surfaceSize={40}
+              surfaceSize={48}
               label={(l as unknown as { name?: string }).name ?? l.id}
-              showLabel={false}
+              showLabel={isHovered}
+              pulse={isHovered}
             />
           ),
           onClick: () => onAssetClickRef.current?.(l.id),
           onContextMenu: (e) => openContextMenu(e, 'effector', l.id),
+          onMouseEnter: () => setHoveredMarkerId(l.id),
+          onMouseLeave: () => setHoveredMarkerId((current) => (current === l.id ? null : current)),
         });
       }
     }
@@ -329,6 +366,8 @@ export function CesiumTacticalMap({
     regulusEffectors,
     friendlyDrones,
     launcherEffectors,
+    jammingJammerAssetId,
+    hoveredMarkerId,
     openContextMenu,
   ]);
 
