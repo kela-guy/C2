@@ -53,6 +53,23 @@ export interface CesiumMapFlyTo {
 }
 
 /**
+ * Polyline / trail entity. Used for drone tracks, engagement lines,
+ * mission routes, etc. Pass an array of [lon, lat] (or [lat, lon] — see
+ * `coordOrder`) tuples. Width in pixels.
+ */
+export interface CesiumPolyline {
+  id: string;
+  /** Series of points along the line. */
+  points: Array<{ lat: number; lon: number }>;
+  /** CSS color string. Defaults to `#22b8cf`. */
+  color?: string;
+  /** Stroke width in pixels. Defaults to 2. */
+  width?: number;
+  /** When true, renders as a flowing dashed line (engagement-line style). */
+  dashed?: boolean;
+}
+
+/**
  * DOM-overlay marker. Renders arbitrary React content positioned over the
  * Cesium canvas at the given lat/lon. Updated each frame from the scene's
  * `cartesianToCanvasCoordinates`. Use this when you need crisp SVGs, CSS
@@ -74,6 +91,16 @@ export interface CesiumHtmlMarker {
   /** Optional hover handlers. */
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
+  /**
+   * Optional sensor field-of-view sector (terrain-clamped polygon).
+   * `bearingDeg` is the centre direction (0=N, 90=E); `widthDeg` is the full
+   * cone angle. Use `widthDeg: 360` for omnidirectional sensors.
+   */
+  fov?: { rangeM: number; bearingDeg: number; widthDeg: number; color?: string; opacity?: number };
+  /** Optional coverage ring (terrain-clamped ellipse). */
+  coverageRadiusM?: number;
+  /** Coverage ring colour (CSS string). Defaults to `#22b8cf`. */
+  coverageColor?: string;
 }
 
 export interface CesiumMapProps {
@@ -85,6 +112,8 @@ export interface CesiumMapProps {
   markers?: CesiumMarker[];
   /** Markers rendered as DOM overlays positioned via scene transforms. */
   htmlMarkers?: CesiumHtmlMarker[];
+  /** Polylines / trails (drone tracks, engagement lines, mission routes). */
+  polylines?: CesiumPolyline[];
   /** Imperatively fly the camera to a position; pass a NEW object each time you want to fly. */
   flyTo?: CesiumMapFlyTo | null;
   /** Scene mode. Defaults to '2D' for parity with our current top-down Mapbox view. */
@@ -169,6 +198,7 @@ export function CesiumMap({
   initialView,
   markers,
   htmlMarkers,
+  polylines,
   flyTo,
   sceneMode = '2D',
   ionImageryAssetId = 2,
@@ -181,6 +211,10 @@ export function CesiumMap({
   const markerEntitiesRef = useRef<Map<string, Cesium.Entity>>(new Map());
   const fovEntitiesRef = useRef<Cesium.Entity[]>([]);
   const coverageEntitiesRef = useRef<Cesium.Entity[]>([]);
+  /** Geometry entities (FOV / coverage) attached to HTML markers. */
+  const htmlGeometryEntitiesRef = useRef<Cesium.Entity[]>([]);
+  /** Polyline entities (trails, engagement lines, etc.). */
+  const polylineEntitiesRef = useRef<Cesium.Entity[]>([]);
   /**
    * Per-frame screen positions for HTML markers. We compute Cartesian once
    * per `htmlMarkers` change, but project to canvas coordinates every frame
@@ -333,6 +367,8 @@ export function CesiumMap({
       markerEntitiesRef.current.clear();
       fovEntitiesRef.current = [];
       coverageEntitiesRef.current = [];
+      htmlGeometryEntitiesRef.current = [];
+      polylineEntitiesRef.current = [];
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mountReady]);
@@ -459,6 +495,90 @@ export function CesiumMap({
       }
     }
   }, [markers]);
+
+  // ── FOV + coverage entities for HTML markers ──────────────────────────────
+  // The DOM overlay renders the icon + tooltip; Cesium renders the geometry
+  // (terrain-clamped sector polygon for FOV, ellipse for coverage). These
+  // are kept in a separate ref so the `markers[]` effect above doesn't tear
+  // them down on every change.
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+
+    for (const entity of htmlGeometryEntitiesRef.current) viewer.entities.remove(entity);
+    htmlGeometryEntitiesRef.current = [];
+
+    if (!htmlMarkers) return;
+
+    for (const m of htmlMarkers) {
+      if (m.fov) {
+        const fovColor = Cesium.Color.fromCssColorString(m.fov.color ?? '#22b8cf');
+        const fovOpacity = m.fov.opacity ?? 0.18;
+        const fovEntity = viewer.entities.add({
+          id: `${m.id}__fov`,
+          polygon: {
+            hierarchy: new Cesium.PolygonHierarchy(
+              buildSectorPositions(m.lat, m.lon, m.fov.rangeM, m.fov.bearingDeg, m.fov.widthDeg),
+            ),
+            material: fovColor.withAlpha(fovOpacity),
+            outline: true,
+            outlineColor: fovColor.withAlpha(Math.min(1, fovOpacity * 3)),
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+          },
+        });
+        htmlGeometryEntitiesRef.current.push(fovEntity);
+      }
+
+      if (m.coverageRadiusM != null) {
+        const coverageColor = Cesium.Color.fromCssColorString(m.coverageColor ?? '#22b8cf');
+        const coverageEntity = viewer.entities.add({
+          id: `${m.id}__coverage`,
+          position: Cesium.Cartesian3.fromDegrees(m.lon, m.lat),
+          ellipse: {
+            semiMajorAxis: m.coverageRadiusM,
+            semiMinorAxis: m.coverageRadiusM,
+            material: coverageColor.withAlpha(0.10),
+            outline: true,
+            outlineColor: coverageColor.withAlpha(0.5),
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+          },
+        });
+        htmlGeometryEntitiesRef.current.push(coverageEntity);
+      }
+    }
+    viewer.scene.requestRender();
+  }, [htmlMarkers]);
+
+  // ── Polylines (trails, engagement lines, mission routes) ──────────────────
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+
+    for (const entity of polylineEntitiesRef.current) viewer.entities.remove(entity);
+    polylineEntitiesRef.current = [];
+
+    if (!polylines) return;
+
+    for (const line of polylines) {
+      if (line.points.length < 2) continue;
+      const positions = line.points.map((p) => Cesium.Cartesian3.fromDegrees(p.lon, p.lat));
+      const color = Cesium.Color.fromCssColorString(line.color ?? '#22b8cf');
+      const material = line.dashed
+        ? new Cesium.PolylineDashMaterialProperty({ color, dashLength: 14 })
+        : color;
+      const entity = viewer.entities.add({
+        id: `${line.id}__polyline`,
+        polyline: {
+          positions,
+          width: line.width ?? 2,
+          material,
+          clampToGround: true,
+        },
+      });
+      polylineEntitiesRef.current.push(entity);
+    }
+    viewer.scene.requestRender();
+  }, [polylines]);
 
   // ── Imperative fly-to ──────────────────────────────────────────────────────
   useEffect(() => {

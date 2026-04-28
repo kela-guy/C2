@@ -23,6 +23,7 @@ export {
   type CesiumMarker,
   type CesiumHtmlMarker,
   type CesiumMapFlyTo,
+  type CesiumPolyline,
   type CesiumSceneMode,
 } from './CesiumMap';
 export { DroneCardIcon, JamWaveIcon, MissileCardIcon, DRONE_PATH, MISSILE_PATH } from './MapIcons';

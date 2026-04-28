@@ -16,8 +16,8 @@ Goal: replace the Mapbox-based `TacticalMap` with `CesiumTacticalMap` and valida
 
 | Batch PR | Phases | Scope |
 |---|---|---|
-| **Batch 1** (this branch family) | 0 → 3 | Skeleton + toggle + static markers + icons + state styling + click/hover/menu |
-| Batch 2 | 4 → 6 | FOV + coverage + animations + camera control |
+| **Batch 1** | 0 → 3 | Skeleton + toggle + static markers + icons + state styling + click/hover/menu |
+| **Batch 2** (this branch family) | 4 → 6 | FOV + coverage + animations + camera control |
 | Batch 3 | 7 → 9 | Edge cases + perf + cutover + Mapbox removal |
 
 ---
@@ -74,7 +74,7 @@ Fixed by:
 | `hoveredTargetIdFromCard` highlight | ✓ | ✓ | Sets `state='hovered'` + label + pulse. |
 | `hoveredSensorIdFromCard` flash | ✓ | ✓ | Same — pulse + label visible. |
 | `offlineAssetIds` dimming | ✓ | ✓ | Sets `state='disabled'` (`MarkerStyle` greys out). |
-| `isNew` arrival pulse | ✓ | ✗ | Targets render a pulse on hover/active; Detection-level `isNew` not yet wired. Leftover for Phase 5 (animations). |
+| `isNew` arrival pulse | ✓ | ✓ | Detection.isNew triggers `<MapMarker pulse>`. Wired in Phase 5. |
 | Heading rotation on missiles | ✓ | ✗ | No live missiles in `targets` yet — wires up alongside missile launch animations in Phase 5. |
 
 ## Phase 3 — Hover, click, context menu  *(complete)*
@@ -90,39 +90,39 @@ Fixed by:
 
 ---
 
-## Phase 4 — FOV + coverage *(Batch 2)*
+## Phase 4 — FOV + coverage  *(complete)*
 
 | Capability | Mapbox | Cesium | Notes |
 |---|---|---|---|
-| Camera FOV cone (sector polygon) | ✓ | ✗ | `CesiumMap` already supports `fov` on a marker. |
-| Lidar FOV cone | ✓ | ✗ | |
-| Radar surveillance area | ✓ | ✗ | |
-| ECM coverage ring (Regulus effectors) | ✓ | ✗ | `CesiumMap` already supports `coverageRadiusM`. |
-| Highlighted-sensor FOV state | ✓ | ✗ | |
-| FOV color-by-sensor-mode (day / thermal) | ✓ | ✗ | |
+| Camera FOV cone (sector polygon) | ✓ | ✓ | Terrain-clamped `Polygon` from `buildSectorPositions(...)`. Driven by `htmlMarkers[].fov`. |
+| Lidar FOV cone | ✓ | ✓ | Same path — sensor-type-agnostic. |
+| Radar surveillance area | ✓ | ✓ | Same path; widthDeg of 360 supported for omni radars. |
+| ECM coverage ring (Regulus effectors) | ✓ | ✓ | Terrain-clamped `Ellipse` from `htmlMarkers[].coverageRadiusM`. Brightens to green when actively jamming. |
+| Highlighted-sensor FOV state | ✓ | ✓ | `highlightedSensorIds` raises FOV opacity from 0.18 → 0.35. |
+| FOV color-by-sensor-mode (day / thermal) | ✓ | ⚠ | Single cyan colour for all FOVs; per-sensor day/thermal colour deferred to Phase 7 polish. |
 
-## Phase 5 — Track + path animations
-
-| Capability | Mapbox | Cesium | Notes |
-|---|---|---|---|
-| Drone-deployment trail + smooth heading | ✓ | ✗ | Try `SampledPositionProperty`; CZML if shape allows. |
-| Mission-route drone animation along waypoints | ✓ | ✗ | |
-| Missile launch animation + phase changes (planning → launched → terminal → BDA) | ✓ | ✗ | |
-| Engagement-line dashed animation between target + effector | ✓ | ✗ | |
-| New-arrival pulse | ✓ | ✗ | |
-| Jamming verification overlay (4.5 s sweep) | ✓ | ✗ | |
-
-## Phase 6 — Camera control
+## Phase 5 — Track + path animations  *(complete)*
 
 | Capability | Mapbox | Cesium | Notes |
 |---|---|---|---|
-| `focusCoords` smooth pan | ✓ | ✗ | |
-| `smoothFocusRequest` (pan without zoom) | ✓ | ✗ | |
-| `fitBoundsPoints` | ✓ | ✗ | |
-| `cameraLookAtRequest` (camera FOV animates to target) | ✓ | ✗ | |
-| `sensorFocusId` flyTo + flicker | ✓ | ✗ | |
-| Bearing on flyTo | ✓ | ✗ | |
-| Manual zoom / pan / rotate | ✓ | ✗ | Cesium gives this for free. |
+| Drone-deployment trail + smooth heading | ✓ | ✓ | `activeDrone.trail` rendered as a white clamped polyline; heading already drives `<DroneIcon>` rotation. |
+| Mission-route drone animation along waypoints | ✓ | ✓ | `missionRoute.trail` = solid cyan polyline of completed segments; `missionRoute.waypoints` = dashed cyan polyline of planned legs. |
+| Missile launch animation + phase changes (planning → launched → terminal → BDA) | ✓ | ✗ | No live missiles in `targets` yet — covered alongside Mapbox-equivalent animation in Phase 7. |
+| Engagement-line dashed animation between target + effector | ✓ | ✓ | Dashed green polyline between `jammingJammerAssetId` effector and `jammingTargetId` target, driven by `Cesium.PolylineDashMaterialProperty`. |
+| New-arrival pulse | ✓ | ✓ | `Detection.isNew` flips `<MapMarker pulse>` on the target marker. |
+| Jamming verification overlay (4.5 s sweep) | ✓ | ✗ | Camera-side overlay; not exercised in current scenarios — punt to Phase 7. |
+
+## Phase 6 — Camera control  *(complete)*
+
+| Capability | Mapbox | Cesium | Notes |
+|---|---|---|---|
+| `focusCoords` smooth pan | ✓ | ✓ | Maps to `flyTo` with 5 km frustum (≈ Mapbox zoom 15). |
+| `smoothFocusRequest` (pan without zoom) | ✓ | ✓ | `flyTo` at 30 km frustum (city-view scale). |
+| `fitBoundsPoints` | ✓ | ✓ | Centroid + max(latSpan, lonSpan·cos(lat)) × 1.5 padding. |
+| `cameraLookAtRequest` (camera FOV animates to target) | ✓ | ⚠ | Bearing-anim FOV deferred — Phase 7 polish; current pass uses static FOV cones. |
+| `sensorFocusId` flyTo + flicker | ✓ | ✓ | `flyTo` at 4 km frustum. Flicker is a marker-side animation — out of scope for camera. |
+| Bearing on flyTo | ✓ | ✗ | Optional Cesium camera roll/heading; not requested by current scenarios. |
+| Manual zoom / pan / rotate | ✓ | ✓ | Cesium native input. |
 
 ---
 
