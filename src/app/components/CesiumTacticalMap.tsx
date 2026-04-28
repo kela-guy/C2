@@ -245,10 +245,10 @@ export function CesiumTacticalMap({
       pushFriendlyAsset(a.id, a.latitude, a.longitude, <DroneHiveIcon />, a.typeLabel);
     }
     for (const a of WEAPON_SYSTEM_ASSETS) {
-      pushFriendlyAsset(a.id, a.latitude, a.longitude, <LauncherIcon size={32} />, a.typeLabel, 48);
+      pushFriendlyAsset(a.id, a.latitude, a.longitude, <LauncherIcon size={32} />, a.typeLabel, 40);
     }
     for (const l of LAUNCHER_ASSETS) {
-      pushFriendlyAsset(l.id, l.latitude, l.longitude, <LauncherIcon size={32} />, l.id, 48);
+      pushFriendlyAsset(l.id, l.latitude, l.longitude, <LauncherIcon size={32} />, l.id, 40);
     }
 
     // Regulus effectors — friendly assets but treated as effectors for context menu.
@@ -341,7 +341,7 @@ export function CesiumTacticalMap({
             <MapMarker
               icon={<LauncherIcon size={32} />}
               style={style}
-              surfaceSize={48}
+              surfaceSize={40}
               label={(l as unknown as { name?: string }).name ?? l.id}
               showLabel={isHovered}
               pulse={isHovered}
