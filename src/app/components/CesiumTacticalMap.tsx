@@ -46,6 +46,7 @@ import {
   SensorIcon,
   DroneIcon,
   FOV_RADIUS_M,
+  bearingDegrees,
 } from './TacticalMap';
 import type { TacticalMapProps, MapAsset } from './TacticalMap';
 import type { Detection } from '@/imports/ListOfSystems';
@@ -71,6 +72,28 @@ const TARGET_SURFACE = 32;
 const TARGET_RING = 26;
 /** Default LauncherIcon glyph size on Mapbox (`LauncherIcon` defaults to 24). */
 const LAUNCHER_GLYPH = 24;
+
+/**
+ * `DroneIcon` draws its nose pointing east at `rotationDeg = 0`, but our
+ * heading values follow the compass convention (`0° = north`, `90° = east`).
+ * Subtract 90° so the nose actually points along the heading direction.
+ * Same offset Mapbox uses throughout `TacticalMap.tsx`.
+ */
+const droneRotationFromHeading = (headingDeg: number | null | undefined): number =>
+  (headingDeg ?? 0) - 90;
+
+/**
+ * Derive a heading for a hostile target from the last two points of its
+ * trail. Returns `null` when the trail is missing or has fewer than two
+ * points (Mapbox falls back to 0°/east in that case; we hide rotation
+ * entirely so the icon defaults to its base orientation).
+ */
+function targetHeadingFromTrail(t: Detection): number | null {
+  if (!t.trail || t.trail.length < 2) return null;
+  const p0 = t.trail[t.trail.length - 2];
+  const p1 = t.trail[t.trail.length - 1];
+  return bearingDegrees(p0.lat, p0.lon, p1.lat, p1.lon);
+}
 
 /**
  * Map a `Detection.status` onto an `InteractionState` so we can reuse the
@@ -271,6 +294,9 @@ export function CesiumTacticalMap({
         // a fresh detection lands on the map. Mirrors Mapbox parity (the
         // existing TacticalMap shows `<NewArrivalPulse>` on isNew targets).
         const isNewArrival = t.isNew === true;
+        // Derive heading from the last leg of the trail (Mapbox does the same
+        // at TacticalMap.tsx:1531-1537 for classified drone targets).
+        const targetHeading = targetHeadingFromTrail(t);
         out.push({
           id: t.id,
           lat,
@@ -278,10 +304,15 @@ export function CesiumTacticalMap({
           zIndex: isHovered ? 60 : isActive ? 50 : 20,
           content: (
             <MapMarker
-              icon={<DroneIcon />}
+              icon={
+                targetHeading != null
+                  ? <DroneIcon rotationDeg={droneRotationFromHeading(targetHeading)} />
+                  : <DroneIcon />
+              }
               style={style}
               surfaceSize={TARGET_SURFACE}
               ringSize={TARGET_RING}
+              heading={targetHeading ?? undefined}
               label={t.name ?? t.id}
               showLabel={isHovered || isActive}
               pulse={isHovered || isActive || isNewArrival}
@@ -375,7 +406,7 @@ export function CesiumTacticalMap({
           zIndex: isHovered ? 40 : 25,
           content: (
             <MapMarker
-              icon={<DroneIcon rotationDeg={d.headingDeg ?? 0} />}
+              icon={<DroneIcon rotationDeg={droneRotationFromHeading(d.headingDeg)} />}
               style={style}
               surfaceSize={SENSOR_SURFACE}
               ringSize={SENSOR_RING}
