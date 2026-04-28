@@ -52,8 +52,13 @@ import type { Detection } from '@/imports/ListOfSystems';
 
 const CESIUM_ION_TOKEN = (import.meta.env.VITE_CESIUM_ION_TOKEN as string | undefined) ?? '';
 
-/** 2D scene "height" is orthographic frustum extent. 80 km gives a city view. */
-const DEFAULT_INITIAL_VIEW = { lat: 32.466, lon: 35.005, heightM: 80_000 };
+/**
+ * Initial camera target. In Cesium's 2D scene mode `heightM` is the
+ * orthographic frustum extent (≈ visible canvas height in meters), not a
+ * metric distance — 15 km gives a city-block view that matches Mapbox's
+ * default `zoom: 13.5` from `TacticalMap.tsx`.
+ */
+const DEFAULT_INITIAL_VIEW = { lat: 32.4666, lon: 35.0013, heightM: 15_000 };
 
 /** Pixel size for the SVG icon inside each MapMarker shell. */
 const SENSOR_SURFACE = 36;
@@ -193,10 +198,14 @@ export function CesiumTacticalMap({
             : 'default';
       const style = resolveMarkerStyle(state, affiliation);
 
-      // FOV brightens when this sensor is highlighted from the active target's
-      // sensor list (matches Mapbox's `highlightedSensorIds` semantics).
-      const fovOpacity = isHighlighted ? 0.35 : 0.18;
-      const fovColor = isOffline ? '#71717a' : '#22b8cf';
+      // FOV cone appears only when the user is engaging with this sensor —
+      // hovering it on the map, hovering it in the card sidebar, or seeing it
+      // highlighted as part of the active target's contributing sensors. This
+      // keeps the map quiet at rest and lets the FOV act as a hover affordance
+      // (matches the "show details on demand" pattern of the Mapbox dashboard).
+      const showFov = !isOffline && (isHovered || isSelected || isHighlighted);
+      const fovOpacity = isHighlighted ? 0.35 : 0.28;
+      const fovColor = '#22b8cf';
 
       out.push({
         id,
@@ -213,7 +222,7 @@ export function CesiumTacticalMap({
             pulse={isHovered || isSelected}
           />
         ),
-        fov: fov && !isOffline
+        fov: fov && showFov
           ? { rangeM: fov.rangeM, bearingDeg: fov.bearingDeg, widthDeg: fov.widthDeg, color: fovColor, opacity: fovOpacity }
           : undefined,
         onClick: () => onAssetClickRef.current?.(id),
@@ -439,48 +448,55 @@ export function CesiumTacticalMap({
     const tupleToPoints = (trail: [number, number][]) =>
       trail.map(([lat, lon]) => ({ lat, lon }));
 
+    /**
+     * Push a black "casing" underneath a coloured line so trails stay legible
+     * over high-contrast satellite imagery. Mirrors Mapbox's two-layer trail
+     * styling (`TRAIL_CASING_PAINT` + `TRAIL_LINE_PAINT`).
+     */
+    const pushCasedTrail = (
+      id: string,
+      points: { lat: number; lon: number }[],
+      color: string,
+      width: number,
+    ) => {
+      out.push({ id: `${id}-casing`, points, color: '#000000', width: width + 3 });
+      out.push({ id, points, color, width });
+    };
+
     // Active drone deployment trail (Flow 3).
     if (activeDrone?.trail && activeDrone.trail.length >= 2) {
-      out.push({
-        id: 'active-drone-trail',
-        points: tupleToPoints(activeDrone.trail),
-        color: '#ffffff',
-        width: 3,
-      });
+      pushCasedTrail('active-drone-trail', tupleToPoints(activeDrone.trail), '#ffffff', 3);
     }
 
     // Mission route current trail (Flow 4).
     if (missionRoute?.trail && missionRoute.trail.length >= 2) {
-      out.push({
-        id: 'mission-route-trail',
-        points: tupleToPoints(missionRoute.trail),
-        color: '#22d3ee',
-        width: 3,
-      });
+      pushCasedTrail('mission-route-trail', tupleToPoints(missionRoute.trail), '#22d3ee', 3);
     }
 
     // Mission route waypoints — connect them as a planned line so the user
-    // sees the next leg even before the drone has moved there.
+    // sees the next leg even before the drone has moved there. Dashed lines
+    // skip the casing because the dash material reads cleanly on its own.
     if (missionRoute?.waypoints && missionRoute.waypoints.length >= 2) {
       out.push({
         id: 'mission-route-plan',
         points: missionRoute.waypoints.map((w) => ({ lat: w.lat, lon: w.lon })),
         color: '#22d3ee',
-        width: 2,
+        width: 3,
         dashed: true,
       });
     }
 
-    // Friendly drone trails (PathFinder, Starling, etc.).
+    // Friendly drone trails (PathFinder, Starling, etc.). Cyan to match
+    // friendly affiliation; cased so they stand out over imagery.
     if (friendlyDrones) {
       for (const d of friendlyDrones) {
         if (!d.trail || d.trail.length < 2) continue;
-        out.push({
-          id: `friendly-drone-${d.id}-trail`,
-          points: tupleToPoints(d.trail),
-          color: '#22d3ee',
-          width: 2,
-        });
+        pushCasedTrail(
+          `friendly-drone-${d.id}-trail`,
+          tupleToPoints(d.trail),
+          '#22d3ee',
+          3,
+        );
       }
     }
 
@@ -490,12 +506,12 @@ export function CesiumTacticalMap({
       for (const t of targets) {
         if (t.entityStage !== 'classified') continue;
         if (!t.trail || t.trail.length < 2) continue;
-        out.push({
-          id: `target-${t.id}-trail`,
-          points: t.trail.map((p) => ({ lat: p.lat, lon: p.lon })),
-          color: '#ffffff',
-          width: 2,
-        });
+        pushCasedTrail(
+          `target-${t.id}-trail`,
+          t.trail.map((p) => ({ lat: p.lat, lon: p.lon })),
+          '#ffffff',
+          3,
+        );
       }
     }
 
