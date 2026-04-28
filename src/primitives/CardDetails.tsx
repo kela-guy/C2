@@ -39,7 +39,7 @@ export function CardDetails({
   return (
     <AccordionSection title="נתוני טלמטריה" defaultOpen={defaultOpen} icon={Eye} className={className}>
       <div className="w-full py-1">
-        <div className="w-full flex flex-row gap-8 group/copy relative">
+        <div className="w-full grid grid-cols-3 gap-x-8 gap-y-2 group/copy relative">
           {rows.map((row, idx) => (
             <TelemetryRow key={idx} label={row.label} value={row.value} icon={row.icon} />
           ))}
