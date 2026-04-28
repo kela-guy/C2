@@ -52,13 +52,39 @@ export interface CesiumMapFlyTo {
   durationSec?: number;
 }
 
+/**
+ * DOM-overlay marker. Renders arbitrary React content positioned over the
+ * Cesium canvas at the given lat/lon. Updated each frame from the scene's
+ * `cartesianToCanvasCoordinates`. Use this when you need crisp SVGs, CSS
+ * animations, or pointer-events that React already handles — i.e. anything
+ * billboard images can't do well.
+ */
+export interface CesiumHtmlMarker {
+  id: string;
+  lat: number;
+  lon: number;
+  /** React content rendered at the marker position (centred on the lat/lon). */
+  content: React.ReactNode;
+  /** Z-index for stacking among siblings. */
+  zIndex?: number;
+  /** Optional click handler (alternative to `onHtmlMarkerClick` on the map). */
+  onClick?: (e: React.MouseEvent) => void;
+  /** Optional context-menu handler (right-click). */
+  onContextMenu?: (e: React.MouseEvent) => void;
+  /** Optional hover handlers. */
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
+}
+
 export interface CesiumMapProps {
   /** Cesium Ion access token. Required for Bing Aerial / Cesium Ion assets. */
   ionToken: string;
   /** Initial camera target. Required so we don't open over the equator. */
   initialView: { lat: number; lon: number; heightM?: number };
-  /** Markers to render. */
+  /** Markers to render as Cesium points/entities (cheap, GPU). */
   markers?: CesiumMarker[];
+  /** Markers rendered as DOM overlays positioned via scene transforms. */
+  htmlMarkers?: CesiumHtmlMarker[];
   /** Imperatively fly the camera to a position; pass a NEW object each time you want to fly. */
   flyTo?: CesiumMapFlyTo | null;
   /** Scene mode. Defaults to '2D' for parity with our current top-down Mapbox view. */
@@ -68,9 +94,9 @@ export interface CesiumMapProps {
    * Ion's standard default. See https://ion.cesium.com for other ids.
    */
   ionImageryAssetId?: number;
-  /** Called when a marker pin is clicked. */
+  /** Called when a `markers[]` entity is clicked (point markers only). */
   onMarkerClick?: (id: string) => void;
-  /** Called when a marker is hovered (id) or unhovered (null). */
+  /** Called when a `markers[]` entity is hovered (point markers only). */
   onMarkerHover?: (id: string | null) => void;
   /** Optional className for the wrapping `<div>`. Set width + height here or via parent. */
   className?: string;
@@ -142,6 +168,7 @@ export function CesiumMap({
   ionToken,
   initialView,
   markers,
+  htmlMarkers,
   flyTo,
   sceneMode = '2D',
   ionImageryAssetId = 2,
@@ -154,6 +181,13 @@ export function CesiumMap({
   const markerEntitiesRef = useRef<Map<string, Cesium.Entity>>(new Map());
   const fovEntitiesRef = useRef<Cesium.Entity[]>([]);
   const coverageEntitiesRef = useRef<Cesium.Entity[]>([]);
+  /**
+   * Per-frame screen positions for HTML markers. We compute Cartesian once
+   * per `htmlMarkers` change, but project to canvas coordinates every frame
+   * via the scene's preRender event.
+   */
+  const htmlMarkerNodesRef = useRef<Map<string, HTMLDivElement>>(new Map());
+  const htmlMarkerCartesianRef = useRef<Map<string, Cesium.Cartesian3>>(new Map());
 
   // ── Mount-readiness gate ──────────────────────────────────────────────────
   // Defer Viewer construction until the container actually has dimensions.
@@ -263,9 +297,36 @@ export function CesiumMap({
       }
     }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
+    // Per-frame sync of DOM-overlay marker positions. Cesium emits
+    // `preRender` before each frame; we project each marker's cached
+    // Cartesian to canvas coords and translate the corresponding DOM node.
+    // Cheap (~20 div translates per frame) and matches what Mapbox does
+    // internally for `mapboxgl.Marker`.
+    const removePreRender = viewer.scene.preRender.addEventListener(() => {
+      const nodes = htmlMarkerNodesRef.current;
+      const cartesians = htmlMarkerCartesianRef.current;
+      if (nodes.size === 0) return;
+      for (const [id, node] of nodes) {
+        const cart = cartesians.get(id);
+        if (!cart) {
+          node.style.display = 'none';
+          continue;
+        }
+        const screen = viewer.scene.cartesianToCanvasCoordinates(cart);
+        if (!screen) {
+          // Off-screen / behind the globe.
+          node.style.display = 'none';
+          continue;
+        }
+        node.style.display = '';
+        node.style.transform = `translate(-50%, -50%) translate(${screen.x}px, ${screen.y}px)`;
+      }
+    });
+
     viewerRef.current = viewer;
 
     return () => {
+      removePreRender();
       handler.destroy();
       viewer.destroy();
       viewerRef.current = null;
@@ -275,6 +336,21 @@ export function CesiumMap({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mountReady]);
+
+  // ── HTML marker positions ────────────────────────────────────────────────
+  // Re-compute Cartesian3 cache whenever `htmlMarkers` changes. The
+  // per-frame loop reads from this cache, so it stays cheap.
+  useEffect(() => {
+    const cache = htmlMarkerCartesianRef.current;
+    cache.clear();
+    if (!htmlMarkers) return;
+    for (const m of htmlMarkers) {
+      cache.set(m.id, Cesium.Cartesian3.fromDegrees(m.lon, m.lat));
+    }
+    // Force a render so positions update immediately even without user
+    // interaction (Cesium uses request-render mode by default).
+    viewerRef.current?.scene.requestRender();
+  }, [htmlMarkers]);
 
   // ── Token (live update) ────────────────────────────────────────────────────
   useEffect(() => {
@@ -393,5 +469,46 @@ export function CesiumMap({
     });
   }, [flyTo]);
 
-  return <div ref={containerRef} className={className} />;
+  return (
+    <div ref={containerRef} className={className}>
+      {/*
+        DOM-overlay container. Sits absolutely over the Cesium canvas with
+        `pointer-events: none` so clicks fall through to the scene unless
+        a child element explicitly opts in via `pointer-events: auto`.
+        Each marker is positioned via the `transform` set in the per-frame
+        sync above; it never re-renders unless the React tree changes.
+
+        The parent container's className is provided by the consumer and
+        already establishes a positioning context (`absolute inset-0` in
+        the dashboard, `w-full h-full` in the styleguide). We don't append
+        `relative` here because that would override `position: absolute`
+        in the dashboard chain and collapse the container to 0×0.
+      */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        {htmlMarkers?.map((m) => (
+          <div
+            key={m.id}
+            ref={(node) => {
+              if (node) htmlMarkerNodesRef.current.set(m.id, node);
+              else htmlMarkerNodesRef.current.delete(m.id);
+            }}
+            onClick={m.onClick}
+            onContextMenu={m.onContextMenu}
+            onMouseEnter={m.onMouseEnter}
+            onMouseLeave={m.onMouseLeave}
+            className="pointer-events-auto absolute top-0 left-0"
+            style={{
+              zIndex: m.zIndex,
+              // Hidden by default until first preRender places it. Avoids
+              // a flash at (0,0) before the scene has run a frame.
+              display: 'none',
+              willChange: 'transform',
+            }}
+          >
+            {m.content}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }

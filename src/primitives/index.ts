@@ -21,6 +21,7 @@ export {
   CesiumMap,
   type CesiumMapProps,
   type CesiumMarker,
+  type CesiumHtmlMarker,
   type CesiumMapFlyTo,
   type CesiumSceneMode,
 } from './CesiumMap';

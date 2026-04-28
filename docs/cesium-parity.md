@@ -35,22 +35,22 @@ Goal: replace the Mapbox-based `TacticalMap` with `CesiumTacticalMap` and valida
 
 ---
 
-## Phase 1 — Static markers  *(in progress)*
+## Phase 1 — Static markers  *(complete)*
 
 Render every map element as a Cesium entity with the correct lat/lon. Visual styling minimal; verify count + position + the parsing of every data shape.
 
 | Capability | Mapbox | Cesium | Notes |
 |---|---|---|---|
-| Detection targets | ✓ | ⏳ | Coordinates parsed from `Detection.coordinates` ("lat, lon" string). Code shipped. |
-| Camera assets (`CAMERA_ASSETS`) | ✓ | ⏳ | Pulled from `TacticalMap` registry. Code shipped. |
-| Radar assets (`RADAR_ASSETS`) | ✓ | ⏳ | Code shipped. |
-| Drone-hive assets (`DRONE_HIVE_ASSETS`) | ✓ | ⏳ | Code shipped. |
-| Lidar assets (`LIDAR_ASSETS`) | ✓ | ⏳ | Code shipped. |
-| Launcher assets (`LAUNCHER_ASSETS`) | ✓ | ⏳ | Code shipped. |
-| Weapon-system assets (`WEAPON_SYSTEM_ASSETS`) | ✓ | ⏳ | Code shipped. |
-| Regulus effectors (prop, fallback to module default) | ✓ | ⏳ | Code shipped. |
-| Friendly drones (prop) | ✓ | ⏳ | Code shipped. |
-| Launcher effectors (prop) | ✓ | ⏳ | Code shipped. |
+| Detection targets | ✓ | ✓ | Coordinates parsed from `Detection.coordinates`. Hostile affiliation; state from `Detection.status`. |
+| Camera assets (`CAMERA_ASSETS`) | ✓ | ✓ | Friendly affiliation. Real `<CameraIcon>` inside `<MapMarker>`. |
+| Radar assets (`RADAR_ASSETS`) | ✓ | ✓ | Friendly. `<RadarIcon>`. |
+| Drone-hive assets (`DRONE_HIVE_ASSETS`) | ✓ | ✓ | Friendly. `<DroneHiveIcon>`. |
+| Lidar assets (`LIDAR_ASSETS`) | ✓ | ✓ | Friendly. `<LidarIcon>`. |
+| Launcher assets (`LAUNCHER_ASSETS`) | ✓ | ✓ | Friendly. `<LauncherIcon>` at 40 px. |
+| Weapon-system assets (`WEAPON_SYSTEM_ASSETS`) | ✓ | ✓ | Friendly. `<LauncherIcon>` at 40 px. |
+| Regulus effectors (prop, fallback to module default) | ✓ | ✓ | Friendly with `'jammer'` interaction state. |
+| Friendly drones (prop) | ✓ | ✓ | Friendly. `<DroneIcon>` rotates by `headingDeg`. |
+| Launcher effectors (prop) | ✓ | ✓ | Friendly. Deduped against `LAUNCHER_ASSETS`. |
 
 ### Mount blocker — resolved
 
@@ -62,30 +62,31 @@ Fixed by:
 3. Calling `viewer.scene.requestRender()` from the same `ResizeObserver` that drives the gate, so the canvas redraws cleanly when the user drags the resize handle.
 4. Adding `CesiumErrorBoundary` around the dashboard's Cesium branch only — Mapbox keeps its existing error semantics. Fallback UI offers a one-click "reload with Mapbox" link.
 
-## Phase 2 — Marker icons + state-driven styling
+## Phase 2 — Marker icons + state-driven styling  *(complete)*
 
 | Capability | Mapbox | Cesium | Notes |
 |---|---|---|---|
-| Custom SVG icons via `MapIcons.tsx` (DroneIcon, MissileIcon, etc.) | ✓ | ✗ | Render as Cesium billboards via canvas (or DOM-overlay for crisp Hebrew labels). |
-| Threat-accent rings (idle / suspicion / detection / tracking / mitigating / active / resolved / expired) | ✓ | ✗ | Reuse `markerStyles.ts`. |
-| Heading rotation on drones / missiles | ✓ | ✗ | |
-| Affiliation palettes (hostile / friendly / unknown) | ✓ | ✗ | |
-| `selectedAssetId` highlight | ✓ | ✗ | |
-| `hoveredTargetIdFromCard` highlight | ✓ | ✗ | |
-| `hoveredSensorIdFromCard` flash | ✓ | ✗ | |
-| `offlineAssetIds` dimming | ✓ | ✗ | |
-| `isNew` arrival pulse | ✓ | ✗ | |
+| Custom SVG icons via `MapIcons.tsx` / `TacticalMap` | ✓ | ✓ | Rendered as DOM overlay through new `htmlMarkers` prop on `CesiumMap`. Cesium's `preRender` event projects each marker's Cartesian to canvas coords every frame. |
+| Threat-accent rings via `markerStyles.ts` | ✓ | ✓ | Reuses `<MapMarker>` primitive with `resolveMarkerStyle(state, affiliation)`. |
+| Heading rotation on drones | ✓ | ✓ | `friendlyDrones[].headingDeg` passes through to `<DroneIcon rotationDeg=...>` and `<MapMarker heading=...>`. |
+| Affiliation palettes (hostile / friendly) | ✓ | ✓ | Targets default to hostile; assets default to friendly. |
+| `selectedAssetId` highlight | ✓ | ✓ | Sets `state='selected'` and bumps zIndex. |
+| `hoveredTargetIdFromCard` highlight | ✓ | ✓ | Sets `state='hovered'` + label + pulse. |
+| `hoveredSensorIdFromCard` flash | ✓ | ✓ | Same — pulse + label visible. |
+| `offlineAssetIds` dimming | ✓ | ✓ | Sets `state='disabled'` (`MarkerStyle` greys out). |
+| `isNew` arrival pulse | ✓ | ✗ | Targets render a pulse on hover/active; Detection-level `isNew` not yet wired. Leftover for Phase 5 (animations). |
+| Heading rotation on missiles | ✓ | ✗ | No live missiles in `targets` yet — wires up alongside missile launch animations in Phase 5. |
 
-## Phase 3 — Hover, click, context menu
+## Phase 3 — Hover, click, context menu  *(complete)*
 
 | Capability | Mapbox | Cesium | Notes |
 |---|---|---|---|
-| Marker hover state + tooltip | ✓ | ✗ | |
-| `onMarkerClick(targetId)` | ✓ | ✗ | |
-| `onAssetClick(assetId)` | ✓ | ✗ | |
-| Right-click context menu (target: open-card / mitigate / mitigate-all / dismiss / track / investigate) | ✓ | ✗ | DOM overlay anchored to scene coords. |
-| Right-click context menu (sensor: view-feed) | ✓ | ✗ | |
-| Card-hover → marker highlight bridge | ✓ | ✗ | Driven by `hoveredTargetIdFromCard`. |
+| Marker hover state + tooltip | ✓ | ✓ | Native DOM `onMouseEnter` / `onMouseLeave` on each `htmlMarker`; `<MapMarker>` renders the pulse + label. |
+| `onMarkerClick(targetId)` | ✓ | ✓ | DOM `onClick` fires the prop directly; ref kept fresh so memoisation never staleness. |
+| `onAssetClick(assetId)` | ✓ | ✓ | Same pattern — DOM click on asset markers. |
+| Right-click context menu (target: open-card / mitigate / mitigate-all / dismiss / track / investigate) | ✓ | ✓ | New `CesiumContextMenu` component renders at `(clientX, clientY)` and dispatches the existing `onContextMenuAction(action, 'target', id)`. |
+| Right-click context menu (sensor: view-feed) | ✓ | ✓ | Same component handles both; sensor menu shows just the "view feed" action. |
+| Card-hover → marker highlight bridge | ✓ | ✓ | `hoveredTargetIdFromCard` + `hoveredSensorIdFromCard` drive `state='hovered'` on the matching marker. |
 
 ---
 
