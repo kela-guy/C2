@@ -294,9 +294,9 @@ function buildFlowActions(
     actions.push({
       id: `${flow.id}-terminal`,
       label: phaseUI.buttonLabel,
-      group: 'effector',
+      group: 'primary',
       onClick: (e) => e.stopPropagation(),
-      effectorStatusStrip: phaseUI.stripLabel
+      statusStrip: phaseUI.stripLabel
         ? { label: phaseUI.stripLabel, icon: phaseUI.stripIcon!, tone: phaseUI.stripTone! }
         : undefined,
     });
@@ -310,7 +310,7 @@ function buildFlowActions(
           icon: ta.icon,
           variant: ta.variant,
           size: 'sm',
-          group: 'investigation',
+          group: 'secondary',
           loading: ta.id === 'lock-weapon' && phase === 'locking',
           onClick: (e) => { e.stopPropagation(); cb?.(); },
         });
@@ -326,13 +326,13 @@ function buildFlowActions(
           icon: Crosshair,
           variant: 'ghost',
           size: 'sm',
-          group: 'investigation',
+          group: 'secondary',
           onClick: (e) => { e.stopPropagation(); callbacks.onSendDroneVerification?.(); },
         });
       } else {
         actions.push({
           id: 'dismiss-target', label: 'ביטול', icon: X, variant: 'ghost', size: 'sm',
-          group: 'investigation',
+          group: 'secondary',
           onClick: (e) => { e.stopPropagation(); callbacks.onDismiss?.('dismissed'); },
         });
       }
@@ -356,7 +356,7 @@ function buildFlowActions(
     icon: phaseUI.buttonIcon,
     variant: phaseUI.buttonVariant,
     size: 'sm',
-    group: 'effector',
+    group: 'primary',
     dataTour: `cuas-cta-${flow.id}`,
     loading: phaseUI.loading,
     disabled: phaseUI.disabled,
@@ -383,7 +383,7 @@ function buildFlowActions(
       icon: cameraActive ? CameraLockedIcon : Eye,
       variant: cameraPointing || cameraActive ? 'ghost' : 'fill',
       size: 'sm',
-      group: 'investigation',
+      group: 'secondary',
       loading: cameraPointing,
       onClick: (e) => { e.stopPropagation(); if (!cameraActive) callbacks.onVerify?.('investigate'); },
       className: cameraActive ? 'text-white cursor-default' : '',
@@ -392,7 +392,7 @@ function buildFlowActions(
 
   actions.push({
     id: 'dismiss-target', label: 'ביטול', icon: X, variant: 'ghost', size: 'sm',
-    group: 'investigation',
+    group: 'secondary',
     onClick: (e) => { e.stopPropagation(); callbacks.onDismiss?.('dismissed'); },
   });
 
@@ -418,9 +418,9 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
     actions.push({
       id: 'mitigate',
       label: 'שיבוש הושלם',
-      group: 'effector',
+      group: 'primary',
       onClick: (e) => e.stopPropagation(),
-      effectorStatusStrip: { label: 'שיבוש הושלם', icon: Check, tone: 'success' },
+      statusStrip: { label: 'שיבוש הושלם', icon: Check, tone: 'success' },
     });
 
     if (countdown != null && countdown > 0) {
@@ -430,7 +430,7 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
         icon: Timer,
         variant: 'ghost' as const,
         size: 'sm' as const,
-        group: 'investigation' as const,
+        group: 'secondary' as const,
         disabled: true,
         onClick: (e: React.MouseEvent) => { e.stopPropagation(); },
         className: 'ring-1 ring-amber-400/35',
@@ -442,7 +442,7 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
         icon: Lock,
         variant: 'ghost' as const,
         size: 'sm' as const,
-        group: 'investigation' as const,
+        group: 'secondary' as const,
         onClick: (e: React.MouseEvent) => { e.stopPropagation(); callbacks.onRequestCameraControl?.(); },
         className: 'ring-1 ring-amber-400/40',
       });
@@ -453,7 +453,7 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
         icon: EyeOff,
         variant: 'fill' as const,
         size: 'sm' as const,
-        group: 'investigation' as const,
+        group: 'secondary' as const,
         onClick: (e: React.MouseEvent) => { e.stopPropagation(); callbacks.onBdaCamera?.(); },
       });
     } else {
@@ -463,7 +463,7 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
         icon: Eye,
         variant: 'fill' as const,
         size: 'sm' as const,
-        group: 'investigation' as const,
+        group: 'secondary' as const,
         dataTour: 'cuas-cta-bda',
         onClick: (e: React.MouseEvent) => { e.stopPropagation(); callbacks.onBdaCamera?.(); },
       });
@@ -471,7 +471,7 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
 
     actions.push(
       { id: 'complete-mission', label: 'סיום משימה', icon: Check, variant: 'fill', size: 'sm',
-        group: 'investigation',
+        group: 'secondary',
         dataTour: 'cuas-cta-complete',
         onClick: (e) => { e.stopPropagation(); callbacks.onCompleteMission?.(); },
       },
@@ -492,13 +492,13 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
   if (isCuas && target.classifiedType === 'bird') {
     actions.push(
       { id: 'confirm-bird', label: 'אשר ציפור — סגור זיהוי', icon: Check, variant: 'warning', size: 'sm',
-        group: 'effector',
+        group: 'primary',
         onClick: (e) => { e.stopPropagation(); callbacks.onDismiss?.('bird_confirmed'); } },
       { id: 'false-alarm', label: 'שווא', icon: Ban, variant: 'ghost', size: 'sm',
-        group: 'investigation',
+        group: 'secondary',
         onClick: (e) => { e.stopPropagation(); callbacks.onDismiss?.('false_alarm'); } },
       { id: 'investigate-bird', label: 'תחקור', icon: Eye, variant: 'ghost', size: 'sm',
-        group: 'investigation',
+        group: 'secondary',
         onClick: (e) => { e.stopPropagation(); callbacks.onVerify?.('investigate'); } },
     );
     return actions;

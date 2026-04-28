@@ -6,7 +6,7 @@ export { AccordionSection } from './AccordionSection';
 export { TelemetryRow } from './TelemetryRow';
 export { TargetCard, type TargetCardProps } from './TargetCard';
 export { CardHeader, type CardHeaderProps } from './CardHeader';
-export { CardActions, type CardAction, type CardActionsProps } from './CardActions';
+export { CardActions, CARD_ACTION_GROUP, type CardAction, type CardActionGroup, type CardActionStatusStripTone, type CardActionsProps } from './CardActions';
 export { CardTimeline, type TimelineStep, type TimelineStepStatus, type CardTimelineProps } from './CardTimeline';
 export { CardDetails, type DetailRow, type CardDetailsClassification, type CardDetailsProps } from './CardDetails';
 export { CardSensors, type CardSensor, type CardSensorsProps } from './CardSensors';
@@ -14,7 +14,7 @@ export { CardMedia, MEDIA_BADGE_CONFIG, type MediaBadgeType, type CardMediaProps
 export { CardLog, type LogEntry, type CardLogProps } from './CardLog';
 export { CardClosure, type ClosureOutcome, type CardClosureProps } from './CardClosure';
 export { CardFooterDock, type FooterDockAction, type CardFooterDockProps } from './CardFooterDock';
-export { FilterBar, STATUS_OPTIONS } from './FilterBar';
+export { FilterBar, type FilterBarProps, type FilterDef, type FilterOption } from './FilterBar';
 export { NewUpdatesPill } from './NewUpdatesPill';
 export { MapMarker, type MapMarkerProps } from './MapMarker';
 export { DroneCardIcon, JamWaveIcon, MissileCardIcon, DRONE_PATH, MISSILE_PATH } from './MapIcons';

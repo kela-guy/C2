@@ -9,13 +9,23 @@ export interface TimelineStep {
   status: TimelineStepStatus;
 }
 
+export const DEFAULT_TIMELINE_STATUS_LABELS: Record<TimelineStepStatus, string> = {
+  pending: 'Pending',
+  active: 'Active',
+  complete: 'Complete',
+  error: 'Error',
+};
+
 export interface CardTimelineProps {
   steps: TimelineStep[];
   compact?: boolean;
   className?: string;
+  /** Override the localized status words used in compact-mode aria-labels. Falls back to English. */
+  statusLabels?: Partial<Record<TimelineStepStatus, string>>;
 }
 
-export function CardTimeline({ steps, compact, className = '' }: CardTimelineProps) {
+export function CardTimeline({ steps, compact, className = '', statusLabels: statusLabelsProp }: CardTimelineProps) {
+  const statusLabels: Record<TimelineStepStatus, string> = { ...DEFAULT_TIMELINE_STATUS_LABELS, ...(statusLabelsProp ?? {}) };
   const d = CARD_TOKENS.timeline;
 
   if (steps.length === 0) return null;
@@ -41,7 +51,7 @@ export function CardTimeline({ steps, compact, className = '' }: CardTimelinePro
               }}
               title={step.label}
               role="img"
-              aria-label={`${step.label}: ${step.status === 'complete' ? 'הושלם' : step.status === 'active' ? 'פעיל' : step.status === 'error' ? 'שגיאה' : 'ממתין'}`}
+              aria-label={`${step.label}: ${statusLabels[step.status]}`}
             />
             {idx < steps.length - 1 && (
               <div

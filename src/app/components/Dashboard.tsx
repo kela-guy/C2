@@ -11,8 +11,9 @@ import { Toggle } from '@/shared/components/ui/toggle';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/shared/components/ui/tooltip';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/shared/components/ui/dropdown-menu';
 import { Separator } from '@/shared/components/ui/separator';
-import { DevicesPanel, DevicesIcon, DEVICE_CAMERA_DRAG_TYPE, DEVICE_CONNECTION } from './DevicesPanel';
+import { DevicesPanel, DevicesIcon, DEVICE_CAMERA_DRAG_TYPE } from './DevicesPanel';
 import type { DeviceCameraDragItem } from './DevicesPanel';
+import { useDevicesFromAssets, CAMERA_PRESETS } from './useDevicesFromAssets';
 import { CameraViewerPanel } from './CameraViewerPanel';
 import type { CameraFeed } from './CameraViewerPanel';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/shared/components/ui/resizable';
@@ -149,6 +150,7 @@ export const Dashboard = () => {
   // #region agent log
   // removed old session log
   // #endregion
+  const allDevices = useDevicesFromAssets();
   const [activeTargetId, setActiveTargetId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [devicesPanelOpen, setDevicesPanelOpen] = useState(false);
@@ -228,11 +230,10 @@ export const Dashboard = () => {
     }))
   );
 
-  const offlineAssetIds = useMemo(() =>
-    Object.entries(DEVICE_CONNECTION)
-      .filter(([, state]) => state === 'offline')
-      .map(([id]) => id),
-  []);
+  const offlineAssetIds = useMemo(
+    () => allDevices.filter((d) => d.connectionState === 'offline').map((d) => d.id),
+    [allDevices],
+  );
 
   const highlightedSensorIds = useMemo(() => {
     const ids = new Set<string>();
@@ -1490,6 +1491,7 @@ export const Dashboard = () => {
         </aside>
 
         <DevicesPanel
+          devices={allDevices}
           open={devicesPanelOpen}
           onClose={() => { setDevicesPanelOpen(false); setSelectedAssetId(null); }}
           onFlyTo={handleDeviceFlyTo}
@@ -1501,6 +1503,56 @@ export const Dashboard = () => {
           noTransition={panelSwitching}
           width={sidebarWidth}
           focusedDeviceId={focusedDeviceId}
+          title="מכשירים"
+          closeAriaLabel="סגור"
+          cameraPresets={CAMERA_PRESETS}
+          typeLabels={{
+            camera: 'מצלמות',
+            radar: 'מכ"מים',
+            dock: 'כוורות',
+            drone: 'רחפנים',
+            ecm: 'משבשים',
+            launcher: 'משגרים',
+            lidar: 'לידר',
+            weapon_system: 'מערכות נשק',
+          }}
+          connectionStateLabels={{
+            online: 'מחובר',
+            offline: 'לא מקוון',
+            error: 'שגיאה',
+            warning: 'אזהרה',
+          }}
+          strings={{
+            searchPlaceholder: 'חיפוש...',
+            clearSearch: 'נקה חיפוש',
+            resetFilters: 'איפוס סינון',
+            resetFiltersLabel: 'ניקוי',
+            noMatches: 'אין מכשירים תואמים',
+            location: 'מיקום',
+            bearing: 'כיוון',
+            fieldOfView: 'שדה ראייה',
+            coverage: 'כיסוי',
+            altitude: 'גובה',
+            health: 'תקינות',
+            healthOk: 'תקין',
+            healthMalfunction: 'תקלה',
+            battery: 'סוללה',
+            jam: 'הפעל',
+            jamActive: 'שיבוש פעיל',
+            jamDisabledOffline: 'המכשיר לא מקוון',
+            jamDisabledMalfunction: 'המכשיר בתקלה',
+            jamDisabledAlreadyActive: 'שיבוש כבר פעיל',
+            cameraModeAriaLabel: 'מצב מצלמה',
+            centerOnMap: 'מרכז במפה',
+            mute: 'השתק',
+            unmute: 'בטל השתקה',
+            wipers: 'מגבים',
+            wipersAriaLabel: 'מגבים',
+            calibrate: 'כיול',
+            calibrating: 'מכייל...',
+            calibrated: 'הושלם',
+            calibrateAriaLabel: 'כיול',
+          }}
         />
 
       </div>

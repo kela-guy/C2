@@ -82,6 +82,10 @@ export interface SplitActionButtonProps {
   dropdownGroups?: SplitDropdownGroup[];
   className?: string;
   dataTour?: string;
+  /** aria-label for the dropdown trigger chevron. Defaults to 'More actions'. */
+  moreActionsLabel?: string;
+  /** Placeholder shown for grouped dropdowns when no item is selected. Defaults to 'Select'. */
+  placeholder?: string;
 }
 
 export function SplitActionButton({
@@ -100,6 +104,8 @@ export function SplitActionButton({
   dropdownGroups,
   className = '',
   dataTour,
+  moreActionsLabel = 'More actions',
+  placeholder = 'Select',
 }: SplitActionButtonProps) {
   const prefersReducedMotion = useReducedMotion();
   const [menuOpen, setMenuOpen] = React.useState(false);
@@ -204,7 +210,7 @@ export function SplitActionButton({
               'flex shrink-0 items-center justify-center px-2 rounded-e-[4px]',
               chevronExtras,
             )}
-            aria-label="פעולות נוספות"
+            aria-label={moreActionsLabel}
             aria-disabled={isDisabled}
             onClick={(e) => e.stopPropagation()}
           >
@@ -223,7 +229,6 @@ export function SplitActionButton({
           side="bottom"
           align="end"
           sideOffset={6}
-          dir="rtl"
           style={shellWidth ? { minWidth: shellWidth } : undefined}
           className={cn(
             'rounded-lg border-none p-1 origin-top-left',
@@ -266,7 +271,7 @@ export function SplitActionButton({
                         {ItemIcon && <ItemIcon size={14} className="shrink-0" aria-hidden="true" />}
                         <span className="min-w-0 flex-1 text-start">{item.label}</span>
                         <span className="text-[10px] text-white/40 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                          בחר
+                          {placeholder}
                         </span>
                       </DropdownMenuItem>
                     );

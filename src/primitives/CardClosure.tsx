@@ -17,7 +17,7 @@ export interface CardClosureProps {
 }
 
 export function CardClosure({
-  title = 'סגירת אירוע — בחר סיבה',
+  title = 'Close — pick a reason',
   outcomes,
   onSelect,
   className = '',
@@ -42,7 +42,7 @@ export function CardClosure({
                 e.stopPropagation();
                 onSelect(outcome.id);
               }}
-              className="h-auto min-h-0 w-full justify-start px-2.5 py-2 rounded text-zinc-300 transition-colors text-[11px] font-medium text-right gap-1.5 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 hover:bg-white/[0.08]"
+              className="h-auto min-h-0 w-full justify-start px-2.5 py-2 rounded text-zinc-300 transition-colors text-[11px] font-medium text-end gap-1.5 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 hover:bg-white/[0.08]"
               style={{ backgroundColor: CARD_TOKENS.surface.level3, boxShadow: `0 0 0 1px ${CARD_TOKENS.surface.level3}` }}
             >
               {OutcomeIcon && <OutcomeIcon size={12} className="shrink-0 text-zinc-500" aria-hidden="true" />}
