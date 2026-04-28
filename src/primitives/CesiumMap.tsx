@@ -213,8 +213,15 @@ export function CesiumMap({
   const coverageEntitiesRef = useRef<Cesium.Entity[]>([]);
   /** Geometry entities (FOV / coverage) attached to HTML markers. */
   const htmlGeometryEntitiesRef = useRef<Cesium.Entity[]>([]);
-  /** Polyline entities (trails, engagement lines, etc.). */
-  const polylineEntitiesRef = useRef<Cesium.Entity[]>([]);
+  /**
+   * Polyline entities (trails, engagement lines, etc.) keyed by their
+   * stable `CesiumPolyline.id`. Keyed (not array) so the polylines effect
+   * can update positions in place rather than tearing down + recreating
+   * every entity on each tick — that thrash makes drone trails flicker
+   * because Cesium has to re-tessellate ground-clamped polylines from
+   * scratch each time.
+   */
+  const polylineEntitiesRef = useRef<Map<string, Cesium.Entity>>(new Map());
   /**
    * Per-frame screen positions for HTML markers. We compute Cartesian once
    * per `htmlMarkers` change, but project to canvas coordinates every frame
@@ -368,7 +375,7 @@ export function CesiumMap({
       fovEntitiesRef.current = [];
       coverageEntitiesRef.current = [];
       htmlGeometryEntitiesRef.current = [];
-      polylineEntitiesRef.current = [];
+      polylineEntitiesRef.current.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mountReady]);
@@ -550,33 +557,63 @@ export function CesiumMap({
   }, [htmlMarkers]);
 
   // ── Polylines (trails, engagement lines, mission routes) ──────────────────
+  // Diffed by id — entities that already exist get their positions / width
+  // / material updated in place; only genuinely-new ids cause an `add`, only
+  // genuinely-removed ids cause a `remove`. Keeping entities alive across
+  // ticks lets Cesium reuse the tessellation cache for ground-clamped
+  // polylines instead of rebuilding from scratch each second, which is what
+  // was making the drone-patrol trails flicker.
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer) return;
 
-    for (const entity of polylineEntitiesRef.current) viewer.entities.remove(entity);
-    polylineEntitiesRef.current = [];
+    const existing = polylineEntitiesRef.current;
+    const desiredIds = new Set<string>();
 
-    if (!polylines) return;
+    if (polylines) {
+      for (const line of polylines) {
+        if (line.points.length < 2) continue;
+        desiredIds.add(line.id);
 
-    for (const line of polylines) {
-      if (line.points.length < 2) continue;
-      const positions = line.points.map((p) => Cesium.Cartesian3.fromDegrees(p.lon, p.lat));
-      const color = Cesium.Color.fromCssColorString(line.color ?? '#22b8cf');
-      const material = line.dashed
-        ? new Cesium.PolylineDashMaterialProperty({ color, dashLength: 14 })
-        : color;
-      const entity = viewer.entities.add({
-        id: `${line.id}__polyline`,
-        polyline: {
-          positions,
-          width: line.width ?? 2,
-          material,
-          clampToGround: true,
-        },
-      });
-      polylineEntitiesRef.current.push(entity);
+        const positions = line.points.map((p) => Cesium.Cartesian3.fromDegrees(p.lon, p.lat));
+        const color = Cesium.Color.fromCssColorString(line.color ?? '#22b8cf');
+        const material = line.dashed
+          ? new Cesium.PolylineDashMaterialProperty({ color, dashLength: 14 })
+          : new Cesium.ColorMaterialProperty(color);
+        const width = line.width ?? 2;
+
+        const entity = existing.get(line.id);
+        if (entity?.polyline) {
+          // Update in place. ConstantProperty wrappers let Cesium short-circuit
+          // its internal "did this change?" diff so unchanged frames don't
+          // re-tessellate the polyline.
+          entity.polyline.positions = new Cesium.ConstantProperty(positions);
+          entity.polyline.material = material;
+          entity.polyline.width = new Cesium.ConstantProperty(width);
+        } else {
+          // First sighting of this id — add a fresh entity.
+          const fresh = viewer.entities.add({
+            id: `${line.id}__polyline`,
+            polyline: {
+              positions,
+              width,
+              material,
+              clampToGround: true,
+            },
+          });
+          existing.set(line.id, fresh);
+        }
+      }
     }
+
+    // Remove entities that are no longer in the desired set.
+    for (const [id, entity] of existing) {
+      if (!desiredIds.has(id)) {
+        viewer.entities.remove(entity);
+        existing.delete(id);
+      }
+    }
+
     viewer.scene.requestRender();
   }, [polylines]);
 
