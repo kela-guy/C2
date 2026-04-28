@@ -48,11 +48,11 @@ export const spec: ComponentSpec = {
       implementedInPrototype: true,
     },
     {
-      name: 'effector status strip',
-      trigger: 'Action has effectorStatusStrip config instead of normal button',
-      description: 'Read-only status indicator replacing button (e.g. "jam complete" with check icon)',
+      name: 'status strip',
+      trigger: 'Action has statusStrip config instead of normal button',
+      description: 'Read-only status indicator replacing button (e.g. completion confirmation with icon)',
       implementedInPrototype: true,
-      visualNotes: 'text-emerald-400 icon, pointer-events-none',
+      visualNotes: 'tone-driven icon color (emerald/sky/amber/red), pointer-events-none',
     },
     {
       name: 'split action button',
@@ -170,7 +170,7 @@ export const spec: ComponentSpec = {
       'aria-describedby="confirm-desc" (when description exists)',
       'aria-modal="true"',
       'aria-label on confirm and cancel buttons',
-      'role="status" on EffectorStatusStrip',
+      'role="status" on StatusStrip',
     ],
     keyboardNav: [
       'Tab: cycles through action buttons (native)',

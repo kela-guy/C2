@@ -34,7 +34,7 @@ export function CardMedia({
   aspectRatio,
   showControls = false,
   className = '',
-  alt = 'תצפית מטרה',
+  alt = 'Surveillance',
 }: CardMediaProps) {
   const [expanded, setExpanded] = useState(false);
   const savedTimeRef = useRef(0);
@@ -123,11 +123,11 @@ export function CardMedia({
             <button
               onClick={handleExpand}
               className="absolute inset-0 z-10 flex items-center justify-center opacity-0 group-hover/media:opacity-100 transition-opacity duration-200 cursor-pointer"
-              aria-label="הרחב הקלטה"
+              aria-label="Expand recording"
             >
               <div className="flex items-center gap-1.5 bg-black/70 backdrop-blur-sm px-3 py-1.5 rounded-md shadow-[0_0_0_1px_rgba(255,255,255,0.15)]">
                 <Maximize2 size={13} className="text-white/90" aria-hidden="true" />
-                <span className="text-[11px] font-medium text-white/90">הרחב תצוגה</span>
+                <span className="text-[11px] font-medium text-white/90">Expand</span>
               </div>
             </button>
           </>
@@ -153,7 +153,7 @@ export function CardMedia({
               '[&>button]:text-white/80 [&>button]:hover:bg-black/80 [&>button]:hover:text-white [&>button]:bg-black/60',
             )}
           >
-            <DialogTitle className="sr-only">הרחבת הקלטה</DialogTitle>
+            <DialogTitle className="sr-only">Expanded recording</DialogTitle>
             <LightboxVideo src={src} initialTime={savedTimeRef.current} />
           </DialogContent>
         </Dialog>
@@ -236,11 +236,11 @@ function LightboxVideo({ src, initialTime }: { src: string; initialTime: number 
           className="relative mb-3 h-1.5 w-full cursor-pointer rounded-full bg-white/15 group/scrub focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
           role="slider"
           tabIndex={0}
-          aria-label="מיקום בסרטון"
+          aria-label="Video position"
           aria-valuemin={0}
           aria-valuemax={Math.round(duration)}
           aria-valuenow={Math.round(progress)}
-          aria-valuetext={`${formatTime(progress)} מתוך ${formatTime(duration)}`}
+          aria-valuetext={`${formatTime(progress)} of ${formatTime(duration)}`}
           onClick={handleScrub}
           onKeyDown={(e) => {
             const v = videoRef.current;
@@ -262,13 +262,13 @@ function LightboxVideo({ src, initialTime }: { src: string; initialTime: number 
         </div>
 
         <div className="flex items-center justify-center gap-4">
-          <button onClick={skip(-5)} className="text-white/60 hover:text-white transition-colors cursor-pointer" aria-label="הרצה אחורה 5 שניות">
+          <button onClick={skip(-5)} className="text-white/60 hover:text-white transition-colors cursor-pointer" aria-label="Skip back 5 seconds">
             <SkipBack size={14} aria-hidden="true" />
           </button>
-          <button onClick={togglePlay} className="text-white hover:text-cyan-400 transition-colors cursor-pointer" aria-label={playing ? 'השהה' : 'הפעל'}>
+          <button onClick={togglePlay} className="text-white hover:text-cyan-400 transition-colors cursor-pointer" aria-label={playing ? 'Pause' : 'Play'}>
             {playing ? <Pause size={20} aria-hidden="true" /> : <Play size={20} aria-hidden="true" />}
           </button>
-          <button onClick={skip(5)} className="text-white/60 hover:text-white transition-colors cursor-pointer" aria-label="הרצה קדימה 5 שניות">
+          <button onClick={skip(5)} className="text-white/60 hover:text-white transition-colors cursor-pointer" aria-label="Skip forward 5 seconds">
             <SkipForward size={14} aria-hidden="true" />
           </button>
           <span className="text-[11px] text-zinc-400 font-mono tabular-nums ml-2">
@@ -353,11 +353,11 @@ const VideoWithControls = React.forwardRef<HTMLVideoElement, { src: string }>(
             className="relative mb-1.5 h-1 w-full cursor-pointer rounded-full bg-white/15 group/scrub focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
             role="slider"
             tabIndex={0}
-            aria-label="מיקום בסרטון"
+            aria-label="Video position"
             aria-valuemin={0}
             aria-valuemax={Math.round(duration)}
             aria-valuenow={Math.round(progress)}
-            aria-valuetext={`${formatTime(progress)} מתוך ${formatTime(duration)}`}
+            aria-valuetext={`${formatTime(progress)} of ${formatTime(duration)}`}
             onClick={handleScrub}
             onKeyDown={(e) => {
               const v = videoRef.current;
@@ -379,13 +379,13 @@ const VideoWithControls = React.forwardRef<HTMLVideoElement, { src: string }>(
           </div>
 
           <div className="flex items-center justify-center gap-3">
-            <button onClick={skip(-5)} className="text-white/60 hover:text-white transition-colors" aria-label="הרצה אחורה 5 שניות">
+            <button onClick={skip(-5)} className="text-white/60 hover:text-white transition-colors" aria-label="Skip back 5 seconds">
               <SkipBack size={12} aria-hidden="true" />
             </button>
-            <button onClick={togglePlay} className="text-white hover:text-cyan-400 transition-colors" aria-label={playing ? 'השהה' : 'הפעל'}>
+            <button onClick={togglePlay} className="text-white hover:text-cyan-400 transition-colors" aria-label={playing ? 'Pause' : 'Play'}>
               {playing ? <Pause size={16} aria-hidden="true" /> : <Play size={16} aria-hidden="true" />}
             </button>
-            <button onClick={skip(5)} className="text-white/60 hover:text-white transition-colors" aria-label="הרצה קדימה 5 שניות">
+            <button onClick={skip(5)} className="text-white/60 hover:text-white transition-colors" aria-label="Skip forward 5 seconds">
               <SkipForward size={12} aria-hidden="true" />
             </button>
             <span className="text-[9px] text-zinc-400 font-mono tabular-nums ml-2">

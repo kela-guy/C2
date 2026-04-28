@@ -1,5 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
+import { Radio, SlidersHorizontal } from 'lucide-react';
 import { CAMERA_ASSETS, LIDAR_ASSETS, RADAR_ASSETS } from '@/shared/components/TacticalMap';
+import type { FilterDef } from '@/primitives/FilterBar';
 import type { ActivityStatus, Detection } from './ListOfSystems';
 import { compareTargetsByPriority, getActivityStatus } from './useActivityStatus';
 
@@ -196,6 +198,73 @@ export function useTargetFilters(targets: Detection[], scope: FilterScope) {
     }));
   }, []);
 
+  const setQuery = useCallback((value: string) => {
+    setFilters((prev) => ({ ...prev, query: value }));
+  }, []);
+
+  const STATUS_FILTER_ID = 'activityStatus';
+  const SENSOR_FILTER_ID = 'detectedByDeviceIds';
+
+  /** FilterDef[] adapted for the generic <FilterBar /> primitive. */
+  const filterDefs: FilterDef[] = useMemo(
+    () => [
+      {
+        id: STATUS_FILTER_ID,
+        label: 'סטטוס',
+        icon: SlidersHorizontal,
+        options: (Object.keys(ACTIVITY_STATUS_LABELS) as ActivityStatus[]).map((status) => ({
+          value: status,
+          label: ACTIVITY_STATUS_LABELS[status],
+        })),
+        summarize: (selectedValues) => {
+          if (selectedValues.length === 0) return 'הכל';
+          if (selectedValues.length === 1) return ACTIVITY_STATUS_LABELS[selectedValues[0] as ActivityStatus];
+          if (
+            selectedValues.length === 2 &&
+            selectedValues.includes('active') &&
+            selectedValues.includes('recently_active')
+          ) {
+            return 'פעילים';
+          }
+          return `${selectedValues.length} נבחרו`;
+        },
+      },
+      {
+        id: SENSOR_FILTER_ID,
+        label: 'מזהה',
+        icon: Radio,
+        options: availableSensors.map((s) => ({ value: s.id, label: s.label })),
+        emptyLabel: 'אין מזהים זמינים',
+        summarize: (selectedValues) => {
+          if (selectedValues.length === 0) return 'כל המזהים';
+          if (selectedValues.length === 1) {
+            return availableSensors.find((s) => s.id === selectedValues[0])?.label ?? '1 נבחר';
+          }
+          return `${selectedValues.length} מזהים`;
+        },
+      },
+    ],
+    [availableSensors],
+  );
+
+  /** Selection map keyed by FilterDef.id. */
+  const selections: Record<string, string[]> = useMemo(
+    () => ({
+      [STATUS_FILTER_ID]: filters.activityStatus,
+      [SENSOR_FILTER_ID]: filters.detectedByDeviceIds,
+    }),
+    [filters.activityStatus, filters.detectedByDeviceIds],
+  );
+
+  /** Handler matching <FilterBar onFilterChange />. */
+  const onFilterChange = useCallback((filterId: string, nextValues: string[]) => {
+    if (filterId === STATUS_FILTER_ID) {
+      setFilters((prev) => ({ ...prev, activityStatus: nextValues as ActivityStatus[] }));
+    } else if (filterId === SENSOR_FILTER_ID) {
+      setFilters((prev) => ({ ...prev, detectedByDeviceIds: nextValues }));
+    }
+  }, []);
+
   return {
     filters,
     activeFilterCount,
@@ -207,5 +276,10 @@ export function useTargetFilters(targets: Detection[], scope: FilterScope) {
     resetFilters,
     toggleSensorId,
     toggleActivityStatus,
+    setQuery,
+    /** Generic FilterBar adapter outputs. */
+    filterDefs,
+    selections,
+    onFilterChange,
   };
 }

@@ -13,6 +13,10 @@ export interface CardLogProps {
   maxVisible?: number;
   defaultOpen?: boolean;
   className?: string;
+  /** Section heading prefix. The total count is appended in parentheses. Defaults to 'Log'. */
+  title?: string;
+  /** Formatter for the "show more" button. Defaults to `(n) => \`+${n} more\``. */
+  moreLabel?: (count: number) => string;
 }
 
 export function CardLog({
@@ -20,6 +24,8 @@ export function CardLog({
   maxVisible = 5,
   defaultOpen = false,
   className = '',
+  title = 'Log',
+  moreLabel = (count: number) => `+${count} more`,
 }: CardLogProps) {
   const [expanded, setExpanded] = useState(false);
 
@@ -33,7 +39,7 @@ export function CardLog({
     <AccordionSection
       title={
         <>
-          לוג (<span className="tabular-nums">{entries.length}</span>)
+          {title} (<span className="tabular-nums">{entries.length}</span>)
         </>
       }
       defaultOpen={defaultOpen}
@@ -63,7 +69,7 @@ export function CardLog({
             }}
             className="w-full text-center text-[12px] text-white hover:text-zinc-300 transition-colors py-0.5"
           >
-            עוד {reversed.length - maxVisible} רשומות
+            {moreLabel(reversed.length - maxVisible)}
           </button>
         )}
       </div>

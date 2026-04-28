@@ -273,7 +273,15 @@ function UnifiedCard({
 
       {slots.media && <CardMedia {...slots.media} />}
 
-      {slots.actions.length > 0 && <CardActions actions={slots.actions} />}
+      {slots.actions.length > 0 && (
+        <CardActions
+          actions={slots.actions}
+          confirmLabel="אישור"
+          cancelLabel="ביטול"
+          finalConfirmTitle="אישור סופי"
+          finalConfirmLabel="הפעל"
+        />
+      )}
 
       {!thinMode && slots.timeline.length > 0 && (
         <div className="px-2">
@@ -285,6 +293,8 @@ function UnifiedCard({
         <CardDetails
           rows={slots.details.rows}
           classification={slots.details.classification}
+          title="נתוני טלמטריה"
+          copyLabel="העתק טלמטריה"
         />
       )}
 
@@ -313,11 +323,19 @@ function UnifiedCard({
       )}
 
       {!thinMode && slots.log.length > 0 && (
-        <CardLog entries={slots.log} />
+        <CardLog
+          entries={slots.log}
+          title="לוג"
+          moreLabel={(n) => `עוד ${n} רשומות`}
+        />
       )}
 
       {slots.closure && (
-        <CardClosure outcomes={slots.closure.outcomes} onSelect={slots.closure.onSelect} />
+        <CardClosure
+          outcomes={slots.closure.outcomes}
+          onSelect={slots.closure.onSelect}
+          title="סגירת אירוע — בחר סיבה"
+        />
       )}
     </TargetCard>
   );
@@ -536,6 +554,10 @@ export default function ListOfSystems({
     resetFilters,
     toggleSensorId,
     toggleActivityStatus,
+    setQuery,
+    filterDefs,
+    selections,
+    onFilterChange,
   } = useTargetFilters(uniqueTargets, activeTab);
 
   const activeTargets = useMemo(() => (
@@ -768,13 +790,18 @@ export default function ListOfSystems({
         </div>
 
         <FilterBar
-          filters={filters}
-          activeFilterCount={activeFilterCount}
-          availableSensors={availableSensors}
-          onUpdate={updateFilter}
-          onToggleActivity={toggleActivityStatus}
-          onToggleSensor={toggleSensorId}
+          query={filters.query}
+          onQueryChange={setQuery}
+          filters={filterDefs}
+          selections={selections}
+          onFilterChange={onFilterChange}
           onReset={resetFilters}
+          searchPlaceholder="חיפוש יעד, מזהה או סוג..."
+          searchAriaLabel="חיפוש מטרות"
+          clearSearchAriaLabel="נקה חיפוש"
+          resetLabel="איפוס"
+          resetAriaLabel="איפוס פילטרים"
+          emptyOptionsLabel="אין אפשרויות"
         />
       </div>
 
@@ -785,6 +812,7 @@ export default function ListOfSystems({
               <div className="pointer-events-auto">
                 <NewUpdatesPill
                   count={visibleArrivalTargets.length}
+                  label={(n) => `${n} התראות חדשות`}
                   onClick={() => {
                     setNewArrivalIds([]);
                     listScrollRef.current?.scrollTo({

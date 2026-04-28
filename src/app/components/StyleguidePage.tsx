@@ -4,6 +4,7 @@ import {
   Trash2, Send, Compass, Gauge, Navigation, MapPin, CheckCircle2,
   Bird, Activity, History, Radar, Hand, Copy, Check, Download,
   BellOff, Camera, Wrench, Loader2, Search, X, Lock,
+  SlidersHorizontal, Tag,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Toaster } from '@/shared/components/ui/sonner';
@@ -27,6 +28,7 @@ import {
   FilterBar, NewUpdatesPill,
   type CardAction, type CardSensor,
   type LogEntry, type ClosureOutcome, type DetailRow,
+  type FilterDef,
 } from '@/primitives';
 import {
   CameraIcon, SensorIcon, RadarIcon, DroneIcon, DroneHiveIcon,
@@ -112,6 +114,96 @@ const MARKER_FILES: RelatedFile[] = [
   { file: 'markerStyles.ts', code: markerStylesSrc },
   { file: 'MapIcons.tsx', code: mapIconsSrc },
   TOKENS_FILE, BARREL_FILE,
+];
+
+// ─── FilterBar demo data ─────────────────────────────────────────────────────
+
+const FILTER_BAR_DEMO_DEFS: FilterDef[] = [
+  {
+    id: 'status',
+    label: 'Status',
+    icon: SlidersHorizontal,
+    options: [
+      { value: 'active', label: 'Active' },
+      { value: 'recent', label: 'Recently active' },
+      { value: 'timeout', label: 'Timed out' },
+      { value: 'dismissed', label: 'Dismissed' },
+    ],
+  },
+  {
+    id: 'type',
+    label: 'Type',
+    icon: Tag,
+    options: [
+      { value: 'drone', label: 'Drone' },
+      { value: 'missile', label: 'Missile' },
+      { value: 'vehicle', label: 'Vehicle' },
+      { value: 'unknown', label: 'Unknown' },
+    ],
+  },
+  {
+    id: 'origin',
+    label: 'Origin',
+    icon: Radio,
+    options: [
+      { value: 'rf-01', label: 'RF Scanner 01' },
+      { value: 'radar-01', label: 'Radar X-Band' },
+      { value: 'eo-01', label: 'EO/IR Camera' },
+    ],
+  },
+];
+
+// ─── DevicesPanel demo data ──────────────────────────────────────────────────
+
+const devicesPanelDemoDevices: Device[] = [
+  {
+    id: 'cam-01',
+    name: 'PTZ Camera',
+    type: 'camera',
+    lat: 0,
+    lon: 0,
+    status: 'available',
+    operationalStatus: 'operational',
+    connectionState: 'online',
+    Icon: CameraIcon,
+    capabilities: ['video', 'photo'],
+    batteryPct: 78,
+  },
+  {
+    id: 'cam-02',
+    name: 'PixelSight',
+    type: 'camera',
+    lat: 0,
+    lon: 0,
+    status: 'available',
+    operationalStatus: 'operational',
+    connectionState: 'warning',
+    Icon: CameraIcon,
+    capabilities: ['video'],
+  },
+  {
+    id: 'rad-01',
+    name: 'X-Band Radar',
+    type: 'radar',
+    lat: 0,
+    lon: 0,
+    status: 'available',
+    operationalStatus: 'operational',
+    connectionState: 'online',
+    Icon: RadarIcon,
+  },
+  {
+    id: 'ecm-01',
+    name: 'Regulus North',
+    type: 'ecm',
+    lat: 0,
+    lon: 0,
+    status: 'active',
+    operationalStatus: 'operational',
+    connectionState: 'online',
+    Icon: SensorIcon,
+    coverageRadiusM: 5000,
+  },
 ];
 
 // ─── Layout primitives ───────────────────────────────────────────────────────
@@ -2410,27 +2502,18 @@ export default function StyleguidePage() {
   const sampleActions: CardAction[] = [
     {
       id: 'jam', label: 'הפעל ג׳אמר', icon: Zap, variant: 'danger', size: 'sm',
-      group: 'effector', onClick: noop,
+      group: 'primary', onClick: noop,
       dropdownActions: [
         { id: 'jam-rf', label: 'ג׳אמר RF', icon: Radio, onClick: noop },
         { id: 'jam-gps', label: 'ג׳אמר GPS', icon: Crosshair, onClick: noop },
       ],
     },
-    { id: 'camera', label: 'הפנה מצלמה', icon: Eye, variant: 'fill', size: 'sm', group: 'investigation', onClick: noop },
-    { id: 'dismiss', label: 'בטל', icon: Ban, variant: 'ghost', size: 'sm', group: 'investigation', onClick: noop },
+    { id: 'camera', label: 'הפנה מצלמה', icon: Eye, variant: 'fill', size: 'sm', group: 'secondary', onClick: noop },
+    { id: 'dismiss', label: 'בטל', icon: Ban, variant: 'ghost', size: 'sm', group: 'secondary', onClick: noop },
   ];
 
-  const [filterState, setFilterState] = useState({
-    query: '',
-    activityStatus: [] as string[],
-    detectedByDeviceIds: [] as string[],
-  });
-
-  const mockSensorsForFilter = [
-    { id: 'rf-01', label: 'RF Scanner 01' },
-    { id: 'radar-01', label: 'Radar X-Band' },
-    { id: 'eo-01', label: 'EO/IR Camera' },
-  ];
+  const [filterBarQuery, setFilterBarQuery] = useState('');
+  const [filterBarSelections, setFilterBarSelections] = useState<Record<string, string[]>>({});
 
   const handleSelectPage = useCallback((id: string) => {
     setActiveItem(id);
@@ -3305,46 +3388,42 @@ export function DetectionRow() {
             )}
 
             {activeItem === 'filter-bar' && (
-            <ComponentSection id="filter-bar" name="FilterBar" description="Search, sort, and multi-select filter controls for the target list sidebar.">
-              <CodePreviewBlock name="FilterBar" description="Search, sort, and multi-select filter controls for the target list sidebar." tight code={filterBarSrc} relatedFiles={COMMON_FILES}>
-                <div className="max-w-sm rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level1 }}>
+            <ComponentSection id="filter-bar" name="FilterBar" description="Search input + data-driven filter dropdowns. Pass any number of filter dimensions (status, type, origin, severity, ...) as a `filters: FilterDef[]` array; each renders as a popover with multi-select options.">
+              <CodePreviewBlock name="FilterBar" description="Data-driven multi-filter bar." tight code={filterBarSrc} relatedFiles={COMMON_FILES}>
+                <div className="w-96 mx-auto rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level1 }}>
                   <FilterBar
-                    filters={filterState}
-                    activeFilterCount={filterState.activityStatus.length + filterState.detectedByDeviceIds.length}
-                    availableSensors={mockSensorsForFilter}
-                    onUpdate={(key, value) => setFilterState(prev => ({ ...prev, [key]: value }))}
-                    onToggleActivity={(status) => setFilterState(prev => ({
-                      ...prev,
-                      activityStatus: prev.activityStatus.includes(status)
-                        ? prev.activityStatus.filter(s => s !== status)
-                        : [...prev.activityStatus, status],
-                    }))}
-                    onToggleSensor={(id) => setFilterState(prev => ({
-                      ...prev,
-                      detectedByDeviceIds: prev.detectedByDeviceIds.includes(id)
-                        ? prev.detectedByDeviceIds.filter(s => s !== id)
-                        : [...prev.detectedByDeviceIds, id],
-                    }))}
-                    onReset={() => setFilterState({ query: '', activityStatus: [], detectedByDeviceIds: [] })}
+                    query={filterBarQuery}
+                    onQueryChange={setFilterBarQuery}
+                    filters={FILTER_BAR_DEMO_DEFS}
+                    selections={filterBarSelections}
+                    onFilterChange={(filterId, next) =>
+                      setFilterBarSelections((prev) => ({ ...prev, [filterId]: next }))
+                    }
+                    onReset={() => {
+                      setFilterBarQuery('');
+                      setFilterBarSelections({});
+                    }}
                   />
                 </div>
               </CodePreviewBlock>
 
               <SectionHeading>Import</SectionHeading>
-              <ImportBlock path="@/primitives" names={['FilterBar']} />
+              <ImportBlock path="@/primitives" names={['FilterBar', 'type FilterDef', 'type FilterOption']} />
 
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={filterBarSrc} name="FilterBar" />
 
               <SectionHeading>API Reference</SectionHeading>
               <PropsTable items={[
-                { name: 'filters', type: 'FilterState', description: 'Current filter values' },
-                { name: 'activeFilterCount', type: 'number', description: 'Controls reset button visibility' },
-                { name: 'availableSensors', type: '{ id, label }[]', description: 'Sensor options for popover' },
-                { name: 'onUpdate', type: '(key, value) => void', description: 'Generic filter field update' },
-                { name: 'onToggleActivity', type: '(status) => void', description: 'Toggle activity status filter' },
-                { name: 'onToggleSensor', type: '(id) => void', description: 'Toggle sensor filter' },
-                { name: 'onReset', type: '() => void', description: 'Clear all filters' },
+                { name: 'query', type: 'string', description: 'Free-text search value (controlled).' },
+                { name: 'onQueryChange', type: '(next: string) => void', description: 'Search input change handler.' },
+                { name: 'filters', type: 'FilterDef[]', description: 'Filter dimensions to render — each becomes a popover trigger.' },
+                { name: 'selections', type: 'Record<string, string[]>', description: 'Selection state keyed by FilterDef.id.' },
+                { name: 'onFilterChange', type: '(filterId, nextValues) => void', description: 'Replace one filter’s selected values.' },
+                { name: 'onReset', type: '() => void', description: 'Clear query + all selections.' },
+                { name: 'searchPlaceholder', type: 'string', default: '"Search…"', description: 'Input placeholder.' },
+                { name: 'resetLabel', type: 'string', default: '"Reset"', description: 'Reset button text.' },
+                { name: 'emptyOptionsLabel', type: 'string', default: '"No options"', description: 'Shown when a filter has no options.' },
               ]} />
             </ComponentSection>
             )}
@@ -3353,7 +3432,7 @@ export function DetectionRow() {
             <ComponentSection id="devices-panel" name="DevicesPanel" description="Right-hand sidebar listing all connected field devices grouped by type. Supports search, type-filter isolation, device expansion with stats grid, camera preview with presets, ECM jam activation, mute with 30-min countdown, drone wipers/calibration, and drag-to-camera-viewer for camera rows.">
               <CodePreviewBlock name="DevicesPanel" description="Full interactive panel — try searching, filtering by type, expanding rows, and clicking actions." tight code={devicesPanelSrc} relatedFiles={DEVICES_PANEL_FILES}>
                 <div className="relative mx-auto overflow-hidden rounded-lg border border-white/10" style={{ width: LAYOUT_TOKENS.sidebarWidthPx, height: 400 }}>
-                  <DevicesPanel open onClose={() => {}} onFlyTo={() => {}} noTransition />
+                  <DevicesPanel devices={devicesPanelDemoDevices} open onClose={() => {}} onFlyTo={() => {}} noTransition />
                 </div>
               </CodePreviewBlock>
 
