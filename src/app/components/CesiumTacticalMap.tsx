@@ -379,10 +379,13 @@ export function CesiumTacticalMap({
             pulse={isHovered}
           />
         ),
-        // ECM coverage ring (terrain-clamped ellipse). Brightens when the
-        // effector is actively jamming so it visually matches the active
-        // jam state on the marker itself.
-        coverageRadiusM: e.coverageRadiusM,
+        // ECM coverage ring. Hidden at rest so the map doesn't get cluttered
+        // with overlapping translucent circles — appears on hover (or when
+        // hovered from the card sidebar) as a "details on demand" affordance,
+        // matching the FOV-on-hover behaviour for sensors. Stays visible
+        // while actively jamming because that's a live operational state,
+        // not idle metadata.
+        coverageRadiusM: isHovered || isJamming ? e.coverageRadiusM : undefined,
         coverageColor: isJamming ? '#4ade80' : '#22b8cf',
         onClick: () => onAssetClickRef.current?.(e.id),
         onContextMenu: (ev) => openContextMenu(ev, 'effector', e.id),
