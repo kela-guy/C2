@@ -554,15 +554,19 @@ export function CesiumMap({
 
       if (m.coverageRadiusM != null) {
         const coverageColor = Cesium.Color.fromCssColorString(m.coverageColor ?? '#22b8cf');
+        // Fill / outline opacities tuned to read clearly over satellite
+        // imagery without burying the markers underneath. Roughly mirrors
+        // the FOV cone's solidity (0.40 fill); the outline is fully opaque
+        // so the ring boundary is unambiguous even at larger zoom-outs.
         const coverageEntity = viewer.entities.add({
           id: `${m.id}__coverage`,
           position: Cesium.Cartesian3.fromDegrees(m.lon, m.lat),
           ellipse: {
             semiMajorAxis: m.coverageRadiusM,
             semiMinorAxis: m.coverageRadiusM,
-            material: coverageColor.withAlpha(0.10),
+            material: coverageColor.withAlpha(0.25),
             outline: true,
-            outlineColor: coverageColor.withAlpha(0.5),
+            outlineColor: coverageColor.withAlpha(0.95),
             heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
           },
         });

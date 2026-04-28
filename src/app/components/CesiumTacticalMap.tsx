@@ -236,8 +236,11 @@ export function CesiumTacticalMap({
       // highlighted as part of the active target's contributing sensors. This
       // keeps the map quiet at rest and lets the FOV act as a hover affordance
       // (matches the "show details on demand" pattern of the Mapbox dashboard).
+      // Fill opacity matches Mapbox's `FRIENDLY_FOV_FILL_PAINT` (0.40) so the
+      // wedge reads at a glance over satellite imagery; highlighted sensors
+      // bump up further to call out the active target's contributors.
       const showFov = !isOffline && (isHovered || isSelected || isHighlighted);
-      const fovOpacity = isHighlighted ? 0.35 : 0.28;
+      const fovOpacity = isHighlighted ? 0.55 : 0.4;
       const fovColor = '#22b8cf';
 
       out.push({
@@ -459,7 +462,7 @@ export function CesiumTacticalMap({
                 bearingDeg: d.headingDeg!,
                 widthDeg: d.fovDeg ?? DRONE_FOV_DEG,
                 color: '#22b8cf',
-                opacity: 0.28,
+                opacity: 0.4,
               }
             : undefined,
           onClick: () => onAssetClickRef.current?.(d.id),
