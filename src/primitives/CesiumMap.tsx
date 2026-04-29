@@ -298,6 +298,27 @@ export function CesiumMap({
   const polylineParticleEndpointsRef = useRef<
     Map<string, { fromLat: number; fromLon: number; toLat: number; toLon: number }>
   >(new Map());
+
+  /**
+   * Endpoint-interpolation cache for 2-point dashed lines (engagement
+   * lines). Stores the *previous* and *current* endpoints together with
+   * a timestamp; the polyline's `CallbackProperty` eases between them
+   * over a short window so the 1 Hz dashboard tick (target position
+   * updates) doesn't snap-jump the line on every change.
+   */
+  const polylineSmoothEndpointsRef = useRef<
+    Map<
+      string,
+      {
+        curr: { fromLat: number; fromLon: number; toLat: number; toLon: number };
+        prev: { fromLat: number; fromLon: number; toLat: number; toLon: number };
+        changedAt: number;
+      }
+    >
+  >(new Map());
+
+  /** ms over which a 2-point dashed line eases to new endpoints. */
+  const SMOOTH_LINE_MS = 300;
   /**
    * Per-frame screen positions for HTML markers. We compute Cartesian once
    * per `htmlMarkers` change, but project to canvas coordinates every frame
@@ -463,6 +484,7 @@ export function CesiumMap({
       polylineFingerprintRef.current.clear();
       polylineParticleEntitiesRef.current.clear();
       polylineParticleEndpointsRef.current.clear();
+      polylineSmoothEndpointsRef.current.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mountReady]);
@@ -699,6 +721,50 @@ export function CesiumMap({
           prev.width === next.width &&
           prev.dashed === next.dashed;
 
+        // 2-point dashed lines (engagement-line style) use a smoothing path:
+        // the entity is created once with a `CallbackProperty` for positions
+        // that eases between the previous and current endpoints over
+        // `SMOOTH_LINE_MS`. The 1 Hz dashboard tick (target position update)
+        // therefore plays as a 300 ms ease-out instead of a hard snap, which
+        // is what was reading as "glitching" on the engagement line. The
+        // particle dots already tracked the same endpoints so they smooth too.
+        const isSmoothed = dashed && line.points.length === 2;
+        if (isSmoothed) {
+          const nowMs = Date.now();
+          const history = polylineSmoothEndpointsRef.current.get(line.id);
+          const newCurr = {
+            fromLat: first.lat,
+            fromLon: first.lon,
+            toLat: last.lat,
+            toLon: last.lon,
+          };
+          if (history) {
+            // Snapshot the previous "curr" as "prev" iff endpoints actually
+            // moved — otherwise we'd reset the easing every memo recompute,
+            // making the line visibly twitch on no-op updates.
+            const moved =
+              history.curr.fromLat !== newCurr.fromLat ||
+              history.curr.fromLon !== newCurr.fromLon ||
+              history.curr.toLat !== newCurr.toLat ||
+              history.curr.toLon !== newCurr.toLon;
+            if (moved) {
+              polylineSmoothEndpointsRef.current.set(line.id, {
+                curr: newCurr,
+                prev: history.curr,
+                changedAt: nowMs,
+              });
+            }
+          } else {
+            // First sighting — start with prev = curr so no easing occurs
+            // on initial render.
+            polylineSmoothEndpointsRef.current.set(line.id, {
+              curr: newCurr,
+              prev: newCurr,
+              changedAt: nowMs,
+            });
+          }
+        }
+
         // Particle endpoints always need to track the latest first / last
         // points, even on otherwise-unchanged updates, so the moving dots
         // re-target if the engagement pair switches mid-flight.
@@ -718,7 +784,6 @@ export function CesiumMap({
           continue;
         }
 
-        const positions = line.points.map((p) => Cesium.Cartesian3.fromDegrees(p.lon, p.lat));
         const cesiumColor = Cesium.Color.fromCssColorString(colorCss);
         // Static dashed pattern. Earlier I tried animating the dash via a
         // `CallbackProperty` that rotated the 16-bit pattern, but each
@@ -730,10 +795,53 @@ export function CesiumMap({
           : new Cesium.ColorMaterialProperty(cesiumColor);
 
         if (entity?.polyline) {
-          entity.polyline.positions = new Cesium.ConstantProperty(positions);
+          if (!isSmoothed) {
+            // Trails / non-smoothed lines: replace positions directly. The
+            // smoothed lines never reach this branch because their entity
+            // keeps the same `CallbackProperty` for its lifetime — only
+            // material / width get patched here when we fall through.
+            const positions = line.points.map((p) => Cesium.Cartesian3.fromDegrees(p.lon, p.lat));
+            entity.polyline.positions = new Cesium.ConstantProperty(positions);
+          }
           entity.polyline.material = material;
           entity.polyline.width = new Cesium.ConstantProperty(width);
+        } else if (isSmoothed) {
+          // First creation of a smoothed engagement line: install the
+          // interpolating CallbackProperty. The two-element Cartesian3
+          // array is reused across frames (mutated in place) so Cesium's
+          // polyline primitive doesn't see "new array reference" churn.
+          const lineId = line.id;
+          const cachedArr: Cesium.Cartesian3[] = [
+            new Cesium.Cartesian3(),
+            new Cesium.Cartesian3(),
+          ];
+          const positionsProp = new Cesium.CallbackProperty((_time, _result) => {
+            const ep = polylineSmoothEndpointsRef.current.get(lineId);
+            if (!ep) return cachedArr;
+            const elapsed = Date.now() - ep.changedAt;
+            const tNorm = Math.min(1, Math.max(0, elapsed / SMOOTH_LINE_MS));
+            // Ease-out cubic — fast at first, settles softly into the
+            // new endpoint. Avoids the sharp 1 Hz snap.
+            const eased = 1 - Math.pow(1 - tNorm, 3);
+            const fromLat = ep.prev.fromLat + (ep.curr.fromLat - ep.prev.fromLat) * eased;
+            const fromLon = ep.prev.fromLon + (ep.curr.fromLon - ep.prev.fromLon) * eased;
+            const toLat = ep.prev.toLat + (ep.curr.toLat - ep.prev.toLat) * eased;
+            const toLon = ep.prev.toLon + (ep.curr.toLon - ep.prev.toLon) * eased;
+            Cesium.Cartesian3.fromDegrees(fromLon, fromLat, 0, undefined, cachedArr[0]);
+            Cesium.Cartesian3.fromDegrees(toLon, toLat, 0, undefined, cachedArr[1]);
+            return cachedArr;
+          }, false);
+          const fresh = viewer.entities.add({
+            id: `${lineId}__polyline`,
+            polyline: {
+              positions: positionsProp,
+              width,
+              material,
+            },
+          });
+          existing.set(lineId, fresh);
         } else {
+          const positions = line.points.map((p) => Cesium.Cartesian3.fromDegrees(p.lon, p.lat));
           const fresh = viewer.entities.add({
             id: `${line.id}__polyline`,
             polyline: {
@@ -765,16 +873,37 @@ export function CesiumMap({
             // which is why the dots looked frozen. `CallbackPositionProperty`
             // is Cesium's purpose-built variant for animated entity
             // positions and is what we need here.
+            //
+            // The closure also eases between the previous and current
+            // endpoints (via `polylineSmoothEndpointsRef`) when the line
+            // is smoothed, so the dots travel along the same eased path
+            // as the line itself instead of skipping ahead each tick.
             const positionProp = new Cesium.CallbackPositionProperty((_time, result) => {
               const endpoints = polylineParticleEndpointsRef.current.get(lineId);
               if (!endpoints) {
                 return Cesium.Cartesian3.fromDegrees(0, 0, 0, undefined, result);
               }
+              // If the line is smoothed, sample the eased endpoints so the
+              // particle path matches the line's interpolated geometry.
+              const smooth = polylineSmoothEndpointsRef.current.get(lineId);
+              let fromLat = endpoints.fromLat;
+              let fromLon = endpoints.fromLon;
+              let toLat = endpoints.toLat;
+              let toLon = endpoints.toLon;
+              if (smooth) {
+                const sElapsed = Date.now() - smooth.changedAt;
+                const sNorm = Math.min(1, Math.max(0, sElapsed / SMOOTH_LINE_MS));
+                const sEased = 1 - Math.pow(1 - sNorm, 3);
+                fromLat = smooth.prev.fromLat + (smooth.curr.fromLat - smooth.prev.fromLat) * sEased;
+                fromLon = smooth.prev.fromLon + (smooth.curr.fromLon - smooth.prev.fromLon) * sEased;
+                toLat = smooth.prev.toLat + (smooth.curr.toLat - smooth.prev.toLat) * sEased;
+                toLon = smooth.prev.toLon + (smooth.curr.toLon - smooth.prev.toLon) * sEased;
+              }
               const t = ((Date.now() / 1000) * speed + phaseOffset) % 1;
               const eased = easeSpring(t);
               return Cesium.Cartesian3.fromDegrees(
-                endpoints.fromLon + (endpoints.toLon - endpoints.fromLon) * eased,
-                endpoints.fromLat + (endpoints.toLat - endpoints.fromLat) * eased,
+                fromLon + (toLon - fromLon) * eased,
+                fromLat + (toLat - fromLat) * eased,
                 0,
                 undefined,
                 result,
@@ -804,6 +933,7 @@ export function CesiumMap({
         viewer.entities.remove(entity);
         existing.delete(id);
         fingerprints.delete(id);
+        polylineSmoothEndpointsRef.current.delete(id);
         scheduledRender = true;
       }
     }
