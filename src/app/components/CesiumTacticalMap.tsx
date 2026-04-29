@@ -1096,14 +1096,6 @@ export function CesiumTacticalMap({
 
   return (
     <div className="relative w-full h-full">
-      {/* Phase indicator — physical-left so RTL chrome doesn't bury it. */}
-      <div
-        className="pointer-events-none absolute top-2 left-2 z-10 rounded-md bg-amber-500/15 px-2 py-1 text-[11px] font-medium text-amber-200 shadow-[0_0_0_1px_rgba(255,255,255,0.1)]"
-        aria-live="polite"
-      >
-        Cesium backend — Phases 2-6 ({htmlMarkers.length} markers, {polylines.length} lines)
-      </div>
-
       <CesiumMap
         ionToken={CESIUM_ION_TOKEN}
         initialView={DEFAULT_INITIAL_VIEW}
