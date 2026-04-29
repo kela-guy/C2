@@ -136,9 +136,9 @@ Fixed by:
 | `selectedEffectorIds` per-target effector highlight | ✓ | ✓ | Consumed by `engagementPair` (`CesiumTacticalMap.tsx:292`); the engagement line shifts to the user-picked Regulus, and the chosen marker gets `state='selected'` via `isEngagementEffector`. Mapbox uses the prop the same way (only in `jamPair`). |
 | `selectedLauncherIds` per-target launcher highlight | ✓ | ✓ | Consumed by `engagementPair` (`CesiumTacticalMap.tsx:327`); engagement line shifts to user-picked launcher and the marker's `isEngaged` check sets `state='selected'`. |
 | `pathFinderConnectedId` Starling drone connect state | ✓ | 🚫 | Dropped from Cesium scope — not pursuing pathfinder/Starling parity. |
-| FPS within 10% of Mapbox | ✓ | ✗ | Profile in this phase. |
-| No memory leaks across 5 min of interaction | ✓ | ✗ | |
-| Bundle size impact | n/a | ✗ | Already +1.3 MB; offset by Phase 9 Mapbox removal. |
+| FPS within 10% of Mapbox | ✓ | ⚠ | Cannot benchmark headlessly — preview tab is background-throttled and `rAF` drops to ~0.1 Hz, swamping any real frame-rate signal. **Run manually:** open `?map=mapbox` and `?map=cesium` side-by-side with focused windows, watch Chrome DevTools FPS meter while panning + interacting. |
+| No memory leaks across 5 min of interaction | ✓ | ⚠ | Baseline at idle: 111.9 MB used / 163.9 MB total JS heap (`performance.memory`). 5-minute interaction-and-compare needs a focused tab + scripted scenario; manual run pending. |
+| Bundle size impact | n/a | ⚠ | Main JS chunk: **1,354 kB / 394 kB gzip** (Cesium runtime is the bulk). Mapbox still co-bundled at 988 kB / 276 kB gzip — removed in Phase 9 cutover, which roughly halves that. |
 
 ## Phase 8 — Cutover
 
