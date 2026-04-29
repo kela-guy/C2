@@ -427,6 +427,21 @@ export function CesiumMap({
         console.error('[CesiumMap] failed to load Ion imagery:', err);
       });
 
+    // Cesium World Terrain (Ion asset 1). Without it the globe is a smooth
+    // ellipsoid and 3D mode reads as a tilted satellite image — no real
+    // depth. The terrain provider streams elevation tiles on demand and is
+    // a no-op cost in 2D mode (heights are loaded but rendered flat).
+    // Same destroy guard as the imagery loader for the same reason.
+    Cesium.createWorldTerrainAsync()
+      .then((terrain) => {
+        if (viewer.isDestroyed()) return;
+        viewer.terrainProvider = terrain;
+      })
+      .catch((err) => {
+        if (viewer.isDestroyed()) return;
+        console.error('[CesiumMap] failed to load world terrain:', err);
+      });
+
     viewer.scene.mode = SCENE_MODE_MAP[sceneMode];
 
     // Initial camera position. Use `setView` (instant) + a deliberately tall
@@ -611,14 +626,40 @@ export function CesiumMap({
       if (cart && cart.height > 6_000) {
         const lat = (cart.latitude * 180) / Math.PI;
         const lon = (cart.longitude * 180) / Math.PI;
+        // Oblique side-on shot — terrain reads in 3D, hills cast depth.
+        // -30° pitch keeps things closer to horizontal than a top-down
+        // bird's-eye, so foreground/background separation is obvious.
+        // 2.5 km altitude at this pitch puts the viewer roughly 4–5 km
+        // back from the centre point — close enough that drone-scale
+        // entities aren't lost in the satellite imagery, far enough
+        // that the surrounding terrain context stays visible.
+        //
+        // The flyTo target is *behind* the centre point (offset along
+        // the camera's view direction) so the camera ends up looking
+        // toward the centre, not from straight above it.
+        const PITCH_DEG = -30;
+        const HEIGHT_M = 2_500;
+        const pitchRad = Cesium.Math.toRadians(PITCH_DEG);
+        const heading = viewer.camera.heading;
+        // Offset the destination so that a -30° pitch + position-back
+        // -from-target lands the centre near the middle of the screen.
+        // distBack = height / tan(|pitch|) — geometric back-up so the
+        // look-vector intersects ground at the original centre.
+        const distBack = HEIGHT_M / Math.tan(Math.abs(pitchRad));
+        // Convert distBack metres into a lat offset along the heading.
+        // Heading 0 = north; offset back is opposite (-cos / -sin).
+        const dLat = -Math.cos(heading) * (distBack / 111_000);
+        const dLon =
+          -Math.sin(heading) *
+          (distBack / (111_000 * Math.cos((lat * Math.PI) / 180)));
         viewer.camera.flyTo({
-          destination: Cesium.Cartesian3.fromDegrees(lon, lat, 4_000),
+          destination: Cesium.Cartesian3.fromDegrees(lon + dLon, lat + dLat, HEIGHT_M),
           orientation: {
-            pitch: Cesium.Math.toRadians(-45),
-            heading: viewer.camera.heading,
+            pitch: pitchRad,
+            heading,
             roll: 0,
           },
-          duration: 0.6,
+          duration: 0.8,
         });
       }
     }
