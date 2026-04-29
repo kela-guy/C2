@@ -358,10 +358,21 @@ export function CesiumMap({
     // Cartesian to canvas coords and translate the corresponding DOM node.
     // Cheap (~20 div translates per frame) and matches what Mapbox does
     // internally for `mapboxgl.Marker`.
+    //
+    // Markers are also clipped against the canvas viewport here:
+    // `cartesianToCanvasCoordinates` happily returns coordinates past the
+    // right / bottom edge of the canvas (it only returns `undefined` for
+    // points behind the camera), so without this guard a marker projected
+    // off the right of the map would slide under any overlay panel that
+    // happens to share the screen — visible because the marker's own DOM
+    // wrapper has no stacking context of its own.
     const removePreRender = viewer.scene.preRender.addEventListener(() => {
       const nodes = htmlMarkerNodesRef.current;
       const cartesians = htmlMarkerCartesianRef.current;
       if (nodes.size === 0) return;
+      const canvas = viewer.canvas;
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
       for (const [id, node] of nodes) {
         const cart = cartesians.get(id);
         if (!cart) {
@@ -371,6 +382,18 @@ export function CesiumMap({
         const screen = viewer.scene.cartesianToCanvasCoordinates(cart);
         if (!screen) {
           // Off-screen / behind the globe.
+          node.style.display = 'none';
+          continue;
+        }
+        // Drop a marker margin so the icon itself stays clear of the edge
+        // before we hide it (instead of clipping mid-icon).
+        const margin = 32;
+        if (
+          screen.x < -margin ||
+          screen.y < -margin ||
+          screen.x > w + margin ||
+          screen.y > h + margin
+        ) {
           node.style.display = 'none';
           continue;
         }
@@ -695,7 +718,15 @@ export function CesiumMap({
         `relative` here because that would override `position: absolute`
         in the dashboard chain and collapse the container to 0×0.
       */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      {/*
+        `isolate` (`isolation: isolate`) creates a fresh stacking context
+        on this overlay so the per-marker `zIndex` values (10..60) only
+        compete with each other — they can't outrank surrounding chrome
+        like the dashboard's side panel, which sits at a moderate
+        document-root `z-index: 10` but should always render above the
+        map regardless of how active a marker is.
+      */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden isolate">
         {htmlMarkers?.map((m) => (
           <div
             key={m.id}
