@@ -837,7 +837,9 @@ export function CesiumTacticalMap({
     // Active-target engagement line (jam or weapon flow). Mirrors the
     // dashed line Mapbox draws between the active target and the resolved
     // effector (`TacticalMap.tsx:1456-1472`). Colour is phase-driven —
-    // white at idle, red while mitigating, etc.
+    // white at idle, red while mitigating, etc. Three spring-eased
+    // particle dots flow along the line so the engagement direction
+    // reads at a glance, matching `useEngagementLine.ts` exactly.
     if (engagementPair) {
       out.push({
         id: `${engagementPair.flow}-engagement-line`,
@@ -848,6 +850,7 @@ export function CesiumTacticalMap({
         color: engagementPair.lineColor,
         width: 2,
         dashed: true,
+        particles: { count: 3, color: engagementPair.lineColor, speed: 0.25 },
       });
     }
 

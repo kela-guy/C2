@@ -67,6 +67,20 @@ export interface CesiumPolyline {
   width?: number;
   /** When true, renders as a flowing dashed line (engagement-line style). */
   dashed?: boolean;
+  /**
+   * Animated particles flowing from the first to the last point of the
+   * line. Used for engagement-pair viz so the user sees a clear direction
+   * of fire even on a still map. Spring-eased so each dot accelerates and
+   * settles into the target — mirrors Mapbox's `useEngagementLine` look.
+   */
+  particles?: {
+    /** Number of dots flowing along the line. Mapbox uses 3. */
+    count: number;
+    /** Core dot colour. Defaults to the line's `color`. */
+    color?: string;
+    /** Cycles per second. `0.25` ≈ 4 s loop, matching Mapbox. */
+    speed?: number;
+  };
 }
 
 /**
@@ -187,6 +201,40 @@ function buildSectorPositions(
   return positions;
 }
 
+/**
+ * Lazy-built spring lookup table for particle easing. Same physics
+ * constants as `useEngagementLine.ts` so the Cesium and Mapbox paths
+ * accelerate / settle identically. Built on first use, then cached.
+ */
+let SPRING_LUT_CACHE: number[] | null = null;
+function getSpringLUT(): number[] {
+  if (SPRING_LUT_CACHE) return SPRING_LUT_CACHE;
+  const stiffness = 160;
+  const damping = 70;
+  const mass = 1;
+  const steps = 300;
+  const dt = 1 / 120;
+  let x = 0;
+  let v = 0;
+  const lut: number[] = [];
+  for (let i = 0; i <= steps; i++) {
+    lut.push(Math.max(0, Math.min(x, 1.5)));
+    const a = (-stiffness * (x - 1) - damping * v) / mass;
+    v += a * dt;
+    x += v * dt;
+  }
+  SPRING_LUT_CACHE = lut;
+  return lut;
+}
+
+function easeSpring(t: number): number {
+  const lut = getSpringLUT();
+  const idx = t * (lut.length - 1);
+  const lo = Math.floor(idx);
+  const hi = Math.min(lo + 1, lut.length - 1);
+  return lut[lo] + (lut[hi] - lut[lo]) * (idx - lo);
+}
+
 const SCENE_MODE_MAP: Record<CesiumSceneMode, Cesium.SceneMode> = {
   '2D': Cesium.SceneMode.SCENE2D,
   '2.5D': Cesium.SceneMode.COLUMBUS_VIEW,
@@ -236,6 +284,19 @@ export function CesiumMap({
    */
   const polylineFingerprintRef = useRef<
     Map<string, { len: number; firstLat: number; firstLon: number; lastLat: number; lastLon: number; color: string; width: number; dashed: boolean }>
+  >(new Map());
+
+  /**
+   * Per-polyline particle entities + endpoint cache. Particles read their
+   * `from` / `to` lat-lon from this cache via a `CallbackProperty` so the
+   * same particle entity can keep flowing along a line whose endpoints
+   * change (e.g. when the engagement pair re-resolves to a different
+   * effector); the cache is updated in place, and Cesium's per-frame
+   * property evaluation picks up the new endpoints automatically.
+   */
+  const polylineParticleEntitiesRef = useRef<Map<string, Cesium.Entity[]>>(new Map());
+  const polylineParticleEndpointsRef = useRef<
+    Map<string, { fromLat: number; fromLon: number; toLat: number; toLon: number }>
   >(new Map());
   /**
    * Per-frame screen positions for HTML markers. We compute Cartesian once
@@ -400,6 +461,8 @@ export function CesiumMap({
       htmlGeometryEntitiesRef.current = [];
       polylineEntitiesRef.current.clear();
       polylineFingerprintRef.current.clear();
+      polylineParticleEntitiesRef.current.clear();
+      polylineParticleEndpointsRef.current.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mountReady]);
@@ -597,6 +660,8 @@ export function CesiumMap({
 
     const existing = polylineEntitiesRef.current;
     const fingerprints = polylineFingerprintRef.current;
+    const particleEntities = polylineParticleEntitiesRef.current;
+    const particleEndpoints = polylineParticleEndpointsRef.current;
     const desiredIds = new Set<string>();
     let scheduledRender = false;
 
@@ -634,31 +699,34 @@ export function CesiumMap({
           prev.width === next.width &&
           prev.dashed === next.dashed;
 
+        // Particle endpoints always need to track the latest first / last
+        // points, even on otherwise-unchanged updates, so the moving dots
+        // re-target if the engagement pair switches mid-flight.
+        if (line.particles && line.particles.count > 0) {
+          particleEndpoints.set(line.id, {
+            fromLat: first.lat,
+            fromLon: first.lon,
+            toLat: last.lat,
+            toLon: last.lon,
+          });
+        }
+
         if (entity && sameAsPrev) {
-          // No change → don't touch Cesium at all. This is the hot path that
-          // kills the drone-trail flicker on idle ticks.
+          // No change → don't touch Cesium polyline. The endpoint cache
+          // above still got refreshed so any in-flight particle animation
+          // tracks the new positions on its next frame.
           continue;
         }
 
         const positions = line.points.map((p) => Cesium.Cartesian3.fromDegrees(p.lon, p.lat));
         const cesiumColor = Cesium.Color.fromCssColorString(colorCss);
-        // Animated dash flow — the bit pattern (16-bit, 1 = dash) is rotated
-        // every frame so the dashes appear to slide along the line. Cesium's
-        // default render loop evaluates `CallbackProperty` (with
-        // `isConstant=false`) on every frame, so the effect is automatic
-        // for a viewer that isn't in `requestRenderMode`. Mirrors the
-        // visual intent of Mapbox's particle-flow engagement line without
-        // needing additional moving entities.
+        // Static dashed pattern. Earlier I tried animating the dash via a
+        // `CallbackProperty` that rotated the 16-bit pattern, but each
+        // rotation step represents a discrete dash/gap flip rather than a
+        // continuous slide — visible as the "glitching" the user reported.
+        // The flow motion now comes from per-line particle dots (below).
         const material = dashed
-          ? new Cesium.PolylineDashMaterialProperty({
-              color: cesiumColor,
-              dashLength: 16,
-              dashPattern: new Cesium.CallbackProperty(() => {
-                const base = 0xff00;
-                const shift = Math.floor(Date.now() / 60) % 16;
-                return ((base << shift) | (base >>> (16 - shift))) & 0xffff;
-              }, false),
-            })
+          ? new Cesium.PolylineDashMaterialProperty({ color: cesiumColor, dashLength: 12 })
           : new Cesium.ColorMaterialProperty(cesiumColor);
 
         if (entity?.polyline) {
@@ -678,6 +746,49 @@ export function CesiumMap({
         }
         fingerprints.set(line.id, next);
         scheduledRender = true;
+
+        // Spawn particle entities the first time we see a polyline that
+        // requested them. The CallbackProperty closure reads from the
+        // endpoints ref, so the same entity follows whatever the latest
+        // start / end points are without us having to recreate it.
+        if (line.particles && line.particles.count > 0 && !particleEntities.has(line.id)) {
+          const count = line.particles.count;
+          const speed = line.particles.speed ?? 0.25;
+          const dotColor = Cesium.Color.fromCssColorString(line.particles.color ?? colorCss);
+          const lineId = line.id;
+          const created: Cesium.Entity[] = [];
+          for (let i = 0; i < count; i++) {
+            const phaseOffset = i / count;
+            const positionProp = new Cesium.CallbackProperty((_time, result) => {
+              const endpoints = polylineParticleEndpointsRef.current.get(lineId);
+              if (!endpoints) {
+                return Cesium.Cartesian3.fromDegrees(0, 0, 0, undefined, result);
+              }
+              const t = ((Date.now() / 1000) * speed + phaseOffset) % 1;
+              const eased = easeSpring(t);
+              return Cesium.Cartesian3.fromDegrees(
+                endpoints.fromLon + (endpoints.toLon - endpoints.fromLon) * eased,
+                endpoints.fromLat + (endpoints.toLat - endpoints.fromLat) * eased,
+                0,
+                undefined,
+                result,
+              );
+            }, false);
+            const particleEntity = viewer.entities.add({
+              id: `${lineId}__particle-${i}`,
+              position: positionProp,
+              point: {
+                pixelSize: 6,
+                color: dotColor,
+                outlineColor: dotColor.withAlpha(0.35),
+                outlineWidth: 6,
+                disableDepthTestDistance: Number.POSITIVE_INFINITY,
+              },
+            });
+            created.push(particleEntity);
+          }
+          particleEntities.set(lineId, created);
+        }
       }
     }
 
@@ -687,6 +798,15 @@ export function CesiumMap({
         viewer.entities.remove(entity);
         existing.delete(id);
         fingerprints.delete(id);
+        scheduledRender = true;
+      }
+    }
+    // Tear down particles for any line that's no longer present.
+    for (const [id, particles] of particleEntities) {
+      if (!desiredIds.has(id)) {
+        for (const p of particles) viewer.entities.remove(p);
+        particleEntities.delete(id);
+        particleEndpoints.delete(id);
         scheduledRender = true;
       }
     }
