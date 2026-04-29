@@ -336,6 +336,14 @@ export function CesiumMap({
    */
   const htmlMarkerNodesRef = useRef<Map<string, HTMLDivElement>>(new Map());
   const htmlMarkerCartesianRef = useRef<Map<string, Cesium.Cartesian3>>(new Map());
+  /**
+   * Per-id lat/lon for non-kinematic html markers. Kept alongside the
+   * Cartesian3 cache so the per-frame loop can re-project at the terrain
+   * surface when in 3D mode (markers default to altitude 0; without a
+   * terrain-aware altitude they'd float above hills or sink under them
+   * after a 2D → 3D toggle, visibly mis-aligned with the imagery beneath).
+   */
+  const htmlMarkerCartographicRef = useRef<Map<string, { lat: number; lon: number }>>(new Map());
 
   /**
    * Per-id motion tracks for `htmlMarkers[m].kinematic === true`. Lat/lon
@@ -487,13 +495,27 @@ export function CesiumMap({
     // panel). No explicit bounds check here — `clientWidth`/`clientHeight`
     // can momentarily report 0 during initial layout, which would briefly
     // hide every marker if we gated rendering on them.
+    // Reusable Cartographic for the per-frame terrain-height sample.
+    // Allocated once at scope; mutated in place per marker per frame to
+    // avoid GC churn on a hot path.
+    const terrainSampleCarto = new Cesium.Cartographic();
     const removePreRender = viewer.scene.preRender.addEventListener(() => {
       const nodes = htmlMarkerNodesRef.current;
       const cartesians = htmlMarkerCartesianRef.current;
+      const cartographics = htmlMarkerCartographicRef.current;
       const tracks = motionTracksRef.current;
       const kinematicScratch = kinematicCartesianScratchRef.current;
       if (nodes.size === 0) return;
       const now = Date.now();
+      // In 3D mode the imagery is draped over real terrain elevation. Markers
+      // default to altitude 0 (ellipsoid) — without sampling terrain height,
+      // an icon meant to sit on a 50 m hill ends up 50 m underground (or
+      // visibly above when on a depression). This reads as the markers
+      // "shifting" when the user toggles 2D → 3D. We sample once per marker
+      // per frame; ~22 markers, cheap. In 2D mode the orthographic
+      // projection ignores altitude, so we skip the work entirely.
+      const isMode3D = viewer.scene.mode === Cesium.SceneMode.SCENE3D;
+      const globe = viewer.scene.globe;
       // Kinematic tracks that are still smoothing toward the latest
       // sample or extrapolating forward need the scene to keep
       // rendering — Cesium's request-render mode would otherwise idle
@@ -506,12 +528,29 @@ export function CesiumMap({
           const s = track.query(now);
           const scratch = kinematicScratch.get(id);
           if (scratch) {
-            Cesium.Cartesian3.fromDegrees(s.lon, s.lat, 0, undefined, scratch);
+            let alt = 0;
+            if (isMode3D) {
+              Cesium.Cartographic.fromDegrees(s.lon, s.lat, 0, terrainSampleCarto);
+              const h = globe.getHeight(terrainSampleCarto);
+              if (typeof h === 'number') alt = h;
+            }
+            Cesium.Cartesian3.fromDegrees(s.lon, s.lat, alt, undefined, scratch);
             cart = scratch;
           }
           if (!s.frozen) kinematicActive = true;
         } else {
           cart = cartesians.get(id);
+          if (cart && isMode3D) {
+            const carto = cartographics.get(id);
+            if (carto) {
+              Cesium.Cartographic.fromDegrees(carto.lon, carto.lat, 0, terrainSampleCarto);
+              const h = globe.getHeight(terrainSampleCarto);
+              const alt = typeof h === 'number' ? h : 0;
+              // Mutate the cached Cartesian3 in place so static markers
+              // also stay aligned to terrain without per-frame allocation.
+              Cesium.Cartesian3.fromDegrees(carto.lon, carto.lat, alt, undefined, cart);
+            }
+          }
         }
         if (!cart) {
           node.style.display = 'none';
@@ -547,6 +586,7 @@ export function CesiumMap({
       polylineSmoothEndpointsRef.current.clear();
       motionTracksRef.current.clear();
       kinematicCartesianScratchRef.current.clear();
+      htmlMarkerCartographicRef.current.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mountReady]);
@@ -562,7 +602,9 @@ export function CesiumMap({
   // they don't leak across long sessions.
   useEffect(() => {
     const cache = htmlMarkerCartesianRef.current;
+    const cartographics = htmlMarkerCartographicRef.current;
     cache.clear();
+    cartographics.clear();
     if (!htmlMarkers) {
       motionTracksRef.current.clear();
       kinematicCartesianScratchRef.current.clear();
@@ -582,7 +624,10 @@ export function CesiumMap({
         }
         track.pushSample(m.lat, m.lon, sampleAt);
       } else {
+        // Cache as a fresh Cartesian3 we can mutate in place each frame —
+        // the preRender loop re-projects at the terrain surface in 3D.
         cache.set(m.id, Cesium.Cartesian3.fromDegrees(m.lon, m.lat));
+        cartographics.set(m.id, { lat: m.lat, lon: m.lon });
       }
     }
 
