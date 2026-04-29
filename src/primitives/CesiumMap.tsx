@@ -704,14 +704,17 @@ export function CesiumMap({
         in the dashboard chain and collapse the container to 0×0.
       */}
       {/*
-        `isolate` (`isolation: isolate`) creates a fresh stacking context
-        on this overlay so the per-marker `zIndex` values (10..60) only
-        compete with each other — they can't outrank surrounding chrome
-        like the dashboard's side panel, which sits at a moderate
-        document-root `z-index: 10` but should always render above the
-        map regardless of how active a marker is.
+        Stack the overlay explicitly above the Cesium canvas (which Cesium
+        appends to the same `containerRef` after React mounts, so a plain
+        `z-auto` overlay would lose to it in source-order tie-break) and
+        below dashboard chrome that sits higher in the document — the side
+        panel uses `z-30`, so a single-digit z-index here keeps markers
+        on top of the map without breaking out of the dashboard's stack.
+        `position: absolute` + a numeric z-index also creates a stacking
+        context, so the per-marker `zIndex` values (10..60) only compete
+        with each other instead of bubbling up to the document root.
       */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden isolate">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden z-[1]">
         {htmlMarkers?.map((m) => (
           <div
             key={m.id}
