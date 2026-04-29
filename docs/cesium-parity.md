@@ -131,11 +131,11 @@ Fixed by:
 | Capability | Mapbox | Cesium | Notes |
 |---|---|---|---|
 | `controlIndicator` overlay | ✓ | ✗ | |
-| `planningMode` click-to-add waypoints | ✓ | ✗ | |
+| `planningMode` click-to-add waypoints | ✓ | 🚫 | Dropped from Cesium scope — drone-mission waypoint authoring stays Mapbox-only for now. |
 | `planningScanViz` camera scan visualization | ✓ | ✗ | |
 | `selectedEffectorIds` per-target effector highlight | ✓ | ✗ | |
 | `selectedLauncherIds` per-target launcher highlight | ✓ | ✗ | |
-| `pathFinderConnectedId` Starling drone connect state | ✓ | ✗ | |
+| `pathFinderConnectedId` Starling drone connect state | ✓ | 🚫 | Dropped from Cesium scope — not pursuing pathfinder/Starling parity. |
 | FPS within 10% of Mapbox | ✓ | ✗ | Profile in this phase. |
 | No memory leaks across 5 min of interaction | ✓ | ✗ | |
 | Bundle size impact | n/a | ✗ | Already +1.3 MB; offset by Phase 9 Mapbox removal. |
