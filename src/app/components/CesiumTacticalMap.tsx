@@ -87,13 +87,20 @@ const droneRotationFromHeading = (headingDeg: number | null | undefined): number
   (headingDeg ?? 0) - 90;
 
 /**
- * Heading window — must match the value the motion tracker uses internally
- * for its angular-velocity regression so the icon rotation and the per-frame
- * smoothed position agree on which way the track is "facing".
+ * Heading window. Deliberately shorter than the velocity window (5-10 s in
+ * the motion tracker): linear speed changes slowly so a longer window damps
+ * sample noise without noticeable lag, but heading can change fast — at
+ * loiter-drone turn rates of ~18°/s, a 5 s window means the regression is
+ * trying to fit ~90° of rotation as a single line, and during a target-
+ * heading change mid-window the fit underestimates the current turn rate.
+ * Result: icon visibly lags the actual direction of motion.
+ *
+ * 1.5 s is six samples at 4 Hz — enough pair-bearings for stable regression
+ * while keeping the projection-to-head close to the instantaneous tangent.
  */
-const HEADING_WINDOW_MS = 5000;
+const HEADING_WINDOW_MS = 1500;
 /** Min trail points before we trust the regression; fall back to last-pair below this. */
-const HEADING_MIN_REGRESSION_PAIRS = 3;
+const HEADING_MIN_REGRESSION_PAIRS = 2;
 
 /**
  * Derive a heading for a hostile target from a sliding window of its trail.
