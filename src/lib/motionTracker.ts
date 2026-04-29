@@ -9,12 +9,38 @@
  *   2. Returns a smoothed render position via `query(now)` — the caller is
  *      Cesium's per-frame `preRender` hook.
  *
- * Between fresh samples the track interpolates (eases the displayed position
- * toward the latest sample). Once the gap exceeds `EXTRAP_AFTER_MS` it
- * starts predicting forward along the last-known velocity vector. Past
- * `STALE_AT_MS` the track latches `frozen = true`, holds the last displayed
- * position, and the halo radius pegs at `MAX_HALO_M` so the operator sees
- * "we don't actually know where this is anymore".
+ * ─── Smoothing model ─────────────────────────────────────────────────────
+ *
+ * Two layers stacked on top of each other:
+ *
+ *   1. **Windowed regression** over a 5-10 s sliding window of recent samples
+ *      gives a stable instantaneous estimate of linear velocity and angular
+ *      velocity (heading rate). Single-pair velocity is too noisy on real
+ *      sensor data — sample noise gets directly amplified into velocity
+ *      noise — so we fit a line through the recent samples instead.
+ *      Window adapts: tries 5 s first, extends to 10 s if there aren't
+ *      enough samples for a stable fit.
+ *
+ *   2. **Exponential display smoothing** at frame rate eases the rendered
+ *      position + heading toward the regression-derived target. `τ = 250 ms`
+ *      is critically-damped-feeling.
+ *
+ * Forward extrapolation when samples go quiet uses the smoothed velocity and
+ * smoothed angular velocity, so heading keeps tracking through turns even
+ * after the last sample arrives.
+ *
+ * ─── Why no acceleration / jerk ──────────────────────────────────────────
+ *
+ * For loitering drones / vehicles / vessels, motion is approximately
+ * constant-velocity-with-occasional-turns. Acceleration estimates from the
+ * same 5-10 s window are noise-dominated (tiny signal, sample-noise floor)
+ * and adding ̇v (or angular jerk ω̇) to extrapolation would *amplify* noise
+ * rather than reduce it. Same conclusion for jerk.
+ *
+ * Accelerating tracks (missiles boosting, accelerating vehicles) are an
+ * edge case where a constant-acceleration model would help; out of scope
+ * for this iteration. Tracked entities don't currently include any such
+ * profiles.
  *
  * Pure module — no Cesium / DOM imports — so it stays unit-testable and the
  * map primitive owns the per-frame integration loop.
@@ -41,8 +67,22 @@ const MAX_HALO_M = 800;
  * last good heading instead so a stationary blob doesn't spin.
  */
 const HEADING_FROM_VEL_MIN_M_PER_S = 0.5;
-/** Number of recent samples kept (only the last two are read for velocity). */
-const SAMPLE_RING_SIZE = 4;
+
+/**
+ * Sliding window for velocity / angular-velocity regression. Try the
+ * preferred window first; if too few samples land in it (e.g. very sparse
+ * feeds), extend up to the max. Always need at least `MIN_REGRESSION_SAMPLES`
+ * to fit a line stably.
+ */
+const VELOCITY_WINDOW_PREFERRED_MS = 5000;
+const VELOCITY_WINDOW_MAX_MS = 10000;
+const MIN_REGRESSION_SAMPLES = 3;
+/**
+ * How many samples we hold in the buffer. 64 covers ~16 s at 4 Hz; older
+ * samples are evicted by `VELOCITY_WINDOW_MAX_MS` first, so this is just a
+ * runaway-memory guard for very high sample rates.
+ */
+const SAMPLE_BUFFER_MAX = 64;
 
 interface Sample {
   lat: number;
@@ -121,14 +161,41 @@ function shortestArcDeg(a: number, b: number): number {
   return d;
 }
 
+/**
+ * Least-squares slope for `y = slope * t + intercept` over (tᵢ, yᵢ) pairs.
+ * `t` is in milliseconds, so the returned slope is per-millisecond — caller
+ * scales by 1000 to get per-second.
+ *
+ * Returns 0 when the time variance is zero (all samples at the same instant
+ * — degenerate, can't fit a line).
+ */
+function regressSlopePerMs(pts: ReadonlyArray<{ t: number; y: number }>): number {
+  const n = pts.length;
+  if (n < 2) return 0;
+  let sumT = 0;
+  let sumY = 0;
+  for (let i = 0; i < n; i++) {
+    sumT += pts[i].t;
+    sumY += pts[i].y;
+  }
+  const meanT = sumT / n;
+  const meanY = sumY / n;
+  let num = 0;
+  let denom = 0;
+  for (let i = 0; i < n; i++) {
+    const dt = pts[i].t - meanT;
+    num += dt * (pts[i].y - meanY);
+    denom += dt * dt;
+  }
+  return denom > 0 ? num / denom : 0;
+}
+
 export function createMotionTrack(): MotionTrack {
   const samples: Sample[] = [];
   let displayLat = 0;
   let displayLon = 0;
   let displayHeadingDeg: number | null = null;
   let lastQueryAt = 0;
-  let velLatPerSec = 0;
-  let velLonPerSec = 0;
   let frozen = false;
   let initialised = false;
   // Snapshot of the most recent `query()` result. `peek()` returns this
@@ -142,6 +209,97 @@ export function createMotionTrack(): MotionTrack {
     haloRadiusM: MAX_HALO_M,
     frozen: false,
   };
+
+  /**
+   * Pick the regression window adaptively: prefer 5 s, but extend up to
+   * 10 s if not enough samples landed in the shorter window. Returns the
+   * tail of `samples` that lies inside the chosen window.
+   */
+  function selectWindow(now: number): Sample[] {
+    const start = (cutoff: number) => {
+      // samples is time-sorted; binary search would be nicer but n ≤ 64.
+      for (let i = samples.length - 1; i >= 0; i--) {
+        if (samples[i].t < cutoff) return i + 1;
+      }
+      return 0;
+    };
+    let from = start(now - VELOCITY_WINDOW_PREFERRED_MS);
+    if (samples.length - from < MIN_REGRESSION_SAMPLES) {
+      from = start(now - VELOCITY_WINDOW_MAX_MS);
+    }
+    return samples.slice(from);
+  }
+
+  /**
+   * Linear velocity from least-squares regression on (t, lat) and (t, lon).
+   * Falls back to the last-two-sample chord if there aren't enough samples
+   * for a stable fit (initial moments after `pushSample`, or after a teleport).
+   */
+  function computeVelocity(window: Sample[]): { vLatPerSec: number; vLonPerSec: number } {
+    if (window.length < 2) return { vLatPerSec: 0, vLonPerSec: 0 };
+    if (window.length < MIN_REGRESSION_SAMPLES) {
+      const a = window[0];
+      const b = window[window.length - 1];
+      const dt = (b.t - a.t) / 1000;
+      if (dt <= 0) return { vLatPerSec: 0, vLonPerSec: 0 };
+      return { vLatPerSec: (b.lat - a.lat) / dt, vLonPerSec: (b.lon - a.lon) / dt };
+    }
+    const latPts = window.map((s) => ({ t: s.t, y: s.lat }));
+    const lonPts = window.map((s) => ({ t: s.t, y: s.lon }));
+    const vLatPerMs = regressSlopePerMs(latPts);
+    const vLonPerMs = regressSlopePerMs(lonPts);
+    return { vLatPerSec: vLatPerMs * 1000, vLonPerSec: vLonPerMs * 1000 };
+  }
+
+  /**
+   * Heading + angular velocity from the same window.
+   *
+   * For each consecutive sample pair (a, b) we get an instantaneous bearing
+   * (a → b) tagged at the midpoint timestamp. Pairs whose chord-speed is
+   * below the heading floor are skipped (sensor noise dominates direction
+   * for stationary blobs). The remaining pair-bearings are unwrapped (so a
+   * slow turn through 0/360 doesn't read as a 360°/s spin) and least-squares
+   * regressed against time → angular velocity in deg/s.
+   *
+   * Heading itself is the newest pair-bearing, so it tracks the current
+   * direction of travel rather than a window-averaged direction (which would
+   * lag too much during turns).
+   */
+  function computeAngular(window: Sample[]): { headingDeg: number | null; angVelDegPerSec: number } {
+    if (window.length < 2) return { headingDeg: null, angVelDegPerSec: 0 };
+
+    // Pair-wise bearings + chord-speed filter.
+    const pairs: Array<{ t: number; h: number }> = [];
+    for (let i = 1; i < window.length; i++) {
+      const a = window[i - 1];
+      const b = window[i];
+      const dt = (b.t - a.t) / 1000;
+      if (dt <= 0) continue;
+      const speed = approxDistanceM(a.lat, a.lon, b.lat, b.lon) / dt;
+      if (speed < HEADING_FROM_VEL_MIN_M_PER_S) continue;
+      pairs.push({ t: (a.t + b.t) / 2, h: bearingDeg(a.lat, a.lon, b.lat, b.lon) });
+    }
+    if (pairs.length === 0) return { headingDeg: null, angVelDegPerSec: 0 };
+
+    // Latest bearing → instantaneous heading.
+    const latestHeading = pairs[pairs.length - 1].h;
+
+    if (pairs.length < MIN_REGRESSION_SAMPLES) {
+      // Not enough pairs to regress angular velocity stably.
+      return { headingDeg: latestHeading, angVelDegPerSec: 0 };
+    }
+
+    // Unwrap so a turn from 350° → 10° reads as +20° not -340°.
+    const unwrapped: number[] = [pairs[0].h];
+    for (let i = 1; i < pairs.length; i++) {
+      const delta = shortestArcDeg(pairs[i - 1].h, pairs[i].h);
+      unwrapped.push(unwrapped[i - 1] + delta);
+    }
+    const angPts = pairs.map((p, i) => ({ t: p.t, y: unwrapped[i] }));
+    const omegaPerMs = regressSlopePerMs(angPts);
+
+    return { headingDeg: latestHeading, angVelDegPerSec: omegaPerMs * 1000 };
+  }
 
   const pushSample = (lat: number, lon: number, t: number) => {
     // Drop out-of-order arrivals — keeps velocity sane if a delayed packet
@@ -175,14 +333,12 @@ export function createMotionTrack(): MotionTrack {
     const distM = approxDistanceM(last.lat, last.lon, lat, lon);
     if (distM > TELEPORT_M) {
       // Teleport — abandon the smoothing path, snap to the new sample, and
-      // throw away the velocity (it's now meaningless). Clear the freeze
+      // throw away the buffer (history is now meaningless). Clear the freeze
       // latch so the next `query` exits the held state.
       samples.length = 0;
       samples.push({ lat, lon, t });
       displayLat = lat;
       displayLon = lon;
-      velLatPerSec = 0;
-      velLonPerSec = 0;
       displayHeadingDeg = null;
       frozen = false;
       snapshot = {
@@ -198,24 +354,14 @@ export function createMotionTrack(): MotionTrack {
     }
 
     samples.push({ lat, lon, t });
-    if (samples.length > SAMPLE_RING_SIZE) samples.shift();
 
-    // Velocity from the two newest samples. With only one sample we leave
-    // velocity at zero (no extrapolation possible yet).
-    const a = samples[samples.length - 2];
-    const b = samples[samples.length - 1];
-    const dt = (b.t - a.t) / 1000;
-    if (dt > 0) {
-      velLatPerSec = (b.lat - a.lat) / dt;
-      velLonPerSec = (b.lon - a.lon) / dt;
+    // Evict samples older than the regression window's max (10 s by default)
+    // so the buffer doesn't grow unboundedly on long-lived tracks.
+    const evictBefore = t - VELOCITY_WINDOW_MAX_MS;
+    while (samples.length > 0 && samples[0].t < evictBefore) samples.shift();
 
-      // Derive heading from the velocity vector. Below the speed floor the
-      // direction is dominated by sensor noise — keep the previous heading.
-      const groundSpeed = approxDistanceM(a.lat, a.lon, b.lat, b.lon) / dt;
-      if (groundSpeed >= HEADING_FROM_VEL_MIN_M_PER_S) {
-        displayHeadingDeg = bearingDeg(a.lat, a.lon, b.lat, b.lon);
-      }
-    }
+    // Hard cap as a memory guard for very high sample-rate feeds.
+    while (samples.length > SAMPLE_BUFFER_MAX) samples.shift();
 
     // A fresh sample always thaws the freeze latch — we're getting data again.
     frozen = false;
@@ -226,10 +372,14 @@ export function createMotionTrack(): MotionTrack {
       return snapshot;
     }
 
+    const window = selectWindow(now);
+    const { vLatPerSec, vLonPerSec } = computeVelocity(window);
+    const { headingDeg: instHeading, angVelDegPerSec } = computeAngular(window);
+
     const newest = samples[samples.length - 1];
     const ageMs = now - newest.t;
 
-    // Compute target position the smoother is chasing.
+    // ── Target position ───────────────────────────────────────────────────
     let targetLat: number;
     let targetLon: number;
 
@@ -243,12 +393,12 @@ export function createMotionTrack(): MotionTrack {
       targetLat = newest.lat;
       targetLon = newest.lon;
     } else if (ageMs <= STALE_AT_MS) {
-      // Predict forward along the last-known velocity vector. Capped at
-      // STALE_AT_MS-worth of extrapolation so the prediction doesn't fly
-      // arbitrarily far past the last fix.
+      // Predict forward along the smoothed velocity vector. The window is
+      // 5-10 s of recent samples so the slope is stable against per-sample
+      // noise but still tracks turns within a couple of seconds.
       const dtSec = ageMs / 1000;
-      targetLat = newest.lat + velLatPerSec * dtSec;
-      targetLon = newest.lon + velLonPerSec * dtSec;
+      targetLat = newest.lat + vLatPerSec * dtSec;
+      targetLon = newest.lon + vLonPerSec * dtSec;
     } else {
       // Too stale — latch frozen at the current displayed position.
       frozen = true;
@@ -256,19 +406,40 @@ export function createMotionTrack(): MotionTrack {
       targetLon = displayLon;
     }
 
-    // Exponential smoothing toward the target. `factor` is `1 - exp(-dt/τ)`
-    // which gives critically-damped-feeling motion regardless of frame rate.
+    // ── Target heading ────────────────────────────────────────────────────
+    // Use the windowed instantaneous heading; extrapolate forward by the
+    // smoothed angular velocity so a turning track keeps turning visually
+    // even after the last sample arrived. If the chord-speed filter killed
+    // every pair (stationary or near-stationary), keep the previous
+    // displayed heading rather than introducing a null.
+    let targetHeading: number | null = instHeading ?? displayHeadingDeg;
+    if (
+      instHeading != null &&
+      ageMs > EXTRAP_AFTER_MS &&
+      ageMs <= STALE_AT_MS
+    ) {
+      const dtSec = ageMs / 1000;
+      targetHeading = ((instHeading + angVelDegPerSec * dtSec) % 360 + 360) % 360;
+    }
+
+    // ── Display smoothing ─────────────────────────────────────────────────
+    // Exponential easing toward the target. `factor = 1 - exp(-dt/τ)` gives
+    // critically-damped-feeling motion regardless of frame rate.
     const dtMs = Math.max(0, now - lastQueryAt);
     const factor = 1 - Math.exp(-dtMs / SMOOTH_TAU_MS);
     displayLat += (targetLat - displayLat) * factor;
     displayLon += (targetLon - displayLon) * factor;
 
-    // Heading smoothing — same factor, but on the shortest arc so we don't
-    // spin the long way around 0/360.
-    if (displayHeadingDeg != null) {
-      // Heading is already updated on `pushSample`; we keep it as-is here.
-      // (No per-frame heading smoothing yet — adds DOM complexity for the
-      // map's per-frame loop. Heading updates land at sample rate.)
+    if (targetHeading != null) {
+      if (displayHeadingDeg == null) {
+        displayHeadingDeg = targetHeading;
+      } else {
+        // Shortest-arc lerp so the marker doesn't spin the long way around
+        // when heading crosses 0/360.
+        const delta = shortestArcDeg(displayHeadingDeg, targetHeading);
+        displayHeadingDeg =
+          ((displayHeadingDeg + delta * factor) % 360 + 360) % 360;
+      }
     }
 
     lastQueryAt = now;

@@ -87,16 +87,88 @@ const droneRotationFromHeading = (headingDeg: number | null | undefined): number
   (headingDeg ?? 0) - 90;
 
 /**
- * Derive a heading for a hostile target from the last two points of its
- * trail. Returns `null` when the trail is missing or has fewer than two
- * points (Mapbox falls back to 0°/east in that case; we hide rotation
- * entirely so the icon defaults to its base orientation).
+ * Heading window — must match the value the motion tracker uses internally
+ * for its angular-velocity regression so the icon rotation and the per-frame
+ * smoothed position agree on which way the track is "facing".
+ */
+const HEADING_WINDOW_MS = 5000;
+
+/**
+ * Derive a heading for a hostile target from a 5-second sliding window of
+ * its trail rather than just the last two points. Single-pair bearings are
+ * jumpy on real sensor data — sample noise gets directly amplified into
+ * heading noise, and you see the icon visibly twitch each tick. Computing
+ * heading from a windowed least-squares fit on (t, lat) and (t, lon) lets
+ * the rotation track the underlying direction of travel without the
+ * frame-to-frame jitter.
+ *
+ * Returns `null` when the trail is missing, too short, or every pair in
+ * the window is below the heading-from-velocity speed floor (a stationary
+ * blob, where direction is dominated by sensor noise — keep the icon at
+ * its default orientation rather than spinning randomly).
  */
 function targetHeadingFromTrail(t: Detection): number | null {
   if (!t.trail || t.trail.length < 2) return null;
-  const p0 = t.trail[t.trail.length - 2];
-  const p1 = t.trail[t.trail.length - 1];
-  return bearingDegrees(p0.lat, p0.lon, p1.lat, p1.lon);
+
+  // Pick the window: prefer the last 5 s, but if too few samples landed in
+  // it (slow feeds), use whatever we have at the tail of the trail.
+  const tail = t.trail[t.trail.length - 1];
+  const tailMs = Date.parse(tail.timestamp);
+  let from = 0;
+  if (Number.isFinite(tailMs)) {
+    const cutoff = tailMs - HEADING_WINDOW_MS;
+    for (let i = t.trail.length - 1; i >= 0; i--) {
+      const ts = Date.parse(t.trail[i].timestamp);
+      if (Number.isFinite(ts) && ts < cutoff) { from = i + 1; break; }
+    }
+  }
+  // Fall back to the last 5 trail points if timestamps weren't parseable
+  // (shouldn't happen with the current trail format, but defensive).
+  if (from === t.trail.length - 1) from = Math.max(0, t.trail.length - 5);
+
+  const window = t.trail.slice(from);
+  if (window.length < 2) return null;
+
+  // Least-squares slope of (index, lat) and (index, lon). We use index as
+  // the time proxy because trail timestamps are formatted as `HH:mm:ss`
+  // strings (not parseable in all locales) and the trail is uniformly
+  // sampled — index works as a stand-in time axis. The bearing comes from
+  // (vLat, vLon) regardless of the time scale, so any positive slope axis
+  // produces the same bearing.
+  let sumI = 0, sumLat = 0, sumLon = 0;
+  for (let i = 0; i < window.length; i++) {
+    sumI += i; sumLat += window[i].lat; sumLon += window[i].lon;
+  }
+  const meanI = sumI / window.length;
+  const meanLat = sumLat / window.length;
+  const meanLon = sumLon / window.length;
+  let nLat = 0, nLon = 0, denom = 0;
+  for (let i = 0; i < window.length; i++) {
+    const di = i - meanI;
+    nLat += di * (window[i].lat - meanLat);
+    nLon += di * (window[i].lon - meanLon);
+    denom += di * di;
+  }
+  if (denom <= 0) return null;
+  const vLat = nLat / denom;
+  const vLon = nLon / denom;
+
+  // If the regression slope says the track is essentially stationary,
+  // bearing is undefined — return the previous-pair bearing instead so
+  // the icon doesn't flip to 0° when speed dips briefly.
+  const speed2 = vLat * vLat + vLon * vLon;
+  if (speed2 < 1e-12) {
+    const a = window[window.length - 2];
+    const b = window[window.length - 1];
+    return bearingDegrees(a.lat, a.lon, b.lat, b.lon);
+  }
+
+  // Bearing from the velocity vector. `bearingDegrees` is implemented for
+  // two lat/lon points; feed it the regression's "next predicted point"
+  // along the slope direction.
+  const lat0 = meanLat;
+  const lon0 = meanLon;
+  return bearingDegrees(lat0, lon0, lat0 + vLat, lon0 + vLon);
 }
 
 /**
