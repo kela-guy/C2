@@ -202,6 +202,86 @@ function buildSectorPositions(
 }
 
 /**
+ * Animated dashed-line material. Cesium's stock
+ * `PolylineDashMaterialProperty` interprets `dashPattern` as a fixed
+ * 16-bit on/off mask sampled along the line, with no notion of a
+ * moveable offset — there's no way to "slide" the pattern over time
+ * without rewriting the shader. This factory builds a `Material` with
+ * a tiny custom GLSL `fabric` block plus a `MaterialProperty`-shaped
+ * adapter that polyline graphics can consume directly. The shader uses
+ * `materialInput.s * viewport_width` (the same trick the stock dash
+ * material uses for pixel-consistent dashes) and adds a `time` uniform
+ * that we tick from `Date.now()` each frame, so the dash boundary
+ * sweeps along the line at `speed` pixels/sec.
+ */
+function createAnimatedDashMaterialProperty(
+  cssColor: string,
+  opts: { dashLength?: number; speed?: number } = {},
+): unknown {
+  const dashLength = opts.dashLength ?? 16;
+  const speed = opts.speed ?? 24;
+  const cesiumColor = Cesium.Color.fromCssColorString(cssColor);
+
+  const material = new Cesium.Material({
+    fabric: {
+      type: 'CesiumMapAnimatedDash',
+      uniforms: {
+        color: cesiumColor,
+        time: 0.0,
+        dashLength,
+        speed,
+      },
+      source: `
+        uniform vec4 color;
+        uniform float time;
+        uniform float dashLength;
+        uniform float speed;
+
+        czm_material czm_getMaterial(czm_materialInput materialInput) {
+          czm_material material = czm_getDefaultMaterial(materialInput);
+
+          // Pixel position along the line. Same conversion the built-in
+          // PolylineDash material uses (see Cesium's
+          // PolylineDashMaterial.glsl) so dashes stay pixel-consistent
+          // regardless of camera zoom.
+          float pixelDist = materialInput.s * (czm_pixelRatio * czm_viewport.z) * 0.5;
+          // Subtract \`time * speed\` so the pattern translates along the
+          // line in the +s direction (effector → target) over time.
+          float pos = mod(pixelDist - time * speed, dashLength * 2.0);
+
+          if (pos < dashLength) {
+            material.diffuse = color.rgb;
+            material.alpha = color.a;
+          } else {
+            material.diffuse = vec3(0.0);
+            material.alpha = 0.0;
+          }
+
+          return material;
+        }
+      `,
+    },
+    translucent: true,
+  });
+
+  const event = new Cesium.Event();
+  return {
+    isConstant: false,
+    definitionChanged: event,
+    getType: () => 'CesiumMapAnimatedDash',
+    getValue: (_time: Cesium.JulianDate, _result?: Cesium.Material) => {
+      // Update the time uniform from wall-clock so the animation runs
+      // at the same speed regardless of Cesium's clock state.
+      // Modulo to keep the float small (avoid precision loss after long
+      // sessions).
+      (material.uniforms as { time: number }).time = (Date.now() % 1_000_000) / 1000;
+      return material;
+    },
+    equals: () => false,
+  };
+}
+
+/**
  * Lazy-built spring lookup table for particle easing. Same physics
  * constants as `useEngagementLine.ts` so the Cesium and Mapbox paths
  * accelerate / settle identically. Built on first use, then cached.
@@ -785,13 +865,16 @@ export function CesiumMap({
         }
 
         const cesiumColor = Cesium.Color.fromCssColorString(colorCss);
-        // Static dashed pattern. Earlier I tried animating the dash via a
-        // `CallbackProperty` that rotated the 16-bit pattern, but each
-        // rotation step represents a discrete dash/gap flip rather than a
-        // continuous slide — visible as the "glitching" the user reported.
-        // The flow motion now comes from per-line particle dots (below).
+        // Dashed lines use a custom material with a `time` uniform that
+        // shifts the dash phase each frame for a real flowing effect.
+        // Cesium's stock `PolylineDashMaterialProperty` is a fixed 16-bit
+        // pattern with no slide / offset; rotating its `dashPattern` bits
+        // via a CallbackProperty produces a wrap-around shuffle instead
+        // of a continuous slide (that's the glitch we kept hitting).
+        // Static-coloured (non-dashed) lines stay on `ColorMaterialProperty`
+        // since trails don't need motion baked into the material.
         const material = dashed
-          ? new Cesium.PolylineDashMaterialProperty({ color: cesiumColor, dashLength: 12 })
+          ? (createAnimatedDashMaterialProperty(colorCss, { dashLength: 16, speed: 24 }) as unknown as Cesium.MaterialProperty)
           : new Cesium.ColorMaterialProperty(cesiumColor);
 
         if (entity?.polyline) {
