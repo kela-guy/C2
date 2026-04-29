@@ -546,11 +546,17 @@ export function CesiumTacticalMap({
             ? 'selected'
             : 'default';
       const style = resolveMarkerStyle(state, 'friendly');
+      // "Engaged" = this Regulus is the resolved jammer for the user's
+      // active target. The treatment mirrors hover (coverage ring + tooltip
+      // + pulse) so the operator instantly sees which effector is currently
+      // pointed at the threat without having to mouse-hover. Mirrors the
+      // Mapbox conditions at TacticalMap.tsx:1818 + 1825.
+      const showHoverEffect = isHovered || isEngaged;
       out.push({
         id: e.id,
         lat: e.lat,
         lon: e.lon,
-        zIndex: isHovered ? 40 : 15,
+        zIndex: showHoverEffect ? 40 : 15,
         content: (
           <MapMarker
             icon={<SensorIcon />}
@@ -558,17 +564,15 @@ export function CesiumTacticalMap({
             surfaceSize={SENSOR_SURFACE}
             ringSize={SENSOR_RING}
             label={e.name}
-            showLabel={isHovered}
-            pulse={isHovered}
+            showLabel={showHoverEffect || isJamming}
+            pulse={showHoverEffect}
           />
         ),
         // ECM coverage ring. Hidden at rest so the map doesn't get cluttered
-        // with overlapping translucent circles — appears on hover (or when
-        // hovered from the card sidebar) as a "details on demand" affordance,
-        // matching the FOV-on-hover behaviour for sensors. Stays visible
-        // while actively jamming because that's a live operational state,
-        // not idle metadata.
-        coverageRadiusM: isHovered || isJamming ? e.coverageRadiusM : undefined,
+        // with overlapping translucent circles — appears on hover, while
+        // engaged with a target (the "pointing" state), and while actively
+        // jamming. Same details-on-demand affordance as the sensor FOVs.
+        coverageRadiusM: showHoverEffect || isJamming ? e.coverageRadiusM : undefined,
         coverageColor: isJamming ? '#4ade80' : '#22b8cf',
         onClick: () => onAssetClickRef.current?.(e.id),
         onContextMenu: (ev) => openContextMenu(ev, 'effector', e.id),
@@ -667,11 +671,17 @@ export function CesiumTacticalMap({
             ? 'selected'
             : 'default';
         const style = resolveMarkerStyle(state, 'friendly');
+        // Same "engaged === hovered" treatment as the Regulus block above.
+        // When this launcher is the resolved weapon for the active target,
+        // light it up with the tooltip + pulse so the operator can read it
+        // off the map without hovering. Mirrors Mapbox's launcher state at
+        // TacticalMap.tsx:1786 (showLabel) + 1783 (pulse).
+        const showHoverEffect = isHovered || isEngaged;
         out.push({
           id: l.id,
           lat,
           lon,
-          zIndex: isHovered ? 40 : 15,
+          zIndex: showHoverEffect ? 40 : 15,
           content: (
             <MapMarker
               icon={<LauncherIcon size={LAUNCHER_GLYPH} />}
@@ -679,8 +689,8 @@ export function CesiumTacticalMap({
               surfaceSize={SENSOR_SURFACE}
               ringSize={SENSOR_RING}
               label={(l as unknown as { name?: string }).name ?? l.id}
-              showLabel={isHovered}
-              pulse={isHovered}
+              showLabel={showHoverEffect}
+              pulse={showHoverEffect}
             />
           ),
           onClick: () => onAssetClickRef.current?.(l.id),
@@ -1017,7 +1027,7 @@ export function CesiumTacticalMap({
         onClick={() => setSceneMode((prev) => (prev === '3D' ? '2D' : '3D'))}
         aria-label={sceneMode === '3D' ? 'Switch to 2D map' : 'Switch to 3D map'}
         aria-pressed={sceneMode === '3D'}
-        className="absolute bottom-3 left-3 z-20 pointer-events-auto w-7 h-7 rounded-md bg-zinc-900/80 backdrop-blur-md text-[11px] font-mono font-semibold tabular-nums text-zinc-100 ring-1 ring-white/15 shadow-[0_4px_12px_rgba(0,0,0,0.45)] hover:bg-zinc-800/90 hover:ring-white/30 active:bg-zinc-950/85 transition-colors flex items-center justify-center select-none"
+        className="absolute bottom-3 left-3 z-20 pointer-events-auto w-7 h-7 bg-zinc-900/80 backdrop-blur-md text-[11px] font-mono font-semibold tabular-nums text-zinc-100 shadow-[0_4px_12px_rgba(0,0,0,0.45)] hover:bg-zinc-800/90 active:bg-zinc-950/85 transition-colors flex items-center justify-center select-none"
       >
         {sceneMode === '3D' ? '2D' : '3D'}
       </button>
