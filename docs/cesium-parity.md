@@ -132,7 +132,7 @@ Fixed by:
 |---|---|---|---|
 | `controlIndicator` overlay | ✓ | ✓ | "אתה בשליטה" emerald pill at top-centre — same palette + 3 s pulse as Mapbox. `CesiumTacticalMap.tsx:963-979`. |
 | `planningMode` click-to-add waypoints | ✓ | 🚫 | Dropped from Cesium scope — drone-mission waypoint authoring stays Mapbox-only for now. |
-| `planningScanViz` camera scan visualization | ✓ | ✗ | |
+| `planningScanViz` camera scan visualization | ✓ | ✓ | One dashed violet polyline per bearing (`CesiumTacticalMap.tsx:868-893`); 0.4 km from the camera, palette + offset math match Mapbox's GeoJSON layer (`TacticalMap.tsx:2105-2139`). |
 | `selectedEffectorIds` per-target effector highlight | ✓ | ✓ | Consumed by `engagementPair` (`CesiumTacticalMap.tsx:292`); the engagement line shifts to the user-picked Regulus, and the chosen marker gets `state='selected'` via `isEngagementEffector`. Mapbox uses the prop the same way (only in `jamPair`). |
 | `selectedLauncherIds` per-target launcher highlight | ✓ | ✓ | Consumed by `engagementPair` (`CesiumTacticalMap.tsx:327`); engagement line shifts to user-picked launcher and the marker's `isEngaged` check sets `state='selected'`. |
 | `pathFinderConnectedId` Starling drone connect state | ✓ | 🚫 | Dropped from Cesium scope — not pursuing pathfinder/Starling parity. |

@@ -153,6 +153,7 @@ export function CesiumTacticalMap({
   selectedEffectorIds,
   selectedLauncherIds,
   controlIndicator,
+  planningScanViz,
   onMarkerClick,
   onAssetClick,
   onContextMenuAction,
@@ -865,8 +866,41 @@ export function CesiumTacticalMap({
       });
     }
 
+    // Camera-scan fan visualisation — preview of which bearings a planned
+    // camera-scan mission will sweep. Mirrors the Mapbox layer in
+    // `TacticalMap.tsx:2105-2139`: 0.4 km dashed lines fanning out from
+    // the camera, violet at 50 % alpha. Same offset math (lat scaled by
+    // 1°≈111.32 km, lon scaled by cos(lat) to compensate for meridian
+    // convergence). One polyline per bearing so each line gets a stable
+    // id and Cesium can diff updates as the planner adds bearings.
+    if (planningScanViz && planningScanViz.bearings.length > 0) {
+      const SCAN_DIST_KM = 0.4;
+      const cosLat = Math.cos((planningScanViz.cameraLat * Math.PI) / 180);
+      for (let i = 0; i < planningScanViz.bearings.length; i++) {
+        const bearing = planningScanViz.bearings[i];
+        const bearingRad = (bearing * Math.PI) / 180;
+        const endLat =
+          planningScanViz.cameraLat + (SCAN_DIST_KM / 111.32) * Math.cos(bearingRad);
+        const endLon =
+          planningScanViz.cameraLon + (SCAN_DIST_KM / (111.32 * cosLat)) * Math.sin(bearingRad);
+        out.push({
+          id: `planning-scan-${i}`,
+          points: [
+            { lat: planningScanViz.cameraLat, lon: planningScanViz.cameraLon },
+            { lat: endLat, lon: endLon },
+          ],
+          color: 'rgba(167, 139, 250, 0.5)',
+          // Mapbox uses line-width 1.5; Cesium polyline widths are
+          // integer-friendly. 2 reads close enough at typical zoom and
+          // matches the engagement line's hairline style.
+          width: 2,
+          dashed: true,
+        });
+      }
+    }
+
     return out;
-  }, [activeDrone, missionRoute, friendlyDrones, targets, jammingTargetId, jammingJammerAssetId, regulusEffectors, engagementPair]);
+  }, [activeDrone, missionRoute, friendlyDrones, targets, jammingTargetId, jammingJammerAssetId, regulusEffectors, engagementPair, planningScanViz]);
 
   /**
    * Phase 6 — imperative camera control. Each prop is converted into a
