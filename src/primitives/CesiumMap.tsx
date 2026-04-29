@@ -591,11 +591,37 @@ export function CesiumMap({
   }, [ionToken]);
 
   // ── Scene mode ─────────────────────────────────────────────────────────────
+  // In SCENE2D, the camera "height" is interpreted as the orthographic frustum
+  // extent (≈ visible canvas height in metres). In SCENE3D, it's the camera's
+  // height above ground in a perspective frustum. The default 15 km extent
+  // reads as a comfortable city-scale top-down frame in 2D, but lands the
+  // user too high in 3D — the city blurs into a satellite shot. When the
+  // consumer flips into 3D from a too-high vantage, fly the camera down to
+  // a city-zoom altitude with a 45° pitch so the perspective view feels right
+  // without losing the operator's centre lat/lon.
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer) return;
     const target = SCENE_MODE_MAP[sceneMode];
-    if (viewer.scene.mode !== target) viewer.scene.mode = target;
+    if (viewer.scene.mode === target) return;
+    viewer.scene.mode = target;
+
+    if (sceneMode === '3D') {
+      const cart = viewer.camera.positionCartographic;
+      if (cart && cart.height > 6_000) {
+        const lat = (cart.latitude * 180) / Math.PI;
+        const lon = (cart.longitude * 180) / Math.PI;
+        viewer.camera.flyTo({
+          destination: Cesium.Cartesian3.fromDegrees(lon, lat, 4_000),
+          orientation: {
+            pitch: Cesium.Math.toRadians(-45),
+            heading: viewer.camera.heading,
+            roll: 0,
+          },
+          duration: 0.6,
+        });
+      }
+    }
   }, [sceneMode]);
 
   // ── Markers + FOV + Coverage (rebuild on prop change) ──────────────────────

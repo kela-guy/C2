@@ -25,6 +25,7 @@ import {
   type CesiumHtmlMarker,
   type CesiumMapFlyTo,
   type CesiumPolyline,
+  type CesiumSceneMode,
   MapMarker,
   resolveMarkerStyle,
   type Affiliation,
@@ -168,6 +169,11 @@ export function CesiumTacticalMap({
   // Drives the white-on-hover ring + tooltip visibility regardless of
   // whether the hover came from this map or from the card sidebar.
   const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null);
+  // Scene mode (2D top-down vs 3D perspective). Default 2D so the post-cutover
+  // map looks identical to what operators see today; the in-map toggle (rendered
+  // bottom-left) flips to 3D on demand. The primitive layer handles the live
+  // mode switch and camera-height nudge.
+  const [sceneMode, setSceneMode] = useState<CesiumSceneMode>('2D');
   // Stable callbacks, used inside memoised marker arrays.
   const onMarkerClickRef = useRef(onMarkerClick);
   const onAssetClickRef = useRef(onAssetClick);
@@ -991,9 +997,25 @@ export function CesiumTacticalMap({
         htmlMarkers={htmlMarkers}
         polylines={polylines}
         flyTo={flyTo}
-        sceneMode="2D"
+        sceneMode={sceneMode}
         className="absolute inset-0"
       />
+
+      {/*
+        2D ↔ 3D toggle. Lattice-style affordance — the label is the
+        *destination* mode (click "3D" to switch to 3D). Anchored
+        bottom-left to line up with the existing phase-status pill at
+        top-left for a coherent left rail of map chrome.
+      */}
+      <button
+        type="button"
+        onClick={() => setSceneMode((prev) => (prev === '3D' ? '2D' : '3D'))}
+        aria-label={sceneMode === '3D' ? 'Switch to 2D map' : 'Switch to 3D map'}
+        aria-pressed={sceneMode === '3D'}
+        className="absolute bottom-3 left-3 z-20 pointer-events-auto w-7 h-7 rounded-md bg-zinc-900/80 backdrop-blur-md text-[11px] font-mono font-semibold tabular-nums text-zinc-100 ring-1 ring-white/15 shadow-[0_4px_12px_rgba(0,0,0,0.45)] hover:bg-zinc-800/90 hover:ring-white/30 active:bg-zinc-950/85 transition-colors flex items-center justify-center select-none"
+      >
+        {sceneMode === '3D' ? '2D' : '3D'}
+      </button>
 
       {/*
         "אתה בשליטה" / "You have control" indicator. Mirrors the Mapbox
