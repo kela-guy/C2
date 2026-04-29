@@ -211,13 +211,20 @@ function buildSectorPositions(
  * adapter that polyline graphics can consume directly. The shader uses
  * `materialInput.s * viewport_width` (the same trick the stock dash
  * material uses for pixel-consistent dashes) and adds a `time` uniform
- * that we tick from `Date.now()` each frame, so the dash boundary
- * sweeps along the line at `speed` pixels/sec.
+ * that the consumer ticks every frame.
+ *
+ * Important: Cesium polyline graphics only invokes `MaterialProperty.getValue`
+ * when `definitionChanged` fires — *not* every frame — so updating the
+ * uniform from inside `getValue` is a no-op once the material is bound.
+ * The factory therefore returns both the `MaterialProperty`-shaped adapter
+ * (for the polyline) **and** the underlying `Material` instance (for the
+ * caller to register against a per-frame hook that updates
+ * `material.uniforms.time`).
  */
 function createAnimatedDashMaterialProperty(
   cssColor: string,
   opts: { dashLength?: number; speed?: number } = {},
-): unknown {
+): { property: unknown; material: Cesium.Material } {
   const dashLength = opts.dashLength ?? 16;
   const speed = opts.speed ?? 24;
   const cesiumColor = Cesium.Color.fromCssColorString(cssColor);
@@ -265,20 +272,14 @@ function createAnimatedDashMaterialProperty(
   });
 
   const event = new Cesium.Event();
-  return {
+  const property = {
     isConstant: false,
     definitionChanged: event,
     getType: () => 'CesiumMapAnimatedDash',
-    getValue: (_time: Cesium.JulianDate, _result?: Cesium.Material) => {
-      // Update the time uniform from wall-clock so the animation runs
-      // at the same speed regardless of Cesium's clock state.
-      // Modulo to keep the float small (avoid precision loss after long
-      // sessions).
-      (material.uniforms as { time: number }).time = (Date.now() % 1_000_000) / 1000;
-      return material;
-    },
+    getValue: (_time: Cesium.JulianDate, _result?: Cesium.Material) => material,
     equals: () => false,
   };
+  return { property, material };
 }
 
 /**
@@ -399,6 +400,17 @@ export function CesiumMap({
 
   /** ms over which a 2-point dashed line eases to new endpoints. */
   const SMOOTH_LINE_MS = 300;
+
+  /**
+   * Live custom-dash materials per polyline id. Cesium only re-fetches a
+   * `MaterialProperty` when its `definitionChanged` event fires, so the
+   * `time` uniform driving the dash slide has to be updated outside
+   * `getValue`. The pre-render loop iterates this map every frame and
+   * patches `material.uniforms.time` directly — Cesium's renderer then
+   * uploads the fresh value with the rest of the material's uniforms on
+   * the next draw.
+   */
+  const dashMaterialsRef = useRef<Map<string, Cesium.Material>>(new Map());
   /**
    * Per-frame screen positions for HTML markers. We compute Cartesian once
    * per `htmlMarkers` change, but project to canvas coordinates every frame
@@ -529,6 +541,14 @@ export function CesiumMap({
     // can momentarily report 0 during initial layout, which would briefly
     // hide every marker if we gated rendering on them.
     const removePreRender = viewer.scene.preRender.addEventListener(() => {
+      // Tick `time` on every active animated-dash material so the slide
+      // keeps moving. Modulo keeps the float small over long sessions.
+      if (dashMaterialsRef.current.size > 0) {
+        const tNow = (Date.now() % 1_000_000) / 1000;
+        for (const m of dashMaterialsRef.current.values()) {
+          (m.uniforms as { time: number }).time = tNow;
+        }
+      }
       const nodes = htmlMarkerNodesRef.current;
       const cartesians = htmlMarkerCartesianRef.current;
       if (nodes.size === 0) return;
@@ -565,6 +585,7 @@ export function CesiumMap({
       polylineParticleEntitiesRef.current.clear();
       polylineParticleEndpointsRef.current.clear();
       polylineSmoothEndpointsRef.current.clear();
+      dashMaterialsRef.current.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mountReady]);
@@ -867,15 +888,20 @@ export function CesiumMap({
         const cesiumColor = Cesium.Color.fromCssColorString(colorCss);
         // Dashed lines use a custom material with a `time` uniform that
         // shifts the dash phase each frame for a real flowing effect.
-        // Cesium's stock `PolylineDashMaterialProperty` is a fixed 16-bit
-        // pattern with no slide / offset; rotating its `dashPattern` bits
-        // via a CallbackProperty produces a wrap-around shuffle instead
-        // of a continuous slide (that's the glitch we kept hitting).
-        // Static-coloured (non-dashed) lines stay on `ColorMaterialProperty`
-        // since trails don't need motion baked into the material.
-        const material = dashed
-          ? (createAnimatedDashMaterialProperty(colorCss, { dashLength: 16, speed: 24 }) as unknown as Cesium.MaterialProperty)
-          : new Cesium.ColorMaterialProperty(cesiumColor);
+        // The factory hands back both the property (for the polyline) and
+        // the underlying `Material` instance — we register the latter in
+        // `dashMaterialsRef` so the pre-render hook can tick its `time`
+        // uniform every frame. Cesium polyline graphics only re-fetches
+        // the property on `definitionChanged`, so updating the uniform
+        // from inside `getValue` is a one-time effect.
+        let material: Cesium.MaterialProperty;
+        if (dashed) {
+          const built = createAnimatedDashMaterialProperty(colorCss, { dashLength: 16, speed: 24 });
+          dashMaterialsRef.current.set(line.id, built.material);
+          material = built.property as unknown as Cesium.MaterialProperty;
+        } else {
+          material = new Cesium.ColorMaterialProperty(cesiumColor);
+        }
 
         if (entity?.polyline) {
           if (!isSmoothed) {
@@ -1017,6 +1043,7 @@ export function CesiumMap({
         existing.delete(id);
         fingerprints.delete(id);
         polylineSmoothEndpointsRef.current.delete(id);
+        dashMaterialsRef.current.delete(id);
         scheduledRender = true;
       }
     }
