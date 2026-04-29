@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { motion, useReducedMotion } from 'framer-motion';
 import { useDrop } from 'react-dnd';
 import { TacticalMap, CAMERA_ASSETS, REGULUS_EFFECTORS, bearingDegrees, haversineDistanceM } from './TacticalMap';
+import { CesiumTacticalMap } from './CesiumTacticalMap';
+import { CesiumErrorBoundary } from './CesiumErrorBoundary';
+import { IS_CESIUM } from '@/lib/mapBackend';
 import { NotificationSystem, showTacticalNotification } from './NotificationSystem';
 import { NotificationCenter } from './NotificationCenter';
 import ListOfSystems from '@/imports/ListOfSystems';
@@ -1314,7 +1317,16 @@ export const Dashboard = () => {
             onResize={() => window.dispatchEvent(new Event('resize'))}
           >
             <div ref={mapDropRef} className="relative w-full h-full">
-              <TacticalMap
+              {(() => {
+                // Map backend selector — `?map=cesium` swaps the entire renderer
+                // for the Cesium-based component (parity migration in progress).
+                // Both branches receive the EXACT same props so the dashboard
+                // never has to know which one it's mounting. The Cesium branch
+                // is additionally wrapped in an error boundary so a viewer
+                // crash doesn't take the whole dashboard down.
+                const MapComponent = IS_CESIUM ? CesiumTacticalMap : TacticalMap;
+                const mapNode = (
+              <MapComponent
                 targets={targets}
                 activeTargetId={activeTargetId}
                 onMarkerClick={(id) => { setActiveTargetId(id); setSidebarOpen(true); setDevicesPanelOpen(false); setSelectedAssetId(null); }}
@@ -1369,6 +1381,11 @@ export const Dashboard = () => {
                 launcherEffectors={launcherEffectors}
                 selectedLauncherIds={selectedLauncherIds}
               />
+                );
+                return IS_CESIUM
+                  ? <CesiumErrorBoundary>{mapNode}</CesiumErrorBoundary>
+                  : mapNode;
+              })()}
             </div>
           </ResizablePanel>
 
@@ -1391,7 +1408,7 @@ export const Dashboard = () => {
         <aside
           ref={asideRef}
           className={`
-            absolute top-0 bottom-0 bg-[#141414] border-l border-white/10 flex flex-col ${panelSwitching || isDragging ? '' : isSnapping ? '' : 'transition-[transform,opacity] duration-300 ease-in-out'} z-10
+            absolute top-0 bottom-0 bg-[#141414] border-l border-white/10 flex flex-col ${panelSwitching || isDragging ? '' : isSnapping ? '' : 'transition-[transform,opacity] duration-300 ease-in-out'} z-30
             ${sidebarOpen ? 'translate-x-0 right-0' : 'translate-x-full right-0'}
           `}
           style={{

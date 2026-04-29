@@ -244,7 +244,7 @@ export function getClosestAssetsForTarget(lat: number, lon: number, limit: numbe
 
 export type MissilePhase = 'launched' | 'en_route' | 'impact';
 
-interface TacticalMapProps {
+export interface TacticalMapProps {
   focusCoords?: { lat: number; lon: number } | null;
   targets?: Detection[];
   activeTargetId?: string | null;

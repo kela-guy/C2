@@ -117,6 +117,16 @@ export const NAV: NavGroup[] = [
           { id: 'icon-catalog', label: 'Icon Catalog' },
         ],
       },
+      {
+        id: 'cesium-map',
+        label: 'Cesium Map',
+        children: [
+          { id: 'cesium-basics', label: 'Basics' },
+          { id: 'cesium-fov', label: 'FOV + Coverage' },
+          { id: 'cesium-fly-to', label: 'Fly-To' },
+          { id: 'cesium-step-2', label: 'Step 2 — Opportunities' },
+        ],
+      },
     ],
   },
 ];

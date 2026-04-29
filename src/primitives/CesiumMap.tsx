@@ -1,0 +1,1235 @@
+/**
+ * CesiumMap — generic CesiumJS viewer primitive.
+ *
+ * Drop-in component that wraps `Cesium.Viewer` with a prop-driven API for the
+ * common surface our existing Mapbox-based map exposes:
+ *
+ *   - basemap selection (Cesium Ion imagery, default Bing Aerial)
+ *   - 2D / 2.5D / 3D scene mode
+ *   - marker pins with click + hover
+ *   - sensor FOV cone (sector polygon) and ECM coverage circle
+ *   - imperative fly-to via prop
+ *
+ * No app-domain coupling. Pass your own data via props.
+ */
+
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import * as Cesium from 'cesium';
+import 'cesium/Build/Cesium/Widgets/widgets.css';
+import { createMotionTrack, type MotionTrack } from '@/lib/motionTracker';
+
+/**
+ * Minimum container size (px) before we're willing to construct
+ * `Cesium.Viewer`. Below this, WebGL context init can fail silently and leave
+ * the viewer in a "half-built" state where `_cesiumWidget` is undefined,
+ * which then explodes on the first public-getter access. Mirrors the same
+ * threshold our Mapbox path uses for `mapbox-gl`.
+ */
+const MIN_MOUNT_SIZE_PX = 8;
+
+export type CesiumSceneMode = '2D' | '2.5D' | '3D';
+
+export interface CesiumMarker {
+  id: string;
+  /** Geographic position. */
+  lat: number;
+  lon: number;
+  /** Pin label shown on hover and to screen readers. */
+  label?: string;
+  /** Pin colour. Accepts any CSS color string. Defaults to `#22b8cf`. */
+  color?: string;
+  /** When set, draws a sensor field-of-view sector (degrees + heading + range). */
+  fov?: { rangeM: number; bearingDeg: number; widthDeg: number };
+  /** When set, draws an ECM coverage ring (radius in meters). */
+  coverageRadiusM?: number;
+}
+
+export interface CesiumMapFlyTo {
+  lat: number;
+  lon: number;
+  /** Camera height above terrain in meters. Default 1500. */
+  heightM?: number;
+  /** Ease duration in seconds. Default 1.2. */
+  durationSec?: number;
+}
+
+/**
+ * Polyline / trail entity. Used for drone tracks, engagement lines,
+ * mission routes, etc. Pass an array of [lon, lat] (or [lat, lon] — see
+ * `coordOrder`) tuples. Width in pixels.
+ */
+export interface CesiumPolyline {
+  id: string;
+  /** Series of points along the line. */
+  points: Array<{ lat: number; lon: number }>;
+  /** CSS color string. Defaults to `#22b8cf`. */
+  color?: string;
+  /** Stroke width in pixels. Defaults to 2. */
+  width?: number;
+  /** When true, renders as a flowing dashed line (engagement-line style). */
+  dashed?: boolean;
+  /**
+   * Stacking order for ground-clamped polylines. Higher z-index draws on
+   * top — Cesium uses this to resolve z-fighting between two polylines
+   * occupying the same path (e.g. a black casing + white centreline
+   * trail, where the centreline must paint over the casing). Only has
+   * effect when the polyline ends up ground-clamped (currently: all
+   * non-smoothed polylines in 3D mode). Defaults to 0.
+   */
+  zIndex?: number;
+  /**
+   * Animated particles flowing from the first to the last point of the
+   * line. Used for engagement-pair viz so the user sees a clear direction
+   * of fire even on a still map. Spring-eased so each dot accelerates and
+   * settles into the target — mirrors Mapbox's `useEngagementLine` look.
+   */
+  particles?: {
+    /** Number of dots flowing along the line. Mapbox uses 3. */
+    count: number;
+    /** Core dot colour. Defaults to the line's `color`. */
+    color?: string;
+    /** Cycles per second. `0.25` ≈ 4 s loop, matching Mapbox. */
+    speed?: number;
+  };
+}
+
+/**
+ * DOM-overlay marker. Renders arbitrary React content positioned over the
+ * Cesium canvas at the given lat/lon. Updated each frame from the scene's
+ * `cartesianToCanvasCoordinates`. Use this when you need crisp SVGs, CSS
+ * animations, or pointer-events that React already handles — i.e. anything
+ * billboard images can't do well.
+ */
+export interface CesiumHtmlMarker {
+  id: string;
+  lat: number;
+  lon: number;
+  /** React content rendered at the marker position (centred on the lat/lon). */
+  content: React.ReactNode;
+  /** Z-index for stacking among siblings. */
+  zIndex?: number;
+  /** Optional click handler (alternative to `onHtmlMarkerClick` on the map). */
+  onClick?: (e: React.MouseEvent) => void;
+  /** Optional context-menu handler (right-click). */
+  onContextMenu?: (e: React.MouseEvent) => void;
+  /** Optional hover handlers. */
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
+  /**
+   * Optional sensor field-of-view sector (terrain-clamped polygon).
+   * `bearingDeg` is the centre direction (0=N, 90=E); `widthDeg` is the full
+   * cone angle. Use `widthDeg: 360` for omnidirectional sensors.
+   */
+  fov?: { rangeM: number; bearingDeg: number; widthDeg: number; color?: string; opacity?: number };
+  /** Optional coverage ring (terrain-clamped ellipse). */
+  coverageRadiusM?: number;
+  /** Coverage ring colour (CSS string). Defaults to `#22b8cf`. */
+  coverageColor?: string;
+  /**
+   * When true, the marker's lat/lon prop is treated as a *sensor sample*
+   * rather than a render position. The map maintains a per-id motion track
+   * that interpolates between samples and extrapolates forward along the
+   * last-known velocity vector when samples go quiet — see
+   * `src/lib/motionTracker.ts`. Heading from velocity is exposed but not
+   * applied to the icon (icons stay React-level for rotation).
+   */
+  kinematic?: boolean;
+}
+
+export interface CesiumMapProps {
+  /** Cesium Ion access token. Required for Bing Aerial / Cesium Ion assets. */
+  ionToken: string;
+  /** Initial camera target. Required so we don't open over the equator. */
+  initialView: { lat: number; lon: number; heightM?: number };
+  /** Markers to render as Cesium points/entities (cheap, GPU). */
+  markers?: CesiumMarker[];
+  /** Markers rendered as DOM overlays positioned via scene transforms. */
+  htmlMarkers?: CesiumHtmlMarker[];
+  /** Polylines / trails (drone tracks, engagement lines, mission routes). */
+  polylines?: CesiumPolyline[];
+  /** Imperatively fly the camera to a position; pass a NEW object each time you want to fly. */
+  flyTo?: CesiumMapFlyTo | null;
+  /** Scene mode. Defaults to '2D' for parity with our current top-down Mapbox view. */
+  sceneMode?: CesiumSceneMode;
+  /**
+   * Cesium Ion imagery asset id. Defaults to 2 (Bing Maps Aerial),
+   * Ion's standard default. See https://ion.cesium.com for other ids.
+   */
+  ionImageryAssetId?: number;
+  /** Called when a `markers[]` entity is clicked (point markers only). */
+  onMarkerClick?: (id: string) => void;
+  /** Called when a `markers[]` entity is hovered (point markers only). */
+  onMarkerHover?: (id: string | null) => void;
+  /** Optional className for the wrapping `<div>`. Set width + height here or via parent. */
+  className?: string;
+}
+
+/**
+ * Convert {lat, lon, heightM} → Cartesian3, with a sane height default.
+ */
+function toCartesian({ lat, lon, heightM }: { lat: number; lon: number; heightM?: number }) {
+  return Cesium.Cartesian3.fromDegrees(lon, lat, heightM ?? 1500);
+}
+
+/**
+ * Build a sector polygon (FOV cone) as an array of Cartographic positions.
+ * Returns an array of cartesian points: [origin, arc..., origin].
+ */
+function buildSectorPositions(
+  centerLat: number,
+  centerLon: number,
+  rangeM: number,
+  bearingDeg: number,
+  widthDeg: number,
+  steps = 24,
+): Cesium.Cartesian3[] {
+  const positions: Cesium.Cartesian3[] = [];
+  positions.push(Cesium.Cartesian3.fromDegrees(centerLon, centerLat));
+
+  const halfWidth = widthDeg / 2;
+  const startBearing = bearingDeg - halfWidth;
+  const endBearing = bearingDeg + halfWidth;
+
+  // Earth's radius in meters (used for great-circle offset approximation;
+  // accurate enough for visual FOV cones at sensor scale).
+  const R = 6_371_000;
+  const centerLatRad = (centerLat * Math.PI) / 180;
+  const centerLonRad = (centerLon * Math.PI) / 180;
+  const angularDistance = rangeM / R;
+
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const bearing = startBearing + t * (endBearing - startBearing);
+    const bearingRad = (bearing * Math.PI) / 180;
+
+    const lat2Rad = Math.asin(
+      Math.sin(centerLatRad) * Math.cos(angularDistance) +
+        Math.cos(centerLatRad) * Math.sin(angularDistance) * Math.cos(bearingRad),
+    );
+    const lon2Rad =
+      centerLonRad +
+      Math.atan2(
+        Math.sin(bearingRad) * Math.sin(angularDistance) * Math.cos(centerLatRad),
+        Math.cos(angularDistance) - Math.sin(centerLatRad) * Math.sin(lat2Rad),
+      );
+
+    positions.push(Cesium.Cartesian3.fromDegrees((lon2Rad * 180) / Math.PI, (lat2Rad * 180) / Math.PI));
+  }
+
+  positions.push(Cesium.Cartesian3.fromDegrees(centerLon, centerLat));
+  return positions;
+}
+
+/**
+ * Lazy-built spring lookup table for particle easing. Same physics
+ * constants as `useEngagementLine.ts` so the Cesium and Mapbox paths
+ * accelerate / settle identically. Built on first use, then cached.
+ */
+let SPRING_LUT_CACHE: number[] | null = null;
+function getSpringLUT(): number[] {
+  if (SPRING_LUT_CACHE) return SPRING_LUT_CACHE;
+  const stiffness = 160;
+  const damping = 70;
+  const mass = 1;
+  const steps = 300;
+  const dt = 1 / 120;
+  let x = 0;
+  let v = 0;
+  const lut: number[] = [];
+  for (let i = 0; i <= steps; i++) {
+    lut.push(Math.max(0, Math.min(x, 1.5)));
+    const a = (-stiffness * (x - 1) - damping * v) / mass;
+    v += a * dt;
+    x += v * dt;
+  }
+  SPRING_LUT_CACHE = lut;
+  return lut;
+}
+
+function easeSpring(t: number): number {
+  const lut = getSpringLUT();
+  const idx = t * (lut.length - 1);
+  const lo = Math.floor(idx);
+  const hi = Math.min(lo + 1, lut.length - 1);
+  return lut[lo] + (lut[hi] - lut[lo]) * (idx - lo);
+}
+
+const SCENE_MODE_MAP: Record<CesiumSceneMode, Cesium.SceneMode> = {
+  '2D': Cesium.SceneMode.SCENE2D,
+  '2.5D': Cesium.SceneMode.COLUMBUS_VIEW,
+  '3D': Cesium.SceneMode.SCENE3D,
+};
+
+export function CesiumMap({
+  ionToken,
+  initialView,
+  markers,
+  htmlMarkers,
+  polylines,
+  flyTo,
+  sceneMode = '2D',
+  ionImageryAssetId = 2,
+  onMarkerClick,
+  onMarkerHover,
+  className = 'w-full h-full',
+}: CesiumMapProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const viewerRef = useRef<Cesium.Viewer | null>(null);
+  const markerEntitiesRef = useRef<Map<string, Cesium.Entity>>(new Map());
+  const fovEntitiesRef = useRef<Cesium.Entity[]>([]);
+  const coverageEntitiesRef = useRef<Cesium.Entity[]>([]);
+  /** Geometry entities (FOV / coverage) attached to HTML markers. */
+  const htmlGeometryEntitiesRef = useRef<Cesium.Entity[]>([]);
+  /**
+   * Polyline entities (trails, engagement lines, etc.) keyed by their
+   * stable `CesiumPolyline.id`. Keyed (not array) so the polylines effect
+   * can update positions in place rather than tearing down + recreating
+   * every entity on each tick.
+   */
+  const polylineEntitiesRef = useRef<Map<string, Cesium.Entity>>(new Map());
+
+  /**
+   * Per-polyline content fingerprint. The dashboard re-creates the polylines
+   * memo every second (because the `friendlyDrones` array reference changes
+   * on every tick of its simulation loop), but the underlying trail
+   * coordinates only actually grow every 3 ticks. Without the fingerprint
+   * check, every tick triggers a position update on Cesium's polyline
+   * primitive, which forces it to re-tessellate the line — and that
+   * re-tessellation is what shows up as a 1 Hz visual flicker on the trails.
+   *
+   * Storing length + first + last point catches new-tail-appended,
+   * head-trimmed (trail rotation past max length), and full-replacement
+   * cases without doing a full content compare.
+   */
+  const polylineFingerprintRef = useRef<
+    Map<string, { len: number; firstLat: number; firstLon: number; lastLat: number; lastLon: number; color: string; width: number; dashed: boolean }>
+  >(new Map());
+
+  /**
+   * Per-polyline particle entities + endpoint cache. Particles read their
+   * `from` / `to` lat-lon from this cache via a `CallbackProperty` so the
+   * same particle entity can keep flowing along a line whose endpoints
+   * change (e.g. when the engagement pair re-resolves to a different
+   * effector); the cache is updated in place, and Cesium's per-frame
+   * property evaluation picks up the new endpoints automatically.
+   */
+  const polylineParticleEntitiesRef = useRef<Map<string, Cesium.Entity[]>>(new Map());
+  const polylineParticleEndpointsRef = useRef<
+    Map<string, { fromLat: number; fromLon: number; toLat: number; toLon: number }>
+  >(new Map());
+
+  /**
+   * Endpoint-interpolation cache for 2-point dashed lines (engagement
+   * lines). Stores the *previous* and *current* endpoints together with
+   * a timestamp; the polyline's `CallbackProperty` eases between them
+   * over a short window so the 1 Hz dashboard tick (target position
+   * updates) doesn't snap-jump the line on every change.
+   */
+  const polylineSmoothEndpointsRef = useRef<
+    Map<
+      string,
+      {
+        curr: { fromLat: number; fromLon: number; toLat: number; toLon: number };
+        prev: { fromLat: number; fromLon: number; toLat: number; toLon: number };
+        changedAt: number;
+      }
+    >
+  >(new Map());
+
+  /** ms over which a 2-point dashed line eases to new endpoints. */
+  const SMOOTH_LINE_MS = 300;
+  /**
+   * Per-frame screen positions for HTML markers. We compute Cartesian once
+   * per `htmlMarkers` change, but project to canvas coordinates every frame
+   * via the scene's preRender event.
+   */
+  const htmlMarkerNodesRef = useRef<Map<string, HTMLDivElement>>(new Map());
+  const htmlMarkerCartesianRef = useRef<Map<string, Cesium.Cartesian3>>(new Map());
+  /**
+   * Per-id lat/lon for non-kinematic html markers. Kept alongside the
+   * Cartesian3 cache so the per-frame loop can re-project at the terrain
+   * surface when in 3D mode (markers default to altitude 0; without a
+   * terrain-aware altitude they'd float above hills or sink under them
+   * after a 2D → 3D toggle, visibly mis-aligned with the imagery beneath).
+   */
+  const htmlMarkerCartographicRef = useRef<Map<string, { lat: number; lon: number }>>(new Map());
+
+  /**
+   * Per-id motion tracks for `htmlMarkers[m].kinematic === true`. Lat/lon
+   * arriving on prop updates is pushed as a sample; the preRender loop
+   * queries the track at frame time to get a smoothed (interpolated /
+   * extrapolated) render position. See `src/lib/motionTracker.ts`.
+   *
+   * `kinematicCartesianScratchRef` is a reusable Cartesian3 per kinematic
+   * marker so the per-frame loop doesn't allocate a fresh object on every
+   * frame. Halo entities live in their own ref so the marker-rebuild
+   * effect doesn't tear them down.
+   */
+  const motionTracksRef = useRef<Map<string, MotionTrack>>(new Map());
+  const kinematicCartesianScratchRef = useRef<Map<string, Cesium.Cartesian3>>(new Map());
+
+  // ── Mount-readiness gate ──────────────────────────────────────────────────
+  // Defer Viewer construction until the container actually has dimensions.
+  // Without this, `<ResizablePanel>` and other "measure-then-size" parents
+  // can render us at 0×0 on first paint, which silently breaks Cesium's
+  // WebGL context init and leaves us with a half-built viewer.
+  const [mountReady, setMountReady] = useState(false);
+
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const consider = (w: number, h: number) => {
+      if (w > MIN_MOUNT_SIZE_PX && h > MIN_MOUNT_SIZE_PX) {
+        setMountReady(true);
+      }
+    };
+
+    const initial = el.getBoundingClientRect();
+    consider(initial.width, initial.height);
+
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        consider(entry.contentRect.width, entry.contentRect.height);
+        // Cesium's auto-resize handles canvas dimensions, but in 2D mode
+        // the orthographic frustum doesn't always redraw until interaction.
+        // Force a render so the imagery stays sharp on container resize.
+        viewerRef.current?.scene.requestRender();
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // ── Bootstrap viewer (mount once container is sized) ──────────────────────
+  useEffect(() => {
+    if (!mountReady || !containerRef.current) return;
+
+    Cesium.Ion.defaultAccessToken = ionToken;
+
+    let viewer: Cesium.Viewer;
+    try {
+      viewer = new Cesium.Viewer(containerRef.current, {
+        // Strip the widgets we don't need (keeps UI minimal).
+        animation: false,
+        timeline: false,
+        geocoder: false,
+        homeButton: false,
+        sceneModePicker: false,
+        baseLayerPicker: false,
+        navigationHelpButton: false,
+        fullscreenButton: false,
+        infoBox: false,
+        selectionIndicator: false,
+        // Imagery loaded below.
+        baseLayer: false as unknown as Cesium.ImageryLayer,
+      });
+    } catch (err) {
+      // Surface the real error instead of letting it cascade through React's
+      // boundary as the cryptic "scene of undefined" we used to see.
+      console.error('[CesiumMap] Viewer construction failed:', err);
+      throw err;
+    }
+
+    // Bing Aerial via Cesium Ion (asset 2 by default). Guard against the
+    // viewer being destroyed (StrictMode double-mount, fast nav) before the
+    // imagery promise resolves — otherwise we crash inside Cesium internals.
+    Cesium.IonImageryProvider.fromAssetId(ionImageryAssetId)
+      .then((provider) => {
+        if (viewer.isDestroyed()) return;
+        viewer.imageryLayers.addImageryProvider(provider);
+      })
+      .catch((err) => {
+        if (viewer.isDestroyed()) return;
+        console.error('[CesiumMap] failed to load Ion imagery:', err);
+      });
+
+    // Cesium World Terrain (Ion asset 1). Without it the globe is a smooth
+    // ellipsoid and 3D mode reads as a tilted satellite image — no real
+    // depth. The terrain provider streams elevation tiles on demand and is
+    // a no-op cost in 2D mode (heights are loaded but rendered flat).
+    // Same destroy guard as the imagery loader for the same reason.
+    Cesium.createWorldTerrainAsync()
+      .then((terrain) => {
+        if (viewer.isDestroyed()) return;
+        viewer.terrainProvider = terrain;
+      })
+      .catch((err) => {
+        if (viewer.isDestroyed()) return;
+        console.error('[CesiumMap] failed to load world terrain:', err);
+      });
+
+    viewer.scene.mode = SCENE_MODE_MAP[sceneMode];
+
+    // Initial camera position. Use `setView` (instant) + a deliberately tall
+    // `heightM` because in `SceneMode.SCENE2D` Cesium's camera "height" is
+    // interpreted as the orthographic frustum extent, not a metric distance.
+    // 50_000 m gives a city-scale view; the consumer can re-target with the
+    // imperative `flyTo` prop afterwards.
+    viewer.camera.setView({
+      destination: toCartesian({ ...initialView, heightM: initialView.heightM ?? 50_000 }),
+    });
+
+    // Click → marker handler.
+    const handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
+    handler.setInputAction((event: Cesium.ScreenSpaceEventHandler.PositionedEvent) => {
+      const picked = viewer.scene.pick(event.position);
+      const id = picked?.id;
+      if (id instanceof Cesium.Entity && id.id && onMarkerClick) {
+        const markerId = String(id.id);
+        if (markerEntitiesRef.current.has(markerId)) onMarkerClick(markerId);
+      }
+    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+    handler.setInputAction((event: Cesium.ScreenSpaceEventHandler.MotionEvent) => {
+      const picked = viewer.scene.pick(event.endPosition);
+      const id = picked?.id;
+      if (id instanceof Cesium.Entity && id.id && markerEntitiesRef.current.has(String(id.id))) {
+        onMarkerHover?.(String(id.id));
+      } else {
+        onMarkerHover?.(null);
+      }
+    }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+    // Per-frame sync of DOM-overlay marker positions. Cesium emits
+    // `preRender` before each frame; we project each marker's cached
+    // Cartesian to canvas coords and translate the corresponding DOM node.
+    // Cheap (~20 div translates per frame) and matches what Mapbox does
+    // internally for `mapboxgl.Marker`.
+    //
+    // Visual containment is handled by the wrapping div: it has
+    // `overflow-hidden` (clips any marker translated past its bounds) and
+    // `isolate` (gives marker `zIndex` values their own stacking context
+    // so they can't outrank surrounding chrome like the dashboard's side
+    // panel). No explicit bounds check here — `clientWidth`/`clientHeight`
+    // can momentarily report 0 during initial layout, which would briefly
+    // hide every marker if we gated rendering on them.
+    // Reusable Cartographic for the per-frame terrain-height sample.
+    // Allocated once at scope; mutated in place per marker per frame to
+    // avoid GC churn on a hot path.
+    const terrainSampleCarto = new Cesium.Cartographic();
+    const removePreRender = viewer.scene.preRender.addEventListener(() => {
+      const nodes = htmlMarkerNodesRef.current;
+      const cartesians = htmlMarkerCartesianRef.current;
+      const cartographics = htmlMarkerCartographicRef.current;
+      const tracks = motionTracksRef.current;
+      const kinematicScratch = kinematicCartesianScratchRef.current;
+      if (nodes.size === 0) return;
+      const now = Date.now();
+      // In 3D mode the imagery is draped over real terrain elevation. Markers
+      // default to altitude 0 (ellipsoid) — without sampling terrain height,
+      // an icon meant to sit on a 50 m hill ends up 50 m underground (or
+      // visibly above when on a depression). This reads as the markers
+      // "shifting" when the user toggles 2D → 3D. We sample once per marker
+      // per frame; ~22 markers, cheap. In 2D mode the orthographic
+      // projection ignores altitude, so we skip the work entirely.
+      const isMode3D = viewer.scene.mode === Cesium.SceneMode.SCENE3D;
+      const globe = viewer.scene.globe;
+      // Kinematic tracks that are still smoothing toward the latest
+      // sample or extrapolating forward need the scene to keep
+      // rendering — Cesium's request-render mode would otherwise idle
+      // out after one frame and the marker would visibly freeze.
+      let kinematicActive = false;
+      for (const [id, node] of nodes) {
+        const track = tracks.get(id);
+        let cart: Cesium.Cartesian3 | undefined;
+        if (track) {
+          const s = track.query(now);
+          const scratch = kinematicScratch.get(id);
+          if (scratch) {
+            let alt = 0;
+            if (isMode3D) {
+              Cesium.Cartographic.fromDegrees(s.lon, s.lat, 0, terrainSampleCarto);
+              const h = globe.getHeight(terrainSampleCarto);
+              if (typeof h === 'number') alt = h;
+            }
+            Cesium.Cartesian3.fromDegrees(s.lon, s.lat, alt, undefined, scratch);
+            cart = scratch;
+          }
+          if (!s.frozen) kinematicActive = true;
+        } else {
+          cart = cartesians.get(id);
+          if (cart && isMode3D) {
+            const carto = cartographics.get(id);
+            if (carto) {
+              Cesium.Cartographic.fromDegrees(carto.lon, carto.lat, 0, terrainSampleCarto);
+              const h = globe.getHeight(terrainSampleCarto);
+              const alt = typeof h === 'number' ? h : 0;
+              // Mutate the cached Cartesian3 in place so static markers
+              // also stay aligned to terrain without per-frame allocation.
+              Cesium.Cartesian3.fromDegrees(carto.lon, carto.lat, alt, undefined, cart);
+            }
+          }
+        }
+        if (!cart) {
+          node.style.display = 'none';
+          continue;
+        }
+        const screen = viewer.scene.cartesianToCanvasCoordinates(cart);
+        if (!screen) {
+          // Off-screen / behind the globe.
+          node.style.display = 'none';
+          continue;
+        }
+        node.style.display = '';
+        node.style.transform = `translate(-50%, -50%) translate(${screen.x}px, ${screen.y}px)`;
+      }
+      if (kinematicActive) viewer.scene.requestRender();
+    });
+
+    viewerRef.current = viewer;
+
+    return () => {
+      removePreRender();
+      handler.destroy();
+      viewer.destroy();
+      viewerRef.current = null;
+      markerEntitiesRef.current.clear();
+      fovEntitiesRef.current = [];
+      coverageEntitiesRef.current = [];
+      htmlGeometryEntitiesRef.current = [];
+      polylineEntitiesRef.current.clear();
+      polylineFingerprintRef.current.clear();
+      polylineParticleEntitiesRef.current.clear();
+      polylineParticleEndpointsRef.current.clear();
+      polylineSmoothEndpointsRef.current.clear();
+      motionTracksRef.current.clear();
+      kinematicCartesianScratchRef.current.clear();
+      htmlMarkerCartographicRef.current.clear();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mountReady]);
+
+  // ── HTML marker positions ────────────────────────────────────────────────
+  // Re-compute Cartesian3 cache whenever `htmlMarkers` changes. The
+  // per-frame loop reads from this cache, so it stays cheap.
+  //
+  // Kinematic markers don't write to the static cache — instead, the new
+  // lat/lon is pushed as a sample to the per-id motion track, and the
+  // per-frame preRender loop queries the track at frame time. Tracks /
+  // scratch buffers for ids that left the prop set are dropped here so
+  // they don't leak across long sessions.
+  useEffect(() => {
+    const cache = htmlMarkerCartesianRef.current;
+    const cartographics = htmlMarkerCartographicRef.current;
+    cache.clear();
+    cartographics.clear();
+    if (!htmlMarkers) {
+      motionTracksRef.current.clear();
+      kinematicCartesianScratchRef.current.clear();
+      return;
+    }
+
+    const liveKinematicIds = new Set<string>();
+    const sampleAt = Date.now();
+    for (const m of htmlMarkers) {
+      if (m.kinematic) {
+        liveKinematicIds.add(m.id);
+        let track = motionTracksRef.current.get(m.id);
+        if (!track) {
+          track = createMotionTrack();
+          motionTracksRef.current.set(m.id, track);
+          kinematicCartesianScratchRef.current.set(m.id, new Cesium.Cartesian3());
+        }
+        track.pushSample(m.lat, m.lon, sampleAt);
+      } else {
+        // Cache as a fresh Cartesian3 we can mutate in place each frame —
+        // the preRender loop re-projects at the terrain surface in 3D.
+        cache.set(m.id, Cesium.Cartesian3.fromDegrees(m.lon, m.lat));
+        cartographics.set(m.id, { lat: m.lat, lon: m.lon });
+      }
+    }
+
+    // Drop tracks + scratch Cartesians for ids that vanished or that are
+    // no longer kinematic (e.g. a drone going offline mid-session).
+    for (const id of motionTracksRef.current.keys()) {
+      if (!liveKinematicIds.has(id)) {
+        motionTracksRef.current.delete(id);
+        kinematicCartesianScratchRef.current.delete(id);
+      }
+    }
+
+    // Force a render so positions update immediately even without user
+    // interaction (Cesium uses request-render mode by default).
+    viewerRef.current?.scene.requestRender();
+  }, [htmlMarkers]);
+
+  // ── Token (live update) ────────────────────────────────────────────────────
+  useEffect(() => {
+    Cesium.Ion.defaultAccessToken = ionToken;
+  }, [ionToken]);
+
+  // ── Scene mode ─────────────────────────────────────────────────────────────
+  // In SCENE2D, the camera "height" is interpreted as the orthographic frustum
+  // extent (≈ visible canvas height in metres). In SCENE3D, it's the camera's
+  // height above ground in a perspective frustum. The default 15 km extent
+  // reads as a comfortable city-scale top-down frame in 2D, but lands the
+  // user too high in 3D — the city blurs into a satellite shot. When the
+  // consumer flips into 3D from a too-high vantage, fly the camera down to
+  // a city-zoom altitude with a 45° pitch so the perspective view feels right
+  // without losing the operator's centre lat/lon.
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+    const target = SCENE_MODE_MAP[sceneMode];
+    if (viewer.scene.mode === target) return;
+    viewer.scene.mode = target;
+
+    if (sceneMode === '3D') {
+      const cart = viewer.camera.positionCartographic;
+      if (cart && cart.height > 6_000) {
+        const lat = (cart.latitude * 180) / Math.PI;
+        const lon = (cart.longitude * 180) / Math.PI;
+        // Oblique side-on shot — terrain reads in 3D, hills cast depth.
+        // -30° pitch keeps things closer to horizontal than a top-down
+        // bird's-eye, so foreground/background separation is obvious.
+        // 2.5 km altitude at this pitch puts the viewer roughly 4–5 km
+        // back from the centre point — close enough that drone-scale
+        // entities aren't lost in the satellite imagery, far enough
+        // that the surrounding terrain context stays visible.
+        //
+        // The flyTo target is *behind* the centre point (offset along
+        // the camera's view direction) so the camera ends up looking
+        // toward the centre, not from straight above it.
+        const PITCH_DEG = -30;
+        const HEIGHT_M = 2_500;
+        const pitchRad = Cesium.Math.toRadians(PITCH_DEG);
+        const heading = viewer.camera.heading;
+        // Offset the destination so that a -30° pitch + position-back
+        // -from-target lands the centre near the middle of the screen.
+        // distBack = height / tan(|pitch|) — geometric back-up so the
+        // look-vector intersects ground at the original centre.
+        const distBack = HEIGHT_M / Math.tan(Math.abs(pitchRad));
+        // Convert distBack metres into a lat offset along the heading.
+        // Heading 0 = north; offset back is opposite (-cos / -sin).
+        const dLat = -Math.cos(heading) * (distBack / 111_000);
+        const dLon =
+          -Math.sin(heading) *
+          (distBack / (111_000 * Math.cos((lat * Math.PI) / 180)));
+        viewer.camera.flyTo({
+          destination: Cesium.Cartesian3.fromDegrees(lon + dLon, lat + dLat, HEIGHT_M),
+          orientation: {
+            pitch: pitchRad,
+            heading,
+            roll: 0,
+          },
+          duration: 0.8,
+        });
+      }
+    }
+  }, [sceneMode]);
+
+  // ── Markers + FOV + Coverage (rebuild on prop change) ──────────────────────
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+
+    // Clear previous.
+    for (const entity of markerEntitiesRef.current.values()) {
+      viewer.entities.remove(entity);
+    }
+    markerEntitiesRef.current.clear();
+    for (const entity of fovEntitiesRef.current) viewer.entities.remove(entity);
+    fovEntitiesRef.current = [];
+    for (const entity of coverageEntitiesRef.current) viewer.entities.remove(entity);
+    coverageEntitiesRef.current = [];
+
+    if (!markers) return;
+
+    for (const marker of markers) {
+      const color = marker.color ?? '#22b8cf';
+      const cesiumColor = Cesium.Color.fromCssColorString(color);
+
+      // Pin entity.
+      const entity = viewer.entities.add({
+        id: marker.id,
+        name: marker.label ?? marker.id,
+        position: Cesium.Cartesian3.fromDegrees(marker.lon, marker.lat),
+        point: {
+          pixelSize: 12,
+          color: cesiumColor,
+          outlineColor: Cesium.Color.WHITE,
+          outlineWidth: 2,
+          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
+        },
+        label: marker.label
+          ? {
+              text: marker.label,
+              font: '12px sans-serif',
+              fillColor: Cesium.Color.WHITE,
+              outlineColor: Cesium.Color.BLACK,
+              outlineWidth: 2,
+              style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+              verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+              pixelOffset: new Cesium.Cartesian2(0, -16),
+              showBackground: true,
+              backgroundColor: Cesium.Color.BLACK.withAlpha(0.6),
+              backgroundPadding: new Cesium.Cartesian2(6, 4),
+              disableDepthTestDistance: Number.POSITIVE_INFINITY,
+            }
+          : undefined,
+      });
+      markerEntitiesRef.current.set(marker.id, entity);
+
+      // FOV sector.
+      if (marker.fov) {
+        const fovEntity = viewer.entities.add({
+          id: `${marker.id}__fov`,
+          polygon: {
+            hierarchy: new Cesium.PolygonHierarchy(
+              buildSectorPositions(
+                marker.lat,
+                marker.lon,
+                marker.fov.rangeM,
+                marker.fov.bearingDeg,
+                marker.fov.widthDeg,
+              ),
+            ),
+            material: cesiumColor.withAlpha(0.18),
+            outline: true,
+            outlineColor: cesiumColor.withAlpha(0.6),
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+          },
+        });
+        fovEntitiesRef.current.push(fovEntity);
+      }
+
+      // ECM coverage ring.
+      if (marker.coverageRadiusM != null) {
+        const coverageEntity = viewer.entities.add({
+          id: `${marker.id}__coverage`,
+          position: Cesium.Cartesian3.fromDegrees(marker.lon, marker.lat),
+          ellipse: {
+            semiMajorAxis: marker.coverageRadiusM,
+            semiMinorAxis: marker.coverageRadiusM,
+            material: cesiumColor.withAlpha(0.10),
+            outline: true,
+            outlineColor: cesiumColor.withAlpha(0.5),
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+          },
+        });
+        coverageEntitiesRef.current.push(coverageEntity);
+      }
+    }
+  }, [markers]);
+
+  // ── FOV + coverage entities for HTML markers ──────────────────────────────
+  // The DOM overlay renders the icon + tooltip; Cesium renders the geometry
+  // (terrain-clamped sector polygon for FOV, ellipse for coverage). These
+  // are kept in a separate ref so the `markers[]` effect above doesn't tear
+  // them down on every change.
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+
+    for (const entity of htmlGeometryEntitiesRef.current) viewer.entities.remove(entity);
+    htmlGeometryEntitiesRef.current = [];
+
+    if (!htmlMarkers) return;
+
+    for (const m of htmlMarkers) {
+      if (m.fov) {
+        const fovColor = Cesium.Color.fromCssColorString(m.fov.color ?? '#22b8cf');
+        const fovOpacity = m.fov.opacity ?? 0.18;
+        const fovEntity = viewer.entities.add({
+          id: `${m.id}__fov`,
+          polygon: {
+            hierarchy: new Cesium.PolygonHierarchy(
+              buildSectorPositions(m.lat, m.lon, m.fov.rangeM, m.fov.bearingDeg, m.fov.widthDeg),
+            ),
+            material: fovColor.withAlpha(fovOpacity),
+            outline: true,
+            outlineColor: fovColor.withAlpha(Math.min(1, fovOpacity * 3)),
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+          },
+        });
+        htmlGeometryEntitiesRef.current.push(fovEntity);
+      }
+
+      if (m.coverageRadiusM != null) {
+        const coverageColor = Cesium.Color.fromCssColorString(m.coverageColor ?? '#22b8cf');
+        // Fill / outline opacities tuned to read clearly over satellite
+        // imagery without burying the markers underneath. Roughly mirrors
+        // the FOV cone's solidity (0.40 fill); the outline is fully opaque
+        // so the ring boundary is unambiguous even at larger zoom-outs.
+        const coverageEntity = viewer.entities.add({
+          id: `${m.id}__coverage`,
+          position: Cesium.Cartesian3.fromDegrees(m.lon, m.lat),
+          ellipse: {
+            semiMajorAxis: m.coverageRadiusM,
+            semiMinorAxis: m.coverageRadiusM,
+            material: coverageColor.withAlpha(0.25),
+            outline: true,
+            outlineColor: coverageColor.withAlpha(0.95),
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+          },
+        });
+        htmlGeometryEntitiesRef.current.push(coverageEntity);
+      }
+    }
+    viewer.scene.requestRender();
+  }, [htmlMarkers]);
+
+  // ── Polylines (trails, engagement lines, mission routes) ──────────────────
+  // Per id: if the content + style fingerprint is identical to the previous
+  // run, skip Cesium entirely. Otherwise update existing positions / material
+  // / width in place, or add a fresh entity for unseen ids. Static
+  // polylines (trails, mission routes, scan fans) get `clampToGround: true`
+  // so they drape on terrain in 3D mode — at altitude=0 they otherwise
+  // float visibly above the imagery wherever terrain rises above sea
+  // level. The fingerprint short-circuit means re-tessellation only fires
+  // when content actually changes, so the cost is bounded. Smoothed
+  // 2-point engagement lines (CallbackProperty positions) keep
+  // clampToGround off — re-tessellating per frame would tank perf.
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+
+    const existing = polylineEntitiesRef.current;
+    const fingerprints = polylineFingerprintRef.current;
+    const particleEntities = polylineParticleEntitiesRef.current;
+    const particleEndpoints = polylineParticleEndpointsRef.current;
+    const desiredIds = new Set<string>();
+    let scheduledRender = false;
+
+    if (polylines) {
+      for (const line of polylines) {
+        if (line.points.length < 2) continue;
+        desiredIds.add(line.id);
+
+        const first = line.points[0];
+        const last = line.points[line.points.length - 1];
+        const colorCss = line.color ?? '#22b8cf';
+        const width = line.width ?? 2;
+        const dashed = line.dashed === true;
+        const next = {
+          len: line.points.length,
+          firstLat: first.lat,
+          firstLon: first.lon,
+          lastLat: last.lat,
+          lastLon: last.lon,
+          color: colorCss,
+          width,
+          dashed,
+        };
+
+        const prev = fingerprints.get(line.id);
+        const entity = existing.get(line.id);
+        const sameAsPrev =
+          prev &&
+          prev.len === next.len &&
+          prev.firstLat === next.firstLat &&
+          prev.firstLon === next.firstLon &&
+          prev.lastLat === next.lastLat &&
+          prev.lastLon === next.lastLon &&
+          prev.color === next.color &&
+          prev.width === next.width &&
+          prev.dashed === next.dashed;
+
+        // 2-point dashed lines (engagement-line style) use a smoothing path:
+        // the entity is created once with a `CallbackProperty` for positions
+        // that eases between the previous and current endpoints over
+        // `SMOOTH_LINE_MS`. The 1 Hz dashboard tick (target position update)
+        // therefore plays as a 300 ms ease-out instead of a hard snap, which
+        // is what was reading as "glitching" on the engagement line. The
+        // particle dots already tracked the same endpoints so they smooth too.
+        const isSmoothed = dashed && line.points.length === 2;
+        if (isSmoothed) {
+          const nowMs = Date.now();
+          const history = polylineSmoothEndpointsRef.current.get(line.id);
+          const newCurr = {
+            fromLat: first.lat,
+            fromLon: first.lon,
+            toLat: last.lat,
+            toLon: last.lon,
+          };
+          if (history) {
+            // Snapshot the previous "curr" as "prev" iff endpoints actually
+            // moved — otherwise we'd reset the easing every memo recompute,
+            // making the line visibly twitch on no-op updates.
+            const moved =
+              history.curr.fromLat !== newCurr.fromLat ||
+              history.curr.fromLon !== newCurr.fromLon ||
+              history.curr.toLat !== newCurr.toLat ||
+              history.curr.toLon !== newCurr.toLon;
+            if (moved) {
+              polylineSmoothEndpointsRef.current.set(line.id, {
+                curr: newCurr,
+                prev: history.curr,
+                changedAt: nowMs,
+              });
+            }
+          } else {
+            // First sighting — start with prev = curr so no easing occurs
+            // on initial render.
+            polylineSmoothEndpointsRef.current.set(line.id, {
+              curr: newCurr,
+              prev: newCurr,
+              changedAt: nowMs,
+            });
+          }
+        }
+
+        // Particle endpoints always need to track the latest first / last
+        // points, even on otherwise-unchanged updates, so the moving dots
+        // re-target if the engagement pair switches mid-flight.
+        if (line.particles && line.particles.count > 0) {
+          particleEndpoints.set(line.id, {
+            fromLat: first.lat,
+            fromLon: first.lon,
+            toLat: last.lat,
+            toLon: last.lon,
+          });
+        }
+
+        if (entity && sameAsPrev) {
+          // No change → don't touch Cesium polyline. The endpoint cache
+          // above still got refreshed so any in-flight particle animation
+          // tracks the new positions on its next frame.
+          continue;
+        }
+
+        const cesiumColor = Cesium.Color.fromCssColorString(colorCss);
+        // Static dashed pattern. Animated dashes (sliding along the line)
+        // are deferred — see `docs/cesium-engagement-line-dash-animation.md`
+        // for the attempts that didn't land. The 3 spring-eased particle
+        // dots provide the flow direction in the meantime.
+        const material = dashed
+          ? new Cesium.PolylineDashMaterialProperty({ color: cesiumColor, dashLength: 12 })
+          : new Cesium.ColorMaterialProperty(cesiumColor);
+
+        if (entity?.polyline) {
+          if (!isSmoothed) {
+            // Trails / non-smoothed lines: replace positions directly. The
+            // smoothed lines never reach this branch because their entity
+            // keeps the same `CallbackProperty` for its lifetime — only
+            // material / width get patched here when we fall through.
+            const positions = line.points.map((p) => Cesium.Cartesian3.fromDegrees(p.lon, p.lat));
+            entity.polyline.positions = new Cesium.ConstantProperty(positions);
+          }
+          entity.polyline.material = material;
+          entity.polyline.width = new Cesium.ConstantProperty(width);
+        } else if (isSmoothed) {
+          // First creation of a smoothed engagement line: install the
+          // interpolating CallbackProperty. The two-element Cartesian3
+          // array is reused across frames (mutated in place) so Cesium's
+          // polyline primitive doesn't see "new array reference" churn.
+          const lineId = line.id;
+          const cachedArr: Cesium.Cartesian3[] = [
+            new Cesium.Cartesian3(),
+            new Cesium.Cartesian3(),
+          ];
+          const positionsProp = new Cesium.CallbackProperty((_time, _result) => {
+            const ep = polylineSmoothEndpointsRef.current.get(lineId);
+            if (!ep) return cachedArr;
+            const elapsed = Date.now() - ep.changedAt;
+            const tNorm = Math.min(1, Math.max(0, elapsed / SMOOTH_LINE_MS));
+            // Ease-out cubic — fast at first, settles softly into the
+            // new endpoint. Avoids the sharp 1 Hz snap.
+            const eased = 1 - Math.pow(1 - tNorm, 3);
+            const fromLat = ep.prev.fromLat + (ep.curr.fromLat - ep.prev.fromLat) * eased;
+            const fromLon = ep.prev.fromLon + (ep.curr.fromLon - ep.prev.fromLon) * eased;
+            const toLat = ep.prev.toLat + (ep.curr.toLat - ep.prev.toLat) * eased;
+            const toLon = ep.prev.toLon + (ep.curr.toLon - ep.prev.toLon) * eased;
+            Cesium.Cartesian3.fromDegrees(fromLon, fromLat, 0, undefined, cachedArr[0]);
+            Cesium.Cartesian3.fromDegrees(toLon, toLat, 0, undefined, cachedArr[1]);
+            return cachedArr;
+          }, false);
+          const fresh = viewer.entities.add({
+            id: `${lineId}__polyline`,
+            polyline: {
+              positions: positionsProp,
+              width,
+              material,
+            },
+          });
+          existing.set(lineId, fresh);
+        } else {
+          const positions = line.points.map((p) => Cesium.Cartesian3.fromDegrees(p.lon, p.lat));
+          const fresh = viewer.entities.add({
+            id: `${line.id}__polyline`,
+            polyline: {
+              positions,
+              width,
+              material,
+              // Drape the polyline on terrain so trails follow the
+              // actual ground surface in 3D mode rather than floating
+              // at sea level above the imagery. Cesium's GroundPrimitive
+              // path tessellates the line into ground-clamped strips;
+              // re-tessellation cost is negligible because static lines
+              // (trails, mission routes, scan fans) only re-create their
+              // entity when content actually changes (fingerprint check
+              // earlier in this loop). The smoothed-engagement-line
+              // branch above doesn't get this — its CallbackProperty
+              // positions would re-tessellate every frame.
+              clampToGround: true,
+              // zIndex resolves z-fighting between two ground polylines
+              // occupying the same path — e.g. a black casing + white
+              // centreline trail. Higher z-index draws on top.
+              zIndex: line.zIndex ?? 0,
+            },
+          });
+          existing.set(line.id, fresh);
+        }
+        fingerprints.set(line.id, next);
+        scheduledRender = true;
+
+        // Spawn particle entities the first time we see a polyline that
+        // requested them. The CallbackProperty closure reads from the
+        // endpoints ref, so the same entity follows whatever the latest
+        // start / end points are without us having to recreate it.
+        if (line.particles && line.particles.count > 0 && !particleEntities.has(line.id)) {
+          const count = line.particles.count;
+          const speed = line.particles.speed ?? 0.25;
+          const dotColor = Cesium.Color.fromCssColorString(line.particles.color ?? colorCss);
+          const lineId = line.id;
+          const created: Cesium.Entity[] = [];
+          for (let i = 0; i < count; i++) {
+            const phaseOffset = i / count;
+            // `Entity.position` requires a `PositionProperty` subclass.
+            // `CallbackProperty` works for `polyline.positions` etc. but
+            // the entity-level `position` field silently no-ops on it,
+            // which is why the dots looked frozen. `CallbackPositionProperty`
+            // is Cesium's purpose-built variant for animated entity
+            // positions and is what we need here.
+            //
+            // The closure also eases between the previous and current
+            // endpoints (via `polylineSmoothEndpointsRef`) when the line
+            // is smoothed, so the dots travel along the same eased path
+            // as the line itself instead of skipping ahead each tick.
+            const positionProp = new Cesium.CallbackPositionProperty((_time, result) => {
+              const endpoints = polylineParticleEndpointsRef.current.get(lineId);
+              if (!endpoints) {
+                return Cesium.Cartesian3.fromDegrees(0, 0, 0, undefined, result);
+              }
+              // If the line is smoothed, sample the eased endpoints so the
+              // particle path matches the line's interpolated geometry.
+              const smooth = polylineSmoothEndpointsRef.current.get(lineId);
+              let fromLat = endpoints.fromLat;
+              let fromLon = endpoints.fromLon;
+              let toLat = endpoints.toLat;
+              let toLon = endpoints.toLon;
+              if (smooth) {
+                const sElapsed = Date.now() - smooth.changedAt;
+                const sNorm = Math.min(1, Math.max(0, sElapsed / SMOOTH_LINE_MS));
+                const sEased = 1 - Math.pow(1 - sNorm, 3);
+                fromLat = smooth.prev.fromLat + (smooth.curr.fromLat - smooth.prev.fromLat) * sEased;
+                fromLon = smooth.prev.fromLon + (smooth.curr.fromLon - smooth.prev.fromLon) * sEased;
+                toLat = smooth.prev.toLat + (smooth.curr.toLat - smooth.prev.toLat) * sEased;
+                toLon = smooth.prev.toLon + (smooth.curr.toLon - smooth.prev.toLon) * sEased;
+              }
+              const t = ((Date.now() / 1000) * speed + phaseOffset) % 1;
+              const eased = easeSpring(t);
+              return Cesium.Cartesian3.fromDegrees(
+                fromLon + (toLon - fromLon) * eased,
+                fromLat + (toLat - fromLat) * eased,
+                0,
+                undefined,
+                result,
+              );
+            }, false);
+            const particleEntity = viewer.entities.add({
+              id: `${lineId}__particle-${i}`,
+              position: positionProp,
+              point: {
+                pixelSize: 8,
+                color: dotColor,
+                outlineColor: dotColor.withAlpha(0.4),
+                outlineWidth: 4,
+                disableDepthTestDistance: Number.POSITIVE_INFINITY,
+              },
+            });
+            created.push(particleEntity);
+          }
+          particleEntities.set(lineId, created);
+        }
+      }
+    }
+
+    // Remove entities that are no longer in the desired set.
+    for (const [id, entity] of existing) {
+      if (!desiredIds.has(id)) {
+        viewer.entities.remove(entity);
+        existing.delete(id);
+        fingerprints.delete(id);
+        polylineSmoothEndpointsRef.current.delete(id);
+        scheduledRender = true;
+      }
+    }
+    // Tear down particles for any line that's no longer present.
+    for (const [id, particles] of particleEntities) {
+      if (!desiredIds.has(id)) {
+        for (const p of particles) viewer.entities.remove(p);
+        particleEntities.delete(id);
+        particleEndpoints.delete(id);
+        scheduledRender = true;
+      }
+    }
+
+    if (scheduledRender) viewer.scene.requestRender();
+  }, [polylines]);
+
+  // ── Imperative fly-to ──────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!flyTo || !viewerRef.current) return;
+    viewerRef.current.camera.flyTo({
+      destination: toCartesian({ lat: flyTo.lat, lon: flyTo.lon, heightM: flyTo.heightM ?? 1500 }),
+      duration: flyTo.durationSec ?? 1.2,
+    });
+  }, [flyTo]);
+
+  return (
+    <div ref={containerRef} className={className}>
+      {/*
+        DOM-overlay container. Sits absolutely over the Cesium canvas with
+        `pointer-events: none` so clicks fall through to the scene unless
+        a child element explicitly opts in via `pointer-events: auto`.
+        Each marker is positioned via the `transform` set in the per-frame
+        sync above; it never re-renders unless the React tree changes.
+
+        The parent container's className is provided by the consumer and
+        already establishes a positioning context (`absolute inset-0` in
+        the dashboard, `w-full h-full` in the styleguide). We don't append
+        `relative` here because that would override `position: absolute`
+        in the dashboard chain and collapse the container to 0×0.
+      */}
+      {/*
+        Stack the overlay explicitly above the Cesium canvas (which Cesium
+        appends to the same `containerRef` after React mounts, so a plain
+        `z-auto` overlay would lose to it in source-order tie-break) and
+        below dashboard chrome that sits higher in the document — the side
+        panel uses `z-30`, so a single-digit z-index here keeps markers
+        on top of the map without breaking out of the dashboard's stack.
+        `position: absolute` + a numeric z-index also creates a stacking
+        context, so the per-marker `zIndex` values (10..60) only compete
+        with each other instead of bubbling up to the document root.
+      */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden z-[1]">
+        {htmlMarkers?.map((m) => (
+          <div
+            key={m.id}
+            ref={(node) => {
+              if (node) htmlMarkerNodesRef.current.set(m.id, node);
+              else htmlMarkerNodesRef.current.delete(m.id);
+            }}
+            onClick={m.onClick}
+            onContextMenu={m.onContextMenu}
+            onMouseEnter={m.onMouseEnter}
+            onMouseLeave={m.onMouseLeave}
+            className="pointer-events-auto absolute top-0 left-0"
+            style={{
+              zIndex: m.zIndex,
+              // Hidden by default until first preRender places it. Avoids
+              // a flash at (0,0) before the scene has run a frame.
+              display: 'none',
+              willChange: 'transform',
+            }}
+          >
+            {m.content}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
