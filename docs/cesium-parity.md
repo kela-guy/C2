@@ -2,7 +2,7 @@
 
 Goal: replace the Mapbox-based `TacticalMap` with `CesiumTacticalMap` and validate every existing capability lands intact. The two components share the same public API (`TacticalMapProps` from `src/app/components/TacticalMap.tsx`); the active backend is chosen at runtime via the `?map=cesium` URL parameter.
 
-**Toggle:** append `?map=cesium` to any dashboard URL to load the Cesium backend. Default is Mapbox. Read once on page load — switching requires a refresh.
+**Toggle:** Cesium is the default after the Phase 8 cutover. Append `?map=mapbox` to any dashboard URL to load the legacy Mapbox backend (rollback path). Read once on page load — switching requires a refresh.
 
 ## Status legend
 
@@ -140,11 +140,11 @@ Fixed by:
 | No memory leaks across 5 min of interaction | ✓ | ⚠ | Baseline at idle: 111.9 MB used / 163.9 MB total JS heap (`performance.memory`). 5-minute interaction-and-compare needs a focused tab + scripted scenario; manual run pending. |
 | Bundle size impact | n/a | ⚠ | Main JS chunk: **1,354 kB / 394 kB gzip** (Cesium runtime is the bulk). Mapbox still co-bundled at 988 kB / 276 kB gzip — removed in Phase 9 cutover, which roughly halves that. |
 
-## Phase 8 — Cutover
+## Phase 8 — Cutover  *(complete)*
 
 | Capability | Mapbox | Cesium | Notes |
 |---|---|---|---|
-| Default flips to Cesium; toggle becomes `?map=mapbox` | ✓ | ✗ | One full release on Cesium with rollback. |
+| Default flips to Cesium; toggle becomes `?map=mapbox` | ✓ | ✓ | Default in `src/lib/mapBackend.ts` flipped — unsuffixed URLs load Cesium; `?map=mapbox` is the opt-out for rollback during the bake-in release. |
 
 ## Phase 9 — Mapbox removal
 
