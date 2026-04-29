@@ -92,26 +92,35 @@ const droneRotationFromHeading = (headingDeg: number | null | undefined): number
  * smoothed position agree on which way the track is "facing".
  */
 const HEADING_WINDOW_MS = 5000;
+/** Min trail points before we trust the regression; fall back to last-pair below this. */
+const HEADING_MIN_REGRESSION_PAIRS = 3;
 
 /**
- * Derive a heading for a hostile target from a 5-second sliding window of
- * its trail rather than just the last two points. Single-pair bearings are
- * jumpy on real sensor data — sample noise gets directly amplified into
- * heading noise, and you see the icon visibly twitch each tick. Computing
- * heading from a windowed least-squares fit on (t, lat) and (t, lon) lets
- * the rotation track the underlying direction of travel without the
- * frame-to-frame jitter.
+ * Derive a heading for a hostile target from a sliding window of its trail.
  *
- * Returns `null` when the trail is missing, too short, or every pair in
- * the window is below the heading-from-velocity speed floor (a stationary
- * blob, where direction is dominated by sensor noise — keep the icon at
- * its default orientation rather than spinning randomly).
+ * Single-pair bearings (last 2 points) are noisy — sample noise gets
+ * directly amplified into heading noise and the icon visibly twitches each
+ * tick. But naïvely averaging position over a window gives you the *chord*
+ * direction over those samples, which lags by half the window during a turn.
+ *
+ * What we actually want is the *tangent at the head of the trail* with
+ * sample-noise smoothed out. Compute that by:
+ *   1. For each consecutive pair in the window, take its bearing.
+ *   2. Unwrap (so 350° → 10° reads as +20°, not -340°).
+ *   3. Least-squares fit `θ(i) = a + b·i` through the unwrapped bearings.
+ *      `b` is the per-pair turn rate (in degrees per index step).
+ *   4. Predict `θ` at the *latest* pair index — this is the regression-
+ *      smoothed instantaneous heading, which matches the tangent of the
+ *      curve at the head while damping per-pair noise via the fit.
+ *
+ * Returns `null` when the trail is missing or too short.
  */
 function targetHeadingFromTrail(t: Detection): number | null {
   if (!t.trail || t.trail.length < 2) return null;
 
-  // Pick the window: prefer the last 5 s, but if too few samples landed in
-  // it (slow feeds), use whatever we have at the tail of the trail.
+  // Pick the window: prefer the last 5 s, fall back to the last 6 trail
+  // points if timestamps aren't parseable (HH:mm:ss strings in some
+  // locales) or there aren't enough samples in the time window.
   const tail = t.trail[t.trail.length - 1];
   const tailMs = Date.parse(tail.timestamp);
   let from = 0;
@@ -122,53 +131,63 @@ function targetHeadingFromTrail(t: Detection): number | null {
       if (Number.isFinite(ts) && ts < cutoff) { from = i + 1; break; }
     }
   }
-  // Fall back to the last 5 trail points if timestamps weren't parseable
-  // (shouldn't happen with the current trail format, but defensive).
-  if (from === t.trail.length - 1) from = Math.max(0, t.trail.length - 5);
+  if (from === t.trail.length - 1) from = Math.max(0, t.trail.length - 6);
 
   const window = t.trail.slice(from);
   if (window.length < 2) return null;
 
-  // Least-squares slope of (index, lat) and (index, lon). We use index as
-  // the time proxy because trail timestamps are formatted as `HH:mm:ss`
-  // strings (not parseable in all locales) and the trail is uniformly
-  // sampled — index works as a stand-in time axis. The bearing comes from
-  // (vLat, vLon) regardless of the time scale, so any positive slope axis
-  // produces the same bearing.
-  let sumI = 0, sumLat = 0, sumLon = 0;
-  for (let i = 0; i < window.length; i++) {
-    sumI += i; sumLat += window[i].lat; sumLon += window[i].lon;
+  // Last-pair bearing — used as the fallback when the window is too short
+  // for a stable regression and as the wrap-anchor for unwrapping below.
+  const lastPairBearing = bearingDegrees(
+    window[window.length - 2].lat,
+    window[window.length - 2].lon,
+    window[window.length - 1].lat,
+    window[window.length - 1].lon,
+  );
+  if (window.length < HEADING_MIN_REGRESSION_PAIRS + 1) {
+    return lastPairBearing;
   }
-  const meanI = sumI / window.length;
-  const meanLat = sumLat / window.length;
-  const meanLon = sumLon / window.length;
-  let nLat = 0, nLon = 0, denom = 0;
-  for (let i = 0; i < window.length; i++) {
+
+  // Pair-bearings (one per consecutive pair) + unwrapping so a slow turn
+  // through 0/360 reads as a continuous angle for the regression.
+  const bearings: number[] = [];
+  for (let i = 1; i < window.length; i++) {
+    bearings.push(
+      bearingDegrees(
+        window[i - 1].lat,
+        window[i - 1].lon,
+        window[i].lat,
+        window[i].lon,
+      ),
+    );
+  }
+  const unwrapped: number[] = [bearings[0]];
+  for (let i = 1; i < bearings.length; i++) {
+    let delta = ((bearings[i] - bearings[i - 1] + 540) % 360) - 180;
+    if (delta <= -180) delta += 360;
+    unwrapped.push(unwrapped[i - 1] + delta);
+  }
+
+  // Least-squares regression of (i, unwrappedBearing). The output is the
+  // line θ(i) = a + b·i; we evaluate at i = lastIndex to get the
+  // regression-predicted bearing at the head of the trail.
+  let sumI = 0, sumT = 0;
+  for (let i = 0; i < unwrapped.length; i++) {
+    sumI += i; sumT += unwrapped[i];
+  }
+  const meanI = sumI / unwrapped.length;
+  const meanT = sumT / unwrapped.length;
+  let num = 0, denom = 0;
+  for (let i = 0; i < unwrapped.length; i++) {
     const di = i - meanI;
-    nLat += di * (window[i].lat - meanLat);
-    nLon += di * (window[i].lon - meanLon);
+    num += di * (unwrapped[i] - meanT);
     denom += di * di;
   }
-  if (denom <= 0) return null;
-  const vLat = nLat / denom;
-  const vLon = nLon / denom;
-
-  // If the regression slope says the track is essentially stationary,
-  // bearing is undefined — return the previous-pair bearing instead so
-  // the icon doesn't flip to 0° when speed dips briefly.
-  const speed2 = vLat * vLat + vLon * vLon;
-  if (speed2 < 1e-12) {
-    const a = window[window.length - 2];
-    const b = window[window.length - 1];
-    return bearingDegrees(a.lat, a.lon, b.lat, b.lon);
-  }
-
-  // Bearing from the velocity vector. `bearingDegrees` is implemented for
-  // two lat/lon points; feed it the regression's "next predicted point"
-  // along the slope direction.
-  const lat0 = meanLat;
-  const lon0 = meanLon;
-  return bearingDegrees(lat0, lon0, lat0 + vLat, lon0 + vLon);
+  if (denom <= 0) return lastPairBearing;
+  const slopePerPair = num / denom;
+  const lastIdx = unwrapped.length - 1;
+  const headingAtHead = meanT + slopePerPair * (lastIdx - meanI);
+  return ((headingAtHead % 360) + 360) % 360;
 }
 
 /**
