@@ -481,6 +481,11 @@ export function CesiumTacticalMap({
               pulse={isHovered || isActive || isNewArrival}
             />
           ),
+          // Treat backend `coordinates` updates as sensor samples — the
+          // map smooths position between fixes; if updates go quiet the
+          // marker dims and a "Ns ago" badge appears, signalling lost
+          // contact with the threat at a glance.
+          kinematic: true,
           onClick: () => onMarkerClickRef.current?.(t.id),
           onContextMenu: (e) => openContextMenu(e, 'target', t.id),
           onMouseEnter: () => setHoveredMarkerId(t.id),
@@ -626,6 +631,11 @@ export function CesiumTacticalMap({
                 opacity: 0.4,
               }
             : undefined,
+          // Same motion-smoothing + stale-signal story as hostile
+          // targets. Offline drones skip kinematic handling — they're
+          // not "stale", they're explicitly down, and the existing
+          // `disabled` style already communicates that.
+          kinematic: !isOffline,
           onClick: () => onAssetClickRef.current?.(d.id),
           onMouseEnter: () => setHoveredMarkerId(d.id),
           onMouseLeave: () => setHoveredMarkerId((current) => (current === d.id ? null : current)),

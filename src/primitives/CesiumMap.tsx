@@ -16,6 +16,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import * as Cesium from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
+import { createMotionTrack, type MotionTrack } from '@/lib/motionTracker';
 
 /**
  * Minimum container size (px) before we're willing to construct
@@ -115,6 +116,15 @@ export interface CesiumHtmlMarker {
   coverageRadiusM?: number;
   /** Coverage ring colour (CSS string). Defaults to `#22b8cf`. */
   coverageColor?: string;
+  /**
+   * When true, the marker's lat/lon prop is treated as a *sensor sample*
+   * rather than a render position. The map maintains a per-id motion track
+   * that interpolates between samples and extrapolates forward along the
+   * last-known velocity vector when samples go quiet — see
+   * `src/lib/motionTracker.ts`. Heading from velocity is exposed but not
+   * applied to the icon (icons stay React-level for rotation).
+   */
+  kinematic?: boolean;
 }
 
 export interface CesiumMapProps {
@@ -327,6 +337,20 @@ export function CesiumMap({
   const htmlMarkerNodesRef = useRef<Map<string, HTMLDivElement>>(new Map());
   const htmlMarkerCartesianRef = useRef<Map<string, Cesium.Cartesian3>>(new Map());
 
+  /**
+   * Per-id motion tracks for `htmlMarkers[m].kinematic === true`. Lat/lon
+   * arriving on prop updates is pushed as a sample; the preRender loop
+   * queries the track at frame time to get a smoothed (interpolated /
+   * extrapolated) render position. See `src/lib/motionTracker.ts`.
+   *
+   * `kinematicCartesianScratchRef` is a reusable Cartesian3 per kinematic
+   * marker so the per-frame loop doesn't allocate a fresh object on every
+   * frame. Halo entities live in their own ref so the marker-rebuild
+   * effect doesn't tear them down.
+   */
+  const motionTracksRef = useRef<Map<string, MotionTrack>>(new Map());
+  const kinematicCartesianScratchRef = useRef<Map<string, Cesium.Cartesian3>>(new Map());
+
   // ── Mount-readiness gate ──────────────────────────────────────────────────
   // Defer Viewer construction until the container actually has dimensions.
   // Without this, `<ResizablePanel>` and other "measure-then-size" parents
@@ -451,9 +475,29 @@ export function CesiumMap({
     const removePreRender = viewer.scene.preRender.addEventListener(() => {
       const nodes = htmlMarkerNodesRef.current;
       const cartesians = htmlMarkerCartesianRef.current;
+      const tracks = motionTracksRef.current;
+      const kinematicScratch = kinematicCartesianScratchRef.current;
       if (nodes.size === 0) return;
+      const now = Date.now();
+      // Kinematic tracks that are still smoothing toward the latest
+      // sample or extrapolating forward need the scene to keep
+      // rendering — Cesium's request-render mode would otherwise idle
+      // out after one frame and the marker would visibly freeze.
+      let kinematicActive = false;
       for (const [id, node] of nodes) {
-        const cart = cartesians.get(id);
+        const track = tracks.get(id);
+        let cart: Cesium.Cartesian3 | undefined;
+        if (track) {
+          const s = track.query(now);
+          const scratch = kinematicScratch.get(id);
+          if (scratch) {
+            Cesium.Cartesian3.fromDegrees(s.lon, s.lat, 0, undefined, scratch);
+            cart = scratch;
+          }
+          if (!s.frozen) kinematicActive = true;
+        } else {
+          cart = cartesians.get(id);
+        }
         if (!cart) {
           node.style.display = 'none';
           continue;
@@ -467,6 +511,7 @@ export function CesiumMap({
         node.style.display = '';
         node.style.transform = `translate(-50%, -50%) translate(${screen.x}px, ${screen.y}px)`;
       }
+      if (kinematicActive) viewer.scene.requestRender();
     });
 
     viewerRef.current = viewer;
@@ -485,6 +530,8 @@ export function CesiumMap({
       polylineParticleEntitiesRef.current.clear();
       polylineParticleEndpointsRef.current.clear();
       polylineSmoothEndpointsRef.current.clear();
+      motionTracksRef.current.clear();
+      kinematicCartesianScratchRef.current.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mountReady]);
@@ -492,13 +539,47 @@ export function CesiumMap({
   // ── HTML marker positions ────────────────────────────────────────────────
   // Re-compute Cartesian3 cache whenever `htmlMarkers` changes. The
   // per-frame loop reads from this cache, so it stays cheap.
+  //
+  // Kinematic markers don't write to the static cache — instead, the new
+  // lat/lon is pushed as a sample to the per-id motion track, and the
+  // per-frame preRender loop queries the track at frame time. Tracks /
+  // scratch buffers for ids that left the prop set are dropped here so
+  // they don't leak across long sessions.
   useEffect(() => {
     const cache = htmlMarkerCartesianRef.current;
     cache.clear();
-    if (!htmlMarkers) return;
-    for (const m of htmlMarkers) {
-      cache.set(m.id, Cesium.Cartesian3.fromDegrees(m.lon, m.lat));
+    if (!htmlMarkers) {
+      motionTracksRef.current.clear();
+      kinematicCartesianScratchRef.current.clear();
+      return;
     }
+
+    const liveKinematicIds = new Set<string>();
+    const sampleAt = Date.now();
+    for (const m of htmlMarkers) {
+      if (m.kinematic) {
+        liveKinematicIds.add(m.id);
+        let track = motionTracksRef.current.get(m.id);
+        if (!track) {
+          track = createMotionTrack();
+          motionTracksRef.current.set(m.id, track);
+          kinematicCartesianScratchRef.current.set(m.id, new Cesium.Cartesian3());
+        }
+        track.pushSample(m.lat, m.lon, sampleAt);
+      } else {
+        cache.set(m.id, Cesium.Cartesian3.fromDegrees(m.lon, m.lat));
+      }
+    }
+
+    // Drop tracks + scratch Cartesians for ids that vanished or that are
+    // no longer kinematic (e.g. a drone going offline mid-session).
+    for (const id of motionTracksRef.current.keys()) {
+      if (!liveKinematicIds.has(id)) {
+        motionTracksRef.current.delete(id);
+        kinematicCartesianScratchRef.current.delete(id);
+      }
+    }
+
     // Force a render so positions update immediately even without user
     // interaction (Cesium uses request-render mode by default).
     viewerRef.current?.scene.requestRender();
