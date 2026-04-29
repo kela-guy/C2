@@ -152,6 +152,7 @@ export function CesiumTacticalMap({
   sensorFocusId,
   selectedEffectorIds,
   selectedLauncherIds,
+  controlIndicator,
   onMarkerClick,
   onAssetClick,
   onContextMenuAction,
@@ -959,6 +960,25 @@ export function CesiumTacticalMap({
         sceneMode="2D"
         className="absolute inset-0"
       />
+
+      {/*
+        "אתה בשליטה" / "You have control" indicator. Mirrors the Mapbox
+        pill in `TacticalMap.tsx:2386-2393` pixel-for-pixel — same
+        emerald palette, glow shadow, slow 3 s pulse, top-centre. Shown
+        only when the dashboard sets `controlIndicator={true}` (typically
+        while the operator has direct control of an asset).
+      */}
+      {controlIndicator && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+          <div
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-900/90 backdrop-blur-md shadow-[0_0_0_1px_rgba(52,211,153,0.6),0_10px_15px_-3px_rgba(0,0,0,0.3),0_0_20px_rgba(52,211,153,0.2)] animate-pulse"
+            style={{ animationDuration: '3s' }}
+          >
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+            <span className="text-sm font-bold text-emerald-200">אתה בשליטה</span>
+          </div>
+        </div>
+      )}
 
       {contextMenu && (
         <CesiumContextMenu
