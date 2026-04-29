@@ -642,8 +642,23 @@ export function CesiumMap({
 
         const positions = line.points.map((p) => Cesium.Cartesian3.fromDegrees(p.lon, p.lat));
         const cesiumColor = Cesium.Color.fromCssColorString(colorCss);
+        // Animated dash flow — the bit pattern (16-bit, 1 = dash) is rotated
+        // every frame so the dashes appear to slide along the line. Cesium's
+        // default render loop evaluates `CallbackProperty` (with
+        // `isConstant=false`) on every frame, so the effect is automatic
+        // for a viewer that isn't in `requestRenderMode`. Mirrors the
+        // visual intent of Mapbox's particle-flow engagement line without
+        // needing additional moving entities.
         const material = dashed
-          ? new Cesium.PolylineDashMaterialProperty({ color: cesiumColor, dashLength: 14 })
+          ? new Cesium.PolylineDashMaterialProperty({
+              color: cesiumColor,
+              dashLength: 16,
+              dashPattern: new Cesium.CallbackProperty(() => {
+                const base = 0xff00;
+                const shift = Math.floor(Date.now() / 60) % 16;
+                return ((base << shift) | (base >>> (16 - shift))) & 0xffff;
+              }, false),
+            })
           : new Cesium.ColorMaterialProperty(cesiumColor);
 
         if (entity?.polyline) {

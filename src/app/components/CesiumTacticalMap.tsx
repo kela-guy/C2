@@ -47,9 +47,11 @@ import {
   DroneIcon,
   FOV_RADIUS_M,
   bearingDegrees,
+  haversineDistanceM,
 } from './TacticalMap';
 import type { TacticalMapProps, MapAsset } from './TacticalMap';
 import { DRONE_FOV_RADIUS_M, DRONE_FOV_DEG } from '@/app/lib/mapGeo';
+import { JAM_FLOW, WEAPON_FLOW, resolveNearestAsset, type FlowAsset } from '@/imports/engagementFlows';
 import type { Detection } from '@/imports/ListOfSystems';
 
 const CESIUM_ION_TOKEN = (import.meta.env.VITE_CESIUM_ION_TOKEN as string | undefined) ?? '';
@@ -148,6 +150,8 @@ export function CesiumTacticalMap({
   smoothFocusRequest,
   fitBoundsPoints,
   sensorFocusId,
+  selectedEffectorIds,
+  selectedLauncherIds,
   onMarkerClick,
   onAssetClick,
   onContextMenuAction,
@@ -189,6 +193,156 @@ export function CesiumTacticalMap({
     },
     [contextMenu],
   );
+
+  /**
+   * Active-target → engaging-effector pair, rendered as a dashed line on the
+   * map and used to highlight the chosen effector marker. Mirrors the
+   * Mapbox `jamPair` / `weaponPair` logic in `TacticalMap.tsx:600-681`.
+   *
+   * Resolution priority for which effector "owns" the active target:
+   *   1. Already-engaged: `target.mitigatingEffectorId` (jam) or
+   *      `target.pointingLauncherId` (weapon) — engagement is in flight.
+   *   2. Card-side hover preview: when the user hovers an effector in the
+   *      target's sidebar, the line moves to that effector for a beat.
+   *   3. User override via `selectedEffectorIds` / `selectedLauncherIds`.
+   *   4. Closest available effector — picked by `resolveNearestAsset`.
+   *
+   * Returns `null` for targets the flow doesn't apply to (mitigated /
+   * expired / actively-jamming target / mismatched classification).
+   */
+  type EngagementFlowKind = 'jam' | 'weapon';
+  type EngagementPair = {
+    flow: EngagementFlowKind;
+    targetLat: number;
+    targetLon: number;
+    effLat: number;
+    effLon: number;
+    effId: string;
+    distanceM: number;
+    phase: string;
+    lineColor: string;
+    badgeTextColor: string;
+  };
+
+  const engagementPair = useMemo<EngagementPair | null>(() => {
+    if (!activeTargetId || !targets) return null;
+    const target = targets.find((t) => t.id === activeTargetId);
+    if (!target) return null;
+    if (target.entityStage !== 'classified') return null;
+
+    const [tLat, tLon] = (target.coordinates ?? '')
+      .split(',')
+      .map((s) => parseFloat(s.trim()));
+    if (!Number.isFinite(tLat) || !Number.isFinite(tLon)) return null;
+
+    const buildPair = (
+      flow: EngagementFlowKind,
+      asset: FlowAsset,
+      distanceM: number,
+      phase: string,
+      flowDef: typeof JAM_FLOW | typeof WEAPON_FLOW,
+    ): EngagementPair => ({
+      flow,
+      targetLat: tLat,
+      targetLon: tLon,
+      effLat: asset.lat,
+      effLon: asset.lon,
+      effId: asset.id,
+      distanceM,
+      phase,
+      lineColor: flowDef.lineColor(phase),
+      badgeTextColor: flowDef.badgeTextColor(phase),
+    });
+
+    // ── JAM flow (drone targets) ────────────────────────────────────────
+    if (JAM_FLOW.matchTarget(target)) {
+      if (target.mitigationStatus === 'mitigated') return null;
+      if (
+        target.status === 'expired' ||
+        target.status === 'event_neutralized' ||
+        target.status === 'event_resolved'
+      ) {
+        return null;
+      }
+      // Already-jamming targets get their own viz path.
+      if (target.id === jammingTargetId) return null;
+      // "Mitigate all" doesn't pin to a single effector.
+      if (target.mitigatingEffectorId === 'ALL') return null;
+
+      const phase = JAM_FLOW.getPhase(target);
+      const effectors = (regulusEffectors ?? REGULUS_EFFECTORS) as unknown as FlowAsset[];
+
+      // 1. In-flight engagement.
+      if (phase === 'mitigating' && target.mitigatingEffectorId) {
+        const eff = effectors.find((e) => e.id === target.mitigatingEffectorId);
+        if (eff) {
+          return buildPair('jam', eff, haversineDistanceM(tLat, tLon, eff.lat, eff.lon), phase, JAM_FLOW);
+        }
+      }
+
+      // 2. Card-side hover preview.
+      if (hoveredSensorIdFromCard) {
+        const eff = effectors.find((e) => e.id === hoveredSensorIdFromCard);
+        if (eff) {
+          return buildPair('jam', eff, haversineDistanceM(tLat, tLon, eff.lat, eff.lon), phase, JAM_FLOW);
+        }
+      }
+
+      // 3 + 4. User override → closest available.
+      const overrideId = selectedEffectorIds?.get(activeTargetId);
+      const resolved = resolveNearestAsset(tLat, tLon, effectors, JAM_FLOW.availableFilter, overrideId);
+      if (resolved.active) {
+        return buildPair('jam', resolved.active.asset, resolved.active.km * 1000, phase, JAM_FLOW);
+      }
+      return null;
+    }
+
+    // ── WEAPON flow (car targets) ───────────────────────────────────────
+    if (WEAPON_FLOW.matchTarget(target)) {
+      if (
+        target.status === 'expired' ||
+        target.status === 'event_neutralized' ||
+        target.status === 'event_resolved'
+      ) {
+        return null;
+      }
+
+      const phase = WEAPON_FLOW.getPhase(target);
+      const launchers = (launcherEffectors ?? []) as unknown as FlowAsset[];
+
+      if (target.pointingLauncherId) {
+        const launcher = launchers.find((l) => l.id === target.pointingLauncherId);
+        if (launcher) {
+          return buildPair('weapon', launcher, haversineDistanceM(tLat, tLon, launcher.lat, launcher.lon), phase, WEAPON_FLOW);
+        }
+      }
+
+      if (hoveredSensorIdFromCard) {
+        const launcher = launchers.find((l) => l.id === hoveredSensorIdFromCard);
+        if (launcher) {
+          return buildPair('weapon', launcher, haversineDistanceM(tLat, tLon, launcher.lat, launcher.lon), phase, WEAPON_FLOW);
+        }
+      }
+
+      const overrideId = selectedLauncherIds?.get(activeTargetId);
+      const resolved = resolveNearestAsset(tLat, tLon, launchers, WEAPON_FLOW.availableFilter, overrideId);
+      if (resolved.active) {
+        return buildPair('weapon', resolved.active.asset, resolved.active.km * 1000, phase, WEAPON_FLOW);
+      }
+      return null;
+    }
+
+    return null;
+  }, [
+    activeTargetId,
+    targets,
+    regulusEffectors,
+    launcherEffectors,
+    selectedEffectorIds,
+    selectedLauncherIds,
+    hoveredSensorIdFromCard,
+    jammingTargetId,
+  ]);
 
   /**
    * Compose every asset registry + every dynamic prop into a single
@@ -356,9 +510,13 @@ export function CesiumTacticalMap({
     }
 
     // Regulus effectors — friendly assets but treated as effectors for context menu.
-    // Default state, only flips to `'jammer'` (green ring + pulse) when this
-    // specific Regulus is actively jamming.
+    // State priority: hover > active-jam (green ring) > engagement (selected
+    // ring, when this is the resolved effector for the active target) >
+    // default. Mirrors how Mapbox lights up the chosen effector while the
+    // engagement line is drawn from the active target to its asset.
     const effectors = regulusEffectors ?? REGULUS_EFFECTORS;
+    const isEngagementEffector = (id: string) =>
+      engagementPair?.flow === 'jam' && engagementPair.effId === id;
     for (const e of effectors) {
       if (seen.has(e.id)) continue;
       seen.add(e.id);
@@ -366,11 +524,14 @@ export function CesiumTacticalMap({
       const isHoveredFromCard = hoveredSensorIdFromCard === e.id;
       const isHoveredOnMap = hoveredMarkerId === e.id;
       const isHovered = isHoveredFromCard || isHoveredOnMap;
+      const isEngaged = isEngagementEffector(e.id);
       const state: InteractionState = isHovered
         ? 'hovered'
         : isJamming
           ? 'jammer'
-          : 'default';
+          : isEngaged
+            ? 'selected'
+            : 'default';
       const style = resolveMarkerStyle(state, 'friendly');
       out.push({
         id: e.id,
@@ -481,7 +642,12 @@ export function CesiumTacticalMap({
         if (seen.has(l.id)) continue;
         seen.add(l.id);
         const isHovered = hoveredMarkerId === l.id;
-        const state: InteractionState = isHovered ? 'hovered' : 'default';
+        const isEngaged = engagementPair?.flow === 'weapon' && engagementPair.effId === l.id;
+        const state: InteractionState = isHovered
+          ? 'hovered'
+          : isEngaged
+            ? 'selected'
+            : 'default';
         const style = resolveMarkerStyle(state, 'friendly');
         out.push({
           id: l.id,
@@ -507,6 +673,35 @@ export function CesiumTacticalMap({
       }
     }
 
+    // Engagement-line distance badge — sits at the midpoint of the line and
+    // displays the target ↔ effector distance in m / km. Coloured using the
+    // flow's `lineColor` / `badgeTextColor` so the badge reads as part of
+    // the line, not a stray marker. Mirrors the Mapbox badge in
+    // `TacticalMap.tsx:1485-1496`.
+    if (engagementPair) {
+      const distanceLabel =
+        engagementPair.distanceM < 1000
+          ? `${Math.round(engagementPair.distanceM)}m`
+          : `${(engagementPair.distanceM / 1000).toFixed(1)} km`;
+      out.push({
+        id: `__engagement-badge-${engagementPair.flow}`,
+        lat: (engagementPair.targetLat + engagementPair.effLat) / 2,
+        lon: (engagementPair.targetLon + engagementPair.effLon) / 2,
+        zIndex: 70,
+        content: (
+          <div
+            className="rounded px-2 py-1 font-mono text-[11px] tabular-nums whitespace-nowrap pointer-events-none select-none shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
+            style={{
+              backgroundColor: engagementPair.lineColor,
+              color: engagementPair.badgeTextColor,
+            }}
+          >
+            {distanceLabel}
+          </div>
+        ),
+      });
+    }
+
     return out;
   }, [
     targets,
@@ -522,6 +717,7 @@ export function CesiumTacticalMap({
     jammingJammerAssetId,
     hoveredMarkerId,
     openContextMenu,
+    engagementPair,
   ]);
 
   /**
@@ -638,8 +834,25 @@ export function CesiumTacticalMap({
       }
     }
 
+    // Active-target engagement line (jam or weapon flow). Mirrors the
+    // dashed line Mapbox draws between the active target and the resolved
+    // effector (`TacticalMap.tsx:1456-1472`). Colour is phase-driven —
+    // white at idle, red while mitigating, etc.
+    if (engagementPair) {
+      out.push({
+        id: `${engagementPair.flow}-engagement-line`,
+        points: [
+          { lat: engagementPair.effLat, lon: engagementPair.effLon },
+          { lat: engagementPair.targetLat, lon: engagementPair.targetLon },
+        ],
+        color: engagementPair.lineColor,
+        width: 2,
+        dashed: true,
+      });
+    }
+
     return out;
-  }, [activeDrone, missionRoute, friendlyDrones, targets, jammingTargetId, jammingJammerAssetId, regulusEffectors]);
+  }, [activeDrone, missionRoute, friendlyDrones, targets, jammingTargetId, jammingJammerAssetId, regulusEffectors, engagementPair]);
 
   /**
    * Phase 6 — imperative camera control. Each prop is converted into a
