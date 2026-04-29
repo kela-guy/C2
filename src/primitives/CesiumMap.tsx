@@ -865,10 +865,14 @@ export function CesiumMap({
   // ── Polylines (trails, engagement lines, mission routes) ──────────────────
   // Per id: if the content + style fingerprint is identical to the previous
   // run, skip Cesium entirely. Otherwise update existing positions / material
-  // / width in place, or add a fresh entity for unseen ids. `clampToGround`
-  // is intentionally OFF — in `SCENE2D` mode height is ignored, and the
-  // ground-clamped pipeline forces a stencil-based re-tessellation that
-  // visibly flickers when the trail re-samples.
+  // / width in place, or add a fresh entity for unseen ids. Static
+  // polylines (trails, mission routes, scan fans) get `clampToGround: true`
+  // so they drape on terrain in 3D mode — at altitude=0 they otherwise
+  // float visibly above the imagery wherever terrain rises above sea
+  // level. The fingerprint short-circuit means re-tessellation only fires
+  // when content actually changes, so the cost is bounded. Smoothed
+  // 2-point engagement lines (CallbackProperty positions) keep
+  // clampToGround off — re-tessellating per frame would tank perf.
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer) return;
@@ -1040,6 +1044,17 @@ export function CesiumMap({
               positions,
               width,
               material,
+              // Drape the polyline on terrain so trails follow the
+              // actual ground surface in 3D mode rather than floating
+              // at sea level above the imagery. Cesium's GroundPrimitive
+              // path tessellates the line into ground-clamped strips;
+              // re-tessellation cost is negligible because static lines
+              // (trails, mission routes, scan fans) only re-create their
+              // entity when content actually changes (fingerprint check
+              // earlier in this loop). The smoothed-engagement-line
+              // branch above doesn't get this — its CallbackProperty
+              // positions would re-tessellate every frame.
+              clampToGround: true,
             },
           });
           existing.set(line.id, fresh);
