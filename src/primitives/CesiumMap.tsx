@@ -759,7 +759,13 @@ export function CesiumMap({
           const created: Cesium.Entity[] = [];
           for (let i = 0; i < count; i++) {
             const phaseOffset = i / count;
-            const positionProp = new Cesium.CallbackProperty((_time, result) => {
+            // `Entity.position` requires a `PositionProperty` subclass.
+            // `CallbackProperty` works for `polyline.positions` etc. but
+            // the entity-level `position` field silently no-ops on it,
+            // which is why the dots looked frozen. `CallbackPositionProperty`
+            // is Cesium's purpose-built variant for animated entity
+            // positions and is what we need here.
+            const positionProp = new Cesium.CallbackPositionProperty((_time, result) => {
               const endpoints = polylineParticleEndpointsRef.current.get(lineId);
               if (!endpoints) {
                 return Cesium.Cartesian3.fromDegrees(0, 0, 0, undefined, result);
@@ -778,10 +784,10 @@ export function CesiumMap({
               id: `${lineId}__particle-${i}`,
               position: positionProp,
               point: {
-                pixelSize: 6,
+                pixelSize: 8,
                 color: dotColor,
-                outlineColor: dotColor.withAlpha(0.35),
-                outlineWidth: 6,
+                outlineColor: dotColor.withAlpha(0.4),
+                outlineWidth: 4,
                 disableDepthTestDistance: Number.POSITIVE_INFINITY,
               },
             });
