@@ -133,8 +133,8 @@ Fixed by:
 | `controlIndicator` overlay | ✓ | ✗ | |
 | `planningMode` click-to-add waypoints | ✓ | 🚫 | Dropped from Cesium scope — drone-mission waypoint authoring stays Mapbox-only for now. |
 | `planningScanViz` camera scan visualization | ✓ | ✗ | |
-| `selectedEffectorIds` per-target effector highlight | ✓ | ✗ | |
-| `selectedLauncherIds` per-target launcher highlight | ✓ | ✗ | |
+| `selectedEffectorIds` per-target effector highlight | ✓ | ✓ | Consumed by `engagementPair` (`CesiumTacticalMap.tsx:292`); the engagement line shifts to the user-picked Regulus, and the chosen marker gets `state='selected'` via `isEngagementEffector`. Mapbox uses the prop the same way (only in `jamPair`). |
+| `selectedLauncherIds` per-target launcher highlight | ✓ | ✓ | Consumed by `engagementPair` (`CesiumTacticalMap.tsx:327`); engagement line shifts to user-picked launcher and the marker's `isEngaged` check sets `state='selected'`. |
 | `pathFinderConnectedId` Starling drone connect state | ✓ | 🚫 | Dropped from Cesium scope — not pursuing pathfinder/Starling parity. |
 | FPS within 10% of Mapbox | ✓ | ✗ | Profile in this phase. |
 | No memory leaks across 5 min of interaction | ✓ | ✗ | |
