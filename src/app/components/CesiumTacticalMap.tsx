@@ -768,8 +768,13 @@ export function CesiumTacticalMap({
       lineWidth: number,
       casingWidth: number,
     ) => {
-      out.push({ id: `${id}-casing`, points, color: '#000000', width: casingWidth });
-      out.push({ id, points, color: lineColor, width: lineWidth });
+      // zIndex layering matters in 3D where both polylines are ground-clamped
+      // and z-fight: without it the wider black casing wins and the trail
+      // reads as a solid black line. Centreline gets the higher z so it
+      // paints over the casing in the middle, leaving the visible black
+      // edge band on either side.
+      out.push({ id: `${id}-casing`, points, color: '#000000', width: casingWidth, zIndex: 0 });
+      out.push({ id, points, color: lineColor, width: lineWidth, zIndex: 1 });
     };
 
     // Hostile / drone-deployment / mission-route trails — Mapbox uses

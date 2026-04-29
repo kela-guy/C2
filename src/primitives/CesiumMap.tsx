@@ -69,6 +69,15 @@ export interface CesiumPolyline {
   /** When true, renders as a flowing dashed line (engagement-line style). */
   dashed?: boolean;
   /**
+   * Stacking order for ground-clamped polylines. Higher z-index draws on
+   * top — Cesium uses this to resolve z-fighting between two polylines
+   * occupying the same path (e.g. a black casing + white centreline
+   * trail, where the centreline must paint over the casing). Only has
+   * effect when the polyline ends up ground-clamped (currently: all
+   * non-smoothed polylines in 3D mode). Defaults to 0.
+   */
+  zIndex?: number;
+  /**
    * Animated particles flowing from the first to the last point of the
    * line. Used for engagement-pair viz so the user sees a clear direction
    * of fire even on a still map. Spring-eased so each dot accelerates and
@@ -1055,6 +1064,10 @@ export function CesiumMap({
               // branch above doesn't get this — its CallbackProperty
               // positions would re-tessellate every frame.
               clampToGround: true,
+              // zIndex resolves z-fighting between two ground polylines
+              // occupying the same path — e.g. a black casing + white
+              // centreline trail. Higher z-index draws on top.
+              zIndex: line.zIndex ?? 0,
             },
           });
           existing.set(line.id, fresh);
