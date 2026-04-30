@@ -26,13 +26,13 @@ import Joyride from 'react-joyride';
 import { useCuasTour } from '../hooks/useCuasTour';
 import { getPriorityBaseline } from '@/imports/useActivityStatus';
 
-function CuasIcon({ size = 20, className = '' }: { size?: number; className?: string }) {
+function CuasIcon({ size = 20, strokeWidth = 2, className = '' }: { size?: number; strokeWidth?: number; className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
-      <path d="M9.5 5.398C7.093 6.19 5.19 8.093 4.398 10.5M19.86 14.5c.092-.486.14-.987.14-1.5 0-2.01-.742-3.848-1.966-5.253M6.708 19c1.41 1.245 3.263 2 5.292 2 .513 0 1.014-.048 1.5-.14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      <circle cx="12" cy="5" r="2.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M3.82 14.835c1.196-.69 2.725-.28 3.415.915.69 1.196.28 2.724-.915 3.415-1.196.69-2.725.28-3.415-.915-.69-1.196-.28-2.725.916-3.415Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M17.672 19.165c-1.196-.69-1.605-2.22-.915-3.415.69-1.196 2.219-1.605 3.415-.915 1.195.69 1.605 2.219.915 3.415-.69 1.195-2.22 1.605-3.415.915Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M9.5 5.398C7.093 6.19 5.19 8.093 4.398 10.5M19.86 14.5c.092-.486.14-.987.14-1.5 0-2.01-.742-3.848-1.966-5.253M6.708 19c1.41 1.245 3.263 2 5.292 2 .513 0 1.014-.048 1.5-.14" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx="12" cy="5" r="2.5" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M3.82 14.835c1.196-.69 2.725-.28 3.415.915.69 1.196.28 2.724-.915 3.415-1.196.69-2.725.28-3.415-.915-.69-1.196-.28-2.725.916-3.415Z" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M17.672 19.165c-1.196-.69-1.605-2.22-.915-3.415.69-1.196 2.219-1.605 3.415-.915 1.195.69 1.605 2.219.915 3.415-.69 1.195-2.22 1.605-3.415.915Z" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   );
 }
@@ -150,9 +150,6 @@ function SplitDropZone({
 }
 
 export const Dashboard = () => {
-  // #region agent log
-  // removed old session log
-  // #endregion
   const allDevices = useDevicesFromAssets();
   const [activeTargetId, setActiveTargetId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -195,6 +192,12 @@ export const Dashboard = () => {
 
   const [cameraViewerFeeds, setCameraViewerFeeds] = useState<CameraFeed[]>([]);
   const isCameraViewerOpen = cameraViewerFeeds.length > 0;
+
+  useEffect(() => {
+    if (!sidebarOpen || !devicesPanelOpen) return;
+    setDevicesPanelOpen(false);
+    setSelectedAssetId(null);
+  }, [sidebarOpen, devicesPanelOpen]);
 
   useEffect(() => {
     if (cameraViewerFeeds.length === 0) {
@@ -259,6 +262,8 @@ export const Dashboard = () => {
   const tour = useCuasTour(
     useCallback((nextStepIndex: number) => {
       if (nextStepIndex >= 3) {
+        setDevicesPanelOpen(false);
+        setSelectedAssetId(null);
         setSidebarOpen(true);
       }
       if (nextStepIndex >= 4 && nextStepIndex <= 12 && tourTargetId) {
@@ -289,6 +294,8 @@ export const Dashboard = () => {
       const targetId = e.detail?.code;
       if (targetId) {
         setActiveTargetId(targetId);
+        setDevicesPanelOpen(false);
+        setSelectedAssetId(null);
         setSidebarOpen(true);
       }
     };
@@ -632,6 +639,9 @@ export const Dashboard = () => {
   // --- CUAS Simulation Flows ---
   const handleCUASFlow = useCallback(() => {
     setSimulationMenuOpen(false);
+    if (devicesPanelOpen) setPanelSwitching(true);
+    setDevicesPanelOpen(false);
+    setSelectedAssetId(null);
     setSidebarOpen(true);
     if (cuasIntervalRef.current) clearInterval(cuasIntervalRef.current);
     if (cuasIntervalRef2.current) clearInterval(cuasIntervalRef2.current);
@@ -666,10 +676,13 @@ export const Dashboard = () => {
       if (route.delay === 0) spawn();
       else setTimeout(spawn, route.delay);
     });
-  }, [spawnCuasTarget]);
+  }, [devicesPanelOpen, spawnCuasTarget]);
 
   const handleCUASSingle = useCallback(() => {
     setSimulationMenuOpen(false);
+    if (devicesPanelOpen) setPanelSwitching(true);
+    setDevicesPanelOpen(false);
+    setSelectedAssetId(null);
     setSidebarOpen(true);
 
     if (cuasIntervalRef.current) clearInterval(cuasIntervalRef.current);
@@ -688,10 +701,13 @@ export const Dashboard = () => {
       setTourTargetId(id);
       tour.notifyTargetSpawned();
     }
-  }, [spawnCuasTarget, tour.run, tour.notifyTargetSpawned]);
+  }, [devicesPanelOpen, spawnCuasTarget, tour.run, tour.notifyTargetSpawned]);
 
   const handleCUASMassDetection = useCallback(() => {
     setSimulationMenuOpen(false);
+    if (devicesPanelOpen) setPanelSwitching(true);
+    setDevicesPanelOpen(false);
+    setSelectedAssetId(null);
     setSidebarOpen(true);
 
     cuasMassRefs.current.forEach(ref => clearInterval(ref));
@@ -737,7 +753,7 @@ export const Dashboard = () => {
         level: 'critical',
       });
     }, 300);
-  }, [spawnCuasTarget]);
+  }, [devicesPanelOpen, spawnCuasTarget]);
 
   const handleEffectorSelect = useCallback((targetId: string, effectorId: string) => {
     setSelectedEffectorIds(prev => new Map(prev).set(targetId, effectorId));
@@ -1091,14 +1107,34 @@ export const Dashboard = () => {
     setTimeout(() => setMapFocusRequest(null), 100);
   }, []);
 
-  const handleAssetClick = useCallback((assetId: string) => {
+  const openSystemsPanel = useCallback(() => {
+    if (devicesPanelOpen) setPanelSwitching(true);
+    setSidebarOpen(true);
+    setDevicesPanelOpen(false);
+    setSelectedAssetId(null);
+  }, [devicesPanelOpen]);
+
+  const closeSystemsPanel = useCallback(() => {
+    setSidebarOpen(false);
+  }, []);
+
+  const openDevicesPanel = useCallback(() => {
     if (sidebarOpen) setPanelSwitching(true);
     setSidebarOpen(false);
     setDevicesPanelOpen(true);
+  }, [sidebarOpen]);
+
+  const closeDevicesPanel = useCallback(() => {
+    setDevicesPanelOpen(false);
+    setSelectedAssetId(null);
+  }, []);
+
+  const handleAssetClick = useCallback((assetId: string) => {
+    openDevicesPanel();
     setFocusedDeviceId(assetId);
     setSelectedAssetId(assetId);
     setTimeout(() => setFocusedDeviceId(null), 500);
-  }, [sidebarOpen]);
+  }, [openDevicesPanel]);
 
   const handleResizePointerDown = useCallback((e: React.PointerEvent) => {
     e.preventDefault();
@@ -1152,8 +1188,8 @@ export const Dashboard = () => {
     <div className="relative flex w-full h-screen overflow-hidden text-white font-sans selection:bg-red-500/30">
       {/* Minimal Left Nav */}
       <TooltipProvider delayDuration={200}>
-      <nav className="flex flex-col justify-start items-center w-8 flex-shrink-0 h-full bg-[#1a1a1a] border-l border-white/10 z-20" dir="ltr">
-        <div className="flex items-center justify-center py-4 h-[60px] w-full">
+      <nav className="relative z-50 flex flex-col justify-start items-center w-8 flex-shrink-0 h-full bg-[#1a1a1a] border-l border-white/10" dir="ltr">
+        <div className="flex items-center justify-center h-9 w-full">
           <div className="text-white scale-75 origin-center">
             <C2Logo />
           </div>
@@ -1166,11 +1202,14 @@ export const Dashboard = () => {
               <Toggle
                 size="sm"
                 pressed={sidebarOpen}
-                onPressedChange={() => { const next = !sidebarOpen; if (next && devicesPanelOpen) setPanelSwitching(true); setSidebarOpen(next); if (next) setDevicesPanelOpen(false); }}
-                className="size-8 rounded bg-transparent text-gray-400 data-[state=on]:bg-white/10 data-[state=on]:text-white hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                onPressedChange={(next) => {
+                  if (next) openSystemsPanel();
+                  else closeSystemsPanel();
+                }}
+                className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
                 aria-label={sidebarOpen ? 'סגור רשימת מערכות' : 'פתח רשימת מערכות'}
               >
-                <List size={24} strokeWidth={1.5} />
+                <List size={20} strokeWidth={1.5} />
               </Toggle>
             </TooltipTrigger>
             <TooltipContent side="left" sideOffset={8}>
@@ -1183,11 +1222,14 @@ export const Dashboard = () => {
               <Toggle
                 size="sm"
                 pressed={devicesPanelOpen}
-                onPressedChange={() => { const next = !devicesPanelOpen; if (next && sidebarOpen) setPanelSwitching(true); setDevicesPanelOpen(next); if (next) setSidebarOpen(false); }}
-                className="size-8 rounded bg-transparent text-gray-400 data-[state=on]:bg-white/10 data-[state=on]:text-white hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                onPressedChange={(next) => {
+                  if (next) openDevicesPanel();
+                  else closeDevicesPanel();
+                }}
+                className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
                 aria-label={devicesPanelOpen ? 'סגור מכשירים' : 'מכשירים'}
               >
-                <DevicesIcon size={24} />
+                <DevicesIcon size={20} />
               </Toggle>
             </TooltipTrigger>
             <TooltipContent side="left" sideOffset={8}>
@@ -1207,10 +1249,10 @@ export const Dashboard = () => {
                     setCameraViewerFeeds([{ cameraId: CAMERA_ASSETS[0]?.id ?? '' }]);
                   }
                 }}
-                className="size-8 rounded bg-transparent text-gray-400 data-[state=on]:bg-white/10 data-[state=on]:text-white hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
                 aria-label={isCameraViewerOpen ? 'סגור מצלמות' : 'מצלמות'}
               >
-                <Video size={24} strokeWidth={1.5} />
+                <Video size={20} strokeWidth={1.5} />
               </Toggle>
             </TooltipTrigger>
             <TooltipContent side="left" sideOffset={8}>
@@ -1224,10 +1266,10 @@ export const Dashboard = () => {
                 <DropdownMenuTrigger asChild>
                   <button
                     data-cuas-sim-menu
-                    className="size-8 rounded flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                    className="size-6 rounded flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
                     aria-label="תרחישי CUAS"
                   >
-                    <CuasIcon size={24} />
+                    <CuasIcon size={20} strokeWidth={1.5} />
                   </button>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
@@ -1263,10 +1305,10 @@ export const Dashboard = () => {
             <TooltipTrigger asChild>
               <button
                 onClick={tour.startTour}
-                className="size-8 rounded flex items-center justify-center text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                className="size-6 rounded flex items-center justify-center text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
                 aria-label="סיור הדרכה"
               >
-                <HelpCircle size={24} strokeWidth={1.5} />
+                <HelpCircle size={20} strokeWidth={1.5} />
               </button>
             </TooltipTrigger>
             <TooltipContent side="left" sideOffset={8}>סיור הדרכה</TooltipContent>
@@ -1275,10 +1317,10 @@ export const Dashboard = () => {
             <TooltipTrigger asChild>
               <a
                 href="/styleguide"
-                className="size-8 rounded flex items-center justify-center text-gray-400 hover:text-amber-400 hover:bg-amber-500/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                className="size-6 rounded flex items-center justify-center text-gray-400 hover:text-amber-400 hover:bg-amber-500/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
                 aria-label="Style Guide"
               >
-                <Palette size={24} strokeWidth={1.5} />
+                <Palette size={20} strokeWidth={1.5} />
               </a>
             </TooltipTrigger>
             <TooltipContent side="left" sideOffset={8}>Style Guide</TooltipContent>
@@ -1289,10 +1331,10 @@ export const Dashboard = () => {
                 <NotificationCenter
                   trigger={
                     <button
-                      className="size-8 rounded flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                      className="size-6 rounded flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
                       aria-label="התראות"
                     >
-                      <Bell size={24} strokeWidth={1.5} />
+                      <Bell size={20} strokeWidth={1.5} />
                     </button>
                   }
                 />
@@ -1305,7 +1347,7 @@ export const Dashboard = () => {
       </TooltipProvider>
 
       {/* Map + Camera Viewer Split */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-0 relative" data-tour="cuas-map">
+      <div className="relative z-0 flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden" data-tour="cuas-map">
         <SplitDropZone
           visible={canDropOnMap}
           onDrop={handleCameraDrop}
@@ -1329,18 +1371,21 @@ export const Dashboard = () => {
               <MapComponent
                 targets={targets}
                 activeTargetId={activeTargetId}
-                onMarkerClick={(id) => { setActiveTargetId(id); setSidebarOpen(true); setDevicesPanelOpen(false); setSelectedAssetId(null); }}
+                onMarkerClick={(id) => {
+                  setActiveTargetId(id);
+                  openSystemsPanel();
+                }}
                 highlightedSensorIds={highlightedSensorIds}
                 hoveredSensorIdFromCard={hoveredSensorIdFromCard}
                 sensorFocusId={sensorFocusId}
                 onContextMenuAction={(action, elementType, elementId) => {
                   if (elementType === 'target') {
-                    if (action === 'open-card') { setActiveTargetId(elementId); setSidebarOpen(true); }
-                    else if (action === 'mitigate') { setActiveTargetId(elementId); setSidebarOpen(true); }
+                    if (action === 'open-card') { setActiveTargetId(elementId); openSystemsPanel(); }
+                    else if (action === 'mitigate') { setActiveTargetId(elementId); openSystemsPanel(); }
                     else if (action === 'mitigate-all') { handleMitigateAll(elementId); }
                     else if (action === 'dismiss') { handleDismiss(elementId); }
-                    else if (action === 'track') { setActiveTargetId(elementId); setSidebarOpen(true); }
-                    else if (action === 'investigate') { setActiveTargetId(elementId); setSidebarOpen(true); }
+                    else if (action === 'track') { setActiveTargetId(elementId); openSystemsPanel(); }
+                    else if (action === 'investigate') { setActiveTargetId(elementId); openSystemsPanel(); }
                   } else if (elementType === 'sensor' && action === 'view-feed') {
                     const cam = CAMERA_ASSETS.find(c => c.id === elementId);
                     if (cam) {
@@ -1423,7 +1468,7 @@ export const Dashboard = () => {
               className={`absolute left-0 top-0 bottom-0 w-1.5 z-20 cursor-col-resize transition-colors ${isDragging ? 'bg-white/20' : 'bg-transparent hover:bg-white/10'}`}
             />
           )}
-          <div className="px-4 pt-3 pb-2 border-b border-white/10">
+          <div className="flex items-center px-4 h-9 border-b border-white/10">
             <h2 className="text-[11px] font-medium text-white/70 uppercase tracking-wider">Dashboard — מערכות פעילות ({targets.length})</h2>
           </div>
           <div className="flex-1 overflow-y-auto">
@@ -1510,7 +1555,7 @@ export const Dashboard = () => {
         <DevicesPanel
           devices={allDevices}
           open={devicesPanelOpen}
-          onClose={() => { setDevicesPanelOpen(false); setSelectedAssetId(null); }}
+          onClose={closeDevicesPanel}
           onFlyTo={handleDeviceFlyTo}
           onDeviceHover={setHoveredSensorIdFromCard}
           onDeviceSelect={setSelectedAssetId}

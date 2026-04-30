@@ -247,7 +247,7 @@ function MultiSelectList({
           <label
             key={item.value}
             htmlFor={fieldId}
-            className={`flex h-7 cursor-pointer items-center gap-2.5 rounded-md px-2.5 text-end text-xs transition-colors duration-150 focus-within:bg-white/10 focus-within:outline-none ${
+            className={`flex h-7 cursor-pointer items-center gap-2.5 rounded-md px-2.5 text-start text-xs transition-colors duration-150 focus-within:bg-white/10 focus-within:outline-none ${
               active
                 ? 'text-sky-100'
                 : 'text-zinc-300 hover:bg-white/[0.04] hover:text-white'
