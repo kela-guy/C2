@@ -39,6 +39,9 @@ import {
   WEAPON_SYSTEM_ASSETS,
   LAUNCHER_ASSETS,
   REGULUS_EFFECTORS,
+} from './tacticalAssets';
+import type { MapAsset } from './tacticalAssets';
+import {
   CameraIcon,
   RadarIcon,
   LidarIcon,
@@ -46,14 +49,83 @@ import {
   LauncherIcon,
   SensorIcon,
   DroneIcon,
+} from './tacticalIcons';
+import {
   FOV_RADIUS_M,
+  DRONE_FOV_RADIUS_M,
+  DRONE_FOV_DEG,
   bearingDegrees,
   haversineDistanceM,
-} from './TacticalMap';
-import type { TacticalMapProps, MapAsset } from './TacticalMap';
-import { DRONE_FOV_RADIUS_M, DRONE_FOV_DEG } from '@/app/lib/mapGeo';
+} from '@/app/lib/mapGeo';
 import { JAM_FLOW, WEAPON_FLOW, resolveNearestAsset, type FlowAsset } from '@/imports/engagementFlows';
-import type { Detection } from '@/imports/ListOfSystems';
+import type { Detection, RegulusEffector, LauncherEffector } from '@/imports/ListOfSystems';
+
+/**
+ * Props consumed by `<CesiumTacticalMap>`. Inherited from the original
+ * `TacticalMapProps` shape but trimmed to only the fields the Cesium
+ * implementation actually reads — Mapbox-specific knobs (missile flight,
+ * jamming-verification animation, PathFinder, planning click handlers)
+ * were removed when the legacy backend was retired.
+ */
+export interface CesiumTacticalMapProps {
+  focusCoords?: { lat: number; lon: number } | null;
+  targets?: Detection[];
+  activeTargetId?: string | null;
+  onMarkerClick?: (targetId: string) => void;
+  highlightedSensorIds?: string[];
+  hoveredSensorIdFromCard?: string | null;
+  jammingTargetId?: string | null;
+  jammingJammerAssetId?: string | null;
+  /** Show "You have control" indicator on the map. */
+  controlIndicator?: boolean;
+  /** Fit map to show all these points */
+  fitBoundsPoints?: { lat: number; lon: number }[] | null;
+  /** Mission route for Flow 4 */
+  missionRoute?: {
+    waypoints: { lat: number; lon: number; label: string }[];
+    droneLat: number; droneLon: number; headingDeg: number;
+    currentSegment: number; phase: string; trail: [number, number][];
+    loop: boolean;
+  } | null;
+  /** Active drone deployment for Flow 3 */
+  activeDrone?: {
+    currentLat: number;
+    currentLon: number;
+    hiveLat: number;
+    hiveLon: number;
+    targetLat: number;
+    targetLon: number;
+    phase: string;
+    headingDeg: number;
+    trail: [number, number][];
+  } | null;
+  /** Camera scan visualization during planning */
+  planningScanViz?: { cameraLat: number; cameraLon: number; bearings: number[] } | null;
+  /** Asset ID currently selected for mission planning */
+  selectedAssetId?: string | null;
+  /** Regulus effectors state for CUAS */
+  regulusEffectors?: RegulusEffector[];
+  /** Sensor ID to flyTo and flicker (from card click) */
+  sensorFocusId?: string | null;
+  /** Context menu action callbacks */
+  onContextMenuAction?: (action: string, elementType: 'target' | 'effector' | 'sensor', elementId: string) => void;
+  /** Friendly drones shown as cyan markers with tooltip only */
+  friendlyDrones?: { id: string; name: string; lat: number; lon: number; altitude: string; headingDeg?: number; fovDeg?: number; trail?: [number, number][] }[];
+  /** Smooth pan to a target without zoom change */
+  smoothFocusRequest?: { lat: number; lon: number } | null;
+  /** Target ID hovered from card sidebar — highlight on map */
+  hoveredTargetIdFromCard?: string | null;
+  /** Click on a sensor/effector/launcher icon to open its device card */
+  onAssetClick?: (assetId: string) => void;
+  /** Asset IDs that are offline — show a gray badge on the map */
+  offlineAssetIds?: string[];
+  /** User-overridden effector selection per target (targetId -> effectorId) */
+  selectedEffectorIds?: Map<string, string>;
+  /** Launcher effectors for weapon pointing flow */
+  launcherEffectors?: LauncherEffector[];
+  /** User-overridden launcher selection per target (targetId -> launcherId) */
+  selectedLauncherIds?: Map<string, string>;
+}
 
 const CESIUM_ION_TOKEN = (import.meta.env.VITE_CESIUM_ION_TOKEN as string | undefined) ?? '';
 
@@ -256,7 +328,7 @@ export function CesiumTacticalMap({
   onMarkerClick,
   onAssetClick,
   onContextMenuAction,
-}: TacticalMapProps) {
+}: CesiumTacticalMapProps) {
   const offlineSet = useMemo(() => new Set(offlineAssetIds ?? []), [offlineAssetIds]);
   const highlightedSensorSet = useMemo(
     () => new Set(highlightedSensorIds ?? []),
@@ -451,19 +523,21 @@ export function CesiumTacticalMap({
   ]);
 
   /**
-   * Compose every asset registry + every dynamic prop into a single
-   * `htmlMarkers[]`. Each entry pairs a geographic position with a React
-   * node — usually a `<MapMarker>` SVG. Cesium's per-frame loop projects
-   * the position to canvas coords; React handles the rest.
+   * Composing every asset registry + every dynamic prop in a single
+   * `htmlMarkers` memo means *any* dependency tick (kinematic targets,
+   * friendly drones moving every 250 ms) rebuilds the whole array —
+   * including the ~22 static sensor / effector markers whose visual
+   * state hasn't changed at all. Splitting the memo by dependency
+   * shape lets React (and the Cesium primitive's id-keyed diff) skip
+   * the static markers entirely on dynamic ticks.
    *
-   * Dedupe by id (LAUNCHER_ASSETS + launcherEffectors prop overlap).
+   * Each sub-memo returns its slice. `htmlMarkers` is the concatenation,
+   * which is itself stable as long as none of the slices changed.
    */
-  const htmlMarkers = useMemo<CesiumHtmlMarker[]>(() => {
-    const out: CesiumHtmlMarker[] = [];
-    const seen = new Set<string>();
 
-    /** Helper for friendly assets (cameras / radars / lidars / hives / weapons / launchers). */
-    const pushFriendlyAsset = (
+  /** Helper for friendly assets (cameras / radars / lidars / hives / weapons / launchers). */
+  const buildFriendlyAsset = useCallback(
+    (
       id: string,
       lat: number,
       lon: number,
@@ -472,9 +546,7 @@ export function CesiumTacticalMap({
       surfaceSize: number = SENSOR_SURFACE,
       fov?: { rangeM: number; bearingDeg: number; widthDeg: number },
       ringSize: number = SENSOR_RING,
-    ) => {
-      if (seen.has(id)) return;
-      seen.add(id);
+    ): CesiumHtmlMarker => {
       const isOffline = offlineSet.has(id);
       const isSelected = selectedAssetId === id;
       const isHoveredFromCard = hoveredSensorIdFromCard === id;
@@ -503,7 +575,7 @@ export function CesiumTacticalMap({
       const fovOpacity = isHighlighted ? 0.55 : 0.4;
       const fovColor = '#22b8cf';
 
-      out.push({
+      return {
         id,
         lat,
         lon,
@@ -526,111 +598,76 @@ export function CesiumTacticalMap({
         onContextMenu: (e) => openContextMenu(e, 'sensor', id),
         onMouseEnter: () => setHoveredMarkerId(id),
         onMouseLeave: () => setHoveredMarkerId((current) => (current === id ? null : current)),
-      });
-    };
+      };
+    },
+    [
+      offlineSet,
+      selectedAssetId,
+      hoveredSensorIdFromCard,
+      hoveredMarkerId,
+      highlightedSensorSet,
+      openContextMenu,
+    ],
+  );
 
-    /** Map a sensor asset to its Phase-4 FOV definition. */
-    const sensorFov = (asset: MapAsset) => ({
+  /** Map a sensor asset to its Phase-4 FOV definition. */
+  const sensorFov = useCallback(
+    (asset: MapAsset) => ({
       rangeM: FOV_RADIUS_M,
       bearingDeg: asset.bearingDeg,
       widthDeg: asset.fovDeg,
-    });
+    }),
+    [],
+  );
 
-    // Targets — hostile by default, state from `Detection.status`.
-    if (targets) {
-      for (const t of targets) {
-        const [lat, lon] = (t.coordinates ?? '').split(',').map((s) => parseFloat(s.trim()));
-        if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
-        if (seen.has(t.id)) continue;
-        seen.add(t.id);
-        const isActive = activeTargetId === t.id;
-        const isHoveredFromCard = hoveredTargetIdFromCard === t.id;
-        const isHoveredOnMap = hoveredMarkerId === t.id;
-        const isHovered = isHoveredFromCard || isHoveredOnMap;
-        const baseState = detectionInteractionState(t);
-        const state: InteractionState = isHovered
-          ? 'hovered'
-          : isActive
-            ? 'selected'
-            : baseState;
-        const style = resolveMarkerStyle(state, 'hostile');
-        // New-arrival pulse — Detection.isNew triggers a brief animation when
-        // a fresh detection lands on the map. Mirrors Mapbox parity (the
-        // existing TacticalMap shows `<NewArrivalPulse>` on isNew targets).
-        const isNewArrival = t.isNew === true;
-        // Derive heading from the last leg of the trail (Mapbox does the same
-        // at TacticalMap.tsx:1531-1537 for classified drone targets).
-        const targetHeading = targetHeadingFromTrail(t);
-        out.push({
-          id: t.id,
-          lat,
-          lon,
-          zIndex: isHovered ? 60 : isActive ? 50 : 20,
-          content: (
-            <MapMarker
-              icon={
-                <DroneIcon
-                  color={style.glyphColor}
-                  rotationDeg={
-                    targetHeading != null
-                      ? droneRotationFromHeading(targetHeading)
-                      : 0
-                  }
-                />
-              }
-              style={style}
-              surfaceSize={TARGET_SURFACE}
-              ringSize={TARGET_RING}
-              heading={targetHeading ?? undefined}
-              label={t.name ?? t.id}
-              showLabel={isHovered || isActive}
-              pulse={isHovered || isActive || isNewArrival}
-            />
-          ),
-          // Treat backend `coordinates` updates as sensor samples — the
-          // map smooths position between fixes; if updates go quiet the
-          // marker dims and a "Ns ago" badge appears, signalling lost
-          // contact with the threat at a glance.
-          kinematic: true,
-          onClick: () => onMarkerClickRef.current?.(t.id),
-          onContextMenu: (e) => openContextMenu(e, 'target', t.id),
-          onMouseEnter: () => setHoveredMarkerId(t.id),
-          onMouseLeave: () => setHoveredMarkerId((current) => (current === t.id ? null : current)),
-        });
-      }
-    }
-
-    // Static asset registries. Sensors (camera / radar / lidar) get an FOV cone.
+  /**
+   * Slice 1 — static asset markers (CAMERA / RADAR / LIDAR / HIVE /
+   * WEAPON / LAUNCHER). These come from module-scope arrays and only
+   * change when hover / selection / highlight / offline state changes,
+   * NOT when the dashboard's kinematic simulation reruns. Splitting
+   * them out skips ~22 marker rebuilds on every 250 ms friendly-drone
+   * tick. Dedup with `LAUNCHER_ASSETS` is local to this slice.
+   */
+  const staticAssetMarkers = useMemo<CesiumHtmlMarker[]>(() => {
+    const out: CesiumHtmlMarker[] = [];
+    const seen = new Set<string>();
+    const push = (m: CesiumHtmlMarker) => {
+      if (seen.has(m.id)) return;
+      seen.add(m.id);
+      out.push(m);
+    };
     for (const a of CAMERA_ASSETS) {
-      pushFriendlyAsset(a.id, a.latitude, a.longitude, <CameraIcon />, a.typeLabel, SENSOR_SURFACE, sensorFov(a));
+      push(buildFriendlyAsset(a.id, a.latitude, a.longitude, <CameraIcon />, a.typeLabel, SENSOR_SURFACE, sensorFov(a)));
     }
     for (const a of RADAR_ASSETS) {
-      pushFriendlyAsset(a.id, a.latitude, a.longitude, <RadarIcon />, a.typeLabel, SENSOR_SURFACE, sensorFov(a));
+      push(buildFriendlyAsset(a.id, a.latitude, a.longitude, <RadarIcon />, a.typeLabel, SENSOR_SURFACE, sensorFov(a)));
     }
     for (const a of LIDAR_ASSETS) {
-      pushFriendlyAsset(a.id, a.latitude, a.longitude, <LidarIcon />, a.typeLabel, SENSOR_SURFACE, sensorFov(a));
+      push(buildFriendlyAsset(a.id, a.latitude, a.longitude, <LidarIcon />, a.typeLabel, SENSOR_SURFACE, sensorFov(a)));
     }
     for (const a of DRONE_HIVE_ASSETS) {
-      pushFriendlyAsset(a.id, a.latitude, a.longitude, <DroneHiveIcon />, a.typeLabel);
+      push(buildFriendlyAsset(a.id, a.latitude, a.longitude, <DroneHiveIcon />, a.typeLabel));
     }
     for (const a of WEAPON_SYSTEM_ASSETS) {
-      pushFriendlyAsset(a.id, a.latitude, a.longitude, <LauncherIcon size={LAUNCHER_GLYPH} />, a.typeLabel);
+      push(buildFriendlyAsset(a.id, a.latitude, a.longitude, <LauncherIcon size={LAUNCHER_GLYPH} />, a.typeLabel));
     }
     for (const l of LAUNCHER_ASSETS) {
-      pushFriendlyAsset(l.id, l.latitude, l.longitude, <LauncherIcon size={LAUNCHER_GLYPH} />, l.id);
+      push(buildFriendlyAsset(l.id, l.latitude, l.longitude, <LauncherIcon size={LAUNCHER_GLYPH} />, l.id));
     }
+    return out;
+  }, [buildFriendlyAsset, sensorFov]);
 
-    // Regulus effectors — friendly assets but treated as effectors for context menu.
-    // State priority: hover > active-jam (green ring) > engagement (selected
-    // ring, when this is the resolved effector for the active target) >
-    // default. Mirrors how Mapbox lights up the chosen effector while the
-    // engagement line is drawn from the active target to its asset.
+  /**
+   * Slice 2 — Regulus effectors. Friendly assets but with their own
+   * coverage-ring + jamming state shape, so they get their own slice
+   * keyed only on effector-specific deps.
+   */
+  const regulusEffectorMarkers = useMemo<CesiumHtmlMarker[]>(() => {
+    const out: CesiumHtmlMarker[] = [];
     const effectors = regulusEffectors ?? REGULUS_EFFECTORS;
     const isEngagementEffector = (id: string) =>
       engagementPair?.flow === 'jam' && engagementPair.effId === id;
     for (const e of effectors) {
-      if (seen.has(e.id)) continue;
-      seen.add(e.id);
       const isJamming = jammingJammerAssetId === e.id;
       const isHoveredFromCard = hoveredSensorIdFromCard === e.id;
       const isHoveredOnMap = hoveredMarkerId === e.id;
@@ -644,11 +681,6 @@ export function CesiumTacticalMap({
             ? 'selected'
             : 'default';
       const style = resolveMarkerStyle(state, 'friendly');
-      // "Engaged" = this Regulus is the resolved jammer for the user's
-      // active target. The treatment mirrors hover (coverage ring + tooltip
-      // + pulse) so the operator instantly sees which effector is currently
-      // pointed at the threat without having to mouse-hover. Mirrors the
-      // Mapbox conditions at TacticalMap.tsx:1818 + 1825.
       const showHoverEffect = isHovered || isEngaged;
       out.push({
         id: e.id,
@@ -666,10 +698,6 @@ export function CesiumTacticalMap({
             pulse={showHoverEffect}
           />
         ),
-        // ECM coverage ring. Hidden at rest so the map doesn't get cluttered
-        // with overlapping translucent circles — appears on hover, while
-        // engaged with a target (the "pointing" state), and while actively
-        // jamming. Same details-on-demand affordance as the sensor FOVs.
         coverageRadiusM: showHoverEffect || isJamming ? e.coverageRadiusM : undefined,
         coverageColor: isJamming ? '#4ade80' : '#22b8cf',
         onClick: () => onAssetClickRef.current?.(e.id),
@@ -678,173 +706,248 @@ export function CesiumTacticalMap({
         onMouseLeave: () => setHoveredMarkerId((current) => (current === e.id ? null : current)),
       });
     }
-
-    // Friendly drones — heading rotation + offline-state handling. Mirrors
-    // the Mapbox path in `TacticalMap.tsx:2287-2306`: drone state is
-    // `disabled` when offline, `selected` for the active card hover, then
-    // `hovered`, then `default`. Glyph colour is passed through from the
-    // resolved style so the SVG fill matches the affiliation palette
-    // (white at rest, grey when offline) instead of `DroneIcon`'s default
-    // cyan fill, which previously made friendly drones read as hostile.
-    //
-    // FOV cone is shown on hover / selection (same details-on-demand
-    // gating as the sensor FOVs), as long as the drone has a heading and
-    // isn't offline — matches the Mapbox condition at TacticalMap.tsx:1136.
-    if (friendlyDrones) {
-      for (const d of friendlyDrones) {
-        if (seen.has(d.id)) continue;
-        seen.add(d.id);
-        const isOffline = offlineSet.has(d.id);
-        const isSelected = selectedAssetId === d.id;
-        const isHoveredFromCard = hoveredSensorIdFromCard === d.id;
-        const isHoveredOnMap = hoveredMarkerId === d.id;
-        const isHovered = isHoveredFromCard || isHoveredOnMap;
-        const state: InteractionState = isOffline
-          ? 'disabled'
-          : isSelected
-            ? 'selected'
-            : isHovered
-              ? 'hovered'
-              : 'default';
-        const style = resolveMarkerStyle(state, 'friendly');
-        const showFov =
-          d.headingDeg != null && !isOffline && (isHovered || isSelected);
-        out.push({
-          id: d.id,
-          lat: d.lat,
-          lon: d.lon,
-          zIndex: isHovered ? 40 : 25,
-          content: (
-            <MapMarker
-              icon={
-                <DroneIcon
-                  color={style.glyphColor}
-                  disabled={isOffline}
-                  rotationDeg={droneRotationFromHeading(d.headingDeg)}
-                />
-              }
-              style={style}
-              surfaceSize={SENSOR_SURFACE}
-              ringSize={SENSOR_RING}
-              heading={d.headingDeg}
-              label={d.name}
-              showLabel={isHovered || isSelected}
-              pulse={isHovered || isSelected}
-            />
-          ),
-          fov: showFov
-            ? {
-                rangeM: DRONE_FOV_RADIUS_M,
-                bearingDeg: d.headingDeg!,
-                widthDeg: d.fovDeg ?? DRONE_FOV_DEG,
-                color: '#22b8cf',
-                opacity: 0.4,
-              }
-            : undefined,
-          // Same motion-smoothing + stale-signal story as hostile
-          // targets. Offline drones skip kinematic handling — they're
-          // not "stale", they're explicitly down, and the existing
-          // `disabled` style already communicates that.
-          kinematic: !isOffline,
-          onClick: () => onAssetClickRef.current?.(d.id),
-          onMouseEnter: () => setHoveredMarkerId(d.id),
-          onMouseLeave: () => setHoveredMarkerId((current) => (current === d.id ? null : current)),
-        });
-      }
-    }
-
-    // Launcher effectors (dashboard prop) — overlaps LAUNCHER_ASSETS, dedupe applies.
-    if (launcherEffectors) {
-      for (const l of launcherEffectors) {
-        const lat = (l as unknown as { lat?: number }).lat;
-        const lon = (l as unknown as { lon?: number }).lon;
-        if (typeof lat !== 'number' || typeof lon !== 'number') continue;
-        if (seen.has(l.id)) continue;
-        seen.add(l.id);
-        const isHovered = hoveredMarkerId === l.id;
-        const isEngaged = engagementPair?.flow === 'weapon' && engagementPair.effId === l.id;
-        const state: InteractionState = isHovered
-          ? 'hovered'
-          : isEngaged
-            ? 'selected'
-            : 'default';
-        const style = resolveMarkerStyle(state, 'friendly');
-        // Same "engaged === hovered" treatment as the Regulus block above.
-        // When this launcher is the resolved weapon for the active target,
-        // light it up with the tooltip + pulse so the operator can read it
-        // off the map without hovering. Mirrors Mapbox's launcher state at
-        // TacticalMap.tsx:1786 (showLabel) + 1783 (pulse).
-        const showHoverEffect = isHovered || isEngaged;
-        out.push({
-          id: l.id,
-          lat,
-          lon,
-          zIndex: showHoverEffect ? 40 : 15,
-          content: (
-            <MapMarker
-              icon={<LauncherIcon size={LAUNCHER_GLYPH} />}
-              style={style}
-              surfaceSize={SENSOR_SURFACE}
-              ringSize={SENSOR_RING}
-              label={(l as unknown as { name?: string }).name ?? l.id}
-              showLabel={showHoverEffect}
-              pulse={showHoverEffect}
-            />
-          ),
-          onClick: () => onAssetClickRef.current?.(l.id),
-          onContextMenu: (e) => openContextMenu(e, 'effector', l.id),
-          onMouseEnter: () => setHoveredMarkerId(l.id),
-          onMouseLeave: () => setHoveredMarkerId((current) => (current === l.id ? null : current)),
-        });
-      }
-    }
-
-    // Engagement-line distance badge — sits at the midpoint of the line and
-    // displays the target ↔ effector distance in m / km. Coloured using the
-    // flow's `lineColor` / `badgeTextColor` so the badge reads as part of
-    // the line, not a stray marker. Mirrors the Mapbox badge in
-    // `TacticalMap.tsx:1485-1496`.
-    if (engagementPair) {
-      const distanceLabel =
-        engagementPair.distanceM < 1000
-          ? `${Math.round(engagementPair.distanceM)}m`
-          : `${(engagementPair.distanceM / 1000).toFixed(1)} km`;
-      out.push({
-        id: `__engagement-badge-${engagementPair.flow}`,
-        lat: (engagementPair.targetLat + engagementPair.effLat) / 2,
-        lon: (engagementPair.targetLon + engagementPair.effLon) / 2,
-        zIndex: 70,
-        content: (
-          <div
-            className="rounded px-2 py-1 font-mono text-[11px] tabular-nums whitespace-nowrap pointer-events-none select-none shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
-            style={{
-              backgroundColor: engagementPair.lineColor,
-              color: engagementPair.badgeTextColor,
-            }}
-          >
-            {distanceLabel}
-          </div>
-        ),
-      });
-    }
-
     return out;
   }, [
-    targets,
-    activeTargetId,
-    hoveredTargetIdFromCard,
-    hoveredSensorIdFromCard,
-    highlightedSensorSet,
-    selectedAssetId,
-    offlineSet,
     regulusEffectors,
-    friendlyDrones,
-    launcherEffectors,
     jammingJammerAssetId,
+    hoveredSensorIdFromCard,
     hoveredMarkerId,
-    openContextMenu,
     engagementPair,
+    openContextMenu,
   ]);
+
+  /** Slice 3 — hostile target markers. Driven entirely by `targets` + active/hover. */
+  const targetMarkers = useMemo<CesiumHtmlMarker[]>(() => {
+    if (!targets) return [];
+    const out: CesiumHtmlMarker[] = [];
+    const seen = new Set<string>();
+    for (const t of targets) {
+      const [lat, lon] = (t.coordinates ?? '').split(',').map((s) => parseFloat(s.trim()));
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+      if (seen.has(t.id)) continue;
+      seen.add(t.id);
+      const isActive = activeTargetId === t.id;
+      const isHoveredFromCard = hoveredTargetIdFromCard === t.id;
+      const isHoveredOnMap = hoveredMarkerId === t.id;
+      const isHovered = isHoveredFromCard || isHoveredOnMap;
+      const baseState = detectionInteractionState(t);
+      const state: InteractionState = isHovered
+        ? 'hovered'
+        : isActive
+          ? 'selected'
+          : baseState;
+      const style = resolveMarkerStyle(state, 'hostile');
+      const isNewArrival = t.isNew === true;
+      const targetHeading = targetHeadingFromTrail(t);
+      out.push({
+        id: t.id,
+        lat,
+        lon,
+        zIndex: isHovered ? 60 : isActive ? 50 : 20,
+        content: (
+          <MapMarker
+            icon={
+              <DroneIcon
+                color={style.glyphColor}
+                rotationDeg={
+                  targetHeading != null
+                    ? droneRotationFromHeading(targetHeading)
+                    : 0
+                }
+              />
+            }
+            style={style}
+            surfaceSize={TARGET_SURFACE}
+            ringSize={TARGET_RING}
+            heading={targetHeading ?? undefined}
+            label={t.name ?? t.id}
+            showLabel={isHovered || isActive}
+            pulse={isHovered || isActive || isNewArrival}
+          />
+        ),
+        kinematic: true,
+        onClick: () => onMarkerClickRef.current?.(t.id),
+        onContextMenu: (e) => openContextMenu(e, 'target', t.id),
+        onMouseEnter: () => setHoveredMarkerId(t.id),
+        onMouseLeave: () => setHoveredMarkerId((current) => (current === t.id ? null : current)),
+      });
+    }
+    return out;
+  }, [targets, activeTargetId, hoveredTargetIdFromCard, hoveredMarkerId, openContextMenu]);
+
+  /** Slice 4 — friendly drones (kinematic). */
+  const friendlyDroneMarkers = useMemo<CesiumHtmlMarker[]>(() => {
+    if (!friendlyDrones) return [];
+    const out: CesiumHtmlMarker[] = [];
+    const seen = new Set<string>();
+    for (const d of friendlyDrones) {
+      if (seen.has(d.id)) continue;
+      seen.add(d.id);
+      const isOffline = offlineSet.has(d.id);
+      const isSelected = selectedAssetId === d.id;
+      const isHoveredFromCard = hoveredSensorIdFromCard === d.id;
+      const isHoveredOnMap = hoveredMarkerId === d.id;
+      const isHovered = isHoveredFromCard || isHoveredOnMap;
+      const state: InteractionState = isOffline
+        ? 'disabled'
+        : isSelected
+          ? 'selected'
+          : isHovered
+            ? 'hovered'
+            : 'default';
+      const style = resolveMarkerStyle(state, 'friendly');
+      const showFov = d.headingDeg != null && !isOffline && (isHovered || isSelected);
+      out.push({
+        id: d.id,
+        lat: d.lat,
+        lon: d.lon,
+        zIndex: isHovered ? 40 : 25,
+        content: (
+          <MapMarker
+            icon={
+              <DroneIcon
+                color={style.glyphColor}
+                disabled={isOffline}
+                rotationDeg={droneRotationFromHeading(d.headingDeg)}
+              />
+            }
+            style={style}
+            surfaceSize={SENSOR_SURFACE}
+            ringSize={SENSOR_RING}
+            heading={d.headingDeg}
+            label={d.name}
+            showLabel={isHovered || isSelected}
+            pulse={isHovered || isSelected}
+          />
+        ),
+        fov: showFov
+          ? {
+              rangeM: DRONE_FOV_RADIUS_M,
+              bearingDeg: d.headingDeg!,
+              widthDeg: d.fovDeg ?? DRONE_FOV_DEG,
+              color: '#22b8cf',
+              opacity: 0.4,
+            }
+          : undefined,
+        kinematic: !isOffline,
+        onClick: () => onAssetClickRef.current?.(d.id),
+        onMouseEnter: () => setHoveredMarkerId(d.id),
+        onMouseLeave: () => setHoveredMarkerId((current) => (current === d.id ? null : current)),
+      });
+    }
+    return out;
+  }, [friendlyDrones, offlineSet, selectedAssetId, hoveredSensorIdFromCard, hoveredMarkerId]);
+
+  /** Slice 5 — launcher effectors prop. */
+  const launcherEffectorMarkers = useMemo<CesiumHtmlMarker[]>(() => {
+    if (!launcherEffectors) return [];
+    const out: CesiumHtmlMarker[] = [];
+    const seen = new Set<string>();
+    for (const l of launcherEffectors) {
+      const lat = (l as unknown as { lat?: number }).lat;
+      const lon = (l as unknown as { lon?: number }).lon;
+      if (typeof lat !== 'number' || typeof lon !== 'number') continue;
+      if (seen.has(l.id)) continue;
+      seen.add(l.id);
+      const isHovered = hoveredMarkerId === l.id;
+      const isEngaged = engagementPair?.flow === 'weapon' && engagementPair.effId === l.id;
+      const state: InteractionState = isHovered
+        ? 'hovered'
+        : isEngaged
+          ? 'selected'
+          : 'default';
+      const style = resolveMarkerStyle(state, 'friendly');
+      const showHoverEffect = isHovered || isEngaged;
+      out.push({
+        id: l.id,
+        lat,
+        lon,
+        zIndex: showHoverEffect ? 40 : 15,
+        content: (
+          <MapMarker
+            icon={<LauncherIcon size={LAUNCHER_GLYPH} />}
+            style={style}
+            surfaceSize={SENSOR_SURFACE}
+            ringSize={SENSOR_RING}
+            label={(l as unknown as { name?: string }).name ?? l.id}
+            showLabel={showHoverEffect}
+            pulse={showHoverEffect}
+          />
+        ),
+        onClick: () => onAssetClickRef.current?.(l.id),
+        onContextMenu: (e) => openContextMenu(e, 'effector', l.id),
+        onMouseEnter: () => setHoveredMarkerId(l.id),
+        onMouseLeave: () => setHoveredMarkerId((current) => (current === l.id ? null : current)),
+      });
+    }
+    return out;
+  }, [launcherEffectors, hoveredMarkerId, engagementPair, openContextMenu]);
+
+  /** Slice 6 — engagement-line distance badge. */
+  const engagementBadgeMarker = useMemo<CesiumHtmlMarker | null>(() => {
+    if (!engagementPair) return null;
+    const distanceLabel =
+      engagementPair.distanceM < 1000
+        ? `${Math.round(engagementPair.distanceM)}m`
+        : `${(engagementPair.distanceM / 1000).toFixed(1)} km`;
+    return {
+      id: `__engagement-badge-${engagementPair.flow}`,
+      lat: (engagementPair.targetLat + engagementPair.effLat) / 2,
+      lon: (engagementPair.targetLon + engagementPair.effLon) / 2,
+      zIndex: 70,
+      content: (
+        <div
+          className="rounded px-2 py-1 font-mono text-[11px] tabular-nums whitespace-nowrap pointer-events-none select-none shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
+          style={{
+            backgroundColor: engagementPair.lineColor,
+            color: engagementPair.badgeTextColor,
+          }}
+        >
+          {distanceLabel}
+        </div>
+      ),
+    };
+  }, [engagementPair]);
+
+  /**
+   * Concatenated `htmlMarkers` array. Stable as long as none of its
+   * sub-slices changed; CesiumMap's id-keyed diff handles per-marker
+   * updates efficiently from there.
+   *
+   * Order matters for z-fighting on ground-clamped FOV polygons: static
+   * assets first (lowest priority), then effectors, then dynamic
+   * targets/drones on top.
+   */
+  const htmlMarkers = useMemo<CesiumHtmlMarker[]>(() => {
+    // De-dupe across slices. Launchers in particular appear in BOTH
+    // `staticAssetMarkers` (from `LAUNCHER_ASSETS` constant) and
+    // `launcherEffectorMarkers` (from the `launcherEffectors` prop),
+    // and the latter is the richer version with engagement/hover state,
+    // so it wins. Without this, React logs a stream of duplicate-key
+    // warnings every frame the marker set re-renders.
+    const seen = new Set<string>();
+    const out: CesiumHtmlMarker[] = [];
+    const append = (marker: CesiumHtmlMarker): void => {
+      if (seen.has(marker.id)) return;
+      seen.add(marker.id);
+      out.push(marker);
+    };
+    for (const m of launcherEffectorMarkers) append(m);
+    for (const m of staticAssetMarkers) append(m);
+    for (const m of regulusEffectorMarkers) append(m);
+    for (const m of targetMarkers) append(m);
+    for (const m of friendlyDroneMarkers) append(m);
+    if (engagementBadgeMarker) append(engagementBadgeMarker);
+    return out;
+  }, [
+    staticAssetMarkers,
+    regulusEffectorMarkers,
+    targetMarkers,
+    friendlyDroneMarkers,
+    launcherEffectorMarkers,
+    engagementBadgeMarker,
+  ]);
+
 
   /**
    * Polylines (Phase 5):
@@ -858,18 +961,15 @@ export function CesiumTacticalMap({
    * use the structured `TrailPoint` shape. Both flatten to the polyline
    * primitive's `{lat, lon}` points.
    */
-  const polylines = useMemo<CesiumPolyline[]>(() => {
-    const out: CesiumPolyline[] = [];
-
-    const tupleToPoints = (trail: [number, number][]) =>
-      trail.map(([lat, lon]) => ({ lat, lon }));
-
-    /**
-     * Push a black "casing" underneath a coloured line so trails stay legible
-     * over high-contrast satellite imagery. Mirrors Mapbox's two-layer trail
-     * styling (`TRAIL_CASING_PAINT` + `TRAIL_LINE_PAINT` in `TacticalMap.tsx`).
-     */
-    const pushCasedTrail = (
+  // Helpers used across polyline slices. Module-stable closures so
+  // they don't flap memo identities.
+  const tupleToPoints = useCallback(
+    (trail: [number, number][]) => trail.map(([lat, lon]) => ({ lat, lon })),
+    [],
+  );
+  const pushCasedTrail = useCallback(
+    (
+      out: CesiumPolyline[],
       id: string,
       points: { lat: number; lon: number }[],
       lineColor: string,
@@ -883,25 +983,19 @@ export function CesiumTacticalMap({
       // edge band on either side.
       out.push({ id: `${id}-casing`, points, color: '#000000', width: casingWidth, zIndex: 0 });
       out.push({ id, points, color: lineColor, width: lineWidth, zIndex: 1 });
-    };
+    },
+    [],
+  );
 
-    // Hostile / drone-deployment / mission-route trails — Mapbox uses
-    // 7 px black casing + 3 px white centre. Friendly drone patrols use the
-    // narrower 5 / 2 pairing (FRIENDLY_TRAIL_*_PAINT in TacticalMap.tsx).
-
-    // Active drone deployment trail (Flow 3) — hostile-style.
+  /** Slice — active drone + mission-route + friendly trails. */
+  const trailPolylines = useMemo<CesiumPolyline[]>(() => {
+    const out: CesiumPolyline[] = [];
     if (activeDrone?.trail && activeDrone.trail.length >= 2) {
-      pushCasedTrail('active-drone-trail', tupleToPoints(activeDrone.trail), '#ffffff', 3, 7);
+      pushCasedTrail(out, 'active-drone-trail', tupleToPoints(activeDrone.trail), '#ffffff', 3, 7);
     }
-
-    // Mission route current trail (Flow 4) — hostile-style.
     if (missionRoute?.trail && missionRoute.trail.length >= 2) {
-      pushCasedTrail('mission-route-trail', tupleToPoints(missionRoute.trail), '#ffffff', 3, 7);
+      pushCasedTrail(out, 'mission-route-trail', tupleToPoints(missionRoute.trail), '#ffffff', 3, 7);
     }
-
-    // Mission route waypoints — connect them as a planned line so the user
-    // sees the next leg even before the drone has moved there. Dashed lines
-    // skip the casing because the dash material reads cleanly on its own.
     if (missionRoute?.waypoints && missionRoute.waypoints.length >= 2) {
       out.push({
         id: 'mission-route-plan',
@@ -911,28 +1005,18 @@ export function CesiumTacticalMap({
         dashed: true,
       });
     }
-
-    // Friendly drone patrol trails — narrower 5/2 pairing.
     if (friendlyDrones) {
       for (const d of friendlyDrones) {
         if (!d.trail || d.trail.length < 2) continue;
-        pushCasedTrail(
-          `friendly-drone-${d.id}-trail`,
-          tupleToPoints(d.trail),
-          '#ffffff',
-          2,
-          5,
-        );
+        pushCasedTrail(out, `friendly-drone-${d.id}-trail`, tupleToPoints(d.trail), '#ffffff', 2, 5);
       }
     }
-
-    // Hostile target trails — only for `classified` entities, matching
-    // Mapbox's filter (raw detections don't draw a track). 7/3 pairing.
     if (targets) {
       for (const t of targets) {
         if (t.entityStage !== 'classified') continue;
         if (!t.trail || t.trail.length < 2) continue;
         pushCasedTrail(
+          out,
           `target-${t.id}-trail`,
           t.trail.map((p) => ({ lat: p.lat, lon: p.lon })),
           '#ffffff',
@@ -941,9 +1025,12 @@ export function CesiumTacticalMap({
         );
       }
     }
+    return out;
+  }, [activeDrone, missionRoute, friendlyDrones, targets, tupleToPoints, pushCasedTrail]);
 
-    // Engagement line (dashed) — straight line between the actively-jamming
-    // effector and its target. Phase 5's "engagement-line dashed animation".
+  /** Slice — engagement-related polylines (jamming + active engagement). */
+  const engagementPolylines = useMemo<CesiumPolyline[]>(() => {
+    const out: CesiumPolyline[] = [];
     if (jammingTargetId && jammingJammerAssetId) {
       const target = targets?.find((t) => t.id === jammingTargetId);
       const effectors = regulusEffectors ?? REGULUS_EFFECTORS;
@@ -964,13 +1051,6 @@ export function CesiumTacticalMap({
         }
       }
     }
-
-    // Active-target engagement line (jam or weapon flow). Mirrors the
-    // dashed line Mapbox draws between the active target and the resolved
-    // effector (`TacticalMap.tsx:1456-1472`). Colour is phase-driven —
-    // white at idle, red while mitigating, etc. Three spring-eased
-    // particle dots flow along the line so the engagement direction
-    // reads at a glance, matching `useEngagementLine.ts` exactly.
     if (engagementPair) {
       out.push({
         id: `${engagementPair.flow}-engagement-line`,
@@ -984,42 +1064,43 @@ export function CesiumTacticalMap({
         particles: { count: 3, color: engagementPair.lineColor, speed: 0.25 },
       });
     }
-
-    // Camera-scan fan visualisation — preview of which bearings a planned
-    // camera-scan mission will sweep. Mirrors the Mapbox layer in
-    // `TacticalMap.tsx:2105-2139`: 0.4 km dashed lines fanning out from
-    // the camera, violet at 50 % alpha. Same offset math (lat scaled by
-    // 1°≈111.32 km, lon scaled by cos(lat) to compensate for meridian
-    // convergence). One polyline per bearing so each line gets a stable
-    // id and Cesium can diff updates as the planner adds bearings.
-    if (planningScanViz && planningScanViz.bearings.length > 0) {
-      const SCAN_DIST_KM = 0.4;
-      const cosLat = Math.cos((planningScanViz.cameraLat * Math.PI) / 180);
-      for (let i = 0; i < planningScanViz.bearings.length; i++) {
-        const bearing = planningScanViz.bearings[i];
-        const bearingRad = (bearing * Math.PI) / 180;
-        const endLat =
-          planningScanViz.cameraLat + (SCAN_DIST_KM / 111.32) * Math.cos(bearingRad);
-        const endLon =
-          planningScanViz.cameraLon + (SCAN_DIST_KM / (111.32 * cosLat)) * Math.sin(bearingRad);
-        out.push({
-          id: `planning-scan-${i}`,
-          points: [
-            { lat: planningScanViz.cameraLat, lon: planningScanViz.cameraLon },
-            { lat: endLat, lon: endLon },
-          ],
-          color: 'rgba(167, 139, 250, 0.5)',
-          // Mapbox uses line-width 1.5; Cesium polyline widths are
-          // integer-friendly. 2 reads close enough at typical zoom and
-          // matches the engagement line's hairline style.
-          width: 2,
-          dashed: true,
-        });
-      }
-    }
-
     return out;
-  }, [activeDrone, missionRoute, friendlyDrones, targets, jammingTargetId, jammingJammerAssetId, regulusEffectors, engagementPair, planningScanViz]);
+  }, [jammingTargetId, jammingJammerAssetId, targets, regulusEffectors, engagementPair]);
+
+  /**
+   * Slice — planning-scan fan. Driven by the user's planner UI, not
+   * the kinematic sim — so it stays cold while drones tick.
+   */
+  const planningScanPolylines = useMemo<CesiumPolyline[]>(() => {
+    if (!planningScanViz || planningScanViz.bearings.length === 0) return [];
+    const out: CesiumPolyline[] = [];
+    const SCAN_DIST_KM = 0.4;
+    const cosLat = Math.cos((planningScanViz.cameraLat * Math.PI) / 180);
+    for (let i = 0; i < planningScanViz.bearings.length; i++) {
+      const bearing = planningScanViz.bearings[i];
+      const bearingRad = (bearing * Math.PI) / 180;
+      const endLat =
+        planningScanViz.cameraLat + (SCAN_DIST_KM / 111.32) * Math.cos(bearingRad);
+      const endLon =
+        planningScanViz.cameraLon + (SCAN_DIST_KM / (111.32 * cosLat)) * Math.sin(bearingRad);
+      out.push({
+        id: `planning-scan-${i}`,
+        points: [
+          { lat: planningScanViz.cameraLat, lon: planningScanViz.cameraLon },
+          { lat: endLat, lon: endLon },
+        ],
+        color: 'rgba(167, 139, 250, 0.5)',
+        width: 2,
+        dashed: true,
+      });
+    }
+    return out;
+  }, [planningScanViz]);
+
+  const polylines = useMemo<CesiumPolyline[]>(
+    () => [...trailPolylines, ...engagementPolylines, ...planningScanPolylines],
+    [trailPolylines, engagementPolylines, planningScanPolylines],
+  );
 
   /**
    * Phase 6 — imperative camera control. Each prop is converted into a

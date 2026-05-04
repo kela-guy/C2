@@ -168,23 +168,26 @@ function shortestArcDeg(a: number, b: number): number {
  *
  * Returns 0 when the time variance is zero (all samples at the same instant
  * — degenerate, can't fit a line).
+ *
+ * Takes parallel `tArr` / `yArr` arrays + `n` instead of an array of
+ * `{t, y}` pairs so callers can reuse pre-allocated scratch buffers
+ * across frames without paying for per-frame object allocation.
  */
-function regressSlopePerMs(pts: ReadonlyArray<{ t: number; y: number }>): number {
-  const n = pts.length;
+function regressSlopePerMs(tArr: ArrayLike<number>, yArr: ArrayLike<number>, n: number): number {
   if (n < 2) return 0;
   let sumT = 0;
   let sumY = 0;
   for (let i = 0; i < n; i++) {
-    sumT += pts[i].t;
-    sumY += pts[i].y;
+    sumT += tArr[i];
+    sumY += yArr[i];
   }
   const meanT = sumT / n;
   const meanY = sumY / n;
   let num = 0;
   let denom = 0;
   for (let i = 0; i < n; i++) {
-    const dt = pts[i].t - meanT;
-    num += dt * (pts[i].y - meanY);
+    const dt = tArr[i] - meanT;
+    num += dt * (yArr[i] - meanY);
     denom += dt * dt;
   }
   return denom > 0 ? num / denom : 0;
@@ -198,6 +201,23 @@ export function createMotionTrack(): MotionTrack {
   let lastQueryAt = 0;
   let frozen = false;
   let initialised = false;
+  // ── Per-frame scratch buffers ──────────────────────────────────────────
+  // The integration loop runs at the render frame rate (~30 Hz with the
+  // capped target frame rate) for every kinematic marker (~10+ on a
+  // typical Dashboard). The previous implementation allocated 5+ arrays
+  // and an object per sample on every call, all garbage at frame end.
+  // Pre-allocated typed/native arrays sized for the SAMPLE_BUFFER_MAX
+  // upper bound let the regression run zero-allocation. We track a
+  // `_n` field per buffer instead of mutating .length so V8 can keep the
+  // array hidden-class stable across frames.
+  const tBuf = new Float64Array(SAMPLE_BUFFER_MAX);
+  const yLatBuf = new Float64Array(SAMPLE_BUFFER_MAX);
+  const yLonBuf = new Float64Array(SAMPLE_BUFFER_MAX);
+  const pairTBuf = new Float64Array(SAMPLE_BUFFER_MAX);
+  const pairHBuf = new Float64Array(SAMPLE_BUFFER_MAX);
+  const unwrapBuf = new Float64Array(SAMPLE_BUFFER_MAX);
+  /** Logical length within `selectWindow` / `compute*` scratch buffers. */
+  let windowN = 0;
   // Snapshot of the most recent `query()` result. `peek()` returns this
   // without mutating state so multiple readers in the same frame agree.
   let snapshot: MotionQuery = {
@@ -212,12 +232,12 @@ export function createMotionTrack(): MotionTrack {
 
   /**
    * Pick the regression window adaptively: prefer 5 s, but extend up to
-   * 10 s if not enough samples landed in the shorter window. Returns the
-   * tail of `samples` that lies inside the chosen window.
+   * 10 s if not enough samples landed in the shorter window. Writes the
+   * selected sample tail into `tBuf` / `yLatBuf` / `yLonBuf` and updates
+   * `windowN`. No heap allocation.
    */
-  function selectWindow(now: number): Sample[] {
+  function selectWindow(now: number): void {
     const start = (cutoff: number) => {
-      // samples is time-sorted; binary search would be nicer but n ≤ 64.
       for (let i = samples.length - 1; i >= 0; i--) {
         if (samples[i].t < cutoff) return i + 1;
       }
@@ -227,28 +247,52 @@ export function createMotionTrack(): MotionTrack {
     if (samples.length - from < MIN_REGRESSION_SAMPLES) {
       from = start(now - VELOCITY_WINDOW_MAX_MS);
     }
-    return samples.slice(from);
+    const n = samples.length - from;
+    windowN = n;
+    for (let i = 0; i < n; i++) {
+      const s = samples[from + i];
+      tBuf[i] = s.t;
+      yLatBuf[i] = s.lat;
+      yLonBuf[i] = s.lon;
+    }
   }
+
+  // Reused result objects so `query()` itself doesn't allocate.
+  const velOut = { vLatPerSec: 0, vLonPerSec: 0 };
+  const angOut: { headingDeg: number | null; angVelDegPerSec: number } = {
+    headingDeg: null,
+    angVelDegPerSec: 0,
+  };
 
   /**
    * Linear velocity from least-squares regression on (t, lat) and (t, lon).
    * Falls back to the last-two-sample chord if there aren't enough samples
-   * for a stable fit (initial moments after `pushSample`, or after a teleport).
+   * for a stable fit. Reads from the scratch buffers populated by
+   * `selectWindow`. Mutates and returns `velOut`.
    */
-  function computeVelocity(window: Sample[]): { vLatPerSec: number; vLonPerSec: number } {
-    if (window.length < 2) return { vLatPerSec: 0, vLonPerSec: 0 };
-    if (window.length < MIN_REGRESSION_SAMPLES) {
-      const a = window[0];
-      const b = window[window.length - 1];
-      const dt = (b.t - a.t) / 1000;
-      if (dt <= 0) return { vLatPerSec: 0, vLonPerSec: 0 };
-      return { vLatPerSec: (b.lat - a.lat) / dt, vLonPerSec: (b.lon - a.lon) / dt };
+  function computeVelocity(): { vLatPerSec: number; vLonPerSec: number } {
+    const n = windowN;
+    if (n < 2) {
+      velOut.vLatPerSec = 0;
+      velOut.vLonPerSec = 0;
+      return velOut;
     }
-    const latPts = window.map((s) => ({ t: s.t, y: s.lat }));
-    const lonPts = window.map((s) => ({ t: s.t, y: s.lon }));
-    const vLatPerMs = regressSlopePerMs(latPts);
-    const vLonPerMs = regressSlopePerMs(lonPts);
-    return { vLatPerSec: vLatPerMs * 1000, vLonPerSec: vLonPerMs * 1000 };
+    if (n < MIN_REGRESSION_SAMPLES) {
+      const dt = (tBuf[n - 1] - tBuf[0]) / 1000;
+      if (dt <= 0) {
+        velOut.vLatPerSec = 0;
+        velOut.vLonPerSec = 0;
+      } else {
+        velOut.vLatPerSec = (yLatBuf[n - 1] - yLatBuf[0]) / dt;
+        velOut.vLonPerSec = (yLonBuf[n - 1] - yLonBuf[0]) / dt;
+      }
+      return velOut;
+    }
+    const vLatPerMs = regressSlopePerMs(tBuf, yLatBuf, n);
+    const vLonPerMs = regressSlopePerMs(tBuf, yLonBuf, n);
+    velOut.vLatPerSec = vLatPerMs * 1000;
+    velOut.vLonPerSec = vLonPerMs * 1000;
+    return velOut;
   }
 
   /**
@@ -265,40 +309,51 @@ export function createMotionTrack(): MotionTrack {
    * direction of travel rather than a window-averaged direction (which would
    * lag too much during turns).
    */
-  function computeAngular(window: Sample[]): { headingDeg: number | null; angVelDegPerSec: number } {
-    if (window.length < 2) return { headingDeg: null, angVelDegPerSec: 0 };
+  function computeAngular(): { headingDeg: number | null; angVelDegPerSec: number } {
+    const n = windowN;
+    if (n < 2) {
+      angOut.headingDeg = null;
+      angOut.angVelDegPerSec = 0;
+      return angOut;
+    }
 
-    // Pair-wise bearings + chord-speed filter.
-    const pairs: Array<{ t: number; h: number }> = [];
-    for (let i = 1; i < window.length; i++) {
-      const a = window[i - 1];
-      const b = window[i];
-      const dt = (b.t - a.t) / 1000;
+    // Pair-wise bearings + chord-speed filter, written into the
+    // pre-allocated `pairTBuf` / `pairHBuf` (no array push).
+    let pairCount = 0;
+    for (let i = 1; i < n; i++) {
+      const dt = (tBuf[i] - tBuf[i - 1]) / 1000;
       if (dt <= 0) continue;
-      const speed = approxDistanceM(a.lat, a.lon, b.lat, b.lon) / dt;
+      const speed = approxDistanceM(yLatBuf[i - 1], yLonBuf[i - 1], yLatBuf[i], yLonBuf[i]) / dt;
       if (speed < HEADING_FROM_VEL_MIN_M_PER_S) continue;
-      pairs.push({ t: (a.t + b.t) / 2, h: bearingDeg(a.lat, a.lon, b.lat, b.lon) });
+      pairTBuf[pairCount] = (tBuf[i - 1] + tBuf[i]) / 2;
+      pairHBuf[pairCount] = bearingDeg(yLatBuf[i - 1], yLonBuf[i - 1], yLatBuf[i], yLonBuf[i]);
+      pairCount++;
     }
-    if (pairs.length === 0) return { headingDeg: null, angVelDegPerSec: 0 };
-
-    // Latest bearing → instantaneous heading.
-    const latestHeading = pairs[pairs.length - 1].h;
-
-    if (pairs.length < MIN_REGRESSION_SAMPLES) {
-      // Not enough pairs to regress angular velocity stably.
-      return { headingDeg: latestHeading, angVelDegPerSec: 0 };
+    if (pairCount === 0) {
+      angOut.headingDeg = null;
+      angOut.angVelDegPerSec = 0;
+      return angOut;
     }
 
-    // Unwrap so a turn from 350° → 10° reads as +20° not -340°.
-    const unwrapped: number[] = [pairs[0].h];
-    for (let i = 1; i < pairs.length; i++) {
-      const delta = shortestArcDeg(pairs[i - 1].h, pairs[i].h);
-      unwrapped.push(unwrapped[i - 1] + delta);
-    }
-    const angPts = pairs.map((p, i) => ({ t: p.t, y: unwrapped[i] }));
-    const omegaPerMs = regressSlopePerMs(angPts);
+    const latestHeading = pairHBuf[pairCount - 1];
 
-    return { headingDeg: latestHeading, angVelDegPerSec: omegaPerMs * 1000 };
+    if (pairCount < MIN_REGRESSION_SAMPLES) {
+      angOut.headingDeg = latestHeading;
+      angOut.angVelDegPerSec = 0;
+      return angOut;
+    }
+
+    // Unwrap into the pre-allocated `unwrapBuf`.
+    unwrapBuf[0] = pairHBuf[0];
+    for (let i = 1; i < pairCount; i++) {
+      const delta = shortestArcDeg(pairHBuf[i - 1], pairHBuf[i]);
+      unwrapBuf[i] = unwrapBuf[i - 1] + delta;
+    }
+    const omegaPerMs = regressSlopePerMs(pairTBuf, unwrapBuf, pairCount);
+
+    angOut.headingDeg = latestHeading;
+    angOut.angVelDegPerSec = omegaPerMs * 1000;
+    return angOut;
   }
 
   const pushSample = (lat: number, lon: number, t: number) => {
@@ -372,9 +427,9 @@ export function createMotionTrack(): MotionTrack {
       return snapshot;
     }
 
-    const window = selectWindow(now);
-    const { vLatPerSec, vLonPerSec } = computeVelocity(window);
-    const { headingDeg: instHeading, angVelDegPerSec } = computeAngular(window);
+    selectWindow(now);
+    const { vLatPerSec, vLonPerSec } = computeVelocity();
+    const { headingDeg: instHeading, angVelDegPerSec } = computeAngular();
 
     const newest = samples[samples.length - 1];
     const ageMs = now - newest.t;

@@ -46,18 +46,18 @@ export class CesiumErrorBoundary extends React.Component<
               Cesium failed to mount
             </div>
             <div className="mb-3 text-[12px] text-zinc-300">
-              The Cesium parity backend hit a runtime error. The Mapbox dashboard
-              still works — switch back via the link below.
+              The map viewer hit a runtime error. Reload the page to retry.
             </div>
             <pre className="mb-3 max-h-40 overflow-auto rounded bg-black/40 p-2 text-[11px] leading-snug text-red-200">
               {message}
             </pre>
-            <a
-              href="?map=mapbox"
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
               className="inline-flex items-center rounded-md bg-white/[0.08] px-3 py-1.5 text-[12px] font-medium text-white hover:bg-white/[0.14]"
             >
-              Reload with Mapbox
-            </a>
+              Reload page
+            </button>
           </div>
         </div>
       );

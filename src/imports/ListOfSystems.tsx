@@ -217,15 +217,7 @@ function buildStatusChip(target: Detection) {
 
 // ─── Unified Card ───────────────────────────────────────────────────────────
 
-function UnifiedCard({
-  target,
-  isOpen,
-  onToggle,
-  callbacks,
-  ctx,
-  onFocus,
-  thinMode,
-}: {
+interface UnifiedCardProps {
   target: Detection;
   isOpen: boolean;
   onToggle: () => void;
@@ -233,7 +225,17 @@ function UnifiedCard({
   ctx: CardContext;
   onFocus?: () => void;
   thinMode?: boolean;
-}) {
+}
+
+function UnifiedCardImpl({
+  target,
+  isOpen,
+  onToggle,
+  callbacks,
+  ctx,
+  onFocus,
+  thinMode,
+}: UnifiedCardProps) {
   const slots = useCardSlots(target, callbacks, ctx);
   const isSuccess = target.status === 'event_resolved' || target.status === 'event_neutralized';
   const isExpired = target.status === 'expired';
@@ -340,6 +342,43 @@ function UnifiedCard({
     </TargetCard>
   );
 }
+
+/**
+ * Custom equality for `<UnifiedCard>`. The parent rebuilds `callbacks` and
+ * `ctx` fresh on every render (each call site uses inline arrow factories
+ * that capture the current target), but most rows aren't actually changing —
+ * only the row whose `target` reference moved on the latest tick needs to
+ * re-render. We compare:
+ *   1. `target` reference — preserved by the parent's `setTargets(prev =>
+ *       prev.map(t => t.id === id ? { ...t, ... } : t))` pattern.
+ *   2. `isOpen` / `thinMode` — primitive props that affect the rendered tree.
+ *   3. `ctx` — primitive booleans / shared references. Skipping it would
+ *      cause stale "camera active" / "drone verifying" indicators.
+ * Callback identities are deliberately ignored.
+ */
+function isUnifiedCardEqual(prev: UnifiedCardProps, next: UnifiedCardProps): boolean {
+  if (prev.target !== next.target) return false;
+  if (prev.isOpen !== next.isOpen) return false;
+  if (prev.thinMode !== next.thinMode) return false;
+
+  const a = prev.ctx;
+  const b = next.ctx;
+  if (a.isDroneVerifying !== b.isDroneVerifying) return false;
+  if (a.isCameraActive !== b.isCameraActive) return false;
+  if (a.isCameraPointing !== b.isCameraPointing) return false;
+  if (a.allCamerasBusy !== b.allCamerasBusy) return false;
+  if (a.controlRequestCountdown !== b.controlRequestCountdown) return false;
+  if (a.regulusEffectors !== b.regulusEffectors) return false;
+  if (a.selectedEffectorId !== b.selectedEffectorId) return false;
+  if (a.launcherEffectors !== b.launcherEffectors) return false;
+  if (a.selectedLauncherId !== b.selectedLauncherId) return false;
+  if (a.nearbyCameras !== b.nearbyCameras) return false;
+  if (a.nearbyHives !== b.nearbyHives) return false;
+
+  return true;
+}
+
+const UnifiedCard = React.memo(UnifiedCardImpl, isUnifiedCardEqual);
 
 // ─── Legacy exports (backward-compatible wrappers) ──────────────────────────
 

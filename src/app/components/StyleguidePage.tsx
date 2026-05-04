@@ -34,7 +34,7 @@ import {
 import {
   CameraIcon, SensorIcon, RadarIcon, DroneIcon, DroneHiveIcon,
   LidarIcon, LauncherIcon, MissileIcon,
-} from '@/shared/components/TacticalMap';
+} from '@/app/components/tacticalIcons';
 import { DroneCardIcon, JamWaveIcon, MissileCardIcon, CarIcon } from '@/primitives/MapIcons';
 import { MapMarker } from '@/primitives/MapMarker';
 import winterTheme from './winter-is-coming-theme.json';
@@ -1415,8 +1415,16 @@ function EngagementLineAnimatedPreview({ color }: { color: string }) {
   const [particlePositions, setParticlePositions] = useState<number[]>([0.17, 0.5, 0.83]);
   const [dashOffset, setDashOffset] = useState(0);
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [cw, setCw] = useState(600);
+  // Pause the rAF loop when the preview is offscreen or the tab is hidden —
+  // multiple instances of this preview render simultaneously on the styleguide
+  // page and each one runs an unconditional rAF + setState every frame.
+  const [isVisible, setIsVisible] = useState(true);
+
   useEffect(() => {
     if (prefersReducedMotion) return;
+    if (!isVisible) return;
     let frameId: number;
     let lastTime = 0;
 
@@ -1445,16 +1453,43 @@ function EngagementLineAnimatedPreview({ color }: { color: string }) {
 
     frameId = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(frameId);
-  }, [prefersReducedMotion, springLut]);
-
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [cw, setCw] = useState(600);
+  }, [prefersReducedMotion, springLut, isVisible]);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    const node = containerRef.current;
+    if (!node) return;
+
     const ro = new ResizeObserver(([e]) => setCw(e.contentRect.width));
-    ro.observe(containerRef.current);
-    return () => ro.disconnect();
+    ro.observe(node);
+
+    let inView = true;
+    let documentVisible = typeof document !== 'undefined' ? !document.hidden : true;
+    const apply = () => setIsVisible(inView && documentVisible);
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        inView = entries[0]?.isIntersecting ?? false;
+        apply();
+      },
+      { threshold: 0.01 },
+    );
+    io.observe(node);
+
+    const onVisibility = () => {
+      documentVisible = !document.hidden;
+      apply();
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', onVisibility);
+    }
+
+    return () => {
+      ro.disconnect();
+      io.disconnect();
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', onVisibility);
+      }
+    };
   }, []);
 
   const pad = 32;
@@ -4024,7 +4059,7 @@ export function DetectionRow() {
               <div className="space-y-2">
                 <ImportBlock path="@/primitives/MapMarker" names={['MapMarker']} />
                 <ImportBlock path="@/primitives/markerStyles" names={['resolveMarkerStyle', 'INTERACTION_STATES', 'AFFILIATIONS']} />
-                <ImportBlock path="@/shared/components/TacticalMap" names={['CameraIcon', 'RadarIcon', 'SensorIcon', 'DroneIcon', 'DroneHiveIcon', 'LidarIcon', 'LauncherIcon', 'MissileIcon']} />
+                <ImportBlock path="@/app/components/tacticalIcons" names={['CameraIcon', 'RadarIcon', 'SensorIcon', 'DroneIcon', 'DroneHiveIcon', 'LidarIcon', 'LauncherIcon', 'MissileIcon']} />
               </div>
 
               {/* ── Layer Anatomy ── */}

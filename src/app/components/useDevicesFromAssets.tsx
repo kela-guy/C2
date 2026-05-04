@@ -16,13 +16,15 @@ import {
   LAUNCHER_ASSETS,
   LIDAR_ASSETS,
   WEAPON_SYSTEM_ASSETS,
+} from './tacticalAssets';
+import {
   SensorIcon,
   CameraIcon,
   RadarIcon,
   DroneHiveIcon,
   LauncherIcon,
   LidarIcon,
-} from './TacticalMap';
+} from './tacticalIcons';
 import type { Device } from './DevicesPanel';
 
 const DEVICE_HEALTH: Record<string, 'operational' | 'malfunctioning'> = {

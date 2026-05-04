@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Radio, SlidersHorizontal } from 'lucide-react';
-import { CAMERA_ASSETS, LIDAR_ASSETS, RADAR_ASSETS } from '@/shared/components/TacticalMap';
+import { CAMERA_ASSETS, LIDAR_ASSETS, RADAR_ASSETS } from '@/app/components/tacticalAssets';
 import type { FilterDef } from '@/primitives/FilterBar';
 import type { ActivityStatus, Detection } from './ListOfSystems';
 import { compareTargetsByPriority, getActivityStatus } from './useActivityStatus';

@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useDrop } from 'react-dnd';
-import { TacticalMap, CAMERA_ASSETS, REGULUS_EFFECTORS, bearingDegrees, haversineDistanceM } from './TacticalMap';
+import { CAMERA_ASSETS, REGULUS_EFFECTORS } from './tacticalAssets';
+import { bearingDegrees, haversineDistanceM } from '@/app/lib/mapGeo';
 import { CesiumTacticalMap } from './CesiumTacticalMap';
 import { CesiumErrorBoundary } from './CesiumErrorBoundary';
-import { IS_CESIUM } from '@/lib/mapBackend';
 import { NotificationSystem, showTacticalNotification } from './NotificationSystem';
 import { NotificationCenter } from './NotificationCenter';
 import ListOfSystems from '@/imports/ListOfSystems';
@@ -22,9 +22,13 @@ import type { CameraFeed } from './CameraViewerPanel';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/shared/components/ui/resizable';
 import { LAYOUT_TOKENS } from '@/primitives/tokens';
 import { toast } from 'sonner';
-import Joyride from 'react-joyride';
+// Joyride is only used when the user opens the in-app tour. Lazy-loading it
+// keeps the ~80 KB tour package out of the dashboard's initial bundle.
+const Joyride = lazy(() => import('react-joyride'));
 import { useCuasTour } from '../hooks/useCuasTour';
 import { getPriorityBaseline } from '@/imports/useActivityStatus';
+import { measure } from '@/lib/perf/measure';
+import { PerfProfiled } from './perf/PerfProfiled';
 
 function CuasIcon({ size = 20, strokeWidth = 2, className = '' }: { size?: number; strokeWidth?: number; className?: string }) {
   return (
@@ -37,8 +41,29 @@ function CuasIcon({ size = 20, strokeWidth = 2, className = '' }: { size?: numbe
   );
 }
 
+// Cached Hebrew locale time formatter. Reused across all hot paths so we
+// don't allocate a fresh `Intl.DateTimeFormat` (a heavy ICU lookup) on
+// every 250 ms simulation tick. Internally we also memoise the formatted
+// string for the current wall-clock second — multiple targets ticking on
+// the same loop see the exact same string and share it.
+const HE_TIME_FORMATTER = new Intl.DateTimeFormat('he-IL', {
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+});
+let cachedTimeSecond = -1;
+let cachedTimeString = '';
+function nowLocaleTime(): string {
+  const second = Math.floor(Date.now() / 1000);
+  if (second !== cachedTimeSecond) {
+    cachedTimeSecond = second;
+    cachedTimeString = HE_TIME_FORMATTER.format(new Date(second * 1000));
+  }
+  return cachedTimeString;
+}
+
 function appendLog(targets: Detection[], targetId: string, label: string): Detection[] {
-  const time = new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const time = nowLocaleTime();
   return targets.map(t => t.id !== targetId ? t : {
     ...t,
     actionLog: [...(t.actionLog || []), { time, label }],
@@ -55,6 +80,59 @@ const C2Logo = ({ className }: { className?: string }) => (
     />
   </svg>
 );
+
+// Static labels for `<DevicesPanel>` — hoisted to module scope so they keep a
+// stable reference across Dashboard renders (otherwise every render allocates
+// fresh objects and invalidates the panel's internal `useMemo` caches).
+const DEVICES_TYPE_LABELS = {
+  camera: 'מצלמות',
+  radar: 'מכ"מים',
+  dock: 'כוורות',
+  drone: 'רחפנים',
+  ecm: 'משבשים',
+  launcher: 'משגרים',
+  lidar: 'לידר',
+  weapon_system: 'מערכות נשק',
+} as const;
+
+const DEVICES_CONNECTION_LABELS = {
+  online: 'מחובר',
+  offline: 'לא מקוון',
+  error: 'שגיאה',
+  warning: 'אזהרה',
+} as const;
+
+const DEVICES_STRINGS = {
+  searchPlaceholder: 'חיפוש...',
+  clearSearch: 'נקה חיפוש',
+  resetFilters: 'איפוס סינון',
+  resetFiltersLabel: 'ניקוי',
+  noMatches: 'אין מכשירים תואמים',
+  location: 'מיקום',
+  bearing: 'כיוון',
+  fieldOfView: 'שדה ראייה',
+  coverage: 'כיסוי',
+  altitude: 'גובה',
+  health: 'תקינות',
+  healthOk: 'תקין',
+  healthMalfunction: 'תקלה',
+  battery: 'סוללה',
+  jam: 'הפעל',
+  jamActive: 'שיבוש פעיל',
+  jamDisabledOffline: 'המכשיר לא מקוון',
+  jamDisabledMalfunction: 'המכשיר בתקלה',
+  jamDisabledAlreadyActive: 'שיבוש כבר פעיל',
+  cameraModeAriaLabel: 'מצב מצלמה',
+  centerOnMap: 'מרכז במפה',
+  mute: 'השתק',
+  unmute: 'בטל השתקה',
+  wipers: 'מגבים',
+  wipersAriaLabel: 'מגבים',
+  calibrate: 'כיול',
+  calibrating: 'מכייל...',
+  calibrated: 'הושלם',
+  calibrateAriaLabel: 'כיול',
+} as const;
 
 export interface FriendlyDrone {
   id: string;
@@ -256,8 +334,38 @@ export const Dashboard = () => {
   const cuasIntervalRef3 = useRef<NodeJS.Timeout | null>(null);
   const cuasIntervalRef4 = useRef<NodeJS.Timeout | null>(null);
   const cuasMassRefs = useRef<NodeJS.Timeout[]>([]);
+  // Tracks bare `setTimeout` calls scheduled outside the main timer refs so we
+  // can clear them on unmount (CUAS spawn, mitigation cascades, focus resets).
+  const pendingTimeoutsRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
   const [tourTargetId, setTourTargetId] = useState<string | null>(null);
-  const activeTarget = targets.find(t => t.id === activeTargetId);
+
+  // Master unmount cleanup for every long-lived timer the dashboard owns.
+  // Component unmount only happens on full route changes today, but it's the
+  // right hygiene — leaked intervals fire `setTargets` after unmount, which
+  // logs a React warning and keeps the entire (heavy) Dashboard subtree alive
+  // in the heap.
+  useEffect(() => {
+    const cuasRefs = [cuasIntervalRef, cuasIntervalRef2, cuasIntervalRef3, cuasIntervalRef4];
+    const massRefs = cuasMassRefs;
+    const pending = pendingTimeoutsRef;
+    const camPointing = cameraPointingTimeoutRef;
+    return () => {
+      for (const ref of cuasRefs) {
+        if (ref.current) {
+          clearInterval(ref.current);
+          ref.current = null;
+        }
+      }
+      for (const id of massRefs.current) clearInterval(id);
+      massRefs.current = [];
+      for (const id of pending.current) clearTimeout(id);
+      pending.current.clear();
+      if (camPointing.current) {
+        clearTimeout(camPointing.current);
+        camPointing.current = null;
+      }
+    };
+  }, []);
 
   const tour = useCuasTour(
     useCallback((nextStepIndex: number) => {
@@ -272,10 +380,39 @@ export const Dashboard = () => {
     }, [tourTargetId]),
   );
 
+  // Defer the (large) react-joyride mount until the user actually starts the
+  // tour at least once. Once mounted we keep it alive — toggling between
+  // mount + unmount on every tour open would re-fetch the chunk each time.
+  const [tourEverStarted, setTourEverStarted] = useState(false);
+  useEffect(() => {
+    if (tour.run) setTourEverStarted(true);
+  }, [tour.run]);
+
   const tourTarget = useMemo(
     () => tourTargetId ? targets.find(t => t.id === tourTargetId) ?? null : null,
     [targets, tourTargetId],
   );
+
+  // True iff any target has an active weapon-pointing flow. Hoisted out of the
+  // CameraViewerPanel JSX so the .some() runs once per `targets` change instead
+  // of on every Dashboard render.
+  const weaponFeedActive = useMemo(
+    () => targets.some(t => t.weaponPointingStatus && t.weaponPointingStatus !== 'idle'),
+    [targets],
+  );
+
+  // Resolve which target the BDA camera request is currently looking at.
+  // Computed once per `targets` / `cameraLookAtRequest` change instead of
+  // re-walking the array on every Dashboard render.
+  const cameraActiveTargetId = useMemo(() => {
+    if (!cameraLookAtRequest) return null;
+    const match = targets.find(t => {
+      const [lat, lon] = t.coordinates.split(',').map(s => parseFloat(s.trim()));
+      return Math.abs(lat - cameraLookAtRequest.targetLat) < 0.01
+        && Math.abs(lon - cameraLookAtRequest.targetLon) < 0.01;
+    });
+    return match?.id ?? null;
+  }, [targets, cameraLookAtRequest]);
 
   useEffect(() => {
     tour.updateTargetState(tourTarget);
@@ -330,15 +467,36 @@ export const Dashboard = () => {
   }, [cameraControlRequest?.targetId]);
 
   // --- Friendly drone patrol simulation ---
+  // Sims can be disabled via `?sim=off` for perf-sensitive sessions
+  // (kiosk mode, demos). When enabled (default) the loop also pauses
+  // automatically while the tab is hidden — no point burning GPU on
+  // markers that nobody is watching.
+  const SIM_ENABLED = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search).get('sim') !== 'off'
+    : true;
   const patrolProgressRef = useRef<number[]>(FRIENDLY_PATROL_ROUTES.map(() => 0));
   const friendlyTrailRef = useRef<[number, number][][]>(FRIENDLY_PATROL_ROUTES.map(() => []));
   const trailTickRef = useRef(0);
-  const PATROL_SPEED = 0.004;
-  const TRAIL_SAMPLE_EVERY = 3;
+  // Tick at 250 ms (4 Hz). The kinematic motion track in CesiumMap
+  // smoothly interpolates between samples, so the visible movement is
+  // still fluid; previously we sampled at ~8 Hz which doubled all
+  // downstream work for no perceptible quality gain. PATROL_SPEED is
+  // doubled to keep the on-screen drone speed identical.
+  const PATROL_TICK_MS = 250;
+  const PATROL_SPEED = 0.008;
+  // Sample a trail breadcrumb every 4th tick (≈1 s). Each new trail
+  // point invalidates the polyline fingerprint and re-tessellates a
+  // ground-clamped line in Cesium — by far the heaviest per-frame cost
+  // in the simulation. 1 Hz still reads as a continuous breadcrumb path
+  // when the line is buffered to 40 points.
+  const TRAIL_SAMPLE_EVERY = 4;
   const TRAIL_MAX_POINTS = 40;
 
   useEffect(() => {
+    if (!SIM_ENABLED) return;
     const tick = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      measure('Sim', 'sim.friendlyPatrol', () => {
       trailTickRef.current += 1;
       const sampleTrail = trailTickRef.current % TRAIL_SAMPLE_EVERY === 0;
 
@@ -375,9 +533,11 @@ export const Dashboard = () => {
           };
         })
       );
-    }, 120);
+      }, { properties: { tick: trailTickRef.current, drones: FRIENDLY_PATROL_ROUTES.length } });
+    }, PATROL_TICK_MS);
 
     return () => clearInterval(tick);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Targets still on their initial approach path — loitering must not interfere
@@ -395,12 +555,32 @@ export const Dashboard = () => {
   const AREA_MIN_LON = 34.9813, AREA_MAX_LON = 35.0263;
 
   useEffect(() => {
+    if (!SIM_ENABLED) return;
     const TICK_MS = 250;
     const SPEED = 0.00012; // degrees per tick (~13m)
     const TURN_RATE = 0.08; // max radians per tick to steer toward target heading
     const HOME_RADIUS = 0.006; // ~650m before steering back
+    // Same rationale as the friendly-patrol trail sampling: the marker
+    // position itself updates every tick (kinematic interpolation keeps
+    // movement smooth), but the breadcrumb trail only needs a new point
+    // every ~1 s so we don't re-tessellate ground-clamped polylines on
+    // every frame.
+    const TRAIL_SAMPLE_EVERY = 4;
+    let trailTick = 0;
 
     const interval = setInterval(() => {
+      // Tab hidden: pause sim to release GPU/CPU. The map still
+      // renders frames on demand for new state but the sim doesn't
+      // generate any.
+      if (typeof document !== 'undefined' && document.hidden) return;
+      measure('Sim', 'sim.hostileLoiter', () => {
+      trailTick++;
+      const sampleTrail = trailTick % TRAIL_SAMPLE_EVERY === 0;
+      // Track which target ids loitered this tick so we can prune
+      // `loiterStateRef` entries for targets that left the active-drone set
+      // (mitigated, expired, dismissed, or removed entirely). Otherwise the
+      // ref grows unboundedly across a long session.
+      const activeLoiterIds = new Set<string>();
       setTargets(prev => prev.map(t => {
         if (approachingTargetIds.current.has(t.id)) return t;
 
@@ -412,6 +592,7 @@ export const Dashboard = () => {
           && t.status !== 'event_neutralized'
           && t.status !== 'expired';
         if (!isActiveDrone) return t;
+        activeLoiterIds.add(t.id);
 
         const [curLat, curLon] = t.coordinates.split(',').map(s => parseFloat(s.trim()));
         if (isNaN(curLat) || isNaN(curLon)) return t;
@@ -461,18 +642,32 @@ export const Dashboard = () => {
         const clampedLat = Math.max(AREA_MIN_LAT, Math.min(AREA_MAX_LAT, newLat));
         const clampedLon = Math.max(AREA_MIN_LON, Math.min(AREA_MAX_LON, newLon));
 
-        const now = new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        const updatedTrail = [...(t.trail || []), { lat: clampedLat, lon: clampedLon, timestamp: now }];
+        let nextTrail = t.trail;
+        if (sampleTrail) {
+          const now = nowLocaleTime();
+          const updatedTrail = [...(t.trail || []), { lat: clampedLat, lon: clampedLon, timestamp: now }];
+          nextTrail = updatedTrail.length > 60 ? updatedTrail.slice(-60) : updatedTrail;
+        }
 
         return {
           ...t,
           coordinates: `${clampedLat.toFixed(5)}, ${clampedLon.toFixed(5)}`,
-          trail: updatedTrail.length > 60 ? updatedTrail.slice(-60) : updatedTrail,
+          trail: nextTrail,
         };
       }));
+
+      // Prune stale loiter state: any id that wasn't active this tick.
+      const store = loiterStateRef.current;
+      for (const id in store) {
+        if (!activeLoiterIds.has(id)) {
+          delete store[id];
+        }
+      }
+      }, { properties: { tick: trailTick } });
     }, TICK_MS);
 
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // --- CUAS Target Spawn ---
@@ -484,7 +679,7 @@ export const Dashboard = () => {
     silent?: boolean;
   }) => {
     const targetId = `CUAS-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const now = () => new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const now = nowLocaleTime;
 
     const isCar = !!opts.isCar;
     const isBird = !!opts.isBird;
@@ -1017,7 +1212,7 @@ export const Dashboard = () => {
       ));
       toast.warning('יעד עדיין פעיל — ניתן לשבש שוב');
     } else {
-      const now = new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const now = nowLocaleTime();
       const tgt = targets.find(t => t.id === targetId);
       setTargets(prev => appendLog(prev, targetId, 'BDA — אבד מגע').map(t =>
         t.id === targetId ? { ...t, bdaStatus: 'complete' as const, lastSeenAt: now, lastSeenCoordinates: tgt?.coordinates } : t
@@ -1063,7 +1258,7 @@ export const Dashboard = () => {
     }
   };
 
-  const handleDismiss = (targetId: string, reason?: string) => {
+  const handleDismiss = useCallback((targetId: string, reason?: string) => {
     if (reason === 'escalate') {
       const target = targets.find(t => t.id === targetId);
       setTargets(prev => appendLog(prev, targetId, 'דיווח נשלח לגורם ממונה'));
@@ -1091,7 +1286,7 @@ export const Dashboard = () => {
       false_alarm: 'סומן כאזעקת שווא',
     };
     toast(messages[reason || ''] || (reason ? `הוסר: ${reason}` : 'איתור הוסר ממעקב'));
-  };
+  }, [targets, activeTargetId]);
 
   const handleTargetFocus = useCallback((targetId: string) => {
     const target = targets.find(t => t.id === targetId);
@@ -1136,7 +1331,29 @@ export const Dashboard = () => {
     setTimeout(() => setFocusedDeviceId(null), 500);
   }, [openDevicesPanel]);
 
-  const handleResizePointerDown = useCallback((e: React.PointerEvent) => {
+  // Throttle the global `resize` dispatch fired on every ResizablePanel
+  // tick. The map listens for `resize` and triggers a Cesium re-render,
+  // so an unthrottled stream can fire dozens of times per drag tick on
+  // a fast pointer — stalling the actual drag and bloating GPU work.
+  // Coalesce to a single rAF tick so at most one resize per frame.
+  const resizeRafRef = useRef<number | null>(null);
+  const handlePanelResize = useCallback(() => {
+    if (resizeRafRef.current != null) return;
+    resizeRafRef.current = requestAnimationFrame(() => {
+      resizeRafRef.current = null;
+      window.dispatchEvent(new Event('resize'));
+    });
+  }, []);
+  useEffect(() => {
+    return () => {
+      if (resizeRafRef.current != null) {
+        cancelAnimationFrame(resizeRafRef.current);
+        resizeRafRef.current = null;
+      }
+    };
+  }, []);
+
+  const handleResizePointerDown = useCallback((e: React.PointerEvent<HTMLElement>) => {
     e.preventDefault();
     setIsDragging(true);
     setIsSnapping(false);
@@ -1148,6 +1365,24 @@ export const Dashboard = () => {
       position: 'fixed', inset: '0', zIndex: '9999', cursor: 'col-resize',
     });
     document.body.appendChild(overlay);
+
+    // Pointer capture routes all subsequent pointer events to the handle
+    // element regardless of where the cursor goes — even when it leaves the
+    // window. We get a guaranteed `lostpointercapture` cleanup, so the
+    // global listener / overlay can never get orphaned (e.g. when an alert
+    // or DevTools steals focus mid-drag).
+    const target = e.currentTarget;
+    const pointerId = e.pointerId;
+
+    const cleanup = () => {
+      target.removeEventListener('pointermove', onMove);
+      target.removeEventListener('pointerup', onUp);
+      target.removeEventListener('pointercancel', onUp);
+      target.removeEventListener('lostpointercapture', onUp);
+      document.body.style.userSelect = '';
+      const el = document.getElementById('resize-overlay');
+      if (el) el.remove();
+    };
 
     const onMove = (ev: PointerEvent) => {
       const aside = asideRef.current;
@@ -1162,12 +1397,7 @@ export const Dashboard = () => {
     };
 
     const onUp = () => {
-      document.removeEventListener('pointermove', onMove);
-      document.removeEventListener('pointerup', onUp);
-      document.body.style.userSelect = '';
-      const el = document.getElementById('resize-overlay');
-      if (el) el.remove();
-
+      cleanup();
       setSidebarWidth(prev => {
         const snapped = Math.round(prev / LAYOUT_TOKENS.sidebarSnapInterval) * LAYOUT_TOKENS.sidebarSnapInterval;
         return Math.max(LAYOUT_TOKENS.sidebarMinWidth, Math.min(LAYOUT_TOKENS.sidebarMaxWidth, snapped));
@@ -1177,12 +1407,54 @@ export const Dashboard = () => {
       setTimeout(() => setIsSnapping(false), 200);
     };
 
-    document.addEventListener('pointermove', onMove);
-    document.addEventListener('pointerup', onUp);
+    try {
+      target.setPointerCapture(pointerId);
+    } catch {
+      // setPointerCapture can throw if the pointer is already released; the
+      // listeners below still cover the normal completion path.
+    }
+    target.addEventListener('pointermove', onMove);
+    target.addEventListener('pointerup', onUp);
+    target.addEventListener('pointercancel', onUp);
+    target.addEventListener('lostpointercapture', onUp);
   }, []);
 
   const noopStr = () => {};
   const noopStrStr = (_a: string, _b: string) => {};
+
+  // Stable handlers for the map. CesiumTacticalMap stores callbacks in refs
+  // internally, but useCallback keeps deps stable in case we wrap it in
+  // React.memo later — and avoids handing a fresh closure to the marker
+  // sub-components that consume them indirectly.
+  const handleMarkerClick = useCallback((id: string) => {
+    setActiveTargetId(id);
+    openSystemsPanel();
+  }, [openSystemsPanel]);
+
+  const handleContextMenuAction = useCallback(
+    (action: string, elementType: 'target' | 'effector' | 'sensor', elementId: string) => {
+      if (elementType === 'target') {
+        if (action === 'open-card') { setActiveTargetId(elementId); openSystemsPanel(); }
+        else if (action === 'mitigate') { setActiveTargetId(elementId); openSystemsPanel(); }
+        else if (action === 'mitigate-all') { handleMitigateAll(elementId); }
+        else if (action === 'dismiss') { handleDismiss(elementId); }
+        else if (action === 'track') { setActiveTargetId(elementId); openSystemsPanel(); }
+        else if (action === 'investigate') { setActiveTargetId(elementId); openSystemsPanel(); }
+      } else if (elementType === 'sensor' && action === 'view-feed') {
+        const cam = CAMERA_ASSETS.find(c => c.id === elementId);
+        if (cam) {
+          setCameraViewerFeeds(prev => {
+            const already = prev.find(f => f.cameraId === elementId);
+            if (already) return prev;
+            if (prev.length === 0) return [{ cameraId: elementId }];
+            if (prev.length === 1) return [...prev, { cameraId: elementId }];
+            return [{ cameraId: elementId }, prev[1]];
+          });
+        }
+      }
+    },
+    [openSystemsPanel, handleMitigateAll, handleDismiss],
+  );
 
   return (
     <div className="relative flex w-full h-screen overflow-hidden text-white font-sans selection:bg-red-500/30">
@@ -1356,81 +1628,45 @@ export const Dashboard = () => {
           <ResizablePanel
             defaultSize={isCameraViewerOpen ? 55 : 100}
             minSize={40}
-            onResize={() => window.dispatchEvent(new Event('resize'))}
+            onResize={handlePanelResize}
           >
             <div ref={mapDropRef} className="relative w-full h-full">
-              {(() => {
-                // Map backend selector — `?map=cesium` swaps the entire renderer
-                // for the Cesium-based component (parity migration in progress).
-                // Both branches receive the EXACT same props so the dashboard
-                // never has to know which one it's mounting. The Cesium branch
-                // is additionally wrapped in an error boundary so a viewer
-                // crash doesn't take the whole dashboard down.
-                const MapComponent = IS_CESIUM ? CesiumTacticalMap : TacticalMap;
-                const mapNode = (
-              <MapComponent
-                targets={targets}
-                activeTargetId={activeTargetId}
-                onMarkerClick={(id) => {
-                  setActiveTargetId(id);
-                  openSystemsPanel();
-                }}
-                highlightedSensorIds={highlightedSensorIds}
-                hoveredSensorIdFromCard={hoveredSensorIdFromCard}
-                sensorFocusId={sensorFocusId}
-                onContextMenuAction={(action, elementType, elementId) => {
-                  if (elementType === 'target') {
-                    if (action === 'open-card') { setActiveTargetId(elementId); openSystemsPanel(); }
-                    else if (action === 'mitigate') { setActiveTargetId(elementId); openSystemsPanel(); }
-                    else if (action === 'mitigate-all') { handleMitigateAll(elementId); }
-                    else if (action === 'dismiss') { handleDismiss(elementId); }
-                    else if (action === 'track') { setActiveTargetId(elementId); openSystemsPanel(); }
-                    else if (action === 'investigate') { setActiveTargetId(elementId); openSystemsPanel(); }
-                  } else if (elementType === 'sensor' && action === 'view-feed') {
-                    const cam = CAMERA_ASSETS.find(c => c.id === elementId);
-                    if (cam) {
-                      setCameraViewerFeeds(prev => {
-                        const already = prev.find(f => f.cameraId === elementId);
-                        if (already) return prev;
-                        if (prev.length === 0) return [{ cameraId: elementId }];
-                        if (prev.length === 1) return [...prev, { cameraId: elementId }];
-                        return [{ cameraId: elementId }, prev[1]];
-                      });
-                    }
-                  }
-                }}
-                cameraLookAtRequest={cameraLookAtRequest}
-                regulusEffectors={regulusEffectors}
-                focusCoords={null}
-                missileLaunchRequest={null}
-                onMissilePhaseChange={() => {}}
-                jammingTargetId={null}
-                jammingJammerAssetId={null}
-                jammingVerification={null}
-                onJammingVerificationComplete={() => {}}
-                controlIndicator={false}
-                fitBoundsPoints={null}
-                activeDrone={null}
-                missionRoute={null}
-                planningMode={false}
-                planningMissionType={undefined}
-                planningScanViz={null}
-                selectedAssetId={selectedAssetId}
-                onMapClick={() => {}}
-                friendlyDrones={friendlyDrones}
-                smoothFocusRequest={mapFocusRequest}
-                hoveredTargetIdFromCard={hoveredTargetIdFromCard}
-                onAssetClick={handleAssetClick}
-                offlineAssetIds={offlineAssetIds}
-                selectedEffectorIds={selectedEffectorIds}
-                launcherEffectors={launcherEffectors}
-                selectedLauncherIds={selectedLauncherIds}
-              />
-                );
-                return IS_CESIUM
-                  ? <CesiumErrorBoundary>{mapNode}</CesiumErrorBoundary>
-                  : mapNode;
-              })()}
+              {/*
+                * Cesium is the only map backend. The viewer is wrapped in an
+                * error boundary so a WebGL/scene crash can't take the whole
+                * dashboard down with it.
+                */}
+              <CesiumErrorBoundary>
+                <PerfProfiled id="CesiumTacticalMap">
+                <CesiumTacticalMap
+                  targets={targets}
+                  activeTargetId={activeTargetId}
+                  onMarkerClick={handleMarkerClick}
+                  highlightedSensorIds={highlightedSensorIds}
+                  hoveredSensorIdFromCard={hoveredSensorIdFromCard}
+                  sensorFocusId={sensorFocusId}
+                  onContextMenuAction={handleContextMenuAction}
+                  regulusEffectors={regulusEffectors}
+                  focusCoords={null}
+                  jammingTargetId={null}
+                  jammingJammerAssetId={null}
+                  controlIndicator={false}
+                  fitBoundsPoints={null}
+                  activeDrone={null}
+                  missionRoute={null}
+                  planningScanViz={null}
+                  selectedAssetId={selectedAssetId}
+                  friendlyDrones={friendlyDrones}
+                  smoothFocusRequest={mapFocusRequest}
+                  hoveredTargetIdFromCard={hoveredTargetIdFromCard}
+                  onAssetClick={handleAssetClick}
+                  offlineAssetIds={offlineAssetIds}
+                  selectedEffectorIds={selectedEffectorIds}
+                  launcherEffectors={launcherEffectors}
+                  selectedLauncherIds={selectedLauncherIds}
+                />
+                </PerfProfiled>
+              </CesiumErrorBoundary>
             </div>
           </ResizablePanel>
 
@@ -1438,12 +1674,14 @@ export const Dashboard = () => {
             <>
               <ResizableHandle className="w-px bg-white/10 hover:bg-white/20 transition-colors duration-150 ease-out" />
               <ResizablePanel defaultSize={45} minSize={25} maxSize={60} collapsible collapsedSize={0} onCollapse={() => setCameraViewerFeeds([])}>
-                <CameraViewerPanel
-                  feeds={cameraViewerFeeds}
-                  onFeedsChange={setCameraViewerFeeds}
-                  onCameraHover={setHoveredSensorIdFromCard}
-                  weaponFeedActive={targets.some(t => t.weaponPointingStatus && t.weaponPointingStatus !== 'idle')}
-                />
+                <PerfProfiled id="CameraViewerPanel">
+                  <CameraViewerPanel
+                    feeds={cameraViewerFeeds}
+                    onFeedsChange={setCameraViewerFeeds}
+                    onCameraHover={setHoveredSensorIdFromCard}
+                    weaponFeedActive={weaponFeedActive}
+                  />
+                </PerfProfiled>
               </ResizablePanel>
             </>
           )}
@@ -1472,6 +1710,7 @@ export const Dashboard = () => {
             <h2 className="text-[11px] font-medium text-white/70 uppercase tracking-wider">Dashboard — מערכות פעילות ({targets.length})</h2>
           </div>
           <div className="flex-1 overflow-y-auto">
+            <PerfProfiled id="ListOfSystems">
             <ListOfSystems
               className="flex flex-col gap-0"
               targets={targets}
@@ -1532,10 +1771,7 @@ export const Dashboard = () => {
               flowAssets={{ regulusEffectors, launcherEffectors }}
               flowSelectedIds={{ regulusEffectors: selectedEffectorIds, launcherEffectors: selectedLauncherIds }}
               onBdaOutcome={handleBdaOutcome}
-              cameraActiveTargetId={cameraLookAtRequest ? targets.find(t => {
-                const [lat, lon] = t.coordinates.split(',').map(s => parseFloat(s.trim()));
-                return Math.abs(lat - cameraLookAtRequest.targetLat) < 0.01 && Math.abs(lon - cameraLookAtRequest.targetLon) < 0.01;
-              })?.id ?? null : null}
+              cameraActiveTargetId={cameraActiveTargetId}
               cameraPointingTargetId={cameraPointingTargetId}
               allCamerasBusyForTarget={allCamerasBusyForTarget}
               controlRequestCountdown={cameraControlRequest?.countdown ?? null}
@@ -1549,93 +1785,62 @@ export const Dashboard = () => {
               onTargetHover={setHoveredTargetIdFromCard}
               thinMode
             />
+            </PerfProfiled>
           </div>
         </aside>
 
-        <DevicesPanel
-          devices={allDevices}
-          open={devicesPanelOpen}
-          onClose={closeDevicesPanel}
-          onFlyTo={handleDeviceFlyTo}
-          onDeviceHover={setHoveredSensorIdFromCard}
-          onDeviceSelect={setSelectedAssetId}
-          onJamActivate={(jammerId) => {
-            toast.success(`שיבוש הופעל — ${jammerId}`, { duration: 3000 });
-          }}
-          noTransition={panelSwitching}
-          width={sidebarWidth}
-          focusedDeviceId={focusedDeviceId}
-          title="מכשירים"
-          closeAriaLabel="סגור"
-          cameraPresets={CAMERA_PRESETS}
-          typeLabels={{
-            camera: 'מצלמות',
-            radar: 'מכ"מים',
-            dock: 'כוורות',
-            drone: 'רחפנים',
-            ecm: 'משבשים',
-            launcher: 'משגרים',
-            lidar: 'לידר',
-            weapon_system: 'מערכות נשק',
-          }}
-          connectionStateLabels={{
-            online: 'מחובר',
-            offline: 'לא מקוון',
-            error: 'שגיאה',
-            warning: 'אזהרה',
-          }}
-          strings={{
-            searchPlaceholder: 'חיפוש...',
-            clearSearch: 'נקה חיפוש',
-            resetFilters: 'איפוס סינון',
-            resetFiltersLabel: 'ניקוי',
-            noMatches: 'אין מכשירים תואמים',
-            location: 'מיקום',
-            bearing: 'כיוון',
-            fieldOfView: 'שדה ראייה',
-            coverage: 'כיסוי',
-            altitude: 'גובה',
-            health: 'תקינות',
-            healthOk: 'תקין',
-            healthMalfunction: 'תקלה',
-            battery: 'סוללה',
-            jam: 'הפעל',
-            jamActive: 'שיבוש פעיל',
-            jamDisabledOffline: 'המכשיר לא מקוון',
-            jamDisabledMalfunction: 'המכשיר בתקלה',
-            jamDisabledAlreadyActive: 'שיבוש כבר פעיל',
-            cameraModeAriaLabel: 'מצב מצלמה',
-            centerOnMap: 'מרכז במפה',
-            mute: 'השתק',
-            unmute: 'בטל השתקה',
-            wipers: 'מגבים',
-            wipersAriaLabel: 'מגבים',
-            calibrate: 'כיול',
-            calibrating: 'מכייל...',
-            calibrated: 'הושלם',
-            calibrateAriaLabel: 'כיול',
-          }}
-        />
+        {/*
+          * Conditionally mount the devices panel — when closed it would otherwise
+          * stay in the tree (just translated off-screen) and re-run its useMemos,
+          * mute interval, and full device-list iteration on every Dashboard
+          * render. We trade the slide-out animation for a tighter render budget.
+          */}
+        {devicesPanelOpen && (
+          <DevicesPanel
+            devices={allDevices}
+            open={devicesPanelOpen}
+            onClose={closeDevicesPanel}
+            onFlyTo={handleDeviceFlyTo}
+            onDeviceHover={setHoveredSensorIdFromCard}
+            onDeviceSelect={setSelectedAssetId}
+            onJamActivate={(jammerId) => {
+              toast.success(`שיבוש הופעל — ${jammerId}`, { duration: 3000 });
+            }}
+            noTransition={panelSwitching}
+            width={sidebarWidth}
+            focusedDeviceId={focusedDeviceId}
+            title="מכשירים"
+            closeAriaLabel="סגור"
+            cameraPresets={CAMERA_PRESETS}
+            typeLabels={DEVICES_TYPE_LABELS}
+            connectionStateLabels={DEVICES_CONNECTION_LABELS}
+            strings={DEVICES_STRINGS}
+          />
+        )}
 
       </div>
 
       <NotificationSystem />
 
-      <Joyride
-        steps={tour.steps}
-        run={tour.run}
-        stepIndex={tour.stepIndex}
-        continuous
-        showSkipButton
-        scrollToFirstStep
-        disableScrollParentFix
-        disableOverlayClose
-        disableCloseOnEsc
-        callback={tour.handleCallback}
-        styles={tour.styles}
-        locale={tour.locale}
-        floaterProps={{ disableAnimation: true }}
-      />
+      {tourEverStarted && (
+        <Suspense fallback={null}>
+          <Joyride
+            steps={tour.steps}
+            run={tour.run}
+            stepIndex={tour.stepIndex}
+            continuous
+            showSkipButton
+            scrollToFirstStep
+            disableScrollParentFix
+            disableOverlayClose
+            disableCloseOnEsc
+            callback={tour.handleCallback}
+            styles={tour.styles}
+            locale={tour.locale}
+            floaterProps={{ disableAnimation: true }}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };

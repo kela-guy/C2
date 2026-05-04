@@ -48,7 +48,14 @@ function notifyBatchListeners() {
 
 function useBatchItems(): BatchItem[] {
   const [, setTick] = React.useState(0);
-  React.useEffect(() => subscribeBatch(() => setTick(t => t + 1)), []);
+  React.useEffect(() => {
+    // Subscribe and return the unsubscribe as the cleanup. Previously this was
+    // an implicit-return arrow (`() => subscribeBatch(...)`) which technically
+    // worked but was easy to silently break — a single statement in the body
+    // would have dropped the unsubscribe and leaked one listener per toast.
+    const unsubscribe = subscribeBatch(() => setTick(t => t + 1));
+    return unsubscribe;
+  }, []);
   return pendingBatch;
 }
 
@@ -241,6 +248,16 @@ export function NotificationSystem() {
 
   return (
     <>
+      {/*
+        Vignette overlay. Originally drawn with `inset 0 0 40px 20px <color>` —
+        a 40 px inset shadow forces the compositor to rasterise a blur kernel
+        across the entire viewport every frame the alert pulses, which on
+        a 1440p+ display is one of the more expensive paint operations
+        Chromium can perform. A radial-gradient with hard pixel stops gets
+        the same red-edged-fade-to-transparent look entirely on the
+        compositor (no per-frame raster work) and the alert pulse becomes
+        a pure opacity transition, also compositor-only.
+      */}
       <div
         aria-hidden="true"
         className={`notif-vignette fixed inset-0 pointer-events-none z-40 transition-opacity duration-300 ease-out ${
@@ -248,7 +265,11 @@ export function NotificationSystem() {
         }`}
         style={{
           opacity: criticalActive ? 0.4 : 0,
-          boxShadow: `inset 0 0 40px 20px ${vignetteColor}`,
+          // Transparent center → coloured edge. `closest-side` keeps the
+          // gradient aspect-aware on portrait and landscape monitors;
+          // 60% start point matches the visual silhouette of the previous
+          // 40 px inset shadow + 20 px spread.
+          background: `radial-gradient(ellipse at center, transparent 60%, ${vignetteColor} 100%)`,
           animation: criticalActive ? 'notif-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' : 'none',
         }}
       />

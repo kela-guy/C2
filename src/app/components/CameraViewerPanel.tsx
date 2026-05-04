@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useDrop } from 'react-dnd';
 import { X, Plus, Camera, ChevronDown, Map, SplitSquareHorizontal } from 'lucide-react';
-import { CAMERA_ASSETS } from './TacticalMap';
+import { CAMERA_ASSETS } from './tacticalAssets';
 import { DEVICE_CAMERA_DRAG_TYPE } from './DevicesPanel';
 import type { DeviceCameraDragItem } from './DevicesPanel';
 import {

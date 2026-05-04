@@ -20,16 +20,24 @@ function DropdownMenuPortal({
   );
 }
 
-function DropdownMenuTrigger({
-  ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.Trigger>) {
+// `forwardRef` is required so that an outer `TooltipTrigger asChild`
+// (or any other Radix `asChild` wrapper) can forward its ref through
+// this component into the underlying Radix primitive. Without it,
+// React 18 logs "Function components cannot be given refs" and the
+// ref silently goes nowhere, which can break Radix's positioning
+// + outside-click detection on the inner trigger.
+const DropdownMenuTrigger = React.forwardRef<
+  React.ElementRef<typeof DropdownMenuPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Trigger>
+>(function DropdownMenuTrigger(props, ref) {
   return (
     <DropdownMenuPrimitive.Trigger
+      ref={ref}
       data-slot="dropdown-menu-trigger"
       {...props}
     />
   );
-}
+});
 
 function DropdownMenuContent({
   className,
