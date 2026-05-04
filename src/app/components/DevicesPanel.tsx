@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useDrag } from 'react-dnd';
-import { X, Search, Camera, AlertTriangle, MapPin, BellOff, Wrench, Check, Loader2 } from 'lucide-react';
+import { X, Search, Camera, AlertTriangle, MapPin, BellOff, Wrench, Check, Loader2, Pin, PinOff } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './ui/tooltip';
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 import { Switch } from './ui/switch';
@@ -126,6 +126,12 @@ export interface DevicesPanelStrings {
   calibrating: string;
   calibrated: string;
   calibrateAriaLabel: string;
+  /** Pin device to a video feed slot. */
+  pinToFeed: string;
+  pinToFeedAriaLabel: string;
+  /** Unpin a device that is already in a feed slot. */
+  unpinFromFeed: string;
+  unpinFromFeedAriaLabel: string;
 }
 
 export const DEFAULT_DEVICE_PANEL_STRINGS: DevicesPanelStrings = {
@@ -158,6 +164,10 @@ export const DEFAULT_DEVICE_PANEL_STRINGS: DevicesPanelStrings = {
   calibrating: 'Calibrating…',
   calibrated: 'Done',
   calibrateAriaLabel: 'Calibrate',
+  pinToFeed: 'Pin to feed',
+  pinToFeedAriaLabel: 'Pin device to a video feed',
+  unpinFromFeed: 'Unpin',
+  unpinFromFeedAriaLabel: 'Remove device from the video feed',
 };
 
 const CONNECTION_STATE_COLORS: Record<ConnectionState, string> = {
@@ -184,6 +194,9 @@ export function DeviceRow({
   isMuted,
   muteRemaining,
   onToggleMute,
+  onPinToFeed,
+  onUnpinFromFeed,
+  isPinnedToFeed,
   connectionStateLabels = DEFAULT_CONNECTION_STATE_LABELS,
   cameraPresets,
   strings = DEFAULT_DEVICE_PANEL_STRINGS,
@@ -197,6 +210,9 @@ export function DeviceRow({
   isMuted: boolean;
   muteRemaining: string | null;
   onToggleMute: (deviceId: string) => void;
+  onPinToFeed?: (deviceId: string) => void;
+  onUnpinFromFeed?: (deviceId: string) => void;
+  isPinnedToFeed?: boolean;
   connectionStateLabels?: Record<ConnectionState, string>;
   cameraPresets?: Record<string, string[]>;
   strings?: DevicesPanelStrings;
@@ -410,6 +426,28 @@ export function DeviceRow({
               {strings.centerOnMap}
             </button>
 
+            {(onPinToFeed || onUnpinFromFeed) && (device.type === 'camera' || device.type === 'drone') && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isPinnedToFeed) onUnpinFromFeed?.(device.id);
+                  else onPinToFeed?.(device.id);
+                }}
+                disabled={isOffline || (isPinnedToFeed ? !onUnpinFromFeed : !onPinToFeed)}
+                aria-pressed={!!isPinnedToFeed}
+                aria-label={isPinnedToFeed ? strings.unpinFromFeedAriaLabel : strings.pinToFeedAriaLabel}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none ${
+                  isPinnedToFeed
+                    ? 'text-sky-100 bg-sky-500/30 ring-1 ring-inset ring-sky-300/45 hover:bg-sky-500/40'
+                    : 'text-sky-200 bg-sky-500/15 hover:bg-sky-500/25'
+                }`}
+              >
+                {isPinnedToFeed ? <PinOff size={12} /> : <Pin size={12} />}
+                {isPinnedToFeed ? strings.unpinFromFeed : strings.pinToFeed}
+              </button>
+            )}
+
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onToggleMute(device.id); }}
@@ -484,6 +522,12 @@ export interface DevicesPanelProps {
   onDeviceHover?: (id: string | null) => void;
   onDeviceSelect?: (id: string | null) => void;
   onJamActivate?: (jammerId: string) => void;
+  /** Pin a device to a video feed slot. Visible only for camera + drone cards. */
+  onPinToFeed?: (deviceId: string) => void;
+  /** Unpin a device that is already in a feed slot. Visible only for camera + drone cards. */
+  onUnpinFromFeed?: (deviceId: string) => void;
+  /** Set / list of device ids currently pinned to a feed. Drives the Pin/Unpin toggle state. */
+  pinnedDeviceIds?: ReadonlySet<string> | readonly string[];
   noTransition?: boolean;
   width?: number;
   focusedDeviceId?: string | null;
@@ -509,6 +553,9 @@ export function DevicesPanel({
   onDeviceHover,
   onDeviceSelect,
   onJamActivate,
+  onPinToFeed,
+  onUnpinFromFeed,
+  pinnedDeviceIds,
   noTransition,
   width,
   focusedDeviceId,
@@ -522,6 +569,10 @@ export function DevicesPanel({
   const strings = useMemo<DevicesPanelStrings>(
     () => ({ ...DEFAULT_DEVICE_PANEL_STRINGS, ...(stringsProp ?? {}) }),
     [stringsProp],
+  );
+  const pinnedSet = useMemo<ReadonlySet<string>>(
+    () => (pinnedDeviceIds instanceof Set ? pinnedDeviceIds : new Set(pinnedDeviceIds ?? [])),
+    [pinnedDeviceIds],
   );
   const typeLabels = useMemo(
     () => ({ ...DEFAULT_TYPE_LABELS, ...(typeLabelsProp ?? {}) }) as Record<DeviceType, string>,
@@ -567,9 +618,14 @@ export function DevicesPanel({
   const [mutedDevices, setMutedDevices] = useState<Map<string, number>>(new Map());
   const [, setTick] = useState(0);
 
+  const hasMutedDevices = mutedDevices.size > 0;
   useEffect(() => {
-    if (mutedDevices.size === 0) return;
+    if (!hasMutedDevices) return;
+    // Skip the per-second tick when the tab is hidden — countdown labels
+    // aren't visible anyway and the wakeup forces a re-render of the entire
+    // panel + parent.
     const id = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       const now = Date.now();
       setMutedDevices(prev => {
         const next = new Map(prev);
@@ -585,7 +641,7 @@ export function DevicesPanel({
       setTick(t => t + 1);
     }, 1000);
     return () => clearInterval(id);
-  }, [mutedDevices.size > 0]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [hasMutedDevices]);
 
   const handleToggleMute = useCallback((deviceId: string) => {
     setMutedDevices(prev => {
@@ -778,6 +834,9 @@ export function DevicesPanel({
                     isMuted={mutedDevices.has(device.id)}
                     muteRemaining={getMuteRemaining(device.id)}
                     onToggleMute={handleToggleMute}
+                    onPinToFeed={onPinToFeed}
+                    onUnpinFromFeed={onUnpinFromFeed}
+                    isPinnedToFeed={pinnedSet.has(device.id)}
                     connectionStateLabels={connectionStateLabels}
                     cameraPresets={cameraPresets}
                     strings={strings}

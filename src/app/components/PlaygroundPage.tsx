@@ -15,7 +15,7 @@ import { Toggle } from '@/shared/components/ui/toggle';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/shared/components/ui/tooltip';
 import { Separator } from '@/shared/components/ui/separator';
 import { Video } from 'lucide-react';
-import { CAMERA_ASSETS } from './TacticalMap';
+import { CAMERA_ASSETS } from './tacticalAssets';
 import { VideoPanel } from './camera-v2/VideoPanel';
 import { DevicesPanel, DevicesIcon } from './DevicesPanel';
 import { useDevicesFromAssets } from './useDevicesFromAssets';

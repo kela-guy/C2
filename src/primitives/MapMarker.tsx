@@ -225,8 +225,15 @@ export function MapMarker({
           style={{
             left: outerSize / 2 + 6,
             bottom: outerSize / 2 + 2,
-            background: 'rgba(0,0,0,0.6)',
-            backdropFilter: 'blur(12px)',
+            // Slightly more opaque background so we can drop the
+            // 12 px backdrop-blur — every blur radius is a per-pixel
+            // gather pass over a region 4x the radius wide; at 12 px
+            // with multiple labels visible at once this becomes a
+            // measurable GPU cost on every map redraw. 6 px keeps the
+            // glassy feel while halving the kernel.
+            background: 'rgba(0,0,0,0.7)',
+            backdropFilter: 'blur(6px)',
+            WebkitBackdropFilter: 'blur(6px)',
             borderRadius: 4,
             padding: '3px 8px',
             boxShadow: '0 0 0 1px rgba(255,255,255,0.1), 0 4px 12px rgba(0,0,0,0.4)',

@@ -17,6 +17,19 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import * as Cesium from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import { createMotionTrack, type MotionTrack } from '@/lib/motionTracker';
+import { mark, measure } from '@/lib/perf/measure';
+
+/**
+ * Dev-only diagnostic logging. Cesium errors are useful while building
+ * the dashboard but in production they (a) leak the [CesiumMap] tag to
+ * end users' devtools, (b) cost CPU on the (rare) error paths, and
+ * (c) clutter Sentry-style error pipes. Gate them behind the Vite dev
+ * flag so they're tree-shaken from prod bundles entirely.
+ */
+const devError =
+  import.meta.env.DEV
+    ? (...args: unknown[]) => console.error(...args)
+    : () => {};
 
 /**
  * Minimum container size (px) before we're willing to construct
@@ -260,6 +273,33 @@ const SCENE_MODE_MAP: Record<CesiumSceneMode, Cesium.SceneMode> = {
   '3D': Cesium.SceneMode.SCENE3D,
 };
 
+/**
+ * Lazy world-terrain loader, shared across viewers. Streaming Cesium World
+ * Terrain (Ion asset 1) costs nothing visually in 2D — but it still spins
+ * up tile requests in the background. We defer the load until the first
+ * 3D switch and reuse the resolved provider across viewer instances.
+ */
+let WORLD_TERRAIN_PROMISE: Promise<Cesium.TerrainProvider> | null = null;
+async function ensureWorldTerrain(viewer: Cesium.Viewer): Promise<void> {
+  try {
+    if (!WORLD_TERRAIN_PROMISE) {
+      WORLD_TERRAIN_PROMISE = Cesium.createWorldTerrainAsync();
+    }
+    const terrain = await WORLD_TERRAIN_PROMISE;
+    if (viewer.isDestroyed()) return;
+    if (viewer.terrainProvider !== terrain) {
+      viewer.terrainProvider = terrain;
+      viewer.scene.requestRender();
+    }
+  } catch (err) {
+    if (viewer.isDestroyed()) return;
+    devError('[CesiumMap] failed to load world terrain:', err);
+    // Reset the cache so a future 3D switch can retry rather than
+    // resolving instantly to a rejected promise.
+    WORLD_TERRAIN_PROMISE = null;
+  }
+}
+
 export function CesiumMap({
   ionToken,
   initialView,
@@ -279,7 +319,13 @@ export function CesiumMap({
   const fovEntitiesRef = useRef<Cesium.Entity[]>([]);
   const coverageEntitiesRef = useRef<Cesium.Entity[]>([]);
   /** Geometry entities (FOV / coverage) attached to HTML markers. */
-  const htmlGeometryEntitiesRef = useRef<Cesium.Entity[]>([]);
+  // HTML-marker FOV / coverage entities, keyed by `${markerId}__fov` and
+  // `${markerId}__coverage`. We diff in place with a per-entity content
+  // fingerprint so high-frequency `htmlMarkers` rebuilds (friendly drone
+  // patrols update at >4 Hz) don't tear down and re-tessellate ground-
+  // clamped polygons that haven't actually changed.
+  const htmlGeometryEntitiesRef = useRef<Map<string, Cesium.Entity>>(new Map());
+  const htmlGeometryFingerprintRef = useRef<Map<string, string>>(new Map());
   /**
    * Polyline entities (trails, engagement lines, etc.) keyed by their
    * stable `CesiumPolyline.id`. Keyed (not array) so the polylines effect
@@ -353,6 +399,27 @@ export function CesiumMap({
    * after a 2D → 3D toggle, visibly mis-aligned with the imagery beneath).
    */
   const htmlMarkerCartographicRef = useRef<Map<string, { lat: number; lon: number }>>(new Map());
+  /**
+   * Cached `globe.getHeight()` result per marker keyed by `${lat},${lon}`.
+   * `globe.getHeight` walks the loaded terrain tile tree on every call —
+   * cheap individually, but with 20+ static markers and a 30 FPS render
+   * loop it becomes hundreds of tile lookups per second. We re-sample
+   * lazily: when the marker's lat/lon changes, when the cached value is
+   * still null/undefined (terrain tile loaded after the first attempt),
+   * or when a new globe tile finishes loading (handled by clearing the
+   * cache below).
+   */
+  const htmlMarkerTerrainHeightRef = useRef<Map<string, { key: string; height: number | undefined }>>(new Map());
+  /**
+   * Tracks which static (non-kinematic) markers have already had their
+   * canvas position written for the current camera pose. While the
+   * camera is idle their CSS transform doesn't need to be re-issued —
+   * the browser keeps the existing layered transform without re-pasting
+   * a string of identical bytes 30 times a second. Cleared on camera
+   * movement (see camera.changed listener) and on htmlMarkers prop
+   * changes (cache rebuild).
+   */
+  const staticProjectedRef = useRef<Set<string>>(new Set());
 
   /**
    * Per-id motion tracks for `htmlMarkers[m].kinematic === true`. Lat/lon
@@ -407,6 +474,30 @@ export function CesiumMap({
 
     Cesium.Ion.defaultAccessToken = ionToken;
 
+    // #region agent log
+    const __dbgViewerId = `viewer_${Math.random().toString(36).slice(2, 8)}_${Date.now()}`;
+    const __dbg = (loc: string, hyp: string, message: string, data: Record<string, unknown>): void => {
+      fetch('http://127.0.0.1:7266/ingest/86ca69bf-eb7c-4994-9aae-fe544ebf4b6e', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '70413c' },
+        body: JSON.stringify({
+          sessionId: '70413c',
+          hypothesisId: hyp,
+          location: `CesiumMap.tsx:${loc}`,
+          message,
+          data: { viewerId: __dbgViewerId, ...data },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+    };
+    __dbg('viewer-bootstrap', 'H5', 'Viewer effect started', {
+      mountReady,
+      containerSize: { w: containerRef.current?.clientWidth, h: containerRef.current?.clientHeight },
+      tokenPresent: !!ionToken,
+      sceneMode,
+    });
+    // #endregion
+
     let viewer: Cesium.Viewer;
     try {
       viewer = new Cesium.Viewer(containerRef.current, {
@@ -421,45 +512,217 @@ export function CesiumMap({
         fullscreenButton: false,
         infoBox: false,
         selectionIndicator: false,
+        // Don't render at the device pixel ratio — on retina displays
+        // Cesium otherwise renders at 2x or 3x, which roughly doubles or
+        // triples fragment shader work for no perceptible quality gain
+        // on a satellite-imagery basemap. We cap DPR via `resolutionScale`
+        // below.
+        useBrowserRecommendedResolution: false,
         // Imagery loaded below.
         baseLayer: false as unknown as Cesium.ImageryLayer,
       });
     } catch (err) {
       // Surface the real error instead of letting it cascade through React's
       // boundary as the cryptic "scene of undefined" we used to see.
-      console.error('[CesiumMap] Viewer construction failed:', err);
+      devError('[CesiumMap] Viewer construction failed:', err);
       throw err;
     }
+
+    // ── Render-loop tuning ──────────────────────────────────────────────
+    // Cesium defaults to a continuous render loop (~60 FPS) regardless of
+    // whether anything actually changed. For an operator console showing
+    // a mostly-static map with a handful of moving markers, that's a huge
+    // amount of wasted GPU. Switch to on-demand rendering: the scene only
+    // re-renders when something explicitly calls `scene.requestRender()`.
+    //
+    // The `preRender` callback below already issues `requestRender()`
+    // while kinematic markers, particles, or smoothing engagement lines
+    // are active, so animations keep ticking; once they settle the scene
+    // truly idles. `maximumRenderTimeChange = Infinity` disables the
+    // simulation-clock heuristic that would otherwise force a frame
+    // every few seconds even when nothing needs redrawing.
+    viewer.scene.requestRenderMode = true;
+    viewer.scene.maximumRenderTimeChange = Infinity;
+    // Cap effective DPR — 1.5 keeps imagery sharp on retina without
+    // paying for a full 2x/3x raster. Falls back to 1 on platforms
+    // without devicePixelRatio.
+    const dpr = typeof window !== 'undefined' && window.devicePixelRatio
+      ? window.devicePixelRatio
+      : 1;
+    viewer.resolutionScale = Math.min(1.5, dpr);
+
+    // ── Disable expensive scene effects we don't need ──────────────────
+    // We render an operator console, not a planetarium. Atmospheric fog,
+    // sky atmosphere, sky box, sun and moon entities all run their own
+    // shaders + per-frame work for purely cosmetic effect on a top-down
+    // satellite-imagery view. Disabling them shaves measurable GPU time
+    // off every requested frame.
+    viewer.scene.fog.enabled = false;
+    if (viewer.scene.skyAtmosphere) viewer.scene.skyAtmosphere.show = false;
+    if (viewer.scene.skyBox) viewer.scene.skyBox.show = false;
+    if (viewer.scene.sun) viewer.scene.sun.show = false;
+    if (viewer.scene.moon) viewer.scene.moon.show = false;
+    // FXAA is a fragment-shader pass that smooths edges; on a satellite
+    // basemap with sharp HTML markers the cost outweighs the benefit.
+    if (viewer.scene.postProcessStages.fxaa) {
+      viewer.scene.postProcessStages.fxaa.enabled = false;
+    }
+    // Cap globe LOD aggressiveness — 2 ≈ a tile-resolution drop in the
+    // mid-distance, invisible at the operator's typical zoom but cuts
+    // tile-fetch + tessellation cost roughly in half. Default is 2 in
+    // current Cesium; setting it explicitly documents intent.
+    viewer.scene.globe.maximumScreenSpaceError = 2;
+    viewer.scene.globe.preloadAncestors = false;
+    viewer.scene.globe.preloadSiblings = false;
+    // Cap the render loop at 30 FPS — operators can't perceive the
+    // difference between 30 and 60 FPS for ground-clamped markers, and
+    // the cap halves the render budget. Combined with `requestRenderMode`
+    // above, this is an upper bound on idle waste, not the typical rate.
+    viewer.targetFrameRate = 30;
 
     // Bing Aerial via Cesium Ion (asset 2 by default). Guard against the
     // viewer being destroyed (StrictMode double-mount, fast nav) before the
     // imagery promise resolves — otherwise we crash inside Cesium internals.
+    // #region agent log
+    const __dbgImageryRequestedAt = performance.now();
+    __dbg('imagery-request', 'H1', 'IonImageryProvider.fromAssetId requested', {
+      assetId: ionImageryAssetId,
+      tokenLen: ionToken?.length ?? 0,
+    });
+    // #endregion
     Cesium.IonImageryProvider.fromAssetId(ionImageryAssetId)
       .then((provider) => {
+        // #region agent log
+        const carto = Cesium.Cartographic.fromCartesian(viewer.camera.position);
+        __dbg('imagery-resolved', 'H1+H2+H3+H5', 'IonImageryProvider resolved', {
+          elapsedMs: Math.round(performance.now() - __dbgImageryRequestedAt),
+          destroyed: viewer.isDestroyed(),
+          providerCtor: provider.constructor?.name,
+          imageryLayerCountBefore: viewer.imageryLayers.length,
+          useDefaultRenderLoop: viewer.useDefaultRenderLoop,
+          requestRenderMode: viewer.scene.requestRenderMode,
+          canvas: { w: viewer.scene.canvas.clientWidth, h: viewer.scene.canvas.clientHeight, dw: viewer.scene.canvas.width, dh: viewer.scene.canvas.height },
+          sceneMode: viewer.scene.mode,
+          globeShow: viewer.scene.globe.show,
+          camera: { lat: Cesium.Math.toDegrees(carto.latitude), lon: Cesium.Math.toDegrees(carto.longitude), heightM: Math.round(carto.height) },
+        });
+        // #endregion
         if (viewer.isDestroyed()) return;
         viewer.imageryLayers.addImageryProvider(provider);
+        // With `requestRenderMode = true`, adding an imagery layer
+        // doesn't always seed the first render itself — explicitly
+        // request one so the tile-fetch pipeline starts immediately
+        // instead of waiting for the next user interaction.
+        viewer.scene.requestRender();
+        // #region agent log
+        __dbg('imagery-added', 'H2', 'addImageryProvider+requestRender done', {
+          imageryLayerCountAfter: viewer.imageryLayers.length,
+          useDefaultRenderLoop: viewer.useDefaultRenderLoop,
+        });
+        // H6: patch the imagery provider's `requestImage` so we can see
+        // EVERY call Cesium makes to actually fetch a tile. If we see
+        // tileLoadProgressEvent firings (queue growth) but ZERO
+        // requestImage calls, the load pipeline is decoupled from the
+        // queue — tiles are wanted but never fetched.
+        let __dbgRequestImageCalls = 0;
+        const __dbgProvider = provider as unknown as {
+          requestImage?: (...args: unknown[]) => unknown;
+          errorEvent?: { addEventListener: (cb: (e: unknown) => void) => () => void };
+          _resource?: { url?: string };
+          url?: string;
+        };
+        const __dbgOriginalRequestImage = __dbgProvider.requestImage?.bind(provider);
+        if (__dbgOriginalRequestImage) {
+          __dbgProvider.requestImage = (...args: unknown[]) => {
+            __dbgRequestImageCalls++;
+            if (__dbgRequestImageCalls <= 5) {
+              __dbg('provider-requestImage', 'H6', 'provider.requestImage called', {
+                callIndex: __dbgRequestImageCalls,
+                args: args.slice(0, 3),
+              });
+            }
+            return __dbgOriginalRequestImage(...args);
+          };
+        } else {
+          __dbg('provider-requestImage-missing', 'H6', 'provider has no requestImage method', {
+            keys: Object.keys(__dbgProvider).slice(0, 30),
+          });
+        }
+        // H6: provider error events
+        if (__dbgProvider.errorEvent?.addEventListener) {
+          __dbgProvider.errorEvent.addEventListener((e: unknown) => {
+            const err = e as { error?: { message?: string }; level?: number; timesRetried?: number };
+            __dbg('provider-error', 'H6', 'imagery provider errorEvent fired', {
+              level: err?.level,
+              timesRetried: err?.timesRetried,
+              message: err?.error?.message?.slice?.(0, 200),
+            });
+          });
+        }
+        // After 4s, log how many requestImage calls we've actually seen,
+        // and dump a few internal-state hints from the provider.
+        window.setTimeout(() => {
+          if (viewer.isDestroyed()) return;
+          __dbg('provider-state-4s', 'H6', 'provider state 4s after add', {
+            requestImageCallCount: __dbgRequestImageCalls,
+            providerCtor: provider.constructor?.name,
+            tilesLoaded: viewer.scene.globe.tilesLoaded,
+            // Best-effort introspection of common BingMaps fields
+            hasUrl: !!(__dbgProvider as { _imageUrlTemplate?: unknown })._imageUrlTemplate,
+            sample: Object.keys(provider).filter((k) => k.startsWith('_')).slice(0, 12),
+          });
+        }, 4000);
+        // Track tile-load progress for the next ~12s to see if Cesium ever
+        // queues any imagery/terrain tiles at all (H3/H4).
+        let __dbgTileLogs = 0;
+        const __dbgTileSampler = viewer.scene.globe.tileLoadProgressEvent.addEventListener((queued: number) => {
+          if (__dbgTileLogs >= 8) return;
+          __dbgTileLogs++;
+          __dbg('tile-progress', 'H3+H4', 'tileLoadProgressEvent', { queued, sample: __dbgTileLogs });
+        });
+        window.setTimeout(() => {
+          try { __dbgTileSampler(); } catch { /* noop */ }
+          if (viewer.isDestroyed()) {
+            __dbg('post-3s-snapshot', 'H5', 'viewer destroyed before snapshot', {});
+            return;
+          }
+          const carto2 = Cesium.Cartographic.fromCartesian(viewer.camera.position);
+          __dbg('post-3s-snapshot', 'H2+H3+H4', 'snapshot 3s after imagery add', {
+            useDefaultRenderLoop: viewer.useDefaultRenderLoop,
+            requestRenderMode: viewer.scene.requestRenderMode,
+            imageryLayerCount: viewer.imageryLayers.length,
+            tileSamplesSeen: __dbgTileLogs,
+            sceneMode: viewer.scene.mode,
+            camera: { lat: Cesium.Math.toDegrees(carto2.latitude), lon: Cesium.Math.toDegrees(carto2.longitude), heightM: Math.round(carto2.height) },
+            canvas: { w: viewer.scene.canvas.clientWidth, h: viewer.scene.canvas.clientHeight },
+          });
+        }, 3000);
+        // #endregion
       })
       .catch((err) => {
+        // #region agent log
+        __dbg('imagery-rejected', 'H1', 'IonImageryProvider rejected', {
+          elapsedMs: Math.round(performance.now() - __dbgImageryRequestedAt),
+          destroyed: viewer.isDestroyed(),
+          errName: (err as Error)?.name,
+          errMessage: (err as Error)?.message?.slice(0, 200),
+        });
+        // #endregion
         if (viewer.isDestroyed()) return;
-        console.error('[CesiumMap] failed to load Ion imagery:', err);
+        devError('[CesiumMap] failed to load Ion imagery:', err);
       });
 
-    // Cesium World Terrain (Ion asset 1). Without it the globe is a smooth
-    // ellipsoid and 3D mode reads as a tilted satellite image — no real
-    // depth. The terrain provider streams elevation tiles on demand and is
-    // a no-op cost in 2D mode (heights are loaded but rendered flat).
-    // Same destroy guard as the imagery loader for the same reason.
-    Cesium.createWorldTerrainAsync()
-      .then((terrain) => {
-        if (viewer.isDestroyed()) return;
-        viewer.terrainProvider = terrain;
-      })
-      .catch((err) => {
-        if (viewer.isDestroyed()) return;
-        console.error('[CesiumMap] failed to load world terrain:', err);
-      });
-
+    // Cesium World Terrain (Ion asset 1) is only meaningful in 3D mode —
+    // 2D renders top-down with no depth, so the terrain mesh is never
+    // sampled visually. We previously loaded it eagerly on bootstrap,
+    // which started a continuous tile-streaming background workload even
+    // for sessions that never leave 2D. Defer the load to the first 3D
+    // switch (handled in the scene-mode effect below) and keep the
+    // ellipsoid as the default.
     viewer.scene.mode = SCENE_MODE_MAP[sceneMode];
+    if (sceneMode === '3D') {
+      void ensureWorldTerrain(viewer);
+    }
 
     // Initial camera position. Use `setView` (instant) + a deliberately tall
     // `heightM` because in `SceneMode.SCENE2D` Cesium's camera "height" is
@@ -508,10 +771,41 @@ export function CesiumMap({
     // Allocated once at scope; mutated in place per marker per frame to
     // avoid GC churn on a hot path.
     const terrainSampleCarto = new Cesium.Cartographic();
+    // Whenever a new terrain tile loads we may finally have a real height
+    // for markers that previously fell back to 0 — clear the cache so the
+    // next preRender pass re-samples them. The event fires periodically
+    // during initial terrain streaming and then settles to silence.
+    const removeTileLoadHandler = viewer.scene.globe.tileLoadProgressEvent.addEventListener(() => {
+      htmlMarkerTerrainHeightRef.current.clear();
+    });
+    // Cesium's camera.changed event fires once the camera position /
+    // orientation has changed by `percentageChanged` (default 0.5).
+    // Lower it so even small pans / zooms trigger a re-project of the
+    // static marker set; otherwise a slow drag could leave markers
+    // pinned to stale screen coordinates.
+    viewer.camera.percentageChanged = 0.001;
+    const removeCameraChanged = viewer.camera.changed.addEventListener(() => {
+      staticProjectedRef.current.clear();
+      // Force a render so the new screen positions paint without
+      // waiting for the next animation tick.
+      viewer.scene.requestRender();
+    });
+    // Camera entry/exit on user interaction also invalidates: moveStart
+    // resets immediately so we re-project on the very next frame even
+    // if the cumulative move falls below percentageChanged.
+    const removeMoveStart = viewer.camera.moveStart.addEventListener(() => {
+      staticProjectedRef.current.clear();
+    });
+    // Mode switches (2D ↔ 3D) reproject everything via cartographic
+    // altitude, so the cached screen positions are no longer valid.
+    const removeModeChange = viewer.scene.morphComplete.addEventListener(() => {
+      staticProjectedRef.current.clear();
+    });
     const removePreRender = viewer.scene.preRender.addEventListener(() => {
       const nodes = htmlMarkerNodesRef.current;
       const cartesians = htmlMarkerCartesianRef.current;
       const cartographics = htmlMarkerCartographicRef.current;
+      const terrainCache = htmlMarkerTerrainHeightRef.current;
       const tracks = motionTracksRef.current;
       const kinematicScratch = kinematicCartesianScratchRef.current;
       if (nodes.size === 0) return;
@@ -525,6 +819,7 @@ export function CesiumMap({
       // projection ignores altitude, so we skip the work entirely.
       const isMode3D = viewer.scene.mode === Cesium.SceneMode.SCENE3D;
       const globe = viewer.scene.globe;
+      const projectedSet = staticProjectedRef.current;
       // Kinematic tracks that are still smoothing toward the latest
       // sample or extrapolating forward need the scene to keep
       // rendering — Cesium's request-render mode would otherwise idle
@@ -548,16 +843,34 @@ export function CesiumMap({
           }
           if (!s.frozen) kinematicActive = true;
         } else {
+          // Static (non-kinematic) markers: skip the entire project →
+          // cartesianToCanvas → DOM-write pipeline when the camera is
+          // idle and we've already written a transform for this id.
+          // The set is cleared on camera move, mode morph, and marker
+          // prop changes, so a stale value can never persist visually.
+          if (projectedSet.has(id)) continue;
           cart = cartesians.get(id);
           if (cart && isMode3D) {
             const carto = cartographics.get(id);
             if (carto) {
-              Cesium.Cartographic.fromDegrees(carto.lon, carto.lat, 0, terrainSampleCarto);
-              const h = globe.getHeight(terrainSampleCarto);
-              const alt = typeof h === 'number' ? h : 0;
-              // Mutate the cached Cartesian3 in place so static markers
-              // also stay aligned to terrain without per-frame allocation.
-              Cesium.Cartesian3.fromDegrees(carto.lon, carto.lat, alt, undefined, cart);
+              // Static markers don't move, so terrain height only needs
+              // to be sampled once per (lat,lon) — cache it. Re-sample
+              // when (a) we don't have a cached entry for this id at the
+              // current lat/lon, or (b) the cache was cleared by the
+              // tile-load handler above (signalling new terrain data).
+              const key = `${carto.lat},${carto.lon}`;
+              let cached = terrainCache.get(id);
+              if (!cached || cached.key !== key) {
+                Cesium.Cartographic.fromDegrees(carto.lon, carto.lat, 0, terrainSampleCarto);
+                const h = globe.getHeight(terrainSampleCarto);
+                cached = { key, height: typeof h === 'number' ? h : undefined };
+                terrainCache.set(id, cached);
+                const alt = cached.height ?? 0;
+                Cesium.Cartesian3.fromDegrees(carto.lon, carto.lat, alt, undefined, cart);
+              }
+              // If we have no real height yet we keep the cached entry
+              // around with `undefined`; tileLoadProgressEvent will clear
+              // it when new terrain arrives so we re-sample.
             }
           }
         }
@@ -569,25 +882,99 @@ export function CesiumMap({
         if (!screen) {
           // Off-screen / behind the globe.
           node.style.display = 'none';
+          // Mark static markers as projected even when off-screen so we
+          // don't pay the cartesianToCanvas cost again until the camera
+          // moves (a hidden node staying hidden is the desired state).
+          if (!track) projectedSet.add(id);
           continue;
         }
         node.style.display = '';
         node.style.transform = `translate(-50%, -50%) translate(${screen.x}px, ${screen.y}px)`;
+        if (!track) projectedSet.add(id);
       }
-      if (kinematicActive) viewer.scene.requestRender();
+      // With `requestRenderMode = true` the scene only renders when
+      // something explicitly asks. Animations driven by Date.now() inside
+      // CallbackProperty closures (engagement-line smoothing,
+      // particle dots) need a frame every tick or they freeze. Schedule
+      // a render whenever any time-dependent visual is active. When
+      // nothing is animating the scene goes truly idle (~0% GPU).
+      //
+      // Smoothing only pumps frames while the ease window is active —
+      // once the line settles we stop re-rendering even though the
+      // endpoints map still has entries (they're kept around so the
+      // next endpoint change has a `prev` to ease from).
+      const particlesActive = polylineParticleEntitiesRef.current.size > 0;
+      let smoothingActive = false;
+      if (polylineSmoothEndpointsRef.current.size > 0) {
+        for (const ep of polylineSmoothEndpointsRef.current.values()) {
+          if (now - ep.changedAt < SMOOTH_LINE_MS) {
+            smoothingActive = true;
+            break;
+          }
+        }
+      }
+      if (kinematicActive || particlesActive || smoothingActive) {
+        viewer.scene.requestRender();
+      }
     });
 
     viewerRef.current = viewer;
 
+    // Dev-only Cesium perf instrumentation. Dynamically imported behind
+    // an `import.meta.env.DEV` gate so the perf module never reaches
+    // production bundles. Disposes alongside the viewer. Also registers
+    // the viewer with the PerfHud so stats-gl + Cesium debug toggles
+    // can attach.
+    //
+    // Why we capture `viewer` in `localViewer` and check it against
+    // `viewerRef.current` after the dynamic import resolves:
+    //   - React 18 StrictMode mounts the effect twice in dev. Both
+    //     mounts kick off the dynamic import in parallel.
+    //   - If the second mount's viewer settles first, the first mount's
+    //     `.then` callback would attach listeners to the OLD (already
+    //     destroyed) viewer, then the second's would attach to the new
+    //     one — and we'd hold on to a `cesiumMarksDispose` that
+    //     references the wrong handle.
+    //   - The identity check `viewerRef.current === localViewer` is the
+    //     cheapest way to confirm "this is still my mount's viewer".
+    let cesiumMarksDispose: (() => void) | null = null;
+    let unregisterPerfViewer: (() => void) | null = null;
+    let perfTeardownRequested = false;
+    if (import.meta.env.DEV) {
+      const localViewer = viewer;
+      void import('@/lib/perf/cesiumMarks').then(({ installCesiumMarks }) => {
+        if (perfTeardownRequested) return;
+        if (viewerRef.current !== localViewer || localViewer.isDestroyed()) return;
+        const handle = installCesiumMarks(localViewer, {
+          getHtmlMarkerCount: () => htmlMarkerNodesRef.current.size,
+        });
+        cesiumMarksDispose = handle.dispose;
+      });
+      void import('@/app/components/perf/PerfHud').then(({ registerCesiumViewerForPerf }) => {
+        if (perfTeardownRequested) return;
+        if (viewerRef.current !== localViewer || localViewer.isDestroyed()) return;
+        registerCesiumViewerForPerf(localViewer);
+        unregisterPerfViewer = () => registerCesiumViewerForPerf(null);
+      });
+    }
+
     return () => {
       removePreRender();
+      removeTileLoadHandler();
+      removeCameraChanged();
+      removeMoveStart();
+      removeModeChange();
+      perfTeardownRequested = true;
+      cesiumMarksDispose?.();
+      unregisterPerfViewer?.();
       handler.destroy();
       viewer.destroy();
       viewerRef.current = null;
       markerEntitiesRef.current.clear();
       fovEntitiesRef.current = [];
       coverageEntitiesRef.current = [];
-      htmlGeometryEntitiesRef.current = [];
+      htmlGeometryEntitiesRef.current.clear();
+      htmlGeometryFingerprintRef.current.clear();
       polylineEntitiesRef.current.clear();
       polylineFingerprintRef.current.clear();
       polylineParticleEntitiesRef.current.clear();
@@ -596,8 +983,87 @@ export function CesiumMap({
       motionTracksRef.current.clear();
       kinematicCartesianScratchRef.current.clear();
       htmlMarkerCartographicRef.current.clear();
+      htmlMarkerTerrainHeightRef.current.clear();
+      staticProjectedRef.current.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mountReady]);
+
+  // ── Pause render loop when offscreen / tab hidden ─────────────────────────
+  // With request-render mode the steady-state cost is already low, but
+  // any animation tick (kinematic markers, particles, smoothing engagement
+  // lines) keeps requesting frames whether anybody is watching or not.
+  // Toggle Cesium's master render loop based on container visibility so
+  // covered / scrolled-away / backgrounded maps drop to a hard zero.
+  //
+  // This single pattern handles three otherwise distinct cases:
+  //   1. Styleguide page scrolled past the Cesium demos.
+  //   2. Dashboard map covered by a fullscreen modal / device drawer.
+  //   3. Browser tab in the background.
+  // When the container scrolls back into view (or the tab regains focus)
+  // we re-enable the loop and force one render so the canvas paints
+  // immediately instead of waiting for the next animation tick.
+  useEffect(() => {
+    if (!mountReady) return;
+    const viewer = viewerRef.current;
+    const el = containerRef.current;
+    if (!viewer || !el) return;
+
+    let isIntersecting = true;
+    let isPageVisible = typeof document !== 'undefined' ? !document.hidden : true;
+
+    const apply = () => {
+      const shouldRender = isIntersecting && isPageVisible;
+      if (viewer.isDestroyed()) return;
+      if (viewer.useDefaultRenderLoop !== shouldRender) {
+        // #region agent log
+        fetch('http://127.0.0.1:7266/ingest/86ca69bf-eb7c-4994-9aae-fe544ebf4b6e', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '70413c' },
+          body: JSON.stringify({
+            sessionId: '70413c',
+            hypothesisId: 'H2',
+            location: 'CesiumMap.tsx:io-apply',
+            message: 'useDefaultRenderLoop transition',
+            data: { from: viewer.useDefaultRenderLoop, to: shouldRender, isIntersecting, isPageVisible },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion
+        viewer.useDefaultRenderLoop = shouldRender;
+        if (shouldRender) viewer.scene.requestRender();
+      }
+    };
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          isIntersecting = entry.isIntersecting;
+        }
+        apply();
+      },
+      // Small rootMargin keeps the map "warm" when the user scrolls
+      // toward it so it's already painting by the time it enters
+      // the viewport — no perceptible blank-canvas flash.
+      { rootMargin: '200px' },
+    );
+    io.observe(el);
+
+    const onVisibility = () => {
+      isPageVisible = !document.hidden;
+      apply();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    apply();
+
+    return () => {
+      io.disconnect();
+      document.removeEventListener('visibilitychange', onVisibility);
+      // Leave the viewer with the render loop enabled on cleanup so a
+      // fresh remount (HMR, route change) doesn't start in paused state.
+      if (!viewer.isDestroyed()) viewer.useDefaultRenderLoop = true;
+    };
   }, [mountReady]);
 
   // ── HTML marker positions ────────────────────────────────────────────────
@@ -612,8 +1078,16 @@ export function CesiumMap({
   useEffect(() => {
     const cache = htmlMarkerCartesianRef.current;
     const cartographics = htmlMarkerCartographicRef.current;
+    const terrainCache = htmlMarkerTerrainHeightRef.current;
     cache.clear();
     cartographics.clear();
+    // Terrain heights are keyed by id+lat,lon — when the marker set
+    // changes (or any marker moves), invalidate so the next preRender
+    // re-samples for the new positions.
+    terrainCache.clear();
+    // Static-marker screen-position cache must also be invalidated when
+    // the marker prop set changes (positions or membership may differ).
+    staticProjectedRef.current.clear();
     if (!htmlMarkers) {
       motionTracksRef.current.clear();
       kinematicCartesianScratchRef.current.clear();
@@ -676,6 +1150,7 @@ export function CesiumMap({
     viewer.scene.mode = target;
 
     if (sceneMode === '3D') {
+      void ensureWorldTerrain(viewer);
       const cart = viewer.camera.positionCartographic;
       if (cart && cart.height > 6_000) {
         const lat = (cart.latitude * 180) / Math.PI;
@@ -819,56 +1294,184 @@ export function CesiumMap({
   // (terrain-clamped sector polygon for FOV, ellipse for coverage). These
   // are kept in a separate ref so the `markers[]` effect above doesn't tear
   // them down on every change.
+  //
+  // Two-stage lifecycle for FOV entities:
+  //   1. Geometry. Keyed by `${id}__fov`. The entity is created lazily
+  //      the first time a sensor's FOV needs to be drawn, then stays
+  //      resident in `viewer.entities` for the lifetime of the viewer.
+  //      A fingerprint short-circuits the GroundPrimitive rebuild —
+  //      we only touch `polygon.hierarchy` / material when sensor lat/lon /
+  //      bearing / range actually change.
+  //   2. Visibility. The hover-driven prop (`hoveredSensorIdFromCard`)
+  //      flips `m.fov` on/off in `CesiumTacticalMap`. Old code interpreted
+  //      "no `m.fov` this render" as "remove the entity"; that destroyed
+  //      and re-built the terrain-clamped GroundPrimitive on every hover,
+  //      which has to (a) re-tessellate via earcut, (b) issue async
+  //      terrain-height samples, and (c) on first hover ever, compile
+  //      the GroundPrimitive shader pipeline. The result was a visible
+  //      ~hundreds-of-ms delay between hover and FOV paint, every hover.
+  //      We now toggle `entity.show` instead — re-hover paths reuse the
+  //      already-tessellated, terrain-clamped primitive instantly.
+  //
+  // Coverage rings are diffed with the same fingerprint pattern but still
+  // use create/remove semantics — they're driven by sticky state (jamming,
+  // engagement) rather than transient hover, so the cost amortises and
+  // the hold-resident pattern would only add memory.
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer) return;
 
-    for (const entity of htmlGeometryEntitiesRef.current) viewer.entities.remove(entity);
-    htmlGeometryEntitiesRef.current = [];
+    const entities = htmlGeometryEntitiesRef.current;
+    const fingerprints = htmlGeometryFingerprintRef.current;
+    // Marker ids present in this render, regardless of fov visibility.
+    // Used at the end to distinguish "marker still exists, FOV hidden"
+    // (toggle show=false) from "marker gone entirely" (remove entity).
+    const liveMarkerIds = new Set<string>();
+    // FOV ids that should be visible right now. Anything in `entities`
+    // ending with `__fov` whose markerId is live but isn't in this set
+    // gets `show = false` rather than being torn down.
+    const wantFovVisible = new Set<string>();
+    const desiredCoverage = new Set<string>();
+    let scheduledRender = false;
 
-    if (!htmlMarkers) return;
+    if (htmlMarkers) {
+      for (const m of htmlMarkers) {
+        liveMarkerIds.add(m.id);
 
-    for (const m of htmlMarkers) {
-      if (m.fov) {
-        const fovColor = Cesium.Color.fromCssColorString(m.fov.color ?? '#22b8cf');
-        const fovOpacity = m.fov.opacity ?? 0.18;
-        const fovEntity = viewer.entities.add({
-          id: `${m.id}__fov`,
-          polygon: {
-            hierarchy: new Cesium.PolygonHierarchy(
-              buildSectorPositions(m.lat, m.lon, m.fov.rangeM, m.fov.bearingDeg, m.fov.widthDeg),
-            ),
-            material: fovColor.withAlpha(fovOpacity),
-            outline: true,
-            outlineColor: fovColor.withAlpha(Math.min(1, fovOpacity * 3)),
-            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-          },
-        });
-        htmlGeometryEntitiesRef.current.push(fovEntity);
-      }
+        if (m.fov) {
+          const fovId = `${m.id}__fov`;
+          wantFovVisible.add(fovId);
+          const fovColorCss = m.fov.color ?? '#22b8cf';
+          const fovOpacity = m.fov.opacity ?? 0.18;
+          // Quantize lat/lon/bearing so micro-jitter from kinematic
+          // smoothing doesn't invalidate the fingerprint every frame.
+          const fp = `fov:${m.lat.toFixed(5)}:${m.lon.toFixed(5)}:${m.fov.rangeM}:${m.fov.bearingDeg.toFixed(1)}:${m.fov.widthDeg}:${fovColorCss}:${fovOpacity}`;
+          if (fingerprints.get(fovId) !== fp) {
+            // The expensive path. Wrapped in `measure` so the perf trace
+            // surfaces exactly when wedge geometry recomputes (expected:
+            // first hover per sensor, plus per-tick for kinematic drones
+            // whose bearing changes). A re-hover of an unchanged sensor
+            // skips this branch entirely and only flips visibility below.
+            measure(
+              'Cesium',
+              'fov.geometryUpdate',
+              () => {
+                const fovColor = Cesium.Color.fromCssColorString(fovColorCss);
+                const hierarchy = new Cesium.PolygonHierarchy(
+                  buildSectorPositions(m.lat, m.lon, m.fov!.rangeM, m.fov!.bearingDeg, m.fov!.widthDeg),
+                );
+                const existing = entities.get(fovId);
+                if (existing?.polygon) {
+                  existing.polygon.hierarchy = new Cesium.ConstantProperty(hierarchy);
+                  existing.polygon.material = new Cesium.ColorMaterialProperty(fovColor.withAlpha(fovOpacity));
+                  existing.polygon.outlineColor = new Cesium.ConstantProperty(
+                    fovColor.withAlpha(Math.min(1, fovOpacity * 3)),
+                  );
+                } else {
+                  // Initial `show: false` — the toggle pass below flips
+                  // it on the same frame, before `requestRender()`, so
+                  // there's no visible flash. Doing it this way also
+                  // guarantees we emit a `fov.toggle` mark on first
+                  // appearance, so the trace shows the full lifecycle.
+                  const fovEntity = viewer.entities.add({
+                    id: fovId,
+                    show: false,
+                    polygon: {
+                      hierarchy,
+                      material: fovColor.withAlpha(fovOpacity),
+                      outline: true,
+                      outlineColor: fovColor.withAlpha(Math.min(1, fovOpacity * 3)),
+                      heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+                    },
+                  });
+                  entities.set(fovId, fovEntity);
+                }
+              },
+              { properties: { sensorId: m.id } },
+            );
+            fingerprints.set(fovId, fp);
+            scheduledRender = true;
+          }
+        }
 
-      if (m.coverageRadiusM != null) {
-        const coverageColor = Cesium.Color.fromCssColorString(m.coverageColor ?? '#22b8cf');
-        // Fill / outline opacities tuned to read clearly over satellite
-        // imagery without burying the markers underneath. Roughly mirrors
-        // the FOV cone's solidity (0.40 fill); the outline is fully opaque
-        // so the ring boundary is unambiguous even at larger zoom-outs.
-        const coverageEntity = viewer.entities.add({
-          id: `${m.id}__coverage`,
-          position: Cesium.Cartesian3.fromDegrees(m.lon, m.lat),
-          ellipse: {
-            semiMajorAxis: m.coverageRadiusM,
-            semiMinorAxis: m.coverageRadiusM,
-            material: coverageColor.withAlpha(0.25),
-            outline: true,
-            outlineColor: coverageColor.withAlpha(0.95),
-            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-          },
-        });
-        htmlGeometryEntitiesRef.current.push(coverageEntity);
+        if (m.coverageRadiusM != null) {
+          const coverageId = `${m.id}__coverage`;
+          desiredCoverage.add(coverageId);
+          const coverageColorCss = m.coverageColor ?? '#22b8cf';
+          const fp = `cov:${m.lat.toFixed(5)}:${m.lon.toFixed(5)}:${m.coverageRadiusM}:${coverageColorCss}`;
+          if (fingerprints.get(coverageId) !== fp) {
+            const coverageColor = Cesium.Color.fromCssColorString(coverageColorCss);
+            const position = Cesium.Cartesian3.fromDegrees(m.lon, m.lat);
+            const existing = entities.get(coverageId);
+            if (existing?.ellipse) {
+              existing.position = new Cesium.ConstantPositionProperty(position);
+              existing.ellipse.semiMajorAxis = new Cesium.ConstantProperty(m.coverageRadiusM);
+              existing.ellipse.semiMinorAxis = new Cesium.ConstantProperty(m.coverageRadiusM);
+              existing.ellipse.material = new Cesium.ColorMaterialProperty(coverageColor.withAlpha(0.25));
+              existing.ellipse.outlineColor = new Cesium.ConstantProperty(coverageColor.withAlpha(0.95));
+            } else {
+              // Fill / outline opacities tuned to read clearly over satellite
+              // imagery without burying the markers underneath. Roughly mirrors
+              // the FOV cone's solidity (0.40 fill); the outline is fully opaque
+              // so the ring boundary is unambiguous even at larger zoom-outs.
+              const coverageEntity = viewer.entities.add({
+                id: coverageId,
+                position,
+                ellipse: {
+                  semiMajorAxis: m.coverageRadiusM,
+                  semiMinorAxis: m.coverageRadiusM,
+                  material: coverageColor.withAlpha(0.25),
+                  outline: true,
+                  outlineColor: coverageColor.withAlpha(0.95),
+                  heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+                },
+              });
+              entities.set(coverageId, coverageEntity);
+            }
+            fingerprints.set(coverageId, fp);
+            scheduledRender = true;
+          }
+        }
       }
     }
-    viewer.scene.requestRender();
+
+    // Visibility + cleanup pass. Iterates the resident entity cache once:
+    //   - FOV entity for a vanished marker  → tear down (sensor removed
+    //     from the prop set; e.g. operator dismissed it, or the asset
+    //     registry trimmed offline ids).
+    //   - FOV entity for a live marker      → flip `show` to match
+    //     `wantFovVisible`. This is the fast hover/unhover path.
+    //   - Coverage entity not in desired    → tear down (coverage isn't
+    //     hover-cycled; sticky state only).
+    for (const [id, entity] of entities) {
+      if (id.endsWith('__fov')) {
+        const markerId = id.slice(0, -'__fov'.length);
+        if (!liveMarkerIds.has(markerId)) {
+          viewer.entities.remove(entity);
+          entities.delete(id);
+          fingerprints.delete(id);
+          scheduledRender = true;
+          continue;
+        }
+        const wantShow = wantFovVisible.has(id);
+        if (entity.show !== wantShow) {
+          entity.show = wantShow;
+          mark('Cesium', 'fov.toggle', {
+            properties: { sensorId: markerId, visible: wantShow },
+          });
+          scheduledRender = true;
+        }
+      } else if (id.endsWith('__coverage')) {
+        if (!desiredCoverage.has(id)) {
+          viewer.entities.remove(entity);
+          entities.delete(id);
+          fingerprints.delete(id);
+          scheduledRender = true;
+        }
+      }
+    }
+
+    if (scheduledRender) viewer.scene.requestRender();
   }, [htmlMarkers]);
 
   // ── Polylines (trails, engagement lines, mission routes) ──────────────────
@@ -1079,6 +1682,22 @@ export function CesiumMap({
         // requested them. The CallbackProperty closure reads from the
         // endpoints ref, so the same entity follows whatever the latest
         // start / end points are without us having to recreate it.
+        // Particles can be turned OFF on a line whose `id` stays the
+        // same (e.g. an engagement-pair line whose `particles` flag is
+        // toggled off mid-life). The cleanup loop below only fires
+        // when the line id disappears entirely, so we'd silently leak
+        // `count` particle entities per such transition. Tear them
+        // down here when the line is desired but no longer wants
+        // particles.
+        if ((!line.particles || line.particles.count <= 0) && particleEntities.has(line.id)) {
+          const stale = particleEntities.get(line.id);
+          if (stale) {
+            for (const p of stale) viewer.entities.remove(p);
+          }
+          particleEntities.delete(line.id);
+          particleEndpoints.delete(line.id);
+          scheduledRender = true;
+        }
         if (line.particles && line.particles.count > 0 && !particleEntities.has(line.id)) {
           const count = line.particles.count;
           const speed = line.particles.speed ?? 0.25;
@@ -1223,7 +1842,14 @@ export function CesiumMap({
               // Hidden by default until first preRender places it. Avoids
               // a flash at (0,0) before the scene has run a frame.
               display: 'none',
-              willChange: 'transform',
+              // `will-change: transform` was previously set on every marker
+              // to force a composite layer. With ~30 markers that adds up
+              // to non-trivial GPU memory pressure on integrated cards,
+              // and the modern Chromium compositor already promotes
+              // animated transforms on its own. Static markers also have
+              // their transform writes skipped entirely (see
+              // `staticProjectedRef` in the preRender loop), so there's
+              // nothing to optimise for. Letting the browser decide.
             }}
           >
             {m.content}

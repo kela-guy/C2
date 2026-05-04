@@ -18,21 +18,38 @@ function TooltipProvider({
   );
 }
 
+// `Tooltip` previously wrapped each instance in its own `TooltipProvider`,
+// which created a fresh React context value (and a `setTimeout` for the
+// delay-grouping logic) for every tooltip mounted in the tree. With ~30
+// tooltips on a typical Dashboard view that adds non-trivial render
+// + memory pressure on every Dashboard re-render. A single
+// `TooltipProvider` is mounted at the application root in `App.tsx`;
+// individual `Tooltip` components consume that context.
 function Tooltip({
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Root>) {
-  return (
-    <TooltipProvider>
-      <TooltipPrimitive.Root data-slot="tooltip" {...props} />
-    </TooltipProvider>
-  );
+  return <TooltipPrimitive.Root data-slot="tooltip" {...props} />;
 }
 
-function TooltipTrigger({
-  ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
-  return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />;
-}
+// `forwardRef` is required so that other Radix primitives (e.g.
+// `DropdownMenuTrigger asChild` nested inside a `TooltipTrigger asChild`)
+// can forward their ref through this wrapper into the underlying
+// Radix primitive. Without it, React 18 logs a "Function components
+// cannot be given refs" warning and the ref silently goes nowhere,
+// which can break Radix's positioning + outside-click detection on
+// the inner trigger.
+const TooltipTrigger = React.forwardRef<
+  React.ElementRef<typeof TooltipPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Trigger>
+>(function TooltipTrigger(props, ref) {
+  return (
+    <TooltipPrimitive.Trigger
+      ref={ref}
+      data-slot="tooltip-trigger"
+      {...props}
+    />
+  );
+});
 
 function TooltipContent({
   className,

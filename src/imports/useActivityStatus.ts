@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ActivityStatus, Detection } from './ListOfSystems';
 
 const ACTIVE_WINDOW_MS = 10_000;
@@ -130,18 +130,56 @@ export function useActivityStatus(targets: Detection[]) {
   const [nowMs, setNowMs] = useState(() => Date.now());
 
   useEffect(() => {
-    const intervalId = window.setInterval(() => {
+    // Skip the recurring tick when the tab is hidden — Chrome already throttles
+    // background timers, but the throttled wakeups still trigger a full
+    // re-render of every consumer of this hook.
+    const tick = () => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       setNowMs(Date.now());
-    }, REFRESH_INTERVAL_MS);
+    };
+    const intervalId = window.setInterval(tick, REFRESH_INTERVAL_MS);
 
-    return () => window.clearInterval(intervalId);
+    const onVisibilityChange = () => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        setNowMs(Date.now());
+      }
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', onVisibilityChange);
+    }
+
+    return () => {
+      window.clearInterval(intervalId);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', onVisibilityChange);
+      }
+    };
   }, []);
 
-  return useMemo(() => {
-    const statuses = new Map<string, ActivityStatus>();
-    targets.forEach((target) => {
-      statuses.set(target.id, getActivityStatus(target, nowMs));
-    });
-    return statuses;
-  }, [nowMs, targets]);
+  // Hold the previous Map reference so we can return the same instance when
+  // nothing actually changed. Dashboard re-renders re-create `targets` every
+  // 250 ms even when no individual target's status moved — recomputing the
+  // Map every time is fine, but invalidating its identity cascades into
+  // downstream `useMemo`s that depend on it.
+  const previousRef = useRef<Map<string, ActivityStatus>>(new Map());
+
+  const next = new Map<string, ActivityStatus>();
+  for (const target of targets) {
+    next.set(target.id, getActivityStatus(target, nowMs));
+  }
+
+  const previous = previousRef.current;
+  if (previous.size === next.size) {
+    let identical = true;
+    for (const [id, status] of next) {
+      if (previous.get(id) !== status) {
+        identical = false;
+        break;
+      }
+    }
+    if (identical) return previous;
+  }
+
+  previousRef.current = next;
+  return next;
 }

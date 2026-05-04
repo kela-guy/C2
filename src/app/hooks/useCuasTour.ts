@@ -1,7 +1,23 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import type { Step, CallBackProps, Styles } from 'react-joyride';
-import { ACTIONS, EVENTS, STATUS } from 'react-joyride';
 import type { Detection } from '@/imports/ListOfSystems';
+
+// Inlined enum-equivalents from react-joyride. Mirroring the literal string
+// values lets the hook stay tree-shakable while the heavy `<Joyride>`
+// component is dynamically imported elsewhere — avoids dragging the entire
+// react-joyride bundle into the dashboard's first paint.
+const ACTIONS = {
+  PREV: 'prev',
+  CLOSE: 'close',
+} as const;
+const EVENTS = {
+  STEP_AFTER: 'step:after',
+  TARGET_NOT_FOUND: 'error:target_not_found',
+} as const;
+const STATUS = {
+  FINISHED: 'finished',
+  SKIPPED: 'skipped',
+} as const;
 
 const STORAGE_KEY = 'cuas-tour-completed';
 
@@ -387,11 +403,35 @@ export function useCuasTour(
     return () => clearInterval(iv);
   }, [run, stepIndex, advanceTo]);
 
+  // Track every pending advance timeout so we can clear them when the hook
+  // unmounts — otherwise an unmount during a "click-through" advance leaves
+  // a setState firing on a dead component (and re-runs the React reconciler
+  // for nothing).
+  const notifyTimeoutsRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+  useEffect(() => {
+    const timeouts = notifyTimeoutsRef.current;
+    return () => {
+      for (const id of timeouts) clearTimeout(id);
+      timeouts.clear();
+    };
+  }, []);
+
+  const scheduleNotifyAdvance = useCallback(
+    (nextIndex: number, delayMs: number) => {
+      const id = setTimeout(() => {
+        notifyTimeoutsRef.current.delete(id);
+        advanceTo(nextIndex);
+      }, delayMs);
+      notifyTimeoutsRef.current.add(id);
+    },
+    [advanceTo],
+  );
+
   const notifySimMenuOpened = useCallback(() => {
     if (run && stepIndex === 1) {
-      setTimeout(() => advanceTo(2), 300);
+      scheduleNotifyAdvance(2, 300);
     }
-  }, [run, stepIndex, advanceTo]);
+  }, [run, stepIndex, scheduleNotifyAdvance]);
 
   const notifyTargetSpawned = useCallback(() => {
     if (run && stepIndex === 2) {
@@ -401,15 +441,15 @@ export function useCuasTour(
 
   const notifyBdaClicked = useCallback(() => {
     if (run && stepIndex === 10) {
-      setTimeout(() => advanceTo(11), 500);
+      scheduleNotifyAdvance(11, 500);
     }
-  }, [run, stepIndex, advanceTo]);
+  }, [run, stepIndex, scheduleNotifyAdvance]);
 
   const notifyCompletedTabClicked = useCallback(() => {
     if (run && stepIndex === 12) {
-      setTimeout(() => advanceTo(13), 300);
+      scheduleNotifyAdvance(13, 300);
     }
-  }, [run, stepIndex, advanceTo]);
+  }, [run, stepIndex, scheduleNotifyAdvance]);
 
   const activeStep = TOUR_STEPS[stepIndex];
   const resolvedStyles = activeStep?.advanceMode === 'click-through'
@@ -418,12 +458,18 @@ export function useCuasTour(
       ? AUTO_STYLES
       : TOUR_STYLES;
 
+  // Memoize the locale object — react-joyride uses object identity to decide
+  // whether to re-render the tooltip content, so a fresh object on every
+  // hook call (the previous behaviour) re-rendered the tooltip every time
+  // any consumer re-rendered.
+  const locale = useMemo(() => makeTourLocale(stepIndex), [stepIndex]);
+
   return {
     run,
     stepIndex,
     steps: TOUR_STEPS as Step[],
     styles: resolvedStyles,
-    locale: makeTourLocale(stepIndex),
+    locale,
     handleCallback,
     startTour,
     updateTargetState,
