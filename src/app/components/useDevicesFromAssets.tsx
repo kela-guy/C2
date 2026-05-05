@@ -24,6 +24,7 @@ import {
   LidarIcon,
 } from './TacticalMap';
 import type { Device } from './DevicesPanel';
+import { DroneDeviceIcon } from '@/primitives/ProductIcons';
 
 const DEVICE_HEALTH: Record<string, 'operational' | 'malfunctioning'> = {
   'SENS-NVT-MAGOS-S': 'malfunctioning',
@@ -47,17 +48,6 @@ export const CAMERA_PRESETS: Record<string, string[]> = {
   'CAM-NVT-PTZ-N': ['זום', 'לילה', 'רגיל'],
   'CAM-NVT-PIXELSIGHT': ['רגיל', 'תרמי'],
 };
-
-const DroneDeviceIcon = ({ size = 28, fill = 'white' }: { size?: number; fill?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 28 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path
-      d="M23.334 15.7502L9.33696 0.583495L5.86139 4.0835L10.5007 11.0835L9.32456 15.7502L10.5007 20.4168L5.86139 27.4168L9.32456 30.6801L23.334 15.7502Z"
-      fill={fill}
-      stroke="#0a0a0a"
-      strokeWidth="1"
-    />
-  </svg>
-);
 
 /** Memoized hook returning the full `Device[]` for this app. */
 export function useDevicesFromAssets(): Device[] {

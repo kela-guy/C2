@@ -21,21 +21,11 @@ import { CameraViewerPanel } from './CameraViewerPanel';
 import type { CameraFeed } from './CameraViewerPanel';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/shared/components/ui/resizable';
 import { LAYOUT_TOKENS } from '@/primitives/tokens';
+import { CuasIcon, C2Logo, SplitLeftIcon } from '@/primitives/ProductIcons';
 import { toast } from 'sonner';
 import Joyride from 'react-joyride';
 import { useCuasTour } from '../hooks/useCuasTour';
 import { getPriorityBaseline } from '@/imports/useActivityStatus';
-
-function CuasIcon({ size = 20, strokeWidth = 2, className = '' }: { size?: number; strokeWidth?: number; className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
-      <path d="M9.5 5.398C7.093 6.19 5.19 8.093 4.398 10.5M19.86 14.5c.092-.486.14-.987.14-1.5 0-2.01-.742-3.848-1.966-5.253M6.708 19c1.41 1.245 3.263 2 5.292 2 .513 0 1.014-.048 1.5-.14" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"/>
-      <circle cx="12" cy="5" r="2.5" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M3.82 14.835c1.196-.69 2.725-.28 3.415.915.69 1.196.28 2.724-.915 3.415-1.196.69-2.725.28-3.415-.915-.69-1.196-.28-2.725.916-3.415Z" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M17.672 19.165c-1.196-.69-1.605-2.22-.915-3.415.69-1.196 2.219-1.605 3.415-.915 1.195.69 1.605 2.219.915 3.415-.69 1.195-2.22 1.605-3.415.915Z" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  );
-}
 
 function appendLog(targets: Detection[], targetId: string, label: string): Detection[] {
   const time = new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -44,17 +34,6 @@ function appendLog(targets: Detection[], targetId: string, label: string): Detec
     actionLog: [...(t.actionLog || []), { time, label }],
   });
 }
-
-const C2Logo = ({ className }: { className?: string }) => (
-  <svg width={32} height={32} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-    <path
-      fillRule="evenodd"
-      clipRule="evenodd"
-      d="M11.1483 17.565L20.7437 27.1604L20.8479 27.2601C22.623 28.9401 25.4215 28.9084 27.1603 27.1695L27.183 27.1468L36.7649 17.565L43.1679 23.968L23.9543 43.1816L4.74072 23.968L11.1437 17.565H11.1483ZM28.4373 23.3295C28.306 22.3921 27.8758 21.491 27.1558 20.7665C25.3853 18.9959 22.5188 18.9959 20.7528 20.7665C20.0328 21.4865 19.6071 22.3921 19.4713 23.3295L12.4253 16.2835L23.9543 4.75439L35.4834 16.2835L28.4373 23.3295Z"
-      fill="currentColor"
-    />
-  </svg>
-);
 
 export interface FriendlyDrone {
   id: string;
@@ -89,20 +68,6 @@ const FRIENDLY_PATROL_ROUTES: { id: string; name: string; altitude: string; fovD
     waypoints: [[32.4850, 34.9980], [32.4870, 35.0020], [32.4890, 34.9990], [32.4860, 34.9960]],
   },
 ];
-
-function SplitLeftIcon({ className }: { className?: string }) {
-  return (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
-         className={className} aria-hidden="true">
-      <rect x="2" y="3" width="20" height="18" rx="2"
-            stroke="currentColor" strokeWidth="1.5" />
-      <rect x="2" y="3" width="8" height="18" rx="2"
-            fill="currentColor" fillOpacity="0.15" />
-      <line x1="10" y1="3" x2="10" y2="21"
-            stroke="currentColor" strokeWidth="1.5" />
-    </svg>
-  );
-}
 
 function SplitDropZone({
   onDrop,

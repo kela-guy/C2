@@ -7,6 +7,7 @@ import { Switch } from './ui/switch';
 import { Collapsible, CollapsibleContent } from './ui/collapsible';
 import { LAYOUT_TOKENS } from '@/primitives/tokens';
 import { StatusChip } from '@/primitives/StatusChip';
+import { JamIcon, BatteryIcon } from '@/primitives/ProductIcons';
 
 export const DEVICE_CAMERA_DRAG_TYPE = 'DEVICE_CAMERA';
 export interface DeviceCameraDragItem {
@@ -63,26 +64,6 @@ export const DEFAULT_TYPE_LABELS: Record<DeviceType, string> = {
 };
 
 const STATUS_SORT: Record<string, number> = { offline: 0, active: 1, available: 2 };
-
-function JamIcon({ size = 16, className }: { size?: number; className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" width={size} height={size} className={className}>
-      <path d="M22 12C19.5 10.5 19.5 5 17.5 5C15.5 5 15.5 10 13 10C10.5 10 10.5 2 8 2C5.5 2 5 10.5 2 12C5 13.5 5.5 22 8 22C10.5 22 10.5 14 13 14C15.5 14 15.5 19 17.5 19C19.5 19 19 13.5 22 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  );
-}
-
-function BatteryIcon({ pct }: { pct: number }) {
-  const colorClass = pct > 60 ? 'text-emerald-400' : pct > 30 ? 'text-amber-400' : pct >= 20 ? 'text-orange-400' : 'text-red-400';
-  const fillWidth = Math.max(1, (pct / 100) * 17);
-  return (
-    <svg className={colorClass} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" width={16} height={16}>
-      <rect x="1" y="5" width="19" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" fill="none" />
-      <rect x="2.5" y="6.5" width={fillWidth} height="11" rx="1" fill="currentColor" />
-      <rect x="20" y="10" width="3" height="4" rx="1" fill="currentColor" />
-    </svg>
-  );
-}
 
 /** English connection-state labels. Override via `connectionStateLabels` prop. */
 export const DEFAULT_CONNECTION_STATE_LABELS: Record<ConnectionState, string> = {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
 import {
   Eye, Radio, ShieldAlert, Zap, Crosshair, Ban, AlertTriangle,
   Trash2, Send, Compass, Gauge, Navigation, MapPin, CheckCircle2,
@@ -116,6 +116,11 @@ const MARKER_FILES: RelatedFile[] = [
   { file: 'MapIcons.tsx', code: mapIconsSrc },
   TOKENS_FILE, BARREL_FILE,
 ];
+
+// ─── Lazy sections ───────────────────────────────────────────────────────────
+// Icon Library pulls in the full registry + react-dom/server. Lazy so the
+// dashboard route never pays for it.
+const IconLibrary = lazy(() => import('./styleguide/IconLibrary'));
 
 // ─── FilterBar demo data ─────────────────────────────────────────────────────
 
@@ -306,14 +311,17 @@ function ComponentSection({
 }: {
   id: string;
   name: string;
-  description: string;
+  /** Optional. Sections like Icon Library that have their own self-explanatory toolbar omit the paragraph. */
+  description?: string;
   children: React.ReactNode;
 }) {
   return (
     <section id={id} className="scroll-mt-16 space-y-8">
       <div className="flex flex-col gap-2">
         <h2 className="text-[30px] font-bold tracking-tight text-n-12" style={{ textWrap: 'balance' }}>{name}</h2>
-        <p className="text-[16px] font-normal leading-7 text-n-9" style={{ textWrap: 'pretty' }}>{description}</p>
+        {description && (
+          <p className="text-[16px] font-normal leading-7 text-n-9" style={{ textWrap: 'pretty' }}>{description}</p>
+        )}
       </div>
       {children}
     </section>
@@ -2637,10 +2645,27 @@ export default function StyleguidePage() {
               <motion.div
                 key={activeItem}
                 className="mx-auto max-w-[880px] space-y-12"
-                initial={prefersReducedMotionRoot ? false : { opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
+                initial={prefersReducedMotionRoot ? false : { opacity: 0 }}
+                animate={{ opacity: 1 }}
                 transition={{ duration: 0.2, ease: [0, 0, 0.2, 1] }}
               >
+
+            {activeItem === 'icon-library' && (
+            <ComponentSection
+              id="icon-library"
+              name="Icon Library"
+            >
+              <Suspense
+                fallback={
+                  <div className="flex items-center justify-center min-h-[240px] rounded-xl bg-white/[0.02] shadow-[0_0_0_1px_rgba(255,255,255,0.06)] text-[13px] text-n-9">
+                    Loading icon library…
+                  </div>
+                }
+              >
+                <IconLibrary />
+              </Suspense>
+            </ComponentSection>
+            )}
 
             {activeItem === 'quick-start' && (
             <ComponentSection id="quick-start" name="Quick Start" description="Install C2 Hub components into any Vite + React project via the CLI.">
@@ -4179,6 +4204,16 @@ export function DetectionRow() {
                   <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide">
                     Tactical SVG icons used inside map markers on the Mapbox canvas. Each icon accepts a <code className="text-n-10">fill</code> prop.
                   </p>
+                  <a
+                    href="#icon-library"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setActiveItem('icon-library');
+                    }}
+                    className="inline-flex items-center gap-1 text-[13px] text-sky-300/90 hover:text-sky-200 transition-colors duration-150"
+                  >
+                    → See the full Icon Library
+                  </a>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">

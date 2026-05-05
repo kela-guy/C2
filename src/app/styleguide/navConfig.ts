@@ -16,16 +16,17 @@ export interface NavGroup {
 
 export const NAV: NavGroup[] = [
   {
+    label: 'Foundations',
+    items: [
+      { id: 'icon-library', label: 'Icon Library' },
+      { id: 'styling', label: 'Styling' },
+    ],
+  },
+  {
     label: 'Getting Started',
     items: [
       { id: 'quick-start', label: 'Quick Start' },
       { id: 'releases', label: 'Releases' },
-    ],
-  },
-  {
-    label: 'Foundations',
-    items: [
-      { id: 'styling', label: 'Styling' },
     ],
   },
   {
