@@ -154,7 +154,7 @@ export function FilterBar({
           type="button"
           onClick={onReset}
           disabled={activeFilterCount === 0}
-          className={`inline-flex h-7 items-center justify-center gap-1.5 whitespace-nowrap rounded px-2 text-xs font-medium text-white bg-white/[0.06] hover:bg-white/[0.10] transition-opacity duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 active:scale-[0.97] ${
+          className={`inline-flex h-7 items-center justify-center gap-1.5 whitespace-nowrap rounded px-2 text-xs font-medium text-white bg-white/[0.06] hover:bg-white/[0.10] transition-opacity duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 active:scale-[0.98] ${
             activeFilterCount === 0 ? 'opacity-0 pointer-events-none' : 'opacity-100'
           }`}
           aria-label={resetAriaLabel}
@@ -189,7 +189,7 @@ function FilterPopoverButton({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className={`inline-flex h-7 w-full items-center justify-center gap-1 rounded px-2 text-xs font-medium text-white transition-colors duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 active:scale-[0.97] ${
+          className={`inline-flex h-7 w-full items-center justify-center gap-1 rounded px-2 text-xs font-medium text-white transition-colors duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 active:scale-[0.98] ${
             active || open
               ? 'bg-sky-500/[0.12]'
               : 'bg-white/[0.06] hover:bg-white/[0.10]'

@@ -206,6 +206,27 @@ export const Dashboard = () => {
     [allDevices],
   );
 
+  const [floodlightOnIds, setFloodlightOnIds] = useState<Set<string>>(() => new Set());
+  const [speakerPlayingIds, setSpeakerPlayingIds] = useState<Set<string>>(() => new Set());
+
+  const handleFloodlightToggle = useCallback((id: string, next: boolean) => {
+    setFloodlightOnIds((prev) => {
+      const updated = new Set(prev);
+      if (next) updated.add(id);
+      else updated.delete(id);
+      return updated;
+    });
+  }, []);
+
+  const handleSpeakerToggle = useCallback((id: string, next: boolean) => {
+    setSpeakerPlayingIds((prev) => {
+      const updated = new Set(prev);
+      if (next) updated.add(id);
+      else updated.delete(id);
+      return updated;
+    });
+  }, []);
+
   const highlightedSensorIds = useMemo(() => {
     const ids = new Set<string>();
     for (const t of targets) {
@@ -1171,7 +1192,7 @@ export const Dashboard = () => {
                   if (next) openSystemsPanel();
                   else closeSystemsPanel();
                 }}
-                className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-white/10 active:scale-[0.98] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
                 aria-label={sidebarOpen ? 'סגור רשימת מערכות' : 'פתח רשימת מערכות'}
               >
                 <List size={20} strokeWidth={1.5} />
@@ -1191,7 +1212,7 @@ export const Dashboard = () => {
                   if (next) openDevicesPanel();
                   else closeDevicesPanel();
                 }}
-                className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-white/10 active:scale-[0.98] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
                 aria-label={devicesPanelOpen ? 'סגור מכשירים' : 'מכשירים'}
               >
                 <DevicesIcon size={20} />
@@ -1214,7 +1235,7 @@ export const Dashboard = () => {
                     setCameraViewerFeeds([{ cameraId: CAMERA_ASSETS[0]?.id ?? '' }]);
                   }
                 }}
-                className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-white/10 active:scale-[0.98] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
                 aria-label={isCameraViewerOpen ? 'סגור מצלמות' : 'מצלמות'}
               >
                 <Video size={20} strokeWidth={1.5} />
@@ -1231,7 +1252,7 @@ export const Dashboard = () => {
                 <DropdownMenuTrigger asChild>
                   <button
                     data-cuas-sim-menu
-                    className="size-6 rounded flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                    className="size-6 rounded flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 active:scale-[0.98] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
                     aria-label="תרחישי CUAS"
                   >
                     <CuasIcon size={20} strokeWidth={1.5} />
@@ -1270,7 +1291,7 @@ export const Dashboard = () => {
             <TooltipTrigger asChild>
               <button
                 onClick={tour.startTour}
-                className="size-6 rounded flex items-center justify-center text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                className="size-6 rounded flex items-center justify-center text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 active:scale-[0.98] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
                 aria-label="סיור הדרכה"
               >
                 <HelpCircle size={20} strokeWidth={1.5} />
@@ -1282,7 +1303,7 @@ export const Dashboard = () => {
             <TooltipTrigger asChild>
               <a
                 href="/styleguide"
-                className="size-6 rounded flex items-center justify-center text-gray-400 hover:text-amber-400 hover:bg-amber-500/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                className="size-6 rounded flex items-center justify-center text-gray-400 hover:text-amber-400 hover:bg-amber-500/10 active:scale-[0.98] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
                 aria-label="Style Guide"
               >
                 <Palette size={20} strokeWidth={1.5} />
@@ -1296,7 +1317,7 @@ export const Dashboard = () => {
                 <NotificationCenter
                   trigger={
                     <button
-                      className="size-6 rounded flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                      className="size-6 rounded flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 active:scale-[0.98] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
                       aria-label="התראות"
                     >
                       <Bell size={20} strokeWidth={1.5} />
@@ -1390,6 +1411,8 @@ export const Dashboard = () => {
                 selectedEffectorIds={selectedEffectorIds}
                 launcherEffectors={launcherEffectors}
                 selectedLauncherIds={selectedLauncherIds}
+                floodlightOnIds={floodlightOnIds}
+                speakerPlayingIds={speakerPlayingIds}
               />
                 );
                 return IS_CESIUM
@@ -1527,6 +1550,23 @@ export const Dashboard = () => {
           onJamActivate={(jammerId) => {
             toast.success(`שיבוש הופעל — ${jammerId}`, { duration: 3000 });
           }}
+          onFloodlightToggle={(id, next) => {
+            handleFloodlightToggle(id, next);
+            toast.success(next ? `זרקור הופעל — ${id}` : `זרקור כובה — ${id}`, { duration: 2000 });
+          }}
+          onSpeakerToggle={(id, next) => {
+            handleSpeakerToggle(id, next);
+            toast.success(next ? `כריזה הופעלה — ${id}` : `כריזה הופסקה — ${id}`, { duration: 2000 });
+          }}
+          floodlightOnIds={floodlightOnIds}
+          speakerPlayingIds={speakerPlayingIds}
+          speakerTracks={[
+            { id: 'air-raid', label: 'אזעקת צבע אדום' },
+            { id: 'all-clear', label: 'הסר אזעקה' },
+            { id: 'evacuate', label: 'פינוי' },
+            { id: 'lockdown', label: 'סגר' },
+            { id: 'test-tone', label: 'צליל בדיקה' },
+          ]}
           noTransition={panelSwitching}
           width={sidebarWidth}
           focusedDeviceId={focusedDeviceId}
@@ -1542,6 +1582,8 @@ export const Dashboard = () => {
             launcher: 'משגרים',
             lidar: 'לידר',
             weapon_system: 'מערכות נשק',
+            floodlight: 'זרקורים',
+            speaker: 'כריזה',
           }}
           connectionStateLabels={{
             online: 'מחובר',
@@ -1554,6 +1596,7 @@ export const Dashboard = () => {
             clearSearch: 'נקה חיפוש',
             resetFilters: 'איפוס סינון',
             resetFiltersLabel: 'ניקוי',
+            typeFilterLabel: 'מכשירים',
             noMatches: 'אין מכשירים תואמים',
             location: 'מיקום',
             bearing: 'כיוון',
@@ -1579,6 +1622,19 @@ export const Dashboard = () => {
             calibrating: 'מכייל...',
             calibrated: 'הושלם',
             calibrateAriaLabel: 'כיול',
+            floodlightOn: 'דולק',
+            floodlightOff: 'כבוי',
+            floodlightToggleAriaLabel: 'הפעל/כבה זרקור',
+            floodlightTurnOn: 'הפעל',
+            floodlightTurnOff: 'כבה',
+            speakerPlay: 'נגן',
+            speakerStop: 'עצור',
+            speakerPlaying: 'מנגן',
+            speakerDisabledOffline: 'הרמקול לא מקוון',
+            audioTrack: 'מסלול',
+            audioTrackAriaLabel: 'מסלול שמע',
+            audioTrackSearchPlaceholder: 'חיפוש מסלול...',
+            audioTrackNoMatches: 'אין תוצאות תואמות',
           }}
         />
 

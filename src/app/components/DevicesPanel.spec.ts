@@ -3,7 +3,7 @@ import type { ComponentSpec } from '@/specs/types';
 export const spec: ComponentSpec = {
   name: 'DevicesPanel',
   filePath: 'src/app/components/DevicesPanel.tsx',
-  purpose: 'Side panel listing all CUAS devices (cameras, radars, docks, drones, ECM, launchers, LiDAR, weapon systems) with filtering, search, expandable detail rows, drag-to-camera-viewer, and device-specific controls.',
+  purpose: 'Side panel listing all CUAS devices (cameras, radars, docks, drones, ECM, launchers, LiDAR, weapon systems, floodlights, PA speakers) with filtering, search, expandable detail rows, drag-to-camera-viewer, and device-specific controls.',
   location: 'CUAS',
   status: 'prototype',
 
@@ -13,6 +13,11 @@ export const spec: ComponentSpec = {
     { name: 'onFlyTo', type: '(lat: number, lon: number) => void', required: true, description: 'Called when "center on map" is clicked for a device' },
     { name: 'onDeviceHover', type: '(id: string | null) => void', required: false, description: 'Called on mouse enter/leave of a device row for map highlighting' },
     { name: 'onJamActivate', type: '(jammerId: string) => void', required: false, description: 'Called when ECM jam button is clicked' },
+    { name: 'onFloodlightToggle', type: '(floodlightId: string, next: boolean) => void', required: false, description: 'Called when the floodlight Switch is toggled (header row + footer row both fire it).' },
+    { name: 'onSpeakerToggle', type: '(speakerId: string, next: boolean) => void', required: false, description: 'Called when the speaker Play/Stop button is clicked in the header row.' },
+    { name: 'floodlightOnIds', type: 'Set<string>', required: false, description: 'IDs of floodlights currently lit. Drives the active icon variant + Switch state.' },
+    { name: 'speakerPlayingIds', type: 'Set<string>', required: false, description: 'IDs of speakers currently broadcasting. Drives the active icon variant + Play/Stop state.' },
+    { name: 'speakerTracks', type: '{ id: string; label: string }[]', required: false, description: 'Audio tracks rendered in the speaker combobox. Defaults to DEFAULT_SPEAKER_TRACKS (sirens).' },
     { name: 'noTransition', type: 'boolean', required: false, description: 'Disables slide transition (used in tests and styleguide)' },
     { name: 'width', type: 'number', required: false, description: 'Override panel width in pixels (defaults to LAYOUT_TOKENS.sidebarWidthPx)' },
   ],
@@ -21,7 +26,7 @@ export const spec: ComponentSpec = {
     {
       name: 'default',
       trigger: 'Panel opens with open=true',
-      description: 'All devices listed, grouped by type, sorted offline-first. Filter bar shows all types active.',
+      description: 'All devices listed, grouped by type, sorted offline-first. Filter bar shows search input and a Type popover trigger with no selection (all types visible).',
       implementedInPrototype: true,
       storyProps: { open: true },
     },
@@ -34,8 +39,8 @@ export const spec: ComponentSpec = {
     },
     {
       name: 'filtered by type',
-      trigger: 'User clicks a device-type icon in filter bar',
-      description: 'Only devices of selected type(s) are shown; active filter has ring highlight',
+      trigger: 'User opens the Type popover and checks one or more device types',
+      description: 'Only devices of the checked type(s) are shown; the Type trigger summarizes the selection (e.g. "Cameras" or "3 selected") and a Reset button appears.',
       implementedInPrototype: true,
     },
     {
@@ -73,6 +78,36 @@ export const spec: ComponentSpec = {
       name: 'malfunctioning device',
       trigger: 'Device operationalStatus = "malfunctioning"',
       description: 'Orange icon tint, orange name text, AlertTriangle icon, jam button disabled with tooltip',
+      implementedInPrototype: true,
+    },
+    {
+      name: 'floodlight off (idle)',
+      trigger: 'Floodlight device with id NOT in floodlightOnIds',
+      description: 'White icon variant on map + row; header-row Switch shows "Off" label and is unchecked; footer Switch (when expanded) also unchecked.',
+      implementedInPrototype: true,
+    },
+    {
+      name: 'floodlight on (lit)',
+      trigger: 'Floodlight device with id in floodlightOnIds',
+      description: 'Amber lamp fill + drop-shadow on the icon (map + row); marker uses jammer InteractionState (green ring + pulse); both header and footer Switches show "On" with amber thumb track.',
+      implementedInPrototype: true,
+    },
+    {
+      name: 'speaker idle',
+      trigger: 'Speaker device with id NOT in speakerPlayingIds',
+      description: 'Silent icon variant (waves at 50% opacity) on map + row; header-row Play button (sky tint) reads "Play"; track combobox visible inside expanded card.',
+      implementedInPrototype: true,
+    },
+    {
+      name: 'speaker playing',
+      trigger: 'Speaker device with id in speakerPlayingIds',
+      description: 'Amber sound waves + animate-pulse on the icon (map + row); marker uses jammer state and reveals the audible-coverage ring (amber); header-row button shows "Stop" with Square icon and amber tint.',
+      implementedInPrototype: true,
+    },
+    {
+      name: 'speaker offline',
+      trigger: 'Speaker device with connectionState = "offline"',
+      description: 'Header-row Play button disabled with tooltip "Speaker offline" (RTL: "הרמקול לא מקוון"); icon dimmed via shared connection-state row chrome.',
       implementedInPrototype: true,
     },
     {
@@ -123,8 +158,8 @@ export const spec: ComponentSpec = {
     },
     {
       trigger: 'click',
-      element: 'Type filter icon',
-      result: 'Toggles single-type filter. Click when all active → isolate type. Click isolated → show all.',
+      element: 'Type filter popover trigger',
+      result: 'Opens a multi-select checkbox list of device types. Toggling checkboxes narrows the device list; empty selection shows all types.',
     },
     {
       trigger: 'click',
@@ -152,6 +187,23 @@ export const spec: ComponentSpec = {
       trigger: 'click',
       element: 'ECM "הפעל" button',
       result: 'Calls onJamActivate with device ID',
+    },
+    {
+      trigger: 'click',
+      element: 'Floodlight Switch (header row + footer row)',
+      result: 'Calls onFloodlightToggle(id, next). Header Switch is visible while collapsed; both stay in sync via floodlightOnIds.',
+      animation: { property: 'transform', from: 'translateX(0)', to: 'translateX(14px)', duration: '200ms', easing: 'ease-out' },
+    },
+    {
+      trigger: 'click',
+      element: 'Speaker Play/Stop button (header row, outside collapsed card)',
+      result: 'Calls onSpeakerToggle(id, next). Stays clickable while card is collapsed — mirrors ECM jam placement.',
+    },
+    {
+      trigger: 'change',
+      element: 'Speaker audio-track combobox (inside expanded card footer, anchored at the start)',
+      result: 'Popover combobox built on Popover + cmdk Command. Typing in the search input filters the track list; selecting an item updates the local track and closes the popover.',
+      keyboard: 'Type-to-filter via CommandInput, ArrowDown/Up to navigate items, Enter to confirm, Esc to dismiss',
     },
     {
       trigger: 'click',
@@ -220,14 +272,38 @@ export const spec: ComponentSpec = {
         { actor: 'system', action: 'Updates device status to "active"', result: 'Button changes to "שיבוש פעיל" (disabled)' },
       ],
     },
+    {
+      name: 'Light a perimeter floodlight',
+      type: 'happy',
+      steps: [
+        { actor: 'user', action: 'Toggles the Switch on a floodlight row (header or expanded footer)', result: 'onFloodlightToggle(id, true) called; toast confirms' },
+        { actor: 'system', action: 'Adds id to floodlightOnIds', result: 'Lamp icon flips to amber + map marker pulses with green active ring' },
+      ],
+    },
+    {
+      name: 'Play a PA announcement',
+      type: 'happy',
+      steps: [
+        { actor: 'user', action: 'Expands a speaker row and picks an audio track from the combobox', result: 'Local track selection updates' },
+        { actor: 'user', action: 'Clicks "Play" in the header row (button stays visible if card was collapsed)', result: 'onSpeakerToggle(id, true) called' },
+        { actor: 'system', action: 'Adds id to speakerPlayingIds', result: 'Speaker icon waves animate amber; map marker reveals audible-coverage ring' },
+        { actor: 'user', action: 'Clicks "Stop"', result: 'onSpeakerToggle(id, false) called; ring + animation clear' },
+      ],
+    },
   ],
 
   accessibility: {
     role: 'complementary',
-    ariaAttributes: ['aria-label="סגור" on close button', 'role="button" on device rows', 'role="switch" on wipers toggle', 'aria-pressed on mute button'],
-    keyboardNav: ['Tab through filter icons, search, device rows', 'Enter/Space to expand device row', 'Enter to activate buttons'],
+    ariaAttributes: [
+      'aria-label="סגור" on close button',
+      'role="button" on device rows',
+      'role="switch" on wipers toggle and floodlight toggles (header + footer)',
+      'aria-pressed on mute button + speaker Play/Stop button',
+      'aria-label + role="combobox" + aria-expanded on speaker audio-track popover trigger',
+    ],
+    keyboardNav: ['Tab through search input, Type filter trigger, device rows', 'Enter/Space to expand device row', 'Enter to activate buttons', 'ArrowDown/Up + Enter inside the speaker track combobox'],
     focusManagement: 'Focus ring (ring-white/25) on all interactive elements',
-    screenReaderNotes: 'Tooltips on connection status dots provide state labels. Disabled jam buttons have tooltip with reason.',
+    screenReaderNotes: 'Tooltips on connection status dots provide state labels. Disabled jam + speaker Play buttons have tooltips with reasons.',
   },
 
   tasks: [
@@ -306,7 +382,7 @@ export const spec: ComponentSpec = {
   notes: [
     'Panel uses react-dnd useDrag for camera rows — must be wrapped in DndProvider.',
     'Mute timer runs a 1s interval shared across all muted devices — efficient but could drift on heavy loads.',
-    'Type filter uses exclusive toggle logic: clicking when all active isolates that type; clicking the isolated type restores all.',
+    'Type filter is a multi-select popover (FilterBar primitive). Empty selection means all types are visible; checking entries narrows the list.',
     'Camera rows are the only draggable rows (canDrag: isCamera).',
     'The panel uses absolute positioning within a relative parent — not standalone.',
   ],

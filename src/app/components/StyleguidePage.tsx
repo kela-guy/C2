@@ -3,8 +3,8 @@ import {
   Eye, Radio, ShieldAlert, Zap, Crosshair, Ban, AlertTriangle,
   Trash2, Send, Compass, Gauge, Navigation, MapPin, CheckCircle2,
   Bird, Activity, History, Radar, Hand, Copy, Check, Download,
-  BellOff, Camera, Wrench, Loader2, Search, X, Lock,
-  SlidersHorizontal, Tag,
+  BellOff, Camera, Wrench, Loader2, X, Lock,
+  SlidersHorizontal, Tag, ChevronsUpDown, Square,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Toaster } from '@/shared/components/ui/sonner';
@@ -34,6 +34,7 @@ import {
 import {
   CameraIcon, SensorIcon, RadarIcon, DroneIcon, DroneHiveIcon,
   LidarIcon, LauncherIcon, MissileIcon,
+  FloodlightIcon, SpeakerIcon,
 } from '@/shared/components/TacticalMap';
 import { DroneCardIcon, JamWaveIcon, MissileCardIcon, CarIcon } from '@/primitives/MapIcons';
 import { MapMarker } from '@/primitives/MapMarker';
@@ -45,7 +46,11 @@ import {
   type Affiliation, type InteractionState,
 } from '@/primitives/markerStyles';
 import { iconPublicUrl } from '@/lib/styleguideIconAssets';
-import { DevicesPanel, DeviceRow, type Device } from '@/shared/components/DevicesPanel';
+import { DevicesPanel, DeviceRow, DEFAULT_SPEAKER_TRACKS, type Device } from '@/shared/components/DevicesPanel';
+import { Switch } from '@/shared/components/ui/switch';
+import { Popover, PopoverTrigger, PopoverContent } from '@/shared/components/ui/popover';
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/shared/components/ui/command';
+import { Button } from '@/shared/components/ui/button';
 import { useCardSlots, type CardCallbacks, type CardContext } from '@/imports/useCardSlots';
 import {
   cuas_raw, cuas_classified, cuas_classified_bird, cuas_mitigating, cuas_mitigated, cuas_bda_complete,
@@ -73,6 +78,10 @@ import cardClosureSrc from '@/primitives/CardClosure.tsx?raw';
 import filterBarSrc from '@/primitives/FilterBar.tsx?raw';
 import newUpdatesPillSrc from '@/primitives/NewUpdatesPill.tsx?raw';
 import devicesPanelSrc from '@/shared/components/DevicesPanel.tsx?raw';
+import popoverSrc from '@/shared/components/ui/popover.tsx?raw';
+import commandSrc from '@/shared/components/ui/command.tsx?raw';
+import buttonSrc from '@/shared/components/ui/button.tsx?raw';
+import switchSrc from '@/shared/components/ui/switch.tsx?raw';
 import mapMarkerSrc from '@/primitives/MapMarker.tsx?raw';
 import mapIconsSrc from '@/primitives/MapIcons.tsx?raw';
 import tokensSrc from '@/primitives/tokens.ts?raw';
@@ -108,6 +117,11 @@ const CARD_LOG_FILES: RelatedFile[] = [
 
 const DEVICES_PANEL_FILES: RelatedFile[] = [
   { file: 'StatusChip.tsx', code: statusChipSrc },
+  { file: 'FilterBar.tsx', code: filterBarSrc },
+  { file: 'ui/popover.tsx', code: popoverSrc },
+  { file: 'ui/command.tsx', code: commandSrc },
+  { file: 'ui/button.tsx', code: buttonSrc },
+  { file: 'ui/switch.tsx', code: switchSrc },
   TOKENS_FILE, BARREL_FILE,
 ];
 
@@ -250,6 +264,22 @@ function CesiumFlyToDemo() {
 
 // ─── DevicesPanel demo data ──────────────────────────────────────────────────
 
+const DEVICES_PANEL_DEMO_FILTER_DEFS: FilterDef[] = [
+  {
+    id: 'type',
+    label: 'מכשירים',
+    icon: Tag,
+    options: [
+      { value: 'camera', label: 'מצלמות' },
+      { value: 'radar', label: 'מכ"מים' },
+      { value: 'drone', label: 'רחפנים' },
+      { value: 'ecm', label: 'ECM' },
+      { value: 'floodlight', label: 'זרקורים' },
+      { value: 'speaker', label: 'רמקולים' },
+    ],
+  },
+];
+
 const devicesPanelDemoDevices: Device[] = [
   {
     id: 'cam-01',
@@ -298,6 +328,50 @@ const devicesPanelDemoDevices: Device[] = [
     connectionState: 'online',
     Icon: SensorIcon,
     coverageRadiusM: 5000,
+  },
+  {
+    id: 'floodlight-01',
+    name: 'Floodlight (North)',
+    type: 'floodlight',
+    lat: 0,
+    lon: 0,
+    status: 'available',
+    operationalStatus: 'operational',
+    connectionState: 'online',
+    Icon: FloodlightIcon,
+  },
+  {
+    id: 'floodlight-02',
+    name: 'Floodlight (South)',
+    type: 'floodlight',
+    lat: 0,
+    lon: 0,
+    status: 'available',
+    operationalStatus: 'operational',
+    connectionState: 'online',
+    Icon: FloodlightIcon,
+  },
+  {
+    id: 'speaker-01',
+    name: 'PA Speaker (Gate)',
+    type: 'speaker',
+    lat: 0,
+    lon: 0,
+    status: 'available',
+    operationalStatus: 'operational',
+    connectionState: 'online',
+    Icon: SpeakerIcon,
+  },
+  {
+    id: 'speaker-02',
+    name: 'PA Speaker (Tower)',
+    type: 'speaker',
+    lat: 0,
+    lon: 0,
+    status: 'available',
+    operationalStatus: 'operational',
+    connectionState: 'online',
+    Icon: SpeakerIcon,
   },
 ];
 
@@ -408,7 +482,7 @@ function IconCatalogTile({ name, icon }: { name: string; icon: React.ReactNode }
           type="button"
           onClick={copySvg}
           aria-label={copied ? 'Copied' : 'Copy SVG'}
-          className="p-2.5 rounded-md text-n-120 hover:text-n-11 hover:bg-white/[0.08] active:scale-[0.92] transition-[color,background-color,transform] duration-150 ease-out cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+          className="p-2.5 rounded-md text-n-120 hover:text-n-11 hover:bg-white/[0.08] active:scale-[0.98] transition-[color,background-color,transform] duration-150 ease-out cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
         >
           {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
         </button>
@@ -416,7 +490,7 @@ function IconCatalogTile({ name, icon }: { name: string; icon: React.ReactNode }
           href={downloadHref}
           download={`${name}.svg`}
           aria-label="Download SVG"
-          className="p-2.5 rounded-md text-n-120 hover:text-n-11 hover:bg-white/[0.08] active:scale-[0.92] transition-[color,background-color,transform] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+          className="p-2.5 rounded-md text-n-120 hover:text-n-11 hover:bg-white/[0.08] active:scale-[0.98] transition-[color,background-color,transform] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
         >
           <Download size={14} />
         </a>
@@ -452,6 +526,16 @@ function StyleguideJamIcon({ size = 16, className }: { size?: number; className?
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" width={size} height={size} className={className}>
       <path d="M22 12C19.5 10.5 19.5 5 17.5 5C15.5 5 15.5 10 13 10C10.5 10 10.5 2 8 2C5.5 2 5 10.5 2 12C5 13.5 5.5 22 8 22C10.5 22 10.5 14 13 14C15.5 14 15.5 19 17.5 19C19.5 19 19 13.5 22 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
+/** Solid play triangle used inside the speaker Play/Stop button (mirrors the
+ * `PlayFilledIcon` colocated inside `DevicesPanel.tsx`). */
+function StyleguidePlayFilledIcon({ size = 12, className }: { size?: number; className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path d="M6.5145 2.14251C6.20556 1.95715 5.82081 1.95229 5.5073 2.1298C5.19379 2.30731 5 2.63973 5 3V21C5 21.3603 5.19379 21.6927 5.5073 21.8702C5.82081 22.0477 6.20556 22.0429 6.5145 21.8575L21.5145 12.8575C21.8157 12.6768 22 12.3513 22 12C22 11.6487 21.8157 11.3232 21.5145 11.1425L6.5145 2.14251Z" />
     </svg>
   );
 }
@@ -1643,7 +1727,7 @@ function InlineCopyButton({ text }: { text: string }) {
     <button
       onClick={handleCopy}
       aria-label={copied ? 'Copied' : 'Copy code'}
-      className="p-1.5 rounded cursor-pointer text-n-7 hover:text-n-10 hover:bg-white/[0.08] active:scale-[0.94] transition-[color,background-color,transform] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+      className="p-1.5 rounded cursor-pointer text-n-7 hover:text-n-10 hover:bg-white/[0.08] active:scale-[0.98] transition-[color,background-color,transform] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
     >
       {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
     </button>
@@ -1881,7 +1965,7 @@ function CopyIconButton({ text }: { text: string }) {
     <button
       onClick={handleCopy}
       aria-label={copied ? 'Copied' : 'Copy component as markdown'}
-      className="flex items-center gap-1.5 h-7 px-2.5 rounded-[10px_4px_4px_4px] cursor-pointer text-n-120 hover:text-n-11 hover:bg-white/[0.06] active:scale-[0.96] transition-[color,background-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/30"
+      className="flex items-center gap-1.5 h-7 px-2.5 rounded-[10px_4px_4px_4px] cursor-pointer text-n-120 hover:text-n-11 hover:bg-white/[0.06] active:scale-[0.98] transition-[color,background-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/30"
     >
       <AnimatePresence mode="wait" initial={false}>
         {copied ? (
@@ -1956,7 +2040,7 @@ function CodePreviewBlock({
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`px-3 py-2.5 text-[13px] font-medium cursor-pointer transition-[color,border-color] duration-150 ease-out active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/25 ${
+            className={`px-3 py-2.5 text-[13px] font-medium cursor-pointer transition-[color,border-color] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/25 ${
               tab === t.id
                 ? 'text-n-12 border-b-2 border-n-12'
                 : 'text-n-9 hover:text-n-11 border-b-2 border-transparent'
@@ -2327,7 +2411,7 @@ function CardStatePlayground() {
                   <button
                     key={e.id}
                     onClick={() => setActiveId(e.id)}
-                    className={`flex items-center gap-1.5 h-7 px-2.5 rounded-md text-[11px] font-medium cursor-pointer transition-[color,background-color,box-shadow] duration-150 ease-out active:scale-[0.97] ${
+                    className={`flex items-center gap-1.5 h-7 px-2.5 rounded-md text-[11px] font-medium cursor-pointer transition-[color,background-color,box-shadow] duration-150 ease-out active:scale-[0.98] ${
                       isActive
                         ? 'bg-white/[0.1] text-n-12 shadow-[0_0_0_1px_rgba(255,255,255,0.15)]'
                         : 'text-n-120 hover:text-n-10 hover:bg-white/[0.04]'
@@ -2613,6 +2697,26 @@ export default function StyleguidePage() {
   const [filterBarQuery, setFilterBarQuery] = useState('');
   const [filterBarSelections, setFilterBarSelections] = useState<Record<string, string[]>>({});
 
+  const [devicesPanelFloodlightOnIds, setDevicesPanelFloodlightOnIds] = useState<Set<string>>(() => new Set(['floodlight-01']));
+  const [devicesPanelSpeakerPlayingIds, setDevicesPanelSpeakerPlayingIds] = useState<Set<string>>(() => new Set(['speaker-01']));
+  const handleDevicesPanelFloodlightToggle = useCallback((floodlightId: string, next: boolean) => {
+    setDevicesPanelFloodlightOnIds((prev) => {
+      const nextSet = new Set(prev);
+      if (next) nextSet.add(floodlightId); else nextSet.delete(floodlightId);
+      return nextSet;
+    });
+  }, []);
+  const handleDevicesPanelSpeakerToggle = useCallback((speakerId: string, next: boolean) => {
+    setDevicesPanelSpeakerPlayingIds((prev) => {
+      const nextSet = new Set(prev);
+      if (next) nextSet.add(speakerId); else nextSet.delete(speakerId);
+      return nextSet;
+    });
+  }, []);
+
+  const [comboboxDemoTrack, setComboboxDemoTrack] = useState('air-raid');
+  const [comboboxDemoOpen, setComboboxDemoOpen] = useState(false);
+
   const handleSelectPage = useCallback((id: string) => {
     setActiveItem(id);
     window.history.replaceState(null, '', `#${id}`);
@@ -2838,6 +2942,27 @@ export function DetectionRow() {
                   </div>
                 </div>
               </PreviewPanel>
+
+              <SectionHeading>Press feedback</SectionHeading>
+              <p className="text-[16px] font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
+                Every interactive surface (buttons, list rows, icon affordances, filter triggers, combobox triggers) responds to <code className="text-[13px] font-mono text-n-10">:active</code> with a subtle <code className="text-[13px] font-mono text-n-10">scale(0.98)</code>. The scale is intentionally tiny so the feedback registers without feeling bouncy or toy-like. Pair it with a 150ms transform transition.
+              </p>
+              <PreviewPanel align="stretch" className="flex">
+                <div className="flex flex-wrap items-center gap-3" dir="ltr">
+                  <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-[12px] font-medium text-white/80 bg-white/[0.06] hover:bg-white/[0.1] active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out">
+                    Press me
+                  </button>
+                  <Button variant="secondary" size="sm" className="active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out">
+                    Secondary
+                  </Button>
+                  <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-[12px] font-medium bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out">
+                    Stateful
+                  </button>
+                </div>
+              </PreviewPanel>
+              <p className="text-[13px] text-n-9 mt-3 leading-relaxed">
+                Drop-in classes: <code className="text-[12px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">active:scale-[0.98]</code> + <code className="text-[12px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">transition-[background-color,color,transform] duration-150 ease-out</code>. If a button only animates on hover (no transform), it's safe to use the shorter <code className="text-[12px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">transition-colors</code> instead — but keep the scale value at <code className="text-[12px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">0.98</code> for consistency with the rest of the app.
+              </p>
             </ComponentSection>
             )}
 
@@ -3545,9 +3670,22 @@ export function DetectionRow() {
 
             {activeItem === 'devices-panel' && (
             <ComponentSection id="devices-panel" name="DevicesPanel" description="Right-hand sidebar listing all connected field devices grouped by type. Supports search, type-filter isolation, device expansion with stats grid, camera preview with presets, ECM jam activation, mute with 30-min countdown, drone wipers/calibration, and drag-to-camera-viewer for camera rows.">
-              <CodePreviewBlock name="DevicesPanel" description="Full interactive panel — try searching, filtering by type, expanding rows, and clicking actions." tight code={devicesPanelSrc} relatedFiles={DEVICES_PANEL_FILES}>
-                <div className="relative mx-auto overflow-hidden rounded-lg border border-white/10" style={{ width: LAYOUT_TOKENS.sidebarWidthPx, height: 400 }}>
-                  <DevicesPanel devices={devicesPanelDemoDevices} open onClose={() => {}} onFlyTo={() => {}} noTransition />
+              <CodePreviewBlock name="DevicesPanel" description="Full interactive panel — try searching, filtering by type, expanding rows, toggling the floodlight Switch, and pressing Play on a speaker." tight code={devicesPanelSrc} relatedFiles={DEVICES_PANEL_FILES}>
+                <div className="relative mx-auto overflow-hidden rounded-lg border border-white/10" style={{ width: LAYOUT_TOKENS.sidebarWidthPx, height: 520 }}>
+                  <DevicesPanel
+                    devices={devicesPanelDemoDevices}
+                    open
+                    onClose={noop}
+                    onFlyTo={noop}
+                    onDeviceHover={noop}
+                    onDeviceSelect={noop}
+                    onJamActivate={noop}
+                    onFloodlightToggle={handleDevicesPanelFloodlightToggle}
+                    onSpeakerToggle={handleDevicesPanelSpeakerToggle}
+                    floodlightOnIds={devicesPanelFloodlightOnIds}
+                    speakerPlayingIds={devicesPanelSpeakerPlayingIds}
+                    noTransition
+                  />
                 </div>
               </CodePreviewBlock>
 
@@ -3559,38 +3697,102 @@ export function DetectionRow() {
 
               <SectionHeading>API Reference</SectionHeading>
               <PropsTable items={[
-                { name: 'open', type: 'boolean', description: 'Controls sidebar visibility (slide in/out)' },
-                { name: 'onClose', type: '() => void', description: 'Called when the X close button is clicked' },
-                { name: 'onFlyTo', type: '(lat, lon) => void', description: 'Called when "מרכז במפה" is clicked on an expanded device' },
-                { name: 'onDeviceHover', type: '(id | null) => void', description: 'Called on row mouse enter/leave for map highlight sync' },
-                { name: 'onJamActivate', type: '(jammerId) => void', description: 'Called when the ECM jam button is clicked on an effector device' },
-                { name: 'noTransition', type: 'boolean', default: 'false', description: 'Skip the slide-in CSS transition (useful for styleguide / tests)' },
-                { name: 'width', type: 'number', default: 'LAYOUT_TOKENS.sidebarWidthPx', description: 'Override the default sidebar width' },
-                { name: 'focusedDeviceId', type: 'string | null', default: 'undefined', description: 'Auto-expand this device, ensure its type filter is active, clear search, and scroll it into view' },
+                { name: 'devices', type: 'Device[]', description: 'Full list of devices to render. Grouped by type, sorted offline-first per group.' },
+                { name: 'open', type: 'boolean', description: 'Controls sidebar visibility (slide in/out).' },
+                { name: 'onClose', type: '() => void', description: 'Called when the X close button is clicked.' },
+                { name: 'onFlyTo', type: '(lat, lon) => void', description: 'Called when the centre-on-map action is clicked on an expanded device.' },
+                { name: 'onDeviceHover', type: '(id | null) => void', description: 'Called on row mouse enter/leave for map highlight sync.' },
+                { name: 'onDeviceSelect', type: '(id | null) => void', description: 'Called when a device row toggles open/closed (selection sync with the map).' },
+                { name: 'onJamActivate', type: '(jammerId) => void', description: 'Called when the ECM jam button is clicked on an effector device.' },
+                { name: 'onFloodlightToggle', type: '(floodlightId, next) => void', description: 'Toggle a floodlight on/off. Renders the inline Switch on the row + footer when provided.' },
+                { name: 'onSpeakerToggle', type: '(speakerId, next) => void', description: 'Toggle a speaker between play/stop. Renders the inline secondary Play/Stop button when provided.' },
+                { name: 'floodlightOnIds', type: 'Set<string>', description: 'IDs of floodlights currently lit. Drives the active icon variant and Switch state.' },
+                { name: 'speakerPlayingIds', type: 'Set<string>', description: 'IDs of speakers currently broadcasting. Drives the active icon variant and Play/Stop state.' },
+                { name: 'speakerTracks', type: '{ id, label }[]', default: 'DEFAULT_SPEAKER_TRACKS', description: 'Audio tracks rendered inside the speaker combobox.' },
+                { name: 'noTransition', type: 'boolean', default: 'false', description: 'Skip the slide-in CSS transition (useful for styleguide / tests).' },
+                { name: 'width', type: 'number', default: 'LAYOUT_TOKENS.sidebarWidthPx', description: 'Override the default sidebar width.' },
+                { name: 'focusedDeviceId', type: 'string | null', default: 'undefined', description: 'Auto-expand this device, ensure its type filter is active, clear search, and scroll it into view.' },
+                { name: 'typeLabels', type: 'Partial<Record<DeviceType, string>>', default: 'DEFAULT_TYPE_LABELS', description: 'Override per-type group labels (Cameras, Radars, Floodlights, Speakers, …).' },
+                { name: 'connectionStateLabels', type: 'Partial<Record<ConnectionState, string>>', default: 'DEFAULT_CONNECTION_STATE_LABELS', description: 'Override the connection-state labels used in tooltips and chips.' },
+                { name: 'cameraPresets', type: 'Record<string, string[]>', description: 'Optional per-camera preset map keyed by `device.id`. When omitted, no preset chip strip is rendered.' },
+                { name: 'title', type: 'string', default: '"Devices"', description: 'Header title above the device list.' },
+                { name: 'closeAriaLabel', type: 'string', default: '"Close"', description: 'aria-label for the header close button.' },
+                { name: 'strings', type: 'Partial<DevicesPanelStrings>', default: 'DEFAULT_DEVICE_PANEL_STRINGS', description: 'Override any internal label. See the DevicesPanelStrings table below.' },
+              ]} />
+
+              <SectionHeading>DevicesPanelStrings</SectionHeading>
+              <p className="text-[16px] font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
+                Every user-facing label inside the panel is keyed off a single <code className="text-[13px] font-mono text-n-10">DevicesPanelStrings</code> object so consumers can localise without forking the component. Pass overrides via the <code className="text-[13px] font-mono text-n-10">strings</code> prop; missing keys fall back to the English defaults shown here.
+              </p>
+              <PropsTable items={[
+                { name: 'searchPlaceholder', type: 'string', default: '"Search…"', description: 'Placeholder text inside the FilterBar search input.' },
+                { name: 'clearSearch', type: 'string', default: '"Clear search"', description: 'aria-label for the inline X button that clears the search term.' },
+                { name: 'resetFilters', type: 'string', default: '"Reset filters"', description: 'aria-label for the FilterBar reset action.' },
+                { name: 'resetFiltersLabel', type: 'string', default: '"Clear"', description: 'Visible text on the FilterBar reset button.' },
+                { name: 'typeFilterLabel', type: 'string', default: '"Devices"', description: 'Trigger label for the Type filter popover inside the FilterBar.' },
+                { name: 'noMatches', type: 'string', default: '"No matching devices"', description: 'Empty-state copy when search/filter excludes every device.' },
+                { name: 'location', type: 'string', default: '"Location"', description: 'Stat-row label for the lat/lon coordinate pair.' },
+                { name: 'bearing', type: 'string', default: '"Bearing"', description: 'Stat-row label for `device.bearingDeg`.' },
+                { name: 'fieldOfView', type: 'string', default: '"Field of view"', description: 'Stat-row label for `device.fovDeg`.' },
+                { name: 'coverage', type: 'string', default: '"Coverage"', description: 'Stat-row label for `device.coverageRadiusM` (formatted in metres).' },
+                { name: 'altitude', type: 'string', default: '"Altitude"', description: 'Stat-row label for `device.altitude`.' },
+                { name: 'health', type: 'string', default: '"Health"', description: 'Stat-row label for the health line.' },
+                { name: 'healthOk', type: 'string', default: '"OK"', description: 'Health value when `operationalStatus === "operational"`.' },
+                { name: 'healthMalfunction', type: 'string', default: '"Malfunction"', description: 'Health value when `operationalStatus === "malfunctioning"`.' },
+                { name: 'battery', type: 'string', default: '"Battery"', description: 'Stat-row label for `device.batteryPct`.' },
+                { name: 'jam', type: 'string', default: '"Activate"', description: 'Idle label on the ECM jam button.' },
+                { name: 'jamActive', type: 'string', default: '"Jam active"', description: 'Label on the ECM button while a jammer is broadcasting.' },
+                { name: 'jamDisabledOffline', type: 'string', default: '"Device offline"', description: 'Tooltip when the jam button is disabled because the device is offline.' },
+                { name: 'jamDisabledMalfunction', type: 'string', default: '"Device malfunction"', description: 'Tooltip when the jam button is disabled because of a malfunction.' },
+                { name: 'jamDisabledAlreadyActive', type: 'string', default: '"Already jamming"', description: 'Tooltip when the jam button is disabled because another jammer is already active.' },
+                { name: 'cameraModeAriaLabel', type: 'string', default: '"Camera mode"', description: 'aria-label for the camera-preset Tabs strip inside an expanded camera card.' },
+                { name: 'centerOnMap', type: 'string', default: '"Center on map"', description: 'Footer button that calls `onFlyTo` for the current device.' },
+                { name: 'mute', type: 'string', default: '"Mute"', description: 'Idle label on the per-device mute action.' },
+                { name: 'unmute', type: 'string', default: '"Unmute"', description: 'Label on the mute action while the device is silenced.' },
+                { name: 'wipers', type: 'string', default: '"Wipers"', description: 'Inline label next to the drone wipers Switch.' },
+                { name: 'wipersAriaLabel', type: 'string', default: '"Wipers"', description: 'aria-label on the wipers Switch itself.' },
+                { name: 'calibrate', type: 'string', default: '"Calibrate"', description: 'Idle label on the drone calibrate action.' },
+                { name: 'calibrating', type: 'string', default: '"Calibrating…"', description: 'Label on the calibrate action while a calibration is in flight.' },
+                { name: 'calibrated', type: 'string', default: '"Done"', description: 'Label on the calibrate action briefly after a successful run.' },
+                { name: 'calibrateAriaLabel', type: 'string', default: '"Calibrate"', description: 'aria-label on the calibrate button.' },
+                { name: 'floodlightOn', type: 'string', default: '"On"', description: 'Inline status label rendered next to a lit floodlight Switch.' },
+                { name: 'floodlightOff', type: 'string', default: '"Off"', description: 'Inline status label rendered next to an idle floodlight Switch.' },
+                { name: 'floodlightToggleAriaLabel', type: 'string', default: '"Toggle floodlight"', description: 'aria-label for the floodlight Switch (collapsed + expanded rows).' },
+                { name: 'floodlightTurnOn', type: 'string', default: '"Turn on"', description: 'Hover/secondary copy describing what pressing the Switch will do when off.' },
+                { name: 'floodlightTurnOff', type: 'string', default: '"Turn off"', description: 'Hover/secondary copy describing what pressing the Switch will do when on.' },
+                { name: 'speakerPlay', type: 'string', default: '"Play"', description: 'Idle label on the speaker Play/Stop button.' },
+                { name: 'speakerStop', type: 'string', default: '"Stop"', description: 'Label on the Play/Stop button while the speaker is broadcasting.' },
+                { name: 'speakerPlaying', type: 'string', default: '"Playing"', description: 'Status chip shown next to the speaker name while it is broadcasting.' },
+                { name: 'speakerDisabledOffline', type: 'string', default: '"Speaker offline"', description: 'Tooltip when the Play/Stop button is disabled because the speaker is offline.' },
+                { name: 'audioTrack', type: 'string', default: '"Track"', description: 'Default trigger label for the audio-track combobox when no track is selected.' },
+                { name: 'audioTrackAriaLabel', type: 'string', default: '"Audio track"', description: 'aria-label for the audio-track combobox trigger.' },
+                { name: 'audioTrackSearchPlaceholder', type: 'string', default: '"Search…"', description: 'Placeholder text inside the combobox CommandInput.' },
+                { name: 'audioTrackNoMatches', type: 'string', default: '"No matches"', description: 'Empty-state inside the combobox when the search filters out every track.' },
               ]} />
 
               <SectionHeading>Examples</SectionHeading>
               {/* ── Empty state ─────────────────────────────────── */}
               <ExampleBlock id="devices-empty" title="Empty state" tight>
                 <StyleguideDeviceTile label="When no devices match the current search or filter, the panel shows this placeholder.">
-                  <div className="flex flex-col gap-2 px-4 pt-3 pb-2 border-b border-white/10">
-                    <div className="flex items-center justify-between">
+                  <div dir="rtl" className="flex flex-col">
+                    <div className="flex items-center justify-between px-4 pt-3 pb-2">
                       <h2 className="text-xs font-medium text-white uppercase tracking-wider">מכשירים (0)</h2>
                       <div className="p-2 -m-1 rounded text-n-120"><X size={14} /></div>
                     </div>
-                    <div className="relative">
-                      <Search size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-n-120 pointer-events-none" />
-                      <div className="w-full bg-white/[0.04] shadow-[0_0_0_1px_rgba(255,255,255,0.1)] rounded text-[12px] text-n-7 pr-7 pl-7 py-1.5">חיפוש...</div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {[CameraIcon, RadarIcon, DroneHiveIcon, SensorIcon, LauncherIcon, LidarIcon].map((Icon, i) => (
-                        <div key={i} className="p-2 rounded text-white hover:text-n-10 hover:bg-white/[0.06]">
-                          <Icon size={20} fill="currentColor" />
-                        </div>
-                      ))}
-                    </div>
+                    <FilterBar
+                      query="זרקור"
+                      onQueryChange={noop}
+                      filters={DEVICES_PANEL_DEMO_FILTER_DEFS}
+                      selections={{ type: ['camera'] }}
+                      onFilterChange={noop}
+                      onReset={noop}
+                      searchPlaceholder="חיפוש..."
+                      clearSearchAriaLabel="ניקוי חיפוש"
+                      resetLabel="ניקוי"
+                      resetAriaLabel="ניקוי מסננים"
+                    />
+                    <div className="px-3 py-8 text-center text-[12px] text-n-7">אין מכשירים תואמים</div>
                   </div>
-                  <div className="px-3 py-8 text-center text-[12px] text-n-7">אין מכשירים תואמים</div>
                 </StyleguideDeviceTile>
               </ExampleBlock>
 
@@ -3609,44 +3811,37 @@ export function DetectionRow() {
               {/* ── Search & type filters ───────────────────────── */}
               <ExampleBlock id="devices-search" title="Search & type filters" tight>
                 <div className="space-y-4">
-                  <StyleguideDeviceTile label="Default state — all device types active, search empty.">
-                    <div className="flex flex-col gap-2 px-4 py-3">
-                      <div className="relative">
-                        <Search size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-n-120 pointer-events-none" />
-                        <div className="w-full bg-white/[0.04] shadow-[0_0_0_1px_rgba(255,255,255,0.1)] rounded text-[12px] text-n-7 pr-7 pl-7 py-1.5">חיפוש...</div>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {[CameraIcon, RadarIcon, DroneHiveIcon, SensorIcon, LauncherIcon, LidarIcon].map((Icon, i) => (
-                          <div key={i} className="p-2 rounded text-white hover:text-n-10 hover:bg-white/[0.06]">
-                            <Icon size={20} fill="currentColor" />
-                          </div>
-                        ))}
-                      </div>
+                  <StyleguideDeviceTile label="Default state — search empty, no Type selection (every device visible). Backed by the FilterBar primitive.">
+                    <div dir="rtl">
+                      <FilterBar
+                        query=""
+                        onQueryChange={noop}
+                        filters={DEVICES_PANEL_DEMO_FILTER_DEFS}
+                        selections={{}}
+                        onFilterChange={noop}
+                        onReset={noop}
+                        searchPlaceholder="חיפוש..."
+                        clearSearchAriaLabel="ניקוי חיפוש"
+                        resetLabel="ניקוי"
+                        resetAriaLabel="ניקוי מסננים"
+                      />
                     </div>
                   </StyleguideDeviceTile>
 
-                  <StyleguideDeviceTile label="Isolated filter — only cameras selected. 'ניקוי' reset button appears.">
-                    <div className="flex flex-col gap-2 px-4 py-3">
-                      <div className="relative">
-                        <Search size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-n-120 pointer-events-none" />
-                        <div className="w-full bg-white/[0.04] shadow-[0_0_0_1px_rgba(255,255,255,0.1)] rounded text-[12px] text-n-10 pr-7 pl-7 py-1.5">MAGOS</div>
-                        <button className="absolute left-1 top-1/2 -translate-y-1/2 p-1 text-n-120 hover:text-n-10">
-                          <X size={12} />
-                        </button>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div className="p-2 rounded bg-white/15 text-white ring-1 ring-white/30">
-                          <CameraIcon size={20} fill="currentColor" />
-                        </div>
-                        {[RadarIcon, DroneHiveIcon, SensorIcon, LauncherIcon, LidarIcon].map((Icon, i) => (
-                          <div key={i} className="p-2 rounded text-white hover:text-n-10 hover:bg-white/[0.06]">
-                            <Icon size={20} fill="currentColor" />
-                          </div>
-                        ))}
-                        <button className="mr-auto px-2 py-1 rounded text-[11px] text-white/70 hover:text-n-10 hover:bg-white/[0.06]">
-                          ניקוי
-                        </button>
-                      </div>
+                  <StyleguideDeviceTile label="Isolated filter — query 'MAGOS' + Type narrowed to cameras. Reset chip becomes available next to the trigger.">
+                    <div dir="rtl">
+                      <FilterBar
+                        query="MAGOS"
+                        onQueryChange={noop}
+                        filters={DEVICES_PANEL_DEMO_FILTER_DEFS}
+                        selections={{ type: ['camera'] }}
+                        onFilterChange={noop}
+                        onReset={noop}
+                        searchPlaceholder="חיפוש..."
+                        clearSearchAriaLabel="ניקוי חיפוש"
+                        resetLabel="ניקוי"
+                        resetAriaLabel="ניקוי מסננים"
+                      />
                     </div>
                   </StyleguideDeviceTile>
                 </div>
@@ -3976,6 +4171,153 @@ export function DetectionRow() {
                 </div>
               </ExampleBlock>
 
+              {/* ── Expanded — Speaker device ───────────────────── */}
+              <ExampleBlock id="devices-speaker" title="Expanded — Speaker device" tight>
+                <div className="space-y-4">
+                  <StyleguideDeviceTile label="Idle — secondary Play button (custom solid triangle icon) sits inline on the collapsed row.">
+                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right border-b border-white/[0.06]">
+                      <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-white/10">
+                        <SpeakerIcon size={20} fill="white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[13px] font-medium text-n-10">PA Speaker (Gate)</span>
+                      </div>
+                      <Button variant="secondary" size="sm" className="shrink-0 h-7 gap-1.5 px-2 rounded text-[11px] font-medium" aria-pressed={false}>
+                        <StyleguidePlayFilledIcon size={12} />
+                        נגן
+                      </Button>
+                    </div>
+                  </StyleguideDeviceTile>
+
+                  <StyleguideDeviceTile label="Broadcasting — Stop icon swaps in, the active state is mirrored on the row icon and a 'משדר' chip near the device name.">
+                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right border-b border-white/[0.06]">
+                      <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-white/10">
+                        <SpeakerIcon size={20} fill="white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-[13px] font-medium text-n-10 truncate">PA Speaker (Tower)</span>
+                          <StatusChip label="משדר" color="green" className="h-5 px-1.5 text-[10px] leading-none" />
+                        </div>
+                      </div>
+                      <Button variant="secondary" size="sm" className="shrink-0 h-7 gap-1.5 px-2 rounded text-[11px] font-medium" aria-pressed>
+                        <Square size={12} />
+                        עצור
+                      </Button>
+                    </div>
+                  </StyleguideDeviceTile>
+
+                  <StyleguideDeviceTile label="Expanded — track combobox is anchored at the start of the footer (right edge in RTL), then a divider, then the standard fly-to / mute pair.">
+                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right bg-white/[0.04] border-b border-white/[0.06]">
+                      <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-white/10">
+                        <SpeakerIcon size={20} fill="white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[13px] font-medium text-n-10">PA Speaker (Gate)</span>
+                      </div>
+                      <Button variant="secondary" size="sm" className="shrink-0 h-7 gap-1.5 px-2 rounded text-[11px] font-medium" aria-pressed={false}>
+                        <StyleguidePlayFilledIcon size={12} />
+                        נגן
+                      </Button>
+                    </div>
+                    <div className="flex flex-col bg-white/[0.03]">
+                      <div className="flex items-center gap-2 px-2 py-1.5 border-t border-white/[0.06]">
+                        <div className="flex items-center gap-2 min-w-0 h-7 rounded bg-white/[0.05] text-white/[0.64]">
+                          <button
+                            type="button"
+                            className="inline-flex items-center justify-between gap-2 h-7 min-w-0 max-w-[160px] px-2 rounded text-[11px] font-medium text-white/[0.64] bg-transparent transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25"
+                          >
+                            <span className="truncate">אזעקת אש</span>
+                            <ChevronsUpDown size={12} className="shrink-0 opacity-60" />
+                          </button>
+                        </div>
+                        <div className="w-px h-5 bg-white/[0.08] mx-0.5" />
+                        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06]">
+                          <MapPin size={12} />
+                          מרכז במפה
+                        </button>
+                        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06]">
+                          <BellOff size={12} />
+                          השתק
+                        </button>
+                      </div>
+                    </div>
+                  </StyleguideDeviceTile>
+                </div>
+              </ExampleBlock>
+
+              {/* ── Expanded — Floodlight device ────────────────── */}
+              <ExampleBlock id="devices-floodlight" title="Expanded — Floodlight device" tight>
+                <div className="space-y-4">
+                  <StyleguideDeviceTile label="Off — inline Switch lives on the collapsed row, status text reads ‘כבוי’.">
+                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right border-b border-white/[0.06]">
+                      <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-white/10">
+                        <FloodlightIcon size={20} fill="white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[13px] font-medium text-n-10">Floodlight (North)</span>
+                      </div>
+                      <span className="text-[11px] text-white/60 shrink-0">כבוי</span>
+                      <Switch checked={false} aria-label="הפעל זרקור" className="shrink-0" />
+                    </div>
+                  </StyleguideDeviceTile>
+
+                  <StyleguideDeviceTile label="On — Switch in the checked state, the active icon variant lights up, and the inline label flips to ‘דלוק’.">
+                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right border-b border-white/[0.06]">
+                      <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-white/10">
+                        <FloodlightIcon size={20} fill="white" active />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[13px] font-medium text-n-10">Floodlight (South)</span>
+                      </div>
+                      <span className="text-[11px] text-amber-300 shrink-0">דלוק</span>
+                      <Switch checked aria-label="כבה זרקור" className="shrink-0" />
+                    </div>
+                  </StyleguideDeviceTile>
+
+                  <StyleguideDeviceTile label="Expanded — the same Switch is duplicated inside the footer next to the standard fly-to / mute pair so the toggle remains reachable while the row is open.">
+                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right bg-white/[0.04] border-b border-white/[0.06]">
+                      <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-white/10">
+                        <FloodlightIcon size={20} fill="white" active />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[13px] font-medium text-n-10">Floodlight (South)</span>
+                      </div>
+                      <span className="text-[11px] text-amber-300 shrink-0">דלוק</span>
+                      <Switch checked aria-label="כבה זרקור" className="shrink-0" />
+                    </div>
+                    <div className="flex flex-col bg-white/[0.03]">
+                      <div className="grid grid-cols-3 gap-x-4 gap-y-5 px-4 py-3">
+                        {[
+                          { l: 'מיקום', v: '32.4690, 34.9990' },
+                          { l: 'תקינות', v: 'תקין', c: 'text-emerald-400' },
+                        ].map(r => (
+                          <div key={r.l} className="flex flex-col gap-1 text-xs">
+                            <span className="text-white/60 text-[10px]">{r.l}</span>
+                            <span className={`font-sans tabular-nums text-xs ${r.c ?? 'text-white'}`}>{r.v}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-2 px-2 py-1.5 border-t border-white/[0.06]">
+                        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06]">
+                          <MapPin size={12} />
+                          מרכז במפה
+                        </button>
+                        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06]">
+                          <BellOff size={12} />
+                          השתק
+                        </button>
+                        <div className="w-px h-5 bg-white/[0.08] mx-0.5" />
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] text-white/60">זרקור</span>
+                          <Switch checked aria-label="כבה זרקור" />
+                        </div>
+                      </div>
+                    </div>
+                  </StyleguideDeviceTile>
+                </div>
+              </ExampleBlock>
+
               {/* ── Action bar ──────────────────────────────────── */}
               <ExampleBlock id="devices-actions" title="Action bar" tight>
                 <div className="space-y-4">
@@ -4004,6 +4346,66 @@ export function DetectionRow() {
                       </button>
                     </div>
                   </StyleguideDeviceTile>
+                </div>
+              </ExampleBlock>
+
+              {/* ── Track combobox pattern ──────────────────────── */}
+              <ExampleBlock id="devices-track-combobox" title="Audio-track combobox" tight>
+                <div className="space-y-3">
+                  <p className="text-[13px] text-n-9 leading-relaxed">
+                    The speaker audio-track picker is the canonical "combobox with search" pattern in the app. It composes <code className="text-[12px] font-mono text-sky-300/80 bg-white/[0.04] px-1 py-0.5 rounded">Popover</code> for the open/close affordance with <code className="text-[12px] font-mono text-sky-300/80 bg-white/[0.04] px-1 py-0.5 rounded">cmdk</code>'s <code className="text-[12px] font-mono text-sky-300/80 bg-white/[0.04] px-1 py-0.5 rounded">Command</code> for the search input + filtered list. Use it whenever a Select would otherwise need an in-list search.
+                  </p>
+                  <p className="text-[13px] text-n-9 leading-relaxed">
+                    Direction-aware notes: trigger uses <code className="text-[12px] font-mono text-sky-300/80 bg-white/[0.04] px-1 py-0.5 rounded">align="start"</code> so the popover anchors to the start edge in both LTR and RTL; the content overrides Radix's dynamic <code className="text-[12px] font-mono text-sky-300/80 bg-white/[0.04] px-1 py-0.5 rounded">--radix-popover-content-transform-origin</code> with <code className="text-[12px] font-mono text-sky-300/80 bg-white/[0.04] px-1 py-0.5 rounded">origin-top-left rtl:origin-top-right</code> so the open-animation scales out from the visually-correct corner.
+                  </p>
+                  <div dir="rtl" className="rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)] p-6 flex justify-center" style={{ backgroundColor: SURFACE.level0 }}>
+                    <Popover open={comboboxDemoOpen} onOpenChange={setComboboxDemoOpen}>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="inline-flex items-center justify-between gap-2 h-7 min-w-[160px] max-w-[220px] px-2 rounded text-[11px] font-medium text-white/[0.64] bg-white/[0.05] transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25"
+                        >
+                          <span className="truncate">
+                            {DEFAULT_SPEAKER_TRACKS.find((t) => t.id === comboboxDemoTrack)?.label ?? 'Track'}
+                          </span>
+                          <ChevronsUpDown size={12} className="shrink-0 opacity-60" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        align="start"
+                        sideOffset={4}
+                        className="w-[220px] p-0 origin-top-left rtl:origin-top-right"
+                      >
+                        <Command className="bg-transparent">
+                          <CommandInput placeholder="חיפוש מסלול..." className="text-[12px]" />
+                          <CommandList>
+                            <CommandEmpty>אין תוצאות תואמות</CommandEmpty>
+                            <CommandGroup>
+                              {DEFAULT_SPEAKER_TRACKS.map((track) => (
+                                <CommandItem
+                                  key={track.id}
+                                  value={track.label}
+                                  onSelect={() => {
+                                    setComboboxDemoTrack(track.id);
+                                    setComboboxDemoOpen(false);
+                                  }}
+                                  className="text-[12px]"
+                                >
+                                  <span className="flex-1 truncate">{track.label}</span>
+                                  {track.id === comboboxDemoTrack && (
+                                    <Check size={12} className="shrink-0 text-white/80" />
+                                  )}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <p className="text-[12px] text-n-7 leading-relaxed">
+                    Keyboard: <code className="text-[11px] font-mono text-n-9 bg-white/[0.04] px-1 py-0.5 rounded">Enter</code> / <code className="text-[11px] font-mono text-n-9 bg-white/[0.04] px-1 py-0.5 rounded">Space</code> opens the popover, <code className="text-[11px] font-mono text-n-9 bg-white/[0.04] px-1 py-0.5 rounded">↑</code>/<code className="text-[11px] font-mono text-n-9 bg-white/[0.04] px-1 py-0.5 rounded">↓</code> moves through filtered items, <code className="text-[11px] font-mono text-n-9 bg-white/[0.04] px-1 py-0.5 rounded">Enter</code> commits, <code className="text-[11px] font-mono text-n-9 bg-white/[0.04] px-1 py-0.5 rounded">Esc</code> dismisses.
+                  </p>
                 </div>
               </ExampleBlock>
             </ComponentSection>
@@ -4049,7 +4451,7 @@ export function DetectionRow() {
               <div className="space-y-2">
                 <ImportBlock path="@/primitives/MapMarker" names={['MapMarker']} />
                 <ImportBlock path="@/primitives/markerStyles" names={['resolveMarkerStyle', 'INTERACTION_STATES', 'AFFILIATIONS']} />
-                <ImportBlock path="@/shared/components/TacticalMap" names={['CameraIcon', 'RadarIcon', 'SensorIcon', 'DroneIcon', 'DroneHiveIcon', 'LidarIcon', 'LauncherIcon', 'MissileIcon']} />
+                <ImportBlock path="@/shared/components/TacticalMap" names={['CameraIcon', 'RadarIcon', 'SensorIcon', 'DroneIcon', 'DroneHiveIcon', 'LidarIcon', 'LauncherIcon', 'MissileIcon', 'FloodlightIcon', 'SpeakerIcon']} />
               </div>
 
               {/* ── Layer Anatomy ── */}
@@ -4227,6 +4629,8 @@ export function DetectionRow() {
                     { name: 'DroneIcon', el: <DroneIcon color="white" /> },
                     { name: 'MissileIcon', el: <MissileIcon fill="white" /> },
                     { name: 'CarIcon', el: <CarIcon color="white" size={32} /> },
+                    { name: 'FloodlightIcon', el: <FloodlightIcon size={32} fill="white" /> },
+                    { name: 'SpeakerIcon', el: <SpeakerIcon size={32} fill="white" /> },
                   ] as { name: string; el: React.ReactNode }[]).map(({ name, el }) => (
                     <IconCatalogTile key={name} name={name} icon={el} />
                   ))}

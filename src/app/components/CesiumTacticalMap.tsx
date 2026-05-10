@@ -39,6 +39,8 @@ import {
   WEAPON_SYSTEM_ASSETS,
   LAUNCHER_ASSETS,
   REGULUS_EFFECTORS,
+  FLOODLIGHT_ASSETS,
+  SPEAKER_ASSETS,
   CameraIcon,
   RadarIcon,
   LidarIcon,
@@ -46,6 +48,8 @@ import {
   LauncherIcon,
   SensorIcon,
   DroneIcon,
+  FloodlightIcon,
+  SpeakerIcon,
   FOV_RADIUS_M,
   bearingDegrees,
   haversineDistanceM,
@@ -256,6 +260,8 @@ export function CesiumTacticalMap({
   onMarkerClick,
   onAssetClick,
   onContextMenuAction,
+  floodlightOnIds,
+  speakerPlayingIds,
 }: TacticalMapProps) {
   const offlineSet = useMemo(() => new Set(offlineAssetIds ?? []), [offlineAssetIds]);
   const highlightedSensorSet = useMemo(
@@ -620,6 +626,108 @@ export function CesiumTacticalMap({
       pushFriendlyAsset(l.id, l.latitude, l.longitude, <LauncherIcon size={LAUNCHER_GLYPH} />, l.id);
     }
 
+    // Floodlights — friendly-asset shell. When toggled on, surface the same
+    // white ring as `selected` and turn on `ringPulse` so the marker
+    // breathes without changing color (operators asked for plain white +
+    // pulse, no green/amber). The icon glyph itself stays white throughout;
+    // the ring + pulse carry the on/off signal on the map.
+    for (const f of FLOODLIGHT_ASSETS) {
+      if (seen.has(f.id)) continue;
+      seen.add(f.id);
+      const isOn = floodlightOnIds?.has(f.id) ?? false;
+      const isOffline = offlineSet.has(f.id);
+      const isHoveredFromCard = hoveredSensorIdFromCard === f.id;
+      const isHoveredOnMap = hoveredMarkerId === f.id;
+      const isHovered = isHoveredFromCard || isHoveredOnMap;
+      const isSelected = selectedAssetId === f.id;
+      const state: InteractionState = isOffline
+        ? 'disabled'
+        : isHovered
+          ? 'hovered'
+          : isOn
+            ? 'selected'
+            : isSelected
+              ? 'selected'
+              : 'default';
+      const style = resolveMarkerStyle(
+        state,
+        'friendly',
+        isOn && !isOffline ? { ringPulse: true } : undefined,
+      );
+      out.push({
+        id: f.id,
+        lat: f.latitude,
+        lon: f.longitude,
+        zIndex: isHovered ? 40 : isOn ? 30 : 10,
+        content: (
+          <MapMarker
+            icon={<FloodlightIcon />}
+            style={style}
+            surfaceSize={SENSOR_SURFACE}
+            ringSize={SENSOR_RING}
+            label={f.typeLabel}
+            showLabel={isHovered || isSelected || isOn}
+            pulse={isHovered || isSelected || isOn}
+          />
+        ),
+        onClick: () => onAssetClickRef.current?.(f.id),
+        onMouseEnter: () => setHoveredMarkerId(f.id),
+        onMouseLeave: () => setHoveredMarkerId((current) => (current === f.id ? null : current)),
+      });
+    }
+
+    // PA speakers — same playbook as floodlights. Active state uses the
+    // white `selected` ring + pulse so the broadcast reads on the map
+    // without color-coding it. The audible-coverage ring also reveals while
+    // playing (cyan, matching the existing details-on-demand affordance for
+    // sensor FOVs / Regulus coverage).
+    for (const s of SPEAKER_ASSETS) {
+      if (seen.has(s.id)) continue;
+      seen.add(s.id);
+      const isPlaying = speakerPlayingIds?.has(s.id) ?? false;
+      const isOffline = offlineSet.has(s.id);
+      const isHoveredFromCard = hoveredSensorIdFromCard === s.id;
+      const isHoveredOnMap = hoveredMarkerId === s.id;
+      const isHovered = isHoveredFromCard || isHoveredOnMap;
+      const isSelected = selectedAssetId === s.id;
+      const state: InteractionState = isOffline
+        ? 'disabled'
+        : isHovered
+          ? 'hovered'
+          : isPlaying
+            ? 'selected'
+            : isSelected
+              ? 'selected'
+              : 'default';
+      const style = resolveMarkerStyle(
+        state,
+        'friendly',
+        isPlaying && !isOffline ? { ringPulse: true } : undefined,
+      );
+      out.push({
+        id: s.id,
+        lat: s.latitude,
+        lon: s.longitude,
+        zIndex: isHovered ? 40 : isPlaying ? 30 : 10,
+        content: (
+          <MapMarker
+            icon={<SpeakerIcon />}
+            style={style}
+            surfaceSize={SENSOR_SURFACE}
+            ringSize={SENSOR_RING}
+            label={s.typeLabel}
+            showLabel={isHovered || isSelected || isPlaying}
+            pulse={isHovered || isSelected || isPlaying}
+          />
+        ),
+        coverageRadiusM: isPlaying || isHovered ? s.coverageRadiusM : undefined,
+        coverageColor: '#22b8cf',
+        onClick: () => onAssetClickRef.current?.(s.id),
+        onMouseEnter: () => setHoveredMarkerId(s.id),
+        onMouseLeave: () => setHoveredMarkerId((current) => (current === s.id ? null : current)),
+      });
+    }
+
     // Regulus effectors — friendly assets but treated as effectors for context menu.
     // State priority: hover > active-jam (green ring) > engagement (selected
     // ring, when this is the resolved effector for the active target) >
@@ -844,6 +952,8 @@ export function CesiumTacticalMap({
     hoveredMarkerId,
     openContextMenu,
     engagementPair,
+    floodlightOnIds,
+    speakerPlayingIds,
   ]);
 
   /**

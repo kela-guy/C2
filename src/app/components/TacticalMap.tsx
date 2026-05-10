@@ -144,6 +144,27 @@ export const LauncherIcon = ({ size = 24, fill = "white" }: { size?: number; fil
   </svg>
 );
 
+/** Floodlight tactical icon. `active` is accepted for API parity with other toggleable icons but currently renders identically to the off state — operators read on/off via the device card Switch, not the icon. */
+export const FloodlightIcon = ({ size = 24, fill = "white" }: { size?: number; fill?: string; active?: boolean }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path fillRule="evenodd" clipRule="evenodd" d="M19 13.291L17.2939 13.7506L14.551 3.45958L16.2571 3L19 13.291Z" fill={fill}/>
+    <path d="M10.3206 15.0163L11.2844 18.6324H6.65094V21H11.9154H13.3906H18.4263V18.6324H13.7225L12.5954 14.4035L16.0041 13.4853L13.5659 4.33769L6.25402 6.30731L5 8.78981L6.37146 13.9353L8.69216 15.4549L10.3206 15.0163Z" fill={fill}/>
+    <path d="M18.4258 18.6328H13.7217L12.5947 14.4033L16.0029 13.4854L13.5654 4.33789L6.25293 6.30762L4.99902 8.79004L6.37012 13.9355L8.69141 15.4551L10.3193 15.0166L11.2832 18.6328H6.65039V21H18.4258V18.6328ZM14.5498 3.45996L17.293 13.751L18.999 13.291L16.2559 3L14.5498 3.45996ZM19.9258 22.5H5.15039V17.1328H9.33105L9.25684 16.8555L9.08105 16.9033L8.43164 17.0781L5.06836 14.876L3.40234 8.62402L5.21582 5.0332L12.8672 2.97266L12.7148 2.40039L17.3184 1.16016L20.834 14.3506L16.2305 15.5898L16.0781 15.0176L14.4287 15.4619L14.874 17.1328H19.9258V22.5Z" fill="black"/>
+  </svg>
+);
+
+/** PA speaker tactical icon. `active` is accepted for API parity; the on-air signal is carried by the map marker (white ring + pulse), so the glyph stays visually identical at rest and while broadcasting. */
+export const SpeakerIcon = ({ size = 24, fill = "white" }: { size?: number; fill?: string; active?: boolean }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M13 20.9289V3.07104L5.74656 6.99999H1V17H5.74656L13 20.9289Z" fill={fill}/>
+    <path d="M13 20.9285L5.74609 16.9998H1V6.99975H5.74609L13 3.07104V20.9285ZM6.12695 8.49975H2.5V15.4998H6.12695L6.46094 15.6814L11.5 18.4099V5.58959L6.12695 8.49975Z" fill="black"/>
+    <path d="M18.3633 5.63687C19.9931 7.26664 20.9993 9.51527 20.9993 12.0008C20.9993 14.4864 19.9931 16.735 18.3633 18.3648L19.7775 19.779C21.767 17.7895 22.9993 15.0381 22.9993 12.0008C22.9993 8.96354 21.767 6.21217 19.7775 4.22266L18.3633 5.63687Z" fill={fill}/>
+    <path d="M20.999 12.001C20.999 9.51545 19.9931 7.26649 18.3633 5.63672L19.7773 4.22266C21.7668 6.21217 22.999 8.96372 22.999 12.001L22.9854 12.5664C22.8428 15.3788 21.6426 17.914 19.7773 19.7793L18.3633 18.3652C19.8912 16.8373 20.8708 14.765 20.9873 12.4639L20.999 12.001Z" fill="black"/>
+    <path d="M15.1836 8.81851C15.999 9.63394 16.5016 10.7576 16.5016 12.0005C16.5016 13.2434 15.999 14.367 15.1836 15.1825L16.5978 16.5967C17.773 15.4215 18.5016 13.7951 18.5016 12.0005C18.5016 10.2058 17.773 8.57947 16.5978 7.4043L15.1836 8.81851Z" fill={fill}/>
+    <path d="M16.502 12.001C16.502 10.7581 15.999 9.63379 15.1836 8.81836L16.5977 7.4043C17.7729 8.57947 18.502 10.2063 18.502 12.001L18.4932 12.335C18.4088 13.9966 17.6994 15.4949 16.5977 16.5967L15.1836 15.1826C15.948 14.4182 16.4378 13.3828 16.4961 12.2324L16.502 12.001Z" fill="black"/>
+  </svg>
+);
+
 export const CAMERA_ASSETS: MapAsset[] = [
   { id: 'CAM-NVT-PTZ-N', latitude: 32.4746, longitude: 34.9983, typeLabel: 'PTZ Camera (North)', fovDeg: 90, bearingDeg: 350, Icon: CameraIcon },
   { id: 'CAM-NVT-PIXELSIGHT', latitude: 32.4616, longitude: 35.0063, typeLabel: 'PixelSight', fovDeg: 360, bearingDeg: 0, Icon: CameraIcon },
@@ -166,6 +187,34 @@ export const LIDAR_ASSETS: MapAsset[] = [
 
 export const WEAPON_SYSTEM_ASSETS: MapAsset[] = [
   { id: 'WPN-NVT-01', latitude: 32.4586, longitude: 34.9923, typeLabel: 'Iron Dome', fovDeg: 0, bearingDeg: 0, Icon: LauncherIcon },
+];
+
+export interface FloodlightAsset {
+  id: string;
+  latitude: number;
+  longitude: number;
+  typeLabel: string;
+  /** Direction the lamp is aimed (deg, compass). Used for the active-state cone visuals. */
+  bearingDeg: number;
+}
+
+export const FLOODLIGHT_ASSETS: FloodlightAsset[] = [
+  { id: 'FLD-NVT-PERIMETER-N', latitude: 32.4731, longitude: 34.9978, typeLabel: 'Floodlight (North)', bearingDeg: 350 },
+  { id: 'FLD-NVT-GATE-S', latitude: 32.4571, longitude: 35.0048, typeLabel: 'Floodlight (Gate)', bearingDeg: 180 },
+];
+
+export interface SpeakerAsset {
+  id: string;
+  latitude: number;
+  longitude: number;
+  typeLabel: string;
+  /** Audible coverage radius — used for the soft ring around the marker when playing. */
+  coverageRadiusM: number;
+}
+
+export const SPEAKER_ASSETS: SpeakerAsset[] = [
+  { id: 'SPK-NVT-PA-MAIN', latitude: 32.4696, longitude: 34.9993, typeLabel: 'PA Speaker (Main)', coverageRadiusM: 800 },
+  { id: 'SPK-NVT-PA-EAST', latitude: 32.4636, longitude: 35.0163, typeLabel: 'PA Speaker (East)', coverageRadiusM: 800 },
 ];
 
 // Regulus effector icon
@@ -318,6 +367,10 @@ export interface TacticalMapProps {
   onPathFinderConnect?: (droneId: string) => void;
   /** Currently connected PathFinder drone ID */
   pathFinderConnectedId?: string | null;
+  /** Floodlight device IDs that are currently lit. Drives the active-icon marker variant + (optional) glow. */
+  floodlightOnIds?: Set<string>;
+  /** Speaker device IDs that are currently playing. Drives the active-icon marker variant + audible-coverage ring. */
+  speakerPlayingIds?: Set<string>;
 }
 
 const JAM_VERIFICATION_DURATION_MS = 4500;

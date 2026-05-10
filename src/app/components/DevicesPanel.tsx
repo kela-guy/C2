@@ -1,13 +1,17 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useDrag } from 'react-dnd';
-import { X, Search, Camera, AlertTriangle, MapPin, BellOff, Wrench, Check, Loader2 } from 'lucide-react';
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './ui/tooltip';
+import { X, Camera, AlertTriangle, MapPin, BellOff, Wrench, Check, Loader2, Square, ChevronsUpDown } from 'lucide-react';
+import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 import { Switch } from './ui/switch';
 import { Collapsible, CollapsibleContent } from './ui/collapsible';
+import { Popover, PopoverTrigger, PopoverContent } from './ui/popover';
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from './ui/command';
+import { Button } from './ui/button';
 import { LAYOUT_TOKENS } from '@/primitives/tokens';
 import { StatusChip } from '@/primitives/StatusChip';
 import { JamIcon, BatteryIcon } from '@/primitives/ProductIcons';
+import { FilterBar, type FilterDef } from '@/primitives';
 
 export const DEVICE_CAMERA_DRAG_TYPE = 'DEVICE_CAMERA';
 export interface DeviceCameraDragItem {
@@ -26,7 +30,26 @@ export function DevicesIcon({ size = 20, className = '' }: { size?: number; clas
   );
 }
 
-export type DeviceType = 'camera' | 'radar' | 'dock' | 'drone' | 'ecm' | 'launcher' | 'lidar' | 'weapon_system';
+/** Solid filled play glyph. Used by the speaker Play/Stop button — matches the rounded-corner triangle from the design library. */
+function PlayFilledIcon({ size = 12, className = '' }: { size?: number; className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path d="M6.5145 2.14251C6.20556 1.95715 5.82081 1.95229 5.5073 2.1298C5.19379 2.30731 5 2.63973 5 3V21C5 21.3603 5.19379 21.6927 5.5073 21.8702C5.82081 22.0477 6.20556 22.0429 6.5145 21.8575L21.5145 12.8575C21.8157 12.6768 22 12.3513 22 12C22 11.6487 21.8157 11.3232 21.5145 11.1425L6.5145 2.14251Z" />
+    </svg>
+  );
+}
+
+export type DeviceType =
+  | 'camera'
+  | 'radar'
+  | 'dock'
+  | 'drone'
+  | 'ecm'
+  | 'launcher'
+  | 'lidar'
+  | 'weapon_system'
+  | 'floodlight'
+  | 'speaker';
 export type ConnectionState = 'online' | 'offline' | 'error' | 'warning';
 export type OperationalStatus = 'operational' | 'malfunctioning';
 export type CameraCapability = 'video' | 'photo';
@@ -46,10 +69,22 @@ export interface Device {
   batteryPct?: number;
   capabilities?: CameraCapability[];
   altitude?: string;
-  Icon: React.FC<{ size?: number; fill?: string }>;
+  /** Icons may opt into an `active` prop to render their lit/playing variant (floodlight, speaker). Other icons ignore it. */
+  Icon: React.FC<{ size?: number; fill?: string; active?: boolean }>;
 }
 
-const TYPE_ORDER: DeviceType[] = ['camera', 'radar', 'dock', 'drone', 'ecm', 'launcher', 'lidar', 'weapon_system'];
+const TYPE_ORDER: DeviceType[] = [
+  'camera',
+  'radar',
+  'dock',
+  'drone',
+  'ecm',
+  'launcher',
+  'lidar',
+  'weapon_system',
+  'floodlight',
+  'speaker',
+];
 
 /** English type-group labels. Override via `typeLabels` prop. */
 export const DEFAULT_TYPE_LABELS: Record<DeviceType, string> = {
@@ -61,7 +96,18 @@ export const DEFAULT_TYPE_LABELS: Record<DeviceType, string> = {
   launcher: 'Launchers',
   lidar: 'LIDAR',
   weapon_system: 'Weapon systems',
+  floodlight: 'Floodlights',
+  speaker: 'Speakers',
 };
+
+/** Built-in audio tracks the speaker combobox offers when no override is supplied. */
+export const DEFAULT_SPEAKER_TRACKS: { id: string; label: string }[] = [
+  { id: 'air-raid', label: 'Air Raid' },
+  { id: 'all-clear', label: 'All Clear' },
+  { id: 'evacuate', label: 'Evacuate' },
+  { id: 'lockdown', label: 'Lockdown' },
+  { id: 'test-tone', label: 'Test Tone' },
+];
 
 const STATUS_SORT: Record<string, number> = { offline: 0, active: 1, available: 2 };
 
@@ -79,6 +125,8 @@ export interface DevicesPanelStrings {
   clearSearch: string;
   resetFilters: string;
   resetFiltersLabel: string;
+  /** Trigger label for the Type filter popover. */
+  typeFilterLabel: string;
   noMatches: string;
   /** Stat-row labels in the expanded device card. */
   location: string;
@@ -107,6 +155,21 @@ export interface DevicesPanelStrings {
   calibrating: string;
   calibrated: string;
   calibrateAriaLabel: string;
+  /** Floodlight + speaker controls. */
+  floodlightOn: string;
+  floodlightOff: string;
+  floodlightToggleAriaLabel: string;
+  /** Hover-action copy ("Turn on" / "Turn off"). */
+  floodlightTurnOn: string;
+  floodlightTurnOff: string;
+  speakerPlay: string;
+  speakerStop: string;
+  speakerPlaying: string;
+  speakerDisabledOffline: string;
+  audioTrack: string;
+  audioTrackAriaLabel: string;
+  audioTrackSearchPlaceholder: string;
+  audioTrackNoMatches: string;
 }
 
 export const DEFAULT_DEVICE_PANEL_STRINGS: DevicesPanelStrings = {
@@ -114,6 +177,7 @@ export const DEFAULT_DEVICE_PANEL_STRINGS: DevicesPanelStrings = {
   clearSearch: 'Clear search',
   resetFilters: 'Reset filters',
   resetFiltersLabel: 'Clear',
+  typeFilterLabel: 'Devices',
   noMatches: 'No matching devices',
   location: 'Location',
   bearing: 'Bearing',
@@ -139,6 +203,19 @@ export const DEFAULT_DEVICE_PANEL_STRINGS: DevicesPanelStrings = {
   calibrating: 'Calibrating…',
   calibrated: 'Done',
   calibrateAriaLabel: 'Calibrate',
+  floodlightOn: 'On',
+  floodlightOff: 'Off',
+  floodlightToggleAriaLabel: 'Toggle floodlight',
+  floodlightTurnOn: 'Turn on',
+  floodlightTurnOff: 'Turn off',
+  speakerPlay: 'Play',
+  speakerStop: 'Stop',
+  speakerPlaying: 'Playing',
+  speakerDisabledOffline: 'Speaker offline',
+  audioTrack: 'Track',
+  audioTrackAriaLabel: 'Audio track',
+  audioTrackSearchPlaceholder: 'Search…',
+  audioTrackNoMatches: 'No matches',
 };
 
 const CONNECTION_STATE_COLORS: Record<ConnectionState, string> = {
@@ -161,6 +238,11 @@ export function DeviceRow({
   onToggle,
   onHover,
   onJamActivate,
+  onFloodlightToggle,
+  onSpeakerToggle,
+  isFloodlightOn,
+  isSpeakerPlaying,
+  speakerTracks = DEFAULT_SPEAKER_TRACKS,
   onFlyTo,
   isMuted,
   muteRemaining,
@@ -174,6 +256,11 @@ export function DeviceRow({
   onToggle: () => void;
   onHover: (id: string | null) => void;
   onJamActivate?: (jammerId: string) => void;
+  onFloodlightToggle?: (floodlightId: string, next: boolean) => void;
+  onSpeakerToggle?: (speakerId: string, next: boolean) => void;
+  isFloodlightOn?: boolean;
+  isSpeakerPlaying?: boolean;
+  speakerTracks?: { id: string; label: string }[];
   onFlyTo: (lat: number, lon: number) => void;
   isMuted: boolean;
   muteRemaining: string | null;
@@ -187,6 +274,11 @@ export function DeviceRow({
 
   const isMalfunctioning = device.operationalStatus === 'malfunctioning';
   const isCamera = device.type === 'camera';
+  const isFloodlight = device.type === 'floodlight';
+  const isSpeaker = device.type === 'speaker';
+  const [speakerTrack, setSpeakerTrack] = useState<string>(speakerTracks[0]?.id ?? '');
+  const [speakerTrackOpen, setSpeakerTrackOpen] = useState(false);
+  const selectedSpeakerTrack = speakerTracks.find((t) => t.id === speakerTrack) ?? speakerTracks[0];
   const presets = cameraPresets?.[device.id];
 
   const [activePreset, setActivePreset] = useState(presets?.[0] ?? '');
@@ -250,7 +342,11 @@ export function DeviceRow({
         onMouseLeave={() => onHover(null)}
       >
         <div className={`relative w-8 h-8 rounded flex items-center justify-center shrink-0 ${isMalfunctioning ? 'bg-orange-900/40' : 'bg-white/10'}`}>
-          <device.Icon size={20} fill={isMalfunctioning ? '#f97316' : 'white'} />
+          <device.Icon
+            size={20}
+            fill={isMalfunctioning ? '#f97316' : 'white'}
+            active={(isFloodlight && !!isFloodlightOn) || (isSpeaker && !!isSpeakerPlaying)}
+          />
           {showStatusDot && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -345,6 +441,68 @@ export function DeviceRow({
             </Tooltip>
           );
         })()}
+
+        {isFloodlight && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="shrink-0 inline-flex" onClick={(e) => e.stopPropagation()}>
+                <Switch
+                  checked={!!isFloodlightOn}
+                  onCheckedChange={(next) => onFloodlightToggle?.(device.id, next)}
+                  onClick={(e) => e.stopPropagation()}
+                  disabled={isOffline}
+                  aria-label={isFloodlightOn ? strings.floodlightTurnOff : strings.floodlightTurnOn}
+                  className="h-[18px] w-8 data-[state=checked]:bg-white data-[state=unchecked]:bg-white/10 [&_[data-slot=switch-thumb]]:data-[state=checked]:bg-zinc-900"
+                />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent
+              side="top"
+              sideOffset={6}
+              showArrow={false}
+              className="px-2 py-1 text-[10px] text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
+            >
+              {isFloodlightOn ? strings.floodlightTurnOff : strings.floodlightTurnOn}
+            </TooltipContent>
+          </Tooltip>
+        )}
+
+        {isSpeaker && (() => {
+          const playing = !!isSpeakerPlaying;
+          const disabled = isOffline;
+          const btn = (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={(e) => { e.stopPropagation(); onSpeakerToggle?.(device.id, !playing); }}
+              disabled={disabled}
+              aria-pressed={playing}
+              className="shrink-0 h-7 gap-1.5 px-2 rounded text-[11px] font-medium"
+            >
+              {playing ? <Square size={12} /> : <PlayFilledIcon size={12} />}
+              {playing ? strings.speakerStop : strings.speakerPlay}
+            </Button>
+          );
+          if (!disabled) return btn;
+          return (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                  {btn}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent
+                side="top"
+                sideOffset={6}
+                showArrow={false}
+                className="px-2 py-1 text-[10px] text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
+              >
+                {strings.speakerDisabledOffline}
+              </TooltipContent>
+            </Tooltip>
+          );
+        })()}
       </div>
 
       <CollapsibleContent className="overflow-hidden animate-in fade-in-0 duration-200">
@@ -381,6 +539,67 @@ export function DeviceRow({
           </div>
 
           <div className="flex items-center gap-2 px-2 py-1.5 border-t border-white/[0.06]">
+            {isSpeaker && speakerTracks.length > 0 && (
+              <>
+                <Popover open={speakerTrackOpen} onOpenChange={setSpeakerTrackOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      role="combobox"
+                      aria-expanded={speakerTrackOpen}
+                      aria-label={strings.audioTrackAriaLabel}
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      className="flex h-7 min-w-0 max-w-[180px] items-center justify-between gap-1.5 px-2 rounded text-[11px] font-medium text-white/[0.64] hover:text-white bg-white/[0.05] hover:bg-white/[0.10] transition-[background-color,color,transform] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20"
+                    >
+                      <span className="truncate">
+                        {selectedSpeakerTrack?.label ?? strings.audioTrack}
+                      </span>
+                      <ChevronsUpDown size={12} className="shrink-0 opacity-60" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    align="start"
+                    sideOffset={4}
+                    className="w-[var(--radix-popover-trigger-width)] min-w-[180px] p-0 bg-zinc-900 text-white border-white/10 shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_8px_24px_rgba(0,0,0,0.35)] origin-top-left rtl:origin-top-right"
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  >
+                    <Command className="bg-transparent">
+                      <CommandInput
+                        placeholder={strings.audioTrackSearchPlaceholder}
+                        className="h-8 text-[11px]"
+                      />
+                      <CommandList>
+                        <CommandEmpty className="py-3 text-center text-[11px] text-white/50">
+                          {strings.audioTrackNoMatches}
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {speakerTracks.map((track) => (
+                            <CommandItem
+                              key={track.id}
+                              value={track.label}
+                              onSelect={() => {
+                                setSpeakerTrack(track.id);
+                                setSpeakerTrackOpen(false);
+                              }}
+                              className="text-[11px] data-[selected=true]:bg-white/10 data-[selected=true]:text-white"
+                            >
+                              <span className="flex-1 truncate">{track.label}</span>
+                              {track.id === speakerTrack && (
+                                <Check size={12} className="shrink-0 text-white/80" />
+                              )}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                <div className="w-px h-5 bg-white/[0.08] mx-0.5" />
+              </>
+            )}
+
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onFlyTo(device.lat, device.lon); }}
@@ -465,6 +684,16 @@ export interface DevicesPanelProps {
   onDeviceHover?: (id: string | null) => void;
   onDeviceSelect?: (id: string | null) => void;
   onJamActivate?: (jammerId: string) => void;
+  /** Toggle a floodlight on/off. Renders the header-row Switch + footer Switch when provided. */
+  onFloodlightToggle?: (floodlightId: string, next: boolean) => void;
+  /** Toggle a speaker between play/stop. Renders the header-row Play/Stop button when provided. */
+  onSpeakerToggle?: (speakerId: string, next: boolean) => void;
+  /** Set of floodlight device IDs currently lit. Drives the active icon variant + Switch state. */
+  floodlightOnIds?: Set<string>;
+  /** Set of speaker device IDs currently playing. Drives the active icon variant + Play/Stop state. */
+  speakerPlayingIds?: Set<string>;
+  /** Override audio tracks rendered in the speaker combobox. Defaults to `DEFAULT_SPEAKER_TRACKS`. */
+  speakerTracks?: { id: string; label: string }[];
   noTransition?: boolean;
   width?: number;
   focusedDeviceId?: string | null;
@@ -490,6 +719,11 @@ export function DevicesPanel({
   onDeviceHover,
   onDeviceSelect,
   onJamActivate,
+  onFloodlightToggle,
+  onSpeakerToggle,
+  floodlightOnIds,
+  speakerPlayingIds,
+  speakerTracks,
   noTransition,
   width,
   focusedDeviceId,
@@ -524,7 +758,7 @@ export function DevicesPanel({
   }, [devices]);
 
   const [query, setQuery] = useState('');
-  const [activeTypes, setActiveTypes] = useState<Set<DeviceType>>(new Set(TYPE_ORDER));
+  const [selectedTypes, setSelectedTypes] = useState<DeviceType[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const focusedRowRef = useRef<HTMLDivElement>(null);
 
@@ -533,11 +767,9 @@ export function DevicesPanel({
     const device = devices.find(d => d.id === focusedDeviceId);
     if (!device) return;
     setExpandedId(focusedDeviceId);
-    setActiveTypes(prev => {
-      if (prev.has(device.type)) return prev;
-      const next = new Set(prev);
-      next.add(device.type);
-      return next;
+    setSelectedTypes(prev => {
+      if (prev.length === 0 || prev.includes(device.type)) return prev;
+      return [...prev, device.type];
     });
     setQuery('');
     requestAnimationFrame(() => {
@@ -589,48 +821,27 @@ export function DevicesPanel({
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   }, [mutedDevices]);
 
-  const handleTypeToggle = useCallback((type: DeviceType) => {
-    setActiveTypes(prev => {
-      const allActive = prev.size === TYPE_ORDER.length;
-      const onlyThis = prev.size === 1 && prev.has(type);
-      if (allActive || (!onlyThis && !prev.has(type))) {
-        return new Set([type]);
-      }
-      if (onlyThis) {
-        return new Set(TYPE_ORDER);
-      }
-      const next = new Set(prev);
-      if (next.has(type)) {
-        next.delete(type);
-      } else {
-        next.add(type);
-      }
-      return next.size === 0 ? new Set(TYPE_ORDER) : next;
-    });
-  }, []);
-
   const typeCounts = useMemo(() => {
     const counts = {} as Record<DeviceType, number>;
     for (const type of TYPE_ORDER) {
       counts[type] = devices.filter(d => d.type === type).length;
     }
     return counts;
-  }, []);
-
-  const hasActiveFilters = query.trim().length > 0 || activeTypes.size !== TYPE_ORDER.length;
+  }, [devices]);
 
   const handleReset = useCallback(() => {
     setQuery('');
-    setActiveTypes(new Set(TYPE_ORDER));
+    setSelectedTypes([]);
   }, []);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
+    const typeSet = selectedTypes.length === 0 ? null : new Set(selectedTypes);
     return devices
-      .filter(d => activeTypes.has(d.type))
+      .filter(d => !typeSet || typeSet.has(d.type))
       .filter(d => !q || d.name.toLowerCase().includes(q) || d.id.toLowerCase().includes(q))
       .sort((a, b) => (STATUS_SORT[a.status] ?? 2) - (STATUS_SORT[b.status] ?? 2));
-  }, [query, activeTypes]);
+  }, [query, selectedTypes, devices]);
 
   const grouped = useMemo(() => {
     const groups: { type: DeviceType; label: string; devices: Device[] }[] = [];
@@ -649,91 +860,49 @@ export function DevicesPanel({
     onDeviceSelect?.(next);
   }, [expandedId, onDeviceSelect]);
 
+  const typeFilterDef = useMemo<FilterDef>(() => ({
+    id: 'type',
+    label: strings.typeFilterLabel,
+    options: TYPE_ORDER
+      .filter((t) => typeCounts[t] > 0)
+      .map((t) => ({
+        value: t,
+        label: typeLabels[t],
+        icon: typeFilterIcons[t],
+      })),
+  }), [strings.typeFilterLabel, typeCounts, typeLabels, typeFilterIcons]);
+
   return (
     <aside
       className={`absolute top-0 bottom-0 right-0 bg-zinc-950 border-l border-white/10 flex flex-col z-10 font-sans ${noTransition ? '' : 'transition-transform duration-300 ease-out'} ${open ? 'translate-x-0' : 'translate-x-full pointer-events-none'}`}
       style={{ width: width ?? LAYOUT_TOKENS.sidebarWidthPx }}
     >
-      <div className="flex flex-col gap-2 px-4 pt-3 pb-2 border-b border-white/10 shrink-0">
-        <div className="flex items-center justify-between">
+      <div className="shrink-0">
+        <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-white/10">
           <h2 className="text-xs font-medium text-white uppercase tracking-wider">
             {title} ({devices.length})
           </h2>
           <button
             onClick={onClose}
-            className="p-2 -m-1 rounded hover:bg-white/10 text-zinc-500 hover:text-zinc-300 transition-colors active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+            className="p-2 -m-1 rounded hover:bg-white/10 text-zinc-500 hover:text-zinc-300 transition-[color,background-color,transform] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
             aria-label={closeAriaLabel}
           >
             <X size={14} />
           </button>
         </div>
 
-        <div className="relative">
-          <Search size={13} className="absolute start-2 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
-          <input
-            type="text"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder={strings.searchPlaceholder}
-            className="w-full bg-white/[0.04] shadow-[0_0_0_1px_rgba(255,255,255,0.1)] rounded text-[12px] text-zinc-300 placeholder-zinc-600 ps-7 pe-7 py-1.5 outline-none focus:shadow-[0_0_0_1px_rgba(255,255,255,0.25)] focus:ring-1 focus:ring-white/15 transition-shadow"
-          />
-          {query && (
-            <button
-              onClick={() => setQuery('')}
-              className="absolute end-1 top-1/2 -translate-y-1/2 p-1 text-zinc-500 hover:text-zinc-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
-              aria-label={strings.clearSearch}
-            >
-              <X size={12} />
-            </button>
-          )}
-        </div>
-
-        <TooltipProvider delayDuration={150}>
-          <div className="flex items-center gap-1">
-            {TYPE_ORDER.map(type => {
-              const FilterIcon = typeFilterIcons[type];
-              const count = typeCounts[type];
-              if (!FilterIcon || count === 0) return null;
-              const isActive = activeTypes.has(type);
-              const allActive = activeTypes.size === TYPE_ORDER.length;
-              return (
-                <Tooltip key={type}>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={() => handleTypeToggle(type)}
-                      aria-label={typeLabels[type]}
-                      className={`p-2 rounded transition-colors cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
-                        isActive && !allActive
-                          ? 'bg-white/15 text-white ring-1 ring-white/30'
-                          : 'text-white hover:text-zinc-300 hover:bg-white/[0.06]'
-                      }`}
-                    >
-                      <FilterIcon size={type === 'launcher' || type === 'weapon_system' ? 24 : 20} fill="currentColor" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent
-                    side="top"
-                    sideOffset={6}
-                    showArrow={false}
-                    className="px-2 py-1 text-[10px] text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
-                  >
-                    {typeLabels[type]} ({count})
-                  </TooltipContent>
-                </Tooltip>
-              );
-            })}
-
-            {hasActiveFilters && (
-              <button
-                onClick={handleReset}
-                className="me-auto px-2 py-1 rounded text-[11px] text-white/70 hover:text-zinc-300 hover:bg-white/[0.06] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
-                aria-label={strings.resetFilters}
-              >
-                {strings.resetFiltersLabel}
-              </button>
-            )}
-          </div>
-        </TooltipProvider>
+        <FilterBar
+          query={query}
+          onQueryChange={setQuery}
+          filters={[typeFilterDef]}
+          selections={{ type: selectedTypes }}
+          onFilterChange={(_id, next) => setSelectedTypes(next as DeviceType[])}
+          onReset={handleReset}
+          searchPlaceholder={strings.searchPlaceholder}
+          clearSearchAriaLabel={strings.clearSearch}
+          resetLabel={strings.resetFiltersLabel}
+          resetAriaLabel={strings.resetFilters}
+        />
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -755,6 +924,11 @@ export function DevicesPanel({
                     onToggle={() => handleRowClick(device)}
                     onHover={onDeviceHover ?? (() => {})}
                     onJamActivate={onJamActivate}
+                    onFloodlightToggle={onFloodlightToggle}
+                    onSpeakerToggle={onSpeakerToggle}
+                    isFloodlightOn={floodlightOnIds?.has(device.id)}
+                    isSpeakerPlaying={speakerPlayingIds?.has(device.id)}
+                    speakerTracks={speakerTracks}
                     onFlyTo={onFlyTo}
                     isMuted={mutedDevices.has(device.id)}
                     muteRemaining={getMuteRemaining(device.id)}

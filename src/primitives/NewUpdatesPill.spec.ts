@@ -56,7 +56,7 @@ export const spec: ComponentSpec = {
       trigger: 'Mouse down on pill',
       description: 'Slight scale-down for tactile feedback',
       implementedInPrototype: true,
-      visualNotes: 'active:scale-[0.97]',
+      visualNotes: 'active:scale-[0.98]',
     },
     {
       name: 'reduced motion',
