@@ -1,4 +1,5 @@
 import { ExternalLink, Search } from 'lucide-react';
+import { useDirection } from '@/lib/direction';
 import { findGroupForId, NAV } from './navConfig';
 
 interface StyleguideHeaderProps {
@@ -12,6 +13,7 @@ export function StyleguideHeader({
 }: StyleguideHeaderProps) {
   const group = findGroupForId(activeItem);
   const item = NAV.flatMap((g) => g.items).find((i) => i.id === activeItem);
+  const { direction, setDirection } = useDirection();
 
   const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent);
 
@@ -30,6 +32,49 @@ export function StyleguideHeader({
       </nav>
 
       <div className="flex items-center gap-2 shrink-0">
+        {/*
+          Direction switcher — segmented control wired to the global
+          DirectionProvider. The choice persists to localStorage and
+          mirrors onto `<html dir>` + `<html lang>` immediately, so the
+          rest of the styleguide (and every preview frame inside it)
+          re-renders in the new direction without a reload.
+          A long-term home for this control is the user-settings panel;
+          the styleguide header is the natural temporary location while
+          we audit the visual diff between RTL and LTR.
+        */}
+        <div
+          role="group"
+          aria-label="Writing direction"
+          className="flex items-stretch rounded-md border border-white/[0.06] bg-white/[0.02] p-0.5 text-[12px]"
+        >
+          <button
+            type="button"
+            onClick={() => setDirection('rtl')}
+            aria-pressed={direction === 'rtl'}
+            title="Switch to Right-to-Left (Hebrew)"
+            className={`px-2 py-1 rounded-sm transition-[color,background-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
+              direction === 'rtl'
+                ? 'bg-white/10 text-n-11'
+                : 'text-n-8 hover:text-n-10 hover:bg-white/[0.04]'
+            }`}
+          >
+            עב
+          </button>
+          <button
+            type="button"
+            onClick={() => setDirection('ltr')}
+            aria-pressed={direction === 'ltr'}
+            title="Switch to Left-to-Right (English)"
+            className={`px-2 py-1 rounded-sm transition-[color,background-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
+              direction === 'ltr'
+                ? 'bg-white/10 text-n-11'
+                : 'text-n-8 hover:text-n-10 hover:bg-white/[0.04]'
+            }`}
+          >
+            EN
+          </button>
+        </div>
+
         <button
           type="button"
           onClick={onSearchOpen}

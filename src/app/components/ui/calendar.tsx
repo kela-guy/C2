@@ -27,17 +27,24 @@ function Calendar({
           buttonVariants({ variant: "outline" }),
           "size-7 bg-transparent p-0 opacity-50 hover:opacity-100",
         ),
-        nav_button_previous: "absolute left-1",
-        nav_button_next: "absolute right-1",
+        // Logical anchoring: previous month is on the inline-start
+        // edge of the caption, next month on the inline-end. The chevron
+        // glyphs below add `rtl:rotate-180` so they point the right way
+        // in both directions.
+        nav_button_previous: "absolute start-1",
+        nav_button_next: "absolute end-1",
         table: "w-full border-collapse space-x-1",
         head_row: "flex",
         head_cell:
           "text-muted-foreground rounded-md w-8 font-normal text-[0.8rem]",
         row: "flex w-full mt-2",
         cell: cn(
-          "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-accent [&:has([aria-selected].day-range-end)]:rounded-r-md",
+          // Range start = inline-start corner rounded; range end = inline-end
+          // corner rounded. Logical so the visual range "wraps" the
+          // correct way in RTL too (start visually on the right).
+          "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-accent [&:has([aria-selected].day-range-end)]:rounded-e-md",
           props.mode === "range"
-            ? "[&:has(>.day-range-end)]:rounded-r-md [&:has(>.day-range-start)]:rounded-l-md first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md"
+            ? "[&:has(>.day-range-end)]:rounded-e-md [&:has(>.day-range-start)]:rounded-s-md first:[&:has([aria-selected])]:rounded-s-md last:[&:has([aria-selected])]:rounded-e-md"
             : "[&:has([aria-selected])]:rounded-md",
         ),
         day: cn(
@@ -60,11 +67,15 @@ function Calendar({
         ...classNames,
       }}
       components={{
+        // react-day-picker calls these by *role* (Left = previous,
+        // Right = next), not by physical direction, so we mirror with
+        // `rtl:rotate-180` to keep the visual pointing toward the
+        // right month in both directions.
         IconLeft: ({ className, ...props }) => (
-          <ChevronLeft className={cn("size-4", className)} {...props} />
+          <ChevronLeft className={cn("size-4 rtl:rotate-180", className)} {...props} />
         ),
         IconRight: ({ className, ...props }) => (
-          <ChevronRight className={cn("size-4", className)} {...props} />
+          <ChevronRight className={cn("size-4 rtl:rotate-180", className)} {...props} />
         ),
       }}
       {...props}

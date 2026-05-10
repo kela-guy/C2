@@ -72,9 +72,14 @@ function BreadcrumbSeparator({
       data-slot="breadcrumb-separator"
       role="presentation"
       aria-hidden="true"
-      className={cn("[&>svg]:size-3.5", className)}
+      className={cn("[&>svg]:size-3.5 rtl:[&>svg]:rotate-180", className)}
       {...props}
     >
+      {/*
+        Default separator points toward the *inline-end* (the side
+        the breadcrumb trail flows toward). The `rtl:rotate-180` on
+        the wrapping <li> mirrors any custom child SVG too.
+      */}
       {children ?? <ChevronRight />}
     </li>
   );

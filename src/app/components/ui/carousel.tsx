@@ -8,6 +8,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 
 import { cn } from "./utils";
 import { Button } from "./button";
+import { useIsRtl } from "@/lib/direction";
 
 type CarouselApi = UseEmblaCarouselType[1];
 type UseCarouselParameters = Parameters<typeof useEmblaCarousel>;
@@ -51,10 +52,15 @@ function Carousel({
   children,
   ...props
 }: React.ComponentProps<"div"> & CarouselProps) {
+  const isRtl = useIsRtl();
+  // Embla expects an explicit `direction` option to scroll RTL-aware
+  // (it does NOT inherit `dir` from the DOM). Honour the active app
+  // direction unless the caller already passed one in `opts`.
   const [carouselRef, api] = useEmblaCarousel(
     {
       ...opts,
       axis: orientation === "horizontal" ? "x" : "y",
+      direction: opts?.direction ?? (isRtl ? "rtl" : "ltr"),
     },
     plugins,
   );
@@ -75,17 +81,23 @@ function Carousel({
     api?.scrollNext();
   }, [api]);
 
+  // Arrow keys map to *reading direction*, not absolute side: in RTL
+  // ArrowLeft moves forward (next slide) because reading flows right
+  // -> left. The Embla `direction: 'rtl'` option only handles the
+  // pointer/scroll math, not the keyboard.
   const handleKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (event.key === "ArrowLeft") {
         event.preventDefault();
-        scrollPrev();
+        if (isRtl) scrollNext();
+        else scrollPrev();
       } else if (event.key === "ArrowRight") {
         event.preventDefault();
-        scrollNext();
+        if (isRtl) scrollPrev();
+        else scrollNext();
       }
     },
-    [scrollPrev, scrollNext],
+    [isRtl, scrollPrev, scrollNext],
   );
 
   React.useEffect(() => {
@@ -141,14 +153,14 @@ function CarouselContent({ className, ...props }: React.ComponentProps<"div">) {
       className="overflow-hidden"
       data-slot="carousel-content"
     >
-      <div
-        className={cn(
-          "flex",
-          orientation === "horizontal" ? "-ml-4" : "-mt-4 flex-col",
-          className,
-        )}
-        {...props}
-      />
+    <div
+      className={cn(
+        "flex",
+        orientation === "horizontal" ? "-ms-4" : "-mt-4 flex-col",
+        className,
+      )}
+      {...props}
+    />
     </div>
   );
 }
@@ -163,7 +175,7 @@ function CarouselItem({ className, ...props }: React.ComponentProps<"div">) {
       data-slot="carousel-item"
       className={cn(
         "min-w-0 shrink-0 grow-0 basis-full",
-        orientation === "horizontal" ? "pl-4" : "pt-4",
+        orientation === "horizontal" ? "ps-4" : "pt-4",
         className,
       )}
       {...props}
@@ -186,16 +198,18 @@ function CarouselPrevious({
       size={size}
       className={cn(
         "absolute size-8 rounded-full",
+        // Logical positioning: previous always anchors to the inline-start
+        // edge, regardless of writing direction. Icon mirrors with `rtl:`.
         orientation === "horizontal"
-          ? "top-1/2 -left-12 -translate-y-1/2"
-          : "-top-12 left-1/2 -translate-x-1/2 rotate-90",
+          ? "top-1/2 -start-12 -translate-y-1/2"
+          : "-top-12 start-1/2 -translate-x-1/2 rotate-90",
         className,
       )}
       disabled={!canScrollPrev}
       onClick={scrollPrev}
       {...props}
     >
-      <ArrowLeft />
+      <ArrowLeft className="rtl:rotate-180" />
       <span className="sr-only">Previous slide</span>
     </Button>
   );
@@ -217,15 +231,15 @@ function CarouselNext({
       className={cn(
         "absolute size-8 rounded-full",
         orientation === "horizontal"
-          ? "top-1/2 -right-12 -translate-y-1/2"
-          : "-bottom-12 left-1/2 -translate-x-1/2 rotate-90",
+          ? "top-1/2 -end-12 -translate-y-1/2"
+          : "-bottom-12 start-1/2 -translate-x-1/2 rotate-90",
         className,
       )}
       disabled={!canScrollNext}
       onClick={scrollNext}
       {...props}
     >
-      <ArrowRight />
+      <ArrowRight className="rtl:rotate-180" />
       <span className="sr-only">Next slide</span>
     </Button>
   );

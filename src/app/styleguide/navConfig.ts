@@ -131,6 +131,7 @@ export const NAV: NavGroup[] = [
           { id: 'cesium-step-2', label: 'Step 2 — Opportunities' },
         ],
       },
+      { id: 'playback-investigation', label: 'Playback Investigation' },
     ],
   },
 ];

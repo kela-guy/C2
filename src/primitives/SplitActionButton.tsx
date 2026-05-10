@@ -252,7 +252,10 @@ export function SplitActionButton({
         sideOffset={6}
         style={shellWidth ? { minWidth: shellWidth } : undefined}
         className={cn(
-          'rounded-lg border-none p-1 origin-top-left',
+          // `align="end"` already anchors the popover to the inline-end
+          // corner; keep the transform origin matching the trigger
+          // (Radix's CSS variable handles direction internally).
+          'rounded-lg border-none p-1 [transform-origin:var(--radix-dropdown-menu-content-transform-origin)]',
           'bg-[#1c1c20] text-white',
           'shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_8px_30px_rgba(0,0,0,0.5)]',
           prefersReducedMotion && 'data-[state=open]:animate-none data-[state=closed]:animate-none',

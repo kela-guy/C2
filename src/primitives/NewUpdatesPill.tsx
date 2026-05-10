@@ -1,5 +1,6 @@
 import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowUp } from 'lucide-react';
+import { Bdi } from '@/lib/direction';
 import { Button } from '@/shared/components/ui/button';
 import { cn } from '@/shared/components/ui/utils';
 
@@ -38,7 +39,12 @@ export function NewUpdatesPill({
         )}
       >
         <ArrowUp className="size-[13px]" size={13} strokeWidth={2.5} aria-hidden="true" />
-        <span>{text}</span>
+        {/*
+          Label may contain a leading Latin numeral (e.g. "3 new") plus
+          locale text — isolate so the count digit doesn't reorder
+          relative to the Hebrew word in RTL.
+        */}
+        <Bdi as="span">{text}</Bdi>
       </Button>
     </motion.div>
   );

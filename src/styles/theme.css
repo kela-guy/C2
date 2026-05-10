@@ -1,5 +1,29 @@
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * Direction variants
+ * ──────────────────
+ * Selectors are scoped to the *closest* `[dir]` ancestor (including
+ * the element itself). That way:
+ *
+ *   - `rtl:rotate-180` on a chevron flips it when the page is RTL,
+ *     stays put when the page is LTR.
+ *   - A subtree wrapped in `<div dir="ltr">` (e.g. a playback
+ *     timeline or instrument HUD) breaks the cascade — every
+ *     `rtl:*` rule inside that island stops matching, and `ltr:*`
+ *     rules start matching, so physical-axis controls stay LTR
+ *     even when the app is RTL.
+ *
+ * Use `rtl:` / `ltr:` only when a *physical* outcome is required
+ * (icon rotation, mirroring a transform, hiding a glyph in one
+ * direction). For ordinary spacing/positioning prefer Tailwind's
+ * logical utilities — `ms-*`, `me-*`, `ps-*`, `pe-*`, `start-*`,
+ * `end-*`, `border-s*`, `border-e*`, `rounded-s*`, `rounded-e*`,
+ * `text-start`, `text-end` — which do the right thing automatically.
+ */
+@custom-variant rtl (&:where([dir="rtl"], [dir="rtl"] *));
+@custom-variant ltr (&:where([dir="ltr"], [dir="ltr"] *));
+
 :root {
   --font-size: 16px;
   --background: #ffffff;
@@ -198,4 +222,34 @@
 
 .animate-missile-pulse {
   animation: missile-pulse 0.55s ease-in-out infinite;
+}
+
+/*
+ * RTL transform-origin override for Radix popper-based primitives
+ * ───────────────────────────────────────────────────────────────
+ *
+ * Floating-UI auto-detects RTL via `getComputedStyle(reference).direction`,
+ * so it positions popovers/dropdowns/menus correctly in either direction
+ * (`align="end"` always anchors to the trigger's inline-end edge — right
+ * in LTR, left in RTL).
+ *
+ * Radix's `transformOrigin` middleware, however, hard-codes a *physical*
+ * mapping: `start → 0%`, `center → 50%`, `end → 100%`. That puts the
+ * zoom-in animation's origin on the wrong side of the popover in RTL —
+ * the box appears to grow *away* from the trigger instead of *out of* it.
+ *
+ * For top/bottom placements (where RTL only affects the X axis) we flip
+ * the X portion of `transform-origin` so the animation grows from the
+ * corner adjacent to the trigger. Left/right placements align on the Y
+ * axis, which RTL doesn't change, so they're left alone. Set
+ * `data-no-rtl-flip` on a content element to opt out of the override.
+ */
+[dir="rtl"] [data-radix-popper-content-wrapper] > [data-side="bottom"][data-align="start"]:not([data-no-rtl-flip]),
+[dir="rtl"] [data-radix-popper-content-wrapper] > [data-side="top"][data-align="start"]:not([data-no-rtl-flip]) {
+  transform-origin: 100% 0px;
+}
+
+[dir="rtl"] [data-radix-popper-content-wrapper] > [data-side="bottom"][data-align="end"]:not([data-no-rtl-flip]),
+[dir="rtl"] [data-radix-popper-content-wrapper] > [data-side="top"][data-align="end"]:not([data-no-rtl-flip]) {
+  transform-origin: 0% 0px;
 }

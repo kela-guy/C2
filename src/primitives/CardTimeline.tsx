@@ -98,7 +98,7 @@ export function CardTimeline({ steps, compact, className = '', statusLabels: sta
           )}
           <span>{step.label}</span>
           {step.status === 'active' && (
-            <span className="inline-block w-1 h-3 bg-white/60 animate-blink motion-reduce:animate-none mr-1" aria-hidden="true" />
+            <span className="inline-block w-1 h-3 bg-white/60 animate-blink motion-reduce:animate-none me-1" aria-hidden="true" />
           )}
         </div>
       ))}

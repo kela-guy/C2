@@ -37,7 +37,7 @@ export const spec: ComponentSpec = {
       trigger: 'User clicks status filter button',
       description: 'Popover opens below button showing multi-select list of activity statuses with checkboxes',
       implementedInPrototype: true,
-      visualNotes: 'Radix Popover with backdrop-blur-xl, dark glassy surface. Enter animation uses origin-top-right (RTL-aware) with zoom-in-95 + slide-in-from-top-2 + fade-in.',
+      visualNotes: 'Radix Popover with backdrop-blur-xl, dark glassy surface. Enter animation uses --radix-popover-content-transform-origin (RTL/alignment-aware) with zoom-in-95 + slide-in-from-top-1 + fade-in.',
     },
     {
       name: 'sensor popover open',
@@ -159,8 +159,8 @@ export const spec: ComponentSpec = {
       { name: 'popover', value: '0 0 0 1px rgba(255,255,255,0.1), 0 16px 40px rgba(0,0,0,0.45)', usage: 'Popover elevation shadow' },
     ],
     animations: [
-      { name: 'popover-enter', property: 'opacity, transform', duration: '150ms', easing: 'ease-out (tailwind animate-in)', usage: 'Popover open: fade-in-0 + zoom-in-95 + slide-in-from-top-2, origin-top-right for RTL layout' },
-      { name: 'popover-exit', property: 'opacity, transform', duration: '150ms', easing: 'ease-in (tailwind animate-out)', usage: 'Popover close: fade-out-0 + zoom-out-95' },
+      { name: 'popover-enter', property: 'opacity, transform', duration: '150ms', easing: 'ease-out (tailwind animate-in)', usage: 'Popover open: fade-in-0 + zoom-in-95 + slide-in-from-top-1, transform-origin bound to --radix-popover-content-transform-origin so it scales from the trigger in any RTL/LTR + side/align combination' },
+      { name: 'popover-exit', property: 'opacity, transform', duration: '100ms', easing: 'ease-in (tailwind animate-out)', usage: 'Popover close: fade-out-0 + zoom-out-95' },
     ],
   },
 
