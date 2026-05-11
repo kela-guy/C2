@@ -23,8 +23,9 @@ import {
   Zap,
 } from 'lucide-react';
 import { useCardSlots, type CardCallbacks, type CardContext } from './useCardSlots';
-import { ACTIVITY_STATUS_LABELS, useTargetFilters } from './useTargetFilters';
+import { useTargetFilters } from './useTargetFilters';
 import { getActivityStatus, isCompletedActivityStatus, useActivityStatus } from './useActivityStatus';
+import { useStrings, type Strings } from '@/lib/intl';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -165,16 +166,26 @@ export type IncidentOutcome =
   | 'Ignored_OwnForces'
   | 'Ignored_PoorDetection';
 
-export const INCIDENT_OUTCOMES: { value: IncidentOutcome; label: string }[] = [
-  { value: 'Handled', label: 'טופל' },
-  { value: 'Escalated', label: 'הועבר לגורם מוסמך' },
-  { value: 'Ignored_Animal', label: 'בעל חיים' },
-  { value: 'Ignored_AuthorizedVehicle', label: 'רכב מורשה' },
-  { value: 'Ignored_Vegetation', label: 'צמחייה / רוח' },
-  { value: 'Ignored_SensorError', label: 'תקלת חיישן' },
-  { value: 'Ignored_OwnForces', label: 'כוחות עצמיים' },
-  { value: 'Ignored_PoorDetection', label: 'זיהוי לקוי' },
-];
+/**
+ * Localised incident-closure outcomes for the close-event picker. Built
+ * from the active strings catalog so the same Detection in Hebrew vs
+ * English shows reasons in the operator's language. Consumers call
+ * this with whichever `t` they're holding (typically from
+ * `useStrings()`).
+ */
+export function getIncidentOutcomes(t: Strings): { value: IncidentOutcome; label: string }[] {
+  const r = t.listOfSystems.closeReasons;
+  return [
+    { value: 'Handled', label: r.handled },
+    { value: 'Escalated', label: r.escalated },
+    { value: 'Ignored_Animal', label: r.ignoredAnimal },
+    { value: 'Ignored_AuthorizedVehicle', label: r.ignoredAuthorizedVehicle },
+    { value: 'Ignored_Vegetation', label: r.ignoredVegetation },
+    { value: 'Ignored_SensorError', label: r.ignoredSensorError },
+    { value: 'Ignored_OwnForces', label: r.ignoredOwnForces },
+    { value: 'Ignored_PoorDetection', label: r.ignoredPoorDetection },
+  ];
+}
 
 export interface Playbook {
   id: string;
@@ -183,18 +194,29 @@ export interface Playbook {
   riskLevel: 'low' | 'medium' | 'high';
 }
 
-export const FLOW1_PLAYBOOKS: Playbook[] = [
-  { id: 'fast-inspect', name: 'חקירה מהירה', description: 'שיגור רחפן + התחלת הקלטה', riskLevel: 'low' },
-  { id: 'full-response', name: 'תגובה מלאה', description: 'רחפן + כוח תגובה + הקלטה', riskLevel: 'high' },
-  { id: 'transfer', name: 'העברת אחריות', description: 'העברת נתונים למשטרה / גורם סמוך', riskLevel: 'medium' },
-];
+/**
+ * Localised playbook list for the flow-1 close menu. Same pattern as
+ * {@link getIncidentOutcomes} — built lazily from the catalog rather
+ * than baked at module scope so the active locale wins.
+ */
+export function getFlow1Playbooks(t: Strings): Playbook[] {
+  const p = t.listOfSystems.playbooks;
+  return [
+    { id: 'fast-inspect', name: p.fastInspect.name, description: p.fastInspect.description, riskLevel: 'low' },
+    { id: 'full-response', name: p.fullResponse.name, description: p.fullResponse.description, riskLevel: 'high' },
+    { id: 'transfer', name: p.transfer.name, description: p.transfer.description, riskLevel: 'medium' },
+  ];
+}
 
-export const DISMISS_REASONS = [
-  'לא רלוונטי',
-  'תרגיל',
-  'זיהוי שגוי',
-  'אחר',
-] as const;
+/**
+ * Localised "dismiss reason" quick-pick chips. Returned as a tuple of
+ * the four canonical values (irrelevant / drill / misidentification /
+ * other) — the order is significant for keyboard nav.
+ */
+export function getDismissReasons(t: Strings): readonly [string, string, string, string] {
+  const r = t.listOfSystems.closeReasons;
+  return [r.irrelevant, r.drill, r.misidentification, r.other] as const;
+}
 
 export const MOCK_TARGETS: Detection[] = [];
 
@@ -208,9 +230,9 @@ const ACTIVITY_STATUS_CHIP_COLOR: Record<ActivityStatus, 'green' | 'red' | 'oran
   mitigated: 'green',
 };
 
-function buildStatusChip(target: Detection) {
+function buildStatusChip(target: Detection, labels: Record<ActivityStatus, string>) {
   const status = getActivityStatus(target);
-  const label = ACTIVITY_STATUS_LABELS[status];
+  const label = labels[status];
   const color = ACTIVITY_STATUS_CHIP_COLOR[status];
   return <StatusChip label={label} color={color} />;
 }
@@ -235,6 +257,9 @@ function UnifiedCard({
   thinMode?: boolean;
 }) {
   const slots = useCardSlots(target, callbacks, ctx);
+  const i18n = useStrings();
+  const los = i18n.listOfSystems;
+  const statusLabels = i18n.targetFilters.activityStatusLabels;
   const isSuccess = target.status === 'event_resolved' || target.status === 'event_neutralized';
   const isExpired = target.status === 'expired';
   const showDetails = !isSuccess && !isExpired && target.flowType !== 4;
@@ -250,7 +275,7 @@ function UnifiedCard({
       header={
         <CardHeader
           {...slots.header}
-          status={buildStatusChip(target)}
+          status={buildStatusChip(target, statusLabels)}
           open={isOpen}
         />
       }
@@ -260,12 +285,12 @@ function UnifiedCard({
           {slots.closureType === 'manual' ? (
             <div className="flex items-center gap-1 text-[9px] text-zinc-500">
               <Hand size={10} className="text-zinc-500" aria-hidden="true" />
-              <span>סגירה ידנית</span>
+              <span>{los.closeManual}</span>
             </div>
           ) : (
             <div className="flex items-center gap-1 text-[9px] text-zinc-500">
               <Zap size={10} className="text-zinc-500" aria-hidden="true" />
-              <span>סגירה אוטומטית</span>
+              <span>{los.closeAuto}</span>
             </div>
           )}
         </div>
@@ -276,10 +301,10 @@ function UnifiedCard({
       {slots.actions.length > 0 && (
         <CardActions
           actions={slots.actions}
-          confirmLabel="אישור"
-          cancelLabel="ביטול"
-          finalConfirmTitle="אישור סופי"
-          finalConfirmLabel="הפעל"
+          confirmLabel={los.confirm}
+          cancelLabel={los.cancel}
+          finalConfirmTitle={los.finalConfirmTitle}
+          finalConfirmLabel={los.finalConfirmLabel}
         />
       )}
 
@@ -293,13 +318,13 @@ function UnifiedCard({
         <CardDetails
           rows={slots.details.rows}
           classification={slots.details.classification}
-          title="נתוני טלמטריה"
-          copyLabel="העתק טלמטריה"
+          title={los.telemetryTitle}
+          copyLabel={los.telemetryCopy}
         />
       )}
 
       {slots.laserPosition.length > 0 && (
-        <AccordionSection title="מיקום יחסי ללייזר" icon={Crosshair}>
+        <AccordionSection title={los.laserRelativeLocation} icon={Crosshair}>
           <div className="w-full py-1">
             <div className="grid grid-cols-3 grid-rows-1 gap-0">
               {slots.laserPosition.map((row, idx) => (
@@ -311,7 +336,7 @@ function UnifiedCard({
       )}
 
       {slots.sensors.length > 0 && (
-        <AccordionSection title={`חיישנים (${slots.sensors.length})`} icon={Radar}>
+        <AccordionSection title={los.sensors(slots.sensors.length)} icon={Radar}>
           <div className="px-0 pb-2 w-full pt-2">
             <CardSensors
               sensors={slots.sensors}
@@ -325,8 +350,8 @@ function UnifiedCard({
       {!thinMode && slots.log.length > 0 && (
         <CardLog
           entries={slots.log}
-          title="לוג"
-          moreLabel={(n) => `עוד ${n} רשומות`}
+          title={los.logTitle}
+          moreLabel={los.logMore}
         />
       )}
 
@@ -334,7 +359,7 @@ function UnifiedCard({
         <CardClosure
           outcomes={slots.closure.outcomes}
           onSelect={slots.closure.onSelect}
-          title="סגירת אירוע — בחר סיבה"
+          title={los.closeEventTitle}
         />
       )}
     </TargetCard>
@@ -358,6 +383,7 @@ export function SystemCard({
   onToggleLoop?: () => void;
   quickAction?: { label: string; variant: 'fill' | 'ghost' | 'danger' | 'warning'; icon?: React.ElementType; onClick: (e: React.MouseEvent) => void };
 }) {
+  const statusLabels = useStrings().targetFilters.activityStatusLabels;
   const accent = (() => {
     if (target.mitigationStatus === 'mitigating') return 'mitigating' as const;
     if (target.status === 'event_resolved' || target.status === 'event_neutralized') return 'resolved' as const;
@@ -376,7 +402,7 @@ export function SystemCard({
       header={
         <CardHeader
           title={target.name}
-          status={buildStatusChip(target)}
+          status={buildStatusChip(target, statusLabels)}
           open={isOpen}
         />
       }
@@ -527,6 +553,8 @@ export default function ListOfSystems({
   thinMode,
 }: ListOfSystemsProps) {
   const prefersReducedMotion = useReducedMotion();
+  const i18n = useStrings();
+  const los = i18n.listOfSystems;
   const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
   const [newArrivalIds, setNewArrivalIds] = useState<string[]>([]);
   const [isScrolledToTop, setIsScrolledToTop] = useState(true);
@@ -711,7 +739,7 @@ export default function ListOfSystems({
   const renderTargetList = (
     list: Detection[],
     disableLayout = false,
-    emptyLabel = 'אין איתורים',
+    emptyLabel: string = los.emptyDefault,
   ) => {
     if (list.length === 0) {
       return <div className="p-2 text-center text-xs text-white">{emptyLabel}</div>;
@@ -769,7 +797,7 @@ export default function ListOfSystems({
               activeTab === 'active' ? 'border-white text-white' : 'border-transparent text-zinc-400 hover:text-zinc-300'
             }`}
           >
-            פעילות
+            {los.tabActive}
             {activeCount > 0 && (
               <span className="text-[10px] font-mono bg-white/10 rounded px-1.5 py-0.5 tabular-nums">{activeCount}</span>
             )}
@@ -785,7 +813,7 @@ export default function ListOfSystems({
               activeTab === 'completed' ? 'border-white text-white' : 'border-transparent text-zinc-400 hover:text-zinc-300'
             }`}
           >
-            הושלמו
+            {los.tabCompleted}
           </button>
         </div>
 
@@ -796,12 +824,12 @@ export default function ListOfSystems({
           selections={selections}
           onFilterChange={onFilterChange}
           onReset={resetFilters}
-          searchPlaceholder="חיפוש יעד, מזהה או סוג..."
-          searchAriaLabel="חיפוש מטרות"
-          clearSearchAriaLabel="נקה חיפוש"
-          resetLabel="איפוס"
-          resetAriaLabel="איפוס פילטרים"
-          emptyOptionsLabel="אין אפשרויות"
+          searchPlaceholder={los.searchPlaceholder}
+          searchAriaLabel={los.searchAriaLabel}
+          clearSearchAriaLabel={los.clearSearchAriaLabel}
+          resetLabel={los.resetLabel}
+          resetAriaLabel={los.resetAriaLabel}
+          emptyOptionsLabel={los.emptyOptionsLabel}
         />
       </div>
 
@@ -812,7 +840,7 @@ export default function ListOfSystems({
               <div className="pointer-events-auto">
                 <NewUpdatesPill
                   count={visibleArrivalTargets.length}
-                  label={(n) => `${n} התראות חדשות`}
+                  label={los.newUpdates}
                   onClick={() => {
                     setNewArrivalIds([]);
                     listScrollRef.current?.scrollTo({
@@ -833,13 +861,13 @@ export default function ListOfSystems({
         >
           {activeTab === 'active' && (
             <div id="tabpanel-active" role="tabpanel" aria-labelledby="tab-active" className="space-y-2">
-              {renderTargetList(mainActiveTargets, false, 'אין מטרות פעילות')}
+              {renderTargetList(mainActiveTargets, false, los.emptyActive)}
             </div>
           )}
 
           {activeTab === 'completed' && (
             <div id="tabpanel-completed" role="tabpanel" aria-labelledby="tab-completed">
-              {renderTargetList(filteredCompletedTargets, true, 'אין אירועים שהושלמו')}
+              {renderTargetList(filteredCompletedTargets, true, los.emptyCompleted)}
             </div>
           )}
         </div>

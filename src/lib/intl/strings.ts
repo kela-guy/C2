@@ -1,0 +1,1263 @@
+/**
+ * App-wide string catalog for the dashboard shell.
+ *
+ * The product is Hebrew-first; this module exists so the marketing
+ * `/demo` route can render the same Dashboard component in English
+ * without forking any UI. Strings are read via {@link useStrings}
+ * (below) which keys off the active {@link Locale} from the
+ * direction system — `'rtl'` ⇒ `'he'`, `'ltr'` ⇒ `'en'`.
+ *
+ * Conventions
+ * ───────────
+ *  - Both maps share the **exact same keys**. The `Strings` type is
+ *    derived from the Hebrew map and the English map is asserted to
+ *    satisfy it, so adding a new Hebrew string without an English
+ *    counterpart fails the build.
+ *  - Keys are namespaced by surface (`devices`, `dashboard`,
+ *    `listOfSystems`, `notifications`, `cards`, `actions`, `toasts`,
+ *    `engagementFlows`). Nested objects mirror the consumer
+ *    component's mental model.
+ *  - Pure data (template-string parameters, dynamic counts) is passed
+ *    by helper functions, never by string concatenation at the call
+ *    site, so translations can reorder placeholders.
+ */
+
+export type Locale = 'he' | 'en';
+
+const STRINGS_HE = {
+  /**
+   * Devices panel — labels passed wholesale to <DevicesPanel> via the
+   * `typeLabels` / `connectionLabels` / `strings` props. Mirrors the
+   * existing `DEVICES_*` constants in `Dashboard.tsx`.
+   */
+  devices: {
+    typeLabels: {
+      camera: 'מצלמות',
+      radar: 'מכ"מים',
+      dock: 'כוורות',
+      drone: 'רחפנים',
+      ecm: 'משבשים',
+      launcher: 'משגרים',
+      lidar: 'לידר',
+      weapon_system: 'מערכות נשק',
+    },
+    connectionLabels: {
+      online: 'מחובר',
+      offline: 'לא מקוון',
+      error: 'שגיאה',
+      warning: 'אזהרה',
+    },
+    strings: {
+      searchPlaceholder: 'חיפוש...',
+      clearSearch: 'נקה חיפוש',
+      resetFilters: 'איפוס סינון',
+      resetFiltersLabel: 'ניקוי',
+      typeFilterLabel: 'מכשירים',
+      noMatches: 'אין מכשירים תואמים',
+      location: 'מיקום',
+      bearing: 'כיוון',
+      fieldOfView: 'שדה ראייה',
+      coverage: 'כיסוי',
+      altitude: 'גובה',
+      health: 'תקינות',
+      healthOk: 'תקין',
+      healthMalfunction: 'תקלה',
+      battery: 'סוללה',
+      jam: 'הפעל',
+      jamActive: 'שיבוש פעיל',
+      jamDisabledOffline: 'המכשיר לא מקוון',
+      jamDisabledMalfunction: 'המכשיר בתקלה',
+      jamDisabledAlreadyActive: 'שיבוש כבר פעיל',
+      cameraModeAriaLabel: 'מצב מצלמה',
+      centerOnMap: 'מרכז במפה',
+      mute: 'השתק',
+      unmute: 'בטל השתקה',
+      wipers: 'מגבים',
+      wipersAriaLabel: 'מגבים',
+      calibrate: 'כיול',
+      calibrating: 'מכייל...',
+      calibrated: 'הושלם',
+      calibrateAriaLabel: 'כיול',
+      pinToFeed: 'הצמד',
+      pinToFeedAriaLabel: 'הצמד מכשיר לפיד וידאו',
+      unpinFromFeed: 'בטל הצמדה',
+      unpinFromFeedAriaLabel: 'הסר מכשיר מפיד הווידאו',
+      pinToFeedTooltip: 'הצמד למצלמה',
+      pinnedToFeedTooltip: 'מוצמד למצלמה',
+    },
+  },
+
+  /**
+   * Slim icon rail in the Dashboard chrome — the strings appear in
+   * tooltips on hover. `closeSidebar` / `openSidebar` are used by the
+   * top toggle, the rest are one tooltip per icon.
+   */
+  dashboard: {
+    title: 'DASHBOARD',
+    activeSystems: (count: number) => `מערכות פעילות ( ${count} )`,
+    closeSidebar: 'סגור רשימת מערכות',
+    openSidebar: 'פתח רשימת מערכות',
+    devices: 'מכשירים',
+    cameras: 'מצלמות',
+    cuasScenarios: 'תרחישי CUAS',
+    helpTour: 'סיור הדרכה',
+    styleGuide: 'Style Guide',
+    switchToHebrew: 'החלף לעברית (RTL)',
+    switchToEnglish: 'Switch to English (LTR)',
+    notifications: 'התראות',
+    switchTo3D: 'Switch to 3D map',
+    switchTo2D: 'Switch to 2D map',
+    dropZoneRelease: 'שחרר כדי לצפות',
+    dropZoneHint: 'גרור לכאן',
+    closeDevices: 'סגור מכשירים',
+    closeCameras: 'סגור מצלמות',
+    scenarioSingle: 'יעד בודד',
+    scenarioFull: 'תרחיש מלא (3 יעדים)',
+    scenarioSwarm: 'תרחיש נחיל (20 יעדים)',
+    devicesPanelTitle: 'מכשירים',
+    devicesPanelClose: 'סגור',
+    activeSystemsHeading: (count: number) => `Dashboard — מערכות פעילות (${count})`,
+    notificationsAriaLabel: 'התראות',
+    cuasScenariosAriaLabel: 'תרחישי CUAS',
+    helpTourAriaLabel: 'סיור הדרכה',
+  },
+
+  /**
+   * Right-side target list (`<ListOfSystems>`). Tabs, search, filter
+   * controls, empty states, and per-card action labels.
+   */
+  listOfSystems: {
+    tabActive: 'פעילות',
+    tabCompleted: 'הושלמו',
+    searchPlaceholder: 'חיפוש יעד, מזהה או סוג...',
+    searchAriaLabel: 'חיפוש מטרות',
+    clearSearchAriaLabel: 'נקה חיפוש',
+    resetLabel: 'איפוס',
+    resetAriaLabel: 'איפוס פילטרים',
+    emptyOptionsLabel: 'אין אפשרויות',
+    emptyActive: 'אין מטרות פעילות',
+    emptyCompleted: 'אין אירועים שהושלמו',
+    emptyDefault: 'אין איתורים',
+    newUpdates: (count: number) => `${count} התראות חדשות`,
+    confirm: 'אישור',
+    cancel: 'ביטול',
+    finalConfirmTitle: 'אישור סופי',
+    finalConfirmLabel: 'הפעל',
+    closeManual: 'סגירה ידנית',
+    closeAuto: 'סגירה אוטומטית',
+    telemetryTitle: 'נתוני טלמטריה',
+    telemetryCopy: 'העתק טלמטריה',
+    laserRelativeLocation: 'מיקום יחסי ללייזר',
+    sensors: (count: number) => `חיישנים (${count})`,
+    logTitle: 'לוג',
+    logMore: (n: number) => `עוד ${n} רשומות`,
+    closeEventTitle: 'סגירת אירוע — בחר סיבה',
+    closeReasons: {
+      handled: 'טופל',
+      escalated: 'הועבר לגורם מוסמך',
+      ignoredAnimal: 'בעל חיים',
+      ignoredAuthorizedVehicle: 'רכב מורשה',
+      ignoredVegetation: 'צמחייה / רוח',
+      ignoredSensorError: 'תקלת חיישן',
+      ignoredOwnForces: 'כוחות עצמיים',
+      ignoredPoorDetection: 'זיהוי לקוי',
+      irrelevant: 'לא רלוונטי',
+      drill: 'תרגיל',
+      misidentification: 'זיהוי שגוי',
+      other: 'אחר',
+    },
+    playbooks: {
+      fastInspect: { name: 'חקירה מהירה', description: 'שיגור רחפן + התחלת הקלטה' },
+      fullResponse: { name: 'תגובה מלאה', description: 'רחפן + כוח תגובה + הקלטה' },
+      transfer: { name: 'העברת אחריות', description: 'העברת נתונים למשטרה / גורם סמוך' },
+    },
+  },
+
+  /**
+   * Target card slot content — labels for action buttons, status
+   * chips, mission timelines, and the various detail rows. Used by
+   * `useCardSlots.ts`.
+   */
+  cards: {
+    classifiedTypes: {
+      drone: 'רחפן',
+      bird: 'ציפור',
+      aircraft: 'מטוס',
+      car: 'רכב',
+      unknown: 'לא ידוע',
+    },
+    classifiedTypeLabel: (typeLabel: string) => `סביר ביותר שמדובר ב${typeLabel}`,
+    cameraScan: 'סריקת מצלמה',
+    droneMission: 'משימת רחפן',
+    trackingPtz: 'מעקב PTZ',
+    recordingPtz: 'הקלטת PTZ',
+    distanceFromAsset: (name: string, km: number) => `${name} (${km.toFixed(1)} ק״מ)`,
+    bdaConfirm: 'אימות פגיעה — נעילת רחפן',
+    dismiss: 'ביטול',
+    cameraPointing: 'מפנה מצלמה...',
+    cameraLocked: 'מצלמה נעולה על היעד',
+    pointCamera: 'הפנה מצלמה',
+    jamCompleted: 'שיבוש הושלם',
+    jamCompletedStrip: 'שיבוש הושלם',
+    cameraControlCountdown: (countdown: number) => `${countdown} שניות לשליטה...`,
+    requestCameraControl: 'בקש שליטה על מצלמה',
+    cancelCamera: 'בטל מצלמה',
+    completeMission: 'סיום משימה',
+    confirmBird: 'אשר ציפור — סגור זיהוי',
+    falseAlarm: 'שווא',
+    investigateBird: 'תחקור',
+    sendDrone: 'שגר רחפן',
+    markPoi: 'סמן נ.ע',
+    closeEvent: 'סגור אירוע',
+    closeEventShort: 'סגור',
+    pbFastInspect: 'חקירה מהירה',
+    pbFullResponse: 'תגובה מלאה',
+    pbTransfer: 'העבר אחריות',
+    dronePause: 'השהה',
+    droneResume: 'חדש',
+    droneRtb: 'חזרה לבסיס',
+    missionActivate: 'הפעל משימה',
+    missionCancel: 'ביטול תכנון',
+    missionPause: 'השהה',
+    missionResume: 'המשך',
+    missionOverride: 'שליטה ידנית',
+    missionCancelFull: 'ביטול משימה',
+    missionReturn: 'חזור למשימה',
+    jamPrimary: 'שיבוש',
+    surveillance: 'מעקב',
+    drone: 'רחפן',
+    droneEnRouteBda: 'רחפן בדרך לאימות פגיעה...',
+    dronePhases: {
+      select: 'בחר רחפן',
+      takeoff: 'המראה',
+      flying: 'בדרך לאיתור',
+      onStation: 'תצפית פעילה',
+      rtb: 'חוזר לבסיס',
+      landed: 'נחת',
+    },
+    cuasPhases: {
+      initialDetection: 'זיהוי ראשוני',
+      classification: 'סיווג',
+      weaponPointing: 'כיוון נשק',
+      weaponPointed: 'נשק מכוון',
+      lock: 'נעילה',
+      locking: 'נועל...',
+      locked: 'נעול',
+      pendingAction: 'ממתין לפעולה',
+      jamActive: 'שיבוש פעיל',
+      neutralized: 'נוטרל',
+      bdaConfirm: 'אימות פגיעה',
+    },
+    flowSteps: {
+      trigger: 'זיהוי',
+      orient: 'הפניה',
+      investigate: 'חקירה',
+      manualTracking: 'מעקב ידני',
+      decide: 'החלטה',
+      act: 'ביצוע',
+      closure: 'סגירה',
+    },
+    detailRows: {
+      location: 'מיקום',
+      altitude: 'גובה',
+      distance: 'מרחק',
+      lastSeen: 'נצפה לאחרונה',
+      azimuth: 'אזימוט',
+      elevation: 'זווית הגבהה',
+      range: 'טווח',
+    },
+    typeLabels: {
+      drone: 'רחפן',
+      bird: 'ציפור',
+      aircraft: 'מטוס',
+      car: 'רכב',
+      unknown: 'לא ידוע',
+      unknownDetection: 'זיהוי לא ידוע',
+    },
+  },
+
+  /**
+   * Camera viewer panel + camera-v2 surface — context menus, control
+   * bar, settings menu, playback timeline + container, designate
+   * overlay, and the "split screen" affordance. All of these are
+   * mounted inside the Dashboard whenever the operator opens cameras
+   * (which the demo does as part of the CUAS / car / blackberry
+   * scenarios), so they're part of the visible app shell.
+   */
+  camera: {
+    viewer: {
+      removeWindow: 'הסר',
+      removeWindowAriaLabel: 'הסר חלון',
+      removeCamera: 'הסר מצלמה',
+      removeCameraAriaLabel: 'הסר מצלמה',
+      pickContent: 'בחר תוכן',
+      mapPickerOption: 'מפה',
+      splitScreenAriaLabel: 'פצל מסך',
+      splitScreen: 'פצל מסך',
+    },
+    contextMenu: {
+      releaseControl: 'שחרר שליטה',
+      lockedByOperator: (name: string) => `נעול ע״י ${name}`,
+      lockedByOtherOperator: 'מפעיל אחר',
+      takeControl: 'קח שליטה',
+      switchToNight: 'מצב לילה (IR)',
+      switchToDay: 'מצב יום',
+      hideAiDetections: 'הסתר זיהוי AI',
+      showAiDetections: 'הצג זיהוי AI',
+      cancelDesignate: 'בטל סימון יעד',
+      designateTarget: 'סמן יעד',
+      resetView: 'אפס תצוגה',
+      settings: 'הגדרות',
+      pinToGrid: 'נעץ לגריד',
+    },
+    controlBar: {
+      requestingControlCountdown: (countdown: number) => `מבקש שליטה… ${countdown}s (T)`,
+      requestingControl: 'מבקש שליטה… (T)',
+      releaseControl: 'שחרר שליטה (T)',
+      lockedByOperator: (name: string) => `נעול ע״י ${name}`,
+      lockedByOtherOperator: 'מפעיל אחר',
+      takeControl: 'קח שליטה (T)',
+      switchToNight: 'מצב לילה',
+      switchToDay: 'מצב יום',
+      hideAiDetections: 'הסתר זיהוי AI',
+      showAiDetections: 'הצג זיהוי AI',
+      cancelDesignate: 'בטל סימון יעד',
+      designateTarget: 'סמן יעד',
+      exitFullscreen: 'צא ממסך מלא',
+      enterFullscreen: 'מסך מלא',
+    },
+    settingsMenu: {
+      playbackSplitLabel: 'מפוצל: שידור חי + פלייבק',
+      liveLabel: 'שידור חי',
+      playbackSplitDescription: 'התצוגה מפוצלת לשידור חי ולקובץ הקלוט.',
+      liveDescription: 'הפעל כדי לפצל את הפיד לשידור חי לעומת קלוט.',
+      settingsTriggerAriaLabel: 'הגדרות',
+      settingsHeading: 'הגדרות (S)',
+      playbackSection: 'חקירת פלייבק',
+      displaySection: 'תצוגה',
+      aiDetectionsLabel: 'זיהוי AI',
+      aiDetectionsDescription: 'סמן ברירת זיהויים על הפיד.',
+      aiDetectionsAriaLabel: 'זיהוי AI',
+      modeDescription: 'עבור בין מצלמת יום לאינפרא-אדום.',
+      // Mode row shows current state: day / night (with IR suffix).
+      currentDay: 'מצב יום',
+      currentNight: 'מצב לילה (IR)',
+      // Toggle aria-label describes the *target* mode the click will switch to.
+      switchToDayAriaLabel: 'מצב יום',
+      switchToNightAriaLabel: 'מצב לילה',
+    },
+    feedTile: {
+      defaultEmptySlotHint: 'גרור או נעץ מכשיר לכאן',
+    },
+    playback: {
+      pause: 'השהה',
+      play: 'נגן',
+      exitPlayback: 'צא ממצב פלייבק (P)',
+      playbackPositionAriaLabel: 'מיקום פלייבק',
+      feedUnavailable: 'הפיד אינו זמין כרגע',
+      loading: 'טוען הקלטה',
+      loadingEllipsis: 'טוען הקלטה…',
+      buffering: 'מאחסן זמני',
+      playing: 'מנגן',
+      paused: 'מושהה',
+      ended: 'ההקלטה הסתיימה',
+      errorWithMessage: (message: string) => `שגיאת פלייבק: ${message}`,
+      errorGeneric: 'שגיאת פלייבק',
+      errorUnknown: 'שגיאה לא ידועה בפלייבק',
+      replayFromStart: 'הפעל שוב מההתחלה',
+      playAgain: 'נגן שוב',
+      tryAgain: 'נסה שוב',
+    },
+    designateOverlay: {
+      bannerAriaLabel: 'לחץ כדי לסמן יעד',
+      bannerText: 'לחץ כדי לסמן יעד · Esc לביטול',
+    },
+  },
+
+  /**
+   * Notification center + toast notifications fired from the
+   * Dashboard simulation pipeline. Includes the templated detection
+   * messages (with confidence %, sensor name, target name).
+   */
+  notifications: {
+    swarmAlertTitle: 'התראת נחיל',
+    swarmAlertMessage: (count: number) => `${count} זיהויים בו-זמנית — מצב חירום`,
+    newDetectionTitle: (name: string) => `זיהוי חדש — ${name}`,
+    classifiedAirThreat: (confidence: number) => `ביטחון ${confidence}% — איום אווירי מסווג`,
+    classifiedGroundThreat: (confidence: number) => `ביטחון ${confidence}% — איום קרקעי מסווג`,
+    classifiedAsBird: (confidence: number) => `ביטחון ${confidence}% — סווג כציפור`,
+    classifiedDroneAwait: (confidence: number) => `ביטחון ${confidence}% — איום מסווג — רחפן עוין`,
+    awaitingApproval: (confidence: number) => `ביטחון ${confidence}% — ממתין לאישור`,
+    additionalSensorTitle: (name: string) => `חיישן נוסף — ${name}`,
+    additionalSensorMessageMagos: (confidence: number, count: number) =>
+      `ביטחון ${confidence}% — SENS-NVT-MAGOS-N (+${count})`,
+    additionalSensorMessageElta: (confidence: number, count: number) =>
+      `ביטחון ${confidence}% — RAD-NVT-ELTA (+${count})`,
+    // Chrome strings for the notification *centre* (the slide-in
+    // sheet) and the floating toast stack.
+    centerTitle: 'מרכז התראות',
+    centerOpenAriaLabel: 'מרכז התראות',
+    settingsAriaLabel: 'הגדרות התראות',
+    markAllRead: 'סמן הכל כנקרא',
+    tabAll: 'הכל',
+    tabAlerts: 'דחוף',
+    tabUnread: 'לא נקראו',
+    categoryToday: 'היום',
+    categoryYesterday: 'אתמול',
+    categoryLast7Days: 'השבוע',
+    categoryOlder: 'היסטוריה',
+    emptyState: 'הכל נקי, אין התראות',
+    historyAll: 'כל ההיסטוריה',
+    stackCloseAriaLabel: 'סגור',
+    stackNewCount: (count: number) => `${count} התראות חדשות`,
+    stackCollapse: 'סגור',
+    stackExpand: 'הרחב',
+    stackAndMore: (count: number) => ` ועוד ${count}`,
+    /**
+     * Seed notification history shown inside the slide-in centre. Each
+     * entry is a complete record: title + body + sender. The shape
+     * mirrors `NotificationItem` in `NotificationCenter.tsx` minus the
+     * type/priority/time/dateCategory fields, which stay in the
+     * component (they're not language-dependent).
+     */
+    history: [
+      {
+        id: '1',
+        title: 'זיהוי שיגור טילים',
+        description: 'זוהה שיגור רב-קני מכיוון גזרה צפונית. הופעלו מערכות יירוט אוטומטיות.',
+        sender: 'מכ״ם גזרתי',
+      },
+      {
+        id: '2',
+        title: 'עדכון פקודה מבצעית',
+        description: "התקבל עדכון לפקודת 'אש חיה'. נא לאשר קבלה ולקרוא את הנספחים המצורפים.",
+        sender: 'חמ״ל ראשי',
+      },
+      {
+        id: '3',
+        title: 'תחזוקת שרתים',
+        description: 'השרת יעבור לאתחול יזום בשעה 02:00. ייתכנו שיבושים קלים בזרימת המידע.',
+        sender: 'IT System',
+      },
+      {
+        id: '4',
+        title: 'דוח סיור יומי',
+        description: 'דוח סיור שגרתי מגזרת החוף זמין לצפייה.',
+        sender: 'צוות סיור 4',
+      },
+      {
+        id: '5',
+        title: 'אובדן אות GPS',
+        description: 'שיבושי קליטה זמניים נרשמו באזור הפעולה המשני.',
+        sender: 'מערכת ניווט',
+      },
+      {
+        id: '6',
+        title: 'עדכון תוכנה 2.4.1',
+        description: 'הותקן בהצלחה. שיפורים ביציבות מערכת התצפית.',
+        sender: 'System Update',
+      },
+      {
+        id: '7',
+        title: 'בקשת אישור טיסה',
+        description: "רחפן 'עין הנץ' ממתין לאישור המראה.",
+        sender: 'בקר אווירי',
+      },
+    ],
+  },
+
+  /**
+   * Filter bar in `<ListOfSystems>` — filter chip labels, summary
+   * pills (e.g. "all", "active", "N selected"), filter type-key
+   * labels, and the activity-status / target-type lookups used both
+   * inside the chip dropdowns and inside the target card chrome.
+   */
+  targetFilters: {
+    activityStatusLabels: {
+      active: 'פעיל',
+      recently_active: 'פעיל לאחרונה',
+      timeout: 'פג תוקף',
+      dismissed: 'נדחה',
+      mitigated: 'טופל',
+    },
+    typeLabels: {
+      drone: 'רחפן',
+      bird: 'ציפור',
+      car: 'רכב',
+      unknown: 'לא ידוע',
+      uav: 'רחפן',
+      missile: 'טיל',
+      aircraft: 'מטוס',
+      ground_vehicle: 'רכב',
+      naval: 'כלי שיט',
+    },
+    chipLabels: {
+      activityStatus: 'סטטוס',
+      sensor: 'מזהה',
+    },
+    summaries: {
+      allStatuses: 'הכל',
+      activePair: 'פעילים',
+      countSelected: (count: number) => `${count} נבחרו`,
+      allSensors: 'כל המזהים',
+      oneSelected: '1 נבחר',
+      countSensors: (count: number) => `${count} מזהים`,
+      noSensorsAvailable: 'אין מזהים זמינים',
+    },
+  },
+
+  /**
+   * Engagement-flow definitions (jam + weapon). Renders inside target
+   * cards as the primary action button + dropdown options +
+   * terminal-state strips. The flow definitions themselves are
+   * registered statically (matchTarget, getPhase, etc.) — only the
+   * user-visible labels live here.
+   */
+  engagementFlows: {
+    jam: {
+      idleButton: 'שיבוש',
+      mitigatingButton: 'משבש אות...',
+      mitigatedButton: 'שיבוש הושלם',
+      mitigatedStrip: 'שיבוש הושלם',
+      verifyBdaPtz: 'תחקור — מעקב PTZ',
+      dropdownAll: 'שיבוש כללי',
+      dropdownDirectional: 'שיבוש ממוקד',
+      dropdownSpectrum: 'שיבוש ספקטרום רחב',
+    },
+    weapon: {
+      idleButton: 'כוון נשק',
+      pointingButton: 'מכוון...',
+      pointedButton: 'נשק מכוון',
+      pointedStrip: 'נשק מכוון',
+      lockingButton: 'נשק מכוון',
+      lockingStrip: 'נשק מכוון',
+      lockingTerminalLabel: 'נועל...',
+      lockedButton: 'נעול על מטרה',
+      lockedStrip: 'LOCKED',
+      lockedComplete: 'סיום משימה',
+      lockedDismiss: 'בטל נעילה',
+      pointedLock: 'נעל',
+      pointedDismiss: 'בטל כיוון',
+    },
+  },
+
+  /**
+   * Action log entries appended to a target's history when an
+   * operator runs a command (jam, weapon point, lock, cancel, etc.).
+   * Keep these short — they appear in narrow log rows.
+   */
+  actionLog: {
+    initialDetectionCar: 'זיהוי ראשוני — רכב עוין',
+    initialDetectionBird: 'זיהוי ראשוני — ציפור',
+    initialDetectionDrone: 'זיהוי ראשוני — רחפן עוין',
+    additionalSensorMagos: 'חיישן נוסף — Magos North',
+    additionalSensorElta: 'חיישן נוסף — Elta MHR',
+    classifiedAsBird: 'סווג כציפור — ביטחון 85%',
+    classifiedAsDrone: 'סווג כרחפן — ביטחון 92%',
+    jamStart: 'שיבוש',
+    jamEnd: 'שיבוש הושלם — ממתין לאימות',
+    jamGlobal: (count: number) => `שיבוש כללי — ${count} אפקטורים`,
+    jamGlobalEnd: 'שיבוש כללי הושלם — ממתין לאימות',
+    weaponStart: 'כיוון נשק',
+    weaponEnd: 'נשק מכוון — ממתין לנעילה',
+    locking: 'נועל על מטרה...',
+    locked: 'נעול על מטרה',
+    lockCancelled: 'נעילה בוטלה',
+    pointingCancelled: 'כיוון בוטל',
+    bdaInProgress: 'BDA — מתייצב',
+    bdaObserving: 'BDA — תצפית פעילה',
+    bdaNeutralized: 'BDA — נוטרל',
+    bdaStillActive: 'BDA — עדיין פעיל',
+    bdaLost: 'BDA — אבד מגע',
+    cameraPointing: (typeLabel: string) => `מצלמה ${typeLabel} מפנה למטרה...`,
+    cameraLocked: (typeLabel: string) => `מצלמה ${typeLabel} נעולה על המטרה`,
+    reportSent: 'דיווח נשלח לגורם ממונה',
+  },
+
+  /**
+   * Toast (sonner) messages — fired imperatively from the Dashboard.
+   * Slightly more verbose than action-log entries.
+   */
+  toasts: {
+    cameraControlAcquired: 'שליטה על מצלמה התקבלה — מפנה לאימות',
+    jamStarted: 'שיבוש אלקטרוני הופעל',
+    jamEndedAwaitVerify: 'שיבוש הושלם — נדרש אימות',
+    jamGlobalStarted: (count: number) => `שיבוש כללי הופעל — ${count} אפקטורים`,
+    weaponPointing: 'מכוון נשק למטרה',
+    weaponPointed: 'נשק מכוון — ניתן לנעול',
+    lockedReadyForFire: 'נעול על מטרה — עבור למכשיר חיצוני לירי',
+    lockCancelled: 'נעילה בוטלה',
+    pointingCancelled: 'כיוון בוטל',
+    missionComplete: 'משימה הושלמה בהצלחה',
+    cameraCancelled: 'מצלמה בוטלה',
+    cameraPointingForJamVerify: 'מפנה מצלמה לאימות שיבוש',
+    allCamerasBusy: "כל המצלמות תפוסות — לחץ 'בקש שליטה' להשגת גישה",
+    requestingCameraControl: 'מבקש שליטה על מצלמה...',
+    targetNeutralized: 'יעד נוטרל — לחץ סיום משימה להעברה לטופל',
+    targetStillActive: 'יעד עדיין פעיל — ניתן לשבש שוב',
+    targetLost: 'יעד אבד — לחץ סיום משימה להעברה לטופל',
+    cameraPointingForVerify: (typeLabel: string) => `${typeLabel} מפנה לאימות...`,
+    cameraLockedOnTarget: (typeLabel: string) => `${typeLabel} נעולה על מטרה`,
+    reportSentTo: (name: string) => `דיווח נשלח — ${name}`,
+    confirmedAsBird: 'אושר כציפור — זיהוי נסגר',
+    falseAlarm: 'סומן כאזעקת שווא',
+    dismissedReason: (reason: string) => `הוסר: ${reason}`,
+    dismissedDefault: 'איתור הוסר ממעקב',
+    jamActivated: (jammerId: string) => `שיבוש הופעל — ${jammerId}`,
+    targetFallback: 'יעד',
+  },
+
+  /**
+   * Mock detection seeds + simulation friendly drone names. Surfaced
+   * as the visible target name + initial action-log entry.
+   */
+  simulation: {
+    targetNameCar: (suffix: string) => `רכב — זיהוי ${suffix}`,
+    targetNameBird: (suffix: string) => `ציפור — זיהוי ${suffix}`,
+    targetNameDrone: (suffix: string) => `רחפן — זיהוי ${suffix}`,
+    targetClassifiedBird: (name: string) => `ציפור — ${name}`,
+    targetClassifiedCar: (name: string) => `רכב — ${name}`,
+    targetClassifiedDrone: (name: string) => `רחפן — ${name}`,
+    distanceKm: (km: string) => `${km} ק״מ`,
+    altitudeM: (m: number) => `${m} מ׳`,
+    laserDistanceM: (m: number) => `${m} מ׳`,
+    friendlyDrones: {
+      patrol3: { name: 'סיור-3', altitude: '80 מ׳' },
+      observation7: { name: 'תצפית-7', altitude: '110 מ׳' },
+      patrol11: { name: 'סיור-11', altitude: '95 מ׳' },
+      observation2: { name: 'תצפית-2', altitude: '120 מ׳' },
+      patrol9: { name: 'סיור-9', altitude: '70 מ׳' },
+    },
+    launchers: {
+      alpha: 'משגר אלפא',
+      bravo: 'משגר בראבו',
+      gamma: 'משגר גאמא',
+    },
+    /**
+     * Generic device-name fallbacks used by `useDevicesFromAssets`
+     * when an asset registry doesn't ship a localized label of its
+     * own (currently the static launcher rows).
+     */
+    deviceNames: {
+      missileLauncher: 'משגר טילים',
+    },
+    /**
+     * Camera preset chips rendered inside the DevicesPanel device
+     * card. Keyed by camera asset id.
+     */
+    cameraPresets: {
+      ptzNorth: ['זום', 'לילה', 'רגיל'],
+      pixelsight: ['רגיל', 'תרמי'],
+    },
+  },
+
+  /**
+   * Strings rendered directly on the Cesium tactical map — the "you
+   * have control" pill, and the right-click context menu over targets
+   * and sensors.
+   */
+  map: {
+    youHaveControl: 'אתה בשליטה',
+    contextMenu: {
+      target: {
+        openCard: 'פתח כרטיס',
+        mitigate: 'שיבוש',
+        mitigateAll: 'שיבוש כולל',
+        track: 'מעקב',
+        investigate: 'חקירה',
+        dismiss: 'דחייה',
+      },
+      sensor: {
+        viewFeed: 'צפה בהזנה',
+      },
+    },
+  },
+};
+
+/**
+ * Type derived from the Hebrew catalog. The English catalog is asserted
+ * to satisfy this — TypeScript fails the build if a key drifts.
+ */
+export type Strings = typeof STRINGS_HE;
+
+const STRINGS_EN: Strings = {
+  devices: {
+    typeLabels: {
+      camera: 'Cameras',
+      radar: 'Radars',
+      dock: 'Drone hives',
+      drone: 'Drones',
+      ecm: 'Jammers',
+      launcher: 'Launchers',
+      lidar: 'LIDAR',
+      weapon_system: 'Weapon systems',
+    },
+    connectionLabels: {
+      online: 'Online',
+      offline: 'Offline',
+      error: 'Error',
+      warning: 'Warning',
+    },
+    strings: {
+      searchPlaceholder: 'Search...',
+      clearSearch: 'Clear search',
+      resetFilters: 'Reset filters',
+      resetFiltersLabel: 'Clear',
+      typeFilterLabel: 'Devices',
+      noMatches: 'No matching devices',
+      location: 'Location',
+      bearing: 'Bearing',
+      fieldOfView: 'Field of view',
+      coverage: 'Coverage',
+      altitude: 'Altitude',
+      health: 'Health',
+      healthOk: 'OK',
+      healthMalfunction: 'Malfunction',
+      battery: 'Battery',
+      jam: 'Engage',
+      jamActive: 'Jamming active',
+      jamDisabledOffline: 'Device offline',
+      jamDisabledMalfunction: 'Device malfunction',
+      jamDisabledAlreadyActive: 'Jamming already active',
+      cameraModeAriaLabel: 'Camera mode',
+      centerOnMap: 'Center on map',
+      mute: 'Mute',
+      unmute: 'Unmute',
+      wipers: 'Wipers',
+      wipersAriaLabel: 'Wipers',
+      calibrate: 'Calibrate',
+      calibrating: 'Calibrating...',
+      calibrated: 'Done',
+      calibrateAriaLabel: 'Calibrate',
+      pinToFeed: 'Pin to feed',
+      pinToFeedAriaLabel: 'Pin device to a video feed',
+      unpinFromFeed: 'Unpin',
+      unpinFromFeedAriaLabel: 'Remove device from the video feed',
+      pinToFeedTooltip: 'Pin to feed',
+      pinnedToFeedTooltip: 'Pinned to feed',
+    },
+  },
+
+  dashboard: {
+    title: 'DASHBOARD',
+    activeSystems: (count: number) => `Active systems ( ${count} )`,
+    closeSidebar: 'Close systems list',
+    openSidebar: 'Open systems list',
+    devices: 'Devices',
+    cameras: 'Cameras',
+    cuasScenarios: 'CUAS scenarios',
+    helpTour: 'Help tour',
+    styleGuide: 'Style Guide',
+    switchToHebrew: 'Switch to Hebrew (RTL)',
+    switchToEnglish: 'Switch to English (LTR)',
+    notifications: 'Notifications',
+    switchTo3D: 'Switch to 3D map',
+    switchTo2D: 'Switch to 2D map',
+    dropZoneRelease: 'Release to view',
+    dropZoneHint: 'Drag here',
+    closeDevices: 'Close devices',
+    closeCameras: 'Close cameras',
+    scenarioSingle: 'Single target',
+    scenarioFull: 'Full scenario (3 targets)',
+    scenarioSwarm: 'Swarm scenario (20 targets)',
+    devicesPanelTitle: 'Devices',
+    devicesPanelClose: 'Close',
+    activeSystemsHeading: (count: number) => `Dashboard — Active systems (${count})`,
+    notificationsAriaLabel: 'Notifications',
+    cuasScenariosAriaLabel: 'CUAS scenarios',
+    helpTourAriaLabel: 'Help tour',
+  },
+
+  listOfSystems: {
+    tabActive: 'Active',
+    tabCompleted: 'Completed',
+    searchPlaceholder: 'Search target, ID, or type...',
+    searchAriaLabel: 'Search targets',
+    clearSearchAriaLabel: 'Clear search',
+    resetLabel: 'Reset',
+    resetAriaLabel: 'Reset filters',
+    emptyOptionsLabel: 'No options',
+    emptyActive: 'No active targets',
+    emptyCompleted: 'No completed events',
+    emptyDefault: 'No detections',
+    newUpdates: (count: number) => `${count} new updates`,
+    confirm: 'Confirm',
+    cancel: 'Cancel',
+    finalConfirmTitle: 'Final confirmation',
+    finalConfirmLabel: 'Engage',
+    closeManual: 'Manual close',
+    closeAuto: 'Auto close',
+    telemetryTitle: 'Telemetry',
+    telemetryCopy: 'Copy telemetry',
+    laserRelativeLocation: 'Position relative to laser',
+    sensors: (count: number) => `Sensors (${count})`,
+    logTitle: 'Log',
+    logMore: (n: number) => `${n} more entries`,
+    closeEventTitle: 'Close event — pick a reason',
+    closeReasons: {
+      handled: 'Handled',
+      escalated: 'Escalated to authority',
+      ignoredAnimal: 'Animal',
+      ignoredAuthorizedVehicle: 'Authorized vehicle',
+      ignoredVegetation: 'Vegetation / wind',
+      ignoredSensorError: 'Sensor error',
+      ignoredOwnForces: 'Own forces',
+      ignoredPoorDetection: 'Poor detection',
+      irrelevant: 'Not relevant',
+      drill: 'Drill',
+      misidentification: 'Misidentification',
+      other: 'Other',
+    },
+    playbooks: {
+      fastInspect: { name: 'Fast inspection', description: 'Launch drone + start recording' },
+      fullResponse: { name: 'Full response', description: 'Drone + response force + recording' },
+      transfer: { name: 'Transfer responsibility', description: 'Transfer data to police / nearby authority' },
+    },
+  },
+
+  cards: {
+    classifiedTypes: {
+      drone: 'drone',
+      bird: 'bird',
+      aircraft: 'aircraft',
+      car: 'vehicle',
+      unknown: 'unknown',
+    },
+    classifiedTypeLabel: (typeLabel: string) => `Most likely a ${typeLabel}`,
+    cameraScan: 'Camera scan',
+    droneMission: 'Drone mission',
+    trackingPtz: 'PTZ tracking',
+    recordingPtz: 'PTZ recording',
+    distanceFromAsset: (name: string, km: number) => `${name} (${km.toFixed(1)} km)`,
+    bdaConfirm: 'BDA confirm — drone lock',
+    dismiss: 'Dismiss',
+    cameraPointing: 'Pointing camera...',
+    cameraLocked: 'Camera locked on target',
+    pointCamera: 'Point camera',
+    jamCompleted: 'Jamming complete',
+    jamCompletedStrip: 'Jamming complete',
+    cameraControlCountdown: (countdown: number) => `${countdown}s to control...`,
+    requestCameraControl: 'Request camera control',
+    cancelCamera: 'Cancel camera',
+    completeMission: 'Complete mission',
+    confirmBird: 'Confirm bird — close detection',
+    falseAlarm: 'False alarm',
+    investigateBird: 'Investigate',
+    sendDrone: 'Launch drone',
+    markPoi: 'Mark POI',
+    closeEvent: 'Close event',
+    closeEventShort: 'Close',
+    pbFastInspect: 'Fast inspection',
+    pbFullResponse: 'Full response',
+    pbTransfer: 'Transfer',
+    dronePause: 'Pause',
+    droneResume: 'Resume',
+    droneRtb: 'Return to base',
+    missionActivate: 'Activate mission',
+    missionCancel: 'Cancel planning',
+    missionPause: 'Pause',
+    missionResume: 'Resume',
+    missionOverride: 'Manual control',
+    missionCancelFull: 'Cancel mission',
+    missionReturn: 'Return to mission',
+    jamPrimary: 'Jam',
+    surveillance: 'Surveillance',
+    drone: 'Drone',
+    droneEnRouteBda: 'Drone en route to BDA...',
+    dronePhases: {
+      select: 'Select drone',
+      takeoff: 'Takeoff',
+      flying: 'En route',
+      onStation: 'On station',
+      rtb: 'Returning',
+      landed: 'Landed',
+    },
+    cuasPhases: {
+      initialDetection: 'Initial detection',
+      classification: 'Classification',
+      weaponPointing: 'Weapon pointing',
+      weaponPointed: 'Weapon aligned',
+      lock: 'Lock',
+      locking: 'Locking...',
+      locked: 'Locked',
+      pendingAction: 'Awaiting action',
+      jamActive: 'Jamming active',
+      neutralized: 'Neutralized',
+      bdaConfirm: 'BDA confirmation',
+    },
+    flowSteps: {
+      trigger: 'Detect',
+      orient: 'Orient',
+      investigate: 'Investigate',
+      manualTracking: 'Manual tracking',
+      decide: 'Decide',
+      act: 'Act',
+      closure: 'Close',
+    },
+    detailRows: {
+      location: 'Location',
+      altitude: 'Altitude',
+      distance: 'Distance',
+      lastSeen: 'Last seen',
+      azimuth: 'Azimuth',
+      elevation: 'Elevation',
+      range: 'Range',
+    },
+    typeLabels: {
+      drone: 'Drone',
+      bird: 'Bird',
+      aircraft: 'Aircraft',
+      car: 'Vehicle',
+      unknown: 'Unknown',
+      unknownDetection: 'Unknown detection',
+    },
+  },
+
+  camera: {
+    viewer: {
+      removeWindow: 'Remove',
+      removeWindowAriaLabel: 'Remove window',
+      removeCamera: 'Remove camera',
+      removeCameraAriaLabel: 'Remove camera',
+      pickContent: 'Pick content',
+      mapPickerOption: 'Map',
+      splitScreenAriaLabel: 'Split screen',
+      splitScreen: 'Split screen',
+    },
+    contextMenu: {
+      releaseControl: 'Release control',
+      lockedByOperator: (name: string) => `Locked by ${name}`,
+      lockedByOtherOperator: 'another operator',
+      takeControl: 'Take control',
+      switchToNight: 'Night mode (IR)',
+      switchToDay: 'Day mode',
+      hideAiDetections: 'Hide AI detections',
+      showAiDetections: 'Show AI detections',
+      cancelDesignate: 'Cancel target designation',
+      designateTarget: 'Designate target',
+      resetView: 'Reset view',
+      settings: 'Settings',
+      pinToGrid: 'Pin to grid',
+    },
+    controlBar: {
+      requestingControlCountdown: (countdown: number) => `Requesting control… ${countdown}s (T)`,
+      requestingControl: 'Requesting control… (T)',
+      releaseControl: 'Release control (T)',
+      lockedByOperator: (name: string) => `Locked by ${name}`,
+      lockedByOtherOperator: 'another operator',
+      takeControl: 'Take control (T)',
+      switchToNight: 'Night mode',
+      switchToDay: 'Day mode',
+      hideAiDetections: 'Hide AI detections',
+      showAiDetections: 'Show AI detections',
+      cancelDesignate: 'Cancel target designation',
+      designateTarget: 'Designate target',
+      exitFullscreen: 'Exit fullscreen',
+      enterFullscreen: 'Fullscreen',
+    },
+    settingsMenu: {
+      playbackSplitLabel: 'Split: Live + playback',
+      liveLabel: 'Live',
+      playbackSplitDescription: 'View is split between live and the captured file.',
+      liveDescription: 'Toggle on to split the feed between live and capture.',
+      settingsTriggerAriaLabel: 'Settings',
+      settingsHeading: 'Settings (S)',
+      playbackSection: 'Playback investigation',
+      displaySection: 'Display',
+      aiDetectionsLabel: 'AI detections',
+      aiDetectionsDescription: 'Show default detection markers on the feed.',
+      aiDetectionsAriaLabel: 'AI detections',
+      modeDescription: 'Switch between day camera and infrared.',
+      currentDay: 'Day mode',
+      currentNight: 'Night mode (IR)',
+      switchToDayAriaLabel: 'Day mode',
+      switchToNightAriaLabel: 'Night mode',
+    },
+    feedTile: {
+      defaultEmptySlotHint: 'Drag or pin a device here',
+    },
+    playback: {
+      pause: 'Pause',
+      play: 'Play',
+      exitPlayback: 'Exit playback (P)',
+      playbackPositionAriaLabel: 'Playback position',
+      feedUnavailable: 'Feed currently unavailable',
+      loading: 'Loading recording',
+      loadingEllipsis: 'Loading recording…',
+      buffering: 'Buffering',
+      playing: 'Playing',
+      paused: 'Paused',
+      ended: 'Recording ended',
+      errorWithMessage: (message: string) => `Playback error: ${message}`,
+      errorGeneric: 'Playback error',
+      errorUnknown: 'Unknown playback error',
+      replayFromStart: 'Replay from start',
+      playAgain: 'Play again',
+      tryAgain: 'Try again',
+    },
+    designateOverlay: {
+      bannerAriaLabel: 'Click to designate target',
+      bannerText: 'Click to designate target · Esc to cancel',
+    },
+  },
+
+  notifications: {
+    swarmAlertTitle: 'Swarm alert',
+    swarmAlertMessage: (count: number) => `${count} simultaneous detections — emergency mode`,
+    newDetectionTitle: (name: string) => `New detection — ${name}`,
+    classifiedAirThreat: (confidence: number) => `${confidence}% confidence — air threat classified`,
+    classifiedGroundThreat: (confidence: number) => `${confidence}% confidence — ground threat classified`,
+    classifiedAsBird: (confidence: number) => `${confidence}% confidence — classified as bird`,
+    classifiedDroneAwait: (confidence: number) => `${confidence}% confidence — threat classified — hostile drone`,
+    awaitingApproval: (confidence: number) => `${confidence}% confidence — awaiting approval`,
+    additionalSensorTitle: (name: string) => `Additional sensor — ${name}`,
+    additionalSensorMessageMagos: (confidence: number, count: number) =>
+      `${confidence}% confidence — SENS-NVT-MAGOS-N (+${count})`,
+    additionalSensorMessageElta: (confidence: number, count: number) =>
+      `${confidence}% confidence — RAD-NVT-ELTA (+${count})`,
+    centerTitle: 'Notifications',
+    centerOpenAriaLabel: 'Notification center',
+    settingsAriaLabel: 'Notification settings',
+    markAllRead: 'Mark all read',
+    tabAll: 'All',
+    tabAlerts: 'Urgent',
+    tabUnread: 'Unread',
+    categoryToday: 'Today',
+    categoryYesterday: 'Yesterday',
+    categoryLast7Days: 'This week',
+    categoryOlder: 'Earlier',
+    emptyState: 'All clear — no notifications',
+    historyAll: 'All history',
+    stackCloseAriaLabel: 'Close',
+    stackNewCount: (count: number) => `${count} new notifications`,
+    stackCollapse: 'Collapse',
+    stackExpand: 'Expand',
+    stackAndMore: (count: number) => ` and ${count} more`,
+    history: [
+      {
+        id: '1',
+        title: 'Missile launch detected',
+        description: 'A multi-tube launch was detected from the northern sector. Automatic interception systems engaged.',
+        sender: 'Sector radar',
+      },
+      {
+        id: '2',
+        title: 'Operational order update',
+        description: "Updated 'Live Fire' order received. Please acknowledge receipt and review attached annexes.",
+        sender: 'Main TOC',
+      },
+      {
+        id: '3',
+        title: 'Server maintenance',
+        description: 'Server will reboot at 02:00. Expect brief data-flow disruptions.',
+        sender: 'IT System',
+      },
+      {
+        id: '4',
+        title: 'Daily patrol report',
+        description: 'Routine patrol report from the coastal sector is ready to view.',
+        sender: 'Patrol Team 4',
+      },
+      {
+        id: '5',
+        title: 'GPS signal lost',
+        description: 'Temporary reception disruptions recorded in the secondary operations area.',
+        sender: 'Navigation system',
+      },
+      {
+        id: '6',
+        title: 'Software update 2.4.1',
+        description: 'Installed successfully. Improvements to observation system stability.',
+        sender: 'System Update',
+      },
+      {
+        id: '7',
+        title: 'Flight authorisation request',
+        description: "'Hawk Eye' drone awaiting takeoff approval.",
+        sender: 'Air controller',
+      },
+    ],
+  },
+
+  targetFilters: {
+    activityStatusLabels: {
+      active: 'Active',
+      recently_active: 'Recently active',
+      timeout: 'Timed out',
+      dismissed: 'Dismissed',
+      mitigated: 'Handled',
+    },
+    typeLabels: {
+      drone: 'Drone',
+      bird: 'Bird',
+      car: 'Vehicle',
+      unknown: 'Unknown',
+      uav: 'Drone',
+      missile: 'Missile',
+      aircraft: 'Aircraft',
+      ground_vehicle: 'Vehicle',
+      naval: 'Naval',
+    },
+    chipLabels: {
+      activityStatus: 'Status',
+      sensor: 'Sensor',
+    },
+    summaries: {
+      allStatuses: 'All',
+      activePair: 'Active',
+      countSelected: (count: number) => `${count} selected`,
+      allSensors: 'All sensors',
+      oneSelected: '1 selected',
+      countSensors: (count: number) => `${count} sensors`,
+      noSensorsAvailable: 'No sensors available',
+    },
+  },
+
+  engagementFlows: {
+    jam: {
+      idleButton: 'Jam',
+      mitigatingButton: 'Jamming signal...',
+      mitigatedButton: 'Jamming complete',
+      mitigatedStrip: 'Jamming complete',
+      verifyBdaPtz: 'Investigate — PTZ tracking',
+      dropdownAll: 'Global jamming',
+      dropdownDirectional: 'Directional jamming',
+      dropdownSpectrum: 'Wide-spectrum jamming',
+    },
+    weapon: {
+      idleButton: 'Point weapon',
+      pointingButton: 'Pointing...',
+      pointedButton: 'Weapon aligned',
+      pointedStrip: 'Weapon aligned',
+      lockingButton: 'Weapon aligned',
+      lockingStrip: 'Weapon aligned',
+      lockingTerminalLabel: 'Locking...',
+      lockedButton: 'Locked on target',
+      lockedStrip: 'LOCKED',
+      lockedComplete: 'Complete mission',
+      lockedDismiss: 'Cancel lock',
+      pointedLock: 'Lock',
+      pointedDismiss: 'Cancel pointing',
+    },
+  },
+
+  actionLog: {
+    initialDetectionCar: 'Initial detection — hostile vehicle',
+    initialDetectionBird: 'Initial detection — bird',
+    initialDetectionDrone: 'Initial detection — hostile drone',
+    additionalSensorMagos: 'Additional sensor — Magos North',
+    additionalSensorElta: 'Additional sensor — Elta MHR',
+    classifiedAsBird: 'Classified as bird — 85% confidence',
+    classifiedAsDrone: 'Classified as drone — 92% confidence',
+    jamStart: 'Jamming',
+    jamEnd: 'Jamming complete — awaiting verification',
+    jamGlobal: (count: number) => `Global jamming — ${count} effectors`,
+    jamGlobalEnd: 'Global jamming complete — awaiting verification',
+    weaponStart: 'Weapon pointing',
+    weaponEnd: 'Weapon aligned — awaiting lock',
+    locking: 'Locking on target...',
+    locked: 'Locked on target',
+    lockCancelled: 'Lock cancelled',
+    pointingCancelled: 'Pointing cancelled',
+    bdaInProgress: 'BDA — stabilising',
+    bdaObserving: 'BDA — actively observing',
+    bdaNeutralized: 'BDA — neutralized',
+    bdaStillActive: 'BDA — still active',
+    bdaLost: 'BDA — contact lost',
+    cameraPointing: (typeLabel: string) => `Camera ${typeLabel} pointing at target...`,
+    cameraLocked: (typeLabel: string) => `Camera ${typeLabel} locked on target`,
+    reportSent: 'Report sent to authority',
+  },
+
+  toasts: {
+    cameraControlAcquired: 'Camera control acquired — pointing for verification',
+    jamStarted: 'Electronic jamming engaged',
+    jamEndedAwaitVerify: 'Jamming complete — verification required',
+    jamGlobalStarted: (count: number) => `Global jamming engaged — ${count} effectors`,
+    weaponPointing: 'Pointing weapon at target',
+    weaponPointed: 'Weapon aligned — ready to lock',
+    lockedReadyForFire: 'Locked on target — switch to external device for fire',
+    lockCancelled: 'Lock cancelled',
+    pointingCancelled: 'Pointing cancelled',
+    missionComplete: 'Mission completed successfully',
+    cameraCancelled: 'Camera cancelled',
+    cameraPointingForJamVerify: 'Pointing camera for jamming verification',
+    allCamerasBusy: "All cameras busy — press 'Request control' to acquire access",
+    requestingCameraControl: 'Requesting camera control...',
+    targetNeutralized: 'Target neutralized — press complete mission to mark as handled',
+    targetStillActive: 'Target still active — can be jammed again',
+    targetLost: 'Target lost — press complete mission to mark as handled',
+    cameraPointingForVerify: (typeLabel: string) => `${typeLabel} pointing for verification...`,
+    cameraLockedOnTarget: (typeLabel: string) => `${typeLabel} locked on target`,
+    reportSentTo: (name: string) => `Report sent — ${name}`,
+    confirmedAsBird: 'Confirmed as bird — detection closed',
+    falseAlarm: 'Flagged as false alarm',
+    dismissedReason: (reason: string) => `Dismissed: ${reason}`,
+    dismissedDefault: 'Detection removed from tracking',
+    jamActivated: (jammerId: string) => `Jamming engaged — ${jammerId}`,
+    targetFallback: 'target',
+  },
+
+  simulation: {
+    targetNameCar: (suffix: string) => `Vehicle — detection ${suffix}`,
+    targetNameBird: (suffix: string) => `Bird — detection ${suffix}`,
+    targetNameDrone: (suffix: string) => `Drone — detection ${suffix}`,
+    targetClassifiedBird: (name: string) => `Bird — ${name}`,
+    targetClassifiedCar: (name: string) => `Vehicle — ${name}`,
+    targetClassifiedDrone: (name: string) => `Drone — ${name}`,
+    distanceKm: (km: string) => `${km} km`,
+    altitudeM: (m: number) => `${m} m`,
+    laserDistanceM: (m: number) => `${m} m`,
+    friendlyDrones: {
+      patrol3: { name: 'Patrol-3', altitude: '80 m' },
+      observation7: { name: 'Observation-7', altitude: '110 m' },
+      patrol11: { name: 'Patrol-11', altitude: '95 m' },
+      observation2: { name: 'Observation-2', altitude: '120 m' },
+      patrol9: { name: 'Patrol-9', altitude: '70 m' },
+    },
+    launchers: {
+      alpha: 'Launcher Alpha',
+      bravo: 'Launcher Bravo',
+      gamma: 'Launcher Gamma',
+    },
+    deviceNames: {
+      missileLauncher: 'Missile launcher',
+    },
+    cameraPresets: {
+      ptzNorth: ['Zoom', 'Night', 'Normal'],
+      pixelsight: ['Normal', 'Thermal'],
+    },
+  },
+
+  map: {
+    youHaveControl: 'You have control',
+    contextMenu: {
+      target: {
+        openCard: 'Open card',
+        mitigate: 'Jam',
+        mitigateAll: 'Global jamming',
+        track: 'Track',
+        investigate: 'Investigate',
+        dismiss: 'Dismiss',
+      },
+      sensor: {
+        viewFeed: 'View feed',
+      },
+    },
+  },
+};
+
+const CATALOG: Record<Locale, Strings> = {
+  he: STRINGS_HE,
+  en: STRINGS_EN,
+};
+
+/**
+ * Look up the strings catalog for a given locale. Pure function —
+ * components that need to read strings outside of the React tree
+ * (e.g. module-scope constants, simulation reducers) call this with
+ * an explicit locale instead of going through {@link useStrings}.
+ */
+export function getStrings(locale: Locale): Strings {
+  return CATALOG[locale];
+}

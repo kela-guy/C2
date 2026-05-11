@@ -9,6 +9,8 @@ import {
   Eye,
 } from 'lucide-react';
 import { JamWaveIcon } from '@/primitives/MapIcons';
+import type { Strings } from '@/lib/intl';
+import { getStrings } from '@/lib/intl';
 import type { Detection } from './ListOfSystems';
 import type { CardAction } from '@/primitives/CardActions';
 
@@ -126,168 +128,201 @@ export interface EngagementFlowDef {
 
 // ─── JAM FLOW (drone / aircraft) ───────────────────────────────────────────
 
-const JAM_EXTRA_DROPDOWN = (busy: boolean): CardAction[] => [
-  { id: 'mitigate-all', label: 'שיבוש כללי', icon: Radio,
-    onClick: (e) => e.stopPropagation(),
-    disabled: busy,
-  },
-  { id: 'mitigate-directional', label: 'שיבוש ממוקד', icon: Crosshair,
-    onClick: (e) => e.stopPropagation(),
-    disabled: busy,
-  },
-  { id: 'mitigate-spectrum', label: 'שיבוש ספקטרום רחב', icon: ScanLine,
-    onClick: (e) => e.stopPropagation(),
-    disabled: busy,
-  },
-];
-
-export const JAM_FLOW: EngagementFlowDef = {
-  id: 'jam',
-  matchTarget: (t) =>
-    t.classifiedType !== 'bird' && t.classifiedType !== 'car',
-
-  assetContextKey: 'regulusEffectors',
-  selectedIdContextKey: 'selectedEffectorId',
-  availableFilter: (a) => a.status === 'available',
-
-  getPhase: (t) => {
-    if (t.mitigationStatus === 'mitigated') return 'mitigated';
-    if (t.mitigationStatus === 'mitigating') return 'mitigating';
-    return 'idle';
-  },
-
-  phases: {
-    idle: {
-      buttonLabel: 'שיבוש',
-      buttonIcon: JamWaveIcon,
-      buttonVariant: 'danger',
-      showDropdown: true,
+function buildJamExtraDropdown(t: Strings): (busy: boolean) => CardAction[] {
+  const j = t.engagementFlows.jam;
+  return (busy: boolean): CardAction[] => [
+    { id: 'mitigate-all', label: j.dropdownAll, icon: Radio,
+      onClick: (e) => e.stopPropagation(),
+      disabled: busy,
     },
-    mitigating: {
-      buttonLabel: 'משבש אות...',
-      buttonIcon: JamWaveIcon,
-      buttonVariant: 'danger',
-      loading: true,
-      disabled: true,
-      showDropdown: true,
+    { id: 'mitigate-directional', label: j.dropdownDirectional, icon: Crosshair,
+      onClick: (e) => e.stopPropagation(),
+      disabled: busy,
     },
-    mitigated: {
-      buttonLabel: 'שיבוש הושלם',
-      buttonIcon: Check,
-      buttonVariant: 'ghost',
-      isTerminal: true,
-      stripLabel: 'שיבוש הושלם',
-      stripIcon: Check,
-      stripTone: 'success',
-      terminalActions: [
-        { id: 'investigate-bda', label: 'תחקור — מעקב PTZ', icon: Eye, variant: 'fill', callbackKey: 'onVerify' },
-      ],
+    { id: 'mitigate-spectrum', label: j.dropdownSpectrum, icon: ScanLine,
+      onClick: (e) => e.stopPropagation(),
+      disabled: busy,
     },
-  },
+  ];
+}
 
-  lineColor: (phase) => phase === 'mitigating' ? '#ef4444' : '#ffffff',
-  badgeTextColor: (phase) => phase === 'mitigating' ? '#ffffff' : '#000000',
-  coverageColor: '#12b886',
+/**
+ * Jam-flow definition. Pass the active strings catalog to localize
+ * button + strip + dropdown labels. The non-label fields
+ * (matchTarget, getPhase, lineColor, etc.) are locale-independent.
+ */
+export function getJamFlow(t: Strings): EngagementFlowDef {
+  const j = t.engagementFlows.jam;
+  return {
+    id: 'jam',
+    matchTarget: (target) =>
+      target.classifiedType !== 'bird' && target.classifiedType !== 'car',
 
-  dropdownGroupLabel: '',
-  extraDropdownActions: JAM_EXTRA_DROPDOWN,
+    assetContextKey: 'regulusEffectors',
+    selectedIdContextKey: 'selectedEffectorId',
+    availableFilter: (a) => a.status === 'available',
 
-  primaryCallbackKey: 'onMitigate',
-  selectCallbackKey: 'onEffectorSelect',
+    getPhase: (target) => {
+      if (target.mitigationStatus === 'mitigated') return 'mitigated';
+      if (target.mitigationStatus === 'mitigating') return 'mitigating';
+      return 'idle';
+    },
 
-  showCamera: true,
-  accentPhases: { mitigating: ['mitigating'], active: ['mitigated'] },
-};
+    phases: {
+      idle: {
+        buttonLabel: j.idleButton,
+        buttonIcon: JamWaveIcon,
+        buttonVariant: 'danger',
+        showDropdown: true,
+      },
+      mitigating: {
+        buttonLabel: j.mitigatingButton,
+        buttonIcon: JamWaveIcon,
+        buttonVariant: 'danger',
+        loading: true,
+        disabled: true,
+        showDropdown: true,
+      },
+      mitigated: {
+        buttonLabel: j.mitigatedButton,
+        buttonIcon: Check,
+        buttonVariant: 'ghost',
+        isTerminal: true,
+        stripLabel: j.mitigatedStrip,
+        stripIcon: Check,
+        stripTone: 'success',
+        terminalActions: [
+          { id: 'investigate-bda', label: j.verifyBdaPtz, icon: Eye, variant: 'fill', callbackKey: 'onVerify' },
+        ],
+      },
+    },
+
+    lineColor: (phase) => phase === 'mitigating' ? '#ef4444' : '#ffffff',
+    badgeTextColor: (phase) => phase === 'mitigating' ? '#ffffff' : '#000000',
+    coverageColor: '#12b886',
+
+    dropdownGroupLabel: '',
+    extraDropdownActions: buildJamExtraDropdown(t),
+
+    primaryCallbackKey: 'onMitigate',
+    selectCallbackKey: 'onEffectorSelect',
+
+    showCamera: true,
+    accentPhases: { mitigating: ['mitigating'], active: ['mitigated'] },
+  };
+}
 
 // ─── WEAPON FLOW (car / ground vehicle) ────────────────────────────────────
 
-export const WEAPON_FLOW: EngagementFlowDef = {
-  id: 'weapon',
-  matchTarget: (t) => t.classifiedType === 'car',
+export function getWeaponFlow(t: Strings): EngagementFlowDef {
+  const w = t.engagementFlows.weapon;
+  return {
+    id: 'weapon',
+    matchTarget: (target) => target.classifiedType === 'car',
 
-  assetContextKey: 'launcherEffectors',
-  selectedIdContextKey: 'selectedLauncherId',
-  availableFilter: (a) => a.status === 'available',
+    assetContextKey: 'launcherEffectors',
+    selectedIdContextKey: 'selectedLauncherId',
+    availableFilter: (a) => a.status === 'available',
 
-  getPhase: (t) => t.weaponPointingStatus ?? 'idle',
+    getPhase: (target) => target.weaponPointingStatus ?? 'idle',
 
-  phases: {
-    idle: {
-      buttonLabel: 'כוון נשק',
-      buttonIcon: Crosshair,
-      buttonVariant: 'danger',
-      showDropdown: true,
+    phases: {
+      idle: {
+        buttonLabel: w.idleButton,
+        buttonIcon: Crosshair,
+        buttonVariant: 'danger',
+        showDropdown: true,
+      },
+      pointing: {
+        buttonLabel: w.pointingButton,
+        buttonIcon: Crosshair,
+        buttonVariant: 'warning',
+        loading: true,
+        disabled: true,
+        showDropdown: true,
+      },
+      pointed: {
+        buttonLabel: w.pointedButton,
+        buttonIcon: Crosshair,
+        buttonVariant: 'ghost',
+        isTerminal: true,
+        stripLabel: w.pointedStrip,
+        stripIcon: Crosshair,
+        stripTone: 'success',
+        terminalActions: [
+          { id: 'lock-weapon', label: w.pointedLock, icon: Lock, variant: 'danger', callbackKey: 'onLockWeapon' },
+          { id: 'dismiss-pointing', label: w.pointedDismiss, icon: X, variant: 'ghost', callbackKey: 'onDismissLock' },
+        ],
+      },
+      locking: {
+        buttonLabel: w.lockingButton,
+        buttonIcon: Crosshair,
+        buttonVariant: 'ghost',
+        isTerminal: true,
+        stripLabel: w.lockingStrip,
+        stripIcon: Crosshair,
+        stripTone: 'success',
+        terminalActions: [
+          { id: 'lock-weapon', label: w.lockingTerminalLabel, icon: Lock, variant: 'danger', callbackKey: 'onLockWeapon' },
+          { id: 'dismiss-pointing', label: w.pointedDismiss, icon: X, variant: 'ghost', callbackKey: 'onDismissLock' },
+        ],
+      },
+      locked: {
+        buttonLabel: w.lockedButton,
+        buttonIcon: Lock,
+        buttonVariant: 'ghost',
+        isTerminal: true,
+        stripLabel: w.lockedStrip,
+        stripIcon: Lock,
+        stripTone: 'danger',
+        terminalActions: [
+          { id: 'complete-mission', label: w.lockedComplete, icon: Check, variant: 'fill', callbackKey: 'onCompleteMission' },
+          { id: 'dismiss-lock', label: w.lockedDismiss, icon: X, variant: 'ghost', callbackKey: 'onDismissLock' },
+        ],
+      },
     },
-    pointing: {
-      buttonLabel: 'מכוון...',
-      buttonIcon: Crosshair,
-      buttonVariant: 'warning',
-      loading: true,
-      disabled: true,
-      showDropdown: true,
+
+    lineColor: (phase) => {
+      if (phase === 'locked' || phase === 'locking') return '#ef4444';
+      if (phase === 'pointing' || phase === 'pointed') return '#f59e0b';
+      return '#ffffff';
     },
-    pointed: {
-      buttonLabel: 'נשק מכוון',
-      buttonIcon: Crosshair,
-      buttonVariant: 'ghost',
-      isTerminal: true,
-      stripLabel: 'נשק מכוון',
-      stripIcon: Crosshair,
-      stripTone: 'success',
-      terminalActions: [
-        { id: 'lock-weapon', label: 'נעל', icon: Lock, variant: 'danger', callbackKey: 'onLockWeapon' },
-        { id: 'dismiss-pointing', label: 'בטל כיוון', icon: X, variant: 'ghost', callbackKey: 'onDismissLock' },
-      ],
-    },
-    locking: {
-      buttonLabel: 'נשק מכוון',
-      buttonIcon: Crosshair,
-      buttonVariant: 'ghost',
-      isTerminal: true,
-      stripLabel: 'נשק מכוון',
-      stripIcon: Crosshair,
-      stripTone: 'success',
-      terminalActions: [
-        { id: 'lock-weapon', label: 'נועל...', icon: Lock, variant: 'danger', callbackKey: 'onLockWeapon' },
-        { id: 'dismiss-pointing', label: 'בטל כיוון', icon: X, variant: 'ghost', callbackKey: 'onDismissLock' },
-      ],
-    },
-    locked: {
-      buttonLabel: 'נעול על מטרה',
-      buttonIcon: Lock,
-      buttonVariant: 'ghost',
-      isTerminal: true,
-      stripLabel: 'LOCKED',
-      stripIcon: Lock,
-      stripTone: 'danger',
-      terminalActions: [
-        { id: 'complete-mission', label: 'סיום משימה', icon: Check, variant: 'fill', callbackKey: 'onCompleteMission' },
-        { id: 'dismiss-lock', label: 'בטל נעילה', icon: X, variant: 'ghost', callbackKey: 'onDismissLock' },
-      ],
-    },
-  },
+    badgeTextColor: (phase) => phase === 'idle' ? '#000000' : '#ffffff',
+    coverageColor: '#12b886',
 
-  lineColor: (phase) => {
-    if (phase === 'locked' || phase === 'locking') return '#ef4444';
-    if (phase === 'pointing' || phase === 'pointed') return '#f59e0b';
-    return '#ffffff';
-  },
-  badgeTextColor: (phase) => phase === 'idle' ? '#000000' : '#ffffff',
-  coverageColor: '#12b886',
+    dropdownGroupLabel: '',
 
-  dropdownGroupLabel: '',
+    primaryCallbackKey: 'onPointWeapon',
+    selectCallbackKey: 'onLauncherSelect',
 
-  primaryCallbackKey: 'onPointWeapon',
-  selectCallbackKey: 'onLauncherSelect',
-
-  showCamera: false,
-  accentPhases: { mitigating: ['pointing', 'locking'], active: ['pointed', 'locked'] },
-};
-
-// ─── Registry ──────────────────────────────────────────────────────────────
-
-export const ENGAGEMENT_FLOWS: EngagementFlowDef[] = [JAM_FLOW, WEAPON_FLOW];
-
-export function findFlowForTarget(target: Detection): EngagementFlowDef | null {
-  return ENGAGEMENT_FLOWS.find(f => f.matchTarget(target)) ?? null;
+    showCamera: false,
+    accentPhases: { mitigating: ['pointing', 'locking'], active: ['pointed', 'locked'] },
+  };
 }
+
+/**
+ * Build the engagement-flow registry for the given catalog. Use this
+ * inside React (where you already have a `useStrings()` result)
+ * instead of touching the legacy `JAM_FLOW` / `WEAPON_FLOW`
+ * constants.
+ */
+export function getEngagementFlows(t: Strings): EngagementFlowDef[] {
+  return [getJamFlow(t), getWeaponFlow(t)];
+}
+
+export function findFlowForTarget(target: Detection, t: Strings): EngagementFlowDef | null {
+  return getEngagementFlows(t).find(f => f.matchTarget(target)) ?? null;
+}
+
+// ─── Legacy exports (label-free callers) ───────────────────────────────────
+//
+// CesiumTacticalMap consumes only the locale-independent fields
+// (matchTarget, getPhase, lineColor, badgeTextColor, coverageColor,
+// availableFilter, accentPhases) and never renders any of the
+// `*Label` strings. Re-exporting English-locale instances keeps that
+// call site simple without forcing it through the `useStrings` hook
+// (the map mounts at module init in some demo paths).
+const FALLBACK_STRINGS = getStrings('en');
+export const JAM_FLOW: EngagementFlowDef = getJamFlow(FALLBACK_STRINGS);
+export const WEAPON_FLOW: EngagementFlowDef = getWeaponFlow(FALLBACK_STRINGS);
+export const ENGAGEMENT_FLOWS: EngagementFlowDef[] = [JAM_FLOW, WEAPON_FLOW];

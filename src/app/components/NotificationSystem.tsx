@@ -2,17 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { Toaster } from "./ui/sonner";
 import { X } from "lucide-react";
-
-type ThreatLevel = "critical" | "high" | "medium" | "info" | "success" | "suspect";
-
-interface NotificationData {
-  id: string;
-  title: string;
-  message: string;
-  level: ThreatLevel;
-  code?: string;
-  timestamp?: string;
-}
+import { formatTime, useStrings } from "@/lib/intl";
+import type { NotificationData, ThreatLevel } from "./notificationData";
 
 const LEVEL_ACCENT: Record<ThreatLevel, string> = {
   critical: "#ef4444",
@@ -55,6 +46,8 @@ function useBatchItems(): BatchItem[] {
 const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
   const items = useBatchItems();
   const [expanded, setExpanded] = React.useState(false);
+  const t = useStrings();
+  const nt = t.notifications;
 
   if (items.length === 0) return null;
 
@@ -75,7 +68,7 @@ const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
               <button
                 onClick={(e) => { e.stopPropagation(); toast.dismiss(toastId); flushBatch(); }}
                 className="text-zinc-600 hover:text-zinc-400 transition-[color,opacity] duration-150 shrink-0 opacity-0 group-hover:opacity-100 p-1 -m-1"
-                aria-label="סגור"
+                aria-label={nt.stackCloseAriaLabel}
               >
                 <X size={14} />
               </button>
@@ -94,7 +87,7 @@ const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
       <div className="py-3 px-3">
         <div className="flex items-center justify-between">
           <span className="text-[13px] font-medium text-zinc-100">
-            {items.length} התראות חדשות
+            {nt.stackNewCount(items.length)}
           </span>
           <div className="flex items-center gap-1.5">
             <button
@@ -102,12 +95,12 @@ const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
               className="text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors px-2 py-1.5 rounded hover:bg-white/[0.04]"
               aria-expanded={expanded}
             >
-              {expanded ? 'סגור' : 'הרחב'}
+              {expanded ? nt.stackCollapse : nt.stackExpand}
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); toast.dismiss(toastId); flushBatch(); }}
               className="text-zinc-600 hover:text-zinc-400 transition-colors p-1 -m-1"
-              aria-label="סגור"
+              aria-label={nt.stackCloseAriaLabel}
             >
               <X size={14} />
             </button>
@@ -117,7 +110,7 @@ const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
         {!expanded && (
           <p className="text-[12px] text-zinc-400 mt-1 truncate">
             {items[items.length - 1]?.title}
-            {items.length > 1 && ` ועוד ${items.length - 1}`}
+            {items.length > 1 && nt.stackAndMore(items.length - 1)}
           </p>
         )}
 
@@ -184,7 +177,12 @@ export const showTacticalNotification = (data: Omit<NotificationData, "id">) => 
     window.dispatchEvent(new Event('trigger-suspect-alert'));
   }
 
-  const ts = new Date().toLocaleTimeString('he-IL', { hour12: false });
+  // Read direction off `<html>` once per emit. Toasts fire from anywhere
+  // (selectors, callbacks, RAF loops) — this isn't React land — so we
+  // can't use the `useLocale` hook. The DirectionProvider mirrors its
+  // state onto `documentElement.dir`, which is our source of truth here.
+  const locale = document.documentElement.getAttribute('lang') === 'en' ? 'en' : 'he';
+  const ts = formatTime(new Date(), locale);
   pendingBatch.push({ ...data, timestamp: ts });
 
   ensureToastExists();
@@ -196,20 +194,6 @@ export const showTacticalNotification = (data: Omit<NotificationData, "id">) => 
     flushBatch();
   }, BATCH_WINDOW_MS);
 };
-
-export const MOCK_NOTIFICATIONS: Omit<NotificationData, "id">[] = [
-  { title: "זיהוי שיגור טילים", message: "מערכת מכ״ם זיהתה שיגור רב-קני מכיוון צפון-מזרח. נדרשת תגובה מיידית.", level: "critical", code: "ALERT-99" },
-  { title: "חשד לזיהוי", message: "אות חלש במכ״ם. נדרש אימות ויזואלי מיידי.", level: "suspect", code: "SUSPECT-01" },
-  { title: "פריצת אבטחה", message: "זוהתה כניסה לא מורשית למערכת השו״ב המרכזית. הפרוטוקול ננעל.", level: "critical", code: "SEC-01" },
-  { title: "רחפן לא מזוהה", message: "רחפן חשוד נכנס למרחב האווירי המוגבל בגזרת החוף.", level: "high", code: "UAV-X" },
-  { title: "חסימת תדרים", message: "זוהתה חסימת GPS חזקה באזור הפעולה. ייתכנו שיבושי מיקום.", level: "high", code: "JAM-04" },
-  { title: "אובדן קשר עין", message: "המצלמה הראשית איבדה קשר עם המטרה עקב תנאי ראות קשים.", level: "medium", code: "VIS-LOST" },
-  { title: "סוללה חלשה", message: "רחפן תצפית 4 מדווח על 15% סוללה. מומלץ להחזירו לבסיס.", level: "medium", code: "BAT-LOW" },
-  { title: "מטרה חדשה", message: "מערכת Pixelsight איתרה אובייקט חדש במעקב. סיווג בתהליך.", level: "info", code: "TRG-NEW" },
-  { title: "עדכון משימה", message: "פרמטרים חדשים למשימה התקבלו מהמפקדה. אנא אשר קבלה.", level: "info", code: "MSN-UPD" },
-  { title: "מטרה נוטרלה", message: "אישור פגיעה במטרה. האיום הוסר בהצלחה. כל הכוחות שבו לבסיס.", level: "success", code: "TRG-CLR" },
-  { title: "סנכרון הושלם", message: "כל הנתונים הטלמטריים גובו לשרת המרכזי בהצלחה.", level: "success", code: "SYNC-OK" },
-];
 
 const VIGNETTE_DURATION_MS = 4000;
 

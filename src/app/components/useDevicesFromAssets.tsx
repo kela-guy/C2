@@ -16,19 +16,17 @@ import {
   LAUNCHER_ASSETS,
   LIDAR_ASSETS,
   WEAPON_SYSTEM_ASSETS,
-  FLOODLIGHT_ASSETS,
-  SPEAKER_ASSETS,
+} from './tacticalAssets';
+import {
   SensorIcon,
   CameraIcon,
   RadarIcon,
   DroneHiveIcon,
   LauncherIcon,
   LidarIcon,
-  FloodlightIcon,
-  SpeakerIcon,
-} from './TacticalMap';
+} from './tacticalIcons';
+import { useStrings, getStrings } from '@/lib/intl';
 import type { Device } from './DevicesPanel';
-import { DroneDeviceIcon } from '@/primitives/ProductIcons';
 
 const DEVICE_HEALTH: Record<string, 'operational' | 'malfunctioning'> = {
   'SENS-NVT-MAGOS-S': 'malfunctioning',
@@ -47,14 +45,45 @@ const CAMERA_CAPS: Record<string, ('video' | 'photo')[]> = {
   'CAM-NVT-PIXELSIGHT': ['video'],
 };
 
-/** Hebrew preset labels for cameras — kept here (app-side) since DevicesPanel is presentation-only. */
+/**
+ * @deprecated Prefer `useCameraPresets()` inside React. Kept exported
+ * because `<DevicesPanel cameraPresets={CAMERA_PRESETS} />` callers
+ * outside the Dashboard still reach for this constant.
+ *
+ * Backed by the Hebrew catalog so the legacy default matches the old
+ * behaviour (Hebrew labels) — switch to `useCameraPresets()` to get
+ * the active locale.
+ */
 export const CAMERA_PRESETS: Record<string, string[]> = {
-  'CAM-NVT-PTZ-N': ['זום', 'לילה', 'רגיל'],
-  'CAM-NVT-PIXELSIGHT': ['רגיל', 'תרמי'],
+  'CAM-NVT-PTZ-N': [...getStrings('he').simulation.cameraPresets.ptzNorth],
+  'CAM-NVT-PIXELSIGHT': [...getStrings('he').simulation.cameraPresets.pixelsight],
 };
+
+/** Locale-aware camera-preset label map for `<DevicesPanel cameraPresets>`. */
+export function useCameraPresets(): Record<string, string[]> {
+  const presets = useStrings().simulation.cameraPresets;
+  return useMemo<Record<string, string[]>>(() => ({
+    'CAM-NVT-PTZ-N': [...presets.ptzNorth],
+    'CAM-NVT-PIXELSIGHT': [...presets.pixelsight],
+  }), [presets]);
+}
+
+const DroneDeviceIcon = ({ size = 28, fill = 'white' }: { size?: number; fill?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 28 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M23.334 15.7502L9.33696 0.583495L5.86139 4.0835L10.5007 11.0835L9.32456 15.7502L10.5007 20.4168L5.86139 27.4168L9.32456 30.6801L23.334 15.7502Z"
+      fill={fill}
+      stroke="#0a0a0a"
+      strokeWidth="1"
+    />
+  </svg>
+);
 
 /** Memoized hook returning the full `Device[]` for this app. */
 export function useDevicesFromAssets(): Device[] {
+  const t = useStrings();
+  const launcherDeviceName = t.simulation.deviceNames.missileLauncher;
+  const friendly = t.simulation.friendlyDrones;
   return useMemo<Device[]>(() => [
     ...CAMERA_ASSETS.map((a) => ({
       id: a.id,
@@ -110,7 +139,7 @@ export function useDevicesFromAssets(): Device[] {
     })),
     ...LAUNCHER_ASSETS.map((l) => ({
       id: l.id,
-      name: 'משגר טילים',
+      name: launcherDeviceName,
       type: 'launcher' as const,
       lat: l.latitude,
       lon: l.longitude,
@@ -143,45 +172,21 @@ export function useDevicesFromAssets(): Device[] {
       connectionState: 'online' as const,
       Icon: LauncherIcon,
     })),
-    ...FLOODLIGHT_ASSETS.map((f) => ({
-      id: f.id,
-      name: f.typeLabel,
-      type: 'floodlight' as const,
-      lat: f.latitude,
-      lon: f.longitude,
-      status: 'available' as const,
-      operationalStatus: (DEVICE_HEALTH[f.id] ?? 'operational') as Device['operationalStatus'],
-      connectionState: (DEVICE_CONNECTION[f.id] ?? 'online') as Device['connectionState'],
-      bearingDeg: f.bearingDeg,
-      Icon: FloodlightIcon,
-    })),
-    ...SPEAKER_ASSETS.map((s) => ({
-      id: s.id,
-      name: s.typeLabel,
-      type: 'speaker' as const,
-      lat: s.latitude,
-      lon: s.longitude,
-      status: 'available' as const,
-      operationalStatus: (DEVICE_HEALTH[s.id] ?? 'operational') as Device['operationalStatus'],
-      connectionState: (DEVICE_CONNECTION[s.id] ?? 'online') as Device['connectionState'],
-      coverageRadiusM: s.coverageRadiusM,
-      Icon: SpeakerIcon,
-    })),
     {
       id: 'FRIENDLY-01',
-      name: 'סיור-3',
+      name: friendly.patrol3.name,
       type: 'drone' as const,
       lat: 32.470,
       lon: 35.005,
       status: 'active' as const,
       operationalStatus: 'operational' as const,
       connectionState: 'online' as const,
-      altitude: '80 מ׳',
+      altitude: friendly.patrol3.altitude,
       Icon: DroneDeviceIcon,
     },
     {
       id: 'FRIENDLY-02',
-      name: 'תצפית-7',
+      name: friendly.observation7.name,
       type: 'drone' as const,
       lat: 32.463,
       lon: 34.998,
@@ -190,8 +195,8 @@ export function useDevicesFromAssets(): Device[] {
         ? 'malfunctioning'
         : 'operational',
       connectionState: (DEVICE_CONNECTION['FRIENDLY-02'] ?? 'online') as Device['connectionState'],
-      altitude: '110 מ׳',
+      altitude: friendly.observation7.altitude,
       Icon: DroneDeviceIcon,
     },
-  ], []);
+  ], [launcherDeviceName, friendly]);
 }

@@ -1,7 +1,8 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Radio, SlidersHorizontal } from 'lucide-react';
-import { CAMERA_ASSETS, LIDAR_ASSETS, RADAR_ASSETS } from '@/shared/components/TacticalMap';
+import { CAMERA_ASSETS, LIDAR_ASSETS, RADAR_ASSETS } from '@/app/components/tacticalAssets';
 import type { FilterDef } from '@/primitives/FilterBar';
+import { useStrings, getStrings, type Locale } from '@/lib/intl';
 import type { ActivityStatus, Detection } from './ListOfSystems';
 import { compareTargetsByPriority, getActivityStatus } from './useActivityStatus';
 
@@ -20,25 +21,30 @@ export interface ActiveFilter {
   valueLabel: string;
 }
 
-export const ACTIVITY_STATUS_LABELS: Record<ActivityStatus, string> = {
-  active: 'פעיל',
-  recently_active: 'פעיל לאחרונה',
-  timeout: 'פג תוקף',
-  dismissed: 'נדחה',
-  mitigated: 'טופל',
-};
+/**
+ * @deprecated Prefer `useStrings().targetFilters.activityStatusLabels`
+ * inside React. Kept for legacy callers (e.g. CardHeader badge) — read
+ * from the Hebrew catalog so behaviour matches the historical export.
+ */
+export const ACTIVITY_STATUS_LABELS: Record<ActivityStatus, string> =
+  getStrings('he').targetFilters.activityStatusLabels;
 
-export const TYPE_LABELS: Record<string, string> = {
-  drone: 'רחפן',
-  bird: 'ציפור',
-  car: 'רכב',
-  unknown: 'לא ידוע',
-  uav: 'רחפן',
-  missile: 'טיל',
-  aircraft: 'מטוס',
-  ground_vehicle: 'רכב',
-  naval: 'כלי שיט',
-};
+/**
+ * @deprecated Prefer `useStrings().targetFilters.typeLabels` inside
+ * React. Kept exported because a couple of non-React modules still
+ * reach for it directly.
+ */
+export const TYPE_LABELS: Record<string, string> =
+  getStrings('he').targetFilters.typeLabels;
+
+/** Locale-aware lookup for the same Hebrew default exported above. */
+export function getActivityStatusLabels(locale: Locale): Record<ActivityStatus, string> {
+  return getStrings(locale).targetFilters.activityStatusLabels;
+}
+
+export function getTypeLabels(locale: Locale): Record<string, string> {
+  return getStrings(locale).targetFilters.typeLabels;
+}
 
 function getDefaultActivityStatuses(scope: FilterScope): ActivityStatus[] {
   return scope === 'active'
@@ -47,6 +53,7 @@ function getDefaultActivityStatuses(scope: FilterScope): ActivityStatus[] {
 }
 
 export function useTargetFilters(targets: Detection[], scope: FilterScope) {
+  const t = useStrings().targetFilters;
   const [filters, setFilters] = useState<FilterState>(() => ({
     query: '',
     activityStatus: getDefaultActivityStatuses(scope),
@@ -103,8 +110,8 @@ export function useTargetFilters(targets: Detection[], scope: FilterScope) {
     ) {
       active.push({
         key: 'activityStatus',
-        label: 'סטטוס',
-        valueLabel: filters.activityStatus.map((status) => ACTIVITY_STATUS_LABELS[status]).join(', '),
+        label: t.chipLabels.activityStatus,
+        valueLabel: filters.activityStatus.map((status) => t.activityStatusLabels[status]).join(', '),
       });
     }
 
@@ -116,13 +123,13 @@ export function useTargetFilters(targets: Detection[], scope: FilterScope) {
 
       active.push({
         key: 'detectedByDeviceIds',
-        label: 'מזהה',
+        label: t.chipLabels.sensor,
         valueLabel: deviceLabels.join(', '),
       });
     }
 
     return active;
-  }, [availableSensors, filters.activityStatus, filters.detectedByDeviceIds, scope]);
+  }, [availableSensors, filters.activityStatus, filters.detectedByDeviceIds, scope, t]);
 
   const applyFilters = useCallback((list: Detection[]): Detection[] => {
     let result = list;
@@ -130,11 +137,12 @@ export function useTargetFilters(targets: Detection[], scope: FilterScope) {
 
     if (filters.query.trim()) {
       const query = filters.query.trim().toLowerCase();
+      const typeLabels = t.typeLabels;
       result = result.filter((target) =>
         target.name.toLowerCase().includes(query) ||
         target.id.toLowerCase().includes(query) ||
-        (target.classifiedType && (TYPE_LABELS[target.classifiedType] ?? target.classifiedType).toLowerCase().includes(query)) ||
-        (target.type && (TYPE_LABELS[target.type] ?? target.type).toLowerCase().includes(query))
+        (target.classifiedType && (typeLabels[target.classifiedType] ?? target.classifiedType).toLowerCase().includes(query)) ||
+        (target.type && (typeLabels[target.type] ?? target.type).toLowerCase().includes(query))
       );
     }
 
@@ -157,7 +165,7 @@ export function useTargetFilters(targets: Detection[], scope: FilterScope) {
     result = [...result].sort((a, b) => compareTargetsByPriority(a, b, nowMs));
 
     return result;
-  }, [filters]);
+  }, [filters, t.typeLabels]);
 
   const updateFilter = useCallback(<K extends keyof FilterState>(key: K, value: FilterState[K]) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -210,41 +218,41 @@ export function useTargetFilters(targets: Detection[], scope: FilterScope) {
     () => [
       {
         id: STATUS_FILTER_ID,
-        label: 'סטטוס',
+        label: t.chipLabels.activityStatus,
         icon: SlidersHorizontal,
-        options: (Object.keys(ACTIVITY_STATUS_LABELS) as ActivityStatus[]).map((status) => ({
+        options: (Object.keys(t.activityStatusLabels) as ActivityStatus[]).map((status) => ({
           value: status,
-          label: ACTIVITY_STATUS_LABELS[status],
+          label: t.activityStatusLabels[status],
         })),
         summarize: (selectedValues) => {
-          if (selectedValues.length === 0) return 'הכל';
-          if (selectedValues.length === 1) return ACTIVITY_STATUS_LABELS[selectedValues[0] as ActivityStatus];
+          if (selectedValues.length === 0) return t.summaries.allStatuses;
+          if (selectedValues.length === 1) return t.activityStatusLabels[selectedValues[0] as ActivityStatus];
           if (
             selectedValues.length === 2 &&
             selectedValues.includes('active') &&
             selectedValues.includes('recently_active')
           ) {
-            return 'פעילים';
+            return t.summaries.activePair;
           }
-          return `${selectedValues.length} נבחרו`;
+          return t.summaries.countSelected(selectedValues.length);
         },
       },
       {
         id: SENSOR_FILTER_ID,
-        label: 'מזהה',
+        label: t.chipLabels.sensor,
         icon: Radio,
         options: availableSensors.map((s) => ({ value: s.id, label: s.label })),
-        emptyLabel: 'אין מזהים זמינים',
+        emptyLabel: t.summaries.noSensorsAvailable,
         summarize: (selectedValues) => {
-          if (selectedValues.length === 0) return 'כל המזהים';
+          if (selectedValues.length === 0) return t.summaries.allSensors;
           if (selectedValues.length === 1) {
-            return availableSensors.find((s) => s.id === selectedValues[0])?.label ?? '1 נבחר';
+            return availableSensors.find((s) => s.id === selectedValues[0])?.label ?? t.summaries.oneSelected;
           }
-          return `${selectedValues.length} מזהים`;
+          return t.summaries.countSensors(selectedValues.length);
         },
       },
     ],
-    [availableSensors],
+    [availableSensors, t],
   );
 
   /** Selection map keyed by FilterDef.id. */

@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useDrop } from 'react-dnd';
-import { TacticalMap, CAMERA_ASSETS, REGULUS_EFFECTORS, bearingDegrees, haversineDistanceM } from './TacticalMap';
+import { CAMERA_ASSETS, REGULUS_EFFECTORS } from './tacticalAssets';
+import { bearingDegrees, haversineDistanceM } from '@/app/lib/mapGeo';
 import { CesiumTacticalMap } from './CesiumTacticalMap';
 import { CesiumErrorBoundary } from './CesiumErrorBoundary';
-import { IS_CESIUM } from '@/lib/mapBackend';
 import { NotificationSystem, showTacticalNotification } from './NotificationSystem';
 import { NotificationCenter } from './NotificationCenter';
 import ListOfSystems from '@/imports/ListOfSystems';
@@ -16,24 +16,101 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { Separator } from '@/shared/components/ui/separator';
 import { DevicesPanel, DevicesIcon, DEVICE_CAMERA_DRAG_TYPE } from './DevicesPanel';
 import type { DeviceCameraDragItem } from './DevicesPanel';
-import { useDevicesFromAssets, CAMERA_PRESETS } from './useDevicesFromAssets';
+import { useDevicesFromAssets, useCameraPresets } from './useDevicesFromAssets';
 import { CameraViewerPanel } from './CameraViewerPanel';
 import type { CameraFeed } from './CameraViewerPanel';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/shared/components/ui/resizable';
 import { LAYOUT_TOKENS } from '@/primitives/tokens';
-import { CuasIcon, C2Logo, SplitLeftIcon } from '@/primitives/ProductIcons';
 import { toast } from 'sonner';
-import Joyride from 'react-joyride';
+// Joyride is only used when the user opens the in-app tour. Lazy-loading it
+// keeps the ~80 KB tour package out of the dashboard's initial bundle.
+const Joyride = lazy(() => import('react-joyride'));
 import { useCuasTour } from '../hooks/useCuasTour';
 import { getPriorityBaseline } from '@/imports/useActivityStatus';
+import { useDirection, useIsRtl, useLocale } from '@/lib/direction';
+import { useStrings, getStrings, type Strings } from '@/lib/intl';
+
+/*
+ * Perf-instrumentation stubs.
+ *
+ * The stash version of this file wrapped a few hot paths in `measure()` and
+ * `<PerfProfiled>` calls from the `perf/dev-instrumentation-and-hot-path-tuning`
+ * branch (`@/lib/perf/measure` + `./perf/PerfProfiled`). That branch hasn't
+ * landed on `main`, so we drop the dependency by stubbing both helpers
+ * inline. The stubs are no-ops:
+ *
+ *   - `measure(section, name, fn, meta?)` runs `fn` directly and returns
+ *     its result. Section/name/meta are accepted for call-site fidelity
+ *     but ignored.
+ *   - `<PerfProfiled id="...">` renders its children without any wrapping.
+ *
+ * If/when the perf branch merges, swap these for the real imports — the
+ * call sites are already shaped correctly.
+ */
+function measure<T>(_section: string, _name: string, fn: () => T, _meta?: { properties?: Record<string, unknown> }): T {
+  return fn();
+}
+
+function PerfProfiled({ children }: { id: string; children: React.ReactNode }) {
+  return <>{children}</>;
+}
+
+function CuasIcon({ size = 20, strokeWidth = 2, className = '' }: { size?: number; strokeWidth?: number; className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M9.5 5.398C7.093 6.19 5.19 8.093 4.398 10.5M19.86 14.5c.092-.486.14-.987.14-1.5 0-2.01-.742-3.848-1.966-5.253M6.708 19c1.41 1.245 3.263 2 5.292 2 .513 0 1.014-.048 1.5-.14" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx="12" cy="5" r="2.5" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M3.82 14.835c1.196-.69 2.725-.28 3.415.915.69 1.196.28 2.724-.915 3.415-1.196.69-2.725.28-3.415-.915-.69-1.196-.28-2.725.916-3.415Z" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M17.672 19.165c-1.196-.69-1.605-2.22-.915-3.415.69-1.196 2.219-1.605 3.415-.915 1.195.69 1.605 2.219.915 3.415-.69 1.195-2.22 1.605-3.415.915Z" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
+// Cached Hebrew locale time formatter. Reused across all hot paths so we
+// don't allocate a fresh `Intl.DateTimeFormat` (a heavy ICU lookup) on
+// every 250 ms simulation tick. Internally we also memoise the formatted
+// string for the current wall-clock second — multiple targets ticking on
+// the same loop see the exact same string and share it.
+const HE_TIME_FORMATTER = new Intl.DateTimeFormat('he-IL', {
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+});
+let cachedTimeSecond = -1;
+let cachedTimeString = '';
+function nowLocaleTime(): string {
+  const second = Math.floor(Date.now() / 1000);
+  if (second !== cachedTimeSecond) {
+    cachedTimeSecond = second;
+    cachedTimeString = HE_TIME_FORMATTER.format(new Date(second * 1000));
+  }
+  return cachedTimeString;
+}
 
 function appendLog(targets: Detection[], targetId: string, label: string): Detection[] {
-  const time = new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const time = nowLocaleTime();
   return targets.map(t => t.id !== targetId ? t : {
     ...t,
     actionLog: [...(t.actionLog || []), { time, label }],
   });
 }
+
+const C2Logo = ({ className }: { className?: string }) => (
+  <svg width={32} height={32} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M11.1483 17.565L20.7437 27.1604L20.8479 27.2601C22.623 28.9401 25.4215 28.9084 27.1603 27.1695L27.183 27.1468L36.7649 17.565L43.1679 23.968L23.9543 43.1816L4.74072 23.968L11.1437 17.565H11.1483ZM28.4373 23.3295C28.306 22.3921 27.8758 21.491 27.1558 20.7665C25.3853 18.9959 22.5188 18.9959 20.7528 20.7665C20.0328 21.4865 19.6071 22.3921 19.4713 23.3295L12.4253 16.2835L23.9543 4.75439L35.4834 16.2835L28.4373 23.3295Z"
+      fill="currentColor"
+    />
+  </svg>
+);
+
+// Device panel label sets are now sourced from the i18n catalog
+// (`t.devices.{typeLabels,connectionLabels,strings}`) — see
+// `src/lib/intl/strings.ts`. The catalog returns referentially stable
+// objects per locale, so `<DevicesPanel>`'s internal `useMemo` caches
+// stay valid across Dashboard renders.
 
 export interface FriendlyDrone {
   id: string;
@@ -46,28 +123,59 @@ export interface FriendlyDrone {
   trail?: [number, number][];
 }
 
-const FRIENDLY_PATROL_ROUTES: { id: string; name: string; altitude: string; fovDeg: number; waypoints: [number, number][] }[] = [
-  {
-    id: 'FRIENDLY-01', name: 'סיור-3', altitude: '80 מ׳', fovDeg: 78,
-    waypoints: [[32.4746, 34.9883], [32.4766, 34.9923], [32.4786, 34.9903], [32.4756, 34.9863]],
-  },
-  {
-    id: 'FRIENDLY-02', name: 'תצפית-7', altitude: '110 מ׳', fovDeg: 105,
-    waypoints: [[32.4816, 35.0143], [32.4836, 35.0113], [32.4806, 35.0083], [32.4796, 35.0123]],
-  },
-  {
-    id: 'FRIENDLY-03', name: 'סיור-11', altitude: '95 מ׳', fovDeg: 62,
-    waypoints: [[32.4680, 34.9940], [32.4700, 34.9980], [32.4720, 34.9960], [32.4695, 34.9920]],
-  },
-  {
-    id: 'FRIENDLY-04', name: 'תצפית-2', altitude: '120 מ׳', fovDeg: 118,
-    waypoints: [[32.4590, 35.0020], [32.4610, 35.0060], [32.4630, 35.0030], [32.4605, 35.0000]],
-  },
-  {
-    id: 'FRIENDLY-05', name: 'סיור-9', altitude: '70 מ׳', fovDeg: 88,
-    waypoints: [[32.4850, 34.9980], [32.4870, 35.0020], [32.4890, 34.9990], [32.4860, 34.9960]],
-  },
-];
+interface FriendlyPatrolRoute {
+  id: string;
+  name: string;
+  altitude: string;
+  fovDeg: number;
+  waypoints: [number, number][];
+}
+
+/**
+ * Friendly patrol drones used by the simulation. Names + altitudes
+ * come from the i18n catalog so they read in the active locale; the
+ * rest (waypoints, FOV, ids) are deterministic geometry shared
+ * across both languages.
+ */
+function getFriendlyPatrolRoutes(t: Strings): FriendlyPatrolRoute[] {
+  const d = t.simulation.friendlyDrones;
+  return [
+    {
+      id: 'FRIENDLY-01', name: d.patrol3.name, altitude: d.patrol3.altitude, fovDeg: 78,
+      waypoints: [[32.4746, 34.9883], [32.4766, 34.9923], [32.4786, 34.9903], [32.4756, 34.9863]],
+    },
+    {
+      id: 'FRIENDLY-02', name: d.observation7.name, altitude: d.observation7.altitude, fovDeg: 105,
+      waypoints: [[32.4816, 35.0143], [32.4836, 35.0113], [32.4806, 35.0083], [32.4796, 35.0123]],
+    },
+    {
+      id: 'FRIENDLY-03', name: d.patrol11.name, altitude: d.patrol11.altitude, fovDeg: 62,
+      waypoints: [[32.4680, 34.9940], [32.4700, 34.9980], [32.4720, 34.9960], [32.4695, 34.9920]],
+    },
+    {
+      id: 'FRIENDLY-04', name: d.observation2.name, altitude: d.observation2.altitude, fovDeg: 118,
+      waypoints: [[32.4590, 35.0020], [32.4610, 35.0060], [32.4630, 35.0030], [32.4605, 35.0000]],
+    },
+    {
+      id: 'FRIENDLY-05', name: d.patrol9.name, altitude: d.patrol9.altitude, fovDeg: 88,
+      waypoints: [[32.4850, 34.9980], [32.4870, 35.0020], [32.4890, 34.9990], [32.4860, 34.9960]],
+    },
+  ];
+}
+
+function SplitLeftIcon({ className }: { className?: string }) {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+         className={className} aria-hidden="true">
+      <rect x="2" y="3" width="20" height="18" rx="2"
+            stroke="currentColor" strokeWidth="1.5" />
+      <rect x="2" y="3" width="8" height="18" rx="2"
+            fill="currentColor" fillOpacity="0.15" />
+      <line x1="10" y1="3" x2="10" y2="21"
+            stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
 
 function SplitDropZone({
   onDrop,
@@ -77,16 +185,23 @@ function SplitDropZone({
   visible: boolean;
 }) {
   const shouldReduceMotion = useReducedMotion();
+  const isRtl = useIsRtl();
+  const t = useStrings();
   const [{ isOver }, dropRef] = useDrop(() => ({
     accept: DEVICE_CAMERA_DRAG_TYPE,
     drop: (item: DeviceCameraDragItem) => onDrop(item),
     collect: (monitor) => ({ isOver: monitor.isOver() }),
   }), [onDrop]);
 
-  const hiddenX = shouldReduceMotion ? 0 : '-100%';
+  // Slide off-screen toward the inline-start edge — that's `-X` in LTR
+  // (left side off-screen) and `+X` in RTL (right side off-screen).
+  // Tailwind's `start-3` keeps the visible position on the inline-start
+  // edge of the parent so the drop affordance stays in the natural
+  // reading-entry corner regardless of locale.
+  const hiddenX = shouldReduceMotion ? 0 : (isRtl ? '100%' : '-100%');
 
   return (
-    <div ref={dropRef} className={`absolute left-3 top-3 bottom-3 z-20 w-[180px] ${!visible ? 'pointer-events-none' : ''}`}>
+    <div ref={dropRef} className={`absolute start-3 top-3 bottom-3 z-20 w-[180px] ${!visible ? 'pointer-events-none' : ''}`}>
       <motion.div
         animate={visible
           ? { x: 0, opacity: 1 }
@@ -107,15 +222,57 @@ function SplitDropZone({
           ${isOver ? 'text-white/60' : 'text-white/25'}`} />
         <span className={`text-[11px] transition-colors duration-150 ease-out
           ${isOver ? 'text-white/60' : 'text-white/30'}`}>
-          {isOver ? 'שחרר כדי לצפות' : 'גרור לכאן'}
+          {isOver ? t.dashboard.dropZoneRelease : t.dashboard.dropZoneHint}
         </span>
       </motion.div>
     </div>
   );
 }
 
-export const Dashboard = () => {
+/**
+ * Props for {@link Dashboard}.
+ *
+ * The dashboard is normally self-contained (no consumer-supplied data),
+ * but a small set of opt-in switches exists so the same component can
+ * be rendered as a marketing-recording surface from `/demo`. Defaults
+ * preserve the production behaviour exactly — only the marketing route
+ * passes anything other than `false`.
+ */
+interface DashboardProps {
+  /**
+   * Render the production dashboard with marketing-recording defaults:
+   *   - flat dark monochrome basemap (CartoDB Dark Matter, no labels)
+   *     instead of the satellite imagery
+   *
+   * Off (the default) keeps every operator-facing surface identical to
+   * production. The flag is read once per render and threaded straight
+   * down to {@link CesiumTacticalMap}; nothing else in the dashboard
+   * branches on it today.
+   */
+  demoMode?: boolean;
+}
+
+export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
   const allDevices = useDevicesFromAssets();
+  const cameraPresets = useCameraPresets();
+  // Active i18n catalog. Locale is driven by the direction system
+  // (`'rtl'` ⇒ Hebrew, `'ltr'` ⇒ English), so the marketing
+  // `/demo` route — which forces direction to `'ltr'` via the
+  // outer `<DirectionProvider forceDirection="ltr">` — automatically
+  // gets English everywhere this catalog is read.
+  const t = useStrings();
+  const locale = useLocale();
+  // Friendly patrol drones — names + altitudes come from the active
+  // catalog so they read in the current language. Memoised by locale
+  // so a steady-state render doesn't re-allocate the array.
+  const friendlyPatrolRoutes = useMemo(() => getFriendlyPatrolRoutes(t), [t]);
+  // The slim icon rail follows app direction, so its tooltips need to flip
+  // to the opposite physical side. In LTR the rail sits on the left edge
+  // of the viewport (tooltips fly right); in RTL it sits on the right edge
+  // (tooltips fly left). Computed once and reused at every TooltipContent.
+  const { direction, toggleDirection } = useDirection();
+  const isRtl = direction === 'rtl';
+  const railTooltipSide: 'left' | 'right' = isRtl ? 'left' : 'right';
   const [activeTargetId, setActiveTargetId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [devicesPanelOpen, setDevicesPanelOpen] = useState(false);
@@ -144,11 +301,20 @@ export const Dashboard = () => {
   const [cameraLookAtRequest, setCameraLookAtRequest] = useState<{ cameraId: string; targetLat: number; targetLon: number; fovOverrideDeg?: number } | null>(null);
   const [regulusEffectors, setRegulusEffectors] = useState<RegulusEffector[]>(REGULUS_EFFECTORS);
   const [selectedEffectorIds, setSelectedEffectorIds] = useState<Map<string, string>>(new Map());
-  const [launcherEffectors, setLauncherEffectors] = useState<LauncherEffector[]>([
-    { id: 'LCHR-NVT-ALPHA', name: 'משגר אלפא', lat: 32.4626, lon: 34.9963, status: 'available' },
-    { id: 'LCHR-NVT-BRAVO', name: 'משגר בראבו', lat: 32.4756, lon: 35.0113, status: 'available' },
-    { id: 'LCHR-NVT-GAMMA', name: 'משגר גאמא', lat: 32.4506, lon: 35.0243, status: 'available' },
-  ]);
+  const [launcherEffectors, setLauncherEffectors] = useState<LauncherEffector[]>(() => {
+    // Initial launcher names come from the catalog at mount time —
+    // toggling locale at runtime won't relabel existing launchers
+    // (they live in component state), only freshly-mounted dashboards
+    // pick up the new language. The toggle is rare enough that
+    // accepting this is simpler than wiring a locale-watching effect
+    // that mutates the list.
+    const initT = getStrings(locale);
+    return [
+      { id: 'LCHR-NVT-ALPHA', name: initT.simulation.launchers.alpha, lat: 32.4626, lon: 34.9963, status: 'available' },
+      { id: 'LCHR-NVT-BRAVO', name: initT.simulation.launchers.bravo, lat: 32.4756, lon: 35.0113, status: 'available' },
+      { id: 'LCHR-NVT-GAMMA', name: initT.simulation.launchers.gamma, lat: 32.4506, lon: 35.0243, status: 'available' },
+    ];
+  });
   const [selectedLauncherIds, setSelectedLauncherIds] = useState<Map<string, string>>(new Map());
   const [mapFocusRequest, setMapFocusRequest] = useState<{ lat: number; lon: number } | null>(null);
   const [allCamerasBusyForTarget, setAllCamerasBusyForTarget] = useState<string | null>(null);
@@ -190,42 +356,23 @@ export const Dashboard = () => {
   const [isSnapping, setIsSnapping] = useState(false);
   const asideRef = useRef<HTMLElement>(null);
   const [cameraControlRequest, setCameraControlRequest] = useState<{ targetId: string; countdown: number } | null>(null);
-  const [friendlyDrones, setFriendlyDrones] = useState<FriendlyDrone[]>(() =>
-    FRIENDLY_PATROL_ROUTES.map(r => ({
+  const [friendlyDrones, setFriendlyDrones] = useState<FriendlyDrone[]>(() => {
+    // Same pattern as launchers — drone names are stamped at mount.
+    const routes = getFriendlyPatrolRoutes(getStrings(locale));
+    return routes.map(r => ({
       id: r.id,
       name: r.name,
       lat: r.waypoints[0][0],
       lon: r.waypoints[0][1],
       altitude: r.altitude,
       headingDeg: 0,
-    }))
-  );
+    }));
+  });
 
   const offlineAssetIds = useMemo(
     () => allDevices.filter((d) => d.connectionState === 'offline').map((d) => d.id),
     [allDevices],
   );
-
-  const [floodlightOnIds, setFloodlightOnIds] = useState<Set<string>>(() => new Set());
-  const [speakerPlayingIds, setSpeakerPlayingIds] = useState<Set<string>>(() => new Set());
-
-  const handleFloodlightToggle = useCallback((id: string, next: boolean) => {
-    setFloodlightOnIds((prev) => {
-      const updated = new Set(prev);
-      if (next) updated.add(id);
-      else updated.delete(id);
-      return updated;
-    });
-  }, []);
-
-  const handleSpeakerToggle = useCallback((id: string, next: boolean) => {
-    setSpeakerPlayingIds((prev) => {
-      const updated = new Set(prev);
-      if (next) updated.add(id);
-      else updated.delete(id);
-      return updated;
-    });
-  }, []);
 
   const highlightedSensorIds = useMemo(() => {
     const ids = new Set<string>();
@@ -242,8 +389,38 @@ export const Dashboard = () => {
   const cuasIntervalRef3 = useRef<NodeJS.Timeout | null>(null);
   const cuasIntervalRef4 = useRef<NodeJS.Timeout | null>(null);
   const cuasMassRefs = useRef<NodeJS.Timeout[]>([]);
+  // Tracks bare `setTimeout` calls scheduled outside the main timer refs so we
+  // can clear them on unmount (CUAS spawn, mitigation cascades, focus resets).
+  const pendingTimeoutsRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
   const [tourTargetId, setTourTargetId] = useState<string | null>(null);
-  const activeTarget = targets.find(t => t.id === activeTargetId);
+
+  // Master unmount cleanup for every long-lived timer the dashboard owns.
+  // Component unmount only happens on full route changes today, but it's the
+  // right hygiene — leaked intervals fire `setTargets` after unmount, which
+  // logs a React warning and keeps the entire (heavy) Dashboard subtree alive
+  // in the heap.
+  useEffect(() => {
+    const cuasRefs = [cuasIntervalRef, cuasIntervalRef2, cuasIntervalRef3, cuasIntervalRef4];
+    const massRefs = cuasMassRefs;
+    const pending = pendingTimeoutsRef;
+    const camPointing = cameraPointingTimeoutRef;
+    return () => {
+      for (const ref of cuasRefs) {
+        if (ref.current) {
+          clearInterval(ref.current);
+          ref.current = null;
+        }
+      }
+      for (const id of massRefs.current) clearInterval(id);
+      massRefs.current = [];
+      for (const id of pending.current) clearTimeout(id);
+      pending.current.clear();
+      if (camPointing.current) {
+        clearTimeout(camPointing.current);
+        camPointing.current = null;
+      }
+    };
+  }, []);
 
   const tour = useCuasTour(
     useCallback((nextStepIndex: number) => {
@@ -258,10 +435,39 @@ export const Dashboard = () => {
     }, [tourTargetId]),
   );
 
+  // Defer the (large) react-joyride mount until the user actually starts the
+  // tour at least once. Once mounted we keep it alive — toggling between
+  // mount + unmount on every tour open would re-fetch the chunk each time.
+  const [tourEverStarted, setTourEverStarted] = useState(false);
+  useEffect(() => {
+    if (tour.run) setTourEverStarted(true);
+  }, [tour.run]);
+
   const tourTarget = useMemo(
     () => tourTargetId ? targets.find(t => t.id === tourTargetId) ?? null : null,
     [targets, tourTargetId],
   );
+
+  // True iff any target has an active weapon-pointing flow. Hoisted out of the
+  // CameraViewerPanel JSX so the .some() runs once per `targets` change instead
+  // of on every Dashboard render.
+  const weaponFeedActive = useMemo(
+    () => targets.some(t => t.weaponPointingStatus && t.weaponPointingStatus !== 'idle'),
+    [targets],
+  );
+
+  // Resolve which target the BDA camera request is currently looking at.
+  // Computed once per `targets` / `cameraLookAtRequest` change instead of
+  // re-walking the array on every Dashboard render.
+  const cameraActiveTargetId = useMemo(() => {
+    if (!cameraLookAtRequest) return null;
+    const match = targets.find(t => {
+      const [lat, lon] = t.coordinates.split(',').map(s => parseFloat(s.trim()));
+      return Math.abs(lat - cameraLookAtRequest.targetLat) < 0.01
+        && Math.abs(lon - cameraLookAtRequest.targetLon) < 0.01;
+    });
+    return match?.id ?? null;
+  }, [targets, cameraLookAtRequest]);
 
   useEffect(() => {
     tour.updateTargetState(tourTarget);
@@ -304,7 +510,7 @@ export const Dashboard = () => {
             if (nearest) {
               setCameraLookAtRequest({ cameraId: nearest.cam.id, targetLat: lat, targetLon: lon, fovOverrideDeg: 135 });
               setAllCamerasBusyForTarget(null);
-              toast.success("שליטה על מצלמה התקבלה — מפנה לאימות");
+              toast.success(t.toasts.cameraControlAcquired);
             }
           }
           return null;
@@ -313,28 +519,49 @@ export const Dashboard = () => {
       });
     }, 1000);
     return () => clearInterval(iv);
-  }, [cameraControlRequest?.targetId]);
+  }, [cameraControlRequest?.targetId, targets, t]);
 
   // --- Friendly drone patrol simulation ---
-  const patrolProgressRef = useRef<number[]>(FRIENDLY_PATROL_ROUTES.map(() => 0));
-  const friendlyTrailRef = useRef<[number, number][][]>(FRIENDLY_PATROL_ROUTES.map(() => []));
+  // Sims can be disabled via `?sim=off` for perf-sensitive sessions
+  // (kiosk mode, demos). When enabled (default) the loop also pauses
+  // automatically while the tab is hidden — no point burning GPU on
+  // markers that nobody is watching.
+  const SIM_ENABLED = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search).get('sim') !== 'off'
+    : true;
+  const patrolProgressRef = useRef<number[]>(friendlyPatrolRoutes.map(() => 0));
+  const friendlyTrailRef = useRef<[number, number][][]>(friendlyPatrolRoutes.map(() => []));
   const trailTickRef = useRef(0);
-  const PATROL_SPEED = 0.004;
-  const TRAIL_SAMPLE_EVERY = 3;
+  // Tick at 250 ms (4 Hz). The kinematic motion track in CesiumMap
+  // smoothly interpolates between samples, so the visible movement is
+  // still fluid; previously we sampled at ~8 Hz which doubled all
+  // downstream work for no perceptible quality gain. PATROL_SPEED is
+  // doubled to keep the on-screen drone speed identical.
+  const PATROL_TICK_MS = 250;
+  const PATROL_SPEED = 0.008;
+  // Sample a trail breadcrumb every 4th tick (≈1 s). Each new trail
+  // point invalidates the polyline fingerprint and re-tessellates a
+  // ground-clamped line in Cesium — by far the heaviest per-frame cost
+  // in the simulation. 1 Hz still reads as a continuous breadcrumb path
+  // when the line is buffered to 40 points.
+  const TRAIL_SAMPLE_EVERY = 4;
   const TRAIL_MAX_POINTS = 40;
 
   useEffect(() => {
+    if (!SIM_ENABLED) return;
     const tick = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      measure('Sim', 'sim.friendlyPatrol', () => {
       trailTickRef.current += 1;
       const sampleTrail = trailTickRef.current % TRAIL_SAMPLE_EVERY === 0;
 
       patrolProgressRef.current = patrolProgressRef.current.map((p) => {
         const next = p + PATROL_SPEED;
-        return next >= FRIENDLY_PATROL_ROUTES[0].waypoints.length ? 0 : next;
+        return next >= friendlyPatrolRoutes[0].waypoints.length ? 0 : next;
       });
 
       setFriendlyDrones(
-        FRIENDLY_PATROL_ROUTES.map((route, i) => {
+        friendlyPatrolRoutes.map((route, i) => {
           const progress = patrolProgressRef.current[i];
           const legIndex = Math.floor(progress) % route.waypoints.length;
           const legFrac = progress - legIndex;
@@ -361,9 +588,11 @@ export const Dashboard = () => {
           };
         })
       );
-    }, 120);
+      }, { properties: { tick: trailTickRef.current, drones: friendlyPatrolRoutes.length } });
+    }, PATROL_TICK_MS);
 
     return () => clearInterval(tick);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Targets still on their initial approach path — loitering must not interfere
@@ -381,12 +610,32 @@ export const Dashboard = () => {
   const AREA_MIN_LON = 34.9813, AREA_MAX_LON = 35.0263;
 
   useEffect(() => {
+    if (!SIM_ENABLED) return;
     const TICK_MS = 250;
     const SPEED = 0.00012; // degrees per tick (~13m)
     const TURN_RATE = 0.08; // max radians per tick to steer toward target heading
     const HOME_RADIUS = 0.006; // ~650m before steering back
+    // Same rationale as the friendly-patrol trail sampling: the marker
+    // position itself updates every tick (kinematic interpolation keeps
+    // movement smooth), but the breadcrumb trail only needs a new point
+    // every ~1 s so we don't re-tessellate ground-clamped polylines on
+    // every frame.
+    const TRAIL_SAMPLE_EVERY = 4;
+    let trailTick = 0;
 
     const interval = setInterval(() => {
+      // Tab hidden: pause sim to release GPU/CPU. The map still
+      // renders frames on demand for new state but the sim doesn't
+      // generate any.
+      if (typeof document !== 'undefined' && document.hidden) return;
+      measure('Sim', 'sim.hostileLoiter', () => {
+      trailTick++;
+      const sampleTrail = trailTick % TRAIL_SAMPLE_EVERY === 0;
+      // Track which target ids loitered this tick so we can prune
+      // `loiterStateRef` entries for targets that left the active-drone set
+      // (mitigated, expired, dismissed, or removed entirely). Otherwise the
+      // ref grows unboundedly across a long session.
+      const activeLoiterIds = new Set<string>();
       setTargets(prev => prev.map(t => {
         if (approachingTargetIds.current.has(t.id)) return t;
 
@@ -398,6 +647,7 @@ export const Dashboard = () => {
           && t.status !== 'event_neutralized'
           && t.status !== 'expired';
         if (!isActiveDrone) return t;
+        activeLoiterIds.add(t.id);
 
         const [curLat, curLon] = t.coordinates.split(',').map(s => parseFloat(s.trim()));
         if (isNaN(curLat) || isNaN(curLon)) return t;
@@ -447,18 +697,32 @@ export const Dashboard = () => {
         const clampedLat = Math.max(AREA_MIN_LAT, Math.min(AREA_MAX_LAT, newLat));
         const clampedLon = Math.max(AREA_MIN_LON, Math.min(AREA_MAX_LON, newLon));
 
-        const now = new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        const updatedTrail = [...(t.trail || []), { lat: clampedLat, lon: clampedLon, timestamp: now }];
+        let nextTrail = t.trail;
+        if (sampleTrail) {
+          const now = nowLocaleTime();
+          const updatedTrail = [...(t.trail || []), { lat: clampedLat, lon: clampedLon, timestamp: now }];
+          nextTrail = updatedTrail.length > 60 ? updatedTrail.slice(-60) : updatedTrail;
+        }
 
         return {
           ...t,
           coordinates: `${clampedLat.toFixed(5)}, ${clampedLon.toFixed(5)}`,
-          trail: updatedTrail.length > 60 ? updatedTrail.slice(-60) : updatedTrail,
+          trail: nextTrail,
         };
       }));
+
+      // Prune stale loiter state: any id that wasn't active this tick.
+      const store = loiterStateRef.current;
+      for (const id in store) {
+        if (!activeLoiterIds.has(id)) {
+          delete store[id];
+        }
+      }
+      }, { properties: { tick: trailTick } });
     }, TICK_MS);
 
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // --- CUAS Target Spawn ---
@@ -470,13 +734,22 @@ export const Dashboard = () => {
     silent?: boolean;
   }) => {
     const targetId = `CUAS-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const now = () => new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const now = nowLocaleTime;
 
     const isCar = !!opts.isCar;
     const isBird = !!opts.isBird;
-    const targetName = isCar ? `רכב — זיהוי ${opts.nameSuffix}`
-      : isBird ? `ציפור — זיהוי ${opts.nameSuffix}`
-      : `רחפן — זיהוי ${opts.nameSuffix}`;
+    // Read the current strings catalog inside the callback so a
+    // mid-session locale flip applies to subsequently-spawned
+    // targets. (Existing targets keep whatever language was active
+    // when they spawned — see the launcher/drone state notes above.)
+    const sim = t.simulation;
+    const log = t.actionLog;
+    const notif = t.notifications;
+    const targetName = isCar
+      ? sim.targetNameCar(opts.nameSuffix)
+      : isBird
+        ? sim.targetNameBird(opts.nameSuffix)
+        : sim.targetNameDrone(opts.nameSuffix);
     const rawDetection: Detection = {
       id: targetId,
       name: targetName,
@@ -486,7 +759,7 @@ export const Dashboard = () => {
       timestamp: now(),
       createdAtMs: Date.now(),
       coordinates: `${opts.startLat.toFixed(5)}, ${opts.startLon.toFixed(5)}`,
-      distance: '3.2 ק״מ',
+      distance: sim.distanceKm('3.2'),
       entityStage: 'classified',
       priority: getPriorityBaseline({ status: 'detection', entityStage: 'classified', flowType: 5 }),
       confidence: isCar ? 88 : isBird ? 85 : 92,
@@ -497,12 +770,19 @@ export const Dashboard = () => {
         lastDetectedAt: now(),
       }],
       trail: [{ lat: opts.startLat, lon: opts.startLon, timestamp: now() }],
-      actionLog: [{ time: now(), label: isCar ? 'זיהוי ראשוני — רכב עוין' : isBird ? 'זיהוי ראשוני — ציפור' : 'זיהוי ראשוני — רחפן עוין' }],
+      actionLog: [{
+        time: now(),
+        label: isCar
+          ? log.initialDetectionCar
+          : isBird
+            ? log.initialDetectionBird
+            : log.initialDetectionDrone,
+      }],
       flowType: 5,
       mitigationStatus: 'idle',
       weaponPointingStatus: isCar ? 'idle' : undefined,
-      altitude: isCar ? undefined : '120 מ׳',
-      laserDistance: '2,840 מ׳',
+      altitude: isCar ? undefined : sim.altitudeM(120),
+      laserDistance: sim.laserDistanceM(2840),
       laserAzimuth: '253.44°',
       laserElevation: '2.39°',
       laserRange: '3575.89 m',
@@ -513,8 +793,12 @@ export const Dashboard = () => {
 
     if (!opts.silent) {
       showTacticalNotification({
-        title: `זיהוי חדש — ${rawDetection.name}`,
-        message: `ביטחון ${rawDetection.confidence}% — ${isCar ? 'איום קרקעי מסווג' : isBird ? 'סווג כציפור' : 'איום אווירי מסווג'}`,
+        title: notif.newDetectionTitle(rawDetection.name ?? ''),
+        message: isCar
+          ? notif.classifiedGroundThreat(rawDetection.confidence ?? 0)
+          : isBird
+            ? notif.classifiedAsBird(rawDetection.confidence ?? 0)
+            : notif.classifiedAirThreat(rawDetection.confidence ?? 0),
         code: targetId,
         level: isBird ? 'suspect' : 'critical',
       });
@@ -523,7 +807,7 @@ export const Dashboard = () => {
     let step = 0;
     opts.intervalRef.current = setInterval(() => {
       step++;
-      const t = now();
+      const tnow = now();
       const progress = Math.min(step / 12, 1);
       const curLat = opts.startLat + (opts.endLat - opts.startLat) * progress;
       const curLon = opts.startLon + (opts.endLon - opts.startLon) * progress;
@@ -533,12 +817,12 @@ export const Dashboard = () => {
         if (tgt.id !== targetId) return tgt;
         const updated = { ...tgt };
         updated.coordinates = `${curLat.toFixed(5)}, ${curLon.toFixed(5)}`;
-        updated.distance = `${distKm} ק״מ`;
-        updated.timestamp = t;
-        if (tgt.altitude != null) updated.altitude = `${Math.round(120 + Math.sin(progress * Math.PI) * 30)} מ׳`;
-        updated.trail = [...(tgt.trail || []), { lat: curLat, lon: curLon, timestamp: t }];
+        updated.distance = sim.distanceKm(distKm);
+        updated.timestamp = tnow;
+        if (tgt.altitude != null) updated.altitude = sim.altitudeM(Math.round(120 + Math.sin(progress * Math.PI) * 30));
+        updated.trail = [...(tgt.trail || []), { lat: curLat, lon: curLon, timestamp: tnow }];
         const currentRange = 2840 - progress * 1800;
-        updated.laserDistance = `${Math.round(currentRange)} מ׳`;
+        updated.laserDistance = sim.laserDistanceM(Math.round(currentRange));
         updated.laserAzimuth = `${(253.44 - progress * 12).toFixed(2)}°`;
         updated.laserElevation = `${(2.39 + progress * 3.5).toFixed(2)}°`;
         updated.laserRange = `${currentRange.toFixed(2)} m`;
@@ -547,12 +831,12 @@ export const Dashboard = () => {
           updated.confidence = 45;
           updated.contributingSensors = [
             ...(tgt.contributingSensors || []),
-            { sensorId: 'SENS-NVT-MAGOS-N', sensorType: 'Magos', firstDetectedAt: t, lastDetectedAt: t },
+            { sensorId: 'SENS-NVT-MAGOS-N', sensorType: 'Magos', firstDetectedAt: tnow, lastDetectedAt: tnow },
           ];
-          updated.actionLog = [...(tgt.actionLog || []), { time: t, label: 'חיישן נוסף — Magos North' }];
+          updated.actionLog = [...(tgt.actionLog || []), { time: tnow, label: log.additionalSensorMagos }];
           showTacticalNotification({
-            title: `חיישן נוסף — ${updated.name ?? tgt.name}`,
-            message: `ביטחון ${updated.confidence}% — SENS-NVT-MAGOS-N (+${updated.contributingSensors.length - 1})`,
+            title: notif.additionalSensorTitle(updated.name ?? tgt.name ?? ''),
+            message: notif.additionalSensorMessageMagos(updated.confidence ?? 0, updated.contributingSensors.length - 1),
             code: targetId,
             level: 'info',
           });
@@ -561,13 +845,13 @@ export const Dashboard = () => {
         if (step === 3 && tgt.entityStage === 'raw_detection') {
           updated.contributingSensors = [
             ...(updated.contributingSensors || []),
-            { sensorId: 'RAD-NVT-ELTA', sensorType: 'Radar', firstDetectedAt: t, lastDetectedAt: t },
+            { sensorId: 'RAD-NVT-ELTA', sensorType: 'Radar', firstDetectedAt: tnow, lastDetectedAt: tnow },
           ];
           updated.confidence = 65;
-          updated.actionLog = [...(updated.actionLog || []), { time: t, label: 'חיישן נוסף — Elta MHR' }];
+          updated.actionLog = [...(updated.actionLog || []), { time: tnow, label: log.additionalSensorElta }];
           showTacticalNotification({
-            title: `חיישן נוסף — ${updated.name ?? tgt.name}`,
-            message: `ביטחון ${updated.confidence}% — RAD-NVT-ELTA (+${updated.contributingSensors.length - 1})`,
+            title: notif.additionalSensorTitle(updated.name ?? tgt.name ?? ''),
+            message: notif.additionalSensorMessageElta(updated.confidence ?? 0, updated.contributingSensors.length - 1),
             code: targetId,
             level: 'info',
           });
@@ -578,28 +862,30 @@ export const Dashboard = () => {
           if (opts.isBird) {
             updated.classifiedType = 'bird';
             updated.type = 'unknown';
-            updated.name = `ציפור — ${tgt.name}`;
+            updated.name = sim.targetClassifiedBird(tgt.name ?? '');
             updated.confidence = 85;
           } else if (opts.isCar) {
             updated.classifiedType = 'car';
             updated.type = 'ground_vehicle';
-            updated.name = `רכב — ${tgt.name}`;
+            updated.name = sim.targetClassifiedCar(tgt.name ?? '');
             updated.confidence = 88;
             updated.altitude = undefined;
             updated.weaponPointingStatus = 'idle';
           } else {
             updated.classifiedType = 'drone';
             updated.type = 'uav';
-            updated.name = `רחפן — ${tgt.name}`;
+            updated.name = sim.targetClassifiedDrone(tgt.name ?? '');
             updated.confidence = 92;
           }
           updated.status = 'detection';
           updated.priority = getPriorityBaseline(updated);
-          updated.actionLog = [...(updated.actionLog || []), { time: t, label: opts.isBird ? 'סווג כציפור — ביטחון 85%' : 'סווג כרחפן — ביטחון 92%' }];
+          updated.actionLog = [...(updated.actionLog || []), { time: tnow, label: opts.isBird ? log.classifiedAsBird : log.classifiedAsDrone }];
           setTimeout(() => {
             showTacticalNotification({
-              title: `זיהוי חדש — ${updated.name}`,
-              message: `ביטחון ${updated.confidence}% — ${opts.isBird ? 'ממתין לאישור' : 'איום מסווג — רחפן עוין'}`,
+              title: notif.newDetectionTitle(updated.name ?? ''),
+              message: opts.isBird
+                ? notif.awaitingApproval(updated.confidence ?? 0)
+                : notif.classifiedDroneAwait(updated.confidence ?? 0),
               code: targetId,
               level: opts.isBird ? 'suspect' : 'critical',
             });
@@ -607,7 +893,7 @@ export const Dashboard = () => {
         }
 
         if (updated.contributingSensors) {
-          updated.contributingSensors = updated.contributingSensors.map(s => ({ ...s, lastDetectedAt: t }));
+          updated.contributingSensors = updated.contributingSensors.map(s => ({ ...s, lastDetectedAt: tnow }));
         }
 
         return updated;
@@ -620,7 +906,7 @@ export const Dashboard = () => {
     }, 2000);
 
     return targetId;
-  }, [activeTargetId]);
+  }, [activeTargetId, t]);
 
   // --- CUAS Simulation Flows ---
   const handleCUASFlow = useCallback(() => {
@@ -733,13 +1019,13 @@ export const Dashboard = () => {
 
     setTimeout(() => {
       showTacticalNotification({
-        title: 'התראת נחיל',
-        message: `${count} זיהויים בו-זמנית — מצב חירום`,
+        title: t.notifications.swarmAlertTitle,
+        message: t.notifications.swarmAlertMessage(count),
         code: 'SWARM',
         level: 'critical',
       });
     }, 300);
-  }, [devicesPanelOpen, spawnCuasTarget]);
+  }, [devicesPanelOpen, spawnCuasTarget, t]);
 
   const handleEffectorSelect = useCallback((targetId: string, effectorId: string) => {
     setSelectedEffectorIds(prev => new Map(prev).set(targetId, effectorId));
@@ -793,54 +1079,54 @@ export const Dashboard = () => {
     targetStatusField: 'mitigationStatus',
     targetAssetIdField: 'mitigatingEffectorId',
     startStatus: 'mitigating',
-    startLog: 'שיבוש',
-    startToast: 'שיבוש אלקטרוני הופעל',
+    startLog: t.actionLog.jamStart,
+    startToast: t.toasts.jamStarted,
     endStatus: 'mitigated',
-    endLog: 'שיבוש הושלם — ממתין לאימות',
-    endToast: 'שיבוש הושלם — נדרש אימות',
+    endLog: t.actionLog.jamEnd,
+    endToast: t.toasts.jamEndedAwaitVerify,
     endAssetStatus: 'available',
     extraEndTargetFields: { missionType: 'jamming', missionStatus: 'waiting_confirmation' },
     delayMs: 3000,
-  }), []);
+  }), [t]);
 
   const JAMMABLE_STATUSES = new Set(['suspicion', 'detection', 'tracking', 'event']);
 
   const handleMitigateAll = useCallback((targetId?: string) => {
     const available = regulusEffectors.filter(r => r.status === 'available');
-    toast.success(`שיבוש כללי הופעל — ${available.length} אפקטורים`);
+    toast.success(t.toasts.jamGlobalStarted(available.length));
 
     setRegulusEffectors(prev => prev.map(r =>
       r.status === 'available' ? { ...r, status: 'active' as const, activeTargetId: targetId } : r
     ));
 
     setTargets(prev => {
-      const logged = targetId ? appendLog(prev, targetId, `שיבוש כללי — ${available.length} אפקטורים`) : prev;
-      return logged.map(t => {
-        if (JAMMABLE_STATUSES.has(t.status) && t.mitigationStatus !== 'mitigated') {
-          return { ...t, mitigationStatus: 'mitigating' as const, mitigatingEffectorId: 'ALL' };
+      const logged = targetId ? appendLog(prev, targetId, t.actionLog.jamGlobal(available.length)) : prev;
+      return logged.map(tgt => {
+        if (JAMMABLE_STATUSES.has(tgt.status) && tgt.mitigationStatus !== 'mitigated') {
+          return { ...tgt, mitigationStatus: 'mitigating' as const, mitigatingEffectorId: 'ALL' };
         }
-        return t;
+        return tgt;
       });
     });
 
     setTimeout(() => {
       setTargets(prev => {
-        const logged = targetId ? appendLog(prev, targetId, 'שיבוש כללי הושלם — ממתין לאימות') : prev;
-        return logged.map(t =>
-          t.mitigatingEffectorId === 'ALL' && t.mitigationStatus === 'mitigating'
+        const logged = targetId ? appendLog(prev, targetId, t.actionLog.jamGlobalEnd) : prev;
+        return logged.map(tgt =>
+          tgt.mitigatingEffectorId === 'ALL' && tgt.mitigationStatus === 'mitigating'
             ? {
-                ...t,
+                ...tgt,
                 mitigationStatus: 'mitigated' as const,
                 missionType: 'jamming' as const,
                 missionStatus: 'waiting_confirmation' as const,
               }
-            : t
+            : tgt
         );
       });
       setRegulusEffectors(prev => prev.map(r => ({ ...r, status: 'available' as const, activeTargetId: undefined })));
-      toast.success('שיבוש הושלם — נדרש אימות');
+      toast.success(t.toasts.jamEndedAwaitVerify);
     }, 3000);
-  }, [regulusEffectors]);
+  }, [regulusEffectors, t]);
 
   // --- Ground Vehicle Weapon Pointing Handlers ---
   const handleLauncherSelect = useCallback((targetId: string, launcherId: string) => {
@@ -853,38 +1139,38 @@ export const Dashboard = () => {
     targetStatusField: 'weaponPointingStatus',
     targetAssetIdField: 'pointingLauncherId',
     startStatus: 'pointing',
-    startLog: 'כיוון נשק',
-    startToast: 'מכוון נשק למטרה',
+    startLog: t.actionLog.weaponStart,
+    startToast: t.toasts.weaponPointing,
     endStatus: 'pointed',
-    endLog: 'נשק מכוון — ממתין לנעילה',
-    endToast: 'נשק מכוון — ניתן לנעול',
+    endLog: t.actionLog.weaponEnd,
+    endToast: t.toasts.weaponPointed,
     delayMs: 3000,
-  }), []);
+  }), [t]);
 
   const handleLockWeapon = useCallback((targetId: string) => {
-    setTargets(prev => appendLog(prev, targetId, 'נועל על מטרה...').map(t =>
-      t.id === targetId ? { ...t, weaponPointingStatus: 'locking' as const } : t
+    setTargets(prev => appendLog(prev, targetId, t.actionLog.locking).map(tgt =>
+      tgt.id === targetId ? { ...tgt, weaponPointingStatus: 'locking' as const } : tgt
     ));
 
     setTimeout(() => {
       setTargets(prev => {
-        const tgt = prev.find(t => t.id === targetId);
+        const tgt = prev.find(tg => tg.id === targetId);
         const launcherId = tgt?.pointingLauncherId;
         if (launcherId) {
           setLauncherEffectors(lp => lp.map(l =>
             l.id === launcherId ? { ...l, status: 'locked' as const } : l
           ));
         }
-        return appendLog(prev, targetId, 'נעול על מטרה').map(t =>
-          t.id === targetId ? { ...t, weaponPointingStatus: 'locked' as const } : t
+        return appendLog(prev, targetId, t.actionLog.locked).map(tg =>
+          tg.id === targetId ? { ...tg, weaponPointingStatus: 'locked' as const } : tg
         );
       });
-      toast.success('נעול על מטרה — עבור למכשיר חיצוני לירי');
+      toast.success(t.toasts.lockedReadyForFire);
     }, 1500);
-  }, []);
+  }, [t]);
 
   const handleDismissLock = useCallback((targetId: string) => {
-    const target = targets.find(t => t.id === targetId);
+    const target = targets.find(tg => tg.id === targetId);
     const wasLocked = target?.weaponPointingStatus === 'locked';
     const launcherId = target?.pointingLauncherId;
     if (launcherId) {
@@ -892,24 +1178,24 @@ export const Dashboard = () => {
         l.id === launcherId ? { ...l, status: 'available' as const, activeTargetId: undefined, bearingDeg: undefined } : l
       ));
     }
-    setTargets(prev => appendLog(prev, targetId, wasLocked ? 'נעילה בוטלה' : 'כיוון בוטל').map(t =>
-      t.id === targetId ? { ...t, weaponPointingStatus: 'idle' as const, pointingLauncherId: undefined } : t
+    setTargets(prev => appendLog(prev, targetId, wasLocked ? t.actionLog.lockCancelled : t.actionLog.pointingCancelled).map(tg =>
+      tg.id === targetId ? { ...tg, weaponPointingStatus: 'idle' as const, pointingLauncherId: undefined } : tg
     ));
-    toast.info(wasLocked ? 'נעילה בוטלה' : 'כיוון בוטל');
-  }, [targets]);
+    toast.info(wasLocked ? t.toasts.lockCancelled : t.toasts.pointingCancelled);
+  }, [targets, t]);
 
   const handleCompleteMission = useCallback((targetId: string) => {
-    const target = targets.find(t => t.id === targetId);
+    const target = targets.find(tg => tg.id === targetId);
     const launcherId = target?.pointingLauncherId;
     if (launcherId) {
       setLauncherEffectors(prev => prev.map(l =>
         l.id === launcherId ? { ...l, status: 'available' as const, activeTargetId: undefined, bearingDeg: undefined } : l
       ));
     }
-    setTargets(prev => prev.map(t => {
-      if (t.id !== targetId) return t;
+    setTargets(prev => prev.map(tg => {
+      if (tg.id !== targetId) return tg;
       return {
-        ...t,
+        ...tg,
         missionStatus: 'complete' as const,
         status: 'event_neutralized' as const,
         activityStatus: 'mitigated' as const,
@@ -917,12 +1203,12 @@ export const Dashboard = () => {
         pointingLauncherId: undefined,
       };
     }));
-    toast.success('משימה הושלמה בהצלחה');
-  }, [targets]);
+    toast.success(t.toasts.missionComplete);
+  }, [targets, t]);
 
   const handleBdaCamera = useCallback((targetId: string) => {
     if (cameraLookAtRequest) {
-      const tgt = targets.find(t => t.id === targetId);
+      const tgt = targets.find(tg => tg.id === targetId);
       if (tgt) {
         const [latS, lonS] = tgt.coordinates.split(',').map(s => parseFloat(s.trim()));
         const isActiveForTarget = Math.abs(latS - cameraLookAtRequest.targetLat) < 0.01
@@ -930,13 +1216,13 @@ export const Dashboard = () => {
         if (isActiveForTarget) {
           setCameraLookAtRequest(null);
           setAllCamerasBusyForTarget(null);
-          toast.success('מצלמה בוטלה');
+          toast.success(t.toasts.cameraCancelled);
           return;
         }
       }
     }
 
-    const tgt = targets.find(t => t.id === targetId);
+    const tgt = targets.find(tg => tg.id === targetId);
     if (!tgt) return;
     const [latS, lonS] = tgt.coordinates.split(',').map(s => parseFloat(s.trim()));
     if (isNaN(latS) || isNaN(lonS)) return;
@@ -951,18 +1237,18 @@ export const Dashboard = () => {
     if (freeCamera) {
       setCameraLookAtRequest({ cameraId: freeCamera.cam.id, targetLat: latS, targetLon: lonS, fovOverrideDeg: 135 });
       setAllCamerasBusyForTarget(null);
-      toast.success('מפנה מצלמה לאימות שיבוש');
+      toast.success(t.toasts.cameraPointingForJamVerify);
       tour.notifyBdaClicked();
     } else {
       setAllCamerasBusyForTarget(targetId);
-      toast("כל המצלמות תפוסות — לחץ 'בקש שליטה' להשגת גישה", { icon: '⚠️' });
+      toast(t.toasts.allCamerasBusy, { icon: '⚠️' });
     }
-  }, [targets, cameraLookAtRequest, tour.notifyBdaClicked]);
+  }, [targets, cameraLookAtRequest, tour.notifyBdaClicked, t]);
 
   const handleRequestCameraControl = useCallback((targetId: string) => {
     setCameraControlRequest({ targetId, countdown: 10 });
-    toast("מבקש שליטה על מצלמה...", { icon: '🔒' });
-  }, []);
+    toast(t.toasts.requestingCameraControl, { icon: '🔒' });
+  }, [t]);
 
   const startBdaSequence = useCallback((targetId: string) => {
     const tgt = targets.find(t => t.id === targetId);
@@ -980,38 +1266,38 @@ export const Dashboard = () => {
     }
 
     setTimeout(() => {
-      setTargets(prev => appendLog(prev, targetId, 'BDA — מתייצב').map(t =>
-        t.id === targetId ? { ...t, bdaStatus: 'stabilizing' as const } : t
+      setTargets(prev => appendLog(prev, targetId, t.actionLog.bdaInProgress).map(tg =>
+        tg.id === targetId ? { ...tg, bdaStatus: 'stabilizing' as const } : tg
       ));
     }, 2000);
     setTimeout(() => {
-      setTargets(prev => appendLog(prev, targetId, 'BDA — תצפית פעילה').map(t =>
-        t.id === targetId ? { ...t, bdaStatus: 'observing' as const } : t
+      setTargets(prev => appendLog(prev, targetId, t.actionLog.bdaObserving).map(tg =>
+        tg.id === targetId ? { ...tg, bdaStatus: 'observing' as const } : tg
       ));
     }, 5000);
-  }, [targets]);
+  }, [targets, t]);
 
   const handleBdaOutcome = useCallback((targetId: string, outcome: 'neutralized' | 'active' | 'lost') => {
     if (outcome === 'neutralized') {
-      setTargets(prev => appendLog(prev, targetId, 'BDA — נוטרל').map(t =>
-        t.id === targetId ? { ...t, bdaStatus: 'complete' as const } : t
+      setTargets(prev => appendLog(prev, targetId, t.actionLog.bdaNeutralized).map(tg =>
+        tg.id === targetId ? { ...tg, bdaStatus: 'complete' as const } : tg
       ));
-      toast.success('יעד נוטרל — לחץ סיום משימה להעברה לטופל');
+      toast.success(t.toasts.targetNeutralized);
     } else if (outcome === 'active') {
-      setTargets(prev => appendLog(prev, targetId, 'BDA — עדיין פעיל').map(t =>
-        t.id === targetId ? { ...t, bdaStatus: undefined, mitigationStatus: 'idle' as const, mitigatingEffectorId: undefined, activityStatus: undefined } : t
+      setTargets(prev => appendLog(prev, targetId, t.actionLog.bdaStillActive).map(tg =>
+        tg.id === targetId ? { ...tg, bdaStatus: undefined, mitigationStatus: 'idle' as const, mitigatingEffectorId: undefined, activityStatus: undefined } : tg
       ));
-      toast.warning('יעד עדיין פעיל — ניתן לשבש שוב');
+      toast.warning(t.toasts.targetStillActive);
     } else {
-      const now = new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      const tgt = targets.find(t => t.id === targetId);
-      setTargets(prev => appendLog(prev, targetId, 'BDA — אבד מגע').map(t =>
-        t.id === targetId ? { ...t, bdaStatus: 'complete' as const, lastSeenAt: now, lastSeenCoordinates: tgt?.coordinates } : t
+      const now = nowLocaleTime();
+      const tgt = targets.find(tg => tg.id === targetId);
+      setTargets(prev => appendLog(prev, targetId, t.actionLog.bdaLost).map(tg =>
+        tg.id === targetId ? { ...tg, bdaStatus: 'complete' as const, lastSeenAt: now, lastSeenCoordinates: tgt?.coordinates } : tg
       ));
-      toast('יעד אבד — לחץ סיום משימה להעברה לטופל');
+      toast(t.toasts.targetLost);
     }
     setCameraLookAtRequest(null);
-  }, [targets]);
+  }, [targets, t]);
 
   // --- Simple Handlers ---
   const handleTargetClick = (target: Detection) => {
@@ -1036,28 +1322,28 @@ export const Dashboard = () => {
       setCameraPointingTargetId(targetId);
       setActiveTargetId(targetId);
       setSidebarOpen(true);
-      setTargets(prev => appendLog(prev, targetId, `מצלמה ${bestCam!.typeLabel} מפנה למטרה...`));
-      toast.success(`${bestCam.typeLabel} מפנה לאימות...`);
+      setTargets(prev => appendLog(prev, targetId, t.actionLog.cameraPointing(bestCam!.typeLabel)));
+      toast.success(t.toasts.cameraPointingForVerify(bestCam.typeLabel));
 
       const camRef = bestCam;
       cameraPointingTimeoutRef.current = setTimeout(() => {
         setCameraPointingTargetId(null);
         setCameraLookAtRequest({ cameraId: camRef.id, targetLat: lat, targetLon: lon });
-        setTargets(prev => appendLog(prev, targetId, `מצלמה ${camRef.typeLabel} נעולה על המטרה`));
-        toast.success(`${camRef.typeLabel} נעולה על מטרה`);
+        setTargets(prev => appendLog(prev, targetId, t.actionLog.cameraLocked(camRef.typeLabel)));
+        toast.success(t.toasts.cameraLockedOnTarget(camRef.typeLabel));
       }, 1500);
     }
   };
 
-  const handleDismiss = (targetId: string, reason?: string) => {
+  const handleDismiss = useCallback((targetId: string, reason?: string) => {
     if (reason === 'escalate') {
-      const target = targets.find(t => t.id === targetId);
-      setTargets(prev => appendLog(prev, targetId, 'דיווח נשלח לגורם ממונה'));
-      toast.success(`דיווח נשלח — ${target?.name || 'יעד'}`);
+      const target = targets.find(tg => tg.id === targetId);
+      setTargets(prev => appendLog(prev, targetId, t.actionLog.reportSent));
+      toast.success(t.toasts.reportSentTo(target?.name || t.toasts.targetFallback));
       return;
     }
 
-    const target = targets.find(t => t.id === targetId);
+    const target = targets.find(tg => tg.id === targetId);
     const launcherId = target?.pointingLauncherId;
     if (launcherId) {
       setLauncherEffectors(prev => prev.map(l =>
@@ -1068,16 +1354,16 @@ export const Dashboard = () => {
     const isBirdConfirm = reason === 'bird_confirmed';
     const isFalseAlarm = reason === 'false_alarm';
     const newStatus = isBirdConfirm || isFalseAlarm ? 'event_resolved' as const : 'expired' as const;
-    setTargets(prev => prev.map(t =>
-      t.id === targetId ? { ...t, status: newStatus, dismissReason: reason, activityStatus: 'dismissed' as const, weaponPointingStatus: 'idle' as const, pointingLauncherId: undefined } : t
+    setTargets(prev => prev.map(tg =>
+      tg.id === targetId ? { ...tg, status: newStatus, dismissReason: reason, activityStatus: 'dismissed' as const, weaponPointingStatus: 'idle' as const, pointingLauncherId: undefined } : tg
     ));
     if (activeTargetId === targetId) setActiveTargetId(null);
     const messages: Record<string, string> = {
-      bird_confirmed: 'אושר כציפור — זיהוי נסגר',
-      false_alarm: 'סומן כאזעקת שווא',
+      bird_confirmed: t.toasts.confirmedAsBird,
+      false_alarm: t.toasts.falseAlarm,
     };
-    toast(messages[reason || ''] || (reason ? `הוסר: ${reason}` : 'איתור הוסר ממעקב'));
-  };
+    toast(messages[reason || ''] || (reason ? t.toasts.dismissedReason(reason) : t.toasts.dismissedDefault));
+  }, [targets, activeTargetId, t]);
 
   const handleTargetFocus = useCallback((targetId: string) => {
     const target = targets.find(t => t.id === targetId);
@@ -1122,7 +1408,29 @@ export const Dashboard = () => {
     setTimeout(() => setFocusedDeviceId(null), 500);
   }, [openDevicesPanel]);
 
-  const handleResizePointerDown = useCallback((e: React.PointerEvent) => {
+  // Throttle the global `resize` dispatch fired on every ResizablePanel
+  // tick. The map listens for `resize` and triggers a Cesium re-render,
+  // so an unthrottled stream can fire dozens of times per drag tick on
+  // a fast pointer — stalling the actual drag and bloating GPU work.
+  // Coalesce to a single rAF tick so at most one resize per frame.
+  const resizeRafRef = useRef<number | null>(null);
+  const handlePanelResize = useCallback(() => {
+    if (resizeRafRef.current != null) return;
+    resizeRafRef.current = requestAnimationFrame(() => {
+      resizeRafRef.current = null;
+      window.dispatchEvent(new Event('resize'));
+    });
+  }, []);
+  useEffect(() => {
+    return () => {
+      if (resizeRafRef.current != null) {
+        cancelAnimationFrame(resizeRafRef.current);
+        resizeRafRef.current = null;
+      }
+    };
+  }, []);
+
+  const handleResizePointerDown = useCallback((e: React.PointerEvent<HTMLElement>) => {
     e.preventDefault();
     setIsDragging(true);
     setIsSnapping(false);
@@ -1135,25 +1443,42 @@ export const Dashboard = () => {
     });
     document.body.appendChild(overlay);
 
+    // Pointer capture routes all subsequent pointer events to the handle
+    // element regardless of where the cursor goes — even when it leaves the
+    // window. We get a guaranteed `lostpointercapture` cleanup, so the
+    // global listener / overlay can never get orphaned (e.g. when an alert
+    // or DevTools steals focus mid-drag).
+    const target = e.currentTarget;
+    const pointerId = e.pointerId;
+
+    const cleanup = () => {
+      target.removeEventListener('pointermove', onMove);
+      target.removeEventListener('pointerup', onUp);
+      target.removeEventListener('pointercancel', onUp);
+      target.removeEventListener('lostpointercapture', onUp);
+      document.body.style.userSelect = '';
+      const el = document.getElementById('resize-overlay');
+      if (el) el.remove();
+    };
+
     const onMove = (ev: PointerEvent) => {
       const aside = asideRef.current;
       if (!aside) return;
       const parent = aside.parentElement;
       if (!parent) return;
-      const parentRight = parent.getBoundingClientRect().right;
+      // Sidebar anchors to the inline-start edge of `parent` (left in LTR,
+      // right in RTL). It grows toward the inline-end edge — so width is the
+      // distance from the cursor back to the start edge.
+      const rect = parent.getBoundingClientRect();
+      const distance = isRtl ? (rect.right - ev.clientX) : (ev.clientX - rect.left);
       const newWidth = Math.round(
-        Math.max(LAYOUT_TOKENS.sidebarMinWidth, Math.min(LAYOUT_TOKENS.sidebarMaxWidth, parentRight - ev.clientX))
+        Math.max(LAYOUT_TOKENS.sidebarMinWidth, Math.min(LAYOUT_TOKENS.sidebarMaxWidth, distance))
       );
       setSidebarWidth(newWidth);
     };
 
     const onUp = () => {
-      document.removeEventListener('pointermove', onMove);
-      document.removeEventListener('pointerup', onUp);
-      document.body.style.userSelect = '';
-      const el = document.getElementById('resize-overlay');
-      if (el) el.remove();
-
+      cleanup();
       setSidebarWidth(prev => {
         const snapped = Math.round(prev / LAYOUT_TOKENS.sidebarSnapInterval) * LAYOUT_TOKENS.sidebarSnapInterval;
         return Math.max(LAYOUT_TOKENS.sidebarMinWidth, Math.min(LAYOUT_TOKENS.sidebarMaxWidth, snapped));
@@ -1163,18 +1488,60 @@ export const Dashboard = () => {
       setTimeout(() => setIsSnapping(false), 200);
     };
 
-    document.addEventListener('pointermove', onMove);
-    document.addEventListener('pointerup', onUp);
-  }, []);
+    try {
+      target.setPointerCapture(pointerId);
+    } catch {
+      // setPointerCapture can throw if the pointer is already released; the
+      // listeners below still cover the normal completion path.
+    }
+    target.addEventListener('pointermove', onMove);
+    target.addEventListener('pointerup', onUp);
+    target.addEventListener('pointercancel', onUp);
+    target.addEventListener('lostpointercapture', onUp);
+  }, [isRtl]);
 
   const noopStr = () => {};
   const noopStrStr = (_a: string, _b: string) => {};
+
+  // Stable handlers for the map. CesiumTacticalMap stores callbacks in refs
+  // internally, but useCallback keeps deps stable in case we wrap it in
+  // React.memo later — and avoids handing a fresh closure to the marker
+  // sub-components that consume them indirectly.
+  const handleMarkerClick = useCallback((id: string) => {
+    setActiveTargetId(id);
+    openSystemsPanel();
+  }, [openSystemsPanel]);
+
+  const handleContextMenuAction = useCallback(
+    (action: string, elementType: 'target' | 'effector' | 'sensor', elementId: string) => {
+      if (elementType === 'target') {
+        if (action === 'open-card') { setActiveTargetId(elementId); openSystemsPanel(); }
+        else if (action === 'mitigate') { setActiveTargetId(elementId); openSystemsPanel(); }
+        else if (action === 'mitigate-all') { handleMitigateAll(elementId); }
+        else if (action === 'dismiss') { handleDismiss(elementId); }
+        else if (action === 'track') { setActiveTargetId(elementId); openSystemsPanel(); }
+        else if (action === 'investigate') { setActiveTargetId(elementId); openSystemsPanel(); }
+      } else if (elementType === 'sensor' && action === 'view-feed') {
+        const cam = CAMERA_ASSETS.find(c => c.id === elementId);
+        if (cam) {
+          setCameraViewerFeeds(prev => {
+            const already = prev.find(f => f.cameraId === elementId);
+            if (already) return prev;
+            if (prev.length === 0) return [{ cameraId: elementId }];
+            if (prev.length === 1) return [...prev, { cameraId: elementId }];
+            return [{ cameraId: elementId }, prev[1]];
+          });
+        }
+      }
+    },
+    [openSystemsPanel, handleMitigateAll, handleDismiss],
+  );
 
   return (
     <div className="relative flex w-full h-screen overflow-hidden text-white font-sans selection:bg-red-500/30">
       {/* Minimal Left Nav */}
       <TooltipProvider delayDuration={200}>
-      <nav className="relative z-50 flex flex-col justify-start items-center w-8 flex-shrink-0 h-full bg-[#1a1a1a] border-l border-white/10" dir="ltr">
+      <nav className="relative z-50 flex flex-col justify-start items-center w-8 flex-shrink-0 h-full bg-[#1a1a1a] border-e border-white/10">
         <div className="flex items-center justify-center h-9 w-full">
           <div className="text-white scale-75 origin-center">
             <C2Logo />
@@ -1192,14 +1559,14 @@ export const Dashboard = () => {
                   if (next) openSystemsPanel();
                   else closeSystemsPanel();
                 }}
-                className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-white/10 active:scale-[0.98] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
-                aria-label={sidebarOpen ? 'סגור רשימת מערכות' : 'פתח רשימת מערכות'}
+                className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                aria-label={sidebarOpen ? t.dashboard.closeSidebar : t.dashboard.openSidebar}
               >
                 <List size={20} strokeWidth={1.5} />
               </Toggle>
             </TooltipTrigger>
-            <TooltipContent side="left" sideOffset={8}>
-              {sidebarOpen ? 'סגור רשימת מערכות' : 'פתח רשימת מערכות'}
+            <TooltipContent side={railTooltipSide} sideOffset={8}>
+              {sidebarOpen ? t.dashboard.closeSidebar : t.dashboard.openSidebar}
             </TooltipContent>
           </Tooltip>
 
@@ -1212,14 +1579,14 @@ export const Dashboard = () => {
                   if (next) openDevicesPanel();
                   else closeDevicesPanel();
                 }}
-                className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-white/10 active:scale-[0.98] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
-                aria-label={devicesPanelOpen ? 'סגור מכשירים' : 'מכשירים'}
+                className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                aria-label={devicesPanelOpen ? t.dashboard.closeDevices : t.dashboard.devices}
               >
                 <DevicesIcon size={20} />
               </Toggle>
             </TooltipTrigger>
-            <TooltipContent side="left" sideOffset={8}>
-              {devicesPanelOpen ? 'סגור מכשירים' : 'מכשירים'}
+            <TooltipContent side={railTooltipSide} sideOffset={8}>
+              {devicesPanelOpen ? t.dashboard.closeDevices : t.dashboard.devices}
             </TooltipContent>
           </Tooltip>
 
@@ -1235,14 +1602,14 @@ export const Dashboard = () => {
                     setCameraViewerFeeds([{ cameraId: CAMERA_ASSETS[0]?.id ?? '' }]);
                   }
                 }}
-                className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-white/10 active:scale-[0.98] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
-                aria-label={isCameraViewerOpen ? 'סגור מצלמות' : 'מצלמות'}
+                className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                aria-label={isCameraViewerOpen ? t.dashboard.closeCameras : t.dashboard.cameras}
               >
                 <Video size={20} strokeWidth={1.5} />
               </Toggle>
             </TooltipTrigger>
-            <TooltipContent side="left" sideOffset={8}>
-              {isCameraViewerOpen ? 'סגור מצלמות' : 'מצלמות'}
+            <TooltipContent side={railTooltipSide} sideOffset={8}>
+              {isCameraViewerOpen ? t.dashboard.closeCameras : t.dashboard.cameras}
             </TooltipContent>
           </Tooltip>
 
@@ -1252,17 +1619,17 @@ export const Dashboard = () => {
                 <DropdownMenuTrigger asChild>
                   <button
                     data-cuas-sim-menu
-                    className="size-6 rounded flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 active:scale-[0.98] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
-                    aria-label="תרחישי CUAS"
+                    className="size-6 rounded flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                    aria-label={t.dashboard.cuasScenariosAriaLabel}
                   >
                     <CuasIcon size={20} strokeWidth={1.5} />
                   </button>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
-              <TooltipContent side="left" sideOffset={8}>תרחישי CUAS</TooltipContent>
+              <TooltipContent side={railTooltipSide} sideOffset={8}>{t.dashboard.cuasScenarios}</TooltipContent>
             </Tooltip>
             <DropdownMenuContent
-              side="left"
+              side={railTooltipSide}
               align="start"
               sideOffset={8}
               className="w-52 rounded bg-[#202020] border-0 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)]"
@@ -1271,15 +1638,15 @@ export const Dashboard = () => {
               <DropdownMenuSeparator className="bg-white/10" />
               <DropdownMenuItem data-tour="cuas-single-sim" onSelect={handleCUASSingle} className="gap-2.5 text-xs text-zinc-300 focus:bg-white/10 focus:text-white">
                 <Target size={14} className="shrink-0 text-zinc-400" />
-                <span>יעד בודד</span>
+                <span>{t.dashboard.scenarioSingle}</span>
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={handleCUASFlow} className="gap-2.5 text-xs text-zinc-300 focus:bg-white/10 focus:text-white">
                 <CuasIcon size={14} className="shrink-0 text-zinc-400" />
-                <span>תרחיש מלא (3 יעדים)</span>
+                <span>{t.dashboard.scenarioFull}</span>
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={handleCUASMassDetection} className="gap-2.5 text-xs text-zinc-300 focus:bg-white/10 focus:text-white">
                 <Radar size={14} className="shrink-0 text-zinc-400" />
-                <span>תרחיש נחיל (20 יעדים)</span>
+                <span>{t.dashboard.scenarioSwarm}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -1291,25 +1658,50 @@ export const Dashboard = () => {
             <TooltipTrigger asChild>
               <button
                 onClick={tour.startTour}
-                className="size-6 rounded flex items-center justify-center text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 active:scale-[0.98] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
-                aria-label="סיור הדרכה"
+                className="size-6 rounded flex items-center justify-center text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                aria-label={t.dashboard.helpTourAriaLabel}
               >
                 <HelpCircle size={20} strokeWidth={1.5} />
               </button>
             </TooltipTrigger>
-            <TooltipContent side="left" sideOffset={8}>סיור הדרכה</TooltipContent>
+            <TooltipContent side={railTooltipSide} sideOffset={8}>{t.dashboard.helpTour}</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
               <a
                 href="/styleguide"
-                className="size-6 rounded flex items-center justify-center text-gray-400 hover:text-amber-400 hover:bg-amber-500/10 active:scale-[0.98] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                className="size-6 rounded flex items-center justify-center text-gray-400 hover:text-amber-400 hover:bg-amber-500/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
                 aria-label="Style Guide"
               >
                 <Palette size={20} strokeWidth={1.5} />
               </a>
             </TooltipTrigger>
-            <TooltipContent side="left" sideOffset={8}>Style Guide</TooltipContent>
+            <TooltipContent side={railTooltipSide} sideOffset={8}>Style Guide</TooltipContent>
+          </Tooltip>
+          {/*
+            Direction toggle — flips the entire app between Hebrew (RTL)
+            and English (LTR) writing direction. The choice persists to
+            `localStorage` and re-applies on next load.
+
+            We render the *opposite* locale tag inside the button so the
+            click target reads like a verb ("press here to switch to EN")
+            instead of an indicator. Two-letter pill keeps it within the
+            24px slim-rail footprint without an icon.
+          */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={toggleDirection}
+                aria-label={isRtl ? t.dashboard.switchToEnglish : t.dashboard.switchToHebrew}
+                className="size-6 rounded flex items-center justify-center text-[10px] font-mono font-semibold text-gray-400 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+              >
+                {isRtl ? 'EN' : 'עב'}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side={railTooltipSide} sideOffset={8}>
+              {isRtl ? t.dashboard.switchToEnglish : t.dashboard.switchToHebrew}
+            </TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -1317,8 +1709,8 @@ export const Dashboard = () => {
                 <NotificationCenter
                   trigger={
                     <button
-                      className="size-6 rounded flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 active:scale-[0.98] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
-                      aria-label="התראות"
+                      className="size-6 rounded flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                      aria-label={t.dashboard.notificationsAriaLabel}
                     >
                       <Bell size={20} strokeWidth={1.5} />
                     </button>
@@ -1326,7 +1718,7 @@ export const Dashboard = () => {
                 />
               </span>
             </TooltipTrigger>
-            <TooltipContent side="left" sideOffset={8}>התראות</TooltipContent>
+            <TooltipContent side={railTooltipSide} sideOffset={8}>{t.dashboard.notifications}</TooltipContent>
           </Tooltip>
         </div>
       </nav>
@@ -1342,83 +1734,46 @@ export const Dashboard = () => {
           <ResizablePanel
             defaultSize={isCameraViewerOpen ? 55 : 100}
             minSize={40}
-            onResize={() => window.dispatchEvent(new Event('resize'))}
+            onResize={handlePanelResize}
           >
             <div ref={mapDropRef} className="relative w-full h-full">
-              {(() => {
-                // Map backend selector — `?map=cesium` swaps the entire renderer
-                // for the Cesium-based component (parity migration in progress).
-                // Both branches receive the EXACT same props so the dashboard
-                // never has to know which one it's mounting. The Cesium branch
-                // is additionally wrapped in an error boundary so a viewer
-                // crash doesn't take the whole dashboard down.
-                const MapComponent = IS_CESIUM ? CesiumTacticalMap : TacticalMap;
-                const mapNode = (
-              <MapComponent
-                targets={targets}
-                activeTargetId={activeTargetId}
-                onMarkerClick={(id) => {
-                  setActiveTargetId(id);
-                  openSystemsPanel();
-                }}
-                highlightedSensorIds={highlightedSensorIds}
-                hoveredSensorIdFromCard={hoveredSensorIdFromCard}
-                sensorFocusId={sensorFocusId}
-                onContextMenuAction={(action, elementType, elementId) => {
-                  if (elementType === 'target') {
-                    if (action === 'open-card') { setActiveTargetId(elementId); openSystemsPanel(); }
-                    else if (action === 'mitigate') { setActiveTargetId(elementId); openSystemsPanel(); }
-                    else if (action === 'mitigate-all') { handleMitigateAll(elementId); }
-                    else if (action === 'dismiss') { handleDismiss(elementId); }
-                    else if (action === 'track') { setActiveTargetId(elementId); openSystemsPanel(); }
-                    else if (action === 'investigate') { setActiveTargetId(elementId); openSystemsPanel(); }
-                  } else if (elementType === 'sensor' && action === 'view-feed') {
-                    const cam = CAMERA_ASSETS.find(c => c.id === elementId);
-                    if (cam) {
-                      setCameraViewerFeeds(prev => {
-                        const already = prev.find(f => f.cameraId === elementId);
-                        if (already) return prev;
-                        if (prev.length === 0) return [{ cameraId: elementId }];
-                        if (prev.length === 1) return [...prev, { cameraId: elementId }];
-                        return [{ cameraId: elementId }, prev[1]];
-                      });
-                    }
-                  }
-                }}
-                cameraLookAtRequest={cameraLookAtRequest}
-                regulusEffectors={regulusEffectors}
-                focusCoords={null}
-                missileLaunchRequest={null}
-                onMissilePhaseChange={() => {}}
-                jammingTargetId={null}
-                jammingJammerAssetId={null}
-                jammingVerification={null}
-                onJammingVerificationComplete={() => {}}
-                controlIndicator={false}
-                fitBoundsPoints={null}
-                activeDrone={null}
-                missionRoute={null}
-                planningMode={false}
-                planningMissionType={undefined}
-                planningScanViz={null}
-                selectedAssetId={selectedAssetId}
-                onMapClick={() => {}}
-                friendlyDrones={friendlyDrones}
-                smoothFocusRequest={mapFocusRequest}
-                hoveredTargetIdFromCard={hoveredTargetIdFromCard}
-                onAssetClick={handleAssetClick}
-                offlineAssetIds={offlineAssetIds}
-                selectedEffectorIds={selectedEffectorIds}
-                launcherEffectors={launcherEffectors}
-                selectedLauncherIds={selectedLauncherIds}
-                floodlightOnIds={floodlightOnIds}
-                speakerPlayingIds={speakerPlayingIds}
-              />
-                );
-                return IS_CESIUM
-                  ? <CesiumErrorBoundary>{mapNode}</CesiumErrorBoundary>
-                  : mapNode;
-              })()}
+              {/*
+                * Cesium is the only map backend. The viewer is wrapped in an
+                * error boundary so a WebGL/scene crash can't take the whole
+                * dashboard down with it.
+                */}
+              <CesiumErrorBoundary>
+                <PerfProfiled id="CesiumTacticalMap">
+                <CesiumTacticalMap
+                  targets={targets}
+                  activeTargetId={activeTargetId}
+                  onMarkerClick={handleMarkerClick}
+                  highlightedSensorIds={highlightedSensorIds}
+                  hoveredSensorIdFromCard={hoveredSensorIdFromCard}
+                  sensorFocusId={sensorFocusId}
+                  onContextMenuAction={handleContextMenuAction}
+                  regulusEffectors={regulusEffectors}
+                  focusCoords={null}
+                  jammingTargetId={null}
+                  jammingJammerAssetId={null}
+                  controlIndicator={false}
+                  fitBoundsPoints={null}
+                  activeDrone={null}
+                  missionRoute={null}
+                  planningScanViz={null}
+                  selectedAssetId={selectedAssetId}
+                  friendlyDrones={friendlyDrones}
+                  smoothFocusRequest={mapFocusRequest}
+                  hoveredTargetIdFromCard={hoveredTargetIdFromCard}
+                  onAssetClick={handleAssetClick}
+                  offlineAssetIds={offlineAssetIds}
+                  selectedEffectorIds={selectedEffectorIds}
+                  launcherEffectors={launcherEffectors}
+                  selectedLauncherIds={selectedLauncherIds}
+                  darkMonochromeMap={demoMode}
+                />
+                </PerfProfiled>
+              </CesiumErrorBoundary>
             </div>
           </ResizablePanel>
 
@@ -1426,23 +1781,28 @@ export const Dashboard = () => {
             <>
               <ResizableHandle className="w-px bg-white/10 hover:bg-white/20 transition-colors duration-150 ease-out" />
               <ResizablePanel defaultSize={45} minSize={25} maxSize={60} collapsible collapsedSize={0} onCollapse={() => setCameraViewerFeeds([])}>
-                <CameraViewerPanel
-                  feeds={cameraViewerFeeds}
-                  onFeedsChange={setCameraViewerFeeds}
-                  onCameraHover={setHoveredSensorIdFromCard}
-                  weaponFeedActive={targets.some(t => t.weaponPointingStatus && t.weaponPointingStatus !== 'idle')}
-                />
+                <PerfProfiled id="CameraViewerPanel">
+                  <CameraViewerPanel
+                    feeds={cameraViewerFeeds}
+                    onFeedsChange={setCameraViewerFeeds}
+                    onCameraHover={setHoveredSensorIdFromCard}
+                    weaponFeedActive={weaponFeedActive}
+                  />
+                </PerfProfiled>
               </ResizablePanel>
             </>
           )}
         </ResizablePanelGroup>
 
-        {/* Right Sidebar */}
+        {/* Inline-start Sidebar — sits on the inline-start edge of the dashboard,
+            adjacent to the slim rail (left in LTR, right in RTL). Slide-out
+            animates AWAY from that edge: in LTR that's `-X`; in RTL it's `+X`.
+            Border-end is the divider that faces the map. */}
         <aside
           ref={asideRef}
           className={`
-            absolute top-0 bottom-0 bg-[#141414] border-l border-white/10 flex flex-col ${panelSwitching || isDragging ? '' : isSnapping ? '' : 'transition-[transform,opacity] duration-300 ease-in-out'} z-30
-            ${sidebarOpen ? 'translate-x-0 right-0' : 'translate-x-full right-0'}
+            absolute top-0 bottom-0 start-0 bg-[#141414] border-e border-white/10 flex flex-col ${panelSwitching || isDragging ? '' : isSnapping ? '' : 'transition-[transform,opacity] duration-300 ease-in-out'} z-30
+            ${sidebarOpen ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full'}
           `}
           style={{
             width: sidebarWidth,
@@ -1453,13 +1813,14 @@ export const Dashboard = () => {
           {sidebarOpen && (
             <div
               onPointerDown={handleResizePointerDown}
-              className={`absolute left-0 top-0 bottom-0 w-1.5 z-20 cursor-col-resize transition-colors ${isDragging ? 'bg-white/20' : 'bg-transparent hover:bg-white/10'}`}
+              className={`absolute end-0 top-0 bottom-0 w-1.5 z-20 cursor-col-resize transition-colors ${isDragging ? 'bg-white/20' : 'bg-transparent hover:bg-white/10'}`}
             />
           )}
           <div className="flex items-center px-4 h-9 border-b border-white/10">
-            <h2 className="text-[11px] font-medium text-white/70 uppercase tracking-wider">Dashboard — מערכות פעילות ({targets.length})</h2>
+            <h2 className="text-[11px] font-medium text-white/70 uppercase tracking-wider">{t.dashboard.activeSystemsHeading(targets.length)}</h2>
           </div>
           <div className="flex-1 overflow-y-auto">
+            <PerfProfiled id="ListOfSystems">
             <ListOfSystems
               className="flex flex-col gap-0"
               targets={targets}
@@ -1520,10 +1881,7 @@ export const Dashboard = () => {
               flowAssets={{ regulusEffectors, launcherEffectors }}
               flowSelectedIds={{ regulusEffectors: selectedEffectorIds, launcherEffectors: selectedLauncherIds }}
               onBdaOutcome={handleBdaOutcome}
-              cameraActiveTargetId={cameraLookAtRequest ? targets.find(t => {
-                const [lat, lon] = t.coordinates.split(',').map(s => parseFloat(s.trim()));
-                return Math.abs(lat - cameraLookAtRequest.targetLat) < 0.01 && Math.abs(lon - cameraLookAtRequest.targetLon) < 0.01;
-              })?.id ?? null : null}
+              cameraActiveTargetId={cameraActiveTargetId}
               cameraPointingTargetId={cameraPointingTargetId}
               allCamerasBusyForTarget={allCamerasBusyForTarget}
               controlRequestCountdown={cameraControlRequest?.countdown ?? null}
@@ -1537,126 +1895,62 @@ export const Dashboard = () => {
               onTargetHover={setHoveredTargetIdFromCard}
               thinMode
             />
+            </PerfProfiled>
           </div>
         </aside>
 
-        <DevicesPanel
-          devices={allDevices}
-          open={devicesPanelOpen}
-          onClose={closeDevicesPanel}
-          onFlyTo={handleDeviceFlyTo}
-          onDeviceHover={setHoveredSensorIdFromCard}
-          onDeviceSelect={setSelectedAssetId}
-          onJamActivate={(jammerId) => {
-            toast.success(`שיבוש הופעל — ${jammerId}`, { duration: 3000 });
-          }}
-          onFloodlightToggle={(id, next) => {
-            handleFloodlightToggle(id, next);
-            toast.success(next ? `זרקור הופעל — ${id}` : `זרקור כובה — ${id}`, { duration: 2000 });
-          }}
-          onSpeakerToggle={(id, next) => {
-            handleSpeakerToggle(id, next);
-            toast.success(next ? `כריזה הופעלה — ${id}` : `כריזה הופסקה — ${id}`, { duration: 2000 });
-          }}
-          floodlightOnIds={floodlightOnIds}
-          speakerPlayingIds={speakerPlayingIds}
-          speakerTracks={[
-            { id: 'air-raid', label: 'אזעקת צבע אדום' },
-            { id: 'all-clear', label: 'הסר אזעקה' },
-            { id: 'evacuate', label: 'פינוי' },
-            { id: 'lockdown', label: 'סגר' },
-            { id: 'test-tone', label: 'צליל בדיקה' },
-          ]}
-          noTransition={panelSwitching}
-          width={sidebarWidth}
-          focusedDeviceId={focusedDeviceId}
-          title="מכשירים"
-          closeAriaLabel="סגור"
-          cameraPresets={CAMERA_PRESETS}
-          typeLabels={{
-            camera: 'מצלמות',
-            radar: 'מכ"מים',
-            dock: 'כוורות',
-            drone: 'רחפנים',
-            ecm: 'משבשים',
-            launcher: 'משגרים',
-            lidar: 'לידר',
-            weapon_system: 'מערכות נשק',
-            floodlight: 'זרקורים',
-            speaker: 'כריזה',
-          }}
-          connectionStateLabels={{
-            online: 'מחובר',
-            offline: 'לא מקוון',
-            error: 'שגיאה',
-            warning: 'אזהרה',
-          }}
-          strings={{
-            searchPlaceholder: 'חיפוש...',
-            clearSearch: 'נקה חיפוש',
-            resetFilters: 'איפוס סינון',
-            resetFiltersLabel: 'ניקוי',
-            typeFilterLabel: 'מכשירים',
-            noMatches: 'אין מכשירים תואמים',
-            location: 'מיקום',
-            bearing: 'כיוון',
-            fieldOfView: 'שדה ראייה',
-            coverage: 'כיסוי',
-            altitude: 'גובה',
-            health: 'תקינות',
-            healthOk: 'תקין',
-            healthMalfunction: 'תקלה',
-            battery: 'סוללה',
-            jam: 'הפעל',
-            jamActive: 'שיבוש פעיל',
-            jamDisabledOffline: 'המכשיר לא מקוון',
-            jamDisabledMalfunction: 'המכשיר בתקלה',
-            jamDisabledAlreadyActive: 'שיבוש כבר פעיל',
-            cameraModeAriaLabel: 'מצב מצלמה',
-            centerOnMap: 'מרכז במפה',
-            mute: 'השתק',
-            unmute: 'בטל השתקה',
-            wipers: 'מגבים',
-            wipersAriaLabel: 'מגבים',
-            calibrate: 'כיול',
-            calibrating: 'מכייל...',
-            calibrated: 'הושלם',
-            calibrateAriaLabel: 'כיול',
-            floodlightOn: 'דולק',
-            floodlightOff: 'כבוי',
-            floodlightToggleAriaLabel: 'הפעל/כבה זרקור',
-            floodlightTurnOn: 'הפעל',
-            floodlightTurnOff: 'כבה',
-            speakerPlay: 'נגן',
-            speakerStop: 'עצור',
-            speakerPlaying: 'מנגן',
-            speakerDisabledOffline: 'הרמקול לא מקוון',
-            audioTrack: 'מסלול',
-            audioTrackAriaLabel: 'מסלול שמע',
-            audioTrackSearchPlaceholder: 'חיפוש מסלול...',
-            audioTrackNoMatches: 'אין תוצאות תואמות',
-          }}
-        />
+        {/*
+          * Conditionally mount the devices panel — when closed it would otherwise
+          * stay in the tree (just translated off-screen) and re-run its useMemos,
+          * mute interval, and full device-list iteration on every Dashboard
+          * render. We trade the slide-out animation for a tighter render budget.
+          */}
+        {devicesPanelOpen && (
+          <DevicesPanel
+            devices={allDevices}
+            open={devicesPanelOpen}
+            onClose={closeDevicesPanel}
+            onFlyTo={handleDeviceFlyTo}
+            onDeviceHover={setHoveredSensorIdFromCard}
+            onDeviceSelect={setSelectedAssetId}
+            onJamActivate={(jammerId) => {
+              toast.success(t.toasts.jamActivated(jammerId), { duration: 3000 });
+            }}
+            noTransition={panelSwitching}
+            width={sidebarWidth}
+            focusedDeviceId={focusedDeviceId}
+            title={t.dashboard.devicesPanelTitle}
+            closeAriaLabel={t.dashboard.devicesPanelClose}
+            cameraPresets={cameraPresets}
+            typeLabels={t.devices.typeLabels}
+            connectionStateLabels={t.devices.connectionLabels}
+            strings={t.devices.strings}
+          />
+        )}
 
       </div>
 
       <NotificationSystem />
 
-      <Joyride
-        steps={tour.steps}
-        run={tour.run}
-        stepIndex={tour.stepIndex}
-        continuous
-        showSkipButton
-        scrollToFirstStep
-        disableScrollParentFix
-        disableOverlayClose
-        disableCloseOnEsc
-        callback={tour.handleCallback}
-        styles={tour.styles}
-        locale={tour.locale}
-        floaterProps={{ disableAnimation: true }}
-      />
+      {tourEverStarted && (
+        <Suspense fallback={null}>
+          <Joyride
+            steps={tour.steps}
+            run={tour.run}
+            stepIndex={tour.stepIndex}
+            continuous
+            showSkipButton
+            scrollToFirstStep
+            disableScrollParentFix
+            disableOverlayClose
+            disableCloseOnEsc
+            callback={tour.handleCallback}
+            styles={tour.styles}
+            locale={tour.locale}
+            floaterProps={{ disableAnimation: true }}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };

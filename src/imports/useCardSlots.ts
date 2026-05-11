@@ -46,14 +46,15 @@ import type {
   LauncherEffector,
   IncidentOutcome,
 } from './ListOfSystems';
-import { INCIDENT_OUTCOMES } from './ListOfSystems';
+import { getIncidentOutcomes } from './ListOfSystems';
 import {
-  ENGAGEMENT_FLOWS,
+  getEngagementFlows,
   resolveNearestAsset,
   type EngagementFlowDef,
   type FlowAsset,
 } from './engagementFlows';
 import { JamWaveIcon } from '@/primitives/MapIcons';
+import { useStrings, type Strings } from '@/lib/intl';
 
 export interface CardCallbacks {
   onVerify?: (action: 'intercept' | 'surveillance' | 'investigate') => void;
@@ -153,16 +154,14 @@ function buildHeaderIcon(target: Detection): React.ElementType {
   }
 }
 
-const CLASSIFIED_TYPE_LABELS: Record<string, string> = {
-  drone: 'רחפן', bird: 'ציפור', aircraft: 'מטוס', car: 'רכב', unknown: 'לא ידוע',
-};
-
-function buildConfidenceBadge(confidence: number | undefined, classifiedType?: string): React.ReactNode {
+function buildConfidenceBadge(confidence: number | undefined, classifiedType: string | undefined, t: Strings): React.ReactNode {
   if (confidence == null) return null;
   const bg = confidence >= 80 ? 'bg-red-500/20 text-red-400'
     : confidence >= 40 ? 'bg-amber-500/20 text-amber-400'
     : 'bg-zinc-500/20 text-zinc-400';
-  const typeLabel = CLASSIFIED_TYPE_LABELS[classifiedType ?? 'unknown'] ?? 'לא ידוע';
+  const types = t.cards.classifiedTypes;
+  const key = (classifiedType ?? 'unknown') as keyof typeof types;
+  const typeLabel = types[key] ?? types.unknown;
   return React.createElement(Tooltip, null,
     React.createElement(TooltipTrigger, { asChild: true },
       React.createElement('span', {
@@ -174,11 +173,11 @@ function buildConfidenceBadge(confidence: number | undefined, classifiedType?: s
       sideOffset: 6,
       showArrow: false,
       className: 'px-2 py-1 text-[9px] font-normal font-sans text-white bg-zinc-700 shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_10px_15px_-3px_rgba(0,0,0,0.3)] whitespace-nowrap',
-    }, `סביר ביותר שמדובר ב${typeLabel}`),
+    }, t.cards.classifiedTypeLabel(typeLabel)),
   );
 }
 
-function buildHeader(target: Detection): CardHeaderProps {
+function buildHeader(target: Detection, t: Strings): CardHeaderProps {
   const Icon = buildHeaderIcon(target);
   const isActive = target.status === 'detection' || target.status === 'event';
   const isMission = target.flowType === 4;
@@ -198,14 +197,14 @@ function buildHeader(target: Detection): CardHeaderProps {
           : '#9ca3af',
     iconBgActive: !isMission && !isRaw && isActive,
     title: isMission
-      ? (target.plannedMission?.missionType === 'ptz' ? 'סריקת מצלמה' : 'משימת רחפן')
+      ? (target.plannedMission?.missionType === 'ptz' ? t.cards.cameraScan : t.cards.droneMission)
       : target.name,
     subtitle: isMission ? target.id : target.timestamp,
-    badge: target.entityStage && !isCompleted ? buildConfidenceBadge(target.confidence, target.classifiedType) : undefined,
+    badge: target.entityStage && !isCompleted ? buildConfidenceBadge(target.confidence, target.classifiedType, t) : undefined,
   };
 }
 
-function buildMedia(target: Detection, ctx: CardContext): CardMediaProps | null {
+function buildMedia(target: Detection, ctx: CardContext, t: Strings): CardMediaProps | null {
   const isCuas = !!target.entityStage;
   const isActive = target.status === 'detection' || target.status === 'event';
   const isSuspicion = target.status === 'suspicion';
@@ -231,7 +230,7 @@ function buildMedia(target: Detection, ctx: CardContext): CardMediaProps | null 
         ? (target.classifiedType === 'bird' ? 'bird' : 'threat')
         : isSuspicion ? 'warning' : 'threat',
       showControls: target.mitigationStatus === 'mitigated' || isSuccess || isExpired,
-      trackingLabel: isBdaActive ? 'מעקב PTZ' : (target.mitigationStatus === 'mitigated' ? 'הקלטת PTZ' : undefined),
+      trackingLabel: isBdaActive ? t.cards.trackingPtz : (target.mitigationStatus === 'mitigated' ? t.cards.recordingPtz : undefined),
     };
   }
 
@@ -254,13 +253,14 @@ function buildFlowDropdownGroups(
   activeId: string,
   callbacks: CardCallbacks,
   busy: boolean,
+  t: Strings,
 ): SplitDropdownGroup[] {
   const selectCb = callbacks[flow.selectCallbackKey as keyof CardCallbacks] as ((id: string) => void) | undefined;
   const primaryCb = callbacks[flow.primaryCallbackKey as keyof CardCallbacks] as ((id: string) => void) | undefined;
   const hoverCb = callbacks.onSensorHover;
   const assetItems = sortedAssets.map(({ asset, km }) => ({
     id: `${flow.id}-${asset.id}`,
-    label: `${asset.name} (${km.toFixed(1)} ק״מ)`,
+    label: t.cards.distanceFromAsset(asset.name, km),
     active: asset.id === activeId,
     disabled: !flow.availableFilter(asset) || busy,
     onClick: (e: React.MouseEvent) => {
@@ -284,6 +284,7 @@ function buildFlowActions(
   target: Detection,
   callbacks: CardCallbacks,
   ctx: CardContext,
+  t: Strings,
 ): CardAction[] {
   const actions: CardAction[] = [];
   const phase = flow.getPhase(target);
@@ -322,7 +323,7 @@ function buildFlowActions(
       if (bdaPending) {
         actions.push({
           id: 'start-bda',
-          label: 'אימות פגיעה — נעילת רחפן',
+          label: t.cards.bdaConfirm,
           icon: Crosshair,
           variant: 'ghost',
           size: 'sm',
@@ -331,7 +332,7 @@ function buildFlowActions(
         });
       } else {
         actions.push({
-          id: 'dismiss-target', label: 'ביטול', icon: X, variant: 'ghost', size: 'sm',
+          id: 'dismiss-target', label: t.cards.dismiss, icon: X, variant: 'ghost', size: 'sm',
           group: 'secondary',
           onClick: (e) => { e.stopPropagation(); callbacks.onDismiss?.('dismissed'); },
         });
@@ -367,7 +368,7 @@ function buildFlowActions(
     onHover: active ? (hovering) => callbacks.onSensorHover?.(hovering ? active.asset.id : null) : undefined,
     dropdownActions: flow.extraDropdownActions ? flow.extraDropdownActions(busy) : undefined,
     dropdownGroups: sortedAssets.length > 0
-      ? buildFlowDropdownGroups(flow, sortedAssets, active?.asset.id ?? '', callbacks, busy)
+      ? buildFlowDropdownGroups(flow, sortedAssets, active?.asset.id ?? '', callbacks, busy, t)
       : undefined,
   });
 
@@ -379,7 +380,7 @@ function buildFlowActions(
 
     actions.push({
       id: 'point-camera',
-      label: cameraPointing ? 'מפנה מצלמה...' : cameraActive ? 'מצלמה נעולה על היעד' : 'הפנה מצלמה',
+      label: cameraPointing ? t.cards.cameraPointing : cameraActive ? t.cards.cameraLocked : t.cards.pointCamera,
       icon: cameraActive ? CameraLockedIcon : Eye,
       variant: cameraPointing || cameraActive ? 'ghost' : 'fill',
       size: 'sm',
@@ -391,7 +392,7 @@ function buildFlowActions(
   }
 
   actions.push({
-    id: 'dismiss-target', label: 'ביטול', icon: X, variant: 'ghost', size: 'sm',
+    id: 'dismiss-target', label: t.cards.dismiss, icon: X, variant: 'ghost', size: 'sm',
     group: 'secondary',
     onClick: (e) => { e.stopPropagation(); callbacks.onDismiss?.('dismissed'); },
   });
@@ -399,8 +400,9 @@ function buildFlowActions(
   return actions;
 }
 
-function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardContext): CardAction[] {
+function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardContext, t: Strings): CardAction[] {
   const actions: CardAction[] = [];
+  const c = t.cards;
   const isSuccess = target.status === 'event_resolved' || target.status === 'event_neutralized';
   const isExpired = target.status === 'expired';
   const isCritical = target.status === 'detection' || target.status === 'event';
@@ -417,16 +419,16 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
 
     actions.push({
       id: 'mitigate',
-      label: 'שיבוש הושלם',
+      label: c.jamCompleted,
       group: 'primary',
       onClick: (e) => e.stopPropagation(),
-      statusStrip: { label: 'שיבוש הושלם', icon: Check, tone: 'success' },
+      statusStrip: { label: c.jamCompletedStrip, icon: Check, tone: 'success' },
     });
 
     if (countdown != null && countdown > 0) {
       actions.push({
         id: 'bda-camera',
-        label: `${countdown} שניות לשליטה...`,
+        label: c.cameraControlCountdown(countdown),
         icon: Timer,
         variant: 'ghost' as const,
         size: 'sm' as const,
@@ -438,7 +440,7 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
     } else if (allBusy && !cameraActive) {
       actions.push({
         id: 'bda-camera',
-        label: 'בקש שליטה על מצלמה',
+        label: c.requestCameraControl,
         icon: Lock,
         variant: 'ghost' as const,
         size: 'sm' as const,
@@ -449,7 +451,7 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
     } else if (cameraActive) {
       actions.push({
         id: 'bda-camera',
-        label: 'בטל מצלמה',
+        label: c.cancelCamera,
         icon: EyeOff,
         variant: 'fill' as const,
         size: 'sm' as const,
@@ -459,7 +461,7 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
     } else {
       actions.push({
         id: 'bda-camera',
-        label: 'הפנה מצלמה',
+        label: c.pointCamera,
         icon: Eye,
         variant: 'fill' as const,
         size: 'sm' as const,
@@ -470,7 +472,7 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
     }
 
     actions.push(
-      { id: 'complete-mission', label: 'סיום משימה', icon: Check, variant: 'fill', size: 'sm',
+      { id: 'complete-mission', label: c.completeMission, icon: Check, variant: 'fill', size: 'sm',
         group: 'secondary',
         dataTour: 'cuas-cta-complete',
         onClick: (e) => { e.stopPropagation(); callbacks.onCompleteMission?.(); },
@@ -481,9 +483,9 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
 
   // Engagement flow actions (jam, weapon, and future flows) — config-driven
   if (isCuas) {
-    for (const flow of ENGAGEMENT_FLOWS) {
+    for (const flow of getEngagementFlows(t)) {
       if (flow.matchTarget(target)) {
-        return buildFlowActions(flow, target, callbacks, ctx);
+        return buildFlowActions(flow, target, callbacks, ctx, t);
       }
     }
   }
@@ -491,13 +493,13 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
   // CUAS bird actions
   if (isCuas && target.classifiedType === 'bird') {
     actions.push(
-      { id: 'confirm-bird', label: 'אשר ציפור — סגור זיהוי', icon: Check, variant: 'warning', size: 'sm',
+      { id: 'confirm-bird', label: c.confirmBird, icon: Check, variant: 'warning', size: 'sm',
         group: 'primary',
         onClick: (e) => { e.stopPropagation(); callbacks.onDismiss?.('bird_confirmed'); } },
-      { id: 'false-alarm', label: 'שווא', icon: Ban, variant: 'ghost', size: 'sm',
+      { id: 'false-alarm', label: c.falseAlarm, icon: Ban, variant: 'ghost', size: 'sm',
         group: 'secondary',
         onClick: (e) => { e.stopPropagation(); callbacks.onDismiss?.('false_alarm'); } },
-      { id: 'investigate-bird', label: 'תחקור', icon: Eye, variant: 'ghost', size: 'sm',
+      { id: 'investigate-bird', label: c.investigateBird, icon: Eye, variant: 'ghost', size: 'sm',
         group: 'secondary',
         onClick: (e) => { e.stopPropagation(); callbacks.onVerify?.('investigate'); } },
     );
@@ -508,14 +510,14 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
   if ((target.flowType === 1 || target.flowType === 2) && target.flowPhase === 'investigate') {
     if (target.flowType === 2) {
       actions.push(
-        { id: 'send-drone', label: 'שגר רחפן', icon: Plane, variant: 'fill', size: 'md',
+        { id: 'send-drone', label: c.sendDrone, icon: Plane, variant: 'fill', size: 'md',
           onClick: (e) => { e.stopPropagation(); callbacks.onEscalateSendDrone?.(); } },
-        { id: 'mark-poi', label: 'סמן נ.ע', icon: MapPin, variant: 'ghost', size: 'sm',
+        { id: 'mark-poi', label: c.markPoi, icon: MapPin, variant: 'ghost', size: 'sm',
           onClick: (e) => { e.stopPropagation(); callbacks.onEscalateCreatePOI?.(); } },
       );
     }
     actions.push(
-      { id: 'close-event', label: 'סגור אירוע', icon: Ban, variant: 'ghost', size: 'sm',
+      { id: 'close-event', label: c.closeEvent, icon: Ban, variant: 'ghost', size: 'sm',
         onClick: (e) => { e.stopPropagation(); callbacks.onAdvanceFlowPhase?.(); } },
     );
     return actions;
@@ -524,13 +526,13 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
   // Flow 1 decide phase — playbook selection
   if (target.flowType === 1 && target.flowPhase === 'decide') {
     actions.push(
-      { id: 'pb-fast-inspect', label: 'חקירה מהירה', icon: Plane, variant: 'fill', size: 'md',
+      { id: 'pb-fast-inspect', label: c.pbFastInspect, icon: Plane, variant: 'fill', size: 'md',
         onClick: (e) => { e.stopPropagation(); callbacks.onPlaybookSelect?.('fast-inspect'); } },
-      { id: 'pb-full-response', label: 'תגובה מלאה', icon: Shield, variant: 'danger', size: 'sm',
+      { id: 'pb-full-response', label: c.pbFullResponse, icon: Shield, variant: 'danger', size: 'sm',
         onClick: (e) => { e.stopPropagation(); callbacks.onPlaybookSelect?.('full-response'); } },
-      { id: 'pb-transfer', label: 'העבר אחריות', icon: Send, variant: 'ghost', size: 'sm',
+      { id: 'pb-transfer', label: c.pbTransfer, icon: Send, variant: 'ghost', size: 'sm',
         onClick: (e) => { e.stopPropagation(); callbacks.onPlaybookSelect?.('transfer'); } },
-      { id: 'close-event', label: 'סגור', icon: Ban, variant: 'ghost', size: 'sm',
+      { id: 'close-event', label: c.closeEventShort, icon: Ban, variant: 'ghost', size: 'sm',
         onClick: (e) => { e.stopPropagation(); callbacks.onAdvanceFlowPhase?.(); } },
     );
     return actions;
@@ -541,13 +543,13 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
     const dp = target.droneDeployment;
     if (['flying', 'on_station', 'low_battery'].includes(dp.phase)) {
       if (!dp.overridden) {
-        actions.push({ id: 'drone-pause', label: 'השהה', icon: Pause, variant: 'warning', size: 'sm',
+        actions.push({ id: 'drone-pause', label: c.dronePause, icon: Pause, variant: 'warning', size: 'sm',
           onClick: (e) => { e.stopPropagation(); callbacks.onDroneOverride?.(); } });
       } else {
-        actions.push({ id: 'drone-resume', label: 'חדש', icon: Play, variant: 'fill', size: 'md',
+        actions.push({ id: 'drone-resume', label: c.droneResume, icon: Play, variant: 'fill', size: 'md',
           onClick: (e) => { e.stopPropagation(); callbacks.onDroneResume?.(); } });
       }
-      actions.push({ id: 'drone-rtb', label: 'חזרה לבסיס', icon: Home, variant: 'ghost', size: 'sm',
+      actions.push({ id: 'drone-rtb', label: c.droneRtb, icon: Home, variant: 'ghost', size: 'sm',
         onClick: (e) => { e.stopPropagation(); callbacks.onDroneRTB?.(); } });
     }
     return actions;
@@ -558,31 +560,31 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
     const mp = target.plannedMission;
     if (mp.phase === 'planning') {
       actions.push(
-        { id: 'mission-activate', label: 'הפעל משימה', icon: Play, variant: 'fill', size: 'lg',
+        { id: 'mission-activate', label: c.missionActivate, icon: Play, variant: 'fill', size: 'lg',
           onClick: (e) => { e.stopPropagation(); callbacks.onMissionActivate?.(); } },
-        { id: 'mission-cancel', label: 'ביטול תכנון', icon: X, variant: 'ghost', size: 'sm',
+        { id: 'mission-cancel', label: c.missionCancel, icon: X, variant: 'ghost', size: 'sm',
           onClick: (e) => { e.stopPropagation(); callbacks.onMissionCancel?.(); } },
       );
     } else if (mp.phase === 'active' || mp.phase === 'paused') {
       if (mp.phase === 'active') {
-        actions.push({ id: 'mission-pause', label: 'השהה', icon: Pause, variant: 'ghost', size: 'md',
+        actions.push({ id: 'mission-pause', label: c.missionPause, icon: Pause, variant: 'ghost', size: 'md',
           onClick: (e) => { e.stopPropagation(); callbacks.onMissionPause?.(); } });
       } else {
-        actions.push({ id: 'mission-resume', label: 'המשך', icon: Play, variant: 'ghost', size: 'md',
+        actions.push({ id: 'mission-resume', label: c.missionResume, icon: Play, variant: 'ghost', size: 'md',
           onClick: (e) => { e.stopPropagation(); callbacks.onMissionResume?.(); },
           className: 'shadow-[0_0_0_1px_rgba(16,185,129,0.2)] bg-emerald-500/5 hover:bg-emerald-500/10' });
       }
       actions.push(
-        { id: 'mission-override', label: 'שליטה ידנית', icon: Hand, variant: 'ghost', size: 'sm',
+        { id: 'mission-override', label: c.missionOverride, icon: Hand, variant: 'ghost', size: 'sm',
           onClick: (e) => { e.stopPropagation(); callbacks.onMissionOverride?.(); } },
-        { id: 'mission-cancel', label: 'ביטול משימה', icon: X, variant: 'ghost', size: 'sm',
+        { id: 'mission-cancel', label: c.missionCancelFull, icon: X, variant: 'ghost', size: 'sm',
           onClick: (e) => { e.stopPropagation(); callbacks.onMissionCancel?.(); } },
       );
     } else if (mp.phase === 'override') {
       actions.push(
-        { id: 'mission-return', label: 'חזור למשימה', icon: Play, variant: 'fill', size: 'lg',
+        { id: 'mission-return', label: c.missionReturn, icon: Play, variant: 'fill', size: 'lg',
           onClick: (e) => { e.stopPropagation(); callbacks.onMissionResume?.(); } },
-        { id: 'mission-cancel', label: 'ביטול משימה', icon: X, variant: 'ghost', size: 'sm',
+        { id: 'mission-cancel', label: c.missionCancelFull, icon: X, variant: 'ghost', size: 'sm',
           onClick: (e) => { e.stopPropagation(); callbacks.onMissionCancel?.(); } },
       );
     }
@@ -593,14 +595,14 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
   const isMissionActive = target.missionStatus === 'planning' || target.missionStatus === 'executing' || target.missionStatus === 'waiting_confirmation';
   if (!isMissionActive) {
     if (isCritical || isSuspicion) {
-      actions.push({ id: 'jam-primary', label: 'שיבוש', icon: JamWaveIcon, variant: 'danger', size: 'lg',
+      actions.push({ id: 'jam-primary', label: c.jamPrimary, icon: JamWaveIcon, variant: 'danger', size: 'lg',
         onClick: (e) => { e.stopPropagation(); callbacks.onEngage?.('jamming'); } });
       actions.push(
-        { id: 'surveillance', label: 'מעקב', icon: Eye, variant: 'outline', size: 'sm',
+        { id: 'surveillance', label: c.surveillance, icon: Eye, variant: 'outline', size: 'sm',
           onClick: (e) => { e.stopPropagation(); callbacks.onVerify?.('surveillance'); } },
-        { id: 'drone', label: 'רחפן', icon: Plane, variant: 'outline', size: 'sm',
+        { id: 'drone', label: c.drone, icon: Plane, variant: 'outline', size: 'sm',
           onClick: (e) => e.stopPropagation() },
-        { id: 'dismiss', label: 'ביטול', icon: X, variant: 'outline', size: 'sm',
+        { id: 'dismiss', label: c.dismiss, icon: X, variant: 'outline', size: 'sm',
           onClick: (e) => { e.stopPropagation(); callbacks.onDismiss?.(); } },
       );
     }
@@ -609,7 +611,7 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
   return actions;
 }
 
-function buildTimeline(target: Detection, ctx: CardContext): TimelineStep[] {
+function buildTimeline(target: Detection, ctx: CardContext, t: Strings): TimelineStep[] {
   const steps: TimelineStep[] = [];
 
   // Mission steps (flow 4 with active mission)
@@ -623,20 +625,21 @@ function buildTimeline(target: Detection, ctx: CardContext): TimelineStep[] {
       });
     });
     if (ctx.isDroneVerifying) {
-      steps.push({ label: 'רחפן בדרך לאימות פגיעה...', status: 'active' });
+      steps.push({ label: t.cards.droneEnRouteBda, status: 'active' });
     }
     return steps;
   }
 
   // Flow 3 drone deployment timeline
   if (target.flowType === 3 && target.droneDeployment) {
+    const dp = t.cards.dronePhases;
     const phases: { phase: string; label: string }[] = [
-      { phase: 'select', label: 'בחר רחפן' },
-      { phase: 'takeoff', label: 'המראה' },
-      { phase: 'flying', label: 'בדרך לאיתור' },
-      { phase: 'on_station', label: 'תצפית פעילה' },
-      { phase: 'rtb', label: 'חוזר לבסיס' },
-      { phase: 'landed', label: 'נחת' },
+      { phase: 'select', label: dp.select },
+      { phase: 'takeoff', label: dp.takeoff },
+      { phase: 'flying', label: dp.flying },
+      { phase: 'on_station', label: dp.onStation },
+      { phase: 'rtb', label: dp.rtb },
+      { phase: 'landed', label: dp.landed },
     ];
     const currentIdx = phases.findIndex(p => p.phase === target.droneDeployment!.phase);
     phases.forEach((p, idx) => {
@@ -652,10 +655,11 @@ function buildTimeline(target: Detection, ctx: CardContext): TimelineStep[] {
 
   // CUAS lifecycle timeline
   if (target.entityStage) {
-    const cuasPhases = [
-      { label: 'זיהוי ראשוני', status: 'complete' as TimelineStep['status'] },
+    const cp = t.cards.cuasPhases;
+    const cuasPhases: TimelineStep[] = [
+      { label: cp.initialDetection, status: 'complete' as TimelineStep['status'] },
       {
-        label: 'סיווג',
+        label: cp.classification,
         status: (target.entityStage === 'classified' ? 'complete' : 'active') as TimelineStep['status'],
       },
     ];
@@ -663,31 +667,31 @@ function buildTimeline(target: Detection, ctx: CardContext): TimelineStep[] {
       if (target.classifiedType === 'car') {
         const wp = target.weaponPointingStatus;
         if (wp === 'pointing') {
-          cuasPhases.push({ label: 'כיוון נשק', status: 'active' as TimelineStep['status'] });
+          cuasPhases.push({ label: cp.weaponPointing, status: 'active' as TimelineStep['status'] });
         } else if (wp === 'pointed') {
-          cuasPhases.push({ label: 'נשק מכוון', status: 'complete' as TimelineStep['status'] });
-          cuasPhases.push({ label: 'נעילה', status: 'active' as TimelineStep['status'] });
+          cuasPhases.push({ label: cp.weaponPointed, status: 'complete' as TimelineStep['status'] });
+          cuasPhases.push({ label: cp.lock, status: 'active' as TimelineStep['status'] });
         } else if (wp === 'locking') {
-          cuasPhases.push({ label: 'נשק מכוון', status: 'complete' as TimelineStep['status'] });
-          cuasPhases.push({ label: 'נועל...', status: 'active' as TimelineStep['status'] });
+          cuasPhases.push({ label: cp.weaponPointed, status: 'complete' as TimelineStep['status'] });
+          cuasPhases.push({ label: cp.locking, status: 'active' as TimelineStep['status'] });
         } else if (wp === 'locked') {
-          cuasPhases.push({ label: 'נשק מכוון', status: 'complete' as TimelineStep['status'] });
-          cuasPhases.push({ label: 'נעול', status: 'complete' as TimelineStep['status'] });
+          cuasPhases.push({ label: cp.weaponPointed, status: 'complete' as TimelineStep['status'] });
+          cuasPhases.push({ label: cp.locked, status: 'complete' as TimelineStep['status'] });
         } else {
-          cuasPhases.push({ label: 'ממתין לפעולה', status: 'active' as TimelineStep['status'] });
+          cuasPhases.push({ label: cp.pendingAction, status: 'active' as TimelineStep['status'] });
         }
       } else if (target.mitigationStatus === 'mitigating') {
-        cuasPhases.push({ label: 'שיבוש פעיל', status: 'active' });
+        cuasPhases.push({ label: cp.jamActive, status: 'active' });
       } else if (target.mitigationStatus === 'mitigated') {
-        cuasPhases.push({ label: 'נוטרל', status: 'complete' });
+        cuasPhases.push({ label: cp.neutralized, status: 'complete' });
         if (target.bdaStatus) {
           cuasPhases.push({
-            label: 'אימות פגיעה',
+            label: cp.bdaConfirm,
             status: target.bdaStatus === 'complete' ? 'complete' : 'active',
           });
         }
       } else if (target.classifiedType === 'drone') {
-        cuasPhases.push({ label: 'ממתין לפעולה', status: 'active' });
+        cuasPhases.push({ label: cp.pendingAction, status: 'active' });
       }
     }
     return cuasPhases;
@@ -695,14 +699,15 @@ function buildTimeline(target: Detection, ctx: CardContext): TimelineStep[] {
 
   // Flow 1/2 investigation phases
   if ((target.flowType === 1 || target.flowType === 2) && target.flowPhase) {
+    const fs = t.cards.flowSteps;
     const phaseOrder = ['trigger', 'orient', 'investigate', 'decide', 'act', 'closure'];
     const labels: Record<string, string> = {
-      trigger: 'זיהוי',
-      orient: 'הפניה',
-      investigate: target.flowType === 2 ? 'מעקב ידני' : 'חקירה',
-      decide: 'החלטה',
-      act: 'ביצוע',
-      closure: 'סגירה',
+      trigger: fs.trigger,
+      orient: fs.orient,
+      investigate: target.flowType === 2 ? fs.manualTracking : fs.investigate,
+      decide: fs.decide,
+      act: fs.act,
+      closure: fs.closure,
     };
     const currentIdx = phaseOrder.indexOf(target.flowPhase);
     phaseOrder.forEach((phase, idx) => {
@@ -717,31 +722,33 @@ function buildTimeline(target: Detection, ctx: CardContext): TimelineStep[] {
   return steps;
 }
 
-function buildDetails(target: Detection): { rows: DetailRow[]; classification?: CardDetailsClassification } {
+function buildDetails(target: Detection, t: Strings): { rows: DetailRow[]; classification?: CardDetailsClassification } {
+  const dr = t.cards.detailRows;
+  const tl = t.cards.typeLabels;
   const rows: DetailRow[] = [];
-  rows.push({ label: 'מיקום', value: target.coordinates, icon: MapPin });
-  if (target.altitude) rows.push({ label: 'גובה', value: target.altitude, icon: Mountain });
-  rows.push({ label: 'מרחק', value: target.distance, icon: Ruler });
-  if (target.lastSeenAt) rows.push({ label: 'נצפה לאחרונה', value: target.lastSeenAt, icon: Clock });
+  rows.push({ label: dr.location, value: target.coordinates, icon: MapPin });
+  if (target.altitude) rows.push({ label: dr.altitude, value: target.altitude, icon: Mountain });
+  rows.push({ label: dr.distance, value: target.distance, icon: Ruler });
+  if (target.lastSeenAt) rows.push({ label: dr.lastSeen, value: target.lastSeenAt, icon: Clock });
 
   let classification: CardDetailsClassification | undefined;
   if (target.entityStage === 'classified') {
     const typeLabels: Record<string, string> = {
-      drone: 'רחפן', bird: 'ציפור', aircraft: 'מטוס', car: 'רכב', unknown: 'לא ידוע',
+      drone: tl.drone, bird: tl.bird, aircraft: tl.aircraft, car: tl.car, unknown: tl.unknown,
     };
     const colorClasses: Record<string, string> = {
       drone: 'text-red-400', bird: 'text-amber-400', aircraft: 'text-zinc-300', car: 'text-orange-400',
     };
     classification = {
       type: target.classifiedType ?? 'unknown',
-      typeLabel: typeLabels[target.classifiedType ?? 'unknown'] ?? 'לא ידוע',
+      typeLabel: typeLabels[target.classifiedType ?? 'unknown'] ?? tl.unknown,
       confidence: typeof target.confidence === 'number' ? target.confidence : undefined,
       colorClass: colorClasses[target.classifiedType ?? ''] ?? 'text-zinc-300',
     };
   } else if (target.entityStage === 'raw_detection') {
     classification = {
       type: 'unknown',
-      typeLabel: 'זיהוי לא ידוע',
+      typeLabel: tl.unknownDetection,
       confidence: typeof target.confidence === 'number' ? target.confidence : undefined,
       colorClass: 'text-zinc-400',
     };
@@ -750,11 +757,12 @@ function buildDetails(target: Detection): { rows: DetailRow[]; classification?: 
   return { rows, classification };
 }
 
-function buildLaserPosition(target: Detection): DetailRow[] {
+function buildLaserPosition(target: Detection, t: Strings): DetailRow[] {
+  const dr = t.cards.detailRows;
   const rows: DetailRow[] = [];
-  if (target.laserAzimuth) rows.push({ label: 'אזימוט', value: target.laserAzimuth, icon: Compass });
-  if (target.laserElevation) rows.push({ label: 'זווית הגבהה', value: target.laserElevation, icon: ArrowUpDown });
-  if (target.laserRange || target.laserDistance) rows.push({ label: 'טווח', value: target.laserRange ?? target.laserDistance!, icon: Ruler });
+  if (target.laserAzimuth) rows.push({ label: dr.azimuth, value: target.laserAzimuth, icon: Compass });
+  if (target.laserElevation) rows.push({ label: dr.elevation, value: target.laserElevation, icon: ArrowUpDown });
+  if (target.laserRange || target.laserDistance) rows.push({ label: dr.range, value: target.laserRange ?? target.laserDistance!, icon: Ruler });
   return rows;
 }
 
@@ -786,12 +794,13 @@ function buildSensors(target: Detection): CardSensor[] {
 function buildClosure(
   target: Detection,
   callbacks: CardCallbacks,
+  t: Strings,
 ): { outcomes: ClosureOutcome[]; onSelect: (id: string) => void } | null {
   const isClosurePhase = (target.flowType === 1 || target.flowType === 2) && target.flowPhase === 'closure';
   if (!isClosurePhase) return null;
 
   return {
-    outcomes: INCIDENT_OUTCOMES.map(o => ({
+    outcomes: getIncidentOutcomes(t).map(o => ({
       id: o.value,
       label: o.label,
     })),
@@ -808,6 +817,7 @@ export function useCardSlots(
   callbacks: CardCallbacks,
   ctx: CardContext = {},
 ): CardSlots {
+  const t = useStrings();
   const accent = useMemo(() => buildAccent(target), [target.status, target.mitigationStatus, target.weaponPointingStatus, target.flowType, target.droneDeployment?.phase, target.plannedMission?.phase]);
   const completed = target.status === 'event_resolved' || target.status === 'event_neutralized';
   const closureType = useMemo((): 'manual' | 'auto' | null => {
@@ -820,15 +830,15 @@ export function useCardSlots(
     if (target.status === 'event_resolved') return 'manual';
     return 'auto';
   }, [target.status, target.dismissReason]);
-  const header = useMemo(() => buildHeader(target), [target]);
-  const media = useMemo(() => buildMedia(target, ctx), [target, ctx.isCameraActive]);
-  const actions = useMemo(() => buildActions(target, callbacks, ctx), [target, callbacks, ctx]);
-  const timeline = useMemo(() => buildTimeline(target, ctx), [target, ctx.isDroneVerifying]);
-  const details = useMemo(() => buildDetails(target), [target]);
-  const laserPosition = useMemo(() => buildLaserPosition(target), [target.laserAzimuth, target.laserElevation, target.laserRange, target.laserDistance]);
+  const header = useMemo(() => buildHeader(target, t), [target, t]);
+  const media = useMemo(() => buildMedia(target, ctx, t), [target, ctx.isCameraActive, t]);
+  const actions = useMemo(() => buildActions(target, callbacks, ctx, t), [target, callbacks, ctx, t]);
+  const timeline = useMemo(() => buildTimeline(target, ctx, t), [target, ctx.isDroneVerifying, t]);
+  const details = useMemo(() => buildDetails(target, t), [target, t]);
+  const laserPosition = useMemo(() => buildLaserPosition(target, t), [target.laserAzimuth, target.laserElevation, target.laserRange, target.laserDistance, t]);
   const sensors = useMemo(() => buildSensors(target), [target.contributingSensors, target.detectedBySensors]);
   const log = target.actionLog ?? [];
-  const closure = useMemo(() => buildClosure(target, callbacks), [target.flowPhase, target.flowType, callbacks]);
+  const closure = useMemo(() => buildClosure(target, callbacks, t), [target.flowPhase, target.flowType, callbacks, t]);
 
   return { accent, completed, closureType, header, media, actions, timeline, details, sensors, log, closure, laserPosition };
 }

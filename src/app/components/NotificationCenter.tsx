@@ -10,6 +10,8 @@ import {
   CheckCircle2,
   AlertTriangle,
 } from "lucide-react";
+import { useIsRtl } from "@/lib/direction";
+import { useStrings } from "@/lib/intl";
 import {
   Sheet,
   SheetContent,
@@ -34,85 +36,23 @@ interface NotificationItem {
   icon?: React.ReactNode;
 }
 
-const MOCK_NOTIFICATIONS_HISTORY: NotificationItem[] = [
-  {
-    id: "1",
-    type: "alert",
-    priority: "critical",
-    title: "זיהוי שיגור טילים",
-    description: "זוהה שיגור רב-קני מכיוון גזרה צפונית. הופעלו מערכות יירוט אוטומטיות.",
-    time: "10:42",
-    dateCategory: "Today",
-    read: false,
-    sender: "מכ״ם גזרתי"
-  },
-  {
-    id: "2",
-    type: "message",
-    priority: "high",
-    title: "עדכון פקודה מבצעית",
-    description: "התקבל עדכון לפקודת 'אש חיה'. נא לאשר קבלה ולקרוא את הנספחים המצורפים.",
-    time: "09:15",
-    dateCategory: "Today",
-    read: false,
-    sender: "חמ״ל ראשי"
-  },
-  {
-    id: "3",
-    type: "system",
-    priority: "medium",
-    title: "תחזוקת שרתים",
-    description: "השרת יעבור לאתחול יזום בשעה 02:00. ייתכנו שיבושים קלים בזרימת המידע.",
-    time: "14:30",
-    dateCategory: "Yesterday",
-    read: true,
-    sender: "IT System"
-  },
-  {
-    id: "4",
-    type: "info",
-    priority: "low",
-    title: "דוח סיור יומי",
-    description: "דוח סיור שגרתי מגזרת החוף זמין לצפייה.",
-    time: "Feb 9",
-    dateCategory: "Last 7 Days",
-    read: true,
-    sender: "צוות סיור 4"
-  },
-  {
-    id: "5",
-    type: "alert",
-    priority: "medium",
-    title: "אובדן אות GPS",
-    description: "שיבושי קליטה זמניים נרשמו באזור הפעולה המשני.",
-    time: "Feb 8",
-    dateCategory: "Last 7 Days",
-    read: true,
-    sender: "מערכת ניווט"
-  },
-  {
-    id: "6",
-    type: "system",
-    priority: "low",
-    title: "עדכון תוכנה 2.4.1",
-    description: "הותקן בהצלחה. שיפורים ביציבות מערכת התצפית.",
-    time: "Feb 5",
-    dateCategory: "Older",
-    read: true,
-    sender: "System Update"
-  },
-  {
-    id: "7",
-    type: "message",
-    priority: "medium",
-    title: "בקשת אישור טיסה",
-    description: "רחפן 'עין הנץ' ממתין לאישור המראה.",
-    time: "Feb 3",
-    dateCategory: "Older",
-    read: true,
-    sender: "בקר אווירי"
-  }
-];
+/**
+ * Static metadata for the seed notification rows. Type / priority /
+ * timestamps / read-state / category are language-independent — only
+ * the textual content (title / description / sender) varies per
+ * locale and is sourced from the strings catalog at render time.
+ */
+type NotificationFixture = Pick<NotificationItem, 'type' | 'priority' | 'time' | 'dateCategory' | 'read'>;
+
+const NOTIFICATION_FIXTURES: Record<string, NotificationFixture> = {
+  '1': { type: 'alert', priority: 'critical', time: '10:42', dateCategory: 'Today', read: false },
+  '2': { type: 'message', priority: 'high', time: '09:15', dateCategory: 'Today', read: false },
+  '3': { type: 'system', priority: 'medium', time: '14:30', dateCategory: 'Yesterday', read: true },
+  '4': { type: 'info', priority: 'low', time: 'Feb 9', dateCategory: 'Last 7 Days', read: true },
+  '5': { type: 'alert', priority: 'medium', time: 'Feb 8', dateCategory: 'Last 7 Days', read: true },
+  '6': { type: 'system', priority: 'low', time: 'Feb 5', dateCategory: 'Older', read: true },
+  '7': { type: 'message', priority: 'medium', time: 'Feb 3', dateCategory: 'Older', read: true },
+};
 
 const getIcon = (type: NotificationType, priority: Priority) => {
   const size = 18;
@@ -130,7 +70,9 @@ const NotificationRow = ({ item }: { item: NotificationItem }) => {
       ${!item.read ? 'bg-blue-500/[0.04]' : ''}
     `}>
       {!item.read && (
-        <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-blue-500 shadow-[2px_0_8px_rgba(59,130,246,0.2)]" />
+        // Unread accent stripe — anchored to the inline-start edge of the
+        // row so it always sits at the natural reading-entry side.
+        <div className="absolute start-0 top-0 bottom-0 w-[3px] bg-blue-500 shadow-[2px_0_8px_rgba(59,130,246,0.2)]" />
       )}
 
       <div className="relative shrink-0 pt-0.5">
@@ -160,7 +102,7 @@ const NotificationRow = ({ item }: { item: NotificationItem }) => {
           {item.title}
         </h4>
 
-        <p className="text-[12px] leading-5 text-zinc-400 line-clamp-2 pr-1 font-light">
+        <p className="text-[12px] leading-5 text-zinc-400 line-clamp-2 pe-1 font-light">
           {item.description}
         </p>
       </div>
@@ -173,9 +115,32 @@ type NotificationCenterProps = {
 };
 
 export const NotificationCenter = ({ trigger: customTrigger }: NotificationCenterProps) => {
+  const isRtl = useIsRtl();
+  const t = useStrings();
+  const nt = t.notifications;
+  // Sheet's `side` is physical. Map "inline-end" → "right" in LTR / "left"
+  // in RTL so the panel always docks on the inline-end edge of the
+  // viewport. Matches the Dashboard right-sidebar's docking convention.
+  const sheetSide: 'right' | 'left' = isRtl ? 'left' : 'right';
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"all" | "alerts" | "unread">("all");
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS_HISTORY);
+  // Seed history is composed from language-independent fixtures
+  // (priority, time, read state) joined with localised text from the
+  // strings catalog. Read-state mutations live in component state.
+  const buildNotifications = (): NotificationItem[] => nt.history.map((entry) => {
+    const fx = NOTIFICATION_FIXTURES[entry.id]!;
+    return { ...fx, id: entry.id, title: entry.title, description: entry.description, sender: entry.sender };
+  });
+  const [notifications, setNotifications] = useState<NotificationItem[]>(buildNotifications);
+  // When the operator flips locale at runtime, restamp the visible
+  // text on each notification row but preserve the `read` state.
+  React.useEffect(() => {
+    setNotifications((prev) => prev.map((row) => {
+      const seed = nt.history.find((h) => h.id === row.id);
+      if (!seed) return row;
+      return { ...row, title: seed.title, description: seed.description, sender: seed.sender };
+    }));
+  }, [nt]);
 
   const filteredNotifications = notifications.filter(n => {
     if (activeTab === "unread") return !n.read;
@@ -197,7 +162,7 @@ export const NotificationCenter = ({ trigger: customTrigger }: NotificationCente
   };
 
   const badge = unreadCount > 0 ? (
-    <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border border-zinc-950 flex items-center justify-center text-[8px] font-bold text-white tabular-nums shadow-sm pointer-events-none">
+    <span className="absolute top-0 end-0 w-3 h-3 bg-red-500 rounded-full border border-zinc-950 flex items-center justify-center text-[8px] font-bold text-white tabular-nums shadow-sm pointer-events-none">
       {unreadCount > 9 ? '9+' : unreadCount}
     </span>
   ) : null;
@@ -213,7 +178,7 @@ export const NotificationCenter = ({ trigger: customTrigger }: NotificationCente
             </div>
           ) : (
             <button
-              aria-label="מרכז התראות"
+              aria-label={nt.centerOpenAriaLabel}
               className={`
                 relative w-10 h-10 rounded-full flex items-center justify-center
                 transition-colors duration-200 border
@@ -231,13 +196,13 @@ export const NotificationCenter = ({ trigger: customTrigger }: NotificationCente
         </SheetTrigger>
 
         <SheetContent
-          side="right"
+          side={sheetSide}
           className="w-[380px] sm:max-w-[380px] p-0 gap-0 bg-zinc-950 border-border font-sans"
         >
-          <SheetHeader className="px-4 py-3 pr-10 border-b border-border flex-row justify-between items-center space-y-0">
+          <SheetHeader className="px-4 py-3 pe-10 border-b border-border flex-row justify-between items-center space-y-0">
             <div className="flex items-center gap-2">
               <SheetTitle className="text-sm font-bold text-gray-200 tracking-wide">
-                מרכז התראות
+                {nt.centerTitle}
               </SheetTitle>
               <span className="text-[10px] bg-zinc-900 text-zinc-400 px-1.5 py-0.5 rounded ring-1 ring-white/10">
                 beta
@@ -248,10 +213,10 @@ export const NotificationCenter = ({ trigger: customTrigger }: NotificationCente
                 onClick={markAllAsRead}
                 className="text-[10px] text-zinc-500 hover:text-blue-400 font-medium transition-colors px-2 py-1 rounded hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
               >
-                סמן הכל כנקרא
+                {nt.markAllRead}
               </button>
               <button
-                aria-label="הגדרות התראות"
+                aria-label={nt.settingsAriaLabel}
                 className="text-zinc-500 hover:text-white transition-colors p-1.5 rounded hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
               >
                 <Settings size={14} />
@@ -274,9 +239,9 @@ export const NotificationCenter = ({ trigger: customTrigger }: NotificationCente
                     }
                   `}
                 >
-                  {tab === "all" ? "הכל" : tab === "alerts" ? "דחוף" : "לא נקראו"}
+                  {tab === "all" ? nt.tabAll : tab === "alerts" ? nt.tabAlerts : nt.tabUnread}
                   {tab === "unread" && unreadCount > 0 && (
-                    <span className="mr-1.5 text-[10px] bg-white/10 text-zinc-400 px-1 rounded-full tabular-nums">
+                    <span className="me-1.5 text-[10px] bg-white/10 text-zinc-400 px-1 rounded-full tabular-nums">
                       {unreadCount}
                     </span>
                   )}
@@ -292,9 +257,9 @@ export const NotificationCenter = ({ trigger: customTrigger }: NotificationCente
                 <div key={category} className="flex flex-col">
                   <div className="sticky top-0 z-10 bg-zinc-950/95 backdrop-blur-sm px-4 py-2 border-b border-border/30 flex items-center">
                     <span className="text-[11px] font-medium text-white/70 uppercase tracking-wider">
-                      {category === "Today" ? "היום" :
-                       category === "Yesterday" ? "אתמול" :
-                       category === "Last 7 Days" ? "השבוע" : "היסטוריה"}
+                      {category === "Today" ? nt.categoryToday :
+                       category === "Yesterday" ? nt.categoryYesterday :
+                       category === "Last 7 Days" ? nt.categoryLast7Days : nt.categoryOlder}
                     </span>
                   </div>
                   <div className="flex flex-col">
@@ -311,14 +276,14 @@ export const NotificationCenter = ({ trigger: customTrigger }: NotificationCente
                 <div className="w-12 h-12 rounded-full bg-zinc-950 flex items-center justify-center ring-1 ring-zinc-900">
                   <CheckCircle2 size={20} />
                 </div>
-                <span className="text-xs font-medium">הכל נקי, אין התראות</span>
+                <span className="text-xs font-medium">{nt.emptyState}</span>
               </div>
             )}
           </div>
 
           <div className="p-2 border-t border-border bg-zinc-950 flex justify-center">
             <button className="flex items-center gap-1.5 text-[11px] text-zinc-500 hover:text-white transition-colors py-1 px-3 rounded hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25">
-              <span>כל ההיסטוריה</span>
+              <span>{nt.historyAll}</span>
               <ChevronDown size={12} className="rotate-[90deg]" />
             </button>
           </div>

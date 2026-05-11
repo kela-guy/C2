@@ -2,7 +2,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useDrop } from 'react-dnd';
 import { X, Plus, Camera, ChevronDown, Map, SplitSquareHorizontal } from 'lucide-react';
-import { CAMERA_ASSETS } from './TacticalMap';
+import { useStrings } from '@/lib/intl';
+import { CAMERA_ASSETS } from './tacticalAssets';
 import { DEVICE_CAMERA_DRAG_TYPE } from './DevicesPanel';
 import type { DeviceCameraDragItem } from './DevicesPanel';
 import {
@@ -77,6 +78,7 @@ function FeedSlot({
   onAutoOpenConsumed?: () => void;
   weaponFeedActive?: boolean;
 }) {
+  const t = useStrings().camera.viewer;
   const [isPickerOpen, setIsPickerOpen] = useState(!!autoOpenPicker);
 
   const [{ isOverSlot }, slotDropRef] = useDrop(() => ({
@@ -106,9 +108,9 @@ function FeedSlot({
           <button
             type="button"
             onClick={onRemove}
-            className="absolute top-2 left-2 p-2.5 rounded text-white/30 hover:text-white hover:bg-red-500/30 transition-colors duration-150 ease-out active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none z-10"
-            title="הסר"
-            aria-label="הסר חלון"
+            className="absolute top-2 start-2 p-2.5 rounded text-white/30 hover:text-white hover:bg-red-500/30 transition-colors duration-150 ease-out active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none z-10"
+            title={t.removeWindow}
+            aria-label={t.removeWindowAriaLabel}
           >
             <X size={12} />
           </button>
@@ -124,7 +126,7 @@ function FeedSlot({
                          focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
             >
               <Plus size={14} className="text-white/40 shrink-0" aria-hidden="true" />
-              <span className="text-xs text-white/50">בחר תוכן</span>
+              <span className="text-xs text-white/50">{t.pickContent}</span>
               <ChevronDown size={12} className="text-white/30 shrink-0" />
             </button>
           </DropdownMenuTrigger>
@@ -153,7 +155,7 @@ function FeedSlot({
               className="flex items-center gap-2 px-2.5 py-2 rounded-md text-xs text-zinc-300 cursor-pointer hover:bg-white/10 hover:text-white transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Map size={14} className="shrink-0 text-zinc-400" aria-hidden="true" />
-              <span className="flex-1 text-start">מפה</span>
+              <span className="flex-1 text-start">{t.mapPickerOption}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -210,7 +212,7 @@ function FeedSlot({
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded bg-white/10 hover:bg-white/20 transition-colors duration-150 ease-out active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded bg-white/10 hover:bg-white/20 transition-colors duration-150 ease-out active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
                   >
                     <span className="text-[10px] font-medium text-white/90 truncate max-w-[100px]">{label}</span>
                     <ChevronDown size={10} className="text-white/60 shrink-0" />
@@ -223,9 +225,9 @@ function FeedSlot({
                 <button
                   type="button"
                   onClick={onRemove}
-                  className="relative p-2 rounded text-white/40 hover:text-white hover:bg-red-500/30 transition-colors duration-150 ease-out active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none before:absolute before:inset-[-4px] before:content-['']"
-                  title="הסר מצלמה"
-                  aria-label="הסר מצלמה"
+                  className="relative p-2 rounded text-white/40 hover:text-white hover:bg-red-500/30 transition-colors duration-150 ease-out active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none before:absolute before:inset-[-4px] before:content-['']"
+                  title={t.removeCamera}
+                  aria-label={t.removeCameraAriaLabel}
                 >
                   <X size={12} />
                 </button>
@@ -239,6 +241,7 @@ function FeedSlot({
 }
 
 export function CameraViewerPanel({ feeds, onFeedsChange, onCameraHover, weaponFeedActive }: CameraViewerPanelProps) {
+  const t = useStrings().camera.viewer;
   const MAX_FEEDS = 4;
   const canAddMore = feeds.length < MAX_FEEDS;
   const usedIds = feeds.map(f => f.cameraId);
@@ -347,10 +350,10 @@ export function CameraViewerPanel({ feeds, onFeedsChange, onCameraHover, weaponF
             onFocus={() => setAddCamHovered(true)}
             onBlur={() => setAddCamHovered(false)}
             onClick={handleAddFeed}
-            aria-label="פצל מסך"
+            aria-label={t.splitScreenAriaLabel}
           >
             <SplitSquareHorizontal size={14} className="text-white" />
-            <span className="text-xs text-white">פצל מסך</span>
+            <span className="text-xs text-white">{t.splitScreen}</span>
           </motion.button>
         </div>
       )}
