@@ -6,6 +6,8 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
+    "build:analyze": "ANALYZE=1 vite build",
+    "build:perf": "PERF_BUILD=1 vite build",
     "dev": "vite",
     "registry:build": "shadcn build && node scripts/registry-postbuild.mjs"
   },
@@ -66,14 +68,18 @@
     "recharts": "2.15.2",
     "shiki": "^4.0.2",
     "sonner": "2.0.3",
+    "stats-gl": "^4.1.0",
     "tailwind-merge": "3.2.0",
     "tw-animate-css": "1.3.8",
     "vaul": "1.1.2",
-    "vite-plugin-cesium": "^1.2.23"
+    "vite-plugin-cesium": "^1.2.23",
+    "web-vitals": "^5.2.0"
   },
   "devDependencies": {
+    "@react-scan/vite-plugin-react-scan": "^0.2.6",
     "@tailwindcss/vite": "4.1.12",
     "@vitejs/plugin-react": "4.7.0",
+    "rollup-plugin-visualizer": "^7.0.1",
     "shadcn": "^4.1.2",
     "tailwindcss": "4.1.12",
     "typescript": "^5.9.3",

@@ -29,31 +29,8 @@ import { useCuasTour } from '../hooks/useCuasTour';
 import { getPriorityBaseline } from '@/imports/useActivityStatus';
 import { useDirection, useIsRtl, useLocale } from '@/lib/direction';
 import { useStrings, getStrings, type Strings } from '@/lib/intl';
-
-/*
- * Perf-instrumentation stubs.
- *
- * The stash version of this file wrapped a few hot paths in `measure()` and
- * `<PerfProfiled>` calls from the `perf/dev-instrumentation-and-hot-path-tuning`
- * branch (`@/lib/perf/measure` + `./perf/PerfProfiled`). That branch hasn't
- * landed on `main`, so we drop the dependency by stubbing both helpers
- * inline. The stubs are no-ops:
- *
- *   - `measure(section, name, fn, meta?)` runs `fn` directly and returns
- *     its result. Section/name/meta are accepted for call-site fidelity
- *     but ignored.
- *   - `<PerfProfiled id="...">` renders its children without any wrapping.
- *
- * If/when the perf branch merges, swap these for the real imports — the
- * call sites are already shaped correctly.
- */
-function measure<T>(_section: string, _name: string, fn: () => T, _meta?: { properties?: Record<string, unknown> }): T {
-  return fn();
-}
-
-function PerfProfiled({ children }: { id: string; children: React.ReactNode }) {
-  return <>{children}</>;
-}
+import { measure } from '@/lib/perf/measure';
+import { PerfProfiled } from './perf/PerfProfiled';
 
 function CuasIcon({ size = 20, strokeWidth = 2, className = '' }: { size?: number; strokeWidth?: number; className?: string }) {
   return (

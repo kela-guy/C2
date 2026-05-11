@@ -22,6 +22,15 @@ function PlaygroundFallback() {
   );
 }
 
+// Dev-only perf HUD. Lazy-loaded so the import chain (stats-gl, sink,
+// observers) is dropped from production bundles via tree-shaking on
+// the `import.meta.env.DEV` constant. Becomes visible only when the
+// page loads with `?perf=1` (or persisted equivalent) — see
+// `src/lib/perf/flags.ts`.
+const PerfHud = import.meta.env.DEV
+  ? lazy(() => import("./components/perf/PerfHud").then((m) => ({ default: m.PerfHud })))
+  : null;
+
 export default function App() {
   return (
     // DirectionProvider owns the `'rtl' | 'ltr'` state, mirrors it onto
@@ -62,6 +71,11 @@ export default function App() {
           </Routes>
         </BrowserRouter>
         <DialRoot position="bottom-right" />
+        {PerfHud && (
+          <Suspense fallback={null}>
+            <PerfHud />
+          </Suspense>
+        )}
       </DndProvider>
     </DirectionProvider>
   );
