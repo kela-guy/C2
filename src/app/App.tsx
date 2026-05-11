@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
@@ -7,6 +8,19 @@ import { Dashboard } from "./components/Dashboard";
 import FovTestPage from "./components/FovTestPage";
 import StyleguidePage from "./components/StyleguidePage";
 import { DirectionProvider } from "@/lib/direction";
+
+// Playground hosts the rebuilt video feature (`camera-v2/`). Code-split so
+// neither the production dashboard nor the styleguide bundle drags in
+// VideoPanel/CameraFeedTile/HUD overlays until someone opens `/playground`.
+const PlaygroundPage = lazy(() => import("./components/PlaygroundPage"));
+
+function PlaygroundFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[#09090b] text-sm text-neutral-400">
+      Loading playground…
+    </div>
+  );
+}
 
 export default function App() {
   return (
@@ -30,6 +44,21 @@ export default function App() {
               to `/` today; diverges as adjustments land here.
             */}
             <Route path="/demo" element={<Dashboard />} />
+            {/*
+              Playground — sandbox for the rebuilt camera-v2 video feature
+              (VideoPanel + tile HUDs). Lives on its own route while the
+              design is validated; once approved it replaces the legacy
+              CameraViewerPanel inside Dashboard. See
+              `src/app/components/camera-v2/README.md` for promotion path.
+            */}
+            <Route
+              path="/playground"
+              element={
+                <Suspense fallback={<PlaygroundFallback />}>
+                  <PlaygroundPage />
+                </Suspense>
+              }
+            />
           </Routes>
         </BrowserRouter>
         <DialRoot position="bottom-right" />
