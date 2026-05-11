@@ -612,9 +612,12 @@ const STRINGS_HE = {
    * as the visible target name + initial action-log entry.
    */
   simulation: {
-    targetNameCar: (suffix: string) => `רכב — זיהוי ${suffix}`,
-    targetNameBird: (suffix: string) => `ציפור — זיהוי ${suffix}`,
-    targetNameDrone: (suffix: string) => `רחפן — זיהוי ${suffix}`,
+    // Suffix kept in the signature so the call site stays stable, but
+    // dropped from the rendered string — the type label is enough; the
+    // numeric "detection 111" tail just adds noise on the card header.
+    targetNameCar: (_suffix: string) => `רכב`,
+    targetNameBird: (_suffix: string) => `ציפור`,
+    targetNameDrone: (_suffix: string) => `רחפן`,
     targetClassifiedBird: (name: string) => `ציפור — ${name}`,
     targetClassifiedCar: (name: string) => `רכב — ${name}`,
     targetClassifiedDrone: (name: string) => `רחפן — ${name}`,
@@ -1199,9 +1202,12 @@ const STRINGS_EN: Strings = {
   },
 
   simulation: {
-    targetNameCar: (suffix: string) => `Vehicle — detection ${suffix}`,
-    targetNameBird: (suffix: string) => `Bird — detection ${suffix}`,
-    targetNameDrone: (suffix: string) => `Drone — detection ${suffix}`,
+    // Suffix kept in the signature so the call site stays stable, but
+    // dropped from the rendered string — the type label is enough; the
+    // numeric "detection 111" tail just adds noise on the card header.
+    targetNameCar: (_suffix: string) => `Vehicle`,
+    targetNameBird: (_suffix: string) => `Bird`,
+    targetNameDrone: (_suffix: string) => `Drone`,
     targetClassifiedBird: (name: string) => `Bird — ${name}`,
     targetClassifiedCar: (name: string) => `Vehicle — ${name}`,
     targetClassifiedDrone: (name: string) => `Drone — ${name}`,

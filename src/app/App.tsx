@@ -52,7 +52,7 @@ export default function App() {
               tweaks without touching the production surface. Identical
               to `/` today; diverges as adjustments land here.
             */}
-            <Route path="/demo" element={<Dashboard />} />
+            <Route path="/demo" element={<Dashboard demoMode />} />
             {/*
               Playground — sandbox for the rebuilt camera-v2 video feature
               (VideoPanel + tile HUDs). Lives on its own route while the

@@ -156,6 +156,15 @@ export interface CesiumMapProps {
    * Ion's standard default. See https://ion.cesium.com for other ids.
    */
   ionImageryAssetId?: number;
+  /**
+   * Render the basemap as a flat dark-monochrome canvas instead of the
+   * Ion satellite imagery. We swap the imagery provider for CARTO's
+   * Dark Matter (no-labels) raster tiles — public, no Ion token, no
+   * subscription. The marketing-demo route (`/demo`) sets this so
+   * recordings read cleanly against the bright marker palette;
+   * production keeps the Bing aerial.
+   */
+  darkMonochromeMap?: boolean;
   /** Called when a `markers[]` entity is clicked (point markers only). */
   onMarkerClick?: (id: string) => void;
   /** Called when a `markers[]` entity is hovered (point markers only). */
@@ -269,6 +278,7 @@ export function CesiumMap({
   flyTo,
   sceneMode = '2D',
   ionImageryAssetId = 2,
+  darkMonochromeMap = false,
   onMarkerClick,
   onMarkerHover,
   className = 'w-full h-full',
@@ -431,18 +441,37 @@ export function CesiumMap({
       throw err;
     }
 
-    // Bing Aerial via Cesium Ion (asset 2 by default). Guard against the
-    // viewer being destroyed (StrictMode double-mount, fast nav) before the
-    // imagery promise resolves — otherwise we crash inside Cesium internals.
-    Cesium.IonImageryProvider.fromAssetId(ionImageryAssetId)
-      .then((provider) => {
-        if (viewer.isDestroyed()) return;
-        viewer.imageryLayers.addImageryProvider(provider);
-      })
-      .catch((err) => {
-        if (viewer.isDestroyed()) return;
-        console.error('[CesiumMap] failed to load Ion imagery:', err);
+    // Imagery. Two modes:
+    //   1. `darkMonochromeMap` — CARTO Dark Matter (no-labels) raster
+    //      tiles. Public CDN, no token. Used by `/demo` so recordings
+    //      read cleanly against bright markers without depending on
+    //      the Ion satellite. Synchronous construction (no `fromAssetId`
+    //      promise), so we add immediately.
+    //   2. Default — Bing Aerial via Cesium Ion (asset 2 by default).
+    //      Guard against the viewer being destroyed (StrictMode
+    //      double-mount, fast nav) before the imagery promise resolves
+    //      — otherwise we crash inside Cesium internals.
+    if (darkMonochromeMap) {
+      const provider = new Cesium.UrlTemplateImageryProvider({
+        // CARTO Dark Matter (no labels). `{s}` rotates through the
+        // listed subdomains for connection parallelism.
+        url: 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png',
+        subdomains: ['a', 'b', 'c', 'd'],
+        maximumLevel: 19,
+        credit: '© OpenStreetMap contributors © CARTO',
       });
+      viewer.imageryLayers.addImageryProvider(provider);
+    } else {
+      Cesium.IonImageryProvider.fromAssetId(ionImageryAssetId)
+        .then((provider) => {
+          if (viewer.isDestroyed()) return;
+          viewer.imageryLayers.addImageryProvider(provider);
+        })
+        .catch((err) => {
+          if (viewer.isDestroyed()) return;
+          console.error('[CesiumMap] failed to load Ion imagery:', err);
+        });
+    }
 
     // Cesium World Terrain (Ion asset 1). Without it the globe is a smooth
     // ellipsoid and 3D mode reads as a tilted satellite image — no real

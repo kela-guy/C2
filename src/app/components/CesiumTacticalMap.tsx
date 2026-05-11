@@ -49,7 +49,9 @@ import {
   LauncherIcon,
   SensorIcon,
   DroneIcon,
+  MissileIcon,
 } from './tacticalIcons';
+import { CarIcon } from '@/primitives/MapIcons';
 import { Phone } from 'lucide-react';
 import {
   FOV_RADIUS_M,
@@ -188,6 +190,57 @@ const LAUNCHER_GLYPH = 24;
  */
 const droneRotationFromHeading = (headingDeg: number | null | undefined): number =>
   (headingDeg ?? 0) - 90;
+
+/**
+ * Pick the right hostile-target glyph from a {@link Detection}. The map
+ * used to render every threat as a {@link DroneIcon} regardless of what
+ * the operator had classified the target as, so a card titled "Vehicle"
+ * still showed the drone glyph next to it. We resolve the icon in this
+ * priority order:
+ *
+ *   1. `classifiedType` — the operator's confirmed call. Authoritative
+ *      whenever it's set (`car` → vehicle, `drone` / `aircraft` → drone,
+ *      `bird` falls back to drone since we have no bird glyph).
+ *   2. `type` — the raw sensor classification. `ground_vehicle` → car,
+ *      `missile` → missile, everything else (uav / aircraft / naval /
+ *      unknown) falls back to drone.
+ *
+ * Each glyph is asked to render at the heading-rotated angle so the
+ * nose / front aligns with motion. `CarIcon` doesn't take a rotation
+ * prop today (the SVG is flat), so the rotation is dropped in that
+ * branch — vehicles read fine without a heading nose.
+ */
+function buildThreatIcon(
+  target: Detection,
+  glyphColor: string,
+  targetHeading: number | null,
+): React.ReactNode {
+  const rotationDeg =
+    targetHeading != null ? droneRotationFromHeading(targetHeading) : 0;
+
+  const classified = target.classifiedType;
+  if (classified === 'car') return <CarIcon color={glyphColor} />;
+  if (classified === 'drone' || classified === 'aircraft' || classified === 'bird') {
+    return <DroneIcon color={glyphColor} rotationDeg={rotationDeg} />;
+  }
+
+  switch (target.type) {
+    case 'ground_vehicle':
+      return <CarIcon color={glyphColor} />;
+    case 'missile':
+      return <MissileIcon fill={glyphColor} rotationDeg={rotationDeg} />;
+    case 'uav':
+    case 'aircraft':
+    case 'naval':
+    case 'unknown':
+      return <DroneIcon color={glyphColor} rotationDeg={rotationDeg} />;
+    default: {
+      const _exhaustive: never = target.type;
+      void _exhaustive;
+      return <DroneIcon color={glyphColor} rotationDeg={rotationDeg} />;
+    }
+  }
+}
 
 /**
  * Heading window. Deliberately shorter than the velocity window (5-10 s in
@@ -786,16 +839,7 @@ export function CesiumTacticalMap({
         zIndex: isHovered ? 60 : isActive ? 50 : 20,
         content: (
           <MapMarker
-            icon={
-              <DroneIcon
-                color={style.glyphColor}
-                rotationDeg={
-                  targetHeading != null
-                    ? droneRotationFromHeading(targetHeading)
-                    : 0
-                }
-              />
-            }
+            icon={buildThreatIcon(t, style.glyphColor, targetHeading)}
             style={style}
             surfaceSize={TARGET_SURFACE}
             ringSize={TARGET_RING}
