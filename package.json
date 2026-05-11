@@ -12,6 +12,8 @@
     "registry:build": "shadcn build && node scripts/registry-postbuild.mjs"
   },
   "dependencies": {
+    "@central-icons-react/round-filled-radius-1-stroke-1.5": "^1.1.225",
+    "@central-icons-react/round-outlined-radius-1-stroke-1.5": "^1.1.225",
     "@popperjs/core": "2.11.8",
     "@radix-ui/react-accordion": "1.2.3",
     "@radix-ui/react-alert-dialog": "1.1.6",

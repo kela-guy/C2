@@ -9,7 +9,7 @@ import {
   Info,
   CheckCircle2,
   AlertTriangle,
-} from "lucide-react";
+} from "@/lib/icons/central";
 import { useIsRtl } from "@/lib/direction";
 import { useStrings } from "@/lib/intl";
 import {

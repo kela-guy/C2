@@ -18,6 +18,7 @@
  */
 
 import { useEffect, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import { useStrings } from '@/lib/intl';
 
 interface DesignateTargetOverlayProps {
   active: boolean;
@@ -28,6 +29,7 @@ const RETICLE_SIZE = 56;
 const FLASH_DURATION_MS = 1100;
 
 export function DesignateTargetOverlay({ active, onDesignate }: DesignateTargetOverlayProps) {
+  const t = useStrings().camera.designateOverlay;
   const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
   const [flash, setFlash] = useState<{ x: number; y: number; key: number } | null>(null);
 
@@ -76,7 +78,7 @@ export function DesignateTargetOverlay({ active, onDesignate }: DesignateTargetO
           onClick={handleClick}
           role="button"
           tabIndex={-1}
-          aria-label="לחץ כדי לסמן יעד"
+          aria-label={t.bannerAriaLabel}
         >
           <div
             className="absolute inset-0 pointer-events-none shadow-[inset_0_0_0_2px_rgba(252,211,77,0.55)]"
@@ -87,11 +89,8 @@ export function DesignateTargetOverlay({ active, onDesignate }: DesignateTargetO
             className="absolute inset-x-0 top-12 flex justify-center pointer-events-none"
             aria-hidden="true"
           >
-            <div
-              className="px-2.5 py-1 bg-amber-400/95 text-black text-[10px] font-semibold uppercase tracking-[0.18em] shadow-[0_0_0_1px_rgba(0,0,0,0.45),0_6px_18px_rgba(0,0,0,0.5)]"
-              dir="rtl"
-            >
-              לחץ כדי לסמן יעד · Esc לביטול
+            <div className="px-2.5 py-1 bg-amber-400/95 text-black text-[10px] font-semibold uppercase tracking-[0.18em] shadow-[0_0_0_1px_rgba(0,0,0,0.45),0_6px_18px_rgba(0,0,0,0.5)]">
+              {t.bannerText}
             </div>
           </div>
 

@@ -1,4 +1,4 @@
-import { ExternalLink, Search } from 'lucide-react';
+import { ExternalLink, Search } from '@/lib/icons/central';
 import { useDirection } from '@/lib/direction';
 import { findGroupForId, NAV } from './navConfig';
 

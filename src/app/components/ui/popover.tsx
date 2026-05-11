@@ -23,6 +23,17 @@ function PopoverContent({
   sideOffset = 4,
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Content>) {
+  // Radix's `align` prop is **logical**: floating-ui auto-detects RTL from
+  // `getComputedStyle(reference).direction` and resolves `start`/`end` to
+  // the reading-order-correct physical edge. So `align="end"` anchors to
+  // the trigger's inline-end edge in both directions — no manual flip
+  // needed at the call site.
+  //
+  // Note: Radix's transform-origin middleware is **not** RTL-aware (it
+  // hard-codes `start → 0%`, `end → 100%`). The `rtl-popover-origin` CSS
+  // utility in `src/styles/theme.css` overrides the origin in RTL based on
+  // `[data-align]` so the zoom-in animation starts from the corner
+  // adjacent to the trigger.
   return (
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Content

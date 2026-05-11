@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { Radio, SlidersHorizontal } from 'lucide-react';
+import { Radio, SlidersHorizontal } from '@/lib/icons/central';
 import { CAMERA_ASSETS, LIDAR_ASSETS, RADAR_ASSETS } from '@/app/components/tacticalAssets';
 import type { FilterDef } from '@/primitives/FilterBar';
 import { useStrings, getStrings, type Locale } from '@/lib/intl';

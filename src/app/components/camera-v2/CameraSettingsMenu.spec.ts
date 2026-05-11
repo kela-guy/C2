@@ -4,7 +4,7 @@ export const spec: ComponentSpec = {
   name: 'CameraSettingsMenu',
   filePath: 'src/app/components/camera-v2/CameraSettingsMenu.tsx',
   purpose:
-    'Settings popover triggered by the gear button on the bottom control bar. Hosts Playback investigation and Display toggles (crosshair / AI / day-night).',
+    'Settings popover triggered by the gear button on the bottom control bar. Hosts Playback investigation and Display toggles (AI / day-night).',
   location: 'Composition (camera-v2)',
   status: 'prototype',
 
@@ -25,6 +25,7 @@ export const spec: ComponentSpec = {
     { name: 'open', trigger: 'open === true', description: 'Popover renders two sections (Playback, Display)', implementedInPrototype: true },
     { name: 'foreign-locked', trigger: 'status.controlOwner === "other"', description: 'Day/night row is dimmed and disabled', implementedInPrototype: true },
     { name: 'playback enabled', trigger: 'playbackEnabled === true', description: 'Playback row text switches to "מפוצל: שידור חי + פלייבק"', implementedInPrototype: true },
+    { name: 'P shortcut hint', trigger: 'always', description: 'A small (P) `kbd` chip is rendered next to the playback row label', implementedInPrototype: true },
     { name: 'loading', trigger: 'N/A', description: '-', implementedInPrototype: true },
     { name: 'error', trigger: 'N/A', description: '-', implementedInPrototype: true },
     { name: 'disabled', trigger: 'N/A', description: '-', implementedInPrototype: true },
@@ -45,6 +46,8 @@ export const spec: ComponentSpec = {
       { name: 'popover-shadow', value: '0_0_0_1px_rgba(255,255,255,0.15)', usage: 'Inset hairline + drop shadow' },
       { name: 'section-divider', value: 'rgba(255,255,255,0.10)', usage: '1px between the three sections' },
       { name: 'section-title', value: 'rgba(255,255,255,0.55)', usage: 'Uppercase section heading' },
+      { name: 'switch-track-off', value: 'rgba(255,255,255,0.15)', usage: 'Tactical-readable Switch off-state track (against `bg-[#1a1a1a]/95` popover)' },
+      { name: 'switch-track-on', value: 'rgba(16,185,129,0.8)', usage: 'Emerald Switch on-state track' },
     ],
     typography: [
       { name: 'section-title', fontFamily: 'Heebo', fontSize: '10px', fontWeight: '600', lineHeight: '1', usage: 'Uppercase tracked-out section title' },
@@ -81,6 +84,9 @@ export const spec: ComponentSpec = {
 
   notes: [
     'About section is intentionally text-only - no edit handles - so the popover stays a fast settings switcher rather than a properties editor.',
-    'When playbackEnabled flips on, the parent tile dispatches the necessary state into feed.playback (with a default duration / position).',
+    'When playbackEnabled flips on, `VideoPanel.handlePlaybackToggle` builds an open-state via `makeOpenPlaybackState` (rewinds 30s, paused).',
+    'The Switch primitive was retuned for this popover specifically: the off-state uses `bg-white/15` with an inset white/10 ring so it stays visible against `bg-[#1a1a1a]/95`, and both the track and thumb animate over 200ms ease-out so the flip never feels instant. The shadcn defaults read as invisible in our dark theme.',
+    'The toggle is always enabled when a feed is mounted. There is no archive-availability gate; the previous "disabled with reason" copy was over-engineered for a prototype playground.',
+    'The (P) shortcut hint next to the row label matches the tile-level `P` shortcut wired in `CameraFeedTile`.',
   ],
 };

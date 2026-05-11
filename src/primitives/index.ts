@@ -10,7 +10,8 @@ export { CardActions, CARD_ACTION_GROUP, type CardAction, type CardActionGroup, 
 export { CardTimeline, type TimelineStep, type TimelineStepStatus, type CardTimelineProps } from './CardTimeline';
 export { CardDetails, type DetailRow, type CardDetailsClassification, type CardDetailsProps } from './CardDetails';
 export { CardSensors, type CardSensor, type CardSensorsProps } from './CardSensors';
-export { CardMedia, MEDIA_BADGE_CONFIG, type MediaBadgeType, type CardMediaProps } from './CardMedia';
+export { CardMedia, type CardMediaProps } from './CardMedia';
+export { MEDIA_BADGE_CONFIG, type MediaBadgeType } from './cardMediaConfig';
 export { CardLog, type LogEntry, type CardLogProps } from './CardLog';
 export { CardClosure, type ClosureOutcome, type CardClosureProps } from './CardClosure';
 export { CardFooterDock, type FooterDockAction, type CardFooterDockProps } from './CardFooterDock';

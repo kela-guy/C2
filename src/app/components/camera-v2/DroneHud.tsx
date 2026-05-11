@@ -1,14 +1,24 @@
 /**
  * Drone-specific HUD overlay - mounts only when status.deviceType === 'drone'.
  *
- * Right-edge stat column inspired by DJI Fly:
+ * Inline-end-edge stat column inspired by DJI Fly:
  *   - Battery % with bar
  *   - Signal bars
  *   - Distance from home
  *   - Heading vs home (relative degrees)
+ *
+ * Direction policy:
+ *   - The cluster's *position* uses logical edge (`end-3`) so it follows
+ *     locale — in RTL it sits on the inline-end which is the physical
+ *     left, and the operator's "primary" eye-anchor swaps with reading
+ *     direction.
+ *   - The cluster's *contents* are wrapped in `<DirIsland direction="ltr">`
+ *     because the readings ("BAT 87%", "412m", "+12°") are Latin-only
+ *     instrument tokens — they reorder badly under RTL bidi.
  */
 
-import { Battery, BatteryLow, Compass, Home, SignalHigh, SignalLow } from 'lucide-react';
+import { Battery, BatteryLow, Compass, Home, SignalHigh, SignalLow } from '@/lib/icons/central';
+import { DirIsland } from '@/lib/direction';
 import type { CameraStatus } from './types';
 
 interface DroneHudProps {
@@ -32,11 +42,13 @@ export function DroneHud({ status }: DroneHudProps) {
 
   return (
     <div
-      className="absolute z-20 right-3 top-24 bottom-24 flex items-center pointer-events-none"
-      dir="ltr"
+      className="absolute z-20 end-3 top-24 bottom-24 flex items-center pointer-events-none"
       aria-hidden="true"
     >
-      <div className="flex flex-col gap-1.5 bg-black/45 backdrop-blur-sm ring-1 ring-inset ring-white/10 px-2 py-2">
+      <DirIsland
+        direction="ltr"
+        className="flex flex-col gap-1.5 bg-black/45 backdrop-blur-sm ring-1 ring-inset ring-white/10 px-2 py-2"
+      >
         <Tile
           icon={battery <= 20 ? <BatteryLow size={13} className={batteryColor} /> : <Battery size={13} className={batteryColor} />}
           label="BAT"
@@ -61,7 +73,7 @@ export function DroneHud({ status }: DroneHudProps) {
           label="REL"
           value={`${headingToHomeDelta >= 0 ? '+' : ''}${headingToHomeDelta}\u00b0`}
         />
-      </div>
+      </DirIsland>
     </div>
   );
 }

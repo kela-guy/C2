@@ -11,6 +11,12 @@ importers:
 
   .:
     dependencies:
+      '@central-icons-react/round-filled-radius-1-stroke-1.5':
+        specifier: ^1.1.225
+        version: 1.1.225(react@18.3.1)
+      '@central-icons-react/round-outlined-radius-1-stroke-1.5':
+        specifier: ^1.1.225
+        version: 1.1.225(react@18.3.1)
       '@popperjs/core':
         specifier: 2.11.8
         version: 2.11.8
@@ -386,6 +392,16 @@ packages:
   '@babel/types@7.29.0':
     resolution: {integrity: sha512-LwdZHpScM4Qz8Xw2iKSzS+cfglZzJGvofQICy7W7v4caru4EaAmyUuO6BGrbyQ2mYV11W0U8j5mBhd14dd3B0A==}
     engines: {node: '>=6.9.0'}
+
+  '@central-icons-react/round-filled-radius-1-stroke-1.5@1.1.225':
+    resolution: {integrity: sha512-24W8lJM5bnesQXk2xBO1D99ztIsS301SXfNWb7Y2zpfkudxzWb2DxkmH5Swz5ua6+ly9PCq6V/6l1M9PeoO2rw==}
+    peerDependencies:
+      react: '>=14.0.0 <= 19'
+
+  '@central-icons-react/round-outlined-radius-1-stroke-1.5@1.1.225':
+    resolution: {integrity: sha512-gZSTT6tvbLLTF6xsnOgKITUS6KHmk3TGScTssgaSmCHKT1EBgm/sO7wcegwKb/Y/EWY8pKiMD8LpFl1L0El4Eg==}
+    peerDependencies:
+      react: '>=14.0.0 <= 19'
 
   '@cesium/engine@24.0.0':
     resolution: {integrity: sha512-zJ2gl0tyw/FFhBtvp6UYw+0JQJb2J9EiTJYvVSndc6+6qPR5GHLFzFjA1msLLxucfcpc7uI9R2pXNEPluheR/g==}
@@ -4336,6 +4352,14 @@ snapshots:
     dependencies:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.28.5
+
+  '@central-icons-react/round-filled-radius-1-stroke-1.5@1.1.225(react@18.3.1)':
+    dependencies:
+      react: 18.3.1
+
+  '@central-icons-react/round-outlined-radius-1-stroke-1.5@1.1.225(react@18.3.1)':
+    dependencies:
+      react: 18.3.1
 
   '@cesium/engine@24.0.0':
     dependencies:

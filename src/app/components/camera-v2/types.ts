@@ -25,14 +25,49 @@ export interface CameraFeed {
   playback?: PlaybackState;
 }
 
-/** State of the live-vs-playback split inside a single tile. */
+/**
+ * Runtime status of the playback `<video>` element. Drives the chrome
+ * (spinner, "Replay", error card) inside the playback frame.
+ */
+export type PlaybackStatus =
+  | 'idle'
+  | 'loading'
+  | 'playing'
+  | 'paused'
+  | 'buffering'
+  | 'ended'
+  | 'error';
+
+/**
+ * State of the playback investigation overlay inside a single tile.
+ *
+ * The surface is intentionally minimal: live keeps the top half, playback
+ * occupies the bottom half with a single transport row (play/pause +
+ * scrubber + clocks + exit). No PiP, no drawer, no layout chooser, no
+ * persisted preferences — everything operator-touchable lives in this
+ * runtime object.
+ */
 export interface PlaybackState {
   enabled: boolean;
+  /**
+   * Identity of the recording currently being investigated. Used as a
+   * stale-state guard: when `cameraId` changes (a different camera is
+   * dropped onto the tile), the parent resets `playback` to `undefined`
+   * so position / status / errorMessage cannot leak across cameras.
+   */
+  sourceId?: string;
   /** Position in the recorded clip in seconds. 0 = start. */
   positionSec: number;
-  /** Total clip length. */
+  /** Total clip length. Patched by `<video onLoadedMetadata>`. */
   durationSec: number;
   isPlaying: boolean;
+  /** Drives the chrome inside the playback frame. */
+  status: PlaybackStatus;
+  /** True while the operator is dragging the scrubber thumb, so the
+   *  media-time sync effect doesn't fight the pointer. */
+  isScrubbing?: boolean;
+  /** Last error string, surfaced inside the playback chrome. */
+  errorMessage?: string;
 }
 
 /** Live, per-camera telemetry + ownership state. Read-only from the panel's POV. */

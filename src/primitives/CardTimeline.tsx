@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, Loader2 } from 'lucide-react';
+import { Check, Loader2 } from '@/lib/icons/central';
 import { CARD_TOKENS } from './tokens';
 
 export type TimelineStepStatus = 'pending' | 'active' | 'complete' | 'error';

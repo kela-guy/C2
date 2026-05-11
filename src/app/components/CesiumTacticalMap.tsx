@@ -52,7 +52,7 @@ import {
   MissileIcon,
 } from './tacticalIcons';
 import { CarIcon } from '@/primitives/MapIcons';
-import { Phone } from 'lucide-react';
+import { Phone } from '@/lib/icons/central';
 import {
   FOV_RADIUS_M,
   DRONE_FOV_RADIUS_M,

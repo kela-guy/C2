@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { Toaster } from "./ui/sonner";
-import { X } from "lucide-react";
+import { X } from "@/lib/icons/central";
 import { formatTime, useStrings } from "@/lib/intl";
 import type { NotificationData, ThreatLevel } from "./notificationData";
 

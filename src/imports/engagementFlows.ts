@@ -7,7 +7,7 @@ import {
   Radio,
   ScanLine,
   Eye,
-} from 'lucide-react';
+} from '@/lib/icons/central';
 import { JamWaveIcon } from '@/primitives/MapIcons';
 import type { Strings } from '@/lib/intl';
 import { getStrings } from '@/lib/intl';

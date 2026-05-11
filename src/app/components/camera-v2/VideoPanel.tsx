@@ -19,7 +19,13 @@ import {
   DEVICE_CAMERA_DRAG_TYPE,
   type DeviceCameraDragItem,
 } from '../DevicesPanel';
-import type { CameraFeed, CameraStatus, DetectionBox } from './types';
+import { makeOpenPlaybackState } from './playback/playbackDefaults';
+import type {
+  CameraFeed,
+  CameraStatus,
+  DetectionBox,
+  PlaybackState,
+} from './types';
 
 export interface VideoPanelProps {
   feeds: CameraFeed[];
@@ -74,9 +80,61 @@ export function VideoPanel({
     (index: number, cameraId: string) => {
       const existing = feeds[index];
       if (!existing) return;
-      onFeedsChange(feeds.map((f, i) => (i === index ? { ...f, cameraId } : f)));
+      // Reset playback when swapping cameras so the old position /
+      // sourceId / errorMessage cannot leak onto the new feed.
+      onFeedsChange(
+        feeds.map((f, i) =>
+          i === index ? { ...f, cameraId, playback: undefined } : f,
+        ),
+      );
     },
     [feeds, onFeedsChange],
+  );
+
+  /**
+   * Toggle the playback investigation surface for a feed.
+   *
+   *   - When opening: build a fresh open-state via
+   *     `makeOpenPlaybackState` (rewinds 30s, paused).
+   *   - When closing: pause the clip and clear the runtime fields, but
+   *     retain the per-feed `playback` object so re-opening from the
+   *     same camera is cheap.
+   */
+  const handlePlaybackToggle = useCallback(
+    (index: number) => {
+      const feed = feeds[index];
+      if (!feed?.cameraId) return;
+      const existing = feed.playback;
+
+      if (existing?.enabled) {
+        const next: PlaybackState = {
+          ...existing,
+          enabled: false,
+          isPlaying: false,
+          status: existing.status === 'error' ? 'error' : 'idle',
+          isScrubbing: false,
+        };
+        updateFeed(index, { playback: next });
+        return;
+      }
+
+      const next = makeOpenPlaybackState({
+        sourceId: feed.cameraId,
+        durationSec: existing?.durationSec ?? 0,
+      });
+      updateFeed(index, { playback: next });
+    },
+    [feeds, updateFeed],
+  );
+
+  const handlePlaybackChange = useCallback(
+    (index: number, patch: Partial<PlaybackState>) => {
+      const feed = feeds[index];
+      if (!feed?.cameraId || !feed.playback) return;
+      const next: PlaybackState = { ...feed.playback, ...patch };
+      updateFeed(index, { playback: next });
+    },
+    [feeds, updateFeed],
   );
 
   // Panel-level drop: appends if room, otherwise routes through onPinDevice
@@ -138,23 +196,8 @@ export function VideoPanel({
                 onModeToggle={() => updateFeed(i, { mode: feed.mode === 'day' ? 'night' : 'day' })}
                 onDetectionsToggle={() => updateFeed(i, { showDetections: !feed.showDetections })}
                 onDesignateModeToggle={() => updateFeed(i, { designateMode: !feed.designateMode })}
-                onPlaybackToggle={() => {
-                  const next = !feed.playback?.enabled;
-                  updateFeed(i, {
-                    playback: next
-                      ? feed.playback
-                        ? { ...feed.playback, enabled: true }
-                        : { enabled: true, positionSec: 0, durationSec: 60, isPlaying: true }
-                      : feed.playback
-                        ? { ...feed.playback, enabled: false, isPlaying: false }
-                        : undefined,
-                  });
-                }}
-                onPlaybackChange={(patch) =>
-                  updateFeed(i, {
-                    playback: feed.playback ? { ...feed.playback, ...patch } : undefined,
-                  })
-                }
+                onPlaybackToggle={() => handlePlaybackToggle(i)}
+                onPlaybackChange={(patch) => handlePlaybackChange(i, patch)}
                 onZoomChange={(zoom) => feed.cameraId && onZoomChange?.(feed.cameraId, zoom)}
                 onFullscreenToggle={onFullscreenToggle}
                 onAssignmentClick={() => feed.cameraId && onAssignmentClick?.(feed.cameraId)}

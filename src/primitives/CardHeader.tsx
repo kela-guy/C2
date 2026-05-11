@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown } from '@/lib/icons/central';
 import { CARD_TOKENS } from './tokens';
 
 export interface CardHeaderProps {

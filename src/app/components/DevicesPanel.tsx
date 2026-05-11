@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useDrag } from 'react-dnd';
-import { X, Camera, AlertTriangle, MapPin, BellOff, Wrench, Check, Loader2, Square, ChevronsUpDown, Pin, PinOff } from 'lucide-react';
+import { X, Camera, AlertTriangle, MapPin, BellOff, Wrench, Check, Loader2, Pin, PinFilled, PinOff } from '@/lib/icons/central';
+import { Square, ChevronsUpDown } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 import { Switch } from './ui/switch';
+import { Toggle } from './ui/toggle';
 import { Collapsible, CollapsibleContent } from './ui/collapsible';
 import { Popover, PopoverTrigger, PopoverContent } from './ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from './ui/command';
@@ -175,6 +177,10 @@ export interface DevicesPanelStrings {
   pinToFeedAriaLabel: string;
   unpinFromFeed: string;
   unpinFromFeedAriaLabel: string;
+  /** Tooltip on the small collapsed-row pin toggle, in its off (not-pinned) state. */
+  pinToFeedTooltip: string;
+  /** Tooltip on the small collapsed-row pin toggle, in its on (pinned) state. */
+  pinnedToFeedTooltip: string;
 }
 
 export const DEFAULT_DEVICE_PANEL_STRINGS: DevicesPanelStrings = {
@@ -225,6 +231,8 @@ export const DEFAULT_DEVICE_PANEL_STRINGS: DevicesPanelStrings = {
   pinToFeedAriaLabel: 'Pin device to a video feed',
   unpinFromFeed: 'Unpin',
   unpinFromFeedAriaLabel: 'Remove device from the video feed',
+  pinToFeedTooltip: 'Pin to feed',
+  pinnedToFeedTooltip: 'Pinned to feed',
 };
 
 const CONNECTION_STATE_COLORS: Record<ConnectionState, string> = {
@@ -353,7 +361,7 @@ export function DeviceRow({
         tabIndex={0}
         onClick={onToggle}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(); } }}
-        className={`flex items-center justify-center gap-2.5 px-4 py-2.5 text-right transition-[background-color,border-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25 border-b border-white/[0.06] ${
+        className={`flex items-center justify-center gap-2.5 px-4 py-2.5 text-end transition-[background-color,border-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25 border-b border-white/[0.06] ${
           isExpanded ? 'bg-white/[0.04]' : 'hover:bg-white/[0.04] active:bg-white/[0.06]'
         } cursor-pointer`}
         onMouseEnter={() => onHover(device.id)}
@@ -403,6 +411,42 @@ export function DeviceRow({
                   <BellOff size={12} className="text-white" />
                   {muteRemaining}
                 </span>
+              )}
+              {(onPinToFeed || onUnpinFromFeed) && (device.type === 'camera' || device.type === 'drone') && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Toggle
+                      pressed={!!isPinnedToFeed}
+                      disabled={isOffline || (isPinnedToFeed ? !onUnpinFromFeed : !onPinToFeed)}
+                      onPressedChange={(next) => {
+                        if (next) onPinToFeed?.(device.id);
+                        else onUnpinFromFeed?.(device.id);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      aria-label={isPinnedToFeed ? strings.pinnedToFeedTooltip : strings.pinToFeedTooltip}
+                      // Override the default Toggle sizing (h-9/min-w-9) to fit inline
+                      // with the other badges in the row, and strip the accent
+                      // background normally applied in the on state — we want a clean
+                      // white pin glyph (line off, filled on), not a filled chip.
+                      className="size-6 min-w-0 p-0 rounded text-white/70 hover:bg-white/10 hover:text-white data-[state=on]:bg-transparent data-[state=on]:text-white [&_svg]:size-3"
+                    >
+                      {/*
+                        On = Central's filled Pin (separate package variant).
+                        Off = Central's outlined Pin. Both ship as native variant
+                        components so we no longer need the fill/strokeWidth hack.
+                      */}
+                      {isPinnedToFeed ? <PinFilled /> : <Pin />}
+                    </Toggle>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="top"
+                    sideOffset={6}
+                    showArrow={false}
+                    className="px-2 py-1 text-[10px] text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
+                  >
+                    {isPinnedToFeed ? strings.pinnedToFeedTooltip : strings.pinToFeedTooltip}
+                  </TooltipContent>
+                </Tooltip>
               )}
               {device.batteryPct != null && (
                 <span className="flex items-center gap-1.5 text-[11px] font-['Heebo'] tabular-nums text-white/50 align-middle">
@@ -930,8 +974,13 @@ export function DevicesPanel({
   }), [strings.typeFilterLabel, typeCounts, typeLabels, typeFilterIcons]);
 
   return (
+    // Same inline-start docking pattern as the Dashboard sidebar: the panel
+    // sits on the inline-start edge (left in LTR, right in RTL), adjacent to
+    // the slim rail, and slides off-screen toward that edge in both
+    // directions (`-translate-x-full` for LTR, `rtl:translate-x-full` for
+    // RTL). Border-end is the divider that faces the map.
     <aside
-      className={`absolute top-0 bottom-0 right-0 bg-zinc-950 border-l border-white/10 flex flex-col z-10 font-sans ${noTransition ? '' : 'transition-transform duration-300 ease-out'} ${open ? 'translate-x-0' : 'translate-x-full pointer-events-none'}`}
+      className={`absolute top-0 bottom-0 start-0 bg-zinc-950 border-e border-white/10 flex flex-col z-10 font-sans ${noTransition ? '' : 'transition-transform duration-300 ease-out'} ${open ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full pointer-events-none'}`}
       style={{ width: width ?? LAYOUT_TOKENS.sidebarWidthPx }}
     >
       <div className="shrink-0">

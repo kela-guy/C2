@@ -27,7 +27,7 @@ import {
   Timer,
   Compass,
   ArrowUpDown,
-} from 'lucide-react';
+} from '@/lib/icons/central';
 import { DroneCardIcon, MissileCardIcon, CarCardIcon } from '@/primitives/MapIcons';
 import type { ThreatAccent } from '@/primitives/tokens';
 import type { CardAction } from '@/primitives/CardActions';

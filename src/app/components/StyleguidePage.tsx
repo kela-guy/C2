@@ -3,9 +3,10 @@ import {
   Eye, Radio, ShieldAlert, Zap, Crosshair, Ban, AlertTriangle,
   Trash2, Send, Compass, Gauge, Navigation, MapPin, CheckCircle2,
   Bird, Activity, History, Radar, Hand, Copy, Check, Download,
-  BellOff, Camera, Wrench, Loader2, X, Lock,
-  SlidersHorizontal, Tag, ChevronsUpDown, Square,
-} from 'lucide-react';
+  BellOff, Camera, Wrench, Loader2, Search, X, Lock,
+  SlidersHorizontal, Tag,
+} from '@/lib/icons/central';
+import { ChevronsUpDown, Square } from 'lucide-react';
 import { toast } from 'sonner';
 import { Toaster } from '@/shared/components/ui/sonner';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
@@ -259,6 +260,140 @@ function CesiumFlyToDemo() {
         </div>
       </div>
     </PreviewPanel>
+  );
+}
+
+// ─── Playback investigation mockups ─────────────────────────────────────────
+//
+// Static visual mockups of the camera-v2 playback surface. The live
+// experience is interactive on `/playground`; the styleguide focuses on
+// the design language (layout placement, badge hierarchy, status copy).
+
+function PlaybackLayoutMockup() {
+  return (
+    <div className="space-y-2">
+      <div className="text-[11px] font-medium text-n-12">
+        50/50 split — live on top, playback on the bottom
+      </div>
+      <div className="relative aspect-video rounded-md overflow-hidden bg-black ring-1 ring-white/10">
+        {/* Live frame (top half) — hosts the live HUD so its bottom
+            control bar sits just above the red divider on hover. */}
+        <div className="absolute top-0 inset-x-0 h-1/2 bg-[radial-gradient(circle_at_30%_40%,#1f2937,#0a0a0a_70%)]">
+          <div className="absolute top-1.5 start-1.5 inline-flex items-center gap-1 bg-black/65 px-1.5 py-0.5">
+            <span className="size-1.5 rounded-full bg-red-500" />
+            <span className="text-[8px] font-mono font-semibold text-white uppercase tracking-wider">
+              Live
+            </span>
+          </div>
+          <div className="absolute inset-x-1.5 bottom-1 flex items-center gap-1">
+            <div className="h-3 flex-1 rounded-sm bg-black/55 ring-1 ring-white/10" />
+            <div className="size-3 rounded-sm bg-black/55 ring-1 ring-white/10" />
+          </div>
+        </div>
+
+        {/* Playback frame (bottom half) */}
+        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-[radial-gradient(circle_at_50%_50%,#3f1d1d,#1a0a0a_70%)] border-t-2 border-red-500/80">
+          <div className="absolute top-1 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 bg-red-600/90 px-1.5 py-0.5">
+            <span className="text-[7px] font-mono font-semibold text-white uppercase tracking-wider">
+              Playback
+            </span>
+          </div>
+          <div className="absolute inset-x-2 bottom-1.5 flex items-center gap-2">
+            <span className="text-[7px] font-mono text-white/85">▶</span>
+            <div className="h-1 flex-1 rounded-full bg-white/15">
+              <div className="h-full w-1/2 rounded-full bg-red-400" />
+            </div>
+            <span className="text-[7px] font-mono text-white/55 tabular-nums">00:32</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type PlaybackStatusVariant =
+  | 'loading'
+  | 'buffering'
+  | 'paused'
+  | 'playing'
+  | 'ended'
+  | 'error';
+
+function PlaybackStatusMockup({ variant }: { variant: PlaybackStatusVariant }) {
+  const meta = (() => {
+    switch (variant) {
+      case 'loading':
+        return { title: 'loading', copy: 'Initial metadata fetch — transport disabled until duration arrives.' };
+      case 'buffering':
+        return { title: 'buffering', copy: 'Network stall > 600ms — last frame stays visible, scrubber stays usable.' };
+      case 'paused':
+        return { title: 'paused', copy: 'Default open state — rewinds 30s and pauses so the operator scrubs deliberately.' };
+      case 'playing':
+        return { title: 'playing', copy: 'Active playback — pause icon shown; scrubber tracks media-time.' };
+      case 'ended':
+        return { title: 'ended', copy: 'Clip finished — Replay overlay returns to position 0.' };
+      case 'error':
+        return { title: 'error', copy: 'Media error or autoplay rejection — actionable retry inline.' };
+      default: {
+        const _exhaustive: never = variant;
+        return _exhaustive;
+      }
+    }
+  })();
+
+  return (
+    <div className="space-y-2">
+      <div className="text-[11px] font-medium text-n-12">{meta.title}</div>
+      <div className="relative aspect-video rounded-md overflow-hidden bg-black ring-1 ring-white/10">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,#3f1d1d,#1a0a0a_70%)]" />
+        <div className="absolute top-1.5 start-1.5 inline-flex items-center gap-1 bg-red-600/90 px-1.5 py-0.5">
+          <span className="size-1 rounded-full bg-white" />
+          <span className="text-[8px] font-mono font-semibold text-white uppercase tracking-wider">
+            Playback
+          </span>
+        </div>
+
+        {variant === 'loading' && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/60">
+            <Loader2 size={16} className="text-white/85 animate-spin motion-reduce:animate-none" />
+            <span className="text-[9px] text-white/85 font-mono uppercase tracking-wider">
+              טוען הקלטה…
+            </span>
+          </div>
+        )}
+        {variant === 'buffering' && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/35">
+            <Loader2 size={16} className="text-white/85 animate-spin motion-reduce:animate-none" />
+          </div>
+        )}
+        {variant === 'ended' && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/60">
+            <div className="inline-flex items-center gap-1 px-2 py-1 bg-red-500 text-white text-[9px] uppercase tracking-wider font-semibold">
+              ▶ נגן שוב
+            </div>
+            <span className="text-[8px] text-white/55 uppercase tracking-wider">
+              ההקלטה הסתיימה
+            </span>
+          </div>
+        )}
+        {variant === 'error' && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/70 px-3 text-center">
+            <AlertTriangle size={16} className="text-red-300" />
+            <span className="text-[9px] text-white">הפיד אינו זמין כרגע</span>
+            <span className="text-[8px] text-white/55 uppercase tracking-wider">
+              ↻ נסה שוב
+            </span>
+          </div>
+        )}
+        {(variant === 'paused' || variant === 'playing') && (
+          <div className="absolute bottom-1 inset-x-1.5 flex items-center justify-between text-[8px] font-mono text-white/85">
+            <span className="tabular-nums">00:32</span>
+            <span className="text-white/55 tabular-nums">-00:28</span>
+          </div>
+        )}
+      </div>
+      <p className="text-[11px] leading-snug text-n-10">{meta.copy}</p>
+    </div>
   );
 }
 
@@ -2793,7 +2928,7 @@ export default function StyleguidePage() {
                 <div className="space-y-3">
                   <SectionHeading>Use</SectionHeading>
                   <QuickStartCodeBlock code={`import { StatusChip, ActionButton } from "@/primitives"
-import { Crosshair } from "lucide-react"
+import { Crosshair } from "@/lib/icons/central"
 
 export function DetectionRow() {
   return (
@@ -4764,6 +4899,55 @@ export function DetectionRow() {
                   <li>Wire <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">CesiumMap</code> into <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">Dashboard</code> behind a feature flag, then deprecate <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">TacticalMap</code> when parity is full.</li>
                 </ol>
               </div>
+            </ComponentSection>
+            )}
+
+            {activeItem === 'playback-investigation' && (
+            <ComponentSection
+              id="playback-investigation"
+              name="Playback Investigation"
+              description="Camera-v2 playback surface lives only on /playground. One layout — a 50/50 split where live keeps the top half and playback takes the bottom — and a focused transport (play/pause + scrubber + clocks + exit). The live experience is interactive on /playground."
+            >
+              <SectionHeading>Layout</SectionHeading>
+              <p className="text-[14px] leading-6 text-n-10">
+                Live shrinks to the top half; the playback container takes the bottom half with a 2px red top border so the operator never confuses the two frames. The live HUD (drone overlay, telemetry, control bar) renders inside the live frame so its bottom edge tracks the live half — the operator can still hover the top half to surface the live control bar above the divider while the playback transport stays anchored at the very bottom of the tile.
+              </p>
+              <PreviewPanel align="stretch">
+                <div className="w-full max-w-md">
+                  <PlaybackLayoutMockup />
+                </div>
+              </PreviewPanel>
+
+              <SectionHeading>Status states</SectionHeading>
+              <p className="text-[14px] leading-6 text-n-10">
+                Every media condition is surfaced inside the playback frame as an actionable, localised state. Browser autoplay rejection and `onError` events both route through the error card. Buffering has a 600ms grace timer so a momentary stall does not flash a spinner.
+              </p>
+              <PreviewPanel align="stretch">
+                <div className="grid grid-cols-3 gap-4 w-full">
+                  <PlaybackStatusMockup variant="loading" />
+                  <PlaybackStatusMockup variant="buffering" />
+                  <PlaybackStatusMockup variant="paused" />
+                  <PlaybackStatusMockup variant="playing" />
+                  <PlaybackStatusMockup variant="ended" />
+                  <PlaybackStatusMockup variant="error" />
+                </div>
+              </PreviewPanel>
+
+              <SectionHeading>Notes</SectionHeading>
+              <ul className="space-y-3 text-[14px] leading-6 text-n-10 list-disc ps-6 marker:text-n-9">
+                <li>
+                  <strong className="text-n-12">Time always flows L→R.</strong> The transport sits inside <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">&lt;DirIsland direction=&quot;ltr&quot;&gt;</code>. Hebrew tooltip labels still render correctly because the island only repositions chrome, not text.
+                </li>
+                <li>
+                  <strong className="text-n-12">Foreign-locked tiles stay fully usable.</strong> Playback is read-only investigation, not a control op. Only mutating actions (mode swap, zoom slider) are disabled on a foreign-locked tile.
+                </li>
+                <li>
+                  <strong className="text-n-12">No persistence.</strong> Every open starts fresh — there are no preferences, no bookmarks, and no position carry-over. Camera swaps reset playback to <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">undefined</code> at the panel level so a stale position can&apos;t leak across cameras in a 4-up grid.
+                </li>
+                <li>
+                  <strong className="text-n-12">Settings toggle.</strong> The Switch primitive is retuned for our dark popover (white/15 off-state with an inset hairline ring, emerald on-state, 200ms color and thumb transitions). Off and on both read clearly against <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">bg-[#1a1a1a]/95</code>.
+                </li>
+              </ul>
             </ComponentSection>
             )}
 

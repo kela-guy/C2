@@ -1,15 +1,9 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { Camera, ShieldAlert, AlertTriangle, Play, Pause, SkipBack, SkipForward, Maximize2 } from 'lucide-react';
+import { Camera, Play, Pause, SkipBack, SkipForward, Maximize2 } from '@/lib/icons/central';
 import { Dialog, DialogContent, DialogTitle } from '@/shared/components/ui/dialog';
 import { cn } from '@/shared/components/ui/utils';
-
-export const MEDIA_BADGE_CONFIG = {
-  threat: { icon: ShieldAlert, color: 'text-red-500', usage: 'Confirmed threat detection' },
-  warning: { icon: AlertTriangle, color: 'text-zinc-400', usage: 'Unconfirmed or low-confidence' },
-  bird: { icon: ShieldAlert, color: 'text-amber-400', usage: 'Bird / false positive' },
-} as const;
-
-export type MediaBadgeType = keyof typeof MEDIA_BADGE_CONFIG;
+import { DirIsland } from '@/lib/direction';
+import { MEDIA_BADGE_CONFIG, type MediaBadgeType } from './cardMediaConfig';
 
 export interface CardMediaProps {
   src?: string;
@@ -97,9 +91,15 @@ export function CardMedia({
           );
         })()}
 
+        {/*
+          HUD chrome (Live/PTZ/Playback badges, tracking label) follows
+          the active app direction — these are reading-order labels, not
+          instrument readings. The actual playback controls below are
+          wrapped in <DirIsland direction="ltr"> so time stays LTR.
+        */}
         {isVideo && !showControls && (
           <>
-            <div className="absolute top-2 right-2 flex items-center gap-1.5">
+            <div className="absolute top-2 end-2 flex items-center gap-1.5">
               <div className="flex items-center gap-1 bg-black/80 px-1.5 py-0.5 rounded-sm">
                 <div className="size-1.5 rounded-full bg-red-500 animate-pulse motion-reduce:animate-none" />
                 <span className="text-[9px] font-medium text-white/90 uppercase tracking-wide">
@@ -107,7 +107,7 @@ export function CardMedia({
                 </span>
               </div>
             </div>
-            <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/80 px-1.5 py-0.5 rounded-sm">
+            <div className="absolute top-2 start-2 flex items-center gap-1 bg-black/80 px-1.5 py-0.5 rounded-sm">
               <Camera size={10} className="text-white/70" aria-hidden="true" />
               <span className="text-[9px] text-white/70 font-mono">PTZ</span>
             </div>
@@ -116,7 +116,7 @@ export function CardMedia({
 
         {isVideo && showControls && (
           <>
-            <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/80 px-1.5 py-0.5 rounded-sm">
+            <div className="absolute top-2 end-2 flex items-center gap-1 bg-black/80 px-1.5 py-0.5 rounded-sm">
               <Camera size={10} className="text-white/70" aria-hidden="true" />
               <span className="text-[9px] text-white/70 font-mono">Playback</span>
             </div>
@@ -134,7 +134,7 @@ export function CardMedia({
         )}
 
         {trackingLabel && (
-          <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-cyan-900/80 shadow-[0_0_0_1px_rgba(34,211,238,0.3)] px-2 py-0.5 rounded">
+          <div className="absolute bottom-2 start-2 flex items-center gap-1 bg-cyan-900/80 shadow-[0_0_0_1px_rgba(34,211,238,0.3)] px-2 py-0.5 rounded">
             <Camera size={10} className="text-cyan-300" aria-hidden="true" />
             <span className="text-[9px] font-semibold text-cyan-200">{trackingLabel}</span>
           </div>
@@ -231,7 +231,13 @@ function LightboxVideo({ src, initialTime }: { src: string; initialTime: number 
         <track kind="captions" />
       </video>
 
-      <div className="bg-zinc-950 px-4 py-3">
+      {/*
+        Playback controls are an LTR island regardless of app
+        direction — time always flows left-to-right (universal media
+        convention), the scrub bar uses pixel-space math, and the
+        ArrowLeft/ArrowRight keys map to "back/forward in time".
+      */}
+      <DirIsland direction="ltr" className="bg-zinc-950 px-4 py-3">
         <div
           className="relative mb-3 h-1.5 w-full cursor-pointer rounded-full bg-white/15 group/scrub focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
           role="slider"
@@ -271,11 +277,11 @@ function LightboxVideo({ src, initialTime }: { src: string; initialTime: number 
           <button onClick={skip(5)} className="text-white/60 hover:text-white transition-colors cursor-pointer" aria-label="Skip forward 5 seconds">
             <SkipForward size={14} aria-hidden="true" />
           </button>
-          <span className="text-[11px] text-zinc-400 font-mono tabular-nums ml-2">
+          <span className="text-[11px] text-zinc-400 font-mono tabular-nums ms-2">
             {formatTime(progress)} / {formatTime(duration)}
           </span>
         </div>
-      </div>
+      </DirIsland>
     </div>
   );
 }
@@ -348,7 +354,8 @@ const VideoWithControls = React.forwardRef<HTMLVideoElement, { src: string }>(
           <track kind="captions" />
         </video>
 
-        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent pt-6 pb-1.5 px-2">
+        {/* Same LTR-island convention as LightboxVideo above. */}
+        <DirIsland direction="ltr" className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent pt-6 pb-1.5 px-2">
           <div
             className="relative mb-1.5 h-1 w-full cursor-pointer rounded-full bg-white/15 group/scrub focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
             role="slider"
@@ -388,11 +395,11 @@ const VideoWithControls = React.forwardRef<HTMLVideoElement, { src: string }>(
             <button onClick={skip(5)} className="text-white/60 hover:text-white transition-colors" aria-label="Skip forward 5 seconds">
               <SkipForward size={12} aria-hidden="true" />
             </button>
-            <span className="text-[9px] text-zinc-400 font-mono tabular-nums ml-2">
+            <span className="text-[9px] text-zinc-400 font-mono tabular-nums ms-2">
               {formatTime(progress)} / {formatTime(duration)}
             </span>
           </div>
-        </div>
+        </DirIsland>
       </>
     );
   }

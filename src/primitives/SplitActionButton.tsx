@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronDown, Loader2 } from 'lucide-react';
+import { ChevronDown, Loader2 } from '@/lib/icons/central';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { cn } from '@/shared/components/ui/utils';
 import {

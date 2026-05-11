@@ -8,11 +8,11 @@
  *
  *   - `rtl:rotate-180` on a chevron flips it when the page is RTL,
  *     stays put when the page is LTR.
- *   - A subtree wrapped in `<div dir="ltr">` (e.g. a playback
- *     timeline or instrument HUD) breaks the cascade — every
+ *   - A subtree wrapped in `<DirIsland direction="ltr">` (which sets
+ *     `dir="ltr"` on its root element) breaks the cascade — every
  *     `rtl:*` rule inside that island stops matching, and `ltr:*`
- *     rules start matching, so physical-axis controls stay LTR
- *     even when the app is RTL.
+ *     rules start matching, so instrument HUDs / playback timelines
+ *     stay LTR even when the app is RTL.
  *
  * Use `rtl:` / `ltr:` only when a *physical* outcome is required
  * (icon rotation, mirroring a transform, hiding a glyph in one
@@ -252,4 +252,41 @@
 [dir="rtl"] [data-radix-popper-content-wrapper] > [data-side="bottom"][data-align="end"]:not([data-no-rtl-flip]),
 [dir="rtl"] [data-radix-popper-content-wrapper] > [data-side="top"][data-align="end"]:not([data-no-rtl-flip]) {
   transform-origin: 0% 0px;
+}
+
+/*
+ * Recording-clean overrides
+ * ─────────────────────────
+ *
+ * The marketing demo route at `/demo` sets
+ * `data-recording-clean="true"` on its root container so screen-capture
+ * recordings come out free of incidental UI noise that would otherwise
+ * draw the eye away from the scenario being demonstrated:
+ *
+ *   - Native scrollbars on the right card rail (the rail uses
+ *     overflow-y-auto so long logs scroll, but the chrome bar is
+ *     distracting and Webkit/Edge each render it differently).
+ *   - The high-contrast white focus ring around buttons. Operators
+ *     drive the demo with the keyboard, so buttons get focused as the
+ *     scenario advances — but a 2 px white ring is the loudest thing
+ *     on a dark monochrome map. We tone it down to a 1 px ring at
+ *     ~20 % opacity so it's still visible for a11y but doesn't
+ *     dominate the frame.
+ *
+ * Scoped to the recording-clean subtree so the dashboard at `/` is
+ * unaffected and continues to use the standard product chrome.
+ */
+[data-recording-clean="true"] ::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  background: transparent;
+}
+
+[data-recording-clean="true"] {
+  scrollbar-width: none;
+}
+
+[data-recording-clean="true"] :focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);
 }

@@ -157,12 +157,15 @@ export interface CesiumMapProps {
    */
   ionImageryAssetId?: number;
   /**
-   * Render the basemap as a flat dark-monochrome canvas instead of the
-   * Ion satellite imagery. We swap the imagery provider for CARTO's
-   * Dark Matter (no-labels) raster tiles — public, no Ion token, no
-   * subscription. The marketing-demo route (`/demo`) sets this so
-   * recordings read cleanly against the bright marker palette;
-   * production keeps the Bing aerial.
+   * When true, replaces the default Bing Aerial (Cesium Ion) basemap
+   * with CartoDB's "Dark Matter" tiles — a flat, dark, vector-style
+   * monochrome map (just roads, water, and labels on a near-black
+   * canvas). Designed for marketing-demo recordings where a stylised
+   * tactical chart reads better than tinted satellite imagery.
+   *
+   * Read once at mount; flipping the prop later has no effect (the
+   * basemap is baked into the viewer's imagery layers and swapping it
+   * mid-session would tear down + re-tessellate every tile).
    */
   darkMonochromeMap?: boolean;
   /** Called when a `markers[]` entity is clicked (point markers only). */

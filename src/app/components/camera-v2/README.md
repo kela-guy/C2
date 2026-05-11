@@ -28,15 +28,25 @@ is validated there, swap it into the live `Dashboard` and delete the legacy
   inset ring, shows a hint banner ("לחץ כדי לסמן יעד · Esc לביטול"), and
   fires `onDesignateTarget(normX, normY)` on click before the parent exits
   the mode. A brief amber "ping" lingers at the chosen point as a receipt.
-- `CameraTelemetryStrip.tsx` — bottom-center telemetry. Camera = zoom + FOV;
-  drone = zoom + altitude + velocity.
+- `CameraTelemetryStrip.tsx` — bottom-center read-only telemetry, drone-only
+  (altitude + velocity). Cameras render nothing here; their controllable
+  telemetry (zoom, day/night, AI, designate, etc.) lives on the control bar.
 - `DroneHud.tsx` — right-edge stat column. Mounts only when
   `status.deviceType === 'drone'` (battery / signal / distance / relative
   bearing).
-- `PlaybackTimeline.tsx` — scrubber + transport for the playback half of the
-  live-vs-playback split.
+- `playback/PlaybackContainer.tsx` — playback investigation surface. A
+  single bottom-half frame inside the tile. Owns the playback `<video>`
+  ref, wires every media event (`loadedmetadata`, `error`, `waiting`,
+  `playing`, `pause`, `ended`, autoplay rejection), and renders the
+  status chrome (loading / buffering / replay / error).
+- `playback/playbackDefaults.ts` — single source of truth for playback
+  defaults: rewind-on-open (30s), buffering grace (600ms), and the
+  `makeOpenPlaybackState` constructor.
+- `PlaybackTimeline.tsx` — minimal transport. Play/pause + Radix
+  scrubber + clip/remaining clocks + exit. Pinned LTR via `<DirIsland>`.
 - `CameraDetectionsOverlay.tsx` — bounding-box overlay (mocked data).
-- `types.ts` — `CameraFeed`, `CameraStatus`, `DetectionBox`, `PlaybackState`.
+- `types.ts` — `CameraFeed`, `CameraStatus`, `DetectionBox`,
+  `PlaybackState` (+ `PlaybackStatus`).
 
 ## Pin & swap
 
@@ -52,9 +62,70 @@ is validated there, swap it into the live `Dashboard` and delete the legacy
 - `D` — day / night
 - `X` — toggle designate-target mode (cursor → crosshair, next click designates)
 - `S` — open / close settings popover
-- `P` — toggle playback investigation (live-vs-playback split)
+- `P` — toggle playback investigation
 - `F` — fullscreen
-- `Esc` — cancel designate-target mode, then close settings, then exit fullscreen
+- `Esc` — designate cancel → settings close → playback exit → fullscreen exit
+  (priority order; the most local context wins first)
+
+## Keyboard shortcuts (when the playback transport is focused)
+
+- `Arrow ←/→` — move the scrubber by one step
+
+## Playback investigation surface
+
+Playback is the operator's investigation tool inside a live operational
+tile. It is intentionally surfaced *next to* the live feed rather than
+replacing it, so the operator can compare live and recorded footage at
+the same scale.
+
+### Layout
+
+One mode: a vertical 50/50 split. Live shrinks to the top half; the
+playback container takes the bottom half (`top-1/2`, `border-t-2
+border-red-500/80`). The live HUD (drone overlay, telemetry strip,
+control bar) renders *inside the live frame* so its bottom edge tracks
+the live half — when playback is open the control bar surfaces on
+hover at the live/playback divider rather than disappearing or
+overlapping the playback transport. The playback container has its own
+chrome (PLAYBACK badge, scrubber, exit) anchored inside the bottom
+half.
+
+### State model
+
+Per-feed playback state lives in `feed.playback: PlaybackState`. It is
+runtime-only: `enabled`, `sourceId`, `positionSec`, `durationSec`,
+`isPlaying`, `status`, `isScrubbing`, `errorMessage`. There is no
+persistence and no preference layer — every camera open starts fresh.
+
+When the operator opens playback for the first time on a feed,
+`makeOpenPlaybackState` rewinds to `max(0, durationSec - 30)` and starts
+paused so the operator scrubs deliberately rather than the clip
+auto-running from `0`.
+
+### Status chrome
+
+The playback frame surfaces a localised, *actionable* state for every
+media condition:
+
+- `loading` / `idle (durationSec === 0)` — spinner overlay.
+- `buffering` — spinner overlay after a 600ms grace timer.
+- `ended` — "Replay" button overlay.
+- `error` — error card with an inline retry button. Browser autoplay
+  rejection and `onError` events both route here.
+
+### Edge cases
+
+- **Foreign-locked** (`controlOwner === 'other'`) — playback stays
+  fully usable. Read-only investigation is not a control op.
+- **Camera swap with playback open** — both `VideoPanel.handleSwapFeed`
+  and `PlaygroundPage.handlePinDevice` (LRU swap + empty-slot fill)
+  reset `playback` to `undefined` on cameraId replacement so the
+  position / sourceId / errorMessage from the outgoing camera cannot
+  bleed onto the incoming one. Critical for the multi-tile (up to 4)
+  grid.
+- **Autoplay-rejected `play()`** — the container catches the rejection
+  and surfaces a paused state with a Play button instead of failing
+  silently.
 
 ## Promotion path → Dashboard
 
@@ -125,6 +196,7 @@ Once the `/playground` design is locked in, this is the swap into the live
 - Live PTZ commands — zoom slider only updates UI state.
 - Real detection backend — `detectionsByCameraId` is mocked.
 - Multi-operator presence — `controlOwner: 'other'` is currently a local mock.
-- Real recording archive — playback half reuses `weapon-feed.mp4` with a
-  faked 60s timeline.
+- Real recording archive — playback half reuses `weapon-feed.mp4`. The
+  duration is now read from `<video>.onLoadedMetadata` instead of the old
+  hardcoded `60s`, but the source URL is still placeholder.
 - Real drone telemetry — synthetic 1Hz tick on `/playground`.

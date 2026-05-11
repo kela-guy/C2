@@ -14,12 +14,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Toggle } from '@/shared/components/ui/toggle';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/shared/components/ui/tooltip';
 import { Separator } from '@/shared/components/ui/separator';
-import { Video } from 'lucide-react';
+import { Video } from '@/lib/icons/central';
+import { useIsRtl } from '@/lib/direction';
 import { CAMERA_ASSETS } from './tacticalAssets';
 import { VideoPanel } from './camera-v2/VideoPanel';
 import { DevicesPanel, DevicesIcon } from './DevicesPanel';
 import { useDevicesFromAssets } from './useDevicesFromAssets';
-import type { CameraFeed, CameraStatus, DetectionBox } from './camera-v2/types';
+import type {
+  CameraFeed,
+  CameraStatus,
+  DetectionBox,
+} from './camera-v2/types';
 
 const C2Logo = ({ className }: { className?: string }) => (
   <svg width={32} height={32} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
@@ -112,6 +117,10 @@ const DEVICE_PANEL_STRINGS = {
 
 export default function PlaygroundPage() {
   const devices = useDevicesFromAssets();
+  const isRtl = useIsRtl();
+  // Slim icon rail follows app direction → tooltip side flips to the
+  // physical side opposite the rail's edge. Same convention as Dashboard.
+  const railTooltipSide: 'left' | 'right' = isRtl ? 'left' : 'right';
 
   const cameraLabelById = useMemo<Record<string, string>>(() => {
     const map: Record<string, string> = {};
@@ -242,13 +251,21 @@ export default function PlaygroundPage() {
   //   - empty slot exists -> fill it
   //   - room available -> append
   //   - full -> swap the LRU tile
+  //
+  // Every cameraId replacement also clears `playback` so a recorded
+  // position / sourceId / errorMessage can never leak from the
+  // outgoing feed onto the incoming one.
   const handlePinDevice = useCallback(
     (deviceId: string) => {
       setFeeds((prev) => {
         if (prev.some((f) => f.cameraId === deviceId)) return prev;
         const emptyIdx = prev.findIndex((f) => !f.cameraId);
         if (emptyIdx >= 0) {
-          return prev.map((f, i) => (i === emptyIdx ? { ...f, cameraId: deviceId } : f));
+          return prev.map((f, i) =>
+            i === emptyIdx
+              ? { ...f, cameraId: deviceId, playback: undefined }
+              : f,
+          );
         }
         if (prev.length < MAX_FEEDS) {
           return [...prev, { cameraId: deviceId, mode: 'day' }];
@@ -264,7 +281,11 @@ export default function PlaygroundPage() {
           })
           .pop();
         if (!lruCameraId) return prev;
-        return prev.map((f) => (f.cameraId === lruCameraId ? { ...f, cameraId: deviceId } : f));
+        return prev.map((f) =>
+          f.cameraId === lruCameraId
+            ? { ...f, cameraId: deviceId, playback: undefined }
+            : f,
+        );
       });
     },
     [],
@@ -356,12 +377,14 @@ export default function PlaygroundPage() {
   );
 
   return (
-    <div className="relative flex w-full h-screen overflow-hidden text-white font-sans bg-[#050505]" dir="rtl">
+    // Direction inherits from `<DirectionProvider>` at the app root —
+    // hard-coding `dir="rtl"` here would freeze the playground in RTL
+    // even when the user flips the global toggle. The slim icon rail
+    // also follows app direction; tooltip side is computed below from
+    // `useIsRtl()`.
+    <div className="relative flex w-full h-screen overflow-hidden text-white font-sans bg-[#050505]">
       {!fullscreen && (
-        <nav
-          className="relative z-50 flex flex-col justify-start items-center w-8 flex-shrink-0 h-full bg-[#1a1a1a] border-l border-white/10"
-          dir="ltr"
-        >
+        <nav className="relative z-50 flex flex-col justify-start items-center w-8 flex-shrink-0 h-full bg-[#1a1a1a] border-e border-white/10">
           <div className="flex items-center justify-center h-9 w-full">
             <div className="text-white scale-75 origin-center">
               <C2Logo />
@@ -382,7 +405,7 @@ export default function PlaygroundPage() {
                   <Video size={20} strokeWidth={1.5} />
                 </Toggle>
               </TooltipTrigger>
-              <TooltipContent side="left" sideOffset={8}>
+              <TooltipContent side={railTooltipSide} sideOffset={8}>
                 {cameraPanelOpen ? 'סגור מצלמות' : 'מצלמות'}
               </TooltipContent>
             </Tooltip>
@@ -399,7 +422,7 @@ export default function PlaygroundPage() {
                   <DevicesIcon size={18} className="text-current" />
                 </Toggle>
               </TooltipTrigger>
-              <TooltipContent side="left" sideOffset={8}>
+              <TooltipContent side={railTooltipSide} sideOffset={8}>
                 {devicesPanelOpen ? 'סגור מכשירים' : 'מכשירים'}
               </TooltipContent>
             </Tooltip>
@@ -429,7 +452,10 @@ export default function PlaygroundPage() {
           />
         ) : (
           <div className="flex items-center justify-center w-full h-full text-zinc-500 text-sm">
-            לחץ על כפתור המצלמה בסרגל השמאלי כדי לפתוח
+            {/* Avoid baking a side ("בסרגל השמאלי" = left bar) into copy —
+                the rail now follows app direction and may live on either
+                edge. The generic phrasing reads naturally in both. */}
+            לחץ על כפתור המצלמה בסרגל הצד כדי לפתוח
           </div>
         )}
 

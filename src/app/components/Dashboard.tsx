@@ -9,7 +9,7 @@ import { NotificationSystem, showTacticalNotification } from './NotificationSyst
 import { NotificationCenter } from './NotificationCenter';
 import ListOfSystems from '@/imports/ListOfSystems';
 import type { Detection, RegulusEffector, LauncherEffector } from '@/imports/ListOfSystems';
-import { List, Bell, Radar, HelpCircle, Palette, Target, Video } from 'lucide-react';
+import { List, Bell, Radar, HelpCircle, Palette, Target, Video } from '@/lib/icons/central';
 import { Toggle } from '@/shared/components/ui/toggle';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/shared/components/ui/tooltip';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/shared/components/ui/dropdown-menu';

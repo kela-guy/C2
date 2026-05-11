@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from 'framer-motion';
-import { ArrowUp } from 'lucide-react';
+import { ArrowUp } from '@/lib/icons/central';
 import { Bdi } from '@/lib/direction';
 import { Button } from '@/shared/components/ui/button';
 import { cn } from '@/shared/components/ui/utils';

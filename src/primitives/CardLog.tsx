@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { History } from 'lucide-react';
+import { History } from '@/lib/icons/central';
 import { AccordionSection } from './AccordionSection';
 import { CARD_TOKENS } from './tokens';
 

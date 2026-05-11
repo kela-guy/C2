@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2 } from '@/lib/icons/central';
 import { Button } from '@/shared/components/ui/button';
 import { CARD_TOKENS } from './tokens';
 

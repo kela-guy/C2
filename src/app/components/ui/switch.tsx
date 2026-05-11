@@ -10,10 +10,26 @@ function Switch({
   ...props
 }: React.ComponentProps<typeof SwitchPrimitive.Root>) {
   return (
+    // Switches are an *instrument* control — the thumb position on
+    // the physical right is treated as universal "on" across most
+    // platforms (iOS, Android, macOS, Windows). Forcing `dir="ltr"`
+    // keeps the off→on motion consistent regardless of the app's
+    // active direction. Same convention as the playback timeline
+    // and the drone HUD; see `src/lib/direction/DirIsland.tsx`.
+    // Track + thumb are tuned for our dark tactical popovers. The
+    // shadcn defaults (`bg-switch-background`, `transition-all` with no
+    // duration) read as invisible against `bg-[#1a1a1a]/95` and feel
+    // instant; explicit duration + a brighter unchecked state restore
+    // the off→on motion.
     <SwitchPrimitive.Root
       data-slot="switch"
       className={cn(
-        "peer data-[state=checked]:bg-primary data-[state=unchecked]:bg-switch-background focus-visible:border-ring focus-visible:ring-ring/50 dark:data-[state=unchecked]:bg-input/80 inline-flex h-[1.15rem] w-8 shrink-0 items-center rounded-full border border-transparent transition-all outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
+        "peer relative inline-flex h-[1.15rem] w-8 shrink-0 items-center rounded-full",
+        "ring-1 ring-inset ring-white/10",
+        "data-[state=unchecked]:bg-white/15 data-[state=checked]:bg-emerald-500/80",
+        "transition-colors duration-200 ease-out",
+        "outline-none focus-visible:ring-2 focus-visible:ring-white/40",
+        "disabled:cursor-not-allowed disabled:opacity-50",
         className,
       )}
       {...props}
@@ -21,7 +37,8 @@ function Switch({
       <SwitchPrimitive.Thumb
         data-slot="switch-thumb"
         className={cn(
-          "bg-card dark:data-[state=unchecked]:bg-card-foreground dark:data-[state=checked]:bg-primary-foreground pointer-events-none block size-4 rounded-full ring-0 transition-transform",
+          "pointer-events-none block size-4 rounded-full bg-white shadow-sm ring-0",
+          "transition-transform duration-200 ease-out",
           // Physical X-translation isn't direction-aware; use rtl: variants
           // so the thumb travels the trailing edge in RTL contexts (Hebrew),
           // matching the visual on/off semantics readers expect.

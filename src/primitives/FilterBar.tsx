@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ChevronDown, Search, TimerReset, X } from 'lucide-react';
+import { ChevronDown, Search, TimerReset, X } from '@/lib/icons/central';
 import { Checkbox } from '@/shared/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover';
 
@@ -107,13 +107,13 @@ export function FilterBar({
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder={searchPlaceholder}
             aria-label={searchAriaLabel}
-            className="h-7 w-full rounded-md bg-white/[0.04] ps-7 pe-7 text-[11px] text-zinc-100 shadow-[0_0_0_1px_rgba(255,255,255,0.07)] placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sky-400/40 focus-visible:shadow-[0_0_0_1px_rgba(56,189,248,0.35)]"
+            className="h-7 w-full rounded bg-white/[0.04] ps-7 pe-7 text-[11px] text-zinc-100 shadow-[0_0_0_1px_rgba(255,255,255,0.07)] placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sky-400/40 focus-visible:shadow-[0_0_0_1px_rgba(56,189,248,0.35)]"
           />
           {query && (
             <button
               type="button"
               onClick={() => onQueryChange('')}
-              className="absolute end-1.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded text-zinc-500 transition-colors duration-150 hover:bg-white/5 hover:text-zinc-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20"
+              className="absolute end-1.5 top-1/2 flex h-5 w-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded text-zinc-500 transition-colors duration-150 before:absolute before:-inset-2 before:content-[''] hover:bg-white/5 hover:text-zinc-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20"
               aria-label={clearSearchAriaLabel}
             >
               <X size={10} aria-hidden="true" />
@@ -154,8 +154,8 @@ export function FilterBar({
           type="button"
           onClick={onReset}
           disabled={activeFilterCount === 0}
-          className={`inline-flex h-7 items-center justify-center gap-1.5 whitespace-nowrap rounded px-2 text-xs font-medium text-white bg-white/[0.06] hover:bg-white/[0.10] transition-opacity duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 active:scale-[0.98] ${
-            activeFilterCount === 0 ? 'opacity-0 pointer-events-none' : 'opacity-100'
+          className={`inline-flex h-7 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded bg-white/[0.06] px-2 text-xs font-medium text-white transition-[opacity,transform] duration-150 hover:bg-white/[0.10] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 active:scale-[0.99] disabled:cursor-default motion-reduce:active:scale-100 ${
+            activeFilterCount === 0 ? 'pointer-events-none opacity-0' : 'opacity-100'
           }`}
           aria-label={resetAriaLabel}
         >
@@ -189,7 +189,7 @@ function FilterPopoverButton({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className={`inline-flex h-7 w-full items-center justify-center gap-1 rounded px-2 text-xs font-medium text-white transition-colors duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 active:scale-[0.98] ${
+          className={`inline-flex h-7 w-full cursor-pointer items-center justify-center gap-1.5 rounded px-2 text-xs font-medium text-white transition-[background-color,transform] duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 active:scale-[0.99] motion-reduce:active:scale-100 ${
             active || open
               ? 'bg-sky-500/[0.12]'
               : 'bg-white/[0.06] hover:bg-white/[0.10]'
@@ -200,15 +200,28 @@ function FilterPopoverButton({
         >
           {Icon && <Icon size={11} className="shrink-0 opacity-80" aria-hidden="true" />}
           <span className="shrink-0">{label}</span>
-          <span className="truncate text-end text-zinc-400 flex-1">{value}</span>
-          <ChevronDown size={10} className={`shrink-0 opacity-50 ms-auto transition-transform duration-150 ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
+          <span className="flex-1 truncate text-end text-zinc-400 tabular-nums">{value}</span>
+          <ChevronDown
+            size={10}
+            className={`ms-auto shrink-0 opacity-50 transition-transform duration-150 motion-reduce:transition-none ${open ? 'rotate-180' : ''}`}
+            aria-hidden="true"
+          />
         </button>
       </PopoverTrigger>
       <PopoverContent
         side="bottom"
+        // Anchor to the trigger's inline-start edge: the popover's start
+        // edge lines up with the trigger's start edge and the menu grows
+        // toward inline-end. Floating-UI is RTL-aware (it reads
+        // `direction: rtl` from the trigger), so this resolves to
+        // left-edge alignment in LTR and right-edge alignment in RTL —
+        // mirroring the filter bar's position inside the start-anchored
+        // sidebar. The RTL transform-origin override in
+        // `src/styles/theme.css` keeps the zoom-in animation rooted at
+        // the corner adjacent to the trigger.
         align="start"
         sideOffset={4}
-        className="w-64 origin-top-right overflow-hidden rounded-lg p-0.5 shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_16px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl"
+        className="w-64 overflow-hidden rounded-lg p-0.5 shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_4px_12px_rgba(0,0,0,0.25),0_16px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl [transform-origin:var(--radix-popover-content-transform-origin)] data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-1 data-[side=top]:slide-in-from-bottom-1 data-[state=open]:duration-150 data-[state=closed]:duration-100"
       >
         <div className="overflow-y-auto p-0.5">{children}</div>
       </PopoverContent>

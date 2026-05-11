@@ -24,7 +24,8 @@ import {
   ScanSearch,
   Settings,
   Sun,
-} from 'lucide-react';
+} from '@/lib/icons/central';
+import { useStrings } from '@/lib/intl';
 import type { CameraStatus, DayNightMode } from './types';
 
 interface CameraContextMenuProps {
@@ -56,6 +57,7 @@ export function CameraContextMenu({
   onOpenSettings,
   onPinToGrid,
 }: CameraContextMenuProps) {
+  const t = useStrings().camera.contextMenu;
   const ownsControl = status.controlOwner === 'self';
   const lockedByOther = status.controlOwner === 'other';
   const writeDisabled = lockedByOther;
@@ -78,10 +80,10 @@ export function CameraContextMenu({
           )}
           <span className="flex-1">
             {ownsControl
-              ? 'שחרר שליטה'
+              ? t.releaseControl
               : lockedByOther
-                ? `נעול ע״י ${status.controlOwnerName ?? 'מפעיל אחר'}`
-                : 'קח שליטה'}
+                ? t.lockedByOperator(status.controlOwnerName ?? t.lockedByOtherOperator)
+                : t.takeControl}
           </span>
           <ContextMenuShortcut>T</ContextMenuShortcut>
         </ContextMenuItem>
@@ -90,18 +92,18 @@ export function CameraContextMenu({
 
         <ContextMenuItem onClick={onModeToggle} disabled={writeDisabled} className="rounded-none gap-2.5 text-xs">
           {mode === 'day' ? <Moon size={14} className="text-sky-300" /> : <Sun size={14} className="text-amber-300" />}
-          <span className="flex-1">{mode === 'day' ? 'מצב לילה (IR)' : 'מצב יום'}</span>
+          <span className="flex-1">{mode === 'day' ? t.switchToNight : t.switchToDay}</span>
           <ContextMenuShortcut>D</ContextMenuShortcut>
         </ContextMenuItem>
 
         <ContextMenuItem onClick={onDetectionsToggle} className="rounded-none gap-2.5 text-xs">
           <ScanSearch size={14} className={detectionsOn ? 'text-emerald-300' : 'text-white/80'} />
-          <span className="flex-1">{detectionsOn ? 'הסתר זיהוי AI' : 'הצג זיהוי AI'}</span>
+          <span className="flex-1">{detectionsOn ? t.hideAiDetections : t.showAiDetections}</span>
         </ContextMenuItem>
 
         <ContextMenuItem onClick={onDesignateModeToggle} className="rounded-none gap-2.5 text-xs">
           <Crosshair size={14} className={designateMode ? 'text-amber-300' : 'text-white/80'} />
-          <span className="flex-1">{designateMode ? 'בטל סימון יעד' : 'סמן יעד'}</span>
+          <span className="flex-1">{designateMode ? t.cancelDesignate : t.designateTarget}</span>
           <ContextMenuShortcut>X</ContextMenuShortcut>
         </ContextMenuItem>
 
@@ -109,12 +111,12 @@ export function CameraContextMenu({
 
         <ContextMenuItem onClick={onResetView} className="rounded-none gap-2.5 text-xs">
           <RotateCcw size={14} className="text-white/80" />
-          <span className="flex-1">אפס תצוגה</span>
+          <span className="flex-1">{t.resetView}</span>
         </ContextMenuItem>
 
         <ContextMenuItem onClick={onOpenSettings} className="rounded-none gap-2.5 text-xs">
           <Settings size={14} className="text-white/80" />
-          <span className="flex-1">הגדרות</span>
+          <span className="flex-1">{t.settings}</span>
           <ContextMenuShortcut>S</ContextMenuShortcut>
         </ContextMenuItem>
 
@@ -123,7 +125,7 @@ export function CameraContextMenu({
             <ContextMenuSeparator />
             <ContextMenuItem onClick={onPinToGrid} className="rounded-none gap-2.5 text-xs">
               <Pin size={14} className="text-white/80" />
-              <span className="flex-1">נעץ לגריד</span>
+              <span className="flex-1">{t.pinToGrid}</span>
             </ContextMenuItem>
           </>
         )}

@@ -21,7 +21,7 @@ import {
   Radar,
   Hand,
   Zap,
-} from 'lucide-react';
+} from '@/lib/icons/central';
 import { useCardSlots, type CardCallbacks, type CardContext } from './useCardSlots';
 import { useTargetFilters } from './useTargetFilters';
 import { getActivityStatus, isCompletedActivityStatus, useActivityStatus } from './useActivityStatus';

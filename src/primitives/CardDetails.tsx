@@ -1,5 +1,5 @@
 import React from 'react';
-import { Copy, Eye } from 'lucide-react';
+import { Copy, Eye } from '@/lib/icons/central';
 import { AccordionSection } from './AccordionSection';
 import { TelemetryRow } from './TelemetryRow';
 
