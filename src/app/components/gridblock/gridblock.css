@@ -1,0 +1,758 @@
+/**
+ * Gridblock shell token sheet.
+ *
+ * Scoped to `.gridblock-root` so the existing Dashboard at `/` is
+ * untouched while both layouts co-exist during migration.
+ *
+ * The token names + values were originally borrowed from Anduril's
+ * Lattice reference (see `src/app/components/lattice/lattice.css`),
+ * but the surface is now product-neutral — no logos, banners, or
+ * vendor-specific copy bleed through into this stylesheet.
+ *
+ * Critical RTL change vs. the original lattice sheet: physical
+ * edges (`border-left` / `border-right`) are replaced with logical
+ * edges (`border-inline-start` / `border-inline-end`) so the chrome
+ * seams paint on the correct side regardless of writing direction.
+ * The shell mounts inside the app's `<DirectionProvider>` and never
+ * forces `dir`.
+ */
+
+.gridblock-root {
+  /*
+   * Surface tiers — the four named levels the team talks in.
+   *
+   *   Floor → substrate 2  the dashboard canvas (shell, header,
+   *                        footer, rails, map inset)
+   *   Panel → substrate 2  panel bodies, scroll content wells —
+   *                        intentionally flush with the Floor so
+   *                        panels feel like cut-outs of the canvas,
+   *                        delineated only by chrome (Bars + seams).
+   *   Bar   → substrate 3  title bars, toolbars, sticky strips,
+   *                        category headers — chrome perimeter
+   *   Pop   → substrate 6  popovers, dropdowns, dialogs, sheets,
+   *                        FAB-hover — anything floating above
+   *
+   * Everything that hands its background to a class in this file
+   * reads from one of these four names. To re-paint the dashboard,
+   * edit the four right-hand sides below; nothing else needs to know.
+   *
+   * Floor/Panel intentionally collapse onto the same substrate so
+   * the canvas reads as one continuous deck. Bar adds a single +1
+   * notch for chrome legibility, and Pop jumps to substrate 6 so
+   * floating surfaces feel decisively detached from the deck. The
+   * 1-tier seam between Floor and Bar still keeps |Lc| > 90 for
+   * slate-12 text — see palette.css APCA table.
+   */
+  --gridblock-floor: var(--surface-2);
+  --gridblock-panel: var(--surface-2);
+  --gridblock-bar:   var(--surface-3);
+  --gridblock-pop:   var(--surface-6);
+
+  /*
+   * Legacy aliases. The old --gridblock-page-bg / --bg / --surface /
+   * --surface-elevated names are kept for one migration cycle so
+   * any in-flight branches keep compiling. New code should use the
+   * named tiers above. Delete this block after the next merge.
+   */
+  --gridblock-page-bg:          var(--gridblock-floor);
+  --gridblock-bg:               var(--gridblock-panel);
+  --gridblock-surface:          var(--gridblock-bar);
+  --gridblock-surface-elevated: var(--gridblock-pop);
+
+  /*
+   * Chrome hairlines come in two tiers that are intentionally
+   * calibrated to the same *perceptual* weight (~0.36 L on the
+   * floor) — what differs is whether the token uses alpha
+   * compositing or a solid fill.
+   *
+   * --gridblock-border (translucent, --border-default at 0.55 α)
+   *   Internal chrome: panel header bottoms, toolbar bottoms,
+   *   category strips, .gridblock-block ring around panel / map
+   *   tiles, FAB rings, intra-list dividers. Each of these has at
+   *   least one neighbour surface that differs from the floor
+   *   (a panel bar at --gridblock-bar, the panel tile against
+   *   the page moat, etc.), so the translucent hairline always
+   *   has a contrast handle to lean on and reads cleanly.
+   *
+   * --gridblock-border-rail (solid, slate-5)
+   *   Chrome perimeter seams: header bottom, footer top, and the
+   *   two rail inner edges. These seams are special because they
+   *   butt against the floor on both sides — the chrome and the
+   *   neighbouring panel-cell / map-cell wrapper share
+   *   --gridblock-floor as their background. A translucent border
+   *   at 0.55 α has nothing to compose against there, so this
+   *   tier is opted out of alpha blending with a solid token.
+   *   Slate-5 (0.345 L) lands at the same perceived weight as the
+   *   translucent token over floor (~0.362 L), so the two tiers
+   *   read as one uniform hairline color across the shell.
+   *
+   * --gridblock-border-strong is kept as an alias of the default
+   * tier (FAB hover historically used it; the dashboard now
+   * communicates lift via shadow, not a tonal border shift).
+   */
+  --gridblock-border: var(--border-default);
+  --gridblock-border-rail: var(--slate-5);
+  --gridblock-border-strong: var(--gridblock-border);
+
+  /*
+   * Accent palette. Neutral slate so active pills and focus rings
+   * read as muted off-white instead of competing for attention with
+   * target-status colors painted over the map. The -rgb companion
+   * keeps the box-shadow alpha utility working — value mirrors
+   * --slate-12 in sRGB triplet form (see accentHex.ts for the
+   * conversion). Keep this in sync with palette.css.
+   */
+  --gridblock-accent-500: var(--slate-12);
+  --gridblock-accent-500-rgb: 239 244 250; /* mirror of --slate-12 oklch(0.965 0.010 256) */
+  --gridblock-accent-800: var(--surface-4);
+  --gridblock-accent-100: var(--slate-10);
+
+  --gridblock-text-primary: var(--slate-12);
+  --gridblock-text-secondary: var(--slate-11);
+  --gridblock-text-muted: var(--slate-9);
+
+  /*
+   * Timeline-only semantic colors. Footer scrubber uses
+   * --accent-success for "live" and --accent-historical for
+   * "historical". The -rgb companions feed inline rgba() shadows
+   * elsewhere in the chrome; values are the sRGB triplets that
+   * accentHex() generates from the matching oklch tokens.
+   */
+  --gridblock-live: var(--accent-success);
+  --gridblock-live-rgb: 101 216 109;        /* #65d86d — accent-success */
+  --gridblock-historical: var(--accent-historical);
+  --gridblock-historical-rgb: 146 150 255;  /* #9296ff — accent-historical */
+
+  --gridblock-rail-width: 32px;
+  --gridblock-header-height: 32px;
+  --gridblock-footer-height: 33px;
+  /*
+   * Page-bg moat around the map cell only — rails and footer still
+   * abut the page edges. The map reads as a tile floating in the
+   * chrome.
+   */
+  --gridblock-map-inset: 4px;
+
+  /*
+   * Motion tokens. Custom curves rather than the (weak) CSS built-ins.
+   *  - `out`  : entrances — arrive fast, settle gently.
+   *  - `in`   : exits — build momentum on the way out.
+   *  - `inOut`: on-screen movement (e.g. a panel reveal that pushes
+   *             the map column).
+   * Durations stay <= 240ms so chrome interactions never feel sluggish
+   * on a tactical surface where the operator interacts 100s of times
+   * per session.
+   */
+  --gridblock-ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+  --gridblock-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --gridblock-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --gridblock-dur-press: 120ms;
+  --gridblock-dur-state: 180ms;
+  --gridblock-dur-reveal: 240ms;
+}
+
+/* ============================================================
+ * Layout — five elastic columns: rail | panel-L | map | panel-R | rail.
+ *
+ * The panel columns animate from `300px → 0px` when their content
+ * unmounts, and the map column (`1fr`) breathes back into the
+ * freed space in the same paint. This is the "refined" layout
+ * feel — nothing pops, every cell shifts together.
+ *
+ * `.gridblock-panel-cell` clips its overflow so the inner Motion
+ * panel doesn't bleed onto neighbouring cells while its column
+ * track is mid-collapse.
+ * ============================================================ */
+.gridblock-grid-cols {
+  transition: grid-template-columns var(--gridblock-dur-reveal)
+    var(--gridblock-ease-in-out);
+}
+/*
+ * During an active drag-resize the panel column is being driven
+ * imperatively at pointer-move cadence (~120 fps on modern
+ * trackpads). Letting the column transition continue would chase
+ * a 240 ms tween behind every move and read as molasses, so we
+ * gate the transition off via a body-level data attribute that
+ * GridblockResizeHandle sets on pointerdown and clears on pointerup.
+ */
+[data-gridblock-resizing] .gridblock-grid-cols {
+  transition: none;
+}
+
+/*
+ * Canvas-overflow wrapper. Sits inside the map cell and extends
+ * laterally past the visible cell by exactly the open panel widths,
+ * driven by --map-overflow-left/right vars set on the map cell
+ * wrapper in GridblockShell. The tile's overflow:hidden clips the
+ * excess. The wrapper's CSS width comes out to a stable
+ * `viewport - 2 * rail - 8` regardless of panel state — so the
+ * Cesium canvas inside never re-pins on a panel toggle.
+ *
+ * The left/right transition matches the grid-template-columns
+ * transition exactly (same duration + easing tokens), so during a
+ * panel slide the wrapper's box width stays perfectly invariant
+ * frame-by-frame instead of breathing in and out.
+ */
+.gridblock-canvas-overflow {
+  /*
+   * Symmetric overflow: extend the wrapper by half the total open-panel
+   * width on each side. Chrome already sits centered in the visible cell,
+   * so symmetric overflow keeps wrapper center = chrome center = visible
+   * cell center frame-by-frame. The world point Cesium renders at the
+   * framebuffer's pixel center tracks the visible cell center as a side
+   * effect of the layout animation — no separate compositor transform,
+   * so the layout pass and the camera pan are driven by a single timing
+   * pipeline (no drift between left/right and transform).
+   *
+   * Width is still invariant: chrome.width + LP + RP = viewport - 2*rail
+   * - 2*inset, so Cesium's ResizeObserver doesn't fire on panel toggles.
+   */
+  --map-overflow-half: calc(
+    (var(--map-overflow-left, 0px) + var(--map-overflow-right, 0px)) / 2
+  );
+  left: calc(0px - var(--map-overflow-half));
+  right: calc(0px - var(--map-overflow-half));
+  transition:
+    left var(--gridblock-dur-reveal) var(--gridblock-ease-in-out),
+    right var(--gridblock-dur-reveal) var(--gridblock-ease-in-out);
+}
+[data-gridblock-resizing] .gridblock-canvas-overflow {
+  transition: none;
+}
+
+.gridblock-panel-cell {
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/*
+ * Closed-cell padding collapse. When the panel is closed, the
+ * --start / --end cells carry no children (AnimatePresence has
+ * unmounted the motion.div and the resize handle is conditional
+ * on the same panel-open boolean). They become :empty.
+ *
+ * Without this rule, the inline padding on .gridblock-panel-cell--*
+ * still forces a 4px min-content width — CSS Grid honours an
+ * item's min-content size and `padding` cannot compress below
+ * its specified value, even with `min-width: 0` and box-sizing:
+ * border-box. The result is the cell rendering 4px wide at the
+ * 0px grid track and overlapping the adjacent rail wrapper,
+ * painting --gridblock-floor over the rail's border. Confirmed
+ * via runtime instrumentation (debug session c449dd):
+ *   panelCellRect: {x: 28, width: 4, right: 32}
+ *   wrapperRect:   {x: 0,  width: 32, right: 32}
+ *
+ * Zeroing the inline padding only when the cell is :empty
+ * collapses the cell to a true 0px in the closed state, while
+ * preserving the 4px "map inset moat" during the entire
+ * AnimatePresence exit animation (motion.div is still mounted
+ * during exit, so the cell is non-empty and keeps its padding).
+ */
+.gridblock-panel-cell:empty {
+  padding-inline-start: 0;
+  padding-inline-end: 0;
+}
+
+/*
+ * Panel-cell moat — same `--gridblock-map-inset` (4px) used by the
+ * map tile so all three tiles (left panel | map | right panel) read
+ * as a single coherent set of floating cards inside the chrome.
+ *
+ * Each panel pads three sides:
+ *   - block-start / block-end (top / bottom): always
+ *   - inline-start (left in LTR / right in RTL) for the inline-start
+ *     panel — this is the rail-adjacent edge.
+ *   - inline-end (right in LTR / left in RTL) for the inline-end
+ *     panel — also the rail-adjacent edge.
+ *
+ * The panel's map-adjacent edge stays flush so the panel and map
+ * share the same seam (no double 4px gap reading as a thick gutter).
+ *
+ * `box-sizing: border-box` + the cell's grid track collapsing to 0px
+ * during a panel close means the padding is clipped along with the
+ * inner motion.div — no residual 8px stub when the column is empty.
+ */
+.gridblock-panel-cell--start {
+  padding-block: var(--gridblock-map-inset);
+  padding-inline-start: var(--gridblock-map-inset);
+  background: var(--gridblock-floor);
+}
+.gridblock-panel-cell--end {
+  padding-block: var(--gridblock-map-inset);
+  padding-inline-end: var(--gridblock-map-inset);
+  background: var(--gridblock-floor);
+}
+
+/* ============================================================
+ * Resize handle. Sits flush with the map-adjacent edge of an open
+ * side panel (inline-end of the start cell, inline-start of the
+ * end cell). The hit target is 8px wide and lives entirely inside
+ * the panel cell — the cell has overflow:hidden so we can't spill
+ * onto the neighbouring map column.
+ *
+ * Everything is invisible at rest. The cursor flip to `col-resize`
+ * is what advertises "grabbable"; the visible 1px accent line
+ * only appears on hover, drag, and keyboard focus. This keeps
+ * the panel content clean from a permanent vertical hairline
+ * cutting through it.
+ *
+ * z-index: 3 keeps the handle above its own panel's content
+ * (incl. any sticky category headers at z-index 2) but below
+ * open popovers (Substrate level 3+, z-index 50+).
+ * ============================================================ */
+.gridblock-resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+  background: transparent;
+  z-index: 3;
+  touch-action: none;
+}
+/*
+ * Mount edge — flush with the panel's outer (map-adjacent) edge.
+ * Logical positioning keeps RTL correct automatically: the start
+ * panel's inline-end is its visual map-facing edge in both LTR
+ * and RTL.
+ */
+.gridblock-panel-cell--start > .gridblock-resize-handle {
+  inset-inline-end: 0;
+}
+.gridblock-panel-cell--end > .gridblock-resize-handle {
+  inset-inline-start: 0;
+}
+/*
+ * Pseudo-element paints the visible 1px accent line at the
+ * handle's outer edge — flush with the panel/map seam, not in
+ * the middle of the hit target. Starts transparent so the panel
+ * looks clean at rest; hover/drag/focus light it.
+ */
+.gridblock-resize-handle::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: transparent;
+  transition: background-color var(--gridblock-dur-press) ease;
+  pointer-events: none;
+}
+.gridblock-panel-cell--start > .gridblock-resize-handle::after {
+  inset-inline-end: 0;
+}
+.gridblock-panel-cell--end > .gridblock-resize-handle::after {
+  inset-inline-start: 0;
+}
+.gridblock-resize-handle:hover::after,
+.gridblock-resize-handle[data-dragging]::after {
+  background: var(--gridblock-border-strong);
+}
+.gridblock-resize-handle:focus-visible {
+  outline: none;
+}
+.gridblock-resize-handle:focus-visible::after {
+  background: var(--gridblock-accent-500);
+  width: 2px;
+}
+
+/* ============================================================
+ * Block — used only by elements that float free of the chrome grid
+ * (the side panels, which mount/unmount with motion and need
+ * explicit edges on every side). Grid chrome cells (header, rails,
+ * footer, map tile) instead use the directional `gridblock-edge-*`
+ * helpers below so abutting cells produce a single 1px seam rather
+ * than the 2px doubled seam an all-side border would create.
+ * ============================================================ */
+.gridblock-block {
+  border: 1px solid var(--gridblock-border);
+}
+
+/* ============================================================
+ * Directional edges — chrome seams between abutting cells.
+ *
+ * Block-axis edges (top / bottom) are physical because the block
+ * axis doesn't flip in RTL.
+ *
+ * Inline-axis edges (start / end) are logical so the seam paints
+ * on the correct side when the document flips between LTR and RTL.
+ *
+ *   header  → border-bottom
+ *   l-rail  → border-inline-end (visually right in LTR, left in RTL)
+ *   r-rail  → border-inline-start (visually left in LTR, right in RTL)
+ *   footer  → border-top
+ *
+ * The map tile lives inside a `--gridblock-map-inset` page-bg
+ * moat and uses an all-side border (`gridblock-block`) because
+ * none of its edges abut another cell.
+ * ============================================================ */
+/*
+ * Chrome perimeter seams — header bottom, footer top, and the
+ * two rail inner edges below. All four pull from the solid
+ * --gridblock-border-rail token so the seams survive their
+ * no-contrast neighbours (chrome and adjacent cells both paint
+ * --gridblock-floor on either side of the seam, leaving a
+ * translucent hairline with nothing to compose against).
+ */
+.gridblock-edge-bottom {
+  border-bottom: 1px solid var(--gridblock-border-rail);
+}
+.gridblock-edge-top {
+  border-top: 1px solid var(--gridblock-border-rail);
+}
+.gridblock-edge-inline-start {
+  border-inline-start: 1px solid var(--gridblock-border-rail);
+}
+.gridblock-edge-inline-end {
+  border-inline-end: 1px solid var(--gridblock-border-rail);
+}
+
+/* ============================================================
+ * Rail icon button
+ *
+ * 24x24 (sm) icon buttons with a 16px glyph. The inactive state
+ * is fully transparent — hover lifts to a subtle white wash. The
+ * active tab carries a 1px solid border (not an inset shadow),
+ * so the cell reads as a discrete edge.
+ * ============================================================ */
+.gridblock-rail-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  /* Default 1px transparent border so the box never resizes when
+   * `data-active` flips on/off — the border just becomes visible. */
+  border: 1px solid transparent;
+  color: var(--gridblock-text-secondary);
+  background: transparent;
+  transition: background-color var(--gridblock-dur-press) ease,
+    color var(--gridblock-dur-press) ease,
+    border-color var(--gridblock-dur-state) var(--gridblock-ease-out),
+    transform var(--gridblock-dur-press) var(--gridblock-ease-out);
+  /* Hint the compositor — the press/active scale is the only
+   * transform we apply, but declaring it explicitly keeps Safari
+   * from re-rasterising on every state flip. */
+  will-change: transform;
+}
+.gridblock-rail-btn:hover {
+  background: var(--state-hover-strong);
+  color: var(--gridblock-text-primary);
+}
+.gridblock-rail-btn:active {
+  /* Felt, not seen. ~3% scale at 120ms reads as a confirmed press
+   * without registering as motion. */
+  transform: scale(0.94);
+}
+.gridblock-rail-btn[data-active="true"] {
+  background: var(--state-selected);
+  color: var(--gridblock-accent-500);
+  border-color: var(--gridblock-border-strong);
+}
+.gridblock-rail-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(var(--gridblock-accent-500-rgb), 0.6);
+}
+
+/* ============================================================
+ * Top-bar icon button (header chrome — settings, account, etc.)
+ * ============================================================ */
+.gridblock-iconbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  min-width: 32px;
+  padding: 0 6px;
+  border-radius: 2px;
+  color: var(--gridblock-text-secondary);
+  background: transparent;
+  transition: background-color var(--gridblock-dur-press) ease,
+    color var(--gridblock-dur-press) ease,
+    transform var(--gridblock-dur-press) var(--gridblock-ease-out);
+  font-size: 12px;
+  gap: 6px;
+}
+.gridblock-iconbtn:hover {
+  background: var(--state-hover-strong);
+  color: var(--gridblock-text-primary);
+}
+.gridblock-iconbtn:active {
+  transform: scale(0.96);
+}
+.gridblock-iconbtn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(var(--gridblock-accent-500-rgb), 0.6);
+}
+
+/* ============================================================
+ * FAB button (map overlays — compass, pitch slider, scale bar).
+ * ============================================================ */
+.gridblock-fab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 2px;
+  background: var(--gridblock-panel);
+  color: var(--gridblock-text-primary);
+  font-size: 11px;
+  font-weight: 600;
+  box-shadow: 0 0 0 1px var(--gridblock-border), 0 4px 10px rgba(0, 0, 0, 0.5);
+  transition: background-color var(--gridblock-dur-press) ease,
+    color var(--gridblock-dur-press) ease,
+    box-shadow var(--gridblock-dur-state) var(--gridblock-ease-out),
+    transform var(--gridblock-dur-press) var(--gridblock-ease-out);
+}
+.gridblock-fab:hover {
+  background: var(--gridblock-pop);
+  /* Slightly stronger ambient shadow on hover lifts the FAB off
+   * the map without resorting to a translateY which would fight
+   * Cesium's pointer hit testing. */
+  box-shadow: 0 0 0 1px var(--gridblock-border-strong),
+    0 6px 14px rgba(0, 0, 0, 0.55);
+}
+.gridblock-fab:active {
+  transform: scale(0.96);
+}
+
+/* ============================================================
+ * Footer scrubber
+ *
+ * 4px horizontal bar (no border-radius). The handle is an 8x24
+ * white grab-rectangle anchored below the bar, NOT a thin accent
+ * vertical line. The handle itself does not animate; the only
+ * motion in the timeline is the `.gridblock-live-dot` heartbeat
+ * on the LIVE pill.
+ * ============================================================ */
+.gridblock-scrubber-track {
+  position: relative;
+  height: 4px;
+  background: color-mix(in oklch, var(--slate-12) 18%, transparent);
+}
+.gridblock-scrubber-handle {
+  position: absolute;
+  /* Anchor at the bar's bottom edge and pull below so the handle
+   * extends downward into the footer chrome. */
+  bottom: -10px;
+  transform: translateX(-50%);
+  width: 8px;
+  height: 24px;
+  border-radius: 3px;
+  background: #fff;
+  border: 1px solid #000;
+  cursor: grab;
+}
+.gridblock-tick-label {
+  /* `bottom: 100%` puts the label's bottom edge AT the track's
+   * top edge — i.e. immediately above the bar. `padding-bottom`
+   * adds a 4px breath between the label baseline and the bar.
+   * `translateX(-50%)` centers the label on its `leftPct`. */
+  position: absolute;
+  bottom: 100%;
+  transform: translateX(-50%);
+  padding-bottom: 4px;
+  font-size: 10px;
+  line-height: 12px;
+  color: var(--gridblock-text-muted);
+  white-space: nowrap;
+  user-select: none;
+  pointer-events: none;
+}
+.gridblock-tick-line {
+  /* Tick lines belong to the 4px track row. Absolute-positioned
+   * so they extend BELOW the bar (height 12 > track 4) — the
+   * portion below the bar is the visible "drop tick". */
+  position: absolute;
+  top: 0;
+  width: 1px;
+  height: 12px;
+  background: color-mix(in oklch, var(--slate-12) 28%, transparent);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+/* ============================================================
+ * Footer divider — 1px x 32px column separator. Sits centered
+ * inside the footer instead of stretching the full row height.
+ * ============================================================ */
+.gridblock-divider {
+  width: 1px;
+  height: 32px;
+  background: var(--gridblock-border);
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+ * Global scrubbing cursor — toggle `body.gridblock-scrubbing`
+ * while dragging the timeline so the cursor stays `grabbing`
+ * even when pointer leaves the handle. (Drag wiring lands in a
+ * follow-up; the utility is here so it's already in the
+ * vocabulary.)
+ * ============================================================ */
+body.gridblock-scrubbing,
+body.gridblock-scrubbing * {
+  cursor: grabbing !important;
+  user-select: none;
+}
+
+/* ============================================================
+ * Panel row — base list-row primitive used inside the side
+ * panels. Padding mirrors a 4px vertical / 10px horizontal
+ * grid.
+ *
+ * Selected uses an inner ring + darker inset bg so the row
+ * reads as "currently focused" without competing with the
+ * panel chrome.
+ * ============================================================ */
+.gridblock-panel-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 4px 10px;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--gridblock-text-primary);
+  background: transparent;
+  border: 0;
+  text-align: start;
+  cursor: pointer;
+  transition: background-color var(--gridblock-dur-press) ease;
+}
+.gridblock-panel-row:hover {
+  background: var(--state-hover);
+}
+.gridblock-panel-row[data-selected="true"] {
+  background: var(--gridblock-panel);
+  box-shadow: inset 0 0 0 1px var(--gridblock-border-strong);
+}
+.gridblock-panel-row:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1px rgba(var(--gridblock-accent-500-rgb), 0.6);
+}
+
+/* ============================================================
+ * Pitch slider — vertical, sits under the compass.
+ *
+ * 8x48 track with a 2px-wide neutral inner groove and a flat
+ * 8px-tall thumb that fills the track width. The 8px-wide hit
+ * target stays comfortable for the cursor while the painted
+ * groove is only 2px — the visual line stays thin.
+ * ============================================================ */
+.gridblock-pitch-track {
+  position: relative;
+  width: 8px;
+  height: 48px;
+  margin: 0 auto;
+  cursor: pointer;
+}
+.gridblock-pitch-track::before {
+  /* The visible 2px groove. Inset 3px on either side leaves a
+   * `8 - 6 = 2px` centered line. */
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  right: 3px;
+  background: color-mix(in oklch, var(--slate-12) 18%, transparent);
+  border-radius: 1px;
+}
+.gridblock-pitch-thumb {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 8px;
+  border-radius: 1px;
+  background: var(--gridblock-text-primary);
+  /* Pull the thumb up by half its height so its center sits on
+   * the `top: ${fraction * 100}%` line driven by the parent. */
+  transform: translateY(-50%);
+  cursor: grab;
+}
+
+/* ============================================================
+ * Live indicator pulse — slow heartbeat on the LIVE dot in the
+ * footer (and anywhere else that needs a "still alive" signal).
+ * Two-second cycle is intentionally slow so it reads as a
+ * heartbeat rather than a flashing alarm. Uses the timeline-only
+ * `--gridblock-live` token so the halo stays green.
+ *
+ * Implementation note: the dot itself paints a static halo via
+ * `box-shadow`, and a `::before` pseudo on top animates only
+ * `transform: scale` + `opacity` (S-tier — compositor only).
+ * An earlier version animated `box-shadow` directly inside the
+ * keyframes, which forces a paint on every frame because shadow
+ * geometry has to be re-rasterised. Always-on infinite animations
+ * are exactly the case where C-tier (paint per frame) shows up
+ * as steady CPU draw, so we promote it to the GPU.
+ * ============================================================ */
+.gridblock-live-dot {
+  position: relative;
+  box-shadow: 0 0 6px var(--gridblock-live);
+}
+.gridblock-live-dot::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-color: var(--gridblock-live);
+  pointer-events: none;
+  /* Stacking: keep the halo behind the dot's own glyph. */
+  z-index: -1;
+  /* Initial state matches the keyframe 0% so reduced-motion
+   * (which kills the animation) leaves a sensible static look. */
+  opacity: 0.4;
+  transform: scale(1);
+  animation: gridblock-live-halo 2.4s var(--gridblock-ease-in-out) infinite;
+}
+@keyframes gridblock-live-halo {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.15;
+    transform: scale(0.6);
+  }
+}
+
+/* ============================================================
+ * Reduced motion — strip every animation that exists for taste
+ * (pulses, scales, reveals). Functional state changes
+ * (background-color, color, box-shadow on focus) keep their
+ * sub-200ms transitions because they communicate state, not
+ * decoration.
+ * ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .gridblock-rail-btn,
+  .gridblock-iconbtn,
+  .gridblock-fab {
+    transition: background-color var(--gridblock-dur-press) ease,
+      color var(--gridblock-dur-press) ease;
+  }
+  .gridblock-rail-btn:active,
+  .gridblock-iconbtn:active,
+  .gridblock-fab:active {
+    transform: none;
+  }
+  .gridblock-live-dot::before {
+    animation: none;
+  }
+  /*
+   * Reduced-motion: snap the panel column instead of animating
+   * the `1fr → 1fr+300px` track. The Motion panel inside also
+   * skips its translateX/opacity tween (see `GridblockShell.tsx`).
+   */
+  .gridblock-grid-cols {
+    transition: none;
+  }
+  .gridblock-canvas-overflow {
+    transition: none;
+  }
+}

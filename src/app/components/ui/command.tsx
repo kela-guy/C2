@@ -17,11 +17,15 @@ function Command({
   className,
   ...props
 }: React.ComponentProps<typeof CommandPrimitive>) {
+  // Substrate: Command never opens its own substrate. It mounts
+  // inside DialogContent (CommandDialog) or PopoverContent — both
+  // of which already paint a substrate surface and provide context
+  // — and inherits from there. Surface vars cascade automatically.
   return (
     <CommandPrimitive
       data-slot="command"
       className={cn(
-        "bg-popover text-popover-foreground flex h-full w-full flex-col overflow-hidden rounded-md",
+        "text-popover-foreground flex h-full w-full flex-col overflow-hidden rounded-md",
         className,
       )}
       {...props}

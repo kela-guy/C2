@@ -16,6 +16,8 @@ import {
   LAUNCHER_ASSETS,
   LIDAR_ASSETS,
   WEAPON_SYSTEM_ASSETS,
+  FLOODLIGHT_ASSETS,
+  SPEAKER_ASSETS,
 } from './tacticalAssets';
 import {
   SensorIcon,
@@ -24,6 +26,8 @@ import {
   DroneHiveIcon,
   LauncherIcon,
   LidarIcon,
+  FloodlightIcon,
+  SpeakerIcon,
 } from './tacticalIcons';
 import { useStrings, getStrings } from '@/lib/intl';
 import type { Device } from './DevicesPanel';
@@ -69,6 +73,9 @@ export function useCameraPresets(): Record<string, string[]> {
 }
 
 const DroneDeviceIcon = ({ size = 28, fill = 'white' }: { size?: number; fill?: string }) => (
+  // The near-black stroke is icon-art (gives the geometry crisp
+  // separation against any substrate). Intentionally NOT routed
+  // through accentHex() — it's outline geometry, not a theme color.
   <svg width={size} height={size} viewBox="0 0 28 32" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path
       d="M23.334 15.7502L9.33696 0.583495L5.86139 4.0835L10.5007 11.0835L9.32456 15.7502L10.5007 20.4168L5.86139 27.4168L9.32456 30.6801L23.334 15.7502Z"
@@ -171,6 +178,30 @@ export function useDevicesFromAssets(): Device[] {
       operationalStatus: 'operational' as const,
       connectionState: 'online' as const,
       Icon: LauncherIcon,
+    })),
+    ...FLOODLIGHT_ASSETS.map((a) => ({
+      id: a.id,
+      name: a.typeLabel,
+      type: 'floodlight' as const,
+      lat: a.latitude,
+      lon: a.longitude,
+      status: 'available' as const,
+      operationalStatus: (DEVICE_HEALTH[a.id] ?? 'operational') as Device['operationalStatus'],
+      connectionState: (DEVICE_CONNECTION[a.id] ?? 'online') as Device['connectionState'],
+      bearingDeg: a.bearingDeg,
+      Icon: FloodlightIcon,
+    })),
+    ...SPEAKER_ASSETS.map((a) => ({
+      id: a.id,
+      name: a.typeLabel,
+      type: 'speaker' as const,
+      lat: a.latitude,
+      lon: a.longitude,
+      status: 'available' as const,
+      operationalStatus: (DEVICE_HEALTH[a.id] ?? 'operational') as Device['operationalStatus'],
+      connectionState: (DEVICE_CONNECTION[a.id] ?? 'online') as Device['connectionState'],
+      coverageRadiusM: a.coverageRadiusM,
+      Icon: SpeakerIcon,
     })),
     {
       id: 'FRIENDLY-01',

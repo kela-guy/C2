@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChevronDown, Loader2 } from '@/lib/icons/central';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { cn } from '@/shared/components/ui/utils';
 import {
   DropdownMenu,
@@ -146,93 +146,95 @@ export function SplitActionButton({
   return (
     <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
       {/*
-        Make the *whole shell* the trigger so the popper anchors to the
-        full button width — not just the small chevron — keeping the
-        dropdown directly under the visible button instead of extending
-        sideways and bleeding off the dashboard panel.
-        Click handling: the primary button calls `e.stopPropagation()`
-        before invoking its own onClick, so primary clicks don't toggle
-        the menu. Clicks on the chevron (a span, not a button) bubble
-        up to the trigger element and toggle the menu the way Radix
-        expects. Keyboard activation lands on the trigger as a unit,
-        which is fine — Enter/Space at the shell-level opens the menu.
+        Two real, sibling buttons inside a shared shell. Only the
+        chevron is wrapped in `DropdownMenuTrigger` so it is the *only*
+        thing that opens the menu — pressing the primary button always
+        runs `onClick` and never opens the dropdown.
+
+        The popper still visually spans the whole shell because:
+          - `align="end"` anchors the menu to the trigger's inline-end
+            edge, which coincides with the chevron's (and the shell's)
+            end edge.
+          - `style={{ minWidth: shellWidth }}` on `DropdownMenuContent`
+            stretches it back to at least the shell width, so the menu
+            sits directly under the button as before.
+
+        A previous version wrapped the whole shell in the trigger and
+        tried to "swallow" primary clicks with `e.stopPropagation()`.
+        That didn't work: Radix opens dropdowns on `pointerdown`, which
+        fires before React's `onClick` synthetic event, so the menu was
+        already open by the time `stopPropagation` ran. Splitting the
+        triggers fixes that class of bug entirely.
       */}
-      <DropdownMenuTrigger asChild disabled={isDisabled}>
-        <div
-          ref={shellRef}
-          role="button"
-          tabIndex={isDisabled ? -1 : 0}
-          aria-disabled={isDisabled}
-          aria-haspopup="menu"
-          aria-expanded={menuOpen}
-          aria-label={moreActionsLabel}
+      <div
+        ref={shellRef}
+        className={cn(
+          'flex w-full items-stretch gap-0.5 rounded',
+          variantShell,
+          disabledCls,
+          className,
+        )}
+        {...(dataTour ? { 'data-tour': dataTour } : {})}
+        {...(loading ? { 'aria-busy': true as const } : {})}
+      >
+        <button
+          type="button"
+          onClick={isDisabled ? undefined : onClick}
+          disabled={isDisabled}
+          onMouseEnter={onHover ? () => onHover(true) : undefined}
+          onMouseLeave={onHover ? () => onHover(false) : undefined}
           className={cn(
-            'flex w-full items-stretch gap-0.5 rounded',
-            variantShell,
-            disabledCls,
-            className,
+            segmentBase,
+            'flex flex-1 items-center justify-center gap-2 px-3',
+            'min-w-0 overflow-hidden rounded-s-[4px]',
+            loading ? 'cursor-wait pointer-events-none' : 'active:scale-[0.98] will-change-transform',
           )}
-          {...(dataTour ? { 'data-tour': dataTour } : {})}
-          {...(loading ? { 'aria-busy': true as const } : {})}
+          {...(loading ? { 'aria-live': 'polite' as const } : {})}
         >
+          <AnimatePresence mode="popLayout" initial={false}>
+            <motion.span
+              key={label}
+              className={cn('flex items-center gap-2', hasSubtitle && 'py-1')}
+              transition={prefersReducedMotion ? { duration: 0 } : { type: 'spring', duration: 0.3, bounce: 0 }}
+              initial={prefersReducedMotion ? false : { opacity: 0, y: -25 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={prefersReducedMotion ? undefined : { opacity: 0, y: 25 }}
+            >
+              {loading ? (
+                <Loader2 size={sz.icon} className={cn('shrink-0', prefersReducedMotion ? 'opacity-90' : 'animate-spin opacity-90')} aria-hidden="true" />
+              ) : (
+                Icon && <Icon size={sz.icon} className="shrink-0 opacity-95" aria-hidden="true" />
+              )}
+              {hasSubtitle ? (
+                <span className="flex flex-col items-start leading-tight">
+                  <span>{label}</span>
+                  <span className="text-[10px] opacity-60 font-normal">{subtitle}</span>
+                </span>
+              ) : (
+                <span>{label}</span>
+              )}
+              {hasBadge && (
+                <span className="text-[10px] font-medium bg-white/[0.12] px-1.5 py-0.5 rounded leading-none whitespace-nowrap">
+                  {badge}
+                </span>
+              )}
+            </motion.span>
+          </AnimatePresence>
+        </button>
+
+        <DropdownMenuTrigger asChild disabled={isDisabled}>
           <button
             type="button"
-            onClick={isDisabled ? undefined : (e) => { e.stopPropagation(); onClick(e); }}
             disabled={isDisabled}
-            onMouseEnter={onHover ? () => onHover(true) : undefined}
-            onMouseLeave={onHover ? () => onHover(false) : undefined}
-            className={cn(
-              segmentBase,
-              'flex flex-1 items-center justify-center gap-2 px-3',
-              'min-w-0 overflow-hidden rounded-s-[4px]',
-              loading ? 'cursor-wait pointer-events-none' : 'active:scale-[0.98] will-change-transform',
-            )}
-            {...(loading ? { 'aria-live': 'polite' as const } : {})}
-          >
-            <AnimatePresence mode="popLayout" initial={false}>
-              <motion.span
-                key={label}
-                className={cn('flex items-center gap-2', hasSubtitle && 'py-1')}
-                transition={prefersReducedMotion ? { duration: 0 } : { type: 'spring', duration: 0.3, bounce: 0 }}
-                initial={prefersReducedMotion ? false : { opacity: 0, y: -25 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={prefersReducedMotion ? undefined : { opacity: 0, y: 25 }}
-              >
-                {loading ? (
-                  <Loader2 size={sz.icon} className={cn('shrink-0', prefersReducedMotion ? 'opacity-90' : 'animate-spin opacity-90')} aria-hidden="true" />
-                ) : (
-                  Icon && <Icon size={sz.icon} className="shrink-0 opacity-95" aria-hidden="true" />
-                )}
-                {hasSubtitle ? (
-                  <span className="flex flex-col items-start leading-tight">
-                    <span>{label}</span>
-                    <span className="text-[10px] opacity-60 font-normal">{subtitle}</span>
-                  </span>
-                ) : (
-                  <span>{label}</span>
-                )}
-                {hasBadge && (
-                  <span className="text-[10px] font-medium bg-white/[0.12] px-1.5 py-0.5 rounded leading-none whitespace-nowrap">
-                    {badge}
-                  </span>
-                )}
-              </motion.span>
-            </AnimatePresence>
-          </button>
-
-          {/*
-            Chevron is now a styled span (not a button) — the parent
-            shell is the actual interactive trigger. Keeps the visual
-            layout identical without nesting a button inside a button.
-          */}
-          <span
+            aria-label={moreActionsLabel}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
             className={cn(
               segmentBase,
               sz.chevronMin,
               'flex shrink-0 items-center justify-center px-2 rounded-e-[4px]',
               chevronExtras,
             )}
-            aria-hidden="true"
           >
             <ChevronDown
               size={Math.max(sz.icon - 2, 10)}
@@ -242,9 +244,9 @@ export function SplitActionButton({
               )}
               aria-hidden="true"
             />
-          </span>
-        </div>
-      </DropdownMenuTrigger>
+          </button>
+        </DropdownMenuTrigger>
+      </div>
 
       <DropdownMenuContent
         side="bottom"
@@ -255,9 +257,9 @@ export function SplitActionButton({
           // `align="end"` already anchors the popover to the inline-end
           // corner; keep the transform origin matching the trigger
           // (Radix's CSS variable handles direction internally).
-          'rounded-lg border-none p-1 [transform-origin:var(--radix-dropdown-menu-content-transform-origin)]',
-          'bg-[#1c1c20] text-white',
-          'shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_8px_30px_rgba(0,0,0,0.5)]',
+          // Surface + shadow now come from <MenuSurface> in
+          // ui/dropdown-menu.tsx (substrate lift +2).
+          'rounded-lg border-none p-1 [transform-origin:var(--radix-dropdown-menu-content-transform-origin)] text-slate-12',
           prefersReducedMotion && 'data-[state=open]:animate-none data-[state=closed]:animate-none',
         )}
         onCloseAutoFocus={(e) => e.preventDefault()}

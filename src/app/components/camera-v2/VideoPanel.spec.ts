@@ -4,12 +4,12 @@ export const spec: ComponentSpec = {
   name: 'VideoPanel',
   filePath: 'src/app/components/camera-v2/VideoPanel.tsx',
   purpose:
-    'Multi-feed video panel for the rebuilt video feature. Shows up to 4 camera feeds in adaptive layouts (1 = fill, 2 = vertical stack, 3-4 = 2x2 grid). Drop on the panel appends; drop on a tile swaps. Maximize / PIP layout was removed in v2. Adding feeds is driven entirely by drag/drop or pin-from-devices.',
+    'Multi-feed video panel for the rebuilt video feature. Shows up to 5 camera feeds in one of four operator-chosen layouts via the panel-level VideoLayoutPicker: Single (1 fills), Stack-2 (2 vertical), Grid 2x2 (up to 4), Hero+Filmstrip (1 hero + up to 4 thumbs). When the chosen layout cannot fit the current feed count, the panel falls back deterministically (hero-filmstrip → grid-2x2 → stack-2 → single). Drop on the panel appends; drop on a tile swaps. Adding feeds is driven entirely by drag/drop or pin-from-devices.',
   location: 'Composition (camera-v2)',
   status: 'prototype',
 
   props: [
-    { name: 'feeds', type: 'CameraFeed[]', required: true, description: 'Active feeds (max 4). Each: { cameraId, mode, showDetections?, designateMode?, playback? }' },
+    { name: 'feeds', type: 'CameraFeed[]', required: true, description: 'Active feeds (max 5). Each: { cameraId, mode, showDetections?, designateMode?, playback? }' },
     { name: 'onFeedsChange', type: '(feeds: CameraFeed[]) => void', required: true, description: 'Called when feeds are added, removed, or modified' },
     { name: 'cameraLabelById', type: 'Record<string, string>', required: true, description: 'Display label per camera id' },
     { name: 'statusByCameraId', type: 'Record<string, CameraStatus>', required: true, description: 'Live telemetry + ownership per camera (and drone)' },
@@ -26,12 +26,18 @@ export const spec: ComponentSpec = {
     { name: 'onTileFocus', type: '(cameraId: string) => void', required: false, description: 'Bubbled when a tile gains focus, so the panel can track the LRU tile for pin-swap logic.' },
     { name: 'onZoomChange', type: '(cameraId: string, zoomLevel: number) => void', required: false, description: 'Bubbles zoom slider changes to the parent.' },
     { name: 'onDesignateTarget', type: '(cameraId: string, normX: number, normY: number) => void', required: false, description: 'Operator clicked a point on a feed in designate-target mode. Coords are normalised (0..1, top-left origin).' },
+    { name: 'layout', type: "LayoutKind ('single' | 'stack-2' | 'grid-2x2' | 'hero-filmstrip')", required: true, description: 'Operator-chosen layout preset. The panel never auto-overrides this — invalid combinations fall back at render time but the prop value is preserved so the picker keeps showing the operator intent.' },
+    { name: 'onLayoutChange', type: '(next: LayoutKind) => void', required: true, description: 'Picker change callback. Wired to the parent state (PlaygroundPage / Dashboard).' },
+    { name: 'heroIndex', type: 'number', required: true, description: 'Index into feeds[] of the tile that takes the hero slot in the hero-filmstrip layout. Ignored by the other three layouts. Clamped to [0, feeds.length-1] internally.' },
+    { name: 'onHeroChange', type: '(next: number) => void', required: true, description: 'Operator promoted a thumb (or via prop change). Used by the parent to update heroIndex.' },
   ],
 
   states: [
-    { name: 'single feed', trigger: 'feeds.length === 1', description: 'One feed fills the panel', implementedInPrototype: true },
-    { name: 'two feeds (stacked)', trigger: 'feeds.length === 2', description: 'Vertical stack with 1px divider', implementedInPrototype: true },
-    { name: 'three / four feeds (grid)', trigger: 'feeds.length === 3 || 4', description: '2x2 CSS grid; gaps shown as 1px white/10 lines', implementedInPrototype: true },
+    { name: 'layout: single', trigger: "layout === 'single' (or fallback when feeds.length <= 1)", description: 'First feed fills the panel; picker hidden', implementedInPrototype: true, storyProps: { layout: 'single' } },
+    { name: 'layout: stack-2', trigger: "layout === 'stack-2' && feeds.length >= 2", description: 'Two feeds vertically split 50/50 with 1px divider', implementedInPrototype: true, storyProps: { layout: 'stack-2' } },
+    { name: 'layout: grid-2x2', trigger: "layout === 'grid-2x2'", description: '2x2 CSS grid; gaps shown as 1px white/10 lines (renders any number of feeds 1-4)', implementedInPrototype: true, storyProps: { layout: 'grid-2x2' } },
+    { name: 'layout: hero-filmstrip', trigger: "layout === 'hero-filmstrip' && feeds.length >= 2", description: 'feeds[heroIndex] takes the top ~78% of height; remaining feeds render as a horizontal filmstrip in the bottom ~22%. Each thumb gets a hover "Use as main" button and double-click promotion.', implementedInPrototype: true, storyProps: { layout: 'hero-filmstrip', heroIndex: 0 } },
+    { name: 'layout fallback', trigger: 'chosen layout cannot fit feed count', description: 'Falls back deterministically: hero-filmstrip → grid-2x2 → stack-2 → single. The chosen value persists in props so the picker reflects intent.', implementedInPrototype: true },
     { name: 'panel fullscreen', trigger: 'fullscreen === true', description: 'Panel grows to occupy the entire viewport (left nav hidden)', implementedInPrototype: true },
     { name: 'empty slot', trigger: 'feed.cameraId === ""', description: 'Slot shows a "drop or pin a device here" hint', implementedInPrototype: true },
     { name: 'panel drop hover', trigger: 'A device card is dragged over the panel background', description: 'Inset sky ring on the entire panel; drop appends or pins (LRU swap if full)', implementedInPrototype: true },
@@ -42,6 +48,9 @@ export const spec: ComponentSpec = {
 
   interactions: [
     { trigger: 'click', element: 'Fullscreen button on a tile', result: 'Calls onFullscreenToggle; panel expands viewport-wide' },
+    { trigger: 'click', element: 'Layout picker icon (top inline-end corner)', result: 'Calls onLayoutChange with the chosen LayoutKind. Disabled options (those that cannot fit current feed count) are not selectable.' },
+    { trigger: 'click', element: 'Promote-to-hero button on a thumb (hero-filmstrip layout only)', result: 'Calls onHeroChange with the thumb index; thumb swaps into the hero slot, the previous hero falls into the filmstrip.' },
+    { trigger: 'dblclick', element: 'Filmstrip thumb body', result: 'Same as the promote button — swaps the tile into the hero slot. Inner interactive elements (control bar, designate overlay) are excluded so the gesture does not interfere with them.' },
     { trigger: 'drop', element: 'Tile body', result: 'Swaps the tile cameraId to the dropped device' },
     { trigger: 'drop', element: 'Panel background (not on a tile)', result: 'Calls onPinDevice with the device id' },
   ],
@@ -67,6 +76,23 @@ export const spec: ComponentSpec = {
         { actor: 'user', action: 'Opens the devices panel and clicks Pin on a camera card', result: 'PlaygroundPage.handlePinDevice fills an empty slot, appends a new feed, or swaps the LRU tile' },
         { actor: 'user', action: 'Drags another camera card onto an existing tile', result: 'Tile cameraId is replaced (swap-on-drop)' },
         { actor: 'user', action: 'Drags a card onto the panel whitespace', result: 'Same logic as click-to-pin (panel-level drop)' },
+      ],
+    },
+    {
+      name: 'Switch to Hero+Filmstrip and promote a thumb',
+      type: 'happy',
+      steps: [
+        { actor: 'user', action: 'With 3+ feeds open, clicks the LayoutPanelTop icon in the picker', result: 'onLayoutChange("hero-filmstrip"); panel re-renders with feeds[0] as hero and the rest as a horizontal strip below.' },
+        { actor: 'user', action: 'Hovers a filmstrip thumb', result: 'Centered "Use as main" button fades in (opacity, 150ms)' },
+        { actor: 'user', action: 'Clicks the button (or double-clicks the thumb body)', result: 'onHeroChange(thumbIndex); the thumb takes the hero slot, the previous hero drops into the filmstrip.' },
+      ],
+    },
+    {
+      name: 'Detection alert lights up an off-screen feed',
+      type: 'happy',
+      steps: [
+        { actor: 'system', action: 'Detection backend emits a new DetectionBox for a feed currently rendered as a filmstrip thumb', result: 'TileDetectionAlert ring appears on the thumb (200ms opacity in) and fires a one-shot pulse keyed by the new id (~600ms).' },
+        { actor: 'user', action: 'Notices the pulse and promotes that thumb to hero', result: 'Hero swap exposes the full HUD + detection boxes for investigation.' },
       ],
     },
   ],
@@ -110,8 +136,9 @@ export const spec: ComponentSpec = {
   ],
 
   notes: [
-    'Panel is presentational - all state lives in PlaygroundPage. This keeps the component swap into Dashboard easy.',
-    'YouTube-inspired hover affordance: top HUD always visible, bottom control bar fades in on hover/focus.',
-    'Maximize / PIP was removed in v2 - empty slots and the pin-from-devices flow replace the use case.',
+    'Panel is presentational - all state (feeds, layout, heroIndex) lives in PlaygroundPage. This keeps the component swap into Dashboard easy.',
+    'Layout is operator-controlled (manual picker), not derived from feed count. The picker is hidden when feeds.length <= 1 because there is no meaningful choice. When the chosen layout cannot fit the current feed count, the panel falls back deterministically (hero-filmstrip → grid-2x2 → stack-2 → single) but preserves the chosen value so the picker reflects intent.',
+    'YouTube-inspired hover affordance: top HUD always visible, bottom control bar fades in on hover/focus. Filmstrip thumbs additionally get a centered "Use as main" overlay on hover.',
+    'Layout choice persists across sessions via localStorage (key c2.video-layout.v1) at the parent (PlaygroundPage / Dashboard) layer.',
   ],
 };

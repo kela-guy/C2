@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import {
   TargetCard,
   CardHeader,
@@ -283,13 +283,13 @@ function UnifiedCard({
       {slots.closureType && (
         <div className="px-2 pt-1.5 flex items-center gap-1">
           {slots.closureType === 'manual' ? (
-            <div className="flex items-center gap-1 text-[9px] text-zinc-500">
-              <Hand size={10} className="text-zinc-500" aria-hidden="true" />
+            <div className="flex items-center gap-1 text-[9px] text-slate-9">
+              <Hand size={10} className="text-slate-9" aria-hidden="true" />
               <span>{los.closeManual}</span>
             </div>
           ) : (
-            <div className="flex items-center gap-1 text-[9px] text-zinc-500">
-              <Zap size={10} className="text-zinc-500" aria-hidden="true" />
+            <div className="flex items-center gap-1 text-[9px] text-slate-9">
+              <Zap size={10} className="text-slate-9" aria-hidden="true" />
               <span>{los.closeAuto}</span>
             </div>
           )}
@@ -414,7 +414,7 @@ export function SystemCard({
 
 /** @deprecated Use UnifiedCard with useCardSlots instead */
 export function ExpandedTargetDetails({ target }: { target: Detection; [key: string]: any }) {
-  return <div className="p-2 text-xs text-zinc-400">Use ComposedCard instead</div>;
+  return <div className="p-2 text-xs text-slate-10">Use ComposedCard instead</div>;
 }
 
 // ─── List Component ─────────────────────────────────────────────────────────
@@ -742,7 +742,7 @@ export default function ListOfSystems({
     emptyLabel: string = los.emptyDefault,
   ) => {
     if (list.length === 0) {
-      return <div className="p-2 text-center text-xs text-white">{emptyLabel}</div>;
+      return <div className="p-2 text-center text-xs text-slate-12">{emptyLabel}</div>;
     }
 
     return (
@@ -784,9 +784,9 @@ export default function ListOfSystems({
 
   return (
     <div className={`w-full flex flex-col ${className}`}>
-      <div className="sticky top-0 z-10 bg-[#141414]">
+      <div className="sticky top-0 z-10 bg-surface-2">
         {/* Tab bar */}
-        <div data-tour="detection-tabs" className="flex border-b border-white/10 px-1" role="tablist">
+        <div data-tour="detection-tabs" className="flex border-b border-border-default px-1" role="tablist">
           <button
             id="tab-active"
             onClick={() => setActiveTab('active')}
@@ -794,12 +794,12 @@ export default function ListOfSystems({
             aria-selected={activeTab === 'active'}
             aria-controls="tabpanel-active"
             className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold transition-colors border-b-2 ${
-              activeTab === 'active' ? 'border-white text-white' : 'border-transparent text-zinc-400 hover:text-zinc-300'
+              activeTab === 'active' ? 'border-slate-12 text-slate-12' : 'border-transparent text-slate-10 hover:text-slate-11'
             }`}
           >
             {los.tabActive}
             {activeCount > 0 && (
-              <span className="text-[10px] font-mono bg-white/10 rounded px-1.5 py-0.5 tabular-nums">{activeCount}</span>
+              <span className="text-[10px] font-mono bg-state-hover-strong rounded px-1.5 py-0.5 tabular-nums">{activeCount}</span>
             )}
           </button>
           <button
@@ -810,7 +810,7 @@ export default function ListOfSystems({
             aria-selected={activeTab === 'completed'}
             aria-controls="tabpanel-completed"
             className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold transition-colors border-b-2 ${
-              activeTab === 'completed' ? 'border-white text-white' : 'border-transparent text-zinc-400 hover:text-zinc-300'
+              activeTab === 'completed' ? 'border-slate-12 text-slate-12' : 'border-transparent text-slate-10 hover:text-slate-11'
             }`}
           >
             {los.tabCompleted}

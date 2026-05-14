@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useDrag } from 'react-dnd';
 import { X, Camera, AlertTriangle, MapPin, BellOff, Wrench, Check, Loader2, Pin, PinFilled, PinOff } from '@/lib/icons/central';
+import { GridblockPanel } from './gridblock';
 import { Square, ChevronsUpDown } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
@@ -10,10 +11,10 @@ import { Collapsible, CollapsibleContent } from './ui/collapsible';
 import { Popover, PopoverTrigger, PopoverContent } from './ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from './ui/command';
 import { Button } from './ui/button';
-import { LAYOUT_TOKENS } from '@/primitives/tokens';
 import { StatusChip } from '@/primitives/StatusChip';
 import { JamIcon, BatteryIcon } from '@/primitives/ProductIcons';
 import { FilterBar, type FilterDef } from '@/primitives';
+import { accentHex } from '@/primitives/accentHex';
 
 export const DEVICE_CAMERA_DRAG_TYPE = 'DEVICE_CAMERA';
 export interface DeviceCameraDragItem {
@@ -249,6 +250,27 @@ const CONNECTION_STATE_CHIP_COLORS: Record<ConnectionState, 'green' | 'gray' | '
   warning: 'orange',
 };
 
+/**
+ * Tiny self-ticking countdown for a single muted device. Owns its own
+ * 1 Hz interval so the parent `DevicesPanel` doesn't have to re-render
+ * every second to refresh `MM:SS` text on every visible row.
+ */
+function MuteCountdown({ expiry }: { expiry: number }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const remaining = Math.max(0, expiry - now);
+  const mins = Math.floor(remaining / 60000);
+  const secs = Math.floor((remaining % 60000) / 1000);
+  return (
+    <>
+      {String(mins).padStart(2, '0')}:{String(secs).padStart(2, '0')}
+    </>
+  );
+}
+
 export function DeviceRow({
   device,
   isExpanded,
@@ -262,7 +284,7 @@ export function DeviceRow({
   speakerTracks = DEFAULT_SPEAKER_TRACKS,
   onFlyTo,
   isMuted,
-  muteRemaining,
+  muteExpiry,
   onToggleMute,
   onPinToFeed,
   onUnpinFromFeed,
@@ -283,7 +305,8 @@ export function DeviceRow({
   speakerTracks?: { id: string; label: string }[];
   onFlyTo: (lat: number, lon: number) => void;
   isMuted: boolean;
-  muteRemaining: string | null;
+  /** Unix epoch ms when the mute expires; null when not muted. */
+  muteExpiry: number | null;
   onToggleMute: (deviceId: string) => void;
   /** Pin a camera/drone into the next available video feed slot. */
   onPinToFeed?: (deviceId: string) => void;
@@ -361,7 +384,7 @@ export function DeviceRow({
         tabIndex={0}
         onClick={onToggle}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(); } }}
-        className={`flex items-center justify-center gap-2.5 px-4 py-2.5 text-end transition-[background-color,border-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25 border-b border-white/[0.06] ${
+        className={`flex items-center justify-center gap-2.5 px-4 py-2.5 transition-[background-color,border-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25 border-b border-white/[0.06] ${
           isExpanded ? 'bg-white/[0.04]' : 'hover:bg-white/[0.04] active:bg-white/[0.06]'
         } cursor-pointer`}
         onMouseEnter={() => onHover(device.id)}
@@ -370,7 +393,7 @@ export function DeviceRow({
         <div className={`relative w-8 h-8 rounded flex items-center justify-center shrink-0 ${isMalfunctioning ? 'bg-orange-900/40' : 'bg-white/10'}`}>
           <device.Icon
             size={20}
-            fill={isMalfunctioning ? '#f97316' : 'white'}
+            fill={isMalfunctioning ? accentHex('warning') : 'white'}
             active={(isFloodlight && !!isFloodlightOn) || (isSpeaker && !!isSpeakerPlaying)}
           />
           {showStatusDot && (
@@ -406,10 +429,10 @@ export function DeviceRow({
               )}
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
-              {isMuted && muteRemaining && (
+              {isMuted && muteExpiry != null && (
                 <span className="flex items-center gap-1 text-xs font-mono tabular-nums text-white">
                   <BellOff size={12} className="text-white" />
-                  {muteRemaining}
+                  <MuteCountdown expiry={muteExpiry} />
                 </span>
               )}
               {(onPinToFeed || onUnpinFromFeed) && (device.type === 'camera' || device.type === 'drone') && (
@@ -623,7 +646,7 @@ export function DeviceRow({
                   <PopoverContent
                     align="start"
                     sideOffset={4}
-                    className="w-[var(--radix-popover-trigger-width)] min-w-[180px] p-0 bg-zinc-900 text-white border-white/10 shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_8px_24px_rgba(0,0,0,0.35)] origin-top-left rtl:origin-top-right"
+                    className="w-[var(--radix-popover-trigger-width)] min-w-[180px] p-0 text-slate-12 origin-top-left rtl:origin-top-right"
                     onClick={(e) => e.stopPropagation()}
                     onKeyDown={(e) => e.stopPropagation()}
                   >
@@ -784,7 +807,16 @@ export interface DevicesPanelProps {
   onUnpinFromFeed?: (deviceId: string) => void;
   /** Set / list of device ids currently pinned to a feed. Drives the Pin/Unpin toggle state. */
   pinnedDeviceIds?: ReadonlySet<string> | readonly string[];
+  /**
+   * @deprecated The Dashboard now renders DevicesPanel inside a CSS
+   * Grid cell that owns the slide animation, so per-panel transition
+   * suppression is no longer needed. Kept for prop-shape compatibility.
+   */
   noTransition?: boolean;
+  /**
+   * @deprecated Width is now controlled by the parent grid cell
+   * (`LAYOUT_TOKENS.panelWidthPx`). Kept for prop-shape compatibility.
+   */
   width?: number;
   focusedDeviceId?: string | null;
   /** Override per-type group labels. Falls back to `DEFAULT_TYPE_LABELS` (English). */
@@ -817,8 +849,6 @@ export function DevicesPanel({
   onPinToFeed,
   onUnpinFromFeed,
   pinnedDeviceIds,
-  noTransition,
-  width,
   focusedDeviceId,
   typeLabels: typeLabelsProp,
   connectionStateLabels: connectionStateLabelsProp,
@@ -879,13 +909,18 @@ export function DevicesPanel({
   }, [focusedDeviceId]);
 
   const [mutedDevices, setMutedDevices] = useState<Map<string, number>>(new Map());
-  const [, setTick] = useState(0);
 
+  // Sweep expired mutes every 1s, but only update state when at least
+  // one mute actually expired (the `setMutedDevices` callback returns
+  // `prev` otherwise, so React skips the re-render). Live countdown
+  // refresh is owned by per-row `<MuteCountdown />` so this effect
+  // never has to force a panel-wide tick just to repaint MM:SS text.
   useEffect(() => {
     if (mutedDevices.size === 0) return;
     const id = setInterval(() => {
       const now = Date.now();
       setMutedDevices(prev => {
+        if (prev.size === 0) return prev;
         const next = new Map(prev);
         let changed = false;
         for (const [deviceId, expiry] of next) {
@@ -896,7 +931,6 @@ export function DevicesPanel({
         }
         return changed ? next : prev;
       });
-      setTick(t => t + 1);
     }, 1000);
     return () => clearInterval(id);
   }, [mutedDevices.size > 0]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -913,14 +947,10 @@ export function DevicesPanel({
     });
   }, []);
 
-  const getMuteRemaining = useCallback((deviceId: string): string | null => {
-    const expiry = mutedDevices.get(deviceId);
-    if (!expiry) return null;
-    const remaining = Math.max(0, expiry - Date.now());
-    const mins = Math.floor(remaining / 60000);
-    const secs = Math.floor((remaining % 60000) / 1000);
-    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-  }, [mutedDevices]);
+  // Live countdown text now lives in <MuteCountdown />, which ticks
+  // itself once per second only when actually rendered. The panel just
+  // forwards the raw expiry timestamp, so unrelated devices don't pay
+  // a render cost just because someone muted one row.
 
   const typeCounts = useMemo(() => {
     const counts = {} as Record<DeviceType, number>;
@@ -973,30 +1003,27 @@ export function DevicesPanel({
       })),
   }), [strings.typeFilterLabel, typeCounts, typeLabels, typeFilterIcons]);
 
-  return (
-    // Same inline-start docking pattern as the Dashboard sidebar: the panel
-    // sits on the inline-start edge (left in LTR, right in RTL), adjacent to
-    // the slim rail, and slides off-screen toward that edge in both
-    // directions (`-translate-x-full` for LTR, `rtl:translate-x-full` for
-    // RTL). Border-end is the divider that faces the map.
-    <aside
-      className={`absolute top-0 bottom-0 start-0 bg-zinc-950 border-e border-white/10 flex flex-col z-10 font-sans ${noTransition ? '' : 'transition-transform duration-300 ease-out'} ${open ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full pointer-events-none'}`}
-      style={{ width: width ?? LAYOUT_TOKENS.sidebarWidthPx }}
-    >
-      <div className="shrink-0">
-        <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-white/10">
-          <h2 className="text-xs font-medium text-white uppercase tracking-wider">
-            {title} ({devices.length})
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-2 -m-1 rounded hover:bg-white/10 text-zinc-500 hover:text-zinc-300 transition-[color,background-color,transform] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
-            aria-label={closeAriaLabel}
-          >
-            <X size={14} />
-          </button>
-        </div>
+  // Header title carries an inline device count so the operator sees
+  // the total at a glance, matching the legacy `Devices (12)` chrome.
+  const headerTitle = (
+    <>
+      {title} <span className="text-[var(--gridblock-text-muted)]">({devices.length})</span>
+    </>
+  );
 
+  return (
+    // The Dashboard mounts this panel inside its own CSS Grid cell that
+    // owns the slide-in animation, so the panel itself just fills the
+    // cell and lets the GridblockPanel chrome drive header + scroll.
+    // The panel is also conditionally mounted by the parent — `open` is
+    // effectively always true here, but we keep the prop for back-compat
+    // callers.
+    <GridblockPanel
+      title={headerTitle}
+      onClose={onClose}
+      closeAriaLabel={closeAriaLabel}
+      testId="devices-panel"
+      toolbar={
         <FilterBar
           query={query}
           onQueryChange={setQuery}
@@ -1009,49 +1036,61 @@ export function DevicesPanel({
           resetLabel={strings.resetFiltersLabel}
           resetAriaLabel={strings.resetFilters}
         />
-      </div>
-
-      <div className="flex-1 overflow-y-auto">
-        {grouped.length === 0 ? (
-          <div className="px-3 py-8 text-center text-[12px] text-zinc-600">
-            {strings.noMatches}
-          </div>
-        ) : (
-          grouped.map(group => (
-            <div key={group.type}>
-              <div className="px-4 py-1.5 text-xs font-normal uppercase tracking-wider text-white border-b border-white/5 bg-white/5">
-                {group.label} ({group.devices.length})
-              </div>
-              {group.devices.map(device => (
-                <div key={device.id} ref={device.id === focusedDeviceId ? focusedRowRef : undefined}>
-                  <DeviceRow
-                    device={device}
-                    isExpanded={expandedId === device.id}
-                    onToggle={() => handleRowClick(device)}
-                    onHover={onDeviceHover ?? (() => {})}
-                    onJamActivate={onJamActivate}
-                    onFloodlightToggle={onFloodlightToggle}
-                    onSpeakerToggle={onSpeakerToggle}
-                    isFloodlightOn={floodlightOnIds?.has(device.id)}
-                    isSpeakerPlaying={speakerPlayingIds?.has(device.id)}
-                    speakerTracks={speakerTracks}
-                    onFlyTo={onFlyTo}
-                    isMuted={mutedDevices.has(device.id)}
-                    muteRemaining={getMuteRemaining(device.id)}
-                    onToggleMute={handleToggleMute}
-                    onPinToFeed={onPinToFeed}
-                    onUnpinFromFeed={onUnpinFromFeed}
-                    isPinnedToFeed={pinnedSet.has(device.id)}
-                    connectionStateLabels={connectionStateLabels}
-                    cameraPresets={cameraPresets}
-                    strings={strings}
-                  />
-                </div>
-              ))}
+      }
+    >
+      {grouped.length === 0 ? (
+        <div className="px-3 py-8 text-center text-[12px] text-[var(--gridblock-text-muted)]">
+          {strings.noMatches}
+        </div>
+      ) : (
+        grouped.map((group, index) => (
+          <div key={group.type}>
+            {/*
+             * Category strip. Every header carries the same bottom
+             * hairline that visually closes off its row list, and
+             * every header except the first also paints a top hairline
+             * so adjacent groups read as discrete bands. The first
+             * group omits the top border because its panel toolbar
+             * already supplies the seam above it — doubling up here
+             * would land two parallel hairlines on the same physical
+             * line and read as a thicker, off-key chrome stroke.
+             */}
+            <div
+              className={`px-4 py-1.5 text-xs font-normal uppercase tracking-wider text-[var(--gridblock-text-primary)] border-b border-[var(--gridblock-border)] bg-[var(--gridblock-bar)]${
+                index > 0 ? ' border-t' : ''
+              }`}
+            >
+              {group.label} ({group.devices.length})
             </div>
-          ))
-        )}
-      </div>
-    </aside>
+            {group.devices.map(device => (
+              <div key={device.id} ref={device.id === focusedDeviceId ? focusedRowRef : undefined}>
+                <DeviceRow
+                  device={device}
+                  isExpanded={expandedId === device.id}
+                  onToggle={() => handleRowClick(device)}
+                  onHover={onDeviceHover ?? (() => {})}
+                  onJamActivate={onJamActivate}
+                  onFloodlightToggle={onFloodlightToggle}
+                  onSpeakerToggle={onSpeakerToggle}
+                  isFloodlightOn={floodlightOnIds?.has(device.id)}
+                  isSpeakerPlaying={speakerPlayingIds?.has(device.id)}
+                  speakerTracks={speakerTracks}
+                  onFlyTo={onFlyTo}
+                  isMuted={mutedDevices.has(device.id)}
+                  muteExpiry={mutedDevices.get(device.id) ?? null}
+                  onToggleMute={handleToggleMute}
+                  onPinToFeed={onPinToFeed}
+                  onUnpinFromFeed={onUnpinFromFeed}
+                  isPinnedToFeed={pinnedSet.has(device.id)}
+                  connectionStateLabels={connectionStateLabels}
+                  cameraPresets={cameraPresets}
+                  strings={strings}
+                />
+              </div>
+            ))}
+          </div>
+        ))
+      )}
+    </GridblockPanel>
   );
 }

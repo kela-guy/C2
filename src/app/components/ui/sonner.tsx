@@ -1,6 +1,14 @@
 import { Toaster as Sonner } from "sonner";
 import type { ToasterProps } from "sonner";
 
+/*
+ * Sonner Toaster styled against the new substrate / state token
+ * system. Toasts portal to <body> outside the Substrate tree, so
+ * they pick their surface explicitly: --surface-3 lines up with
+ * the in-app NotificationToast wells and reads as "alert chrome
+ * sitting above the page substrate" without competing with
+ * popovers (which sit at substrate 5).
+ */
 const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
@@ -12,9 +20,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
       style={{ zIndex: 60 }}
       toastOptions={{
         style: {
-          background: '#1c1c20',
-          border: 'none',
-          boxShadow: '0 0 0 1px rgba(255,255,255,0.10), 0 8px 30px rgba(0,0,0,0.5)',
+          background: 'var(--surface-3)',
+          color: 'var(--slate-12)',
+          border: '1px solid var(--border-default)',
+          boxShadow: 'var(--shadow-5)',
           borderRadius: '8px',
           direction: 'rtl',
         },

@@ -36,6 +36,11 @@ import { mark } from '@/lib/perf/measure';
 import { clearSink } from '@/lib/perf/sink';
 import { downloadTrace } from '@/lib/perf/trace';
 import { getRegisteredCesiumViewer } from './PerfHud';
+import { accentHex, slateHex } from '@/primitives/accentHex';
+
+const HUD_FG = slateHex(12);
+const HUD_OK = accentHex('success');
+const HUD_PRIMARY = accentHex('info');
 
 interface RunContext {
   signal: AbortSignal;
@@ -127,7 +132,7 @@ export function PerfScenarios(): React.JSX.Element {
             style={{
               ...rowBtnStyle,
               opacity: disabled && !isRunning ? 0.45 : 1,
-              borderColor: isRunning ? '#1f6feb' : 'rgba(255,255,255,0.12)',
+              borderColor: isRunning ? HUD_PRIMARY : 'rgba(255,255,255,0.12)',
             }}
             title={def.needsViewer && !viewerPresent ? 'Cesium viewer not attached yet' : undefined}
           >
@@ -339,7 +344,7 @@ const rowBtnStyle: CSSProperties = {
   justifyContent: 'space-between',
   gap: 8,
   font: '10px/1.3 ui-monospace, monospace',
-  color: '#e6edf3',
+  color: HUD_FG,
   background: 'rgba(255,255,255,0.06)',
   border: '1px solid rgba(255,255,255,0.12)',
   borderRadius: 4,
@@ -350,7 +355,7 @@ const rowBtnStyle: CSSProperties = {
 
 const countdownStyle: CSSProperties = {
   fontVariantNumeric: 'tabular-nums',
-  color: '#7ee787',
+  color: HUD_OK,
   fontWeight: 600,
 };
 
@@ -369,8 +374,8 @@ const overlayBackdropStyle: CSSProperties = {
 const overlayCardStyle: CSSProperties = {
   minWidth: 360,
   maxWidth: '60vw',
-  background: 'rgba(13, 17, 23, 0.96)',
-  color: '#e6edf3',
+  background: `color-mix(in oklch, ${slateHex(2)} 96%, transparent)`,
+  color: HUD_FG,
   border: '1px solid rgba(255,255,255,0.14)',
   borderRadius: 10,
   padding: '24px 28px',

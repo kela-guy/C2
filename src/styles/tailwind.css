@@ -1,4 +1,173 @@
 @import 'tailwindcss' source(none);
-@source '../**/*.{js,ts,jsx,tsx}';
+/*
+  Narrow class-extraction sources to directories that actually contain
+  JSX / className strings. The previous broad ../star-star/star
+  rescanned src/lib/perf (no UI), src/imports (data only), and
+  src/styles itself on every save -- pure overhead during the
+  Tailwind v4 per-edit extraction pass on a large project.
+*/
+@source '../app/**/*.{js,ts,jsx,tsx}';
+@source '../primitives/**/*.{js,ts,jsx,tsx}';
+@source '../main.tsx';
 
 @import 'tw-animate-css';
+
+/*
+ * Tailwind v4 @theme mirror for the OKLCH Slate palette.
+ *
+ * Publishes utility classes for the tokens declared in palette.css:
+ *   bg-surface-1..8 / bg-surface-void
+ *   text-slate-1..12
+ *   bg-accent-{danger,warning,success,info,tracking,historical,cyan,magenta}
+ *   bg-accent-{danger,warning,success,info}-soft / -tint
+ *   bg-disposition-{suspect,assumed-friend,neutral}
+ *   border-border-{default,strong,subtle}
+ *   bg-state-{hover,hover-strong,pressed,selected}
+ *
+ * Each entry resolves to var(--token) so a theme switch (.light)
+ * cascades through Tailwind utilities automatically.
+ *
+ * Legacy aliases (--color-n-*, --color-1..12 tactical red, --color-surface,
+ * --color-text-primary, --color-text-secondary, --color-overlay,
+ * --color-blue-accent, --color-blue-light-bg, --color-border-default,
+ * --color-surface-subtle, --color-surface-chip) are preserved here
+ * pointing at the new tokens for backwards compatibility. The
+ * cleanup-and-verify todo removes them once callsites are migrated.
+ */
+@theme {
+  /* Surfaces */
+  --color-surface-void: var(--surface-void);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-surface-4: var(--surface-4);
+  --color-surface-5: var(--surface-5);
+  --color-surface-6: var(--surface-6);
+  --color-surface-7: var(--surface-7);
+  --color-surface-8: var(--surface-8);
+
+  /* Slate ramp */
+  --color-slate-1:  var(--slate-1);
+  --color-slate-2:  var(--slate-2);
+  --color-slate-3:  var(--slate-3);
+  --color-slate-4:  var(--slate-4);
+  --color-slate-5:  var(--slate-5);
+  --color-slate-6:  var(--slate-6);
+  --color-slate-7:  var(--slate-7);
+  --color-slate-8:  var(--slate-8);
+  --color-slate-9:  var(--slate-9);
+  --color-slate-10: var(--slate-10);
+  --color-slate-11: var(--slate-11);
+  --color-slate-12: var(--slate-12);
+
+  /* Tactical accents (vivid) */
+  --color-accent-danger:     var(--accent-danger);
+  --color-accent-warning:    var(--accent-warning);
+  --color-accent-tracking:   var(--accent-tracking);
+  --color-accent-success:    var(--accent-success);
+  --color-accent-info:       var(--accent-info);
+  --color-accent-historical: var(--accent-historical);
+  --color-accent-cyan:       var(--accent-cyan);
+  --color-accent-magenta:    var(--accent-magenta);
+
+  /* Tactical accents (soft + tints) */
+  --color-accent-danger-soft:    var(--accent-danger-soft);
+  --color-accent-warning-soft:   var(--accent-warning-soft);
+  --color-accent-success-soft:   var(--accent-success-soft);
+  --color-accent-info-soft:      var(--accent-info-soft);
+  --color-accent-success-tint:   var(--accent-success-tint);
+  --color-accent-danger-tint:    var(--accent-danger-tint);
+  --color-accent-warning-tint:   var(--accent-warning-tint);
+  --color-accent-info-tint:      var(--accent-info-tint);
+
+  /* Dispositions (operator labels — independent of severity) */
+  --color-disposition-suspect:        var(--disposition-suspect);
+  --color-disposition-assumed-friend: var(--disposition-assumed-friend);
+  --color-disposition-neutral:        var(--disposition-neutral);
+
+  /* Borders */
+  --color-border-default: var(--border-default);
+  --color-border-strong:  var(--border-strong);
+  --color-border-subtle:  var(--border-subtle);
+
+  /* State overlays */
+  --color-state-hover:        var(--state-hover);
+  --color-state-hover-strong: var(--state-hover-strong);
+  --color-state-pressed:      var(--state-pressed);
+  --color-state-selected:     var(--state-selected);
+
+  /*
+   * Text tiers — the three names the team talks in.
+   *   ink     primary text (titles, primary values, anything you must read)
+   *   muted   secondary text (labels, captions, supporting copy)
+   *   faint   tertiary text (icons at rest, placeholders, disabled)
+   *
+   * These are aliases over the slate ramp; the ramp itself stays
+   * available (text-slate-12, etc.) for cases where a specific step
+   * is needed (e.g., text-slate-10 between muted and faint).
+   */
+  --color-ink:    var(--slate-12);
+  --color-muted:  var(--slate-11);
+  --color-faint:  var(--slate-9);
+
+  /* ── Legacy aliases (deleted in cleanup-and-verify) ───────── */
+  /*
+   * The old neutral scale and tactical-red scale used to live
+   * in src/index.css under different names. Mirroring them here
+   * keeps existing components working while the migration runs.
+   */
+  --color-n-1:  var(--slate-1);
+  --color-n-2:  var(--slate-2);
+  --color-n-3:  var(--slate-3);
+  --color-n-4:  var(--slate-4);
+  --color-n-5:  var(--slate-5);
+  --color-n-6:  var(--slate-6);
+  --color-n-7:  var(--slate-7);
+  --color-n-8:  var(--slate-8);
+  --color-n-9:  var(--slate-9);
+  --color-n-10: var(--slate-10);
+  --color-n-11: var(--slate-11);
+  --color-n-12: var(--slate-12);
+
+  /* Tactical-red ramp (legacy --color-1..12 — only --danger-cta-* used today) */
+  --color-1:  oklch(0.195 0.030 17);
+  --color-2:  oklch(0.227 0.041 17);
+  --color-3:  oklch(0.295 0.082 17);
+  --color-4:  oklch(0.348 0.111 17);
+  --color-5:  oklch(0.394 0.133 17);
+  --color-6:  oklch(0.445 0.151 17);
+  --color-7:  oklch(0.513 0.168 17);
+  --color-8:  oklch(0.599 0.184 17);
+  --color-9:  oklch(0.647 0.176 17);
+  --color-10: oklch(0.699 0.166 17);
+  --color-11: oklch(0.863 0.102 17);
+  --color-12: oklch(0.927 0.062 17);
+
+  /* Semantic aliases that the old index.css declared */
+  --color-surface:         var(--surface-2);
+  --color-surface-subtle:  color-mix(in oklch, var(--slate-12) 5%, transparent);
+  --color-surface-chip:    color-mix(in oklch, var(--slate-12) 15%, transparent);
+  --color-text-primary:    var(--slate-12);
+  --color-text-secondary:  var(--slate-11);
+  --color-blue-accent:     var(--accent-info);
+  --color-blue-light-bg:   var(--accent-info-tint);
+  --color-overlay:         oklch(0 0 0 / 0.6);
+
+  /* Fonts (preserved from old --font-* declarations) */
+  --font-sans: "Heebo", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+
+  /* Radius (4pt grid) */
+  --radius-sm: 4px;
+}
+
+/*
+ * Filled danger CTAs — alias palette also exposed as bare CSS vars
+ * (not Tailwind utilities) for inline-style or var() consumers.
+ */
+:root {
+  --danger-cta-bg:        var(--accent-danger-soft);
+  --danger-cta-bg-hover:  var(--accent-danger);
+  --danger-cta-bg-active: color-mix(in oklch, var(--accent-danger-soft) 80%, black);
+  --danger-cta-text:      var(--slate-12);
+}

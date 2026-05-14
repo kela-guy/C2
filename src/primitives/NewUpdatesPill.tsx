@@ -1,4 +1,4 @@
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion, useReducedMotion } from 'motion/react';
 import { ArrowUp } from '@/lib/icons/central';
 import { Bdi } from '@/lib/direction';
 import { Button } from '@/shared/components/ui/button';

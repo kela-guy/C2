@@ -32,6 +32,8 @@ export const spec: ComponentSpec = {
     { name: 'onFocus', type: '() => void', required: false, description: 'Tile gained focus; used by the parent to maintain an LRU stack of cameras for pin-swap behavior' },
     { name: 'onResetView', type: '() => void', required: false, description: 'Reset overlays (designate mode off, detections off)' },
     { name: 'onDesignateTarget', type: '(normX: number, normY: number) => void', required: false, description: 'Operator clicked a point on the feed in designate-target mode. Coords are normalised (0..1, top-left origin). Tile auto-exits designate mode after firing.' },
+    { name: 'tileVariant', type: "TileVariant ('fill' | 'hero' | 'thumb')", required: false, defaultValue: "'fill'", description: 'Layout role. fill = single/stack/grid (default). hero = the large feed in hero-filmstrip. thumb = a small filmstrip preview; hides the bottom strips and gains the centered Use-as-main overlay.' },
+    { name: 'onPromoteToHero', type: '() => void', required: false, description: 'Operator wants this thumb to become the hero. Wired only when tileVariant === "thumb"; enables the centered hover button + double-click promotion.' },
   ],
 
   states: [
@@ -47,6 +49,10 @@ export const spec: ComponentSpec = {
     { name: 'drone HUD', trigger: 'status.deviceType === "drone"', description: 'Right-edge telemetry column (battery, signal, distance, relative bearing); telemetry strip switches to drone mode (zoom + alt + vel)', implementedInPrototype: true },
     { name: 'drop target highlighted', trigger: 'A device card is dragged over the tile', description: 'Inset sky ring; on drop the cameraId is replaced', implementedInPrototype: true },
     { name: 'context menu open', trigger: 'right-click on the tile', description: 'Take/Release, Day/Night, AI, Designate target, Reset view, Open settings', implementedInPrototype: true },
+    { name: 'thumb (filmstrip preview)', trigger: 'tileVariant === "thumb"', description: 'Hides the noisy bottom strips (telemetry, control bar, drone HUD, designate overlay, playback) so the thumb reads as a preview. Top HUD label, the detection alert ring, and the right-click context menu still apply. The centered Use-as-main button fades in on hover/focus.', implementedInPrototype: true, storyProps: { tileVariant: 'thumb' } },
+    { name: 'hero (filmstrip large)', trigger: 'tileVariant === "hero"', description: 'Same chrome as fill — full HUD, full control bar. The detection-alert ring is suppressed when feed.showDetections is true (the boxes already convey it).', implementedInPrototype: true, storyProps: { tileVariant: 'hero' } },
+    { name: 'detection alert (ring)', trigger: 'detections.length > 0 (and not suppressed by hero+detectionsOn)', description: 'Inset red gradient ring frames the tile (rgba(239,68,68,0.55) 2px inset shadow + a top→bottom red gradient overlay). Pure visual — pointer-events-none.', implementedInPrototype: true },
+    { name: 'detection alert (pulse)', trigger: 'A new detection id appears that was not in the previous render', description: 'One-shot opacity pulse (0 → 0.95 → 0.6 → 0) over ~650ms keyed by the new id. Degrades to a flat fade under prefers-reduced-motion.', implementedInPrototype: true },
     { name: 'loading', trigger: 'Stream is connecting', description: 'Skeleton/spinner instead of <video>', implementedInPrototype: false },
     { name: 'error', trigger: 'Stream failed', description: 'Error card with retry', implementedInPrototype: false },
     { name: 'disabled', trigger: 'Camera asset offline', description: 'Greyed-out tile; controls disabled with explanatory tooltip', implementedInPrototype: false },
@@ -58,6 +64,9 @@ export const spec: ComponentSpec = {
     { trigger: 'right-click', element: 'tile', result: 'Opens the context menu' },
     { trigger: 'drop', element: 'tile body', result: 'Replaces feed.cameraId with the dropped device id' },
     { trigger: 'click', element: 'feed body (in designate mode)', result: 'Calls onDesignateTarget(normX, normY); shows a brief amber "ping" at the chosen point; auto-exits designate mode' },
+    { trigger: 'hover/focus', element: 'thumb tile', result: 'Centered "Use as main" button fades in', animation: { property: 'opacity', from: '0', to: '1', duration: '150ms', easing: 'ease-out' } },
+    { trigger: 'click', element: '"Use as main" button (thumb)', result: 'Calls onPromoteToHero; the thumb swaps into the hero slot in the parent layout' },
+    { trigger: 'dblclick', element: 'thumb body (excluding interactive children)', result: 'Same as the Use-as-main button — promotes the thumb to hero. Children carrying [data-no-promote] or matching button/[role=button]/a/input are excluded.' },
   ],
 
   tokens: {
@@ -66,11 +75,23 @@ export const spec: ComponentSpec = {
       { name: 'empty-bg', value: '#141414', usage: 'Empty slot background' },
       { name: 'focus-ring', value: 'rgba(255,255,255,0.3)', usage: 'Inset focus ring' },
       { name: 'drop-accent', value: 'rgba(56,189,248,0.6)', usage: 'Inset ring during a valid drop' },
+      { name: 'detection-alert-strong', value: 'rgba(239,68,68,0.85)', usage: 'TileDetectionAlert pulse inset shadow' },
+      { name: 'detection-alert-mid', value: 'rgba(239,68,68,0.55)', usage: 'TileDetectionAlert ring inset shadow' },
+      { name: 'detection-alert-soft', value: 'rgba(239,68,68,0.18)', usage: 'TileDetectionAlert top/bottom gradient stops' },
+      { name: 'promote-btn-bg', value: 'rgba(0,0,0,0.6)', usage: 'Use-as-main pill background (thumbs)' },
+      { name: 'promote-btn-bg-hover', value: 'rgba(0,0,0,0.75)', usage: 'Use-as-main pill background (hovered)' },
+      { name: 'promote-btn-ring', value: 'rgba(255,255,255,0.2)', usage: 'Use-as-main pill ring' },
     ],
     typography: [
       { name: 'live-badge', fontFamily: 'Heebo', fontSize: '9px', fontWeight: '600', lineHeight: '1', usage: 'LIVE / PLAYBACK badge inside the playback split' },
+      { name: 'promote-btn', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '500', lineHeight: '1', usage: 'Use-as-main pill text' },
     ],
     spacing: [],
+    animations: [
+      { name: 'promote-btn-fade', property: 'opacity', duration: '150ms', easing: 'ease-out', usage: 'Use-as-main button reveal on hover/focus' },
+      { name: 'detection-ring-fade', property: 'opacity', duration: '200ms', easing: 'ease-out', usage: 'TileDetectionAlert ring mount/unmount' },
+      { name: 'detection-pulse', property: 'opacity', duration: '650ms', easing: 'ease-out', usage: 'TileDetectionAlert one-shot pulse on new detection id (340ms / flat fade under reduced motion)' },
+    ],
   },
 
   accessibility: {
@@ -111,6 +132,8 @@ export const spec: ComponentSpec = {
     'Hover detection uses both onMouseEnter/Leave and focus-within so keyboard users get the same affordance.',
     'Night mode prefers a dedicated IR src; falls back to a stack of CSS filters when the IR asset is missing (still recognisable as "thermal" visually).',
     'Cursor stays at the platform default when the operator is just inspecting the feed; it only switches to crosshair while designate-target mode is armed - so the cursor change itself is a clear "the next click designates a target" affordance.',
-    'The DroneHud, telemetry strip, and DesignateTargetOverlay are skipped while the playback split is active to keep the two halves uncluttered.',
+    'The DroneHud, telemetry strip, and DesignateTargetOverlay are skipped while the playback split is active to keep the two halves uncluttered. Thumbs (tileVariant === "thumb") drop *all* of these strips plus the playback split entirely — they are previews, not control surfaces.',
+    'Detection alert is mounted *outside* the live frame so the ring frames the entire tile (matching the existing inset-shadow accents). On hero tiles the ring is suppressed when feed.showDetections is true because the boxes already carry the signal; on other tiles it is always visible so the operator can\'t miss activity on a feed they aren\'t looking at.',
+    'The promote-to-hero double-click is intentionally narrow: it ignores any descendant matching button / [role="button"] / a / input / [data-no-promote] so existing tile gestures (control bar, designate, settings popover) keep working unchanged.',
   ],
 };

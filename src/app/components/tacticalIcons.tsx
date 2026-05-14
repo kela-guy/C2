@@ -7,6 +7,17 @@
  */
 
 import { DRONE_PATH, MISSILE_PATH } from '@/primitives/MapIcons';
+import { accentHex, slateHex } from '@/primitives/accentHex';
+
+/*
+ * Default fills for friendly air vehicles. Both missile and drone
+ * are drone-team blue-green (accent-cyan) by default; disabled
+ * drones desaturate to slate-7 (jammer state). Routed through
+ * accentHex/slateHex so the JS-side palette stays aligned with
+ * palette.css.
+ */
+const FRIENDLY_AIR_FILL = accentHex('cyan');
+const DISABLED_FILL = slateHex(7);
 
 export const SensorIcon = ({ size = 28, fill = 'white' }: { size?: number; fill?: string }) => (
   <svg width={size} height={size} viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -32,7 +43,7 @@ export const RadarIcon = ({ size = 28, fill = 'white' }: { size?: number; fill?:
   </svg>
 );
 
-export const MissileIcon = ({ rotationDeg = 0, fill = '#15FFF6' }: { rotationDeg?: number; fill?: string }) => (
+export const MissileIcon = ({ rotationDeg = 0, fill = FRIENDLY_AIR_FILL }: { rotationDeg?: number; fill?: string }) => (
   <svg
     width="42"
     height="30"
@@ -58,7 +69,7 @@ export const DroneIcon = ({ rotationDeg = 0, disabled = false, color }: { rotati
   >
     <path
       d={DRONE_PATH}
-      fill={disabled ? '#6b7280' : color || '#15FFF6'}
+      fill={disabled ? DISABLED_FILL : color || FRIENDLY_AIR_FILL}
       stroke="#0a0a0a"
       strokeWidth="1"
     />
@@ -80,5 +91,35 @@ export const LidarIcon = ({ size = 28, fill = 'white' }: { size?: number; fill?:
 export const LauncherIcon = ({ size = 24, fill = 'white' }: { size?: number; fill?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M23.042 8.75977C23.2375 8.77623 23.4049 8.90599 23.4707 9.09082C23.5365 9.27575 23.488 9.48191 23.3467 9.61816L22.2334 10.6924C22.1826 10.7413 22.122 10.7788 22.0557 10.8027L12.042 14.3994L12.6738 15.5977L15.1904 19.7402C15.2842 19.8946 15.2868 20.0877 15.1982 20.2451C15.1097 20.4024 14.9433 20.5 14.7627 20.5H4.31445C4.03831 20.5 3.81445 20.2761 3.81445 20V17.3555L3.37012 17.5156C3.2415 17.5618 3.09879 17.5533 2.97656 17.4922C2.85465 17.4311 2.7628 17.3227 2.72266 17.1924L2.35156 15.9834C2.27343 15.7286 2.4086 15.4569 2.65918 15.3662L21.2217 8.6543L21.3252 8.62793C21.3607 8.6232 21.3967 8.623 21.4326 8.62598L23.042 8.75977ZM22.0742 6.23145C22.2698 6.2478 22.4381 6.37757 22.5039 6.5625C22.5696 6.74731 22.521 6.95363 22.3799 7.08984L21.2656 8.16406C21.2148 8.213 21.1543 8.25055 21.0879 8.27441L2.40234 14.9873C2.27376 15.0335 2.13197 15.025 2.00977 14.9639C1.88761 14.9027 1.79505 14.7946 1.75488 14.6641L1.38379 13.4551C1.30573 13.2003 1.44176 12.9285 1.69238 12.8379L20.2539 6.12598L20.3584 6.10059C20.3938 6.09591 20.43 6.09467 20.4658 6.09766L22.0742 6.23145ZM21.2119 3.63574C21.4076 3.65207 21.5758 3.78185 21.6416 3.9668C21.7073 4.15168 21.6588 4.35792 21.5176 4.49414L20.4043 5.56836C20.3534 5.61741 20.2921 5.65482 20.2256 5.67871L1.54004 12.3916C1.41147 12.4377 1.26962 12.4293 1.14746 12.3682C1.02542 12.3071 0.933759 12.1988 0.893555 12.0684L0.522461 10.8594C0.444234 10.6045 0.579375 10.3329 0.830078 10.2422L1.33301 10.0596L1.02051 9.12598C0.933486 8.86551 1.07316 8.58317 1.33301 8.49414L3.68457 7.68848L3.75586 7.66992C3.82891 7.65652 3.90427 7.66014 3.97656 7.67969L6.22852 8.28906L19.3916 3.53027C19.4593 3.50579 19.5318 3.49597 19.6035 3.50195L21.2119 3.63574Z" fill={fill} stroke="black" strokeLinejoin="round"/>
+  </svg>
+);
+
+/**
+ * Floodlight tactical icon. `active` is accepted for API parity with
+ * other toggleable icons but currently renders identically to the off
+ * state — operators read on/off via the device card Switch and the
+ * marker's white pulse ring, not the glyph itself.
+ */
+export const FloodlightIcon = ({ size = 24, fill = 'white' }: { size?: number; fill?: string; active?: boolean }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path fillRule="evenodd" clipRule="evenodd" d="M19 13.291L17.2939 13.7506L14.551 3.45958L16.2571 3L19 13.291Z" fill={fill}/>
+    <path d="M10.3206 15.0163L11.2844 18.6324H6.65094V21H11.9154H13.3906H18.4263V18.6324H13.7225L12.5954 14.4035L16.0041 13.4853L13.5659 4.33769L6.25402 6.30731L5 8.78981L6.37146 13.9353L8.69216 15.4549L10.3206 15.0163Z" fill={fill}/>
+    <path d="M18.4258 18.6328H13.7217L12.5947 14.4033L16.0029 13.4854L13.5654 4.33789L6.25293 6.30762L4.99902 8.79004L6.37012 13.9355L8.69141 15.4551L10.3193 15.0166L11.2832 18.6328H6.65039V21H18.4258V18.6328ZM14.5498 3.45996L17.293 13.751L18.999 13.291L16.2559 3L14.5498 3.45996ZM19.9258 22.5H5.15039V17.1328H9.33105L9.25684 16.8555L9.08105 16.9033L8.43164 17.0781L5.06836 14.876L3.40234 8.62402L5.21582 5.0332L12.8672 2.97266L12.7148 2.40039L17.3184 1.16016L20.834 14.3506L16.2305 15.5898L16.0781 15.0176L14.4287 15.4619L14.874 17.1328H19.9258V22.5Z" fill="black"/>
+  </svg>
+);
+
+/**
+ * PA speaker tactical icon. `active` is accepted for API parity; the
+ * on-air signal is carried by the map marker (white ring + pulse), so
+ * the glyph stays visually identical at rest and while broadcasting.
+ */
+export const SpeakerIcon = ({ size = 24, fill = 'white' }: { size?: number; fill?: string; active?: boolean }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M13 20.9289V3.07104L5.74656 6.99999H1V17H5.74656L13 20.9289Z" fill={fill}/>
+    <path d="M13 20.9285L5.74609 16.9998H1V6.99975H5.74609L13 3.07104V20.9285ZM6.12695 8.49975H2.5V15.4998H6.12695L6.46094 15.6814L11.5 18.4099V5.58959L6.12695 8.49975Z" fill="black"/>
+    <path d="M18.3633 5.63687C19.9931 7.26664 20.9993 9.51527 20.9993 12.0008C20.9993 14.4864 19.9931 16.735 18.3633 18.3648L19.7775 19.779C21.767 17.7895 22.9993 15.0381 22.9993 12.0008C22.9993 8.96354 21.767 6.21217 19.7775 4.22266L18.3633 5.63687Z" fill={fill}/>
+    <path d="M20.999 12.001C20.999 9.51545 19.9931 7.26649 18.3633 5.63672L19.7773 4.22266C21.7668 6.21217 22.999 8.96372 22.999 12.001L22.9854 12.5664C22.8428 15.3788 21.6426 17.914 19.7773 19.7793L18.3633 18.3652C19.8912 16.8373 20.8708 14.765 20.9873 12.4639L20.999 12.001Z" fill="black"/>
+    <path d="M15.1836 8.81851C15.999 9.63394 16.5016 10.7576 16.5016 12.0005C16.5016 13.2434 15.999 14.367 15.1836 15.1825L16.5978 16.5967C17.773 15.4215 18.5016 13.7951 18.5016 12.0005C18.5016 10.2058 17.773 8.57947 16.5978 7.4043L15.1836 8.81851Z" fill={fill}/>
+    <path d="M16.502 12.001C16.502 10.7581 15.999 9.63379 15.1836 8.81836L16.5977 7.4043C17.7729 8.57947 18.502 10.2063 18.502 12.001L18.4932 12.335C18.4088 13.9966 17.6994 15.4949 16.5977 16.5967L15.1836 15.1826C15.948 14.4182 16.4378 13.3828 16.4961 12.2324L16.502 12.001Z" fill="black"/>
   </svg>
 );

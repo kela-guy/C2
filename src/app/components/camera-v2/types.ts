@@ -11,6 +11,15 @@ export type FeedDeviceType = 'camera' | 'drone';
 
 export type LinkedDeviceType = 'radar' | 'lidar' | 'drone' | 'camera';
 
+/**
+ * Layout preset chosen by the operator from the panel-level layout
+ * picker. The picker is *manual* — the panel does not auto-pick based
+ * on feed count anymore. When the chosen preset cannot fit the current
+ * feed count (e.g. Hero+Filmstrip with 1 feed), the panel falls back
+ * deterministically: hero-filmstrip → grid-2x2 → stack-2 → single.
+ */
+export type LayoutKind = 'single' | 'stack-2' | 'grid-2x2' | 'hero-filmstrip';
+
 /** A single feed slot in the video panel. */
 export interface CameraFeed {
   cameraId: string;
@@ -124,4 +133,11 @@ export interface DetectionBox {
   label: string;
   /** 0..1 - drives the box opacity / colour ramp. */
   confidence: number;
+  /**
+   * Wall-clock ms of when this detection was first observed. Optional
+   * — when present it lets downstream code (e.g. the tile alert pulse)
+   * differentiate "newly arrived" from "still on screen". When absent,
+   * the alert hook synthesises this from id-set diffs instead.
+   */
+  firstSeenAt?: number;
 }

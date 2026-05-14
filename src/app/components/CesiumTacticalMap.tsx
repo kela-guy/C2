@@ -19,10 +19,11 @@
  * Anything still pending is tracked in `docs/cesium-parity.md`.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   CesiumMap,
   type CesiumHtmlMarker,
+  type CesiumMapFitBounds,
   type CesiumMapFlyTo,
   type CesiumPolyline,
   type CesiumSceneMode,
@@ -38,6 +39,8 @@ import {
   LIDAR_ASSETS,
   WEAPON_SYSTEM_ASSETS,
   LAUNCHER_ASSETS,
+  FLOODLIGHT_ASSETS,
+  SPEAKER_ASSETS,
   REGULUS_EFFECTORS,
 } from './tacticalAssets';
 import type { MapAsset } from './tacticalAssets';
@@ -47,6 +50,8 @@ import {
   LidarIcon,
   DroneHiveIcon,
   LauncherIcon,
+  FloodlightIcon,
+  SpeakerIcon,
   SensorIcon,
   DroneIcon,
   MissileIcon,
@@ -63,6 +68,25 @@ import {
 import { JAM_FLOW, WEAPON_FLOW, resolveNearestAsset, type FlowAsset } from '@/imports/engagementFlows';
 import { useStrings } from '@/lib/intl';
 import type { Detection, RegulusEffector, LauncherEffector } from '@/imports/ListOfSystems';
+import { accentHex, slateHex } from '@/primitives/accentHex';
+
+/*
+ * Cesium scene materials and polyline paint consume literal hex
+ * strings. The colors below mirror the Mapbox layer in `TacticalMap`
+ * so a route switch from `?map=cesium` to default looks identical.
+ *
+ *   sensor FOV         → accent-info     (cyan-blue)
+ *   ECM coverage       → accent-success  (green)
+ *   weapon lock        → accent-danger   (red)
+ *   active drone trail → slate-12        (white-ish)
+ *   trail casing       → near-black icon-art outline
+ *   raw track          → accent-magenta  (purple-ish)
+ */
+const CESIUM_FOV = accentHex('info');
+const CESIUM_JAM = accentHex('success');
+const CESIUM_TRAIL = slateHex(12);
+const CESIUM_TRAIL_CASING = '#000000';
+const CESIUM_RAW_TRACK = accentHex('historical');
 
 /**
  * Props consumed by `<CesiumTacticalMap>`. Inherited from the original
@@ -386,7 +410,7 @@ type ContextMenuState = {
   elementId: string;
 };
 
-export function CesiumTacticalMap({
+function CesiumTacticalMapImpl({
   targets,
   activeTargetId,
   hoveredTargetIdFromCard,
@@ -426,6 +450,34 @@ export function CesiumTacticalMap({
   // Drives the white-on-hover ring + tooltip visibility regardless of
   // whether the hover came from this map or from the card sidebar.
   const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null);
+  /**
+   * Hover-out debounce. A fast mouse-skim across markers used to
+   * thrash FOV cones in/out (the primitive tears down and re-adds
+   * each FOV polygon when the marker's `fov` prop flips). Holding
+   * the leave for ~50 ms collapses skim-throughs into a no-op while
+   * still feeling immediate to a deliberate hover.
+   */
+  const HOVER_LEAVE_DEBOUNCE_MS = 50;
+  const hoverLeaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const enterMarker = useCallback((id: string) => {
+    if (hoverLeaveTimerRef.current !== null) {
+      clearTimeout(hoverLeaveTimerRef.current);
+      hoverLeaveTimerRef.current = null;
+    }
+    setHoveredMarkerId(id);
+  }, []);
+  const leaveMarker = useCallback((id: string) => {
+    if (hoverLeaveTimerRef.current !== null) clearTimeout(hoverLeaveTimerRef.current);
+    hoverLeaveTimerRef.current = setTimeout(() => {
+      hoverLeaveTimerRef.current = null;
+      setHoveredMarkerId((current) => (current === id ? null : current));
+    }, HOVER_LEAVE_DEBOUNCE_MS);
+  }, []);
+  useEffect(() => {
+    return () => {
+      if (hoverLeaveTimerRef.current !== null) clearTimeout(hoverLeaveTimerRef.current);
+    };
+  }, []);
   // Scene mode (2D top-down vs 3D perspective). Default 2D so the post-cutover
   // map looks identical to what operators see today; the in-map toggle (rendered
   // bottom-left) flips to 3D on demand. The primitive layer handles the live
@@ -628,6 +680,19 @@ export function CesiumTacticalMap({
    * which is itself stable as long as none of the slices changed.
    */
 
+  /**
+   * Per-asset marker cache. Static-asset markers only change when
+   * hover / selection / highlight / offline state for *that* id flips,
+   * so 99% of asset renders on a hover-tick are cache hits — keeps
+   * the per-marker `<MapMarker>` JSX reference stable and lets the
+   * `HtmlMarkerNode` memo in `CesiumMap` skip reconciling those nodes
+   * entirely. Only the affected marker reconciles. Same trick the
+   * friendly-drone slice already uses.
+   */
+  const friendlyAssetCacheRef = useRef<
+    Map<string, { fingerprint: string; marker: CesiumHtmlMarker }>
+  >(new Map());
+
   /** Helper for friendly assets (cameras / radars / lidars / hives / weapons / launchers). */
   const buildFriendlyAsset = useCallback(
     (
@@ -654,7 +719,6 @@ export function CesiumTacticalMap({
           : isSelected
             ? 'selected'
             : 'default';
-      const style = resolveMarkerStyle(state, affiliation);
 
       // FOV cone appears only when the user is engaging with this sensor —
       // hovering it on the map, hovering it in the card sidebar, or seeing it
@@ -666,9 +730,20 @@ export function CesiumTacticalMap({
       // bump up further to call out the active target's contributors.
       const showFov = !isOffline && (isHovered || isSelected || isHighlighted);
       const fovOpacity = isHighlighted ? 0.55 : 0.4;
-      const fovColor = '#22b8cf';
+      const fovColor = CESIUM_FOV;
 
-      return {
+      // Fingerprint covers everything that affects the rendered marker
+      // shape; lat/lon/icon/label/sizes are static for a given id so
+      // they're omitted, but FOV bearing/width/range are folded in
+      // because some assets (PTZ cameras, etc.) could move them later.
+      const fingerprint = `${state}|${showFov ? '1' : '0'}|${fovOpacity}|${fov ? `${fov.rangeM}-${fov.bearingDeg}-${fov.widthDeg}` : ''}`;
+      const cached = friendlyAssetCacheRef.current.get(id);
+      if (cached && cached.fingerprint === fingerprint) {
+        return cached.marker;
+      }
+
+      const style = resolveMarkerStyle(state, affiliation);
+      const fresh: CesiumHtmlMarker = {
         id,
         lat,
         lon,
@@ -689,9 +764,11 @@ export function CesiumTacticalMap({
           : undefined,
         onClick: () => onAssetClickRef.current?.(id),
         onContextMenu: (e) => openContextMenu(e, 'sensor', id),
-        onMouseEnter: () => setHoveredMarkerId(id),
-        onMouseLeave: () => setHoveredMarkerId((current) => (current === id ? null : current)),
+        onMouseEnter: () => enterMarker(id),
+        onMouseLeave: () => leaveMarker(id),
       };
+      friendlyAssetCacheRef.current.set(id, { fingerprint, marker: fresh });
+      return fresh;
     },
     [
       offlineSet,
@@ -747,20 +824,39 @@ export function CesiumTacticalMap({
     for (const l of LAUNCHER_ASSETS) {
       push(buildFriendlyAsset(l.id, l.latitude, l.longitude, <LauncherIcon size={LAUNCHER_GLYPH} />, l.id));
     }
+    // Floodlights + PA speakers: rendered as plain friendly assets
+    // (no FOV cone) so the operator can see where these tools sit on
+    // the ground. On/off state is driven by the device cards and
+    // shouldn't add a heavy on-map visual at rest — when an operator
+    // toggles a speaker on or a floodlight beam, that affordance can
+    // be threaded through here later via dedicated marker slices, the
+    // same way Regulus effectors live in `regulusEffectorMarkers`.
+    for (const f of FLOODLIGHT_ASSETS) {
+      push(buildFriendlyAsset(f.id, f.latitude, f.longitude, <FloodlightIcon />, f.typeLabel));
+    }
+    for (const s of SPEAKER_ASSETS) {
+      push(buildFriendlyAsset(s.id, s.latitude, s.longitude, <SpeakerIcon />, s.typeLabel));
+    }
     return out;
   }, [buildFriendlyAsset, sensorFov]);
 
   /**
-   * Slice 2 — Regulus effectors. Friendly assets but with their own
-   * coverage-ring + jamming state shape, so they get their own slice
-   * keyed only on effector-specific deps.
+   * Slice 2 — Regulus effectors. Friendly assets with coverage-ring +
+   * jamming state. Per-id cache so hover ticks only reconcile the
+   * affected effector.
    */
+  const regulusCacheRef = useRef<
+    Map<string, { fingerprint: string; marker: CesiumHtmlMarker }>
+  >(new Map());
   const regulusEffectorMarkers = useMemo<CesiumHtmlMarker[]>(() => {
     const out: CesiumHtmlMarker[] = [];
+    const cache = regulusCacheRef.current;
     const effectors = regulusEffectors ?? REGULUS_EFFECTORS;
+    const seen = new Set<string>();
     const isEngagementEffector = (id: string) =>
       engagementPair?.flow === 'jam' && engagementPair.effId === id;
     for (const e of effectors) {
+      seen.add(e.id);
       const isJamming = jammingJammerAssetId === e.id;
       const isHoveredFromCard = hoveredSensorIdFromCard === e.id;
       const isHoveredOnMap = hoveredMarkerId === e.id;
@@ -773,9 +869,17 @@ export function CesiumTacticalMap({
           : isEngaged
             ? 'selected'
             : 'default';
-      const style = resolveMarkerStyle(state, 'friendly');
       const showHoverEffect = isHovered || isEngaged;
-      out.push({
+      const showCoverage = showHoverEffect || isJamming;
+      const fingerprint = `${state}|${showHoverEffect ? '1' : '0'}|${showCoverage ? '1' : '0'}|${isJamming ? '1' : '0'}|${e.coverageRadiusM}|${e.name}`;
+      const cached = cache.get(e.id);
+      if (cached && cached.fingerprint === fingerprint) {
+        out.push(cached.marker);
+        continue;
+      }
+
+      const style = resolveMarkerStyle(state, 'friendly');
+      const fresh: CesiumHtmlMarker = {
         id: e.id,
         lat: e.lat,
         lon: e.lon,
@@ -791,13 +895,18 @@ export function CesiumTacticalMap({
             pulse={showHoverEffect}
           />
         ),
-        coverageRadiusM: showHoverEffect || isJamming ? e.coverageRadiusM : undefined,
-        coverageColor: isJamming ? '#4ade80' : '#22b8cf',
+        coverageRadiusM: showCoverage ? e.coverageRadiusM : undefined,
+        coverageColor: isJamming ? CESIUM_JAM : CESIUM_FOV,
         onClick: () => onAssetClickRef.current?.(e.id),
         onContextMenu: (ev) => openContextMenu(ev, 'effector', e.id),
-        onMouseEnter: () => setHoveredMarkerId(e.id),
-        onMouseLeave: () => setHoveredMarkerId((current) => (current === e.id ? null : current)),
-      });
+        onMouseEnter: () => enterMarker(e.id),
+        onMouseLeave: () => leaveMarker(e.id),
+      };
+      cache.set(e.id, { fingerprint, marker: fresh });
+      out.push(fresh);
+    }
+    for (const id of cache.keys()) {
+      if (!seen.has(id)) cache.delete(id);
     }
     return out;
   }, [
@@ -809,9 +918,25 @@ export function CesiumTacticalMap({
     openContextMenu,
   ]);
 
-  /** Slice 3 — hostile target markers. Driven entirely by `targets` + active/hover. */
+  /**
+   * Slice 3 — hostile target markers (kinematic).
+   *
+   * Same fingerprint-cache trick as `friendlyDroneMarkers`: targets
+   * tick at 2 Hz from the loiter sim, but interaction state, status,
+   * classification, name, and heading-bucket are usually stable
+   * across ticks. Reuse the previous marker object (with patched
+   * lat/lon) when nothing visually relevant changed so the inner
+   * `<MapMarker>` subtree skips reconciliation.
+   */
+  const targetCacheRef = useRef<
+    Map<string, { fingerprint: string; marker: CesiumHtmlMarker }>
+  >(new Map());
   const targetMarkers = useMemo<CesiumHtmlMarker[]>(() => {
-    if (!targets) return [];
+    if (!targets) {
+      targetCacheRef.current.clear();
+      return [];
+    }
+    const cache = targetCacheRef.current;
     const out: CesiumHtmlMarker[] = [];
     const seen = new Set<string>();
     for (const t of targets) {
@@ -829,10 +954,21 @@ export function CesiumTacticalMap({
         : isActive
           ? 'selected'
           : baseState;
-      const style = resolveMarkerStyle(state, 'hostile');
       const isNewArrival = t.isNew === true;
       const targetHeading = targetHeadingFromTrail(t);
-      out.push({
+      const headingBucket = targetHeading != null ? Math.round(targetHeading) : null;
+      const fingerprint = `${state}|${headingBucket}|${t.classifiedType ?? ''}|${t.type}|${t.name ?? ''}|${isNewArrival ? '1' : '0'}|${isActive ? '1' : '0'}`;
+
+      const cached = cache.get(t.id);
+      if (cached && cached.fingerprint === fingerprint) {
+        const reused: CesiumHtmlMarker = { ...cached.marker, lat, lon };
+        out.push(reused);
+        cache.set(t.id, { fingerprint, marker: reused });
+        continue;
+      }
+
+      const style = resolveMarkerStyle(state, 'hostile');
+      const fresh: CesiumHtmlMarker = {
         id: t.id,
         lat,
         lon,
@@ -852,16 +988,41 @@ export function CesiumTacticalMap({
         kinematic: true,
         onClick: () => onMarkerClickRef.current?.(t.id),
         onContextMenu: (e) => openContextMenu(e, 'target', t.id),
-        onMouseEnter: () => setHoveredMarkerId(t.id),
-        onMouseLeave: () => setHoveredMarkerId((current) => (current === t.id ? null : current)),
-      });
+        onMouseEnter: () => enterMarker(t.id),
+        onMouseLeave: () => leaveMarker(t.id),
+      };
+      out.push(fresh);
+      cache.set(t.id, { fingerprint, marker: fresh });
+    }
+    for (const id of cache.keys()) {
+      if (!seen.has(id)) cache.delete(id);
     }
     return out;
   }, [targets, activeTargetId, hoveredTargetIdFromCard, hoveredMarkerId, openContextMenu]);
 
-  /** Slice 4 — friendly drones (kinematic). */
+  /**
+   * Slice 4 — friendly drones (kinematic).
+   *
+   * Per-drone cache. The patrol sim ticks at 2 Hz: lat/lon (and
+   * sometimes heading) change every tick, but interaction state
+   * (`isHovered`, `isSelected`, `isOffline`) is usually stable. We
+   * cache each drone's marker by a fingerprint that combines the
+   * inputs that affect visual output (rotation rounding to 1° avoids
+   * sub-degree rebuilds). When the fingerprint matches we reuse the
+   * previous marker object, only patching `lat` / `lon` so the
+   * Cesium kinematic motion-track still receives a fresh sample.
+   * Net effect: React skips reconciling the inner `<MapMarker>`
+   * subtree every patrol tick when nothing meaningful changed.
+   */
+  const friendlyDroneCacheRef = useRef<
+    Map<string, { fingerprint: string; marker: CesiumHtmlMarker }>
+  >(new Map());
   const friendlyDroneMarkers = useMemo<CesiumHtmlMarker[]>(() => {
-    if (!friendlyDrones) return [];
+    if (!friendlyDrones) {
+      friendlyDroneCacheRef.current.clear();
+      return [];
+    }
+    const cache = friendlyDroneCacheRef.current;
     const out: CesiumHtmlMarker[] = [];
     const seen = new Set<string>();
     for (const d of friendlyDrones) {
@@ -879,9 +1040,24 @@ export function CesiumTacticalMap({
           : isHovered
             ? 'hovered'
             : 'default';
-      const style = resolveMarkerStyle(state, 'friendly');
       const showFov = d.headingDeg != null && !isOffline && (isHovered || isSelected);
-      out.push({
+      // Round heading to whole degrees for fingerprinting — sub-degree
+      // jitter from the patrol sim shouldn't force a rebuild.
+      const headingRounded = d.headingDeg != null ? Math.round(d.headingDeg) : null;
+      const fingerprint = `${state}|${headingRounded}|${d.fovDeg ?? ''}|${showFov ? '1' : '0'}|${d.name}`;
+
+      const cached = cache.get(d.id);
+      if (cached && cached.fingerprint === fingerprint) {
+        // Reuse the marker but patch lat/lon so Cesium's motion track
+        // gets the new sample on this tick.
+        const reused: CesiumHtmlMarker = { ...cached.marker, lat: d.lat, lon: d.lon };
+        out.push(reused);
+        cache.set(d.id, { fingerprint, marker: reused });
+        continue;
+      }
+
+      const style = resolveMarkerStyle(state, 'friendly');
+      const fresh: CesiumHtmlMarker = {
         id: d.id,
         lat: d.lat,
         lon: d.lon,
@@ -909,23 +1085,36 @@ export function CesiumTacticalMap({
               rangeM: DRONE_FOV_RADIUS_M,
               bearingDeg: d.headingDeg!,
               widthDeg: d.fovDeg ?? DRONE_FOV_DEG,
-              color: '#22b8cf',
+              color: CESIUM_FOV,
               opacity: 0.4,
             }
           : undefined,
         kinematic: !isOffline,
         onClick: () => onAssetClickRef.current?.(d.id),
-        onMouseEnter: () => setHoveredMarkerId(d.id),
-        onMouseLeave: () => setHoveredMarkerId((current) => (current === d.id ? null : current)),
-      });
+        onMouseEnter: () => enterMarker(d.id),
+        onMouseLeave: () => leaveMarker(d.id),
+      };
+      out.push(fresh);
+      cache.set(d.id, { fingerprint, marker: fresh });
+    }
+    // Drop cache entries for drones that vanished.
+    for (const id of cache.keys()) {
+      if (!seen.has(id)) cache.delete(id);
     }
     return out;
   }, [friendlyDrones, offlineSet, selectedAssetId, hoveredSensorIdFromCard, hoveredMarkerId]);
 
   /** Slice 5 — launcher effectors prop. */
+  const launcherCacheRef = useRef<
+    Map<string, { fingerprint: string; marker: CesiumHtmlMarker }>
+  >(new Map());
   const launcherEffectorMarkers = useMemo<CesiumHtmlMarker[]>(() => {
-    if (!launcherEffectors) return [];
+    if (!launcherEffectors) {
+      launcherCacheRef.current.clear();
+      return [];
+    }
     const out: CesiumHtmlMarker[] = [];
+    const cache = launcherCacheRef.current;
     const seen = new Set<string>();
     for (const l of launcherEffectors) {
       const lat = (l as unknown as { lat?: number }).lat;
@@ -940,9 +1129,19 @@ export function CesiumTacticalMap({
         : isEngaged
           ? 'selected'
           : 'default';
-      const style = resolveMarkerStyle(state, 'friendly');
       const showHoverEffect = isHovered || isEngaged;
-      out.push({
+      const name = (l as unknown as { name?: string }).name ?? l.id;
+      const fingerprint = `${state}|${showHoverEffect ? '1' : '0'}|${name}`;
+      const cached = cache.get(l.id);
+      if (cached && cached.fingerprint === fingerprint) {
+        const reused: CesiumHtmlMarker = { ...cached.marker, lat, lon };
+        out.push(reused);
+        cache.set(l.id, { fingerprint, marker: reused });
+        continue;
+      }
+
+      const style = resolveMarkerStyle(state, 'friendly');
+      const fresh: CesiumHtmlMarker = {
         id: l.id,
         lat,
         lon,
@@ -953,16 +1152,21 @@ export function CesiumTacticalMap({
             style={style}
             surfaceSize={SENSOR_SURFACE}
             ringSize={SENSOR_RING}
-            label={(l as unknown as { name?: string }).name ?? l.id}
+            label={name}
             showLabel={showHoverEffect}
             pulse={showHoverEffect}
           />
         ),
         onClick: () => onAssetClickRef.current?.(l.id),
         onContextMenu: (e) => openContextMenu(e, 'effector', l.id),
-        onMouseEnter: () => setHoveredMarkerId(l.id),
-        onMouseLeave: () => setHoveredMarkerId((current) => (current === l.id ? null : current)),
-      });
+        onMouseEnter: () => enterMarker(l.id),
+        onMouseLeave: () => leaveMarker(l.id),
+      };
+      cache.set(l.id, { fingerprint, marker: fresh });
+      out.push(fresh);
+    }
+    for (const id of cache.keys()) {
+      if (!seen.has(id)) cache.delete(id);
     }
     return out;
   }, [launcherEffectors, hoveredMarkerId, engagementPair, openContextMenu]);
@@ -975,9 +1179,16 @@ export function CesiumTacticalMap({
    * stands out visually on the map. Kept additive — when `forceUnits`
    * is undefined the slice is empty and nothing renders.
    */
+  const forceUnitCacheRef = useRef<
+    Map<string, { fingerprint: string; marker: CesiumHtmlMarker }>
+  >(new Map());
   const forceUnitMarkers = useMemo<CesiumHtmlMarker[]>(() => {
-    if (!forceUnits || forceUnits.length === 0) return [];
+    if (!forceUnits || forceUnits.length === 0) {
+      forceUnitCacheRef.current.clear();
+      return [];
+    }
     const out: CesiumHtmlMarker[] = [];
+    const cache = forceUnitCacheRef.current;
     const seen = new Set<string>();
     for (const u of forceUnits) {
       if (seen.has(u.id)) continue;
@@ -989,8 +1200,17 @@ export function CesiumTacticalMap({
         : isDispatched
           ? 'selected'
           : 'default';
+      const fingerprint = `${state}|${u.status}|${u.label}`;
+      const cached = cache.get(u.id);
+      if (cached && cached.fingerprint === fingerprint) {
+        const reused: CesiumHtmlMarker = { ...cached.marker, lat: u.lat, lon: u.lon };
+        out.push(reused);
+        cache.set(u.id, { fingerprint, marker: reused });
+        continue;
+      }
+
       const style = resolveMarkerStyle(state, 'friendly');
-      out.push({
+      const fresh: CesiumHtmlMarker = {
         id: u.id,
         lat: u.lat,
         lon: u.lon,
@@ -1007,9 +1227,14 @@ export function CesiumTacticalMap({
           />
         ),
         onClick: () => onAssetClickRef.current?.(u.id),
-        onMouseEnter: () => setHoveredMarkerId(u.id),
-        onMouseLeave: () => setHoveredMarkerId((current) => (current === u.id ? null : current)),
-      });
+        onMouseEnter: () => enterMarker(u.id),
+        onMouseLeave: () => leaveMarker(u.id),
+      };
+      cache.set(u.id, { fingerprint, marker: fresh });
+      out.push(fresh);
+    }
+    for (const id of cache.keys()) {
+      if (!seen.has(id)) cache.delete(id);
     }
     return out;
   }, [forceUnits, hoveredMarkerId]);
@@ -1114,7 +1339,7 @@ export function CesiumTacticalMap({
       // reads as a solid black line. Centreline gets the higher z so it
       // paints over the casing in the middle, leaving the visible black
       // edge band on either side.
-      out.push({ id: `${id}-casing`, points, color: '#000000', width: casingWidth, zIndex: 0 });
+      out.push({ id: `${id}-casing`, points, color: CESIUM_TRAIL_CASING, width: casingWidth, zIndex: 0 });
       out.push({ id, points, color: lineColor, width: lineWidth, zIndex: 1 });
     },
     [],
@@ -1124,16 +1349,16 @@ export function CesiumTacticalMap({
   const trailPolylines = useMemo<CesiumPolyline[]>(() => {
     const out: CesiumPolyline[] = [];
     if (activeDrone?.trail && activeDrone.trail.length >= 2) {
-      pushCasedTrail(out, 'active-drone-trail', tupleToPoints(activeDrone.trail), '#ffffff', 3, 7);
+      pushCasedTrail(out, 'active-drone-trail', tupleToPoints(activeDrone.trail), CESIUM_TRAIL, 3, 7);
     }
     if (missionRoute?.trail && missionRoute.trail.length >= 2) {
-      pushCasedTrail(out, 'mission-route-trail', tupleToPoints(missionRoute.trail), '#ffffff', 3, 7);
+      pushCasedTrail(out, 'mission-route-trail', tupleToPoints(missionRoute.trail), CESIUM_TRAIL, 3, 7);
     }
     if (missionRoute?.waypoints && missionRoute.waypoints.length >= 2) {
       out.push({
         id: 'mission-route-plan',
         points: missionRoute.waypoints.map((w) => ({ lat: w.lat, lon: w.lon })),
-        color: '#22d3ee',
+        color: CESIUM_FOV,
         width: 3,
         dashed: true,
       });
@@ -1141,7 +1366,7 @@ export function CesiumTacticalMap({
     if (friendlyDrones) {
       for (const d of friendlyDrones) {
         if (!d.trail || d.trail.length < 2) continue;
-        pushCasedTrail(out, `friendly-drone-${d.id}-trail`, tupleToPoints(d.trail), '#ffffff', 2, 5);
+        pushCasedTrail(out, `friendly-drone-${d.id}-trail`, tupleToPoints(d.trail), CESIUM_TRAIL, 2, 5);
       }
     }
     if (targets) {
@@ -1152,7 +1377,7 @@ export function CesiumTacticalMap({
           out,
           `target-${t.id}-trail`,
           t.trail.map((p) => ({ lat: p.lat, lon: p.lon })),
-          '#ffffff',
+          CESIUM_TRAIL,
           3,
           7,
         );
@@ -1177,7 +1402,7 @@ export function CesiumTacticalMap({
               { lat: jammer.lat, lon: jammer.lon },
               { lat: tLat, lon: tLon },
             ],
-            color: '#4ade80',
+            color: CESIUM_JAM,
             width: 3,
             dashed: true,
           });
@@ -1222,7 +1447,7 @@ export function CesiumTacticalMap({
           { lat: planningScanViz.cameraLat, lon: planningScanViz.cameraLon },
           { lat: endLat, lon: endLon },
         ],
-        color: 'rgba(167, 139, 250, 0.5)',
+        color: `color-mix(in oklch, ${CESIUM_RAW_TRACK} 50%, transparent)`,
         width: 2,
         dashed: true,
       });
@@ -1249,6 +1474,7 @@ export function CesiumTacticalMap({
    * orthographic frustum extent (i.e. visible diameter).
    */
   const [flyTo, setFlyTo] = useState<CesiumMapFlyTo | null>(null);
+  const [fitBounds, setFitBounds] = useState<CesiumMapFitBounds | null>(null);
 
   // focusCoords → tight 5 km frustum (≈ Mapbox zoom 15).
   useEffect(() => {
@@ -1262,23 +1488,13 @@ export function CesiumTacticalMap({
     setFlyTo({ lat: smoothFocusRequest.lat, lon: smoothFocusRequest.lon, heightM: 30_000, durationSec: 1.0 });
   }, [smoothFocusRequest?.lat, smoothFocusRequest?.lon]);
 
-  // fitBoundsPoints → centroid + span-derived height with padding.
+  // fitBoundsPoints → BoundingSphere fit. Cesium computes the camera
+  // distance that makes the sphere fill the frustum tightly, accounting
+  // for actual aspect — beats the prior centroid + max-span heuristic
+  // which overshot on non-square distributions.
   useEffect(() => {
     if (!fitBoundsPoints || fitBoundsPoints.length < 2) return;
-    const lats = fitBoundsPoints.map((p) => p.lat);
-    const lons = fitBoundsPoints.map((p) => p.lon);
-    const minLat = Math.min(...lats);
-    const maxLat = Math.max(...lats);
-    const minLon = Math.min(...lons);
-    const maxLon = Math.max(...lons);
-    const centerLat = (minLat + maxLat) / 2;
-    const centerLon = (minLon + maxLon) / 2;
-    // 1 deg lat ≈ 111 km. Use the larger of lat-span or longitude-span (corrected
-    // by cos(lat)) so all points are visible. 1.5× pad.
-    const latSpanM = (maxLat - minLat) * 111_000;
-    const lonSpanM = (maxLon - minLon) * 111_000 * Math.cos((centerLat * Math.PI) / 180);
-    const heightM = Math.max(2_000, Math.max(latSpanM, lonSpanM) * 1.5);
-    setFlyTo({ lat: centerLat, lon: centerLon, heightM, durationSec: 1.4 });
+    setFitBounds({ points: fitBoundsPoints, durationSec: 1.4 });
   }, [fitBoundsPoints]);
 
   // sensorFocusId → look up the asset's lat/lon and fly there.
@@ -1291,6 +1507,8 @@ export function CesiumTacticalMap({
       ...DRONE_HIVE_ASSETS.map((a) => ({ id: a.id, lat: a.latitude, lon: a.longitude })),
       ...WEAPON_SYSTEM_ASSETS.map((a) => ({ id: a.id, lat: a.latitude, lon: a.longitude })),
       ...LAUNCHER_ASSETS.map((a) => ({ id: a.id, lat: a.latitude, lon: a.longitude })),
+      ...FLOODLIGHT_ASSETS.map((a) => ({ id: a.id, lat: a.latitude, lon: a.longitude })),
+      ...SPEAKER_ASSETS.map((a) => ({ id: a.id, lat: a.latitude, lon: a.longitude })),
       ...(regulusEffectors ?? REGULUS_EFFECTORS).map((e) => ({ id: e.id, lat: e.lat, lon: e.lon })),
     ];
     const asset = allAssets.find((a) => a.id === sensorFocusId);
@@ -1304,8 +1522,8 @@ export function CesiumTacticalMap({
   // panel even though the basemap it requests is fully fetchable.
   if (!CESIUM_ION_TOKEN && !darkMonochromeMap) {
     return (
-      <div className="absolute inset-0 flex items-center justify-center bg-zinc-950 text-zinc-300">
-        <div className="rounded-md bg-amber-500/10 px-4 py-3 text-sm shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
+      <div className="absolute inset-0 flex items-center justify-center bg-surface-1 text-slate-11">
+        <div className="rounded-md bg-accent-warning-tint px-4 py-3 text-sm shadow-[0_0_0_1px_var(--border-default)]">
           <strong>Cesium token missing.</strong> Set <code className="font-mono">VITE_CESIUM_ION_TOKEN</code> in <code className="font-mono">.env.local</code> and restart the dev server.
         </div>
       </div>
@@ -1314,16 +1532,28 @@ export function CesiumTacticalMap({
 
   return (
     <div className="relative w-full h-full">
-      <CesiumMap
-        ionToken={CESIUM_ION_TOKEN}
-        initialView={DEFAULT_INITIAL_VIEW}
-        htmlMarkers={htmlMarkers}
-        polylines={polylines}
-        flyTo={flyTo}
-        sceneMode={sceneMode}
-        darkMonochromeMap={darkMonochromeMap}
-        className="absolute inset-0"
-      />
+      {/*
+        The canvas-overflow wrapper extends laterally past the visible
+        map cell by the open panel widths (driven by CSS vars set on
+        the gridblock map cell wrapper). The grandparent tile's
+        overflow:hidden clips the excess. Net effect: Cesium's CSS box
+        is invariant across panel toggles, so the framebuffer never
+        re-allocates and the world content stays anchored to viewport
+        coords while the visible portion is just clipped.
+      */}
+      <div className="gridblock-canvas-overflow absolute top-0 bottom-0">
+        <CesiumMap
+          ionToken={CESIUM_ION_TOKEN}
+          initialView={DEFAULT_INITIAL_VIEW}
+          htmlMarkers={htmlMarkers}
+          polylines={polylines}
+          flyTo={flyTo}
+          fitBounds={fitBounds}
+          sceneMode={sceneMode}
+          darkMonochromeMap={darkMonochromeMap}
+          className="absolute inset-0"
+        />
+      </div>
 
       {/*
         2D ↔ 3D toggle. Lattice-style affordance — the label is the
@@ -1336,7 +1566,7 @@ export function CesiumTacticalMap({
         onClick={() => setSceneMode((prev) => (prev === '3D' ? '2D' : '3D'))}
         aria-label={sceneMode === '3D' ? 'Switch to 2D map' : 'Switch to 3D map'}
         aria-pressed={sceneMode === '3D'}
-        className="absolute bottom-3 left-3 z-20 pointer-events-auto w-7 h-7 bg-zinc-900/80 backdrop-blur-md text-[11px] font-mono font-semibold tabular-nums text-zinc-100 shadow-[0_4px_12px_rgba(0,0,0,0.45)] hover:bg-zinc-800/90 active:bg-zinc-950/85 transition-colors flex items-center justify-center select-none"
+        className="absolute bottom-3 left-3 z-20 pointer-events-auto w-7 h-7 bg-[color-mix(in_oklch,var(--surface-3)_85%,transparent)] backdrop-blur-md text-[11px] font-mono font-semibold tabular-nums text-slate-12 shadow-[0_4px_12px_rgba(0,0,0,0.45)] hover:bg-[color-mix(in_oklch,var(--surface-4)_90%,transparent)] active:bg-[color-mix(in_oklch,var(--surface-1)_92%,transparent)] transition-colors flex items-center justify-center select-none"
       >
         {sceneMode === '3D' ? '2D' : '3D'}
       </button>
@@ -1351,11 +1581,11 @@ export function CesiumTacticalMap({
       {controlIndicator && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
           <div
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-900/90 backdrop-blur-md shadow-[0_0_0_1px_rgba(52,211,153,0.6),0_10px_15px_-3px_rgba(0,0,0,0.3),0_0_20px_rgba(52,211,153,0.2)] animate-pulse"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[color-mix(in_oklch,var(--accent-success-soft)_90%,transparent)] backdrop-blur-md shadow-[0_0_0_1px_color-mix(in_oklch,var(--accent-success)_60%,transparent),0_10px_15px_-3px_rgba(0,0,0,0.3),0_0_20px_color-mix(in_oklch,var(--accent-success)_20%,transparent)] animate-pulse"
             style={{ animationDuration: '3s' }}
           >
-            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-            <span className="text-sm font-bold text-emerald-200">{t.youHaveControl}</span>
+            <div className="w-2.5 h-2.5 rounded-full bg-accent-success shadow-[0_0_8px_color-mix(in_oklch,var(--accent-success)_80%,transparent)]" />
+            <span className="text-sm font-bold text-accent-success">{t.youHaveControl}</span>
           </div>
         </div>
       )}
@@ -1371,6 +1601,14 @@ export function CesiumTacticalMap({
     </div>
   );
 }
+
+/**
+ * Memoized export. The dashboard re-renders on lots of unrelated
+ * state (panel resize, dialogs opening, etc.) — without `memo`, every
+ * such re-render rebuilds this component's giant memo chain even when
+ * its props are referentially identical.
+ */
+export const CesiumTacticalMap = memo(CesiumTacticalMapImpl);
 
 /**
  * Right-click context menu shown over the Cesium canvas. Action ids match
@@ -1411,7 +1649,7 @@ function CesiumContextMenu({
       {/* Backdrop closes the menu on outside click. */}
       <div className="fixed inset-0 z-40" onClick={onClose} onContextMenu={(e) => { e.preventDefault(); onClose(); }} />
       <div
-        className="fixed z-50 min-w-[160px] rounded-md bg-[#1c1c20] py-1 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_8px_30px_rgba(0,0,0,0.5)]"
+        className="fixed z-50 min-w-[160px] rounded-md bg-surface-3 py-1 text-slate-12 shadow-[0_0_0_1px_var(--border-default),0_8px_30px_rgba(0,0,0,0.5)]"
         style={{ top: state.y, left: state.x }}
         role="menu"
       >
@@ -1421,7 +1659,7 @@ function CesiumContextMenu({
             type="button"
             role="menuitem"
             onClick={() => onAction(item.id)}
-            className="block w-full px-3 py-1.5 text-end text-[12px] hover:bg-white/[0.08] focus-visible:bg-white/[0.08] focus-visible:outline-none cursor-pointer"
+            className="block w-full px-3 py-1.5 text-end text-[12px] hover:bg-state-hover-strong focus-visible:bg-state-hover-strong focus-visible:outline-none cursor-pointer"
           >
             {item.label}
           </button>

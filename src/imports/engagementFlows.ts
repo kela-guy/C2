@@ -13,6 +13,23 @@ import type { Strings } from '@/lib/intl';
 import { getStrings } from '@/lib/intl';
 import type { Detection } from './ListOfSystems';
 import type { CardAction } from '@/primitives/CardActions';
+import { accentHex, slateHex } from '@/primitives/accentHex';
+
+/*
+ * Engagement-flow line/coverage/badge colors. These are consumed by
+ * Mapbox paint expressions and Cesium materials — both of which
+ * take literal hex strings, not CSS vars. Mapping:
+ *   danger / locked / mitigating     → accent-danger
+ *   warning / pointing                → accent-warning
+ *   success / coverage / acknowledged → accent-success
+ *   default line                      → slate-12 (white-ish)
+ *   badge ink on light                → slate-1 (near-black)
+ */
+const FLOW_DANGER = accentHex('danger');
+const FLOW_WARNING = accentHex('warning');
+const FLOW_SUCCESS = accentHex('success');
+const FLOW_LINE_DEFAULT = slateHex(12);
+const FLOW_BADGE_INK = slateHex(1);
 
 // ─── Shared asset interface ────────────────────────────────────────────────
 
@@ -197,9 +214,9 @@ export function getJamFlow(t: Strings): EngagementFlowDef {
       },
     },
 
-    lineColor: (phase) => phase === 'mitigating' ? '#ef4444' : '#ffffff',
-    badgeTextColor: (phase) => phase === 'mitigating' ? '#ffffff' : '#000000',
-    coverageColor: '#12b886',
+    lineColor: (phase) => phase === 'mitigating' ? FLOW_DANGER : FLOW_LINE_DEFAULT,
+    badgeTextColor: (phase) => phase === 'mitigating' ? FLOW_LINE_DEFAULT : FLOW_BADGE_INK,
+    coverageColor: FLOW_SUCCESS,
 
     dropdownGroupLabel: '',
     extraDropdownActions: buildJamExtraDropdown(t),
@@ -283,12 +300,12 @@ export function getWeaponFlow(t: Strings): EngagementFlowDef {
     },
 
     lineColor: (phase) => {
-      if (phase === 'locked' || phase === 'locking') return '#ef4444';
-      if (phase === 'pointing' || phase === 'pointed') return '#f59e0b';
-      return '#ffffff';
+      if (phase === 'locked' || phase === 'locking') return FLOW_DANGER;
+      if (phase === 'pointing' || phase === 'pointed') return FLOW_WARNING;
+      return FLOW_LINE_DEFAULT;
     },
-    badgeTextColor: (phase) => phase === 'idle' ? '#000000' : '#ffffff',
-    coverageColor: '#12b886',
+    badgeTextColor: (phase) => phase === 'idle' ? FLOW_BADGE_INK : FLOW_LINE_DEFAULT,
+    coverageColor: FLOW_SUCCESS,
 
     dropdownGroupLabel: '',
 

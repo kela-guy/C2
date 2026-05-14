@@ -1,29 +1,37 @@
 import React from "react";
 import { cn } from "@/shared/components/ui/utils";
+import { accentHex, slateHex } from "@/primitives/accentHex";
 
+/*
+ * Status chip semantics — keep this map shallow and aligned with
+ * the four accent classes so anywhere a chip is rendered the dot
+ * (consumed by SVG / inline-style sites that can't resolve CSS
+ * vars) matches its tailwind tint exactly. Don't fork colors here;
+ * fork them in palette.css and let this table follow.
+ */
 export const STATUS_CHIP_COLORS = {
   green: {
-    bg: 'bg-emerald-400/15',
-    text: 'text-emerald-400',
-    dot: '#34d399',
+    bg: 'bg-accent-success-tint',
+    text: 'text-accent-success',
+    dot: accentHex('success'),
     usage: 'Active, resolved, handled',
   },
   red: {
-    bg: 'bg-red-400/15',
-    text: 'text-red-400',
-    dot: '#f87171',
+    bg: 'bg-accent-danger-tint',
+    text: 'text-accent-danger',
+    dot: accentHex('danger'),
     usage: 'Threat, alert, critical',
   },
   orange: {
-    bg: 'bg-orange-300/15',
-    text: 'text-orange-300',
-    dot: '#fdba74',
+    bg: 'bg-accent-warning-tint',
+    text: 'text-accent-warning',
+    dot: accentHex('warning'),
     usage: 'Warning, recently active',
   },
   gray: {
-    bg: 'bg-white/15',
-    text: 'text-white',
-    dot: '#a1a1aa',
+    bg: 'bg-state-hover-strong',
+    text: 'text-slate-12',
+    dot: slateHex(9),
     usage: 'Expired, dismissed, inactive',
   },
 } as const;

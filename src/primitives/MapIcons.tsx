@@ -1,4 +1,13 @@
 import React from 'react';
+import { accentHex } from '@/primitives/accentHex';
+
+/*
+ * Car icon defaults to accent-danger (red) because in the CUAS
+ * fixture data ground vehicles are typically rendered as hostile.
+ * The stroke uses a hardcoded near-black for icon-art reasons — the
+ * outline reads as a fixed dark border independent of theme.
+ */
+const ICON_DEFAULT_CAR_FILL = accentHex('danger');
 
 export const DRONE_PATH =
   'M23.334 15.7502L9.33696 0.583495L5.86139 4.0835L10.5007 11.0835L9.32456 15.7502L10.5007 20.4168L5.86139 27.4168L9.32456 30.6801L23.334 15.7502Z';
@@ -59,7 +68,7 @@ export const MissileCardIcon = ({ size = 15 }: { size?: number }) => (
 export const CAR_PATH =
   'M19.5 17H21C21.5523 17 22 16.5523 22 16V10.8198C22 10.3431 21.6635 9.93271 21.1961 9.83922L17.3746 9.07493C17.1334 9.02668 16.9184 8.89118 16.7708 8.69435L14.3 5.4C14.1111 5.14819 13.8148 5 13.5 5H3C2.44771 5 2 5.44772 2 6V16C2 16.5523 2.44772 17 3 17H4.5';
 
-export const CarIcon = ({ color = '#ff3d40', size = 22 }: { color?: string; size?: number }) => (
+export const CarIcon = ({ color = ICON_DEFAULT_CAR_FILL, size = 22 }: { color?: string; size?: number }) => (
   <svg
     width={size}
     height={size}
@@ -69,6 +78,7 @@ export const CarIcon = ({ color = '#ff3d40', size = 22 }: { color?: string; size
     className="drop-shadow-lg"
     aria-hidden="true"
   >
+    {/* Stroke is intentional icon art — a fixed dark outline */}
     <path d={CAR_PATH} fill={color} stroke="#0a0a0a" strokeWidth="1" strokeLinecap="round" />
     <path d="M9.5 17H14.5" stroke="#0a0a0a" strokeWidth="1.5" strokeLinecap="round" />
     <circle cx="7" cy="16.75" r="2.25" fill={color} />

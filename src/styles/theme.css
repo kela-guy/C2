@@ -24,82 +24,132 @@
 @custom-variant rtl (&:where([dir="rtl"], [dir="rtl"] *));
 @custom-variant ltr (&:where([dir="ltr"], [dir="ltr"] *));
 
+/*
+ * shadcn semantic tokens — dark by default at :root.
+ *
+ * Every shadcn ui/* primitive reads from these vars (--background,
+ * --card, --popover, --muted, --border, --ring, --sidebar-*, --chart-*).
+ * Pointing them at the new surface/slate/accent system means popovers,
+ * dropdowns, dialogs, tooltips, etc. immediately paint from the new
+ * palette with zero per-callsite change.
+ *
+ * The old <html class="dark"> toggle is no longer required (still set
+ * in index.html for backwards compat — both produce the same colors).
+ * .light is an opt-in override for the styleguide's light preview.
+ */
 :root {
   --font-size: 16px;
-  --background: #ffffff;
-  --foreground: oklch(0.145 0 0);
-  --card: #ffffff;
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: #030213;
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.95 0.0058 264.53);
-  --secondary-foreground: #030213;
-  --muted: #ececf0;
-  --muted-foreground: #717182;
-  --accent: #e9ebef;
-  --accent-foreground: #030213;
-  --destructive: #d4183d;
-  --destructive-foreground: #ffffff;
-  --border: rgba(0, 0, 0, 0.1);
-  --input: transparent;
-  --input-background: #f3f3f5;
-  --switch-background: #cbced4;
+
+  --background:           var(--surface-1);
+  --foreground:           var(--slate-12);
+  --card:                 var(--surface-3);
+  --card-foreground:      var(--slate-12);
+  --popover:              var(--surface-5);
+  --popover-foreground:   var(--slate-12);
+  --primary:              var(--slate-12);
+  --primary-foreground:   var(--surface-1);
+  --secondary:            var(--surface-4);
+  --secondary-foreground: var(--slate-12);
+  --muted:                var(--surface-2);
+  --muted-foreground:     var(--slate-9);
+  --accent:               var(--surface-4);
+  --accent-foreground:    var(--slate-12);
+  --destructive:          var(--accent-danger);
+  --destructive-foreground: var(--slate-12);
+  --border:               var(--border-default);
+  --input:                var(--surface-2);
+  --input-background:     var(--surface-2);
+  --switch-background:    var(--surface-4);
+  --ring:                 var(--state-focus-ring);
+
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+
+  --chart-1: var(--accent-info);
+  --chart-2: var(--accent-success);
+  --chart-3: var(--accent-warning);
+  --chart-4: var(--accent-historical);
+  --chart-5: var(--accent-danger);
+
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: #030213;
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+
+  --sidebar:                       var(--surface-2);
+  --sidebar-foreground:            var(--slate-12);
+  --sidebar-primary:               var(--accent-info);
+  --sidebar-primary-foreground:    var(--slate-12);
+  --sidebar-accent:                var(--surface-4);
+  --sidebar-accent-foreground:     var(--slate-12);
+  --sidebar-border:                var(--border-default);
+  --sidebar-ring:                  var(--state-focus-ring);
 }
 
+/*
+ * .dark — kept as an alias of :root so existing `<html class="dark">`
+ * in index.html still resolves to the same values. Removing the class
+ * from index.html in a follow-up is fine; this guard means doing so
+ * is a no-op rather than a regression.
+ */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
-  --font-weight-medium: 500;
-  --font-weight-normal: 400;
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+  --background:           var(--surface-1);
+  --foreground:           var(--slate-12);
+  --card:                 var(--surface-3);
+  --card-foreground:      var(--slate-12);
+  --popover:              var(--surface-5);
+  --popover-foreground:   var(--slate-12);
+  --primary:              var(--slate-12);
+  --primary-foreground:   var(--surface-1);
+  --secondary:            var(--surface-4);
+  --secondary-foreground: var(--slate-12);
+  --muted:                var(--surface-2);
+  --muted-foreground:     var(--slate-9);
+  --accent:               var(--surface-4);
+  --accent-foreground:    var(--slate-12);
+  --destructive:          var(--accent-danger);
+  --destructive-foreground: var(--slate-12);
+  --border:               var(--border-default);
+  --input:                var(--surface-2);
+  --input-background:     var(--surface-2);
+  --switch-background:    var(--surface-4);
+  --ring:                 var(--state-focus-ring);
+}
+
+/*
+ * .light — opt-in override for the styleguide's light preview.
+ * Production routes (/, /demo, /fov-test) never set this class.
+ * The slate ramp itself flips in palette.css; here we re-aim the
+ * shadcn semantic tokens at the substrates that read well on white.
+ */
+.light {
+  --background:           var(--surface-void);  /* white in light mode */
+  --foreground:           var(--slate-12);
+  --card:                 var(--surface-1);
+  --card-foreground:      var(--slate-12);
+  --popover:              var(--surface-2);
+  --popover-foreground:   var(--slate-12);
+  --primary:              var(--slate-12);
+  --primary-foreground:   var(--surface-void);
+  --secondary:            var(--surface-2);
+  --secondary-foreground: var(--slate-12);
+  --muted:                var(--surface-1);
+  --muted-foreground:     var(--slate-9);
+  --accent:               var(--surface-3);
+  --accent-foreground:    var(--slate-12);
+  --destructive:          var(--accent-danger);
+  --destructive-foreground: var(--surface-void);
+  --border:               var(--border-default);
+  --input:                var(--surface-1);
+  --input-background:     var(--surface-1);
+  --switch-background:    var(--surface-3);
+  --ring:                 var(--state-focus-ring);
+
+  --sidebar:                    var(--surface-1);
+  --sidebar-foreground:         var(--slate-12);
+  --sidebar-primary:            var(--accent-info);
+  --sidebar-primary-foreground: var(--surface-void);
+  --sidebar-accent:             var(--surface-2);
+  --sidebar-accent-foreground:  var(--slate-12);
+  --sidebar-border:             var(--border-default);
+  --sidebar-ring:               var(--state-focus-ring);
 }
 
 @theme inline {

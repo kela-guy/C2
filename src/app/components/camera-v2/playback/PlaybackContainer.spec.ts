@@ -12,7 +12,6 @@ export const spec: ComponentSpec = {
     { name: 'src', type: 'string', required: true, description: 'Recording archive URL for the playback `<video>`' },
     { name: 'state', type: 'PlaybackState', required: true, description: 'Full playback state for this feed' },
     { name: 'onPatch', type: '(patch: Partial<PlaybackState>) => void', required: true, description: 'Bubble a state patch up through `VideoPanel`' },
-    { name: 'onExit', type: '() => void', required: true, description: 'Close playback (same as the `P` shortcut)' },
   ],
 
   states: [
@@ -31,7 +30,6 @@ export const spec: ComponentSpec = {
 
   interactions: [
     { trigger: 'media event', element: '`<video>` element', result: '`loadedmetadata` patches durationSec; `waiting` arms the buffering grace timer; `playing` clears it; `ended` patches `status: "ended"`; `error` patches `status: "error"` with a default errorMessage' },
-    { trigger: 'click', element: 'Exit (X) in the chrome', result: 'Calls onExit — closes playback' },
     { trigger: 'click', element: 'Replay (ended state)', result: 'Seeks `<video>` to 0 and resumes' },
     { trigger: 'click', element: 'Retry (error state)', result: 'Calls `<video>.load()` and patches `status: "loading"`' },
   ],
@@ -85,11 +83,12 @@ export const spec: ComponentSpec = {
       'aria-live="polite" announcement for status transitions (loading / buffering / error)',
       'role="status" on the loading + ended overlays',
       'role="alert" on the error overlay',
-      'aria-label on the exit, replay, and retry buttons',
+      'aria-label on the replay and retry buttons',
     ],
     keyboardNav: [
       'Tile-level `Esc` exits playback before fullscreen — playback is always closer to the operator\'s current intent',
-      'Tile-level `P` toggles playback',
+      'Tile-level `P` toggles playback (the only "exit" path; there is no exit button inside the playback surface itself)',
+      'Settings popover → playback row Switch is the equivalent pointer-driven exit',
     ],
     focusManagement: 'Tile retains focus on close so the operator can chain `P` → `Esc` → `T` (take control). The transport stops shortcut letters (P/F/S/T/D/X) from re-triggering the parent via `keyDownCapture`.',
   },
@@ -115,5 +114,7 @@ export const spec: ComponentSpec = {
     'Time always flows L→R: the entire transport is wrapped in `<DirIsland direction="ltr">` inside `PlaybackTimeline`. Hebrew labels still render correctly because the island only repositions chrome.',
     'Buffering has a 600ms grace timer so a momentary network burp doesn\'t flash a spinner. The grace timer is canceled on `playing` and `error` events.',
     'Camera swaps reset the playback object to `undefined` upstream (`VideoPanel.handleSwapFeed`, `PlaygroundPage.handlePinDevice`), so a stale `positionSec` / `errorMessage` from the outgoing camera can never bleed onto the incoming one.',
+    'Exit lives on the live half: Settings → playback row toggle, the `P` shortcut, or `Esc`. The playback surface itself never renders an exit affordance — keeping the investigation frame focused on the recording, not on navigation chrome.',
+    'CameraFeedTile uses `isolate` to scope the tile\'s stacking context, so the z-30 playback surface stays bounded inside the tile and can\'t paint over global panels (e.g. DevicesPanel at z-10) that geometrically overlap.',
   ],
 };

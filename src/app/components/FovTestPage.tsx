@@ -4,6 +4,15 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { Camera } from 'lucide-react';
 import { fovPolygon, FOV_RADIUS_M } from '@/app/lib/mapGeo';
 import { MAPBOX_TOKEN, getMapInstance, tryMapOp } from '@/app/lib/mapUtils';
+import { accentHex, slateHex } from '@/primitives/accentHex';
+
+/*
+ * FOV viz uses accent-info — the same cyan-leaning blue we use for
+ * non-threat camera sensor cues across the app. Routed through
+ * accentHex because Mapbox paint expressions take literal strings
+ * and Marker children mix paint into inline styles.
+ */
+const FOV_COLOR = accentHex('info');
 
 const SENSOR = {
   id: 'test-camera',
@@ -16,12 +25,13 @@ const SENSOR = {
 const EMPTY_FC = { type: 'FeatureCollection' as const, features: [] as never[] };
 
 const FOV_FILL_PAINT = {
-  'fill-color': 'rgba(34, 211, 238, 0.40)',
-  'fill-outline-color': 'rgba(34, 211, 238, 1.0)',
+  'fill-color': FOV_COLOR,
+  'fill-opacity': 0.4,
+  'fill-outline-color': FOV_COLOR,
 } as const;
 
 const FOV_LINE_PAINT = {
-  'line-color': 'rgba(34, 211, 238, 1.0)',
+  'line-color': FOV_COLOR,
   'line-width': 2.5,
 } as const;
 
@@ -60,11 +70,11 @@ export default function FovTestPage() {
   }, []);
 
   return (
-    <div style={{ width: '100vw', height: '100vh', background: '#111' }}>
-      <div style={{ position: 'absolute', top: 16, left: 16, zIndex: 20, color: '#fff', fontFamily: 'sans-serif', fontSize: 14, background: 'rgba(0,0,0,0.7)', padding: '12px 16px', borderRadius: 8 }}>
+    <div style={{ width: '100vw', height: '100vh', background: slateHex(1) }}>
+      <div style={{ position: 'absolute', top: 16, left: 16, zIndex: 20, color: slateHex(12), fontFamily: 'sans-serif', fontSize: 14, background: 'rgba(0,0,0,0.7)', padding: '12px 16px', borderRadius: 8 }}>
         <strong>FOV Test</strong> — Hover the camera icon. FOV should appear.
         <br />
-        <span style={{ color: hovered ? '#22d3ee' : '#888' }}>
+        <span style={{ color: hovered ? FOV_COLOR : slateHex(9) }}>
           {hovered ? 'HOVERED — FOV should be visible' : 'Not hovered'}
         </span>
       </div>
@@ -105,13 +115,15 @@ export default function FovTestPage() {
             }}
             style={{
               width: 36, height: 36, borderRadius: '50%',
-              background: hovered ? 'rgba(34,211,238,0.3)' : 'rgba(0,0,0,0.6)',
-              border: '2px solid #22d3ee',
+              background: hovered
+                ? `color-mix(in oklch, ${FOV_COLOR} 30%, transparent)`
+                : 'rgba(0,0,0,0.6)',
+              border: `2px solid ${FOV_COLOR}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', transition: 'background 0.15s',
             }}
           >
-            <Camera size={18} color="#22d3ee" />
+            <Camera size={18} color={FOV_COLOR} />
           </div>
         </Marker>
       </Map>

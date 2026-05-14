@@ -55,6 +55,21 @@ import {
 } from './engagementFlows';
 import { JamWaveIcon } from '@/primitives/MapIcons';
 import { useStrings, type Strings } from '@/lib/intl';
+import { accentHex, slateHex } from '@/primitives/accentHex';
+
+/*
+ * Card header icon tinting. Drawn via inline `color` props passed
+ * to Lucide icons / SVG primitives, so we need literal hex values
+ * (not CSS vars). Mapping:
+ *   mission     → accent-historical (purple)
+ *   raw det.    → slate-8           (muted gray)
+ *   active      → accent-danger     (red)
+ *   resolved    → slate-9           (neutral gray)
+ */
+const HEADER_ICON_MISSION = accentHex('historical');
+const HEADER_ICON_RAW = slateHex(8);
+const HEADER_ICON_ACTIVE = accentHex('danger');
+const HEADER_ICON_DEFAULT = slateHex(9);
 
 export interface CardCallbacks {
   onVerify?: (action: 'intercept' | 'surveillance' | 'investigate') => void;
@@ -172,7 +187,7 @@ function buildConfidenceBadge(confidence: number | undefined, classifiedType: st
       side: 'top',
       sideOffset: 6,
       showArrow: false,
-      className: 'px-2 py-1 text-[9px] font-normal font-sans text-white bg-zinc-700 shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_10px_15px_-3px_rgba(0,0,0,0.3)] whitespace-nowrap',
+      className: 'px-2 py-1 text-[9px] font-normal font-sans text-slate-12 bg-surface-5 shadow-[0_0_0_1px_var(--border-default),0_10px_15px_-3px_rgba(0,0,0,0.3)] whitespace-nowrap',
     }, t.cards.classifiedTypeLabel(typeLabel)),
   );
 }
@@ -189,12 +204,12 @@ function buildHeader(target: Detection, t: Strings): CardHeaderProps {
   return {
     icon: Icon,
     iconColor: isMission
-      ? '#a78bfa'
+      ? HEADER_ICON_MISSION
       : isRaw
-        ? '#71717a'
+        ? HEADER_ICON_RAW
         : isActive
-          ? '#ef4444'
-          : '#9ca3af',
+          ? HEADER_ICON_ACTIVE
+          : HEADER_ICON_DEFAULT,
     iconBgActive: !isMission && !isRaw && isActive,
     title: isMission
       ? (target.plannedMission?.missionType === 'ptz' ? t.cards.cameraScan : t.cards.droneMission)
@@ -572,7 +587,7 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
       } else {
         actions.push({ id: 'mission-resume', label: c.missionResume, icon: Play, variant: 'ghost', size: 'md',
           onClick: (e) => { e.stopPropagation(); callbacks.onMissionResume?.(); },
-          className: 'shadow-[0_0_0_1px_rgba(16,185,129,0.2)] bg-emerald-500/5 hover:bg-emerald-500/10' });
+          className: 'shadow-[0_0_0_1px_color-mix(in_oklch,var(--accent-success)_20%,transparent)] bg-accent-success-tint hover:bg-[color-mix(in_oklch,var(--accent-success)_18%,transparent)]' });
       }
       actions.push(
         { id: 'mission-override', label: c.missionOverride, icon: Hand, variant: 'ghost', size: 'sm',

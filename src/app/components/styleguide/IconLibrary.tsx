@@ -252,7 +252,12 @@ export default function IconLibrary() {
         </div>
 
         {selected && (
-          <aside className="lg:sticky lg:top-4 lg:w-[320px] lg:shrink-0">
+          // Bound the panel's height so `GridblockPanel`'s scroll body
+          // (flex-1 + overflow-y-auto) has something concrete to fill.
+          // The wrapper sticks 1rem from the top and reserves 2rem of
+          // viewport breathing room, matching the previous "sticky
+          // top-4" layout.
+          <aside className="lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:w-[320px] lg:shrink-0">
             <IconDetailPanel
               entry={selected}
               previewSize={previewSize}

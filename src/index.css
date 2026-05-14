@@ -1,61 +1,22 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-
-/* Tactical red scale (OKLCH hue ~17) — use for danger CTAs, jam, destructive fills */
-:root {
-  --color-1: oklch(0.195 0.03 17);
-  --color-2: oklch(0.227 0.041 17);
-  --color-3: oklch(0.295 0.082 17);
-  --color-4: oklch(0.348 0.111 17);
-  --color-5: oklch(0.394 0.133 17);
-  --color-6: oklch(0.445 0.151 17);
-  --color-7: oklch(0.513 0.168 17);
-  --color-8: oklch(0.599 0.184 17);
-  --color-9: oklch(0.647 0.176 17);
-  --color-10: oklch(0.699 0.166 17);
-  --color-11: oklch(0.863 0.102 17);
-  --color-12: oklch(0.927 0.062 17);
-
-  /* Filled danger CTAs — alias palette for non-Tailwind CSS */
-  --danger-cta-bg: var(--color-4);
-  --danger-cta-bg-hover: var(--color-6);
-  --danger-cta-bg-active: var(--color-3);
-  --danger-cta-text: var(--color-12);
-}
-
-@theme {
-  /* ── Neutral scale (achromatic OKLCH) ── */
-  --color-n-1: oklch(0.162 0 0);
-  --color-n-2: oklch(0.195 0 0);
-  --color-n-3: oklch(0.254 0 0);
-  --color-n-4: oklch(0.302 0 0);
-  --color-n-5: oklch(0.348 0 0);
-  --color-n-6: oklch(0.396 0 0);
-  --color-n-7: oklch(0.459 0 0);
-  --color-n-8: oklch(0.549 0 0);
-  --color-n-9: oklch(0.649 0 0);
-  --color-n-10: oklch(0.72 0 0);
-  --color-n-11: oklch(0.863 0 0);
-  --color-n-12: oklch(0.933 0 0);
-
-  /* ── Colors ── */
-  --color-surface: rgba(255, 255, 255, 0.1);
-  --color-surface-subtle: rgba(255, 255, 255, 0.05);
-  --color-surface-chip: rgba(255, 255, 255, 0.15);
-  --color-border-default: #333;
-  --color-text-primary: #fff;
-  --color-text-secondary: #dee2e6;
-  --color-blue-light-bg: rgba(34, 139, 230, 0.15);
-  --color-blue-accent: #74c0fc;
-  --color-overlay: rgba(0, 0, 0, 0.6);
-
-  /* ── Fonts ── */
-  --font-sans: "Heebo", sans-serif;
-  --font-mono: "IBM Plex Mono", monospace;
-
-  /* ── Radius (4pt grid) ── */
-  --radius-sm: 4px;
-}
+/*
+ * src/index.css
+ *
+ * This file is no longer the source of truth for design tokens.
+ * It is rendered as a `?raw` source in the styleguide so contributors
+ * can see the runtime global rules (sonner toasts, joyride hover,
+ * keyframes, resets). The actual runtime entrypoint is
+ * `src/styles/index.css`, which imports — in order — palette.css,
+ * tailwind.css, and theme.css.
+ *
+ * Anything color-related routes through:
+ *   1. palette.css     — OKLCH token primaries
+ *   2. tailwind.css    — @theme bindings (publishes utilities + legacy aliases)
+ *   3. theme.css       — shadcn semantic token mapping
+ *   4. accentHex.ts    — JS-side hex mirror for SVG / Mapbox / Cesium
+ *
+ * Keep this file for global resets + framework-specific overrides
+ * (Sonner, Joyride, Mapbox marker z-index) only.
+ */
 
 /* ── Reset ── */
 *,
@@ -67,9 +28,17 @@
 }
 
 body {
+  /*
+   * Body sits one notch below the dashboard floor (gridblock-page-bg
+   * = --surface-2). When the gridblock shell fully covers the
+   * viewport the difference is invisible; if a route ever paints
+   * directly onto the body (loading splash, error boundary), the
+   * darker --surface-1 reads as "outside the chrome" rather than
+   * "broken contrast."
+   */
   font-family: var(--font-sans);
-  background-color: #111;
-  color: var(--color-text-primary);
+  background-color: var(--surface-1);
+  color: var(--slate-12);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -87,10 +56,25 @@ body {
   overflow: hidden;
 }
 
-/* ── Tour click-through highlight ── */
+/*
+ * Tour click-through highlight.
+ *
+ * Uses --accent-info (the cyan informational accent) so the highlight
+ * matches the rest of the tour's CTA color (`buttonNext` / `arrow` in
+ * useCuasTour.ts). Updating the palette automatically refreshes the
+ * pulse — no need to touch keyframes.
+ */
 @keyframes tour-click-pulse {
-  0%, 100% { box-shadow: 0 0 0 3px rgba(34, 184, 207, 0.6), 0 0 16px rgba(34, 184, 207, 0.3); }
-  50%      { box-shadow: 0 0 0 6px rgba(34, 184, 207, 0.35), 0 0 24px rgba(34, 184, 207, 0.15); }
+  0%, 100% {
+    box-shadow:
+      0 0 0 3px color-mix(in oklch, var(--accent-info) 60%, transparent),
+      0 0 16px color-mix(in oklch, var(--accent-info) 30%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 6px color-mix(in oklch, var(--accent-info) 35%, transparent),
+      0 0 24px color-mix(in oklch, var(--accent-info) 15%, transparent);
+  }
 }
 .tour-click-target {
   position: relative;
@@ -100,31 +84,31 @@ body {
 }
 /* ── Sonner: unify built-in toasts with tactical design language ── */
 [data-sonner-toast] {
-  --normal-bg: #1c1c20 !important;
-  --normal-border: transparent !important;
-  --normal-text: #f4f4f5 !important;
-  --success-bg: #1c1c20 !important;
-  --success-border: transparent !important;
-  --success-text: #f4f4f5 !important;
-  --info-bg: #1c1c20 !important;
-  --info-border: transparent !important;
-  --info-text: #f4f4f5 !important;
-  --warning-bg: #1c1c20 !important;
-  --warning-border: transparent !important;
-  --warning-text: #f4f4f5 !important;
-  --error-bg: #1c1c20 !important;
-  --error-border: transparent !important;
-  --error-text: #f4f4f5 !important;
-  background: #1c1c20 !important;
-  border: none !important;
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.10), 0 8px 30px rgba(0,0,0,0.5) !important;
+  --normal-bg: var(--surface-3) !important;
+  --normal-border: var(--border-default) !important;
+  --normal-text: var(--slate-12) !important;
+  --success-bg: var(--surface-3) !important;
+  --success-border: var(--border-default) !important;
+  --success-text: var(--slate-12) !important;
+  --info-bg: var(--surface-3) !important;
+  --info-border: var(--border-default) !important;
+  --info-text: var(--slate-12) !important;
+  --warning-bg: var(--surface-3) !important;
+  --warning-border: var(--border-default) !important;
+  --warning-text: var(--slate-12) !important;
+  --error-bg: var(--surface-3) !important;
+  --error-border: var(--border-default) !important;
+  --error-text: var(--slate-12) !important;
+  background: var(--surface-3) !important;
+  border: 1px solid var(--border-default) !important;
+  box-shadow: var(--shadow-5) !important;
   border-radius: 8px !important;
 }
 
 [data-sonner-toast] [data-title] {
   font-size: 13px !important;
   font-weight: 500 !important;
-  color: #f4f4f5 !important;
+  color: var(--slate-12) !important;
 }
 
 [data-sonner-toast] [data-close-button] {
@@ -132,21 +116,21 @@ body {
 }
 
 [data-sonner-toast][data-type="success"] [data-icon] {
-  color: #22c55e !important;
+  color: var(--accent-success) !important;
 }
 [data-sonner-toast][data-type="info"] [data-icon] {
-  color: #a1a1aa !important;
+  color: var(--slate-11) !important;
 }
 [data-sonner-toast][data-type="warning"] [data-icon] {
-  color: #eab308 !important;
+  color: var(--accent-warning) !important;
 }
 [data-sonner-toast][data-type="error"] [data-icon] {
-  color: #ef4444 !important;
+  color: var(--accent-danger) !important;
 }
 .react-joyride__tooltip [data-action="skip"]:hover {
-  background-color: rgba(255, 255, 255, 0.12) !important;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2) !important;
-  color: #e4e4eb !important;
+  background-color: var(--state-hover-strong) !important;
+  box-shadow: 0 0 0 1px var(--border-strong) !important;
+  color: var(--slate-12) !important;
 }
 
 /* Ensure map markers render above the FOV SVG overlay (z-index: 0) */

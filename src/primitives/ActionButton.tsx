@@ -1,39 +1,47 @@
 import React from "react";
 import { Loader2 } from "@/lib/icons/central";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { cn } from "@/shared/components/ui/utils";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/shared/components/ui/tooltip";
 
+/*
+ * Variant base colors all route through the substrate / state /
+ * accent tokens in src/styles/palette.css so a global theme tweak
+ * (or .light preview) cascades through every ActionButton without
+ * editing this file. Soft accent variants paint --accent-N-soft
+ * against --slate-12 type so we land in APCA-pass territory on
+ * substrate 3 (the default panel surface).
+ */
 export const ACTION_BUTTON_VARIANTS = {
   fill: {
-    base: 'bg-white/[0.08]',
-    hover: 'hover:bg-white/[0.14]',
-    active: 'active:bg-white/[0.06]',
-    text: 'text-zinc-200',
+    base: 'bg-state-pressed',
+    hover: 'hover:bg-state-selected',
+    active: 'active:bg-state-hover-strong',
+    text: 'text-slate-11',
   },
   ghost: {
-    base: 'bg-zinc-800',
-    hover: 'hover:bg-zinc-700',
-    active: 'active:bg-zinc-900',
-    text: 'text-white',
+    base: 'bg-surface-4',
+    hover: 'hover:bg-surface-5',
+    active: 'active:bg-surface-3',
+    text: 'text-slate-12',
   },
   outline: {
-    base: 'bg-white/[0.03] shadow-[0_0_0_1px_rgba(255,255,255,0.08)]',
-    hover: 'hover:bg-white/[0.06]',
-    active: 'active:bg-white/[0.02]',
-    text: 'text-zinc-400',
+    base: 'bg-state-hover shadow-[0_0_0_1px_var(--border-default)]',
+    hover: 'hover:bg-state-hover-strong',
+    active: 'active:bg-state-hover',
+    text: 'text-slate-10',
   },
   danger: {
-    base: 'bg-[oklch(0.435_0.151_25)]',
-    hover: 'hover:bg-[oklch(0.485_0.151_25)]',
-    active: 'active:bg-[oklch(0.385_0.151_25)]',
-    text: 'text-white',
+    base: 'bg-accent-danger-soft',
+    hover: 'hover:bg-accent-danger',
+    active: 'active:bg-[color-mix(in_oklch,var(--accent-danger-soft)_80%,black)]',
+    text: 'text-slate-12',
   },
   warning: {
-    base: 'bg-[oklch(0.501_0.166_75)]',
-    hover: 'hover:bg-[oklch(0.551_0.166_75)]',
-    active: 'active:bg-[oklch(0.451_0.166_75)]',
-    text: 'text-white',
+    base: 'bg-accent-warning-soft',
+    hover: 'hover:bg-accent-warning',
+    active: 'active:bg-[color-mix(in_oklch,var(--accent-warning-soft)_80%,black)]',
+    text: 'text-slate-12',
   },
 } as const;
 
@@ -85,7 +93,7 @@ export function ActionButton({
         sz.height, sz.text, sz.font, c.text,
         c.base, c.hover, c.active,
         'transition-[background-color,transform] duration-150 ease-out',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/30',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color-mix(in_oklch,var(--slate-12)_30%,transparent)]',
         !loading && 'active:scale-[0.98] will-change-transform',
         isDisabled && !loading && 'opacity-45 pointer-events-none',
         loading && 'cursor-wait',

@@ -28,6 +28,20 @@
 import { useEffect, useMemo, useReducer, useRef, useState, type CSSProperties } from 'react';
 import { downloadTrace } from '@/lib/perf/trace';
 import { snapshotRecent, subscribe, getTotalCount, type PerfEvent } from '@/lib/perf/sink';
+import { accentHex, slateHex } from '@/primitives/accentHex';
+
+/*
+ * Perf HUD severity ramp. Routed through accentHex so the palette
+ * remains the single source of truth — these colors signal frame
+ * cost, INP duration, and React render duration. The HUD itself
+ * lives outside the Substrate tree (fixed-position dev overlay)
+ * and uses literal strings for inline styles.
+ */
+const HUD_FG = slateHex(12);
+const HUD_OK = accentHex('success');
+const HUD_WARN = accentHex('warning');
+const HUD_BAD = accentHex('danger');
+const HUD_PRIMARY = accentHex('info');
 import { getFrameIntervals } from '@/lib/perf/framePacing';
 import { attachStatsGl, detachStatsGl } from '@/lib/perf/statsGl';
 import { getRenderCounts, subscribeRenderCounts } from '@/lib/perf/renderCounters';
@@ -146,7 +160,12 @@ export function PerfHud(): React.JSX.Element | null {
   }, []);
 
   // Drag handlers — global so dragging works even if the cursor
-  // leaves the title bar.
+  // leaves the title bar. Listeners are registered ONCE and read the
+  // latest `pos` via a ref; the previous `[pos]` dependency caused
+  // the global listeners to be torn down + re-added on every pixel
+  // of mouse movement during a drag (~600 churn events per second).
+  const posRef = useRef(pos);
+  posRef.current = pos;
   useEffect(() => {
     const onMove = (e: MouseEvent): void => {
       const s = dragStateRef.current;
@@ -160,7 +179,7 @@ export function PerfHud(): React.JSX.Element | null {
     const onUp = (): void => {
       if (dragStateRef.current) {
         dragStateRef.current = null;
-        writePos(pos);
+        writePos(posRef.current);
       }
     };
     window.addEventListener('mousemove', onMove);
@@ -169,7 +188,7 @@ export function PerfHud(): React.JSX.Element | null {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
-  }, [pos]);
+  }, []);
 
   if (!visible) {
     return (
@@ -250,7 +269,7 @@ function FrameStats(): React.JSX.Element {
   const last = fpsEvents[fpsEvents.length - 1];
   const fps = last?.value ?? 0;
   const args = (last?.args ?? {}) as { p50?: number; p95?: number; p99?: number; dropped?: number };
-  const fpsColor = fps >= 55 ? '#7ee787' : fps >= 30 ? '#f0c674' : '#ff7b72';
+  const fpsColor = fps >= 55 ? HUD_OK : fps >= 30 ? HUD_WARN : HUD_BAD;
   return (
     <div style={statRowStyle}>
       <span>
@@ -275,7 +294,7 @@ function FrameStrip(): React.JSX.Element {
     <svg width={len * 2} height={32} style={{ display: 'block', marginTop: 4 }}>
       {Array.from(slice).map((v, i) => {
         const h = Math.min(28, (v / 50) * 28);
-        const fill = v > 33 ? '#ff7b72' : v > 20 ? '#f0c674' : '#7ee787';
+        const fill = v > 33 ? HUD_BAD : v > 20 ? HUD_WARN : HUD_OK;
         return <rect key={i} x={i * 2} y={32 - h} width={1.5} height={h} fill={fill} />;
       })}
     </svg>
@@ -382,7 +401,7 @@ function CesiumDebugToggles(): React.JSX.Element {
           onClick={() => toggle(it.key)}
           style={{
             ...toggleBtnStyle,
-            background: flags[it.key] ? '#1f6feb' : 'rgba(255,255,255,0.06)',
+            background: flags[it.key] ? HUD_PRIMARY : 'rgba(255,255,255,0.06)',
             opacity: viewer ? 1 : 0.5,
           }}
         >
@@ -408,7 +427,7 @@ function RenderCounters(): React.JSX.Element {
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{id}</span>
           <span>
             <span style={{ opacity: 0.7 }}>{v.count}× </span>
-            <span style={{ color: v.lastDuration > 16 ? '#ff7b72' : v.lastDuration > 4 ? '#f0c674' : '#7ee787' }}>
+            <span style={{ color: v.lastDuration > 16 ? HUD_BAD : v.lastDuration > 4 ? HUD_WARN : HUD_OK }}>
               {v.lastDuration.toFixed(1)}ms
             </span>
           </span>
@@ -437,7 +456,7 @@ function InpLoAFFeed(): React.JSX.Element {
         };
         return (
           <div key={i}>
-            <strong style={{ color: e.value && e.value > 200 ? '#ff7b72' : e.value && e.value > 100 ? '#f0c674' : '#7ee787' }}>
+            <strong style={{ color: e.value && e.value > 200 ? HUD_BAD : e.value && e.value > 100 ? HUD_WARN : HUD_OK }}>
               {e.value?.toFixed(0)}ms
             </strong>{' '}
             {a.interactionType} → {a.interactionTarget?.slice(0, 40) ?? '—'}
@@ -457,7 +476,7 @@ function InpLoAFFeed(): React.JSX.Element {
         const top = a.scripts?.[0];
         return (
           <div key={i}>
-            <strong style={{ color: e.dur && e.dur > 100 ? '#ff7b72' : '#f0c674' }}>{e.dur?.toFixed(0)}ms</strong>
+            <strong style={{ color: e.dur && e.dur > 100 ? HUD_BAD : HUD_WARN }}>{e.dur?.toFixed(0)}ms</strong>
             {' '}block {fmtMs(a.blockingDuration)}
             {top && (
               <div style={{ opacity: 0.6, paddingLeft: 8 }}>
@@ -502,8 +521,8 @@ const rootStyle: CSSProperties = {
   position: 'fixed',
   zIndex: 2_147_483_647,
   width: 320,
-  background: 'rgba(13, 17, 23, 0.92)',
-  color: '#e6edf3',
+  background: `color-mix(in oklch, ${slateHex(2)} 92%, transparent)`,
+  color: HUD_FG,
   font: '11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace',
   border: '1px solid rgba(255,255,255,0.08)',
   borderRadius: 8,
@@ -525,7 +544,7 @@ const titleBarStyle: CSSProperties = {
 const closeBtnStyle: CSSProperties = {
   background: 'transparent',
   border: 'none',
-  color: '#e6edf3',
+  color: HUD_FG,
   cursor: 'pointer',
   fontSize: 16,
   lineHeight: 1,
@@ -553,8 +572,8 @@ const dotStyle: CSSProperties = {
   width: 32,
   height: 32,
   borderRadius: 16,
-  background: 'rgba(13, 17, 23, 0.85)',
-  color: '#e6edf3',
+  background: `color-mix(in oklch, ${slateHex(2)} 85%, transparent)`,
+  color: HUD_FG,
   border: '1px solid rgba(255,255,255,0.12)',
   cursor: 'pointer',
   fontSize: 16,
@@ -564,7 +583,7 @@ const dotStyle: CSSProperties = {
 
 const toggleBtnStyle: CSSProperties = {
   font: '10px/1 ui-monospace, monospace',
-  color: '#e6edf3',
+  color: HUD_FG,
   border: '1px solid rgba(255,255,255,0.12)',
   borderRadius: 4,
   padding: '3px 6px',
@@ -573,9 +592,9 @@ const toggleBtnStyle: CSSProperties = {
 
 const primaryBtnStyle: CSSProperties = {
   font: '10px/1 ui-monospace, monospace',
-  color: '#e6edf3',
-  background: '#1f6feb',
-  border: '1px solid #1f6feb',
+  color: HUD_FG,
+  background: HUD_PRIMARY,
+  border: `1px solid ${HUD_PRIMARY}`,
   borderRadius: 4,
   padding: '4px 8px',
   cursor: 'pointer',

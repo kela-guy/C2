@@ -28,6 +28,34 @@ import {
   DRONE_FOV_RADIUS_M,
   DRONE_FOV_DEG,
 } from '@/app/lib/mapGeo';
+import { accentHex, slateHex } from '@/primitives/accentHex';
+
+/*
+ * Mapbox layer paint expressions take literal hex strings, not CSS
+ * vars. Centralising the palette here keeps the layer constants
+ * compact and ensures a palette tweak in palette.css cascades
+ * through every paint expression at once.
+ *
+ *   sensor FOV      → accent-info     (cyan-blue)
+ *   ECM / success   → accent-success  (green)
+ *   weapon lock     → accent-danger   (red)
+ *   raw track       → accent-historical (purple)
+ *   active drone    → accent-info / cyan
+ *   offline track   → slate-7         (muted gray)
+ *   trail casing    → black (icon-art outline)
+ *   missile glyph   → accent-cyan
+ *   warn / amber    → accent-warning
+ */
+const TMAP_FOV = accentHex('info');
+const TMAP_SUCCESS = accentHex('success');
+const TMAP_DANGER = accentHex('danger');
+const TMAP_HISTORICAL = accentHex('historical');
+const TMAP_CYAN = accentHex('cyan');
+const TMAP_WARNING = accentHex('warning');
+const TMAP_OFFLINE = slateHex(7);
+const TMAP_WHITE = slateHex(12);
+const TMAP_BLACK = '#000000';
+const TMAP_NEAR_BLACK = slateHex(1);
 import { MAPBOX_TOKEN, getMapInstance, tryMapOp, logMapError } from '@/app/lib/mapUtils';
 
 // Re-export geo helpers for external callers (Dashboard imports them from here).
@@ -93,7 +121,7 @@ export const RadarIcon = ({ size = 28, fill = "white" }: { size?: number; fill?:
   </svg>
 );
 
-export const MissileIcon = ({ rotationDeg = 0, fill = '#15FFF6' }: { rotationDeg?: number; fill?: string }) => (
+export const MissileIcon = ({ rotationDeg = 0, fill = TMAP_CYAN }: { rotationDeg?: number; fill?: string }) => (
   <svg
     width="42"
     height="30"
@@ -119,7 +147,7 @@ export const DroneIcon = ({ rotationDeg = 0, disabled = false, color }: { rotati
   >
     <path
       d={DRONE_PATH}
-      fill={disabled ? '#6b7280' : color || '#15FFF6'}
+      fill={disabled ? TMAP_OFFLINE : color || TMAP_CYAN}
       stroke="#0a0a0a"
       strokeWidth="1"
     />
@@ -386,34 +414,35 @@ const OFFLINE_FOV_DIMMING_ENABLED = OFFLINE_VISIBILITY_VARIANT === 'B';
 
 // Module-scope paint constants — reuse across all layers.
 const TRAIL_CASING_PAINT = {
-  'line-color': '#000000',
+  'line-color': TMAP_BLACK,
   'line-width': 7,
   'line-opacity': 1,
 } as const;
 
 const TRAIL_LINE_PAINT = {
-  'line-color': '#ffffff',
+  'line-color': TMAP_WHITE,
   'line-width': 3,
   'line-opacity': 1,
 } as const;
 
 const FRIENDLY_TRAIL_CASING_PAINT = {
-  'line-color': '#000000',
+  'line-color': TMAP_BLACK,
   'line-width': 5,
 } as const;
 
 const FRIENDLY_TRAIL_LINE_PAINT = {
-  'line-color': '#ffffff',
+  'line-color': TMAP_WHITE,
   'line-width': 2,
 } as const;
 
 const FRIENDLY_FOV_FILL_PAINT = {
-  'fill-color': 'rgba(34, 211, 238, 0.40)',
-  'fill-outline-color': 'rgba(34, 211, 238, 1.0)',
+  'fill-color': TMAP_FOV,
+  'fill-opacity': 0.4,
+  'fill-outline-color': TMAP_FOV,
 } as const;
 
 const FRIENDLY_FOV_LINE_PAINT = {
-  'line-color': 'rgba(34, 211, 238, 1.0)',
+  'line-color': TMAP_FOV,
   'line-width': 2.5,
 } as const;
 
@@ -428,16 +457,19 @@ const EMPTY_FC = { type: 'FeatureCollection' as const, features: [] as any[] };
 const FOV_PAINT = {
   fill: {
     'fill-color': OFFLINE_FOV_DIMMING_ENABLED
-      ? ['case', ['==', ['get', 'offline'], 1], 'rgba(113, 113, 122, 0.22)', 'rgba(34, 211, 238, 0.40)']
-      : 'rgba(34, 211, 238, 0.40)',
+      ? ['case', ['==', ['get', 'offline'], 1], TMAP_OFFLINE, TMAP_FOV]
+      : TMAP_FOV,
+    'fill-opacity': OFFLINE_FOV_DIMMING_ENABLED
+      ? ['case', ['==', ['get', 'offline'], 1], 0.22, 0.4]
+      : 0.4,
     'fill-outline-color': OFFLINE_FOV_DIMMING_ENABLED
-      ? ['case', ['==', ['get', 'offline'], 1], 'rgba(161, 161, 170, 0.7)', 'rgba(34, 211, 238, 1.0)']
-      : 'rgba(34, 211, 238, 1.0)',
+      ? ['case', ['==', ['get', 'offline'], 1], TMAP_OFFLINE, TMAP_FOV]
+      : TMAP_FOV,
   },
   line: {
     'line-color': OFFLINE_FOV_DIMMING_ENABLED
-      ? ['case', ['==', ['get', 'offline'], 1], 'rgba(161, 161, 170, 0.7)', 'rgba(34, 211, 238, 1.0)']
-      : 'rgba(34, 211, 238, 1.0)',
+      ? ['case', ['==', ['get', 'offline'], 1], TMAP_OFFLINE, TMAP_FOV]
+      : TMAP_FOV,
     'line-width': OFFLINE_FOV_DIMMING_ENABLED
       ? ['case', ['==', ['get', 'offline'], 1], 1.5, 2.5]
       : 2.5,
@@ -1203,7 +1235,7 @@ export const TacticalMap = ({
   }), [friendlyDrones, offlineAssetIds, hoveredFriendlyDroneId, selectedAssetId, hoveredSensorIdFromCard]);
 
   return (
-    <div ref={mapContainerRef} className={`absolute inset-0 min-h-0 min-w-0 bg-[#0a0a0a] overflow-hidden z-0 ${planningMode ? 'cursor-crosshair' : ''}`}>
+    <div ref={mapContainerRef} className={`absolute inset-0 min-h-0 min-w-0 bg-surface-void overflow-hidden z-0 ${planningMode ? 'cursor-crosshair' : ''}`}>
 
       {/* Planning mode overlay banner */}
       {planningMode && (
@@ -1283,15 +1315,17 @@ export const TacticalMap = ({
               id="jam-verification-fov-fill"
               type="fill"
               paint={{
-                'fill-color': 'rgba(34, 197, 94, 0.35)',
-                'fill-outline-color': 'rgba(34, 197, 94, 1.0)',
+                'fill-color': TMAP_SUCCESS,
+                'fill-opacity': 0.35,
+                'fill-outline-color': TMAP_SUCCESS,
               }}
             />
             <Layer
               id="jam-verification-fov-line"
               type="line"
               paint={{
-                'line-color': 'rgba(34, 197, 94, 0.9)',
+                'line-color': TMAP_SUCCESS,
+                'line-opacity': 0.9,
                 'line-width': 2,
               }}
             />
@@ -1305,15 +1339,17 @@ export const TacticalMap = ({
               id="camera-lookat-fov-fill"
               type="fill"
               paint={{
-                'fill-color': 'rgba(6, 182, 212, 0.32)',
-                'fill-outline-color': 'rgba(6, 182, 212, 1.0)',
+                'fill-color': TMAP_FOV,
+                'fill-opacity': 0.32,
+                'fill-outline-color': TMAP_FOV,
               }}
             />
             <Layer
               id="camera-lookat-fov-line"
               type="line"
               paint={{
-                'line-color': 'rgba(6, 182, 212, 0.9)',
+                'line-color': TMAP_FOV,
+                'line-opacity': 0.9,
                 'line-width': 2,
               }}
             />
@@ -1353,7 +1389,7 @@ export const TacticalMap = ({
                   id={`missile-line-${missile.id}`}
                   type="line"
                   paint={{
-                    'line-color': '#15FFF6',
+                    'line-color': TMAP_CYAN,
                     'line-width': 3,
                   }}
                 />
@@ -1387,7 +1423,8 @@ export const TacticalMap = ({
               id="jamming-drone-trail-line"
               type="line"
               paint={{
-                'line-color': 'rgba(107, 114, 128, 0.7)',
+                'line-color': TMAP_OFFLINE,
+                'line-opacity': 0.7,
                 'line-width': 2,
                 'line-dasharray': [2, 1],
               }}
@@ -1455,7 +1492,8 @@ export const TacticalMap = ({
                 id="jam-verification-drone-path-line"
                 type="line"
                 paint={{
-                  'line-color': 'rgba(251, 191, 36, 0.7)',
+                  'line-color': TMAP_WARNING,
+                  'line-opacity': 0.7,
                   'line-width': 2,
                   'line-dasharray': [2, 1],
                 }}
@@ -1746,7 +1784,7 @@ export const TacticalMap = ({
             const isLocked = launcher.status === 'locked';
             if (!isHovered && !isHoveredFromCard && !isSelected && !isEngaged && !isPointing && !isLocked) continue;
             const isActive = isPointing || isLocked;
-            const color = isLocked ? '#ef4444' : WEAPON_FLOW.coverageColor;
+            const color = isLocked ? TMAP_DANGER : WEAPON_FLOW.coverageColor;
             const targetBearing = (isActive || isEngaged) && weaponPair
               ? bearingDegrees(launcher.lat, launcher.lon, weaponPair.toLat, weaponPair.toLon)
               : 0;
@@ -1768,7 +1806,7 @@ export const TacticalMap = ({
             const isOffline = offlineAssetIds.includes(reg.id);
             const dim = OFFLINE_FOV_DIMMING_ENABLED && isOffline;
             if (!isHovered && !isActive && !isHoveredFromCard && !isEngaged && !isSelected) continue;
-            const color = dim ? '#a1a1aa' : isActive ? '#4ade80' : JAM_FLOW.coverageColor;
+            const color = dim ? slateHex(9) : isActive ? TMAP_SUCCESS : JAM_FLOW.coverageColor;
             rings.push({
               key: `reg-${reg.id}`, lat: reg.lat, lon: reg.lon, radiusM: reg.coverageRadiusM,
               fovDeg: 360, bearing: 0,
@@ -2087,7 +2125,8 @@ export const TacticalMap = ({
                 id="flow4-route-line"
                 type="line"
                 paint={{
-                  'line-color': missionRoute.phase === 'planning' ? 'rgba(167, 139, 250, 0.5)' : 'rgba(167, 139, 250, 0.35)',
+                  'line-color': TMAP_HISTORICAL,
+                  'line-opacity': missionRoute.phase === 'planning' ? 0.5 : 0.35,
                   'line-width': 2,
                   'line-dasharray': missionRoute.phase === 'planning' ? [4, 3] : [1, 0],
                 }}
@@ -2113,7 +2152,8 @@ export const TacticalMap = ({
                   id="flow4-trail-line"
                   type="line"
                   paint={{
-                    'line-color': 'rgba(167, 139, 250, 0.15)',
+                    'line-color': TMAP_HISTORICAL,
+                    'line-opacity': 0.15,
                     'line-width': 1.5,
                   }}
                 />
@@ -2184,7 +2224,8 @@ export const TacticalMap = ({
               id="camera-scan-lines-layer"
               type="line"
               paint={{
-                'line-color': 'rgba(167, 139, 250, 0.5)',
+                'line-color': TMAP_HISTORICAL,
+                'line-opacity': 0.5,
                 'line-width': 1.5,
                 'line-dasharray': [4, 3],
               }}
@@ -2213,7 +2254,8 @@ export const TacticalMap = ({
                 id="flow3-drone-path-line"
                 type="line"
                 paint={{
-                  'line-color': activeDrone.phase === 'rtb' ? 'rgba(161, 161, 170, 0.5)' : 'rgba(6, 182, 212, 0.5)',
+                  'line-color': activeDrone.phase === 'rtb' ? TMAP_OFFLINE : TMAP_FOV,
+                  'line-opacity': 0.5,
                   'line-width': 1.5,
                   'line-dasharray': [4, 3],
                 }}
@@ -2234,7 +2276,8 @@ export const TacticalMap = ({
                   id="flow3-drone-trail-line"
                   type="line"
                   paint={{
-                    'line-color': 'rgba(6, 182, 212, 0.25)',
+                    'line-color': TMAP_FOV,
+                    'line-opacity': 0.25,
                     'line-width': 1,
                   }}
                 />
@@ -2265,7 +2308,8 @@ export const TacticalMap = ({
                   id="flow3-loiter-circle-line"
                   type="line"
                   paint={{
-                    'line-color': activeDrone.phase === 'low_battery' ? 'rgba(251, 146, 60, 0.5)' : 'rgba(6, 182, 212, 0.3)',
+                    'line-color': activeDrone.phase === 'low_battery' ? TMAP_WARNING : TMAP_FOV,
+                    'line-opacity': activeDrone.phase === 'low_battery' ? 0.5 : 0.3,
                     'line-width': 1,
                     'line-dasharray': [3, 2],
                   }}

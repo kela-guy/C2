@@ -3,16 +3,17 @@
  *
  * Anatomy (physical left -> right inside a `<DirIsland direction="ltr">`):
  *
- *   [Play/Pause]   [Scrubber]   [00:32 / -00:28]   [Exit]
+ *   [Play/Pause]   [Scrubber]   [00:32 / -00:28]
  *
  * Time always flows L→R regardless of app direction; that's why the
  * whole surface lives inside an LTR DirIsland. Hebrew tooltip labels
  * still render correctly because the island only repositions chrome,
  * not text.
  *
- * The transport is purely presentational. Scrubbing, play/pause, and
- * exit bubble up to `PlaybackContainer`, which owns the `<video>`
- * element and the playback state.
+ * The transport is purely presentational. Scrubbing and play/pause
+ * bubble up to `PlaybackContainer`, which owns the `<video>` element
+ * and the playback state. Exit lives on the live half (Settings →
+ * playback toggle, `P`, or `Esc`) — never on the transport itself.
  *
  * Status chrome (loading / buffering / ended / error) is rendered by
  * `PlaybackContainer` over the video frame, not here — keeping this
@@ -21,7 +22,7 @@
 
 import { useCallback, useId } from 'react';
 import * as SliderPrimitive from '@radix-ui/react-slider';
-import { Pause, Play, X } from '@/lib/icons/central';
+import { Pause, Play } from '@/lib/icons/central';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import { DirIsland } from '@/lib/direction';
 import { useStrings } from '@/lib/intl';
@@ -32,7 +33,6 @@ interface PlaybackTimelineProps {
   onScrub: (positionSec: number) => void;
   onScrubbingChange?: (isScrubbing: boolean) => void;
   onPlayPause: () => void;
-  onExit?: () => void;
 }
 
 function fmtClock(sec: number): string {
@@ -47,7 +47,6 @@ export function PlaybackTimeline({
   onScrub,
   onScrubbingChange,
   onPlayPause,
-  onExit,
 }: PlaybackTimelineProps) {
   const t = useStrings().camera.playback;
   const { positionSec, durationSec, isPlaying, status } = state;
@@ -122,12 +121,6 @@ export function PlaybackTimeline({
         <span className="font-mono text-[10px] tabular-nums text-white/55 min-w-[44px] text-end">
           -{fmtClock(remaining)}
         </span>
-
-        {onExit && (
-          <TransportButton label={t.exitPlayback} onClick={onExit}>
-            <X size={14} />
-          </TransportButton>
-        )}
       </div>
     </DirIsland>
   );

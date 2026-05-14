@@ -3,15 +3,22 @@ import { toast } from "sonner";
 import { Toaster } from "./ui/sonner";
 import { X } from "@/lib/icons/central";
 import { formatTime, useStrings } from "@/lib/intl";
+import { accentHex, slateHex } from "@/primitives/accentHex";
 import type { NotificationData, ThreatLevel } from "./notificationData";
 
+/*
+ * Severity → accent tone. Routes through accentHex() so a palette
+ * tweak cascades through every toast / banner / vignette. `info`
+ * intentionally maps to slate-9 (neutral) because it carries no
+ * severity weight; the rest match their accent counterparts.
+ */
 const LEVEL_ACCENT: Record<ThreatLevel, string> = {
-  critical: "#ef4444",
-  high:     "#f97316",
-  suspect:  "#eab308",
-  medium:   "#eab308",
-  info:     "#a1a1aa",
-  success:  "#22c55e",
+  critical: accentHex('danger'),
+  high:     accentHex('tracking'),
+  suspect:  accentHex('warning'),
+  medium:   accentHex('warning'),
+  info:     slateHex(9),
+  success:  accentHex('success'),
 };
 
 
@@ -55,7 +62,7 @@ const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
     const data = items[0];
     return (
       <div
-        className="relative w-[356px] rounded-lg bg-[#1c1c20] shadow-[0_0_0_1px_rgba(255,255,255,0.12),0_8px_30px_rgba(0,0,0,0.5)] overflow-hidden cursor-pointer group"
+        className="relative w-[356px] rounded-lg bg-surface-3 shadow-[0_0_0_1px_var(--border-default),0_8px_30px_rgba(0,0,0,0.5)] overflow-hidden cursor-pointer group"
         onClick={() => window.dispatchEvent(new CustomEvent('toast-clicked', { detail: data }))}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.dispatchEvent(new CustomEvent('toast-clicked', { detail: data })); } }}
         role="button"
@@ -82,7 +89,7 @@ const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
 
   return (
     <div
-      className="relative w-[356px] rounded-lg bg-[#1c1c20] overflow-hidden"
+      className="relative w-[356px] rounded-lg bg-surface-3 overflow-hidden"
     >
       <div className="py-3 px-3">
         <div className="flex items-center justify-between">
@@ -92,7 +99,7 @@ const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
           <div className="flex items-center gap-1.5">
             <button
               onClick={(e) => { e.stopPropagation(); setExpanded(prev => !prev); }}
-              className="text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors px-2 py-1.5 rounded hover:bg-white/[0.04]"
+              className="text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors px-2 py-1.5 rounded hover:bg-state-hover"
               aria-expanded={expanded}
             >
               {expanded ? nt.stackCollapse : nt.stackExpand}
@@ -121,7 +128,7 @@ const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
               return (
                 <div
                   key={`${item.code ?? item.title}-${item.timestamp}`}
-                  className="flex items-start gap-2.5 px-2 py-2 rounded-md hover:bg-white/[0.03] transition-colors cursor-pointer focus-visible:ring-1 focus-visible:ring-white/25 focus-visible:outline-none"
+                  className="flex items-start gap-2.5 px-2 py-2 rounded-md hover:bg-state-hover transition-colors cursor-pointer focus-visible:ring-1 focus-visible:ring-border-strong focus-visible:outline-none"
                   role="button"
                   tabIndex={0}
                   onClick={(e) => {
@@ -199,7 +206,7 @@ const VIGNETTE_DURATION_MS = 4000;
 
 export function NotificationSystem() {
   const [criticalActive, setCriticalActive] = useState(false);
-  const [vignetteColor, setVignetteColor] = useState("#dc2626");
+  const [vignetteColor, setVignetteColor] = useState<string>(accentHex('danger'));
   const vignetteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -210,8 +217,8 @@ export function NotificationSystem() {
       vignetteTimerRef.current = setTimeout(() => setCriticalActive(false), VIGNETTE_DURATION_MS);
     };
 
-    const handleCritical = () => startVignette('#dc2626');
-    const handleSuspect = () => startVignette('#f59e0b');
+    const handleCritical = () => startVignette(accentHex('danger'));
+    const handleSuspect = () => startVignette(accentHex('warning'));
 
     window.addEventListener('trigger-critical-alert', handleCritical);
     window.addEventListener('trigger-suspect-alert', handleSuspect);

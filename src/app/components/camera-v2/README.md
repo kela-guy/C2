@@ -1,17 +1,36 @@
 # camera-v2
 
-Rebuilt video feature. Currently lives only on `/playground`. Once the design
-is validated there, swap it into the live `Dashboard` and delete the legacy
-`CameraViewerPanel`.
+Rebuilt video feature. Mounted in the live `Dashboard` as the camera viewer
+(replacing the deleted legacy `CameraViewerPanel`). Iterated on its own
+`/playground` route during design validation; the playground was folded into
+the dashboard once approved and the route removed.
 
 ## Layout
 
-- `VideoPanel.tsx` — public surface. Picks a layout (1 fill / 2 stack / 2x2
-  grid) and handles panel-level drop. Adding feeds is driven entirely by
-  drag/drop or pin-from-devices.
+- `VideoPanel.tsx` — public surface. Hosts an operator-controlled layout
+  picker (`VideoLayoutPicker`) and renders one of four presets: `single` /
+  `stack-2` / `grid-2x2` / `hero-filmstrip`. Holds up to 5 feeds total
+  (1 hero + 4 thumbs). Handles panel-level drop. Adding feeds is driven
+  entirely by drag/drop or pin-from-devices.
+- `VideoLayoutPicker.tsx` — segmented icon row anchored to the panel's
+  top inline-end corner (mirrors the Apple Finder view-mode control).
+  Four icons: `Square` (single), `Rows2` (stack), `Grid2x2` (grid),
+  `LayoutPanelTop` (hero+filmstrip). Disables presets that cannot fit
+  the current feed count. Stays `dir="ltr"` even in RTL apps so the
+  layout-shape glyphs read correctly.
 - `CameraFeedTile.tsx` — a single feed with overlays. Owns hover/focus state,
   per-tile keyboard shortcuts, the empty drop-target, and the live-vs-playback
-  split.
+  split. Accepts a `tileVariant` (`'fill' | 'hero' | 'thumb'`) that controls
+  in-tile chrome — thumbs hide the noisy bottom strips and gain the centered
+  "Use as main" overlay.
+- `TileDetectionAlert.tsx` — two-tier red-gradient detection signal mounted
+  inside each tile (state ring + one-shot pulse on new detection ids).
+  Suppressed on hero tiles when `feed.showDetections` is on (boxes already
+  convey it).
+- `useDetectionPulse.ts` — hook that drives `TileDetectionAlert`. Tracks a
+  `Set<string>` of seen detection ids per tile and bumps a `pulseKey` when a
+  new id appears. Two tiles showing the same `cameraId` get independent
+  counters by design.
 - `CameraTopHud.tsx` — always-visible top overlay. Centered CoD-Warzone
   heading strip.
 - `CameraCompassStrip.tsx` — horizontal heading strip (replaces the previous
@@ -43,7 +62,9 @@ is validated there, swap it into the live `Dashboard` and delete the legacy
   defaults: rewind-on-open (30s), buffering grace (600ms), and the
   `makeOpenPlaybackState` constructor.
 - `PlaybackTimeline.tsx` — minimal transport. Play/pause + Radix
-  scrubber + clip/remaining clocks + exit. Pinned LTR via `<DirIsland>`.
+  scrubber + clip/remaining clocks. No inline exit — leaving playback
+  goes through the live half (Settings → playback row, `P`, or `Esc`).
+  Pinned LTR via `<DirIsland>`.
 - `CameraDetectionsOverlay.tsx` — bounding-box overlay (mocked data).
 - `types.ts` — `CameraFeed`, `CameraStatus`, `DetectionBox`,
   `PlaybackState` (+ `PlaybackStatus`).
@@ -55,6 +76,59 @@ is validated there, swap it into the live `Dashboard` and delete the legacy
   appends, or swaps the least-recently-focused tile when the panel is full.
 - Each tile is a drop target. Drop on a tile → swap. Drop on the panel
   background → same logic as click-to-pin.
+- Maximum feed count is 5 (so `hero-filmstrip` can hold a hero + 4 thumbs).
+  The pin handler enforces this at the parent (`PlaygroundPage.MAX_FEEDS`,
+  later `Dashboard`).
+
+## Layouts
+
+The panel never auto-picks a layout from feed count anymore; the operator
+chooses via the picker. Persistence lives at the parent (PlaygroundPage /
+Dashboard) under `localStorage` key `c2.video-layout.v1` so the panel
+re-opens in the same shape across sessions.
+
+When the chosen layout cannot fit `feeds.length` (e.g. `hero-filmstrip`
+with one feed), the panel falls back deterministically:
+
+```
+hero-filmstrip → grid-2x2 → stack-2 → single
+```
+
+The chosen value is preserved in props so the picker keeps reflecting
+operator intent — only the rendered layout adapts.
+
+### Hero+Filmstrip
+
+- `feeds[heroIndex]` takes the top ~78% of panel height. Same chrome as
+  `fill` (full HUD, control bar, designate, playback split).
+- Remaining feeds render as a horizontal grid (`grid-flow-col
+  auto-cols-fr`) across the bottom ~22%. Each thumb gets a centered
+  "Use as main" overlay (Hebrew: "הצג כראשי") that fades in on hover or
+  focus. Click promotes the thumb; double-click on the thumb body does
+  the same. Inner interactive elements (`button`, `[role=button]`, `a`,
+  `input`, `[data-no-promote]`) are excluded from the double-click
+  gesture so existing tile controls still work.
+
+## Detection signal
+
+Each tile mounts `TileDetectionAlert` (unless suppressed). It runs in two
+tiers:
+
+1. **State ring** — present whenever `detections.length > 0`. A 2px inset
+   red shadow plus a soft top→bottom red gradient frames the tile. Pure
+   visual (`pointer-events-none`); 200ms opacity fade on mount.
+2. **Pulse on new** — when `useDetectionPulse` observes a detection id
+   that wasn't in the previous render, it bumps `pulseKey`. The pulse
+   layer re-mounts keyed by that integer, animating opacity 0 → 0.95 →
+   0.6 → 0 over ~650ms (degrades to a flat 0 → 0.6 → 0 fade under
+   `prefers-reduced-motion: reduce`).
+
+The intent is twofold: the always-on ring tells the operator "this feed
+has activity right now"; the pulse grabs their eye when something new
+arrives — important when the feed is rendering as a thumb and the
+operator is staring at the hero. On the hero tile itself, the ring is
+suppressed when `feed.showDetections` is on, because the boxes already
+carry the same information.
 
 ## Keyboard shortcuts (when a tile is focused)
 
@@ -87,8 +161,16 @@ control bar) renders *inside the live frame* so its bottom edge tracks
 the live half — when playback is open the control bar surfaces on
 hover at the live/playback divider rather than disappearing or
 overlapping the playback transport. The playback container has its own
-chrome (PLAYBACK badge, scrubber, exit) anchored inside the bottom
-half.
+chrome (PLAYBACK badge, scrubber) anchored inside the bottom half. It
+deliberately renders **no** exit affordance — the operator returns to
+live by toggling the feature off from the live half (Settings →
+playback row, `P`, or `Esc`), keeping the investigation surface
+focused on the recording rather than on navigation.
+
+The `CameraFeedTile` wrapper uses `isolate` to scope the tile's
+stacking context so the `z-30` playback surface stays bounded inside
+the tile — it can never paint over global panels (e.g. DevicesPanel
+at `z-10`) that geometrically overlap the tile.
 
 ### State model
 
@@ -121,7 +203,7 @@ media condition:
   and `PlaygroundPage.handlePinDevice` (LRU swap + empty-slot fill)
   reset `playback` to `undefined` on cameraId replacement so the
   position / sourceId / errorMessage from the outgoing camera cannot
-  bleed onto the incoming one. Critical for the multi-tile (up to 4)
+  bleed onto the incoming one. Critical for the multi-tile (up to 5)
   grid.
 - **Autoplay-rejected `play()`** — the container catches the rejection
   and surfaces a paused state with a Play button instead of failing
@@ -150,11 +232,19 @@ Once the `/playground` design is locked in, this is the swap into the live
 2. **Lift state** into Dashboard:
 
    - `panelFullscreen: boolean`
+   - `layout: LayoutKind` and `heroIndex: number` (default `'grid-2x2'` /
+     `0`). Persist both to `localStorage` under `c2.video-layout.v1` —
+     `PlaygroundPage` already has the read/write helpers; lift them
+     verbatim. Clamp `heroIndex` whenever a feed is removed.
    - `ownership: Record<string, 'self' | 'other' | 'none'>` (replaces today's
      `cameraControlRequest` countdown — keep the 10s request flow but write
      the result into `ownership` on completion).
    - `zoomById: Record<string, number>` (display only until PTZ is wired).
-   - `detectionsByCameraId` — wire to your real detection feed.
+   - `detectionsByCameraId` — wire to your real detection feed. The
+     `TileDetectionAlert` will start firing automatically as soon as a
+     non-empty array shows up for a feed; supply `firstSeenAt` on the
+     box if the backend has it (otherwise the hook synthesises arrival
+     via id-set diff).
 
 3. **Wire the existing handlers** that are already plumbed through
    `ListOfSystems` (today they're no-ops at lines 1729-1731 of `Dashboard`):

@@ -1,10 +1,19 @@
 /**
  * Multi-feed video panel - the public surface of `camera-v2`.
  *
- * Layout rules:
- *   1 feed   - fills the panel
- *   2 feeds  - vertical stack with 1px divider
- *   3-4 feeds - 2x2 CSS grid
+ * Operator-controlled layouts (picked via the panel's top-end
+ * `VideoLayoutPicker` chrome — no auto-selection):
+ *
+ *   - `single`         — first feed fills the panel.
+ *   - `stack-2`        — first two feeds vertically split 50/50.
+ *   - `grid-2x2`       — up to four feeds in a 2x2 CSS grid.
+ *   - `hero-filmstrip` — `feeds[heroIndex]` takes ~78% on top, the rest
+ *                         render as a horizontal filmstrip below.
+ *
+ * When the chosen `layout` cannot fit `feeds.length`, the panel falls
+ * back deterministically: hero-filmstrip → grid-2x2 → stack-2 → single.
+ * The chosen value is preserved in props so the picker still shows the
+ * operator's intent — only the rendered layout adapts.
  *
  * Drop rules:
  *   - Drop on a tile - replaces that tile's cameraId.
@@ -12,9 +21,11 @@
  *     (handled via onPinDevice from the devices panel).
  */
 
-import { useCallback } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { useDrop } from 'react-dnd';
 import { CameraFeedTile } from './CameraFeedTile';
+import { VideoLayoutPicker } from './VideoLayoutPicker';
+import type { PickerAsset } from './CameraAssetPicker';
 import {
   DEVICE_CAMERA_DRAG_TYPE,
   type DeviceCameraDragItem,
@@ -24,6 +35,7 @@ import type {
   CameraFeed,
   CameraStatus,
   DetectionBox,
+  LayoutKind,
   PlaybackState,
 } from './types';
 
@@ -47,6 +59,82 @@ export interface VideoPanelProps {
   /** Operator designated a point on a feed as a target. Coordinates are
    * normalised (0..1, top-left origin) to the feed's video bounds. */
   onDesignateTarget?: (cameraId: string, normX: number, normY: number) => void;
+  /** Operator-chosen layout preset. */
+  layout: LayoutKind;
+  onLayoutChange: (next: LayoutKind) => void;
+  /** Index into `feeds[]` that should take the hero slot in the
+   *  hero-filmstrip layout. Clamped to `feeds.length - 1` by the
+   *  parent. Ignored by the other three layouts. */
+  heroIndex: number;
+  onHeroChange: (next: number) => void;
+  /** Every device the operator could swap into a tile. Forwarded to
+   *  every tile's asset picker. Defaults to an empty array (picker
+   *  self-disables). */
+  availableAssets?: PickerAsset[];
+}
+
+// Stable empty array reference for the `availableAssets` fallback —
+// allocating `[]` per render would invalidate every tile's asset
+// picker memo on every parent rerender.
+const EMPTY_ASSETS: PickerAsset[] = [];
+
+/**
+ * Constrains a tile to 16:9 inside its layout slot.
+ *
+ * The CameraFeedTile renders `w-full h-full` so it fills whatever box
+ * we hand it; this wrapper is what *defines* that box's shape:
+ *   - `aspect-video` (16:9) on the inner div fixes the ratio.
+ *   - `w-full max-h-full` lets the browser pick whichever dimension
+ *     constrains first — wide slot → height-limited (letterbox left
+ *     and right), tall slot → width-limited (letterbox top and
+ *     bottom). Modern CSS `aspect-ratio` shrinks the *other*
+ *     dimension to preserve the ratio when a max-* clamp kicks in.
+ *   - `flex items-center justify-center` on the outer div centers
+ *     the 16:9 box inside the slot so the letterbox bars are even.
+ *
+ * Black background so letterbox bars read as intentional chrome rather
+ * than as the panel's `bg-surface-void` bleeding through.
+ */
+function VideoTileSlot({
+  children,
+  className = '',
+  testId,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  testId?: string;
+}) {
+  return (
+    <div
+      className={`min-h-0 min-w-0 bg-black flex items-center justify-center ${className}`}
+      data-testid={testId}
+    >
+      <div className="aspect-video w-full max-h-full">{children}</div>
+    </div>
+  );
+}
+
+/**
+ * Resolve the operator's chosen layout against the current feed count.
+ * If the chosen layout can't fit the feeds we have, walk down the
+ * fallback ladder. Pure helper, exported for tests.
+ */
+export function resolveLayout(layout: LayoutKind, feedCount: number): LayoutKind {
+  if (feedCount <= 1) return 'single';
+  switch (layout) {
+    case 'single':
+      return 'single';
+    case 'stack-2':
+      return feedCount >= 2 ? 'stack-2' : 'single';
+    case 'grid-2x2':
+      return 'grid-2x2';
+    case 'hero-filmstrip':
+      return feedCount >= 2 ? 'hero-filmstrip' : 'single';
+    default: {
+      const _exhaustive: never = layout;
+      return _exhaustive;
+    }
+  }
 }
 
 export function VideoPanel({
@@ -67,7 +155,33 @@ export function VideoPanel({
   onTileFocus,
   onZoomChange,
   onDesignateTarget,
+  layout,
+  onLayoutChange,
+  heroIndex,
+  onHeroChange,
+  availableAssets,
 }: VideoPanelProps) {
+  const resolvedLayout = useMemo(
+    () => resolveLayout(layout, feeds.length),
+    [layout, feeds.length],
+  );
+  const safeHeroIndex = Math.min(Math.max(heroIndex, 0), Math.max(feeds.length - 1, 0));
+
+  // Camera ids currently mounted in any tile. Used by each tile's
+  // asset picker to disable rows that would cause a double-mount.
+  // Memoised so the picker tree doesn't re-mount on unrelated state.
+  const pinnedCameraIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const f of feeds) {
+      if (f.cameraId) set.add(f.cameraId);
+    }
+    return set;
+  }, [feeds]);
+
+  // Stable empty fallback so a missing prop doesn't allocate a fresh
+  // array per render — matches the same trick the tile uses for the
+  // pinned-set fallback.
+  const safeAvailableAssets = availableAssets ?? EMPTY_ASSETS;
   const updateFeed = useCallback(
     (index: number, patch: Partial<CameraFeed>) => {
       const next = feeds.map((f, i) => (i === index ? { ...f, ...patch } : f));
@@ -154,64 +268,259 @@ export function VideoPanel({
     [onPinDevice],
   );
 
-  const containerClass =
-    feeds.length <= 2
-      ? 'flex-1 min-h-0 flex flex-col'
-      : 'flex-1 min-h-0 grid grid-cols-2 grid-rows-2 gap-px bg-white/10';
-
   const showPanelDropAccent = isOver && canDrop;
+
+  /**
+   * Per-tile handler bundles. `CameraFeedTile` is shallow-prop heavy
+   * and was previously re-rendering on every parent commit because
+   * each render created fresh inline arrow functions for ~12 props.
+   * Building stable per-index bundles via refs lets the tile memoize
+   * cleanly — handlers read latest `feeds[index]` and parent
+   * callbacks through the refs below, so they never need new
+   * identities.
+   */
+  const refs = useRef({
+    feeds,
+    updateFeed,
+    handleSwapFeed,
+    handlePlaybackToggle,
+    handlePlaybackChange,
+    onTakeControl,
+    onReleaseControl,
+    onZoomChange,
+    onFullscreenToggle,
+    onAssignmentClick,
+    onTileFocus,
+    onDesignateTarget,
+    onHeroChange,
+  });
+  refs.current = {
+    feeds,
+    updateFeed,
+    handleSwapFeed,
+    handlePlaybackToggle,
+    handlePlaybackChange,
+    onTakeControl,
+    onReleaseControl,
+    onZoomChange,
+    onFullscreenToggle,
+    onAssignmentClick,
+    onTileFocus,
+    onDesignateTarget,
+    onHeroChange,
+  };
+
+  type TileHandlers = {
+    onTakeControl: () => void;
+    onReleaseControl: () => void;
+    onModeToggle: () => void;
+    onDetectionsToggle: () => void;
+    onDesignateModeToggle: () => void;
+    onPlaybackToggle: () => void;
+    onPlaybackChange: (patch: Partial<PlaybackState>) => void;
+    onZoomChange: (zoom: number) => void;
+    onFullscreenToggle: () => void;
+    onAssignmentClick: () => void;
+    onDropDevice: (item: DeviceCameraDragItem) => void;
+    onFocus: () => void;
+    onResetView: () => void;
+    onDesignateTarget: (normX: number, normY: number) => void;
+    onPromoteToHero: () => void;
+    onSwapAsset: (cameraId: string) => void;
+  };
+  const tileHandlerCacheRef = useRef<TileHandlers[]>([]);
+  const getTileHandlers = (index: number): TileHandlers => {
+    const cache = tileHandlerCacheRef.current;
+    if (cache[index]) return cache[index];
+    const handlers: TileHandlers = {
+      onTakeControl: () => {
+        const feed = refs.current.feeds[index];
+        if (feed?.cameraId) refs.current.onTakeControl(feed.cameraId);
+      },
+      onReleaseControl: () => {
+        const feed = refs.current.feeds[index];
+        if (feed?.cameraId) refs.current.onReleaseControl(feed.cameraId);
+      },
+      onModeToggle: () => {
+        const feed = refs.current.feeds[index];
+        if (!feed) return;
+        refs.current.updateFeed(index, { mode: feed.mode === 'day' ? 'night' : 'day' });
+      },
+      onDetectionsToggle: () => {
+        const feed = refs.current.feeds[index];
+        if (!feed) return;
+        refs.current.updateFeed(index, { showDetections: !feed.showDetections });
+      },
+      onDesignateModeToggle: () => {
+        const feed = refs.current.feeds[index];
+        if (!feed) return;
+        refs.current.updateFeed(index, { designateMode: !feed.designateMode });
+      },
+      onPlaybackToggle: () => refs.current.handlePlaybackToggle(index),
+      onPlaybackChange: (patch) => refs.current.handlePlaybackChange(index, patch),
+      onZoomChange: (zoom) => {
+        const feed = refs.current.feeds[index];
+        if (feed?.cameraId) refs.current.onZoomChange?.(feed.cameraId, zoom);
+      },
+      onFullscreenToggle: () => refs.current.onFullscreenToggle(),
+      onAssignmentClick: () => {
+        const feed = refs.current.feeds[index];
+        if (feed?.cameraId) refs.current.onAssignmentClick?.(feed.cameraId);
+      },
+      onDropDevice: (item) => refs.current.handleSwapFeed(index, item.cameraId),
+      onFocus: () => {
+        const feed = refs.current.feeds[index];
+        if (feed?.cameraId) refs.current.onTileFocus?.(feed.cameraId);
+      },
+      onResetView: () =>
+        refs.current.updateFeed(index, { designateMode: false, showDetections: false }),
+      onDesignateTarget: (normX, normY) => {
+        const feed = refs.current.feeds[index];
+        if (feed?.cameraId) refs.current.onDesignateTarget?.(feed.cameraId, normX, normY);
+      },
+      onPromoteToHero: () => refs.current.onHeroChange(index),
+      onSwapAsset: (cameraId) => refs.current.handleSwapFeed(index, cameraId),
+    };
+    cache[index] = handlers;
+    return handlers;
+  };
+
+  /**
+   * Render the tile for `feeds[index]` with all the panel-supplied
+   * wiring. `tileVariant` controls the in-tile chrome (thumbs hide
+   * the noisy strips, hero gets the full HUD, fill is the default).
+   */
+  const renderTile = (index: number, tileVariant: 'fill' | 'hero' | 'thumb') => {
+    const feed = feeds[index];
+    if (!feed) return null;
+    const status = feed.cameraId
+      ? statusByCameraId[feed.cameraId] ?? defaultStatus()
+      : defaultStatus();
+    const h = getTileHandlers(index);
+    return (
+      <CameraFeedTile
+        feed={feed.cameraId ? feed : null}
+        cameraLabel={cameraLabelById[feed.cameraId] ?? feed.cameraId}
+        status={status}
+        detections={detectionsByCameraId[feed.cameraId] ?? []}
+        videoSrcDay={videoSrcDay}
+        videoSrcNight={videoSrcNight}
+        videoSrcPlayback={videoSrcPlayback}
+        isFullscreen={fullscreen}
+        tileVariant={tileVariant}
+        onTakeControl={h.onTakeControl}
+        onReleaseControl={h.onReleaseControl}
+        onModeToggle={h.onModeToggle}
+        onDetectionsToggle={h.onDetectionsToggle}
+        onDesignateModeToggle={h.onDesignateModeToggle}
+        onPlaybackToggle={h.onPlaybackToggle}
+        onPlaybackChange={h.onPlaybackChange}
+        onZoomChange={h.onZoomChange}
+        onFullscreenToggle={h.onFullscreenToggle}
+        onAssignmentClick={h.onAssignmentClick}
+        onDropDevice={h.onDropDevice}
+        onFocus={h.onFocus}
+        onResetView={h.onResetView}
+        onDesignateTarget={h.onDesignateTarget}
+        onPromoteToHero={tileVariant === 'thumb' ? h.onPromoteToHero : undefined}
+        availableAssets={safeAvailableAssets}
+        pinnedCameraIds={pinnedCameraIds}
+        onSwapAsset={h.onSwapAsset}
+      />
+    );
+  };
+
+  let layoutBody: React.ReactNode;
+  switch (resolvedLayout) {
+    case 'single': {
+      layoutBody = (
+        <VideoTileSlot className="flex-1">{renderTile(0, 'fill')}</VideoTileSlot>
+      );
+      break;
+    }
+    case 'stack-2': {
+      layoutBody = (
+        <div className="flex-1 min-h-0 flex flex-col">
+          <VideoTileSlot className="flex-1">{renderTile(0, 'fill')}</VideoTileSlot>
+          <VideoTileSlot className="flex-1 border-t border-white/10">
+            {renderTile(1, 'fill')}
+          </VideoTileSlot>
+        </div>
+      );
+      break;
+    }
+    case 'grid-2x2': {
+      layoutBody = (
+        <div
+          className="flex-1 min-h-0 grid grid-cols-2 grid-rows-2 gap-px bg-white/10"
+          data-testid="video-panel-grid"
+        >
+          {feeds.slice(0, 4).map((_, i) => (
+            <VideoTileSlot key={i}>{renderTile(i, 'fill')}</VideoTileSlot>
+          ))}
+        </div>
+      );
+      break;
+    }
+    case 'hero-filmstrip': {
+      const thumbIndices = feeds
+        .map((_, i) => i)
+        .filter((i) => i !== safeHeroIndex);
+      layoutBody = (
+        <div className="flex-1 min-h-0 flex flex-col gap-px bg-white/10">
+          <VideoTileSlot
+            className="basis-[78%]"
+            testId="video-panel-hero"
+          >
+            {renderTile(safeHeroIndex, 'hero')}
+          </VideoTileSlot>
+          <div
+            className="flex-1 min-h-0 grid grid-flow-col auto-cols-fr gap-px"
+            data-testid="video-panel-filmstrip"
+          >
+            {thumbIndices.map((i) => (
+              <VideoTileSlot key={i}>{renderTile(i, 'thumb')}</VideoTileSlot>
+            ))}
+          </div>
+        </div>
+      );
+      break;
+    }
+    default: {
+      const _exhaustive: never = resolvedLayout;
+      layoutBody = _exhaustive;
+    }
+  }
+
+  // Picker is hidden when there's at most one feed (no meaningful
+  // layout choice to make). It is positioned `inline-end` so it
+  // mirrors with app direction; the picker's own contents stay LTR
+  // because the layout-shape glyphs would otherwise read backwards.
+  const showPicker = feeds.length >= 2;
 
   return (
     <div
       ref={panelDropRef as unknown as React.Ref<HTMLDivElement>}
-      className={`h-full flex flex-col bg-[#0a0a0a] relative transition-shadow duration-150 ease-out
+      // VideoPanel sits BELOW the substrate ladder. Camera feeds need
+      // a true-black well (so letterbox bars read as intentional chrome
+      // and the video itself anchors against a non-substrate color).
+      // `bg-surface-void` is the formal token for this case — see
+      // palette.css §2 for why surface-void exists.
+      className={`h-full flex flex-col bg-surface-void relative transition-shadow duration-150 ease-out
         ${showPanelDropAccent ? 'shadow-[inset_0_0_0_2px_rgba(56,189,248,0.45)]' : ''}`}
       data-testid="video-panel"
     >
-      <div className={containerClass}>
-        {feeds.map((feed, i) => {
-          const status = feed.cameraId
-            ? statusByCameraId[feed.cameraId] ?? defaultStatus()
-            : defaultStatus();
-          return (
-            <div
-              key={i}
-              className={
-                feeds.length === 2 && i > 0
-                  ? 'flex-1 min-h-0 min-w-0 border-t border-white/10'
-                  : 'flex-1 min-h-0 min-w-0'
-              }
-            >
-              <CameraFeedTile
-                feed={feed.cameraId ? feed : null}
-                cameraLabel={cameraLabelById[feed.cameraId] ?? feed.cameraId}
-                status={status}
-                detections={detectionsByCameraId[feed.cameraId] ?? []}
-                videoSrcDay={videoSrcDay}
-                videoSrcNight={videoSrcNight}
-                videoSrcPlayback={videoSrcPlayback}
-                isFullscreen={fullscreen}
-                onTakeControl={() => onTakeControl(feed.cameraId)}
-                onReleaseControl={() => onReleaseControl(feed.cameraId)}
-                onModeToggle={() => updateFeed(i, { mode: feed.mode === 'day' ? 'night' : 'day' })}
-                onDetectionsToggle={() => updateFeed(i, { showDetections: !feed.showDetections })}
-                onDesignateModeToggle={() => updateFeed(i, { designateMode: !feed.designateMode })}
-                onPlaybackToggle={() => handlePlaybackToggle(i)}
-                onPlaybackChange={(patch) => handlePlaybackChange(i, patch)}
-                onZoomChange={(zoom) => feed.cameraId && onZoomChange?.(feed.cameraId, zoom)}
-                onFullscreenToggle={onFullscreenToggle}
-                onAssignmentClick={() => feed.cameraId && onAssignmentClick?.(feed.cameraId)}
-                onDropDevice={(item) => handleSwapFeed(i, item.cameraId)}
-                onFocus={() => feed.cameraId && onTileFocus?.(feed.cameraId)}
-                onResetView={() => updateFeed(i, { designateMode: false, showDetections: false })}
-                onDesignateTarget={(normX, normY) =>
-                  feed.cameraId && onDesignateTarget?.(feed.cameraId, normX, normY)
-                }
-              />
-            </div>
-          );
-        })}
-      </div>
+      {layoutBody}
+
+      {showPicker && (
+        <div className="absolute top-2 end-2 z-30 pointer-events-auto">
+          <VideoLayoutPicker
+            value={layout}
+            onChange={onLayoutChange}
+            feedCount={feeds.length}
+          />
+        </div>
+      )}
     </div>
   );
 }

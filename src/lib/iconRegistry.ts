@@ -47,6 +47,8 @@ import {
   DroneIcon,
   MissileIcon,
   RegulusIcon,
+  FloodlightIcon,
+  SpeakerIcon,
 } from '@/app/components/TacticalMap';
 import { DevicesIcon } from '@/app/components/DevicesPanel';
 import { STYLEGUIDE_ICON_ASSETS, iconPublicUrl } from '@/lib/styleguideIconAssets';
@@ -444,6 +446,26 @@ const tacticalEntries: IconEntry[] = [
     Component: RegulusIcon as ComponentType<RegistryIconProps>,
     importPath: '@/app/components/TacticalMap',
     importName: 'RegulusIcon',
+  },
+  {
+    id: 'tactical:FloodlightIcon',
+    name: 'FloodlightIcon',
+    source: 'tactical',
+    category: 'Map marker',
+    keywords: ['floodlight', 'light', 'lamp', 'perimeter', 'illuminate'],
+    Component: FloodlightIcon as ComponentType<RegistryIconProps>,
+    importPath: '@/app/components/TacticalMap',
+    importName: 'FloodlightIcon',
+  },
+  {
+    id: 'tactical:SpeakerIcon',
+    name: 'SpeakerIcon',
+    source: 'tactical',
+    category: 'Map marker',
+    keywords: ['speaker', 'sound', 'pa', 'audio', 'broadcast'],
+    Component: SpeakerIcon as ComponentType<RegistryIconProps>,
+    importPath: '@/app/components/TacticalMap',
+    importName: 'SpeakerIcon',
   },
 ];
 

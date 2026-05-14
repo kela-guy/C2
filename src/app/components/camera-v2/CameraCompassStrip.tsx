@@ -10,6 +10,17 @@
  */
 
 import { useId } from 'react';
+import { accentHex } from '@/primitives/accentHex';
+
+/*
+ * HUD accent colors. North marker uses soft danger so the operator
+ * can find true north instantly; center marker + heading number use
+ * accent-warning to match the designation reticle (consistent HUD
+ * vocabulary). Both route through accentHex() so a palette tweak
+ * cascades to every HUD overlay at once.
+ */
+const HUD_NORTH = accentHex('danger');
+const HUD_HEADING = accentHex('warning');
 
 interface CameraCompassStripProps {
   bearingDeg: number;
@@ -116,7 +127,7 @@ export function CameraCompassStrip({
             textAnchor="middle"
             fontSize={c.major ? 10 : 8.5}
             fontWeight={c.major ? 700 : 500}
-            fill={c.label === 'N' ? '#fca5a5' : 'rgba(255,255,255,0.75)'}
+            fill={c.label === 'N' ? HUD_NORTH : 'rgba(255,255,255,0.75)'}
             style={{ letterSpacing: '0.04em' }}
           >
             {c.label}
@@ -128,16 +139,16 @@ export function CameraCompassStrip({
           y1={1}
           x2={cx}
           y2={stripHeight - 4}
-          stroke="#fde047"
+          stroke={HUD_HEADING}
           strokeWidth={1.5}
           strokeLinecap="round"
         />
-        <polygon points={`${cx - 4},0 ${cx + 4},0 ${cx},5`} fill="#fde047" />
+        <polygon points={`${cx - 4},0 ${cx + 4},0 ${cx},5`} fill={HUD_HEADING} />
       </svg>
 
       <div
         className="text-center font-mono text-[20px] leading-none tracking-tight tabular-nums mt-0.5"
-        style={{ color: '#fde047', textShadow: '0 1px 2px rgba(0,0,0,0.85)' }}
+        style={{ color: HUD_HEADING, textShadow: '0 1px 2px rgba(0,0,0,0.85)' }}
         aria-live="polite"
       >
         {Math.round(heading).toString().padStart(3, '0')}

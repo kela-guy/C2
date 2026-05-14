@@ -44,7 +44,7 @@
  * through their site of use.
  */
 
-import type { ComponentType, SVGAttributes } from 'react';
+import { createElement, type ComponentType, type SVGAttributes } from 'react';
 
 import IconCamera1Raw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconCamera1';
 import IconBellRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconBell';
@@ -54,13 +54,14 @@ import IconBatteryFullRaw from '@central-icons-react/round-outlined-radius-1-str
 import IconBatteryLowRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconBatteryLow';
 import IconRadarRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconRadar';
 import IconRadioRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconRadio';
-import IconVideoRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconVideo';
 import IconSignalTowerRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconSignalTower';
 import IconMapRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconMap';
 import IconMapPinRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconMapPin';
 import IconCompassRoundRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconCompassRound';
 import IconHomeRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconHome';
-import IconTargetRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconTarget';
+import IconBulletListRaw from '@central-icons-react/square-filled-radius-0-stroke-2/IconBulletList';
+import IconLayoutGrid2Raw from '@central-icons-react/round-filled-radius-0-stroke-2/IconLayoutGrid2';
+import IconVideo2Raw from '@central-icons-react/round-filled-radius-0-stroke-2/IconVideo2';
 import IconChevronBottomRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconChevronBottom';
 import IconChevronTopRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconChevronTop';
 import IconChevronLeftRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconChevronLeft';
@@ -69,7 +70,7 @@ import IconChevronDoubleLeftRaw from '@central-icons-react/round-outlined-radius
 import IconChevronDoubleRightRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconChevronDoubleRight';
 import IconArrowUpRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconArrowUp';
 import IconArrowBottomTopRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconArrowBottomTop';
-import IconXRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconX';
+import IconCircleXRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconCircleX';
 import IconPlusMediumRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconPlusMedium';
 import IconCheckmark1MediumRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconCheckmark1Medium';
 import IconCheckCircle2Raw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconCheckCircle2';
@@ -94,6 +95,13 @@ import IconSplitRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.
 import IconSunRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconSun';
 import IconMoonRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconMoon';
 import IconSettingsGear1Raw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconSettingsGear1';
+// Off-canon variant pulled from the square-filled-radius-0-stroke-2 family.
+// Used by GridblockHeader's settings affordance specifically — that header
+// asked for a more geometric, heavier-weight chrome icon to anchor the
+// inline-end cluster while the rest of the dashboard stays on the
+// canonical round-outlined variant. Bucket 1 (direct Central mapping) per
+// the file header convention.
+import IconSettingsGear4Raw from '@central-icons-react/square-filled-radius-0-stroke-2/IconSettingsGear4';
 import IconColorPaletteRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconColorPalette';
 import IconSettingsSliderHorRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconSettingsSliderHor';
 import IconSparkles3BoldRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconSparkles3Bold';
@@ -125,11 +133,32 @@ export type IconComponent = ComponentType<IconProps>;
 
 const asIcon = (raw: unknown): IconComponent => raw as IconComponent;
 
+const KELA_LOGO_PATH =
+  'M3.33333 6.66539L8.3275 11.6586L8.38062 11.7104C9.30423 12.5845 10.7618 12.5691 11.6667 11.6644L11.6782 11.6526L16.6667 6.66539L20 9.99808L10 19.9962L4.33981e-07 9.99808L3.33333 6.66539ZM12.3335 9.66466C12.2641 9.17696 12.0419 8.70685 11.6667 8.33174C10.7462 7.41144 9.25381 7.41144 8.33333 8.33174C7.95815 8.70685 7.73589 9.17696 7.66651 9.66466L4 5.99885L10 0L16 5.99885L12.3335 9.66466Z';
+
+const IconKelaLogo = ({ size = 20, ...props }: SVGAttributes<SVGSVGElement> & { size?: number | string }) =>
+  createElement(
+    'svg',
+    { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 20 20', fill: 'none', width: size, height: size, ...props },
+    createElement('path', { fillRule: 'evenodd', clipRule: 'evenodd', d: KELA_LOGO_PATH, fill: 'currentColor' }),
+  );
+
+const X_PATH =
+  'M4.04289 4.04289C4.43342 3.65237 5.06658 3.65237 5.45711 4.04289L12 10.5858L18.5429 4.04289C18.9334 3.65237 19.5666 3.65237 19.9571 4.04289C20.3476 4.43342 20.3476 5.06658 19.9571 5.45711L13.4142 12L19.9571 18.5429C20.3476 18.9334 20.3476 19.5666 19.9571 19.9571C19.5666 20.3476 18.9334 20.3476 18.5429 19.9571L12 13.4142L5.45711 19.9571C5.06658 20.3476 4.43342 20.3476 4.04289 19.9571C3.65237 19.5666 3.65237 18.9334 4.04289 18.5429L10.5858 12L4.04289 5.45711C3.65237 5.06658 3.65237 4.43342 4.04289 4.04289Z';
+
+const IconXCustom = ({ size = 24, ...props }: SVGAttributes<SVGSVGElement> & { size?: number | string }) =>
+  createElement(
+    'svg',
+    { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', fill: 'none', width: size, height: size, ...props },
+    createElement('path', { fillRule: 'evenodd', clipRule: 'evenodd', d: X_PATH, fill: 'currentColor' }),
+  );
+
 // =====================================================================
 // 1. Direct Central mappings (outlined / line variant)
 // =====================================================================
 
 // --- Devices & status ---
+export const LayoutGrid2 = asIcon(IconLayoutGrid2Raw);
 export const Camera = asIcon(IconCamera1Raw);
 export const Bell = asIcon(IconBellRaw);
 export const BellOff = asIcon(IconBellOffRaw);
@@ -138,7 +167,7 @@ export const Battery = asIcon(IconBatteryFullRaw);
 export const BatteryLow = asIcon(IconBatteryLowRaw);
 export const Radar = asIcon(IconRadarRaw);
 export const Radio = asIcon(IconRadioRaw);
-export const Video = asIcon(IconVideoRaw);
+export const Video = asIcon(IconVideo2Raw);
 export const SignalHigh = asIcon(IconSignalTowerRaw);
 // Central has no SignalLow variant; we re-use the same tower icon. The
 // drone HUD already differentiates by colour + numeric bars, so the icon
@@ -150,7 +179,7 @@ export const Map = asIcon(IconMapRaw);
 export const MapPin = asIcon(IconMapPinRaw);
 export const Compass = asIcon(IconCompassRoundRaw);
 export const Home = asIcon(IconHomeRaw);
-export const Target = asIcon(IconTargetRaw);
+export const Target = asIcon(IconBulletListRaw);
 
 // --- Navigation: chevrons & arrows ---
 export const ChevronDown = asIcon(IconChevronBottomRaw);
@@ -168,7 +197,8 @@ export const ArrowUp = asIcon(IconArrowUpRaw);
 export const ArrowUpDown = asIcon(IconArrowBottomTopRaw);
 
 // --- Actions & form controls ---
-export const X = asIcon(IconXRaw);
+export const X = asIcon(IconXCustom);
+export const CircleX = asIcon(IconCircleXRaw);
 export const Plus = asIcon(IconPlusMediumRaw);
 export const Check = asIcon(IconCheckmark1MediumRaw);
 export const CheckCircle2 = asIcon(IconCheckCircle2Raw);
@@ -199,6 +229,14 @@ export const SplitSquareHorizontal = asIcon(IconSplitRaw);
 export const Sun = asIcon(IconSunRaw);
 export const Moon = asIcon(IconMoonRaw);
 export const Settings = asIcon(IconSettingsGear1Raw);
+// Variant-suffixed: the canonical `Settings` stays on the round-outlined
+// Gear1 (lucide-compatible). `SettingsGear4` is the square-filled variant
+// reserved for chrome surfaces that want a heavier, more geometric glyph
+// than the default. Mirrors the `LayoutGrid2` precedent — when a Central
+// icon ships in multiple visual flavours and we want both available,
+// keep the original mapped to its lucide name and expose the alternative
+// under its Central identifier.
+export const SettingsGear4 = asIcon(IconSettingsGear4Raw);
 export const Palette = asIcon(IconColorPaletteRaw);
 export const SlidersHorizontal = asIcon(IconSettingsSliderHorRaw);
 export const Sparkles = asIcon(IconSparkles3BoldRaw);
@@ -267,6 +305,10 @@ import {
   Scan as ScanRaw,
   Mountain as MountainRaw,
   Route as RouteRaw,
+  Square as SquareRaw,
+  Rows2 as Rows2Raw,
+  Grid2x2 as Grid2x2Raw,
+  LayoutPanelTop as LayoutPanelTopRaw,
 } from 'lucide-react';
 
 // Crosshair: Central has no aim/target-reticle glyph. IconTarget would be
@@ -334,3 +376,15 @@ export const Mountain = asIcon(MountainRaw);
 
 // Route: Central has no route/path-of-travel glyph.
 export const Route = asIcon(RouteRaw);
+
+// Layout picker glyphs (Single / Stack / Grid / Hero+filmstrip). Central
+// has no purpose-drawn layout-preset family; lucide ships a coherent set
+// where each icon clearly schematises the cell arrangement of the layout
+// it represents — important since the picker is icon-only.
+export const Square = asIcon(SquareRaw);
+export const Rows2 = asIcon(Rows2Raw);
+export const Grid2x2 = asIcon(Grid2x2Raw);
+export const LayoutPanelTop = asIcon(LayoutPanelTopRaw);
+
+// --- Brand / product logos ---
+export const KelaLogo = asIcon(IconKelaLogo);

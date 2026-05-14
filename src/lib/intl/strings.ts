@@ -123,6 +123,44 @@ const STRINGS_HE = {
   },
 
   /**
+   * Gridblock shell — header, footer, and rail copy used by the
+   * new dashboard layout. Kept separate from the legacy `dashboard`
+   * namespace so the two surfaces can drift independently during
+   * the migration period.
+   */
+  gridblock: {
+    settings: 'הגדרות',
+    timezone: 'אזור זמן',
+    timezoneAriaLabel: 'בחר אזור זמן',
+    live: 'שידור חי',
+    pauseTime: 'השהה זמן',
+    timeWindow: 'חלון זמן',
+    timeWindowLastHour: 'שעה אחרונה',
+    leftRail: 'סרגל ניווט שמאלי',
+    rightRail: 'סרגל ניווט ימני',
+    closePanel: 'סגור חלונית',
+    resizeLeftPanel: 'שנה גודל חלונית שמאלית',
+    resizeRightPanel: 'שנה גודל חלונית ימנית',
+    targets: 'מטרות',
+    cameras: 'מצלמות',
+    devices: 'מכשירים',
+    closeTooltip: 'סגור חלונית',
+    cuasScenarios: 'תרחישי CUAS',
+    cuasScenariosAriaLabel: 'תרחישי CUAS',
+    scenarioSingle: 'יעד בודד',
+    scenarioFull: 'תרחיש מלא (3 יעדים)',
+    scenarioSwarm: 'תרחיש נחיל (20 יעדים)',
+    styleGuide: 'Style Guide',
+    mapToolbar: {
+      dropLocation: 'הצב מיקום',
+      measure: 'מדידה',
+      coordSearchPlaceholder: 'לדוגמה 33.54,-117.6°',
+      coordSearchAriaLabel: 'חיפוש לפי קואורדינטות',
+      mapSettings: 'הגדרות מפה',
+    },
+  },
+
+  /**
    * Right-side target list (`<ListOfSystems>`). Tabs, search, filter
    * controls, empty states, and per-card action labels.
    */
@@ -348,6 +386,20 @@ const STRINGS_HE = {
     },
     feedTile: {
       defaultEmptySlotHint: 'גרור או נעץ מכשיר לכאן',
+      useAsMain: 'הצג כראשי',
+      useAsMainAriaLabel: 'הצג פיד זה כראשי',
+      detectionAlertAriaLabel: 'התראת זיהוי',
+      switchAssetTriggerAriaLabel: 'החלף מכשיר',
+      switchAssetSectionCameras: 'מצלמות',
+      switchAssetSectionDrones: 'רחפנים',
+      assetPinnedElsewhere: 'מוצג בחלון אחר',
+    },
+    layoutPicker: {
+      label: 'פריסת תצוגה',
+      single: 'תצוגה יחידה',
+      stack: 'שתי תצוגות',
+      grid: 'רשת 2x2',
+      gallery: 'תצוגה ראשית + רצועה',
     },
     playback: {
       pause: 'השהה',
@@ -771,6 +823,39 @@ const STRINGS_EN: Strings = {
     helpTourAriaLabel: 'Help tour',
   },
 
+  gridblock: {
+    settings: 'Settings',
+    account: 'Account',
+    accountAndSecurity: 'Account & Security',
+    signOut: 'Sign Out',
+    timezone: 'Timezone',
+    timezoneAriaLabel: 'Choose timezone',
+    live: 'Live',
+    pauseTime: 'Pause time',
+    timeWindow: 'Time window',
+    timeWindowLastHour: 'Last Hour',
+    leftRail: 'Left sidebar',
+    rightRail: 'Right sidebar',
+    closePanel: 'Close panel',
+    targets: 'Targets',
+    cameras: 'Cameras',
+    devices: 'Devices',
+    closeTooltip: 'Close Panel',
+    cuasScenarios: 'CUAS scenarios',
+    cuasScenariosAriaLabel: 'CUAS scenarios',
+    scenarioSingle: 'Single target',
+    scenarioFull: 'Full scenario (3 targets)',
+    scenarioSwarm: 'Swarm scenario (20 targets)',
+    styleGuide: 'Style Guide',
+    mapToolbar: {
+      dropLocation: 'Drop location',
+      measure: 'Measure',
+      coordSearchPlaceholder: 'e.g. 33.54,-117.6°',
+      coordSearchAriaLabel: 'Search by coordinates',
+      mapSettings: 'Map settings',
+    },
+  },
+
   listOfSystems: {
     tabActive: 'Active',
     tabCompleted: 'Completed',
@@ -978,6 +1063,20 @@ const STRINGS_EN: Strings = {
     },
     feedTile: {
       defaultEmptySlotHint: 'Drag or pin a device here',
+      useAsMain: 'Use as main',
+      useAsMainAriaLabel: 'Use this feed as the main view',
+      detectionAlertAriaLabel: 'Detection alert',
+      switchAssetTriggerAriaLabel: 'Switch device',
+      switchAssetSectionCameras: 'Cameras',
+      switchAssetSectionDrones: 'Drones',
+      assetPinnedElsewhere: 'Showing in another tile',
+    },
+    layoutPicker: {
+      label: 'View layout',
+      single: 'Single',
+      stack: 'Stack 2',
+      grid: '2x2 grid',
+      gallery: 'Hero + filmstrip',
     },
     playback: {
       pause: 'Pause',

@@ -137,9 +137,9 @@ export const spec: ComponentSpec = {
     colors: [
       { name: 'confirm-bg', value: 'rgba(255,255,255,0.08)', usage: 'Confirm dialog background overlay' },
       { name: 'confirm-ring', value: 'CARD_TOKENS.surface.level2', usage: 'Confirm dialog border ring' },
-      { name: 'danger-cta-bg', value: 'oklch(0.348 0.111 17)', usage: 'Danger button background (var --color-4)' },
-      { name: 'danger-cta-hover', value: 'oklch(0.445 0.151 17)', usage: 'Danger button hover' },
-      { name: 'danger-cta-text', value: 'oklch(0.927 0.062 17)', usage: 'Danger button text' },
+      { name: 'danger-cta-bg', value: 'var(--accent-danger-soft)', usage: 'Danger button background (alias var --danger-cta-bg)' },
+      { name: 'danger-cta-hover', value: 'var(--accent-danger)', usage: 'Danger button hover (alias var --danger-cta-bg-hover)' },
+      { name: 'danger-cta-text', value: 'var(--slate-12)', usage: 'Danger button text (alias var --danger-cta-text)' },
       { name: 'cancel-bg', value: 'oklch(0.302 0 0)', usage: 'Cancel button background' },
       { name: 'effector-success', value: '#34d399 (emerald-400)', usage: 'Status strip success icon color' },
     ],
@@ -293,7 +293,7 @@ export const spec: ComponentSpec = {
   hardcodedData: [
     {
       current: "OKLCH color values in confirm dialog buttons (e.g. 'bg-[oklch(0.348_0.111_17)]')",
-      replaceWith: 'CSS custom properties from index.css (var(--danger-cta-bg), var(--danger-cta-bg-hover), etc.)',
+      replaceWith: 'CSS custom properties from palette.css (var(--accent-danger-soft), var(--accent-danger), etc.) — exposed as var(--danger-cta-*) aliases in tailwind.css',
       location: 'CardActions.tsx renderConfirmDialog lines 304-331',
     },
   ],

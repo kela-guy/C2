@@ -2,6 +2,22 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import type { Step, CallBackProps, Styles } from 'react-joyride';
 import { ACTIONS, EVENTS, STATUS } from 'react-joyride';
 import type { Detection } from '@/imports/ListOfSystems';
+import { accentHex, slateHex, surfaceHex } from '@/primitives/accentHex';
+
+/*
+ * react-joyride consumes its theme as literal strings (passed
+ * through to `style` props on portal'd DOM nodes), so we feed it
+ * the JS-side hex mirror instead of CSS vars. The mapping below
+ * is tuned to read as a Substrate-3 popover sitting on the page:
+ *   - bg / arrow → surface-3 (matches PopoverSurface lift)
+ *   - text body → slate-11 (muted), titles → slate-12
+ *   - primary → accent-cyan (matches CUAS HUD highlight color)
+ *   - skip button → state-hover-strong wash (no extra weight)
+ */
+const TOUR_BG = surfaceHex(3);
+const TOUR_TEXT_MUTED = slateHex(11);
+const TOUR_TEXT_STRONG = slateHex(12);
+const TOUR_PRIMARY = accentHex('cyan');
 
 const STORAGE_KEY = 'cuas-tour-completed';
 
@@ -140,11 +156,13 @@ const TOUR_STEPS: CuasTourStep[] = [
 
 const TOUR_STYLES: Styles = {
   options: {
-    arrowColor: '#1a1a1a',
-    backgroundColor: '#1a1a1a',
+    arrowColor: TOUR_BG,
+    backgroundColor: TOUR_BG,
+    // Black scrim is intentional — high-contrast overlay so the
+    // spotlight reads regardless of substrate brightness.
     overlayColor: 'rgba(0, 0, 0, 0.6)',
-    primaryColor: '#22b8cf',
-    textColor: '#e4e4e7',
+    primaryColor: TOUR_PRIMARY,
+    textColor: TOUR_TEXT_STRONG,
     spotlightShadow: '0 0 0 4px rgba(0,0,0,0.3), 0 0 20px rgba(0,0,0,0.5)',
     zIndex: 100000,
   },
@@ -165,13 +183,13 @@ const TOUR_STYLES: Styles = {
   tooltipContent: {
     padding: '6px 0',
     lineHeight: 1.5,
-    color: '#a1a1aa',
+    color: TOUR_TEXT_MUTED,
   },
   tooltipTitle: {
     fontSize: 15,
     fontWeight: 600,
     textAlign: 'right' as const,
-    color: '#e4e4e7',
+    color: TOUR_TEXT_STRONG,
   },
   tooltipFooter: {
     display: 'flex',
@@ -189,16 +207,16 @@ const TOUR_STYLES: Styles = {
     alignItems: 'flex-end',
   },
   buttonNext: {
-    backgroundColor: '#22b8cf',
+    backgroundColor: TOUR_PRIMARY,
     borderRadius: 8,
-    color: '#fff',
+    color: slateHex(1),
     fontSize: 13,
     fontWeight: 600,
     padding: '8px 18px',
     outline: 'none',
   },
   buttonBack: {
-    color: '#a1a1aa',
+    color: TOUR_TEXT_MUTED,
     fontSize: 13,
     fontWeight: 500,
     marginLeft: 0,
@@ -209,7 +227,7 @@ const TOUR_STYLES: Styles = {
     border: 'none',
     boxShadow: '0 0 0 1px rgba(255,255,255,0.1)',
     borderRadius: 8,
-    color: '#a1a1aa',
+    color: TOUR_TEXT_MUTED,
     fontSize: 12,
     fontWeight: 500,
     padding: '7px 14px',
@@ -235,7 +253,7 @@ const CLICK_THROUGH_STYLES: Styles = {
   },
   spotlight: {
     borderRadius: 6,
-    border: '2px solid rgba(34, 184, 207, 0.7)',
+    border: `2px solid color-mix(in oklch, ${TOUR_PRIMARY} 70%, transparent)`,
   },
 };
 

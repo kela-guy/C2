@@ -48,6 +48,41 @@ export const LAUNCHER_ASSETS = [
   { id: 'LCHR-NVT-GAMMA', latitude: 32.4506, longitude: 35.0243 },
 ];
 
+/**
+ * Perimeter floodlights. `bearingDeg` is the lamp aim direction, used
+ * by the device card's beam visualisation; the map marker itself is
+ * orientation-agnostic at the current zooms.
+ */
+export interface FloodlightAsset {
+  id: string;
+  latitude: number;
+  longitude: number;
+  typeLabel: string;
+  bearingDeg: number;
+}
+
+export const FLOODLIGHT_ASSETS: FloodlightAsset[] = [
+  { id: 'FLD-NVT-PERIMETER-N', latitude: 32.4731, longitude: 34.9978, typeLabel: 'Floodlight (North)', bearingDeg: 350 },
+  { id: 'FLD-NVT-GATE-S', latitude: 32.4571, longitude: 35.0048, typeLabel: 'Floodlight (Gate)', bearingDeg: 180 },
+];
+
+/**
+ * PA speakers. `coverageRadiusM` drives the soft audible-coverage ring
+ * that appears around the marker when the speaker is broadcasting.
+ */
+export interface SpeakerAsset {
+  id: string;
+  latitude: number;
+  longitude: number;
+  typeLabel: string;
+  coverageRadiusM: number;
+}
+
+export const SPEAKER_ASSETS: SpeakerAsset[] = [
+  { id: 'SPK-NVT-PA-MAIN', latitude: 32.4696, longitude: 34.9993, typeLabel: 'PA Speaker (Main)', coverageRadiusM: 800 },
+  { id: 'SPK-NVT-PA-EAST', latitude: 32.4636, longitude: 35.0163, typeLabel: 'PA Speaker (East)', coverageRadiusM: 800 },
+];
+
 export const REGULUS_EFFECTORS: RegulusEffector[] = [
   { id: 'REG-NVT-NORTH', name: 'Regulus North', lat: 32.4776, lon: 34.9913, coverageRadiusM: 2500, status: 'available' },
   { id: 'REG-NVT-EAST', name: 'Regulus East', lat: 32.4646, lon: 35.0213, coverageRadiusM: 2500, status: 'available' },

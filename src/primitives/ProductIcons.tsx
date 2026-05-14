@@ -111,6 +111,9 @@ export function DroneDeviceIcon({ size = 28, fill = 'white', className = '' }: D
       <path
         d="M23.334 15.7502L9.33696 0.583495L5.86139 4.0835L10.5007 11.0835L9.32456 15.7502L10.5007 20.4168L5.86139 27.4168L9.32456 30.6801L23.334 15.7502Z"
         fill={fill}
+        // Hardcoded near-black stroke is intentional icon art — the glyph
+        // is a flat solid shape that needs a fixed dark outline regardless
+        // of substrate. Not a theme token.
         stroke="#0a0a0a"
         strokeWidth="1"
       />

@@ -18,8 +18,8 @@ export const spec: ComponentSpec = {
     { name: 'floodlightOnIds', type: 'Set<string>', required: false, description: 'IDs of floodlights currently lit. Drives the active icon variant + Switch state.' },
     { name: 'speakerPlayingIds', type: 'Set<string>', required: false, description: 'IDs of speakers currently broadcasting. Drives the active icon variant + Play/Stop state.' },
     { name: 'speakerTracks', type: '{ id: string; label: string }[]', required: false, description: 'Audio tracks rendered in the speaker combobox. Defaults to DEFAULT_SPEAKER_TRACKS (sirens).' },
-    { name: 'noTransition', type: 'boolean', required: false, description: 'Disables slide transition (used in tests and styleguide)' },
-    { name: 'width', type: 'number', required: false, description: 'Override panel width in pixels (defaults to LAYOUT_TOKENS.sidebarWidthPx)' },
+    { name: 'noTransition', type: 'boolean', required: false, description: 'Deprecated. The Dashboard now mounts the panel inside a CSS Grid cell that owns the slide animation; per-panel transition suppression is no longer used. Kept for prop-shape compatibility.' },
+    { name: 'width', type: 'number', required: false, description: 'Deprecated. Width is controlled by the parent grid cell (LAYOUT_TOKENS.panelWidthPx). The panel itself is `flex h-full w-full` and ignores this prop. Kept for prop-shape compatibility.' },
   ],
 
   states: [
@@ -231,8 +231,9 @@ export const spec: ComponentSpec = {
 
   tokens: {
     colors: [
-      { name: 'panel-bg', value: '#141414', usage: 'Panel background' },
-      { name: 'border', value: 'rgba(255,255,255,0.1)', usage: 'Panel border and dividers' },
+      { name: 'panel-bg', value: 'var(--gridblock-panel)', usage: 'Panel body background — the content well surface.' },
+      { name: 'panel-header-bg', value: 'var(--gridblock-bar)', usage: 'Sticky header strip — chrome tier above the panel body.' },
+      { name: 'border', value: 'var(--gridblock-border)', usage: 'Header/toolbar seams + intra-list dividers.' },
       { name: 'row-hover', value: 'rgba(255,255,255,0.04)', usage: 'Device row hover background' },
       { name: 'status-online', value: '#34d399', usage: 'Online connection dot (emerald-400)' },
       { name: 'status-offline', value: '#71717a', usage: 'Offline connection dot (zinc-500)' },
@@ -242,7 +243,7 @@ export const spec: ComponentSpec = {
       { name: 'jam-btn-bg', value: 'oklch(0.348 0.111 17)', usage: 'ECM jam button background' },
     ],
     typography: [
-      { name: 'panel-title', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '500', lineHeight: '1.5', usage: 'Panel header "מכשירים"' },
+      { name: 'panel-title', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '600', lineHeight: '16px', usage: 'Panel header "מכשירים" — rendered by GridblockPanel (32px header strip).' },
       { name: 'device-name', fontFamily: 'Heebo', fontSize: '13px', fontWeight: '500', lineHeight: '1.5', usage: 'Device row name text' },
       { name: 'device-metric', fontFamily: 'monospace', fontSize: '11px', fontWeight: '400', lineHeight: '1.5', usage: 'Coverage/metric text' },
       { name: 'group-label', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '400', lineHeight: '1.5', usage: 'Device type group header' },
@@ -250,7 +251,7 @@ export const spec: ComponentSpec = {
     spacing: [
       { name: 'row-px', value: '16px', usage: 'Row horizontal padding (px-4)' },
       { name: 'row-py', value: '10px', usage: 'Row vertical padding (py-2.5)' },
-      { name: 'header-px', value: '16px', usage: 'Header horizontal padding' },
+      { name: 'header-height', value: '32px', usage: 'Panel header strip — owned by GridblockPanel (h-8).' },
     ],
   },
 
@@ -380,6 +381,7 @@ export const spec: ComponentSpec = {
   ],
 
   notes: [
+    'Panel chrome (header, close button, scroll body, and the sticky toolbar that hosts the FilterBar) is delegated to GridblockPanel. DevicesPanel only owns the device list + filter state — same pattern as Targets/Cameras/Tracks.',
     'Panel uses react-dnd useDrag for camera rows — must be wrapped in DndProvider.',
     'Mute timer runs a 1s interval shared across all muted devices — efficient but could drift on heavy loads.',
     'Type filter is a multi-select popover (FilterBar primitive). Empty selection means all types are visible; checking entries narrows the list.',

@@ -99,12 +99,12 @@ export const spec: ComponentSpec = {
     {
       trigger: 'click',
       element: 'Primary segment',
-      result: 'Calls onClick with event (stopPropagation applied)',
+      result: 'Calls onClick with the original event. Never opens the dropdown (the primary button is a sibling of the trigger, not nested inside it).',
     },
     {
       trigger: 'click',
       element: 'Chevron segment',
-      result: 'Opens Radix dropdown menu (event propagation stopped)',
+      result: 'Opens Radix dropdown menu. The chevron is the sole `DropdownMenuTrigger`.',
     },
     {
       trigger: 'click',
@@ -160,24 +160,25 @@ export const spec: ComponentSpec = {
   },
 
   accessibility: {
-    role: 'button (primary) + menu trigger (chevron)',
+    role: 'Two real buttons inside a styled shell: primary `<button>` (label + onClick) and a chevron `<button>` wrapped in `DropdownMenuTrigger`. The shell div is purely presentational.',
     ariaAttributes: [
       'type="button" on both segments',
-      'disabled attribute on primary when isDisabled',
-      'aria-label="פעולות נוספות" on chevron trigger',
-      'aria-disabled="{isDisabled}" on chevron',
-      'aria-busy="true" on wrapper when loading',
+      'disabled attribute on both segments when isDisabled',
+      'aria-label="פעולות נוספות" on chevron button only',
+      'aria-haspopup="menu" and aria-expanded on chevron button (Radix-controlled)',
+      'aria-busy="true" on shell wrapper when loading',
       'aria-live="polite" on primary when loading',
       'aria-hidden="true" on decorative icons',
     ],
     keyboardNav: [
-      'Tab: focus primary, then chevron',
-      'Enter/Space: activate focused segment',
-      'Arrow keys: navigate dropdown items (Radix)',
+      'Tab: focus primary, then chevron (natural DOM order)',
+      'Enter/Space on primary: runs onClick',
+      'Enter/Space on chevron: opens the dropdown menu',
+      'Arrow keys inside the open menu: navigate items (Radix)',
       'Escape: close dropdown menu (Radix)',
     ],
     focusManagement: 'Focus ring via focus-visible:ring-2 ring-inset ring-white/30. Dropdown close auto-focus is prevented via onCloseAutoFocus.',
-    screenReaderNotes: 'aria-busy and aria-live announce loading state changes. Dropdown uses Radix DropdownMenu which manages its own ARIA roles.',
+    screenReaderNotes: 'Primary button is announced with its visible label; the chevron is announced separately as "More actions". aria-busy and aria-live announce loading state changes. Radix DropdownMenu manages its own ARIA roles for the menu surface.',
   },
 
   flows: [
@@ -267,7 +268,9 @@ export const spec: ComponentSpec = {
   notes: [
     'The gap between segments (gap-0.5 = 2px) reveals the card surface behind, creating a visual divider without an explicit border.',
     'Label swap uses AnimatePresence with mode="popLayout" — old label exits downward, new label enters from above.',
-    'stopPropagation is used on all click handlers to prevent card toggle from firing.',
+    'stopPropagation is used inside dropdown item onClick handlers to prevent the parent card from toggling. The primary button does NOT need it: it is a sibling of the dropdown trigger, not a descendant.',
+    'The dropdown popper is anchored to the chevron but stretched back to the full shell width via `style={{ minWidth: shellWidth }}` + `align="end"` so it visually sits under the whole button as before.',
+    'Earlier versions wrapped the entire shell in `DropdownMenuTrigger` and tried to suppress primary clicks with `e.stopPropagation()` in `onClick`. Radix opens dropdowns on `pointerdown` (which fires before `onClick`), so the menu always opened first and the primary action felt broken. The two-button structure makes that class of bug impossible.',
     'The danger and warning variants add an outer ring (ring-1 ring-inset) via variantShells — other variants do not.',
     'onCloseAutoFocus is prevented on the dropdown to avoid focus jumping back to the chevron after selection.',
   ],

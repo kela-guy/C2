@@ -3,6 +3,7 @@
 import * as React from "react";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 
+import { PopoverSurface } from "@/primitives/Substrate";
 import { cn } from "./utils";
 
 function Popover({
@@ -34,18 +35,25 @@ function PopoverContent({
   // utility in `src/styles/theme.css` overrides the origin in RTL based on
   // `[data-align]` so the zoom-in animation starts from the corner
   // adjacent to the trigger.
+  // Substrate: popovers paint via <PopoverSurface asChild>, which
+  // lifts the substrate +2 above whatever the trigger lived in.
+  // The Radix Content node itself receives data-substrate plus the
+  // bg-[var(--surface)] shadow-[var(--shadow)] classes; no wrapper
+  // div needed.
   return (
     <PopoverPrimitive.Portal>
-      <PopoverPrimitive.Content
-        data-slot="popover-content"
-        align={align}
-        sideOffset={sideOffset}
-        className={cn(
-          "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 w-72 origin-(--radix-popover-content-transform-origin) rounded-md border p-4 shadow-md outline-hidden",
-          className,
-        )}
-        {...props}
-      />
+      <PopoverSurface asChild>
+        <PopoverPrimitive.Content
+          data-slot="popover-content"
+          align={align}
+          sideOffset={sideOffset}
+          className={cn(
+            "text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 w-72 origin-(--radix-popover-content-transform-origin) rounded-md border border-border-default p-4 outline-hidden",
+            className,
+          )}
+          {...props}
+        />
+      </PopoverSurface>
     </PopoverPrimitive.Portal>
   );
 }

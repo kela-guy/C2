@@ -9,7 +9,7 @@ import {
 import { ChevronsUpDown, Square } from 'lucide-react';
 import { toast } from 'sonner';
 import { Toaster } from '@/shared/components/ui/sonner';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { TooltipProvider } from '@/shared/components/ui/tooltip';
 import { NAV, findGroupForId, findParentItemForChild } from '@/app/styleguide/navConfig';
 import { CHANGELOG } from '@/app/styleguide/changelog';
@@ -62,6 +62,11 @@ import { getActivityStatus } from '@/imports/useActivityStatus';
 
 import themeCssSrc from '@/styles/theme.css?raw';
 import indexCssSrc from '@/index.css?raw';
+import paletteCssSrc from '@/styles/palette.css?raw';
+import substrateSrc from '@/primitives/Substrate.tsx?raw';
+import accentHexSrc from '@/primitives/accentHex.ts?raw';
+import { Elevated, PopoverSurface } from '@/primitives/Substrate';
+import { ACCENT_HEX, SLATE_HEX, DISPOSITION_HEX } from '@/primitives/accentHex';
 
 import statusChipSrc from '@/primitives/StatusChip.tsx?raw';
 import actionButtonSrc from '@/primitives/ActionButton.tsx?raw';
@@ -266,8 +271,9 @@ function CesiumFlyToDemo() {
 // ─── Playback investigation mockups ─────────────────────────────────────────
 //
 // Static visual mockups of the camera-v2 playback surface. The live
-// experience is interactive on `/playground`; the styleguide focuses on
-// the design language (layout placement, badge hierarchy, status copy).
+// experience is interactive inside the Dashboard's video panel; the
+// styleguide focuses on the design language (layout placement, badge
+// hierarchy, status copy).
 
 function PlaybackLayoutMockup() {
   return (
@@ -953,24 +959,30 @@ function TargetCardFlows() {
                 open={flow2Open}
               />
             </div>
-            <AnimatePresence initial={false}>
-              {flow2Open && (
-                <motion.div
-                  initial={prefersReducedMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
-                  animate={prefersReducedMotion ? { opacity: 1 } : { height: 'auto', opacity: 1 }}
-                  exit={prefersReducedMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
-                  transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
-                  className="overflow-hidden"
+            {/*
+              Browser-native collapsible: `.accordion-content` animates
+              `grid-template-rows: 0fr ↔ 1fr` (canonical pattern, also
+              used by the global accordion). This replaces a Motion
+              `height: 'auto'` animation, which forced a layout read
+              every frame through Motion's measurement system. The
+              opacity fade is a separate compositor-only transition on
+              the inner panel. Reduced-motion is handled globally
+              via the `*` transition-duration override in index.css.
+            */}
+            <div className="accordion-content" data-open={flow2Open}>
+              <div>
+                <div
+                  className="px-3 py-3 text-[11px] text-n-9 transition-opacity duration-200 ease-out"
+                  style={{
+                    backgroundColor: CARD_TOKENS.content.bgColor,
+                    boxShadow: `inset 0 1px 0 0 ${CARD_TOKENS.content.borderColor}`,
+                    opacity: flow2Open ? 1 : 0,
+                  }}
                 >
-                  <div
-                    className="px-3 py-3 text-[11px] text-n-9"
-                    style={{ backgroundColor: CARD_TOKENS.content.bgColor, boxShadow: `inset 0 1px 0 0 ${CARD_TOKENS.content.borderColor}` }}
-                  >
-                    Card content expanded
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  Card content expanded
+                </div>
+              </div>
+            </div>
           </div>
         }
         mapZone={
@@ -1026,24 +1038,21 @@ function TargetCardFlows() {
                 open={flow3Open}
               />
             </div>
-            <AnimatePresence initial={false}>
-              {flow3Open && (
-                <motion.div
-                  initial={prefersReducedMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
-                  animate={prefersReducedMotion ? { opacity: 1 } : { height: 'auto', opacity: 1 }}
-                  exit={prefersReducedMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
-                  transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
-                  className="overflow-hidden"
+            {/* Same pattern as Flow 2 — see comment above. */}
+            <div className="accordion-content" data-open={flow3Open}>
+              <div>
+                <div
+                  className="px-3 py-3 text-[11px] text-n-9 transition-opacity duration-200 ease-out"
+                  style={{
+                    backgroundColor: CARD_TOKENS.content.bgColor,
+                    boxShadow: `inset 0 1px 0 0 ${CARD_TOKENS.content.borderColor}`,
+                    opacity: flow3Open ? 1 : 0,
+                  }}
                 >
-                  <div
-                    className="px-3 py-3 text-[11px] text-n-9"
-                    style={{ backgroundColor: CARD_TOKENS.content.bgColor, boxShadow: `inset 0 1px 0 0 ${CARD_TOKENS.content.borderColor}` }}
-                  >
-                    Card opens from map click
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  Card opens from map click
+                </div>
+              </div>
+            </div>
           </div>
         }
         mapZone={
@@ -1282,7 +1291,7 @@ function DeviceCardFlows() {
               onHover={(id) => setFlowHoverDeviceId(id)}
               onFlyTo={noopFlyTo}
               isMuted={false}
-              muteRemaining={null}
+              muteExpiry={null}
               onToggleMute={noopMute}
             />
             <DeviceRow
@@ -1292,7 +1301,7 @@ function DeviceCardFlows() {
               onHover={(id) => setFlowHoverDeviceId(id)}
               onFlyTo={noopFlyTo}
               isMuted={false}
-              muteRemaining={null}
+              muteExpiry={null}
               onToggleMute={noopMute}
             />
           </div>
@@ -1347,7 +1356,7 @@ function DeviceCardFlows() {
               onHover={(id) => setFlow4HoveredRow(id)}
               onFlyTo={noopFlyTo}
               isMuted={false}
-              muteRemaining={null}
+              muteExpiry={null}
               onToggleMute={noopMute}
             />
             <DeviceRow
@@ -1357,7 +1366,7 @@ function DeviceCardFlows() {
               onHover={(id) => setFlow4HoveredRow(id)}
               onFlyTo={noopFlyTo}
               isMuted={false}
-              muteRemaining={null}
+              muteExpiry={null}
               onToggleMute={noopMute}
             />
           </div>
@@ -2276,6 +2285,123 @@ function VariantGrid({ entries, renderSample }: {
 }
 
 
+function SlateRamp() {
+  const steps = (Object.keys(SLATE_HEX) as unknown as Array<keyof typeof SLATE_HEX>)
+    .map((step) => ({ step: Number(step), hex: SLATE_HEX[step] }));
+  const [copied, setCopied] = useState<number | null>(null);
+  const copy = (hex: string, step: number) => {
+    navigator.clipboard.writeText(hex).then(() => {
+      setCopied(step);
+      toast.success(`Copied ${hex}`, { duration: 1200 });
+      setTimeout(() => setCopied(null), 1200);
+    });
+  };
+  return (
+    <div className="space-y-3" dir="ltr">
+      <div className="flex rounded-xl overflow-hidden shadow-[0_0_0_1px_var(--border-default)]">
+        {steps.map(({ step, hex }) => (
+          <button
+            key={step}
+            type="button"
+            onClick={() => copy(hex, step)}
+            className="group relative flex-1 h-20 cursor-pointer transition-[filter] duration-200 hover:brightness-125"
+            style={{ backgroundColor: hex }}
+          >
+            <span className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+              <CopyIcon copied={copied === step} />
+            </span>
+          </button>
+        ))}
+      </div>
+      <div className="flex">
+        {steps.map(({ step, hex }) => (
+          <div key={step} className="flex-1 flex flex-col items-center gap-0.5 min-w-0">
+            <span className="text-[10px] font-mono text-slate-10 tabular-nums">slate-{step}</span>
+            <span className="text-[9px] font-mono text-slate-9 tabular-nums">{hex}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SubstrateLadderDemo() {
+  const levels = [1, 2, 3, 4, 5, 6, 7, 8] as const;
+  return (
+    <div className="space-y-4">
+      {/* Surface strip — solid swatches with shadow */}
+      <div className="grid grid-cols-8 gap-2" dir="ltr">
+        {levels.map((lvl) => (
+          <Elevated key={lvl} level={lvl} className="rounded-lg bg-[var(--surface)] shadow-[var(--shadow)] aspect-[3/4] flex flex-col items-center justify-end p-2">
+            <span className="text-[11px] font-mono text-slate-12">{lvl}</span>
+            <span className="text-[9px] font-mono text-slate-10">surface-{lvl}</span>
+          </Elevated>
+        ))}
+      </div>
+
+      {/* Nesting demo — popover lifts +2 from its substrate parent */}
+      <div dir="ltr">
+        <Elevated level={1} className="bg-[var(--surface)] rounded-lg p-4 shadow-[var(--shadow)]">
+          <div className="text-[11px] font-mono text-slate-10 mb-3">Substrate 1 — page background</div>
+          <Elevated level={3} className="bg-[var(--surface)] rounded-lg p-4 shadow-[var(--shadow)] inline-block">
+            <div className="text-[11px] font-mono text-slate-10 mb-3">Substrate 3 — card</div>
+            <PopoverSurface className="rounded-lg bg-[var(--surface)] shadow-[var(--shadow)] p-3 inline-block">
+              <div className="text-[11px] font-mono text-slate-10">PopoverSurface (lift +2 → substrate 5)</div>
+            </PopoverSurface>
+          </Elevated>
+        </Elevated>
+      </div>
+    </div>
+  );
+}
+
+function TacticalAccentsPreview() {
+  const vivid: Array<keyof typeof ACCENT_HEX> = ['danger', 'warning', 'tracking', 'success', 'info', 'historical', 'cyan', 'magenta'];
+  return (
+    <div className="space-y-4" dir="ltr">
+      <div className="grid grid-cols-4 gap-3">
+        {vivid.map((name) => (
+          <div key={name} className="rounded-lg p-3 flex items-center gap-3 bg-surface-3 shadow-[var(--shadow-3)]">
+            <div className="w-10 h-10 rounded" style={{ backgroundColor: ACCENT_HEX[name] }} />
+            <div className="flex flex-col">
+              <span className="text-[11px] font-medium text-slate-12">{name}</span>
+              <span className="text-[10px] font-mono text-slate-10">{ACCENT_HEX[name]}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-4 gap-3">
+        {(['dangerSoft', 'warningSoft', 'successSoft', 'infoSoft'] as Array<keyof typeof ACCENT_HEX>).map((name) => (
+          <div key={name} className="rounded-lg p-3 flex items-center gap-3 bg-surface-3 shadow-[var(--shadow-3)]">
+            <div className="w-10 h-10 rounded" style={{ backgroundColor: ACCENT_HEX[name] }} />
+            <div className="flex flex-col">
+              <span className="text-[11px] font-medium text-slate-12">{name}</span>
+              <span className="text-[10px] font-mono text-slate-10">{ACCENT_HEX[name]}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DispositionsPreview() {
+  const entries = Object.entries(DISPOSITION_HEX) as Array<[keyof typeof DISPOSITION_HEX, string]>;
+  return (
+    <div className="grid grid-cols-3 gap-3" dir="ltr">
+      {entries.map(([name, hex]) => (
+        <div key={name} className="rounded-lg p-3 flex items-center gap-3 bg-surface-3 shadow-[var(--shadow-3)]">
+          <div className="w-10 h-10 rounded-full" style={{ backgroundColor: hex }} />
+          <div className="flex flex-col">
+            <span className="text-[11px] font-medium text-slate-12">{name}</span>
+            <span className="text-[10px] font-mono text-slate-10">{hex}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ElevationRamp() {
   const levels = (Object.keys(ELEVATION.overlay) as Array<keyof typeof ELEVATION.overlay>).map((key) => ({
     key,
@@ -3025,14 +3151,61 @@ export function DetectionRow() {
             )}
 
             {activeItem === 'styling' && (
-            <ComponentSection id="styling" name="Styling" description="Color tokens, elevation surfaces, and typography setup. Paste the theme CSS into your project to get the full design language.">
-              <SectionHeading>Theme CSS</SectionHeading>
+            <ComponentSection id="styling" name="Styling" description="OKLCH palette, substrate ladder, tactical accents, and typography setup. Everything routes through palette.css.">
+              <SectionHeading>palette.css — single source of truth</SectionHeading>
               <p className="text-[16px] font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
-                The design system uses two CSS files: <code className="text-[13px] font-mono text-n-10">theme.css</code> for semantic color tokens (light/dark) and Tailwind bindings, and <code className="text-[13px] font-mono text-n-10">index.css</code> for the neutral scale, tactical red palette, and global resets. Copy each into your project.
+                One file holds the entire color system: a 12-step slate ramp at hue 256, an 8-level substrate ladder + void, shadows, borders, state washes, tactical accents (vivid + soft + tints), and operator dispositions. Painted by <code className="text-[13px] font-mono text-n-10">[data-substrate=&quot;N&quot;]</code> attribute selectors so the <code className="text-[13px] font-mono text-n-10">&lt;Elevated&gt;</code> primitive only sets one attribute, not inline styles.
+              </p>
+              <CodePreviewBlock name="palette.css" description="OKLCH slate ramp, substrate ladder, accents, dispositions, state overlays, and APCA reference table." code={paletteCssSrc} />
+
+              <SectionHeading>Theme CSS bindings</SectionHeading>
+              <p className="text-[16px] font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
+                <code className="text-[13px] font-mono text-n-10">theme.css</code> maps shadcn semantic tokens onto the palette and <code className="text-[13px] font-mono text-n-10">tailwind.css</code> publishes them as utility classes. <code className="text-[13px] font-mono text-n-10">index.css</code> carries global resets + the Sonner toast block.
               </p>
               <div className="space-y-6">
-                <CodePreviewBlock name="theme.css" description="Semantic color tokens, Tailwind @theme bindings, and base typography." code={themeCssSrc} />
-                <CodePreviewBlock name="index.css" description="Neutral scale, tactical red palette, custom theme colors, and global resets." code={indexCssSrc} />
+                <CodePreviewBlock name="theme.css" description="Semantic color tokens routed onto palette.css. Dark in :root, .light is opt-in." code={themeCssSrc} />
+                <CodePreviewBlock name="index.css" description="Global resets, scrollbar tuning, Sonner block, joyride hover wash." code={indexCssSrc} />
+              </div>
+
+              <SectionHeading>Slate ramp</SectionHeading>
+              <p className="text-[16px] font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
+                12-step perceptually-uniform OKLCH ramp at hue 256 (cool blue-gray). Step 1 is the deepest background, 12 is the highest-emphasis foreground. Adjacent steps are ~0.06–0.08 L apart so they're perceptibly distinct.
+              </p>
+              <PreviewPanel align="stretch">
+                <SlateRamp />
+              </PreviewPanel>
+
+              <SectionHeading>Substrate ladder</SectionHeading>
+              <p className="text-[16px] font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
+                Eight surface levels + a void below substrate 1. <code className="text-[13px] font-mono text-n-10">&lt;Elevated lift=&#123;n&#125;&gt;</code> walks up from the current substrate; <code className="text-[13px] font-mono text-n-10">&lt;Elevated level=&#123;n&#125;&gt;</code> jumps absolute. Nested popovers automatically stack one level above their parent, so depth reads even on dark backgrounds.
+              </p>
+              <PreviewPanel align="stretch">
+                <SubstrateLadderDemo />
+              </PreviewPanel>
+
+              <SectionHeading>Tactical accents</SectionHeading>
+              <p className="text-[16px] font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
+                Vivid accents for severity (danger / warning / tracking / success / info / historical / cyan / magenta) and soft variants for muted CTAs. Use <code className="text-[13px] font-mono text-n-10">var(--accent-*)</code> in CSS contexts; use <code className="text-[13px] font-mono text-n-10">accentHex(name)</code> for SVG attributes, Mapbox paint expressions, Cesium materials, and inline color props.
+              </p>
+              <PreviewPanel align="stretch">
+                <TacticalAccentsPreview />
+              </PreviewPanel>
+
+              <SectionHeading>Dispositions</SectionHeading>
+              <p className="text-[16px] font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
+                Operator labels for track classification — independent of severity accents so the two systems can vary without dragging each other.
+              </p>
+              <PreviewPanel align="stretch">
+                <DispositionsPreview />
+              </PreviewPanel>
+
+              <SectionHeading>Role primitives</SectionHeading>
+              <p className="text-[16px] font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
+                Substrate.tsx exports role wrappers (<code className="text-[13px] font-mono text-n-10">PopoverSurface</code>, <code className="text-[13px] font-mono text-n-10">MenuSurface</code>, <code className="text-[13px] font-mono text-n-10">DialogSurface</code>, …). Each wraps <code className="text-[13px] font-mono text-n-10">&lt;Elevated&gt;</code> with the recommended lift for its role. UI primitives in <code className="text-[13px] font-mono text-n-10">ui/*.tsx</code> consume these — never paint surfaces directly.
+              </p>
+              <div className="space-y-6">
+                <CodePreviewBlock name="Substrate.tsx" description="<Substrate>, <Elevated>, role wrappers, and the resolveElevatedLevel helper." code={substrateSrc} />
+                <CodePreviewBlock name="accentHex.ts" description="JS-side hex mirror for SVG/Mapbox/Cesium/canvas consumers. Tracks palette.css 1:1." code={accentHexSrc} />
               </div>
 
               <SectionHeading>Neutral Scale</SectionHeading>
@@ -4906,7 +5079,7 @@ export function DetectionRow() {
             <ComponentSection
               id="playback-investigation"
               name="Playback Investigation"
-              description="Camera-v2 playback surface lives only on /playground. One layout — a 50/50 split where live keeps the top half and playback takes the bottom — and a focused transport (play/pause + scrubber + clocks + exit). The live experience is interactive on /playground."
+              description="Camera-v2 playback surface lives inside the Dashboard's video panel. One layout — a 50/50 split where live keeps the top half and playback takes the bottom — and a focused transport (play/pause + scrubber + clocks + exit). The live experience is interactive in the Dashboard."
             >
               <SectionHeading>Layout</SectionHeading>
               <p className="text-[14px] leading-6 text-n-10">

@@ -28,9 +28,7 @@ import {
   Maximize2,
   Minimize2,
   Moon,
-  ScanSearch,
   Search,
-  Sparkles,
   Sun,
 } from '@/lib/icons/central';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
@@ -98,7 +96,7 @@ function ControlButton({
           disabled={disabled}
           aria-label={label}
           aria-pressed={active ?? undefined}
-          className={`p-2 transition-colors duration-150 ease-out
+          className={`flex flex-col items-center justify-center h-[30px] p-2 transition-colors duration-150 ease-out
             focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none
             disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.97]
             ${active
@@ -311,18 +309,6 @@ function LockButton({ status, onClick }: { status: CameraStatus; onClick: () => 
   );
 }
 
-function AiScanIcon({ active }: { active: boolean }) {
-  return (
-    <span className="relative inline-flex">
-      <ScanSearch size={14} className={active ? 'text-emerald-300' : ''} />
-      <Sparkles
-        size={8}
-        className={`absolute -top-1 -end-1 ${active ? 'text-emerald-200' : 'text-white/55'}`}
-      />
-    </span>
-  );
-}
-
 export function CameraControlBar({
   visible,
   mode,
@@ -376,13 +362,15 @@ export function CameraControlBar({
           >
             {mode === 'day' ? <Moon size={14} /> : <Sun size={14} />}
           </ControlButton>
-          <ControlButton
-            label={detectionsOn ? t.hideAiDetections : t.showAiDetections}
-            onClick={onDetectionsToggle}
-            active={detectionsOn}
-          >
-            <AiScanIcon active={detectionsOn} />
-          </ControlButton>
+          {/*
+            AI-detections toggle intentionally lives only on the Settings
+            popover (and the right-click context menu) now. It used to be
+            duplicated here on the control bar, but that made the bar
+            feel cluttered and the Settings affordance is well-discovered
+            (the gear is the second-to-last icon on every tile). The
+            `onDetectionsToggle` prop is still threaded through so the
+            popover and context menu can fire it.
+          */}
           <ControlButton
             label={designateMode ? t.cancelDesignate : t.designateTarget}
             shortcut="X"

@@ -19,6 +19,17 @@
 
 import { useEffect, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { useStrings } from '@/lib/intl';
+import { accentHex } from '@/primitives/accentHex';
+
+/*
+ * Designation reticle stroke. Routed through the unified accent
+ * palette so a future tweak to --accent-warning cascades through
+ * the camera HUD. accent-warning is the closest perceptual match
+ * to the original yellow-amber reticle (#fde047 — Tailwind yellow-
+ * 300); the new value lands at oklch hue 70, slightly more orange
+ * but still reads as a clear HUD signal over video.
+ */
+const RETICLE_STROKE = accentHex('warning');
 
 interface DesignateTargetOverlayProps {
   active: boolean;
@@ -126,12 +137,12 @@ function FollowReticle({ x, y }: { x: number; y: number }) {
       }}
       aria-hidden="true"
     >
-      <line x1={half - armOuter} y1={half} x2={half - armInner} y2={half} stroke="#fde047" strokeWidth={1.25} strokeLinecap="round" />
-      <line x1={half + armInner} y1={half} x2={half + armOuter} y2={half} stroke="#fde047" strokeWidth={1.25} strokeLinecap="round" />
-      <line x1={half} y1={half - armOuter} x2={half} y2={half - armInner} stroke="#fde047" strokeWidth={1.25} strokeLinecap="round" />
-      <line x1={half} y1={half + armInner} x2={half} y2={half + armOuter} stroke="#fde047" strokeWidth={1.25} strokeLinecap="round" />
+      <line x1={half - armOuter} y1={half} x2={half - armInner} y2={half} stroke={RETICLE_STROKE} strokeWidth={1.25} strokeLinecap="round" />
+      <line x1={half + armInner} y1={half} x2={half + armOuter} y2={half} stroke={RETICLE_STROKE} strokeWidth={1.25} strokeLinecap="round" />
+      <line x1={half} y1={half - armOuter} x2={half} y2={half - armInner} stroke={RETICLE_STROKE} strokeWidth={1.25} strokeLinecap="round" />
+      <line x1={half} y1={half + armInner} x2={half} y2={half + armOuter} stroke={RETICLE_STROKE} strokeWidth={1.25} strokeLinecap="round" />
 
-      <g stroke="#fde047" strokeWidth={1} opacity={0.7} strokeLinecap="round">
+      <g stroke={RETICLE_STROKE} strokeWidth={1} opacity={0.7} strokeLinecap="round">
         <line x1={half - cornerOffset} y1={half - cornerOffset} x2={half - cornerOffset + cornerLen} y2={half - cornerOffset} />
         <line x1={half - cornerOffset} y1={half - cornerOffset} x2={half - cornerOffset} y2={half - cornerOffset + cornerLen} />
         <line x1={half + cornerOffset} y1={half - cornerOffset} x2={half + cornerOffset - cornerLen} y2={half - cornerOffset} />
@@ -142,7 +153,7 @@ function FollowReticle({ x, y }: { x: number; y: number }) {
         <line x1={half + cornerOffset} y1={half + cornerOffset} x2={half + cornerOffset} y2={half + cornerOffset - cornerLen} />
       </g>
 
-      <circle cx={half} cy={half} r={1.25} fill="#fde047" />
+      <circle cx={half} cy={half} r={1.25} fill={RETICLE_STROKE} />
     </svg>
   );
 }

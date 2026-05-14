@@ -4,7 +4,7 @@ export const spec: ComponentSpec = {
   name: 'PlaybackTimeline',
   filePath: 'src/app/components/camera-v2/PlaybackTimeline.tsx',
   purpose:
-    'Minimal playback transport for the Live-vs-Playback investigation surface. Exposes only the controls an operator actually needs while inspecting a clip: a Radix scrubber, play/pause, the clip+remaining clocks, and an exit. Pinned LTR via `<DirIsland direction="ltr">` so time always flows L→R.',
+    'Minimal playback transport for the Live-vs-Playback investigation surface. Exposes only the controls an operator actually needs while inspecting a clip: a Radix scrubber, play/pause, and the clip+remaining clocks. Exit is intentionally absent — operators leave playback by toggling the feature off from the live half (Settings → playback row, `P`, or `Esc`). Pinned LTR via `<DirIsland direction="ltr">` so time always flows L→R.',
   location: 'Composition (camera-v2)',
   status: 'prototype',
 
@@ -13,7 +13,6 @@ export const spec: ComponentSpec = {
     { name: 'onScrub', type: '(positionSec: number) => void', required: true, description: 'Bubble a new position when the user moves the scrubber' },
     { name: 'onScrubbingChange', type: '(isScrubbing: boolean) => void', required: false, description: 'Container uses this to suspend the media-time sync effect while the operator drags' },
     { name: 'onPlayPause', type: '() => void', required: true, description: 'Toggle play / pause' },
-    { name: 'onExit', type: '() => void', required: false, description: 'Close playback — same as the `P` shortcut and the chrome X button' },
   ],
 
   states: [
@@ -32,7 +31,6 @@ export const spec: ComponentSpec = {
   interactions: [
     { trigger: 'pointer drag', element: 'Scrubber thumb', result: 'Calls onScrub on every change + onScrubbingChange(true); onScrubbingChange(false) fires on release' },
     { trigger: 'click', element: 'Play / pause', result: 'Calls onPlayPause' },
-    { trigger: 'click', element: 'Exit (X)', result: 'Calls onExit (same as the `P` shortcut)' },
     { trigger: 'keydown', element: 'Transport wrapper', result: 'Captures tile-level letter shortcuts (P/F/S/T/D/X) so they never re-trigger the parent. Arrow keys move the scrubber via Radix.' },
   ],
 
@@ -89,6 +87,6 @@ export const spec: ComponentSpec = {
     'Pinned to LTR via `<DirIsland direction="ltr">` so time always flows left-to-right regardless of app direction. Hebrew tooltip labels still render correctly because the island only repositions chrome, not text — same convention as the live `CameraControlBar`.',
     'Scrubber backed by the Radix Slider primitive, not the native `<input type="range">`, so we get a real accessible thumb + keyboard support out of the box. The thumb hit-area is 16px (larger than the visual size) so an operator can grab it on dense 4-up tile grids.',
     'Color hierarchy uses red rather than the live-feed amber so the operator never confuses live and playback halves.',
-    'Deliberately stripped: speed, loop, frame-step, bookmarks, snapshot, multi-feed sync, layout cycler, event markers, and idle auto-hide were all removed in the simplification pass. Reintroduce only with explicit operator demand.',
+    'Deliberately stripped: speed, loop, frame-step, bookmarks, snapshot, multi-feed sync, layout cycler, event markers, idle auto-hide — and an inline Exit button — were all removed in the simplification pass. Exit lives on the live half so the playback transport stays focused on inspecting the clip. Reintroduce only with explicit operator demand.',
   ],
 };

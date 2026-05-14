@@ -9,10 +9,11 @@
  */
 
 import { useState, useMemo } from 'react';
-import { Copy, Download, Image as ImageIcon, X } from 'lucide-react';
+import { Copy, Download, Image as ImageIcon } from 'lucide-react';
 import type { IconEntry } from '@/lib/iconRegistry';
 import { type IconPreviewSize } from '@/lib/iconTokens';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/components/ui/tooltip';
+import { GridblockPanel } from '@/app/components/gridblock';
 import type { RenderMode } from './IconLibrary';
 import { useIconExportActions } from './useIconExportActions';
 
@@ -69,138 +70,138 @@ export function IconDetailPanel({ entry, previewSize, renderMode, onClose }: Ico
 
   const PreviewBody = entry.Component;
 
+  // Inline meta — gridblock headers are a single 32px row, so source +
+  // category live next to the icon name rather than stacked below it.
+  // Keeps the panel chrome consistent with the rail panels (Targets,
+  // Cameras, Devices, Tracks).
+  const headerTitle = (
+    <>
+      <span className="truncate">{entry.name}</span>
+      <span className="ms-2 font-normal text-[var(--gridblock-text-muted)]">
+        <span className="uppercase tracking-wider">{entry.source}</span>
+        <span className="mx-1.5">·</span>
+        <span>{entry.category}</span>
+      </span>
+    </>
+  );
+
   return (
-    <aside
-      aria-label={`${entry.name} details`}
-      className="rounded-xl bg-white/[0.02] shadow-[0_0_0_1px_rgba(255,255,255,0.06)] p-5 space-y-5"
+    <GridblockPanel
+      title={headerTitle}
+      onClose={onClose}
+      closeAriaLabel={`Close ${entry.name} details`}
+      testId="icon-detail-panel"
     >
-      <header className="flex items-start justify-between gap-3">
-        <div className="space-y-1 min-w-0">
-          <h3 className="text-[15px] font-semibold text-n-12 truncate">{entry.name}</h3>
-          <p className="text-[12px] text-n-9">
-            <span className="uppercase tracking-wider text-n-120">{entry.source}</span>
-            <span className="mx-1.5 text-n-120">·</span>
-            <span>{entry.category}</span>
+      <div className="space-y-5 p-5">
+        <div className="flex items-center justify-center min-h-[140px] rounded-lg bg-black/30 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)] text-white">
+          {PreviewBody ? (
+            <PreviewBody
+              size={96}
+              strokeWidth={useFill ? 0 : 1.75}
+              color="currentColor"
+              fill={useFill ? 'currentColor' : undefined}
+            />
+          ) : entry.assetUrl ? (
+            <img
+              src={entry.assetUrl}
+              alt={entry.name}
+              width={96}
+              height={96}
+              loading="lazy"
+              decoding="async"
+            />
+          ) : (
+            <span className="text-xs text-n-9">Preview unavailable</span>
+          )}
+        </div>
+
+        {renderMode === 'fill' && entry.fillable !== true && (
+          <p className="text-[11px] text-n-120 leading-snug">
+            {entry.source === 'lucide'
+              ? 'This lucide icon is line-only — its paths don\'t enclose a region, so the Fill toggle is a no-op here.'
+              : entry.source === 'asset'
+                ? 'Static SVG assets are exported from disk as-authored — the Fill toggle doesn\'t apply.'
+                : 'This icon is authored as a fixed shape — the Fill toggle doesn\'t apply.'}
           </p>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close details"
-          className="p-1.5 rounded-md text-n-120 hover:text-n-11 hover:bg-white/[0.08] transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
-        >
-          <X size={14} />
-        </button>
-      </header>
-
-      <div className="flex items-center justify-center min-h-[140px] rounded-lg bg-black/30 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)] text-white">
-        {PreviewBody ? (
-          <PreviewBody
-            size={96}
-            strokeWidth={useFill ? 0 : 1.75}
-            color="currentColor"
-            fill={useFill ? 'currentColor' : undefined}
-          />
-        ) : entry.assetUrl ? (
-          <img
-            src={entry.assetUrl}
-            alt={entry.name}
-            width={96}
-            height={96}
-            loading="lazy"
-            decoding="async"
-          />
-        ) : (
-          <span className="text-xs text-n-9">Preview unavailable</span>
         )}
-      </div>
 
-      {renderMode === 'fill' && entry.fillable !== true && (
-        <p className="text-[11px] text-n-120 leading-snug">
-          {entry.source === 'lucide'
-            ? 'This lucide icon is line-only — its paths don\'t enclose a region, so the Fill toggle is a no-op here.'
-            : entry.source === 'asset'
-              ? 'Static SVG assets are exported from disk as-authored — the Fill toggle doesn\'t apply.'
-              : 'This icon is authored as a fixed shape — the Fill toggle doesn\'t apply.'}
-        </p>
-      )}
+        {entry.keywords.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {entry.keywords.map((kw) => (
+              <span
+                key={kw}
+                className="text-[11px] px-1.5 py-0.5 rounded bg-white/[0.04] text-n-10"
+              >
+                {kw}
+              </span>
+            ))}
+          </div>
+        )}
 
-      {entry.keywords.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {entry.keywords.map((kw) => (
-            <span
-              key={kw}
-              className="text-[11px] px-1.5 py-0.5 rounded bg-white/[0.04] text-n-10"
-            >
-              {kw}
+        <div className="space-y-2">
+          <h4 className="text-[11px] uppercase tracking-wider text-n-120">Import</h4>
+          <pre className="text-[12px] leading-[1.65] font-mono text-sky-200/90 whitespace-pre-wrap break-all bg-black/30 rounded-md px-3 py-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
+            {importSnippet}
+          </pre>
+          <pre className="text-[12px] leading-[1.65] font-mono text-emerald-200/90 whitespace-pre-wrap break-all bg-black/30 rounded-md px-3 py-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
+            {usageSnippet}
+          </pre>
+        </div>
+
+        <div className="space-y-3">
+          <h4 className="text-[11px] uppercase tracking-wider text-n-120">Export</h4>
+          <div className="grid grid-cols-3 gap-2">
+            <ActionButton
+              label="SVG"
+              tooltip="Copy SVG"
+              icon={<Copy size={13} />}
+              onClick={handleCopy}
+              busy={busy === 'copy'}
+            />
+            <ActionButton
+              label="SVG"
+              tooltip="Download SVG"
+              icon={<Download size={13} />}
+              onClick={handleDownloadSvg}
+              busy={busy === 'svg'}
+            />
+            <ActionButton
+              label="PNG"
+              tooltip="Download PNG"
+              icon={<ImageIcon size={13} />}
+              onClick={handleDownloadPng}
+              busy={busy === 'png'}
+            />
+          </div>
+
+          <div>
+            <span className="text-[11px] uppercase tracking-wider text-n-120 block mb-1.5">
+              PNG size
             </span>
-          ))}
-        </div>
-      )}
-
-      <div className="space-y-2">
-        <h4 className="text-[11px] uppercase tracking-wider text-n-120">Import</h4>
-        <pre className="text-[12px] leading-[1.65] font-mono text-sky-200/90 whitespace-pre-wrap break-all bg-black/30 rounded-md px-3 py-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
-          {importSnippet}
-        </pre>
-        <pre className="text-[12px] leading-[1.65] font-mono text-emerald-200/90 whitespace-pre-wrap break-all bg-black/30 rounded-md px-3 py-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
-          {usageSnippet}
-        </pre>
-      </div>
-
-      <div className="space-y-3">
-        <h4 className="text-[11px] uppercase tracking-wider text-n-120">Export</h4>
-        <div className="grid grid-cols-3 gap-2">
-          <ActionButton
-            label="SVG"
-            tooltip="Copy SVG"
-            icon={<Copy size={13} />}
-            onClick={handleCopy}
-            busy={busy === 'copy'}
-          />
-          <ActionButton
-            label="SVG"
-            tooltip="Download SVG"
-            icon={<Download size={13} />}
-            onClick={handleDownloadSvg}
-            busy={busy === 'svg'}
-          />
-          <ActionButton
-            label="PNG"
-            tooltip="Download PNG"
-            icon={<ImageIcon size={13} />}
-            onClick={handleDownloadPng}
-            busy={busy === 'png'}
-          />
-        </div>
-
-        <div>
-          <span className="text-[11px] uppercase tracking-wider text-n-120 block mb-1.5">
-            PNG size
-          </span>
-          <div role="radiogroup" aria-label="PNG export size" className="flex gap-1">
-            {PNG_SIZES.map((s) => {
-              const active = s === pngSize;
-              return (
-                <button
-                  key={s}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  onClick={() => setPngSize(s)}
-                  className={`flex-1 px-2 py-1.5 text-[11px] font-mono rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25
-                    ${active
-                      ? 'bg-white/[0.10] text-n-12 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]'
-                      : 'bg-white/[0.02] text-n-10 hover:bg-white/[0.06]'}`}
-                >
-                  {s}
-                </button>
-              );
-            })}
+            <div role="radiogroup" aria-label="PNG export size" className="flex gap-1">
+              {PNG_SIZES.map((s) => {
+                const active = s === pngSize;
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => setPngSize(s)}
+                    className={`flex-1 px-2 py-1.5 text-[11px] font-mono rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25
+                      ${active
+                        ? 'bg-white/[0.10] text-n-12 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]'
+                        : 'bg-white/[0.02] text-n-10 hover:bg-white/[0.06]'}`}
+                  >
+                    {s}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
-    </aside>
+    </GridblockPanel>
   );
 }
 

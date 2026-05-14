@@ -18,7 +18,7 @@ export function StyleguideHeader({
   const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent);
 
   return (
-    <header className="sticky top-0 z-10 flex items-center h-14 px-8 border-b border-white/[0.06] bg-[#0c0c0e]/80 backdrop-blur-sm">
+    <header className="sticky top-0 z-10 flex items-center h-14 px-8 border-b border-border-default bg-[color-mix(in_oklch,var(--surface-1)_85%,transparent)] backdrop-blur-sm">
       <nav className="flex items-center gap-1.5 text-[14px] min-w-0 flex-1">
         {group && (
           <>

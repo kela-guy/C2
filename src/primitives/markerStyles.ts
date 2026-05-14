@@ -1,3 +1,34 @@
+import { accentHex, slateHex } from '@/primitives/accentHex';
+
+/*
+ * Marker styles are consumed by SVG paint and Cesium scene materials
+ * — both of which need literal hex/rgba values. Each color below
+ * routes through accentHex() / slateHex() so the JS-side palette
+ * matches the OKLCH source in palette.css.
+ *
+ * Mapping:
+ *   hostile / weaponLocked → accent-danger     (red)
+ *   possibleThreat         → accent-tracking   (warm orange)
+ *   weaponPointing         → accent-warning    (yellow-orange)
+ *   neutral / jammer       → accent-success    (green)
+ *   unknown                → accent-warning    (yellow)
+ *   disabled / expired     → slate ramp        (neutral grays)
+ *   surface wash           → slate-12          (white-ish)
+ *   ring base (default)    → slate-1           (near-black outline)
+ */
+const COLOR_HOSTILE = accentHex('danger');
+const COLOR_POSSIBLE = accentHex('tracking');
+const COLOR_NEUTRAL = accentHex('success');
+const COLOR_UNKNOWN = accentHex('warning');
+const COLOR_WEAPON_POINTING = accentHex('warning');
+const COLOR_WEAPON_LOCKED = accentHex('danger');
+const COLOR_SURFACE_WASH = slateHex(12);
+const COLOR_RING_DARK = slateHex(1);
+const COLOR_RING_HOVER = slateHex(12);
+const COLOR_DISABLED = slateHex(7);
+const COLOR_EXPIRED_GLYPH = slateHex(6);
+const COLOR_EXPIRED_RING = slateHex(5);
+
 export type Affiliation = 'friendly' | 'hostile' | 'possibleThreat' | 'neutral' | 'unknown';
 
 export type InteractionState =
@@ -75,38 +106,38 @@ interface AffiliationPalette {
 
 export const AFFILIATION_PALETTES: Record<Affiliation, AffiliationPalette> = {
   friendly: {
-    glyph: '#ffffff',
-    surface: '#ffffff',
+    glyph: COLOR_SURFACE_WASH,
+    surface: COLOR_SURFACE_WASH,
     surfaceOpacity: 0.1,
-    ring: '#222222',
+    ring: COLOR_RING_DARK,
     ringOpacity: 1,
   },
   hostile: {
-    glyph: '#ff3d40',
-    surface: '#ffffff',
+    glyph: COLOR_HOSTILE,
+    surface: COLOR_SURFACE_WASH,
     surfaceOpacity: 0.1,
-    ring: '#ff3d40',
+    ring: COLOR_HOSTILE,
     ringOpacity: 1,
   },
   possibleThreat: {
-    glyph: '#ff9e3d',
-    surface: '#ffffff',
+    glyph: COLOR_POSSIBLE,
+    surface: COLOR_SURFACE_WASH,
     surfaceOpacity: 0.1,
-    ring: '#ff9e3d',
+    ring: COLOR_POSSIBLE,
     ringOpacity: 1,
   },
   neutral: {
-    glyph: '#4ade80',
-    surface: '#ffffff',
+    glyph: COLOR_NEUTRAL,
+    surface: COLOR_SURFACE_WASH,
     surfaceOpacity: 0.1,
-    ring: '#222222',
+    ring: COLOR_RING_DARK,
     ringOpacity: 1,
   },
   unknown: {
-    glyph: '#facc15',
-    surface: '#ffffff',
+    glyph: COLOR_UNKNOWN,
+    surface: COLOR_SURFACE_WASH,
     surfaceOpacity: 0.1,
-    ring: '#222222',
+    ring: COLOR_RING_DARK,
     ringOpacity: 1,
   },
 };
@@ -135,7 +166,7 @@ const STATE_MATRIX: Record<InteractionState, (p: AffiliationPalette) => MarkerSt
     innerGlow: true,
     innerGlowColor: p.glyph,
     innerGlowOpacity: 0.4,
-    ringColor: '#ffffff',
+    ringColor: COLOR_RING_HOVER,
     ringWidth: 2,
     ringOpacity: 1,
     ringDash: 'solid',
@@ -151,7 +182,7 @@ const STATE_MATRIX: Record<InteractionState, (p: AffiliationPalette) => MarkerSt
     innerGlow: true,
     innerGlowColor: p.glyph,
     innerGlowOpacity: 0.4,
-    ringColor: '#ffffff',
+    ringColor: COLOR_RING_HOVER,
     ringWidth: 2,
     ringOpacity: 1,
     ringDash: 'solid',
@@ -167,7 +198,7 @@ const STATE_MATRIX: Record<InteractionState, (p: AffiliationPalette) => MarkerSt
     innerGlow: true,
     innerGlowColor: p.glyph,
     innerGlowOpacity: 0.4,
-    ringColor: '#ffffff',
+    ringColor: COLOR_RING_HOVER,
     ringWidth: 2,
     ringOpacity: 1,
     ringDash: 'solid',
@@ -181,14 +212,14 @@ const STATE_MATRIX: Record<InteractionState, (p: AffiliationPalette) => MarkerSt
     surfaceOpacity: p.surfaceOpacity,
     surfaceBlur: 1,
     innerGlow: false,
-    innerGlowColor: '#8c8c8c',
+    innerGlowColor: COLOR_DISABLED,
     innerGlowOpacity: 0,
-    ringColor: '#8c8c8c',
+    ringColor: COLOR_DISABLED,
     ringWidth: 2,
     ringOpacity: 1,
     ringDash: 'solid',
     ringPulse: false,
-    glyphColor: '#8c8c8c',
+    glyphColor: COLOR_DISABLED,
     glyphOpacity: 1,
     markerScale: 1,
   }),
@@ -197,14 +228,14 @@ const STATE_MATRIX: Record<InteractionState, (p: AffiliationPalette) => MarkerSt
     surfaceOpacity: Math.max(p.surfaceOpacity - 0.05, 0),
     surfaceBlur: 1,
     innerGlow: false,
-    innerGlowColor: '#52525b',
+    innerGlowColor: COLOR_EXPIRED_GLYPH,
     innerGlowOpacity: 0,
-    ringColor: '#3f3f46',
+    ringColor: COLOR_EXPIRED_RING,
     ringWidth: 1,
     ringOpacity: 0.4,
     ringDash: 'dashed',
     ringPulse: false,
-    glyphColor: '#52525b',
+    glyphColor: COLOR_EXPIRED_GLYPH,
     glyphOpacity: 0.4,
     markerScale: 1,
   }),
@@ -213,14 +244,14 @@ const STATE_MATRIX: Record<InteractionState, (p: AffiliationPalette) => MarkerSt
     surfaceOpacity: p.surfaceOpacity,
     surfaceBlur: 1,
     innerGlow: false,
-    innerGlowColor: '#ffffff',
+    innerGlowColor: COLOR_SURFACE_WASH,
     innerGlowOpacity: 0,
-    ringColor: '#ff3d40',
+    ringColor: COLOR_HOSTILE,
     ringWidth: 2,
     ringOpacity: 1,
     ringDash: 'solid',
     ringPulse: true,
-    glyphColor: '#ffffff',
+    glyphColor: COLOR_SURFACE_WASH,
     glyphOpacity: 1,
     markerScale: 1,
   }),
@@ -229,46 +260,46 @@ const STATE_MATRIX: Record<InteractionState, (p: AffiliationPalette) => MarkerSt
     surfaceOpacity: p.surfaceOpacity,
     surfaceBlur: 1,
     innerGlow: false,
-    innerGlowColor: '#4ade80',
+    innerGlowColor: COLOR_NEUTRAL,
     innerGlowOpacity: 0,
-    ringColor: '#4ade80',
+    ringColor: COLOR_NEUTRAL,
     ringWidth: 2,
     ringOpacity: 1,
     ringDash: 'solid',
     ringPulse: true,
-    glyphColor: '#4ade80',
+    glyphColor: COLOR_NEUTRAL,
     glyphOpacity: 1,
     markerScale: 1,
   }),
   weaponPointing: () => ({
-    surfaceFill: '#ffffff',
+    surfaceFill: COLOR_SURFACE_WASH,
     surfaceOpacity: 0.1,
     surfaceBlur: 1,
     innerGlow: true,
-    innerGlowColor: '#f59e0b',
+    innerGlowColor: COLOR_WEAPON_POINTING,
     innerGlowOpacity: 0.4,
-    ringColor: '#f59e0b',
+    ringColor: COLOR_WEAPON_POINTING,
     ringWidth: 2,
     ringOpacity: 1,
     ringDash: 'solid',
     ringPulse: true,
-    glyphColor: '#f59e0b',
+    glyphColor: COLOR_WEAPON_POINTING,
     glyphOpacity: 1,
     markerScale: 1,
   }),
   weaponLocked: () => ({
-    surfaceFill: '#ffffff',
+    surfaceFill: COLOR_SURFACE_WASH,
     surfaceOpacity: 0.1,
     surfaceBlur: 1,
     innerGlow: true,
-    innerGlowColor: '#ef4444',
+    innerGlowColor: COLOR_WEAPON_LOCKED,
     innerGlowOpacity: 0.4,
-    ringColor: '#ef4444',
+    ringColor: COLOR_WEAPON_LOCKED,
     ringWidth: 2,
     ringOpacity: 1,
     ringDash: 'solid',
     ringPulse: false,
-    glyphColor: '#ef4444',
+    glyphColor: COLOR_WEAPON_LOCKED,
     glyphOpacity: 1,
     markerScale: 1,
   }),

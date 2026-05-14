@@ -4,24 +4,11 @@ import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { DialRoot } from "dialkit";
 import "dialkit/styles.css";
-import { Dashboard } from "./components/Dashboard";
+import { Dashboard } from "./components/dashboard/Dashboard";
 import FovTestPage from "./components/FovTestPage";
 import StyleguidePage from "./components/StyleguidePage";
 import { TooltipProvider } from "./components/ui/tooltip";
 import { DirectionProvider } from "@/lib/direction";
-
-// Playground hosts the rebuilt video feature (`camera-v2/`). Code-split so
-// neither the production dashboard nor the styleguide bundle drags in
-// VideoPanel/CameraFeedTile/HUD overlays until someone opens `/playground`.
-const PlaygroundPage = lazy(() => import("./components/PlaygroundPage"));
-
-function PlaygroundFallback() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-[#09090b] text-sm text-neutral-400">
-      Loading playground…
-    </div>
-  );
-}
 
 // Dev-only perf HUD. Lazy-loaded so the import chain (stats-gl, sink,
 // observers) is dropped from production bundles via tree-shaking on
@@ -75,27 +62,14 @@ export default function App() {
               <Route path="/fov-test" element={<FovTestPage />} />
               <Route path="/styleguide" element={<StyleguidePage />} />
               {/*
-                Marketing demo route — same Dashboard component as `/`,
-                served from a separate URL so we can iterate on demo-only
-                tweaks without touching the production surface. Identical
-                to `/` today; diverges as adjustments land here.
+                Marketing demo route — same Dashboard component as
+                `/`, served from a separate URL so we can iterate on
+                demo-only tweaks without touching the production
+                surface. Currently identical except for the dark
+                monochrome map basemap; diverges further as
+                marketing-only adjustments land.
               */}
               <Route path="/demo" element={<Dashboard demoMode />} />
-              {/*
-                Playground — sandbox for the rebuilt camera-v2 video feature
-                (VideoPanel + tile HUDs). Lives on its own route while the
-                design is validated; once approved it replaces the legacy
-                CameraViewerPanel inside Dashboard. See
-                `src/app/components/camera-v2/README.md` for promotion path.
-              */}
-              <Route
-                path="/playground"
-                element={
-                  <Suspense fallback={<PlaygroundFallback />}>
-                    <PlaygroundPage />
-                  </Suspense>
-                }
-              />
             </Routes>
             <ScopedPerfHud />
           </BrowserRouter>

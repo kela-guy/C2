@@ -7,16 +7,23 @@
  */
 
 import type { DetectionBox } from './types';
+import { accentHex } from '@/primitives/accentHex';
 
 interface CameraDetectionsOverlayProps {
   detections: DetectionBox[];
   visible: boolean;
 }
 
+/*
+ * Detection-confidence color tiers route through accentHex() so a
+ * theme tweak to --accent-success / --accent-warning / --accent-danger
+ * cascades through the HUD. The label fill uses the matching soft
+ * variant for legibility on dark video.
+ */
 function colorForConfidence(confidence: number): { stroke: string; fill: string; text: string } {
-  if (confidence >= 0.85) return { stroke: 'rgba(74,222,128,0.95)', fill: 'rgba(74,222,128,0.12)', text: '#bbf7d0' };
-  if (confidence >= 0.6) return { stroke: 'rgba(251,191,36,0.95)', fill: 'rgba(251,191,36,0.12)', text: '#fde68a' };
-  return { stroke: 'rgba(248,113,113,0.95)', fill: 'rgba(248,113,113,0.12)', text: '#fecaca' };
+  if (confidence >= 0.85) return { stroke: accentHex('success'), fill: 'color-mix(in oklch, ' + accentHex('success') + ' 12%, transparent)', text: accentHex('success') };
+  if (confidence >= 0.6) return { stroke: accentHex('warning'), fill: 'color-mix(in oklch, ' + accentHex('warning') + ' 12%, transparent)', text: accentHex('warning') };
+  return { stroke: accentHex('danger'), fill: 'color-mix(in oklch, ' + accentHex('danger') + ' 12%, transparent)', text: accentHex('danger') };
 }
 
 export function CameraDetectionsOverlay({ detections, visible }: CameraDetectionsOverlayProps) {

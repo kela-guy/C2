@@ -1,0 +1,273 @@
+/*
+ * palette.css
+ * ───────────
+ *
+ * Single source of truth for color in the C2 Hub.
+ *
+ * Four layers, top → bottom:
+ *
+ *   1. Slate ramp (--slate-1..12)
+ *      Perceptually-uniform OKLCH at hue 256 (cool blue-gray). The
+ *      project's neutral spine. Step 1 is the deepest background,
+ *      step 12 is the highest-emphasis foreground. Adjacent steps
+ *      are ~0.06–0.08 L apart so they're perceptibly distinct.
+ *
+ *   2. Surface ladder (--surface-void + --surface-1..8)
+ *      Eight substrate levels (fluid-functionalism's Surfaces
+ *      system) plus a "void" level below substrate 1 for true-black
+ *      wells (camera bezels, video iframes, map basemap). Each
+ *      level pairs with a shadow recipe so depth reads even when L
+ *      deltas are subtle.
+ *
+ *   3. Borders + state overlays + accents
+ *      Tinted hairlines (--border-default/strong/subtle), hover /
+ *      pressed / selected interaction washes (--state-*), and
+ *      gamut-checked tactical accents (--accent-*) all derived
+ *      from the same hue/chroma profile.
+ *
+ *   4. Disposition tokens (--disposition-*)
+ *      Operator labels for track classification. Kept separate
+ *      from --accent-* so dispositions and severities can vary
+ *      independently.
+ *
+ * :root holds the dark palette (production default — every route
+ * except a styleguide opt-in renders dark). .light flips the slate
+ * ramp for the styleguide's "light preview" tool.
+ *
+ * Painting hook
+ * ─────────────
+ *
+ * <Elevated> (src/primitives/Substrate.tsx) writes data-substrate={N}
+ * on its rendered element. The [data-substrate="N"] rules at the
+ * bottom of this file project the matching surface + shadow onto two
+ * scoped vars (--surface, --shadow) so the primitive only needs
+ *
+ *   className="bg-[var(--surface)] shadow-[var(--shadow)]"
+ *
+ * to paint. No inline style mutations on every render.
+ *
+ * APCA contrast — measured against the hex mirror in accentHex.ts
+ * ───────────────────────────────────────────────────────────────
+ *
+ * Targets:
+ *   |Lc| ≥ 60   body text
+ *   |Lc| ≥ 75   danger CTA + safety-critical labels
+ *   |Lc| ≥ 45   muted / hint / sub-label
+ *
+ * APCA is dominated by L (chroma effect is small); fix failures
+ * by adjusting L on the slate ramp or accent rather than chroma.
+ *
+ * Foreground on substrate (body / muted use cases)
+ *   text-slate-12 on --surface-1    → |Lc| 102   pass++
+ *   text-slate-12 on --surface-3    → |Lc|  99   pass++
+ *   text-slate-12 on --surface-5    → |Lc|  93   pass++
+ *   text-slate-11 on --surface-1    → |Lc|  83   pass+
+ *   text-slate-11 on --surface-3    → |Lc|  79   pass+
+ *   text-slate-10 on --surface-3    → |Lc|  59   pass (body)
+ *   text-slate-9  on --surface-3    → |Lc|  43   pass (muted)
+ *   text-slate-8  on --surface-3    → |Lc|  31   DECORATIVE ONLY (icons / hairlines)
+ *
+ * Accent text on substrate
+ *   accent-success on --surface-3   → |Lc|  68   pass (body)
+ *   accent-cyan    on --surface-3   → |Lc|  67   pass (body)
+ *   accent-info    on --surface-3   → |Lc|  66   pass (body)
+ *   accent-warning on --surface-3   → |Lc|  59   borderline body / pass muted
+ *   accent-historical on --surface-3→ |Lc|  50   pass muted
+ *   accent-tracking on --surface-3  → |Lc|  49   pass muted
+ *   accent-danger  on --surface-3   → |Lc|  40   ICON / RING ONLY — do not use as body text
+ *
+ * Danger CTAs (text on accent fill)
+ *   slate-12 on accent-danger-soft  → |Lc|  89   pass (danger CTA target ≥75)
+ *   slate-1  on accent-success      → |Lc|  74   pass+
+ *   slate-1  on accent-info         → |Lc|  71   pass
+ *   slate-1  on accent-warning      → |Lc|  65   pass (CTA-grade with light text-1)
+ *
+ * Rule of thumb: pair accent fills with slate-1 for "stamped" CTAs
+ * and slate-12 for "soft / outline" CTAs. Never paint body copy in
+ * accent-danger on dark substrate — use slate-12 + accent-danger
+ * as an ICON cue instead.
+ */
+
+/* ── 1. Slate ramp (hue 256, dark-tuned) ───────────────────── */
+:root {
+  --slate-1:  oklch(0.165 0.005 256);
+  --slate-2:  oklch(0.205 0.006 256);
+  --slate-3:  oklch(0.245 0.008 256);
+  --slate-4:  oklch(0.290 0.010 256);
+  --slate-5:  oklch(0.345 0.012 256);
+  --slate-6:  oklch(0.410 0.014 256);
+  --slate-7:  oklch(0.490 0.016 256);
+  --slate-8:  oklch(0.580 0.018 256);
+  --slate-9:  oklch(0.665 0.018 256);
+  --slate-10: oklch(0.760 0.018 256);
+  --slate-11: oklch(0.870 0.014 256);
+  --slate-12: oklch(0.965 0.010 256);
+}
+
+/* ── 2. Surface ladder + void + shadows ────────────────────── */
+:root {
+  /*
+   * --surface-void: below the substrate ladder. True-black for
+   * camera bezels, video wells, map basemap wells. Documented
+   * exception — used intentionally and only where the UI wants
+   * "deeper than the deepest surface."
+   */
+  --surface-void: oklch(0.06 0 0);
+
+  --surface-1: var(--slate-1);
+  --surface-2: var(--slate-2);
+  --surface-3: var(--slate-3);
+  --surface-4: var(--slate-4);
+  --surface-5: var(--slate-5);
+  --surface-6: var(--slate-6);
+  --surface-7: var(--slate-7);
+  --surface-8: var(--slate-8);
+
+  --shadow-1: none;
+  --shadow-2: 0 1px 2px rgb(0 0 0 / 0.30);
+  --shadow-3: 0 2px 4px rgb(0 0 0 / 0.45), 0 1px 2px rgb(0 0 0 / 0.35);
+  --shadow-4: 0 4px 8px rgb(0 0 0 / 0.55), 0 2px 4px rgb(0 0 0 / 0.40);
+  --shadow-5: 0 8px 16px rgb(0 0 0 / 0.60), 0 4px 8px rgb(0 0 0 / 0.45);
+  --shadow-6: 0 12px 24px rgb(0 0 0 / 0.65), 0 6px 12px rgb(0 0 0 / 0.50);
+  --shadow-7: 0 16px 32px rgb(0 0 0 / 0.70), 0 8px 16px rgb(0 0 0 / 0.55);
+  --shadow-8: 0 24px 48px rgb(0 0 0 / 0.75), 0 12px 24px rgb(0 0 0 / 0.60);
+}
+
+/* ── 3a. Borders ───────────────────────────────────────────── */
+:root {
+  --border-default: oklch(0.490 0.016 256 / 0.55);
+  --border-strong:  oklch(0.580 0.018 256 / 0.80);
+  --border-subtle:  oklch(0.345 0.012 256 / 0.60);
+}
+
+/* ── 3b. Tactical accents (same C% across hues) ────────────── */
+/*
+ * Each accent's chroma is the same percentage of its hue's
+ * max-displayable sRGB chroma at the listed L:
+ *
+ *   - Vivid: ~100% of hue-max C @ L ≈ 0.70 → "vibrant" rim
+ *   - Soft:   ~50% of hue-max C @ L ≈ 0.40 → "dim ember" rim
+ *
+ * Yields consistent perceived vividness across the palette no
+ * matter which hue you pick.
+ */
+:root {
+  --accent-danger:     oklch(0.660 0.220 27);
+  --accent-warning:    oklch(0.770 0.170 70);
+  --accent-tracking:   oklch(0.715 0.180 50);
+  --accent-success:    oklch(0.790 0.180 145);
+  --accent-info:       oklch(0.790 0.140 230);
+  --accent-historical: oklch(0.720 0.160 280);
+  --accent-cyan:       oklch(0.790 0.130 200);
+  --accent-magenta:    oklch(0.700 0.200 340);
+
+  --accent-danger-soft:  oklch(0.395 0.110 27);
+  --accent-warning-soft: oklch(0.420 0.090 70);
+  --accent-success-soft: oklch(0.430 0.090 145);
+  --accent-info-soft:    oklch(0.430 0.070 230);
+
+  /*
+   * Translucent "tint" overlays for highlight rows / pills.
+   * Built with color-mix so they always read against the
+   * substrate they're painted on top of.
+   */
+  --accent-success-tint: color-mix(in oklch, var(--accent-success) 11%, transparent);
+  --accent-danger-tint:  color-mix(in oklch, var(--accent-danger)  11%, transparent);
+  --accent-warning-tint: color-mix(in oklch, var(--accent-warning) 11%, transparent);
+  --accent-info-tint:    color-mix(in oklch, var(--accent-info)    11%, transparent);
+}
+
+/* ── 3c. State overlays (interaction washes) ───────────────── */
+/*
+ * Derived from --slate-12 via color-mix so they scale with the
+ * foreground tone of whichever theme is active. Replaces the
+ * scattered rgba(255,255,255,0.04..0.18) magic numbers.
+ */
+:root {
+  --state-hover:        color-mix(in oklch, var(--slate-12) 4%,  transparent);
+  --state-hover-strong: color-mix(in oklch, var(--slate-12) 6%,  transparent);
+  --state-pressed:      color-mix(in oklch, var(--slate-12) 8%,  transparent);
+  --state-selected:     color-mix(in oklch, var(--slate-12) 12%, transparent);
+  --state-focus-ring:   var(--accent-info);
+}
+
+/* ── 4. Dispositions (operator labels — independent of accents) ─ */
+:root {
+  --disposition-suspect:        oklch(0.745 0.180 60);
+  --disposition-assumed-friend: oklch(0.790 0.180 145);
+  --disposition-neutral:        oklch(0.700 0.200 340);
+}
+
+/* ── data-substrate painting hook ──────────────────────────── */
+/*
+ * <Elevated data-substrate={N}> → CSS picks --surface + --shadow
+ * for that level on the same element. Children inherit nothing —
+ * the primitive opens a new SubstrateContext to mark "this is
+ * the new floor for any popover that mounts inside me."
+ */
+[data-substrate="1"] { --surface: var(--surface-1); --shadow: var(--shadow-1); }
+[data-substrate="2"] { --surface: var(--surface-2); --shadow: var(--shadow-2); }
+[data-substrate="3"] { --surface: var(--surface-3); --shadow: var(--shadow-3); }
+[data-substrate="4"] { --surface: var(--surface-4); --shadow: var(--shadow-4); }
+[data-substrate="5"] { --surface: var(--surface-5); --shadow: var(--shadow-5); }
+[data-substrate="6"] { --surface: var(--surface-6); --shadow: var(--shadow-6); }
+[data-substrate="7"] { --surface: var(--surface-7); --shadow: var(--shadow-7); }
+[data-substrate="8"] { --surface: var(--surface-8); --shadow: var(--shadow-8); }
+
+/* ── .light: opt-in light-mode preview (styleguide only) ───── */
+/*
+ * Production routes (/, /demo, /fov-test) never set this class.
+ * The styleguide may toggle it on its root to preview foundations
+ * under light. Mirror of the slate ramp with L inverted, plus
+ * surfaces / borders / states / accents tuned for a white background.
+ * Disposition tokens are theme-independent (operator coding stays
+ * legible under both themes).
+ */
+.light {
+  --slate-1:  oklch(0.993 0.002 256);
+  --slate-2:  oklch(0.982 0.002 256);
+  --slate-3:  oklch(0.959 0.004 256);
+  --slate-4:  oklch(0.936 0.006 256);
+  --slate-5:  oklch(0.914 0.008 256);
+  --slate-6:  oklch(0.889 0.010 256);
+  --slate-7:  oklch(0.859 0.012 256);
+  --slate-8:  oklch(0.811 0.016 256);
+  --slate-9:  oklch(0.645 0.018 256);
+  --slate-10: oklch(0.501 0.018 256);
+  --slate-11: oklch(0.378 0.016 256);
+  --slate-12: oklch(0.205 0.006 256);
+
+  --surface-void: oklch(1 0 0);
+  --surface-1: var(--slate-1);
+  --surface-2: var(--slate-2);
+  --surface-3: var(--slate-3);
+  --surface-4: var(--slate-4);
+  --surface-5: var(--slate-5);
+  --surface-6: var(--slate-6);
+  --surface-7: var(--slate-7);
+  --surface-8: var(--slate-8);
+
+  /*
+   * Light-mode shadows are softer (light bg can't carry the same
+   * dark drop without looking smudgy). Surfaces 3+ flatten to the
+   * same bg as 2 and rely on shadow for elevation, matching
+   * fluid-functionalism's light-mode recipe.
+   */
+  --shadow-1: none;
+  --shadow-2: 0 1px 2px rgb(0 0 0 / 0.06);
+  --shadow-3: 0 2px 6px rgb(0 0 0 / 0.10), 0 1px 2px rgb(0 0 0 / 0.06);
+  --shadow-4: 0 4px 10px rgb(0 0 0 / 0.12), 0 2px 4px rgb(0 0 0 / 0.08);
+  --shadow-5: 0 8px 20px rgb(0 0 0 / 0.14), 0 4px 8px rgb(0 0 0 / 0.10);
+  --shadow-6: 0 12px 28px rgb(0 0 0 / 0.16), 0 6px 12px rgb(0 0 0 / 0.10);
+  --shadow-7: 0 16px 36px rgb(0 0 0 / 0.18), 0 8px 16px rgb(0 0 0 / 0.12);
+  --shadow-8: 0 24px 52px rgb(0 0 0 / 0.20), 0 12px 24px rgb(0 0 0 / 0.12);
+
+  --border-default: oklch(0.510 0.016 256 / 0.20);
+  --border-strong:  oklch(0.410 0.014 256 / 0.30);
+  --border-subtle:  oklch(0.660 0.018 256 / 0.20);
+
+  --state-hover:        color-mix(in oklch, var(--slate-12) 4%,  transparent);
+  --state-hover-strong: color-mix(in oklch, var(--slate-12) 6%,  transparent);
+  --state-pressed:      color-mix(in oklch, var(--slate-12) 8%,  transparent);
+  --state-selected:     color-mix(in oklch, var(--slate-12) 12%, transparent);
+}

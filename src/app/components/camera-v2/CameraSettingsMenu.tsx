@@ -72,7 +72,11 @@ export function CameraSettingsMenu({
         side="top"
         align="end"
         sideOffset={8}
-        className="w-[280px] p-0 rounded-none bg-[#1a1a1a]/95 backdrop-blur-xl shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_25px_50px_-12px_rgba(0,0,0,0.5)] border-none"
+        // Surface + shadow now come from <PopoverSurface> (substrate
+        // lift +2). Keep `rounded-none` so the menu still hugs the
+        // hard-edged camera HUD aesthetic, and `backdrop-blur-xl`
+        // for the frosted-glass over-video feel.
+        className="w-[280px] p-0 rounded-none backdrop-blur-xl border-none"
       >
         <Section title={t.playbackSection} icon={<History size={11} />}>
           <Row

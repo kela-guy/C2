@@ -66,7 +66,10 @@ export function CameraContextMenu({
     <ContextMenu>
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
       <ContextMenuContent
-        className="min-w-[220px] rounded-none bg-[#1a1a1a]/95 backdrop-blur-xl shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_25px_50px_-12px_rgba(0,0,0,0.5)] border-none"
+        // Surface + shadow + border come from <MenuSurface> in
+        // ui/context-menu.tsx. Just keep the camera-specific
+        // overrides (square corners, frosted glass).
+        className="min-w-[220px] rounded-none backdrop-blur-xl border-none"
       >
         <ContextMenuItem
           onClick={onTakeRelease}

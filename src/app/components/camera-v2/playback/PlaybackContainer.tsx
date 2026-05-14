@@ -10,13 +10,16 @@
  *
  * The transport (`PlaybackTimeline`) renders inside the bottom strip.
  * Time always flows left-to-right via `<DirIsland direction="ltr">`
- * inside the timeline; surrounding chrome (the small exit X) follows
- * app direction.
+ * inside the timeline.
+ *
+ * Exit is intentionally not surfaced here. To leave playback the
+ * operator toggles the feature off from the live half — Settings →
+ * playback row, the `P` shortcut, or `Esc` — keeping the playback
+ * surface itself focused on investigation, not on navigation chrome.
  */
 
 import { useCallback, useEffect, useRef } from 'react';
-import { AlertTriangle, Loader2, Play, RotateCcw, X } from '@/lib/icons/central';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
+import { AlertTriangle, Loader2, Play, RotateCcw } from '@/lib/icons/central';
 import { useStrings, type Strings } from '@/lib/intl';
 import { PlaybackTimeline } from '../PlaybackTimeline';
 import { PLAYBACK_BUFFERING_GRACE_MS } from './playbackDefaults';
@@ -27,10 +30,9 @@ interface PlaybackContainerProps {
   src: string;
   state: PlaybackState;
   onPatch: (patch: Partial<PlaybackState>) => void;
-  onExit: () => void;
 }
 
-export function PlaybackContainer({ src, state, onPatch, onExit }: PlaybackContainerProps) {
+export function PlaybackContainer({ src, state, onPatch }: PlaybackContainerProps) {
   const t = useStrings().camera.playback;
   const videoRef = useRef<HTMLVideoElement>(null);
   const bufferingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -158,7 +160,7 @@ export function PlaybackContainer({ src, state, onPatch, onExit }: PlaybackConta
         className="absolute inset-x-0 top-0 h-9 z-10 bg-gradient-to-b from-black/75 to-transparent pointer-events-none"
         aria-hidden="true"
       />
-      <div className="absolute top-2 inset-x-2 z-20 flex items-center justify-between gap-2">
+      <div className="absolute top-2 start-2 z-20 flex items-center gap-2">
         <div className="flex items-center gap-1.5 bg-red-600/90 px-1.5 py-0.5">
           <span
             className="size-1.5 rounded-full bg-white animate-pulse motion-reduce:animate-none"
@@ -168,21 +170,6 @@ export function PlaybackContainer({ src, state, onPatch, onExit }: PlaybackConta
             Playback
           </span>
         </div>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              onClick={onExit}
-              aria-label={t.exitPlayback}
-              className="size-7 inline-flex items-center justify-center text-white/85 hover:text-white hover:bg-white/15 transition-colors duration-150 ease-out focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none active:scale-[0.97]"
-            >
-              <X size={12} />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" sideOffset={6} className="rounded-none text-[10px]">
-            {t.exitPlayback}
-          </TooltipContent>
-        </Tooltip>
       </div>
 
       <PlaybackStatusChrome
@@ -202,7 +189,6 @@ export function PlaybackContainer({ src, state, onPatch, onExit }: PlaybackConta
         onScrub={handleScrub}
         onScrubbingChange={handleScrubbingChange}
         onPlayPause={handlePlayPause}
-        onExit={onExit}
       />
 
       {/* Status banner: aria-live for screen readers while keeping

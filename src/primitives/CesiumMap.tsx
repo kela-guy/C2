@@ -13,7 +13,7 @@
  * No app-domain coupling. Pass your own data via props.
  */
 
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import * as Cesium from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import { createMotionTrack, type MotionTrack } from '@/lib/motionTracker';
@@ -51,6 +51,23 @@ export interface CesiumMapFlyTo {
   heightM?: number;
   /** Ease duration in seconds. Default 1.2. */
   durationSec?: number;
+}
+
+/**
+ * Imperative "frame these points" request. Internally builds a
+ * `BoundingSphere` from the supplied lat/lon points and uses Cesium's
+ * `Camera.flyToBoundingSphere`, which accounts for the actual
+ * frustum aspect — tighter than computing a centroid + maximum-span
+ * height by hand, which overshoots on non-square distributions.
+ *
+ * Pass a NEW object identity each time you want to (re-)fit.
+ */
+export interface CesiumMapFitBounds {
+  points: Array<{ lat: number; lon: number }>;
+  /** Ease duration in seconds. Default 1.4. */
+  durationSec?: number;
+  /** Padding multiplier on the bounding sphere radius. Default 1.2. */
+  padding?: number;
 }
 
 /**
@@ -149,6 +166,15 @@ export interface CesiumMapProps {
   polylines?: CesiumPolyline[];
   /** Imperatively fly the camera to a position; pass a NEW object each time you want to fly. */
   flyTo?: CesiumMapFlyTo | null;
+  /**
+   * Imperatively frame a set of points. Wraps Cesium's
+   * `flyToBoundingSphere` so the camera ends up tight on the points
+   * regardless of frustum aspect or scene mode. Wins over the manual
+   * centroid + max-span path that the dashboard used to roll because
+   * the latter overshoots on non-square distributions. Pass a NEW
+   * object identity each time you want to refit.
+   */
+  fitBounds?: CesiumMapFitBounds | null;
   /** Scene mode. Defaults to '2D' for parity with our current top-down Mapbox view. */
   sceneMode?: CesiumSceneMode;
   /**
@@ -168,6 +194,20 @@ export interface CesiumMapProps {
    * mid-session would tear down + re-tessellate every tile).
    */
   darkMonochromeMap?: boolean;
+  /**
+   * Live brightness multiplier applied to the active imagery layer
+   * (1.0 = identity). Updates flow through a `useEffect` so the parent
+   * can wire it to a slider without remounting the viewer. When
+   * `undefined`, the component falls back to a sensible default per
+   * basemap (dark mode is lifted toward legibility; Ion is left at 1).
+   */
+  mapBrightness?: number;
+  /**
+   * Live gamma applied to the active imagery layer (1.0 = identity,
+   * <1.0 lightens midtones, >1.0 darkens them). Same live-update story
+   * as `mapBrightness`.
+   */
+  mapGamma?: number;
   /** Called when a `markers[]` entity is clicked (point markers only). */
   onMarkerClick?: (id: string) => void;
   /** Called when a `markers[]` entity is hovered (point markers only). */
@@ -279,15 +319,44 @@ export function CesiumMap({
   htmlMarkers,
   polylines,
   flyTo,
+  fitBounds,
   sceneMode = '2D',
   ionImageryAssetId = 2,
   darkMonochromeMap = false,
+  mapBrightness,
+  mapGamma,
   onMarkerClick,
   onMarkerHover,
   className = 'w-full h-full',
 }: CesiumMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Cesium.Viewer | null>(null);
+  /**
+   * Coalesced `requestRender()` scheduler. Effect hooks that mutate
+   * scene state (markers add/remove, polylines add/remove, brightness
+   * change, etc.) all need to nudge Cesium to paint, but if several
+   * fire in the same React commit we only need one paint. Scheduling
+   * via a microtask collapses N calls in the same tick into 1.
+   */
+  const renderScheduledRef = useRef(false);
+  const scheduleRender = useCallback(() => {
+    if (renderScheduledRef.current) return;
+    renderScheduledRef.current = true;
+    queueMicrotask(() => {
+      renderScheduledRef.current = false;
+      const v = viewerRef.current;
+      if (v && !v.isDestroyed()) v.scene.requestRender();
+    });
+  }, []);
+  /**
+   * Active imagery layer ref. We need a handle to the layer (not just
+   * the provider) so the brightness / gamma effect can update its
+   * post-process knobs without re-adding the layer. In dark mode the
+   * provider is synchronous; in Ion mode the layer is created when the
+   * `fromAssetId` promise resolves, so this ref is populated
+   * asynchronously and the effect re-applies once it lands.
+   */
+  const imageryLayerRef = useRef<Cesium.ImageryLayer | null>(null);
   const markerEntitiesRef = useRef<Map<string, Cesium.Entity>>(new Map());
   const fovEntitiesRef = useRef<Cesium.Entity[]>([]);
   const coverageEntitiesRef = useRef<Cesium.Entity[]>([]);
@@ -366,6 +435,25 @@ export function CesiumMap({
    * after a 2D → 3D toggle, visibly mis-aligned with the imagery beneath).
    */
   const htmlMarkerCartographicRef = useRef<Map<string, { lat: number; lon: number }>>(new Map());
+  /**
+   * IDs of static markers whose terrain altitude has been resolved
+   * for the current 3D pose. Once a marker lands here the per-frame
+   * `preRender` loop skips its `globe.getHeight()` call entirely —
+   * the cached Cartesian3 already bakes in the terrain altitude.
+   *
+   * Invalidated by:
+   *   • lat/lon update for that id (the htmlMarkers effect rebuilds
+   *     the Cartesian3 cache and clears this set).
+   *   • Camera mode change (3D ↔ 2D ↔ Columbus). Static heights
+   *     are meaningless in 2D, so we drop everything when leaving
+   *     3D and re-sample lazily on entering 3D.
+   *
+   * Terrain LOD streaming can change a tile's reported height after
+   * the first sample, but the visual error is sub-pixel for typical
+   * camera distances and the win on per-frame CPU is large
+   * (~22 markers × `globe.getHeight` per frame at 30 fps eliminated).
+   */
+  const htmlMarkerStaticHeightSampledRef = useRef<Set<string>>(new Set());
 
   /**
    * Per-id motion tracks for `htmlMarkers[m].kinematic === true`. Lat/lon
@@ -380,6 +468,13 @@ export function CesiumMap({
    */
   const motionTracksRef = useRef<Map<string, MotionTrack>>(new Map());
   const kinematicCartesianScratchRef = useRef<Map<string, Cesium.Cartesian3>>(new Map());
+
+  /**
+   * Lazy terrain promise. Created on first 2D → 3D transition and
+   * reused across subsequent toggles so the operator only pays the
+   * tile-decode cost once. 2D-only sessions never instantiate it.
+   */
+  const terrainPromiseRef = useRef<Promise<Cesium.TerrainProvider> | null>(null);
 
   // ── Mount-readiness gate ──────────────────────────────────────────────────
   // Defer Viewer construction until the container actually has dimensions.
@@ -404,10 +499,13 @@ export function CesiumMap({
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
         consider(entry.contentRect.width, entry.contentRect.height);
-        // Cesium's auto-resize handles canvas dimensions, but in 2D mode
-        // the orthographic frustum doesn't always redraw until interaction.
-        // Force a render so the imagery stays sharp on container resize.
-        viewerRef.current?.scene.requestRender();
+        // No `scheduleRender()` here. The viewer-bootstrap effect now
+        // pins the canvas backing store at construction and silences
+        // Cesium's own ResizeObserver (Lattice pattern), so layout
+        // changes don't trigger framebuffer reallocation. This RO's
+        // only remaining job is to flip `mountReady` true once the
+        // container has non-zero size — once that's done the
+        // observer is essentially idle but harmless to leave attached.
       }
     });
     ro.observe(el);
@@ -436,13 +534,172 @@ export function CesiumMap({
         selectionIndicator: false,
         // Imagery loaded below.
         baseLayer: false as unknown as Cesium.ImageryLayer,
+        // Render only when something changes (camera move, requestRender
+        // call, etc.) instead of continuously at the monitor refresh
+        // rate. The preRender loop below already calls
+        // `viewer.scene.requestRender()` for kinematic markers, which
+        // is the API contract this mode expects. With this flag idle
+        // CPU usage drops dramatically on a still scene.
+        requestRenderMode: true,
+        // Disable automatic re-renders on simulated time changes (we
+        // don't drive a clock animation). Without this, Cesium would
+        // request a render every time `Cesium.JulianDate.now()`
+        // advances past the threshold, defeating requestRenderMode.
+        maximumRenderTimeChange: Infinity,
+        // 2 samples is a real edge-smoothing improvement over 1 at
+        // half the cost of Cesium's default 4. Combined with the
+        // DPR-matched backing store below, lines and label outlines
+        // read crisp without the fragment-shader cost of full 4x MSAA.
+        msaaSamples: 2,
+        // Defensive: explicit power-preference + don't bail on
+        // integrated-GPU laptops that report a "major performance
+        // caveat" (Cesium's default would refuse to init).
+        contextOptions: {
+          webgl: {
+            powerPreference: 'high-performance',
+            failIfMajorPerformanceCaveat: false,
+          },
+        },
       });
     } catch (err) {
-      // Surface the real error instead of letting it cascade through React's
-      // boundary as the cryptic "scene of undefined" we used to see.
       console.error('[CesiumMap] Viewer construction failed:', err);
       throw err;
     }
+
+    // Cap the render loop at 30 fps. On 120 Hz ProMotion displays
+    // Cesium otherwise paints 4x more frames than a tactical map needs.
+    // Combined with `requestRenderMode` above this only matters when
+    // something is animating (kinematic markers, camera flyTo, etc.).
+    viewer.targetFrameRate = 30;
+
+    // Strip scene effects we never see in the default 2D top-down
+    // tactical view. Atmosphere/sun/moon/fog/shadows are pure GPU cost
+    // when the camera is straight down and the imagery covers the
+    // viewport. The scene-mode effect re-enables the depth-cueing
+    // ones (atmosphere, fog) when the operator toggles into 3D.
+    //
+    // The cesium type defs in this version mark these as possibly
+    // undefined / lack `.show` on `SkyBox`; the runtime API is stable
+    // and well documented — guard with optional chaining and a loose
+    // shim so a future Cesium upgrade can't crash the boot path.
+    const scene = viewer.scene;
+    type Toggleable = { show?: boolean; enabled?: boolean };
+    const setShow = (obj: Toggleable | undefined, value: boolean) => {
+      if (obj) obj.show = value;
+    };
+    const setEnabled = (obj: Toggleable | undefined, value: boolean) => {
+      if (obj) obj.enabled = value;
+    };
+    setShow(scene.skyBox as unknown as Toggleable | undefined, false);
+    setShow(scene.sun as unknown as Toggleable | undefined, false);
+    setShow(scene.moon as unknown as Toggleable | undefined, false);
+    setShow(scene.skyAtmosphere as unknown as Toggleable | undefined, false);
+    setEnabled(scene.fog as unknown as Toggleable | undefined, false);
+    setEnabled(scene.shadowMap as unknown as Toggleable | undefined, false);
+    scene.globe.showGroundAtmosphere = false;
+    scene.globe.enableLighting = false;
+    // Default is 2 (lower = more detail = more tile requests). 4 cuts
+    // terrain tile network volume roughly in half at our zoom range
+    // without a visually meaningful drop.
+    scene.globe.maximumScreenSpaceError = 4;
+
+    // Default inertias (~0.9) feel slippery on trackpads — pan/zoom
+    // keeps gliding after the gesture ends, which reads as imprecise
+    // on a tactical map where the operator wants the camera to settle
+    // on intent. Halve them so the camera locks down promptly while
+    // still feeling damped (vs the harsh 0 of "kill all inertia").
+    const cam = scene.screenSpaceCameraController;
+    cam.inertiaSpin = 0.5;
+    cam.inertiaTranslate = 0.5;
+    cam.inertiaZoom = 0.5;
+
+    // ── Pin the WebGL backing store ourselves ─────────────────────────────
+    //
+    // Cesium's internal `ResizeObserver` + `_forceResize` reallocate the
+    // framebuffer every frame the cell width changes — during a 240ms
+    // panel transition that's ~14 `configureCanvasSize` calls of
+    // main-thread work. We disable Cesium's path below and drive the
+    // pin ourselves at DPR-matched resolution so Retina labels stay
+    // crisp. DPR is capped at 2 — 3x phones / 4K-scaled monitors would
+    // otherwise pay 9x the fragment-shader cost.
+    const canvas = viewer.canvas;
+    const pinBackingStore = () => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = Math.max(1, Math.round(canvas.clientWidth * dpr));
+      const h = Math.max(1, Math.round(canvas.clientHeight * dpr));
+      if (canvas.width === w && canvas.height === h) return;
+      canvas.width = w;
+      canvas.height = h;
+      viewer.scene.requestRender();
+    };
+    pinBackingStore();
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+
+    // Silence Cesium's auto-resize machinery so panel transitions don't
+    // trigger per-frame `configureCanvasSize`. Two private hooks; both must
+    // be neutralised because they're independent paths to the resize:
+    //   1. `_resizeObserver` fires on element size change.
+    //   2. `_forceResize` is read inside the render loop and triggers
+    //      `resize()` even when the RO never fired.
+    // Optional chaining keeps us crash-free if a future Cesium upgrade
+    // renames either symbol — failure mode is "transitions feel laggy
+    // again", visible but recoverable.
+    type CesiumPrivateWidget = {
+      _resizeObserver?: { disconnect(): void };
+      resize?: () => void;
+      _forceResize?: boolean;
+    };
+    const widget = (
+      viewer as unknown as { _cesiumWidget?: CesiumPrivateWidget }
+    )._cesiumWidget;
+    if (widget?._resizeObserver) {
+      try {
+        widget._resizeObserver.disconnect();
+      } catch {
+        /* private API may have changed shape — fall through */
+      }
+    }
+    if (widget) {
+      widget.resize = () => {
+        /* intentionally empty — backing store is fixed at init */
+      };
+      try {
+        Object.defineProperty(widget, '_forceResize', {
+          configurable: true,
+          get: () => false,
+          set: () => {
+            /* swallow writes from internal Cesium code paths */
+          },
+        });
+      } catch {
+        /* defineProperty can throw on a sealed object — best-effort */
+      }
+    }
+
+    // Re-pin once per frame via rAF coalescing. Multiple `ResizeObserver`
+    // fires within the same frame collapse to one `pinBackingStore()` call,
+    // so a 240ms panel transition produces ~7 re-pins (one per painted
+    // frame at the 30 fps cap) instead of ~14. Each re-pin produces a
+    // fresh, correct-aspect frame, so the operator never sees the canvas
+    // texture stretch during the slide. Drag-resize on the splitter gets
+    // the same smooth behaviour for free.
+    let repinFrame: number | null = null;
+    const repinObserver = new ResizeObserver(() => {
+      if (repinFrame !== null) return;
+      repinFrame = window.requestAnimationFrame(() => {
+        repinFrame = null;
+        pinBackingStore();
+      });
+    });
+    repinObserver.observe(canvas);
+    const cleanupBackingStore = () => {
+      repinObserver.disconnect();
+      if (repinFrame !== null) {
+        window.cancelAnimationFrame(repinFrame);
+        repinFrame = null;
+      }
+    };
 
     // Imagery. Two modes:
     //   1. `darkMonochromeMap` — CARTO Dark Matter (no-labels) raster
@@ -454,6 +711,14 @@ export function CesiumMap({
     //      Guard against the viewer being destroyed (StrictMode
     //      double-mount, fast nav) before the imagery promise resolves
     //      — otherwise we crash inside Cesium internals.
+    // Per-basemap defaults for the brightness/gamma knobs. The active
+    // values are reapplied by the `mapBrightness` / `mapGamma` effect
+    // below — these defaults only matter on first mount (and as the
+    // fallback when the parent doesn't override).
+    const DARK_DEFAULTS = { brightness: 1.9, gamma: 0.7 } as const;
+    const ION_DEFAULTS = { brightness: 1.0, gamma: 1.0 } as const;
+    const defaults = darkMonochromeMap ? DARK_DEFAULTS : ION_DEFAULTS;
+
     if (darkMonochromeMap) {
       const provider = new Cesium.UrlTemplateImageryProvider({
         // CARTO Dark Matter (no labels). `{s}` rotates through the
@@ -463,12 +728,25 @@ export function CesiumMap({
         maximumLevel: 19,
         credit: '© OpenStreetMap contributors © CARTO',
       });
-      viewer.imageryLayers.addImageryProvider(provider);
+      const layer = viewer.imageryLayers.addImageryProvider(provider);
+      // CARTO Dark Matter ships almost-black land — perfect for a
+      // recording stage but too dim for actual operators. Lift it
+      // toward a still-dark-but-legible "tactical chart" tone:
+      //   - brightness > 1 amplifies pixel luminance
+      //   - gamma < 1 lightens midtones more than highlights, which
+      //     pulls roads/coastline out of the shadows without blowing
+      //     out the few bright pixels (water, labels-adjacent tiles).
+      layer.brightness = mapBrightness ?? defaults.brightness;
+      layer.gamma = mapGamma ?? defaults.gamma;
+      imageryLayerRef.current = layer;
     } else {
       Cesium.IonImageryProvider.fromAssetId(ionImageryAssetId)
         .then((provider) => {
           if (viewer.isDestroyed()) return;
-          viewer.imageryLayers.addImageryProvider(provider);
+          const layer = viewer.imageryLayers.addImageryProvider(provider);
+          layer.brightness = mapBrightness ?? defaults.brightness;
+          layer.gamma = mapGamma ?? defaults.gamma;
+          imageryLayerRef.current = layer;
         })
         .catch((err) => {
           if (viewer.isDestroyed()) return;
@@ -476,20 +754,12 @@ export function CesiumMap({
         });
     }
 
-    // Cesium World Terrain (Ion asset 1). Without it the globe is a smooth
-    // ellipsoid and 3D mode reads as a tilted satellite image — no real
-    // depth. The terrain provider streams elevation tiles on demand and is
-    // a no-op cost in 2D mode (heights are loaded but rendered flat).
-    // Same destroy guard as the imagery loader for the same reason.
-    Cesium.createWorldTerrainAsync()
-      .then((terrain) => {
-        if (viewer.isDestroyed()) return;
-        viewer.terrainProvider = terrain;
-      })
-      .catch((err) => {
-        if (viewer.isDestroyed()) return;
-        console.error('[CesiumMap] failed to load world terrain:', err);
-      });
+    // Cesium World Terrain is loaded lazily on first 3D entry — see
+    // the scene-mode effect below. The default `EllipsoidTerrainProvider`
+    // is fine for 2D top-down (terrain altitude isn't visible in
+    // orthographic projection), and most operators never leave 2D, so
+    // saving the network + tile-decode cost on cold start is a
+    // material first-paint win. 2D-only sessions never pay for it.
 
     viewer.scene.mode = SCENE_MODE_MAP[sceneMode];
 
@@ -502,26 +772,12 @@ export function CesiumMap({
       destination: toCartesian({ ...initialView, heightM: initialView.heightM ?? 50_000 }),
     });
 
-    // Click → marker handler.
-    const handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
-    handler.setInputAction((event: Cesium.ScreenSpaceEventHandler.PositionedEvent) => {
-      const picked = viewer.scene.pick(event.position);
-      const id = picked?.id;
-      if (id instanceof Cesium.Entity && id.id && onMarkerClick) {
-        const markerId = String(id.id);
-        if (markerEntitiesRef.current.has(markerId)) onMarkerClick(markerId);
-      }
-    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
-
-    handler.setInputAction((event: Cesium.ScreenSpaceEventHandler.MotionEvent) => {
-      const picked = viewer.scene.pick(event.endPosition);
-      const id = picked?.id;
-      if (id instanceof Cesium.Entity && id.id && markerEntitiesRef.current.has(String(id.id))) {
-        onMarkerHover?.(String(id.id));
-      } else {
-        onMarkerHover?.(null);
-      }
-    }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+    // The Cesium-entity pick handlers (LEFT_CLICK + MOUSE_MOVE on
+    // `markers[]`) are created lazily by the dedicated effect below
+    // — only when a consumer actually passes `markers`. `scene.pick`
+    // is a per-pixel framebuffer readback that costs a frame; running
+    // it on every mouse move when the entire app uses `htmlMarkers`
+    // (DOM-handled clicks/hover) is pure overhead.
 
     // Per-frame sync of DOM-overlay marker positions. Cesium emits
     // `preRender` before each frame; we project each marker's cached
@@ -540,6 +796,13 @@ export function CesiumMap({
     // Allocated once at scope; mutated in place per marker per frame to
     // avoid GC churn on a hot path.
     const terrainSampleCarto = new Cesium.Cartographic();
+    // Throttle kinematic-driven requestRender() calls to ~30fps. The
+    // preRender callback runs every frame Cesium chooses to draw; on
+    // request-render mode that means once per requestRender() we make.
+    // Without throttling, each kinematic frame schedules another
+    // immediate frame, creating an unbounded 60-120 fps loop.
+    const KINEMATIC_RENDER_INTERVAL_MS = 33;
+    let lastKinematicRenderAt = 0;
     const removePreRender = viewer.scene.preRender.addEventListener(() => {
       const nodes = htmlMarkerNodesRef.current;
       const cartesians = htmlMarkerCartesianRef.current;
@@ -581,15 +844,25 @@ export function CesiumMap({
           if (!s.frozen) kinematicActive = true;
         } else {
           cart = cartesians.get(id);
-          if (cart && isMode3D) {
+          // Sample terrain height ONCE per static marker per 3D session.
+          // The cached Cartesian3 already carries the resolved altitude
+          // for every id present in `htmlMarkerStaticHeightSampledRef`,
+          // so re-projecting it costs only the matrix multiply inside
+          // `cartesianToCanvasCoordinates` further down.
+          //
+          // If `globe.getHeight` returns `undefined` (terrain tile not
+          // loaded yet at this LOD) we skip caching and re-attempt on
+          // the next frame — eventually the tile streams in and we
+          // pin the marker to it.
+          if (cart && isMode3D && !htmlMarkerStaticHeightSampledRef.current.has(id)) {
             const carto = cartographics.get(id);
             if (carto) {
               Cesium.Cartographic.fromDegrees(carto.lon, carto.lat, 0, terrainSampleCarto);
               const h = globe.getHeight(terrainSampleCarto);
-              const alt = typeof h === 'number' ? h : 0;
-              // Mutate the cached Cartesian3 in place so static markers
-              // also stay aligned to terrain without per-frame allocation.
-              Cesium.Cartesian3.fromDegrees(carto.lon, carto.lat, alt, undefined, cart);
+              if (typeof h === 'number') {
+                Cesium.Cartesian3.fromDegrees(carto.lon, carto.lat, h, undefined, cart);
+                htmlMarkerStaticHeightSampledRef.current.add(id);
+              }
             }
           }
         }
@@ -606,14 +879,55 @@ export function CesiumMap({
         node.style.display = '';
         node.style.transform = `translate(-50%, -50%) translate(${screen.x}px, ${screen.y}px)`;
       }
-      if (kinematicActive) viewer.scene.requestRender();
+      if (kinematicActive) {
+        const nowMs = Date.now();
+        if (nowMs - lastKinematicRenderAt >= KINEMATIC_RENDER_INTERVAL_MS) {
+          lastKinematicRenderAt = nowMs;
+          viewer.scene.requestRender();
+        }
+      }
     });
+
+    // ── Visibility gate ────────────────────────────────────────────────
+    //
+    // When the browser tab is hidden (alt-tab, minimised, another window
+    // covering it), we don't need to draw anything — but Cesium's
+    // request-render loop and our kinematic preRender keep firing
+    // ~30 fps. Profiling showed this as the dominant background-tab CPU
+    // cost: ~15-25% per Chrome renderer process, even when nothing is
+    // visible to the user.
+    //
+    // Strategy:
+    //   • While hidden, flip `useDefaultRenderLoop = false`. Cesium
+    //     stops requesting frames entirely; the preRender callback
+    //     above stops firing because Cesium isn't drawing.
+    //   • On visible, restore `useDefaultRenderLoop = true` and queue
+    //     one `requestRender()` so the first visible frame is fresh
+    //     (camera + entities may have advanced via simulated time).
+    //
+    // The `visibilitychange` event fires before the tab is fully
+    // backgrounded, so the in-flight frame may still complete — fine,
+    // it just means we drop AT-LEAST one frame, not exactly one.
+    const handleVisibilityChange = () => {
+      const v = viewerRef.current;
+      if (!v || v.isDestroyed()) return;
+      if (document.hidden) {
+        v.useDefaultRenderLoop = false;
+      } else {
+        v.useDefaultRenderLoop = true;
+        v.scene.requestRender();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    // Apply initial state in case the tab mounts already-hidden.
+    handleVisibilityChange();
 
     viewerRef.current = viewer;
 
     return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      cleanupBackingStore();
       removePreRender();
-      handler.destroy();
       viewer.destroy();
       viewerRef.current = null;
       markerEntitiesRef.current.clear();
@@ -628,9 +942,43 @@ export function CesiumMap({
       motionTracksRef.current.clear();
       kinematicCartesianScratchRef.current.clear();
       htmlMarkerCartographicRef.current.clear();
+      htmlMarkerStaticHeightSampledRef.current.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mountReady]);
+
+  // ── Lazy entity-pick handlers ────────────────────────────────────────────
+  // `scene.pick` is a per-pixel framebuffer readback; running it on every
+  // mouse move is only worth the cost when the consumer actually renders
+  // Cesium-entity markers (the `markers[]` prop). The dashboard exclusively
+  // uses `htmlMarkers` (DOM hover/click), so the handler stays unattached
+  // there. Effect re-runs if a future consumer toggles `markers` on/off.
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || !markers || markers.length === 0) return;
+
+    const handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
+    handler.setInputAction((event: Cesium.ScreenSpaceEventHandler.PositionedEvent) => {
+      const picked = viewer.scene.pick(event.position);
+      const id = picked?.id;
+      if (id instanceof Cesium.Entity && id.id && onMarkerClick) {
+        const markerId = String(id.id);
+        if (markerEntitiesRef.current.has(markerId)) onMarkerClick(markerId);
+      }
+    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+    handler.setInputAction((event: Cesium.ScreenSpaceEventHandler.MotionEvent) => {
+      const picked = viewer.scene.pick(event.endPosition);
+      const id = picked?.id;
+      if (id instanceof Cesium.Entity && id.id && markerEntitiesRef.current.has(String(id.id))) {
+        onMarkerHover?.(String(id.id));
+      } else {
+        onMarkerHover?.(null);
+      }
+    }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+    return () => handler.destroy();
+  }, [markers, onMarkerClick, onMarkerHover]);
 
   // ── HTML marker positions ────────────────────────────────────────────────
   // Re-compute Cartesian3 cache whenever `htmlMarkers` changes. The
@@ -646,6 +994,9 @@ export function CesiumMap({
     const cartographics = htmlMarkerCartographicRef.current;
     cache.clear();
     cartographics.clear();
+    // Static-marker terrain cache is keyed off the id+lat+lon that
+    // produced it; rebuilding the Cartesian3 cache invalidates it.
+    htmlMarkerStaticHeightSampledRef.current.clear();
     if (!htmlMarkers) {
       motionTracksRef.current.clear();
       kinematicCartesianScratchRef.current.clear();
@@ -683,13 +1034,37 @@ export function CesiumMap({
 
     // Force a render so positions update immediately even without user
     // interaction (Cesium uses request-render mode by default).
-    viewerRef.current?.scene.requestRender();
-  }, [htmlMarkers]);
+    // Coalesced so the htmlMarkers + htmlGeometryEntities + polylines
+    // effects (all driven by the same React commit) share one paint.
+    scheduleRender();
+  }, [htmlMarkers, scheduleRender]);
 
   // ── Token (live update) ────────────────────────────────────────────────────
   useEffect(() => {
     Cesium.Ion.defaultAccessToken = ionToken;
   }, [ionToken]);
+
+  // ── Imagery brightness / gamma (live update) ───────────────────────────────
+  // When the parent slides the brightness/gamma controls, re-apply the
+  // values to the active imagery layer. Falls back to the same defaults
+  // the mount-time code uses so dropping the prop reverts the look
+  // instead of leaving the layer at its previous slider value.
+  //
+  // The Ion path adds its imagery asynchronously, so the layer ref may
+  // be null on first run; the effect simply no-ops, and the mount-time
+  // code re-applies the props once the promise resolves. The viewer
+  // also forces a render so the change is visible without waiting for
+  // the next interaction tick (camera/marker/etc.).
+  useEffect(() => {
+    const layer = imageryLayerRef.current;
+    if (!layer) return;
+    const DARK_DEFAULTS = { brightness: 1.9, gamma: 0.7 } as const;
+    const ION_DEFAULTS = { brightness: 1.0, gamma: 1.0 } as const;
+    const defaults = darkMonochromeMap ? DARK_DEFAULTS : ION_DEFAULTS;
+    layer.brightness = mapBrightness ?? defaults.brightness;
+    layer.gamma = mapGamma ?? defaults.gamma;
+    scheduleRender();
+  }, [mapBrightness, mapGamma, darkMonochromeMap, scheduleRender]);
 
   // ── Scene mode ─────────────────────────────────────────────────────────────
   // In SCENE2D, the camera "height" is interpreted as the orthographic frustum
@@ -706,8 +1081,49 @@ export function CesiumMap({
     const target = SCENE_MODE_MAP[sceneMode];
     if (viewer.scene.mode === target) return;
     viewer.scene.mode = target;
+    // Static-marker terrain heights are mode-specific (ignored in 2D,
+    // resolved against the globe in 3D). Drop the cache so the next
+    // 3D frame re-samples each marker against the freshly-loaded
+    // terrain LOD instead of reusing a stale altitude from a prior
+    // 3D session.
+    htmlMarkerStaticHeightSampledRef.current.clear();
+
+    // Atmosphere + fog read as depth cues in 3D and as wasted fill in
+    // 2D. Toggle alongside the scene mode so the tactical top-down
+    // view stays clean and the perspective view gets its horizon back.
+    // Same defensive shim as the bootstrap — Cesium's type defs are
+    // sparse on these but the runtime API is stable.
+    const inThreeD = sceneMode === '3D';
+    type ToggleableLocal = { show?: boolean; enabled?: boolean };
+    const sky = viewer.scene.skyAtmosphere as unknown as ToggleableLocal | undefined;
+    if (sky) sky.show = inThreeD;
+    viewer.scene.globe.showGroundAtmosphere = inThreeD;
+    const fog = viewer.scene.fog as unknown as ToggleableLocal | undefined;
+    if (fog) fog.enabled = inThreeD;
 
     if (sceneMode === '3D') {
+      // Kick off the world-terrain load lazily on first 3D entry. The
+      // promise is cached on the ref so subsequent 2D ↔ 3D toggles
+      // reuse the resolved provider without re-fetching tiles.
+      if (!terrainPromiseRef.current) {
+        terrainPromiseRef.current = Cesium.createWorldTerrainAsync();
+        terrainPromiseRef.current
+          .then((terrain) => {
+            const v = viewerRef.current;
+            if (!v || v.isDestroyed()) return;
+            v.terrainProvider = terrain;
+            // Static-marker terrain heights need a fresh sample once
+            // the new provider lands — drop the cache so the per-frame
+            // loop re-projects each marker against actual elevations.
+            htmlMarkerStaticHeightSampledRef.current.clear();
+            v.scene.requestRender();
+          })
+          .catch((err) => {
+            console.error('[CesiumMap] failed to load world terrain:', err);
+            terrainPromiseRef.current = null;
+          });
+      }
+
       const cart = viewer.camera.positionCartographic;
       if (cart && cart.height > 6_000) {
         const lat = (cart.latitude * 180) / Math.PI;
@@ -900,8 +1316,8 @@ export function CesiumMap({
         htmlGeometryEntitiesRef.current.push(coverageEntity);
       }
     }
-    viewer.scene.requestRender();
-  }, [htmlMarkers]);
+    scheduleRender();
+  }, [htmlMarkers, scheduleRender]);
 
   // ── Polylines (trails, engagement lines, mission routes) ──────────────────
   // Per id: if the content + style fingerprint is identical to the previous
@@ -1199,8 +1615,8 @@ export function CesiumMap({
       }
     }
 
-    if (scheduledRender) viewer.scene.requestRender();
-  }, [polylines]);
+    if (scheduledRender) scheduleRender();
+  }, [polylines, scheduleRender]);
 
   // ── Imperative fly-to ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -1210,6 +1626,37 @@ export function CesiumMap({
       duration: flyTo.durationSec ?? 1.2,
     });
   }, [flyTo]);
+
+  // ── Imperative fit-bounds (BoundingSphere) ───────────────────────────────
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || !fitBounds || fitBounds.points.length === 0) return;
+    const cartesians = fitBounds.points.map((p) => Cesium.Cartesian3.fromDegrees(p.lon, p.lat));
+    const sphere = Cesium.BoundingSphere.fromPoints(cartesians);
+    if (sphere.radius <= 0) {
+      // Single-point or coincident — fall back to a flat fly-to with a
+      // sensible default extent. flyToBoundingSphere with radius 0 is
+      // a no-op in Cesium.
+      viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(fitBounds.points[0].lon, fitBounds.points[0].lat, 5_000),
+        duration: fitBounds.durationSec ?? 1.4,
+      });
+      return;
+    }
+    const padded = new Cesium.BoundingSphere(sphere.center, sphere.radius * (fitBounds.padding ?? 1.2));
+    viewer.camera.flyToBoundingSphere(padded, {
+      duration: fitBounds.durationSec ?? 1.4,
+    });
+  }, [fitBounds]);
+
+  // Stable ref-callback factory for the per-marker DOM node tracking.
+  // Lives at the parent so `HtmlMarkerNode` can safely memoize on a
+  // stable function identity — without it, every parent re-render
+  // would mint a fresh ref-callback per marker and defeat the memo.
+  const setMarkerNode = useCallback((id: string, node: HTMLDivElement | null) => {
+    if (node) htmlMarkerNodesRef.current.set(id, node);
+    else htmlMarkerNodesRef.current.delete(id);
+  }, []);
 
   return (
     <div ref={containerRef} className={className}>
@@ -1239,29 +1686,44 @@ export function CesiumMap({
       */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden z-[1]">
         {htmlMarkers?.map((m) => (
-          <div
-            key={m.id}
-            ref={(node) => {
-              if (node) htmlMarkerNodesRef.current.set(m.id, node);
-              else htmlMarkerNodesRef.current.delete(m.id);
-            }}
-            onClick={m.onClick}
-            onContextMenu={m.onContextMenu}
-            onMouseEnter={m.onMouseEnter}
-            onMouseLeave={m.onMouseLeave}
-            className="pointer-events-auto absolute top-0 left-0"
-            style={{
-              zIndex: m.zIndex,
-              // Hidden by default until first preRender places it. Avoids
-              // a flash at (0,0) before the scene has run a frame.
-              display: 'none',
-              willChange: 'transform',
-            }}
-          >
-            {m.content}
-          </div>
+          <HtmlMarkerNode key={m.id} marker={m} setNode={setMarkerNode} />
         ))}
       </div>
     </div>
   );
 }
+
+/**
+ * Per-marker DOM wrapper. Memoized on the marker object reference, so
+ * when the parent stabilizes per-id marker references via fingerprint
+ * caching, hover-driven parent re-renders skip reconciling unchanged
+ * markers entirely. Only the marker whose hover state actually flipped
+ * gets a new object ref and reconciles.
+ */
+const HtmlMarkerNode = memo(function HtmlMarkerNode({
+  marker,
+  setNode,
+}: {
+  marker: CesiumHtmlMarker;
+  setNode: (id: string, node: HTMLDivElement | null) => void;
+}) {
+  const id = marker.id;
+  const refCb = useCallback((node: HTMLDivElement | null) => setNode(id, node), [id, setNode]);
+  return (
+    <div
+      ref={refCb}
+      onClick={marker.onClick}
+      onContextMenu={marker.onContextMenu}
+      onMouseEnter={marker.onMouseEnter}
+      onMouseLeave={marker.onMouseLeave}
+      className="pointer-events-auto absolute top-0 left-0"
+      style={{
+        zIndex: marker.zIndex,
+        display: 'none',
+        willChange: 'transform',
+      }}
+    >
+      {marker.content}
+    </div>
+  );
+});

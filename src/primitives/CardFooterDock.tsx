@@ -21,9 +21,8 @@ export function CardFooterDock({ actions, className }: CardFooterDockProps) {
 
   return (
     <div
-      className={cn('flex gap-1.5 px-2 py-2', className)}
+      className={cn('flex gap-1.5 px-2 py-2 bg-state-hover-strong', className)}
       style={{
-        backgroundColor: `rgba(255,255,255,0.06)`,
         borderTop: `1px solid ${CARD_TOKENS.surface.level2}`,
         boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.4)',
         borderBottomLeftRadius: `${CARD_TOKENS.container.borderRadius}px`,
@@ -41,12 +40,12 @@ export function CardFooterDock({ actions, className }: CardFooterDockProps) {
             className={cn(
               'flex flex-1 items-center justify-center gap-1.5',
               'h-8 rounded-[5px] px-3',
-              'text-xs font-medium text-zinc-300',
-              'bg-white/[0.08] border border-white/[0.06]',
+              'text-xs font-medium text-slate-11',
+              'bg-state-pressed border border-border-default',
               'transition-[background-color,border-color] duration-150 ease-out',
-              'hover:bg-white/[0.12] hover:border-white/[0.10]',
-              'active:bg-white/[0.06] active:scale-[0.98]',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25',
+              'hover:bg-state-selected hover:border-border-strong',
+              'active:bg-state-hover-strong active:scale-[0.98]',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_oklch,var(--slate-12)_25%,transparent)]',
               'disabled:opacity-40 disabled:pointer-events-none',
             )}
           >
