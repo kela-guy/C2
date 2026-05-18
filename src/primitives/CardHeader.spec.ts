@@ -9,10 +9,11 @@ export const spec: ComponentSpec = {
 
   props: [
     { name: 'icon', type: 'React.ElementType', required: false, description: 'Lucide icon component rendered inside the icon box' },
-    { name: 'iconColor', type: 'string', required: false, description: 'Override color for the icon — defaults to gray when not active' },
-    { name: 'iconBgActive', type: 'boolean', required: false, description: 'When true, icon box gets a tinted background using activeBg color at 20% opacity' },
+    { name: 'iconColor', type: 'string', required: false, description: 'Override color for the icon — defaults to gray when not active. Ignored when `affiliation` is provided.' },
+    { name: 'iconBgActive', type: 'boolean', required: false, description: 'When true, icon box gets a tinted background using activeBg color at 20% opacity. Ignored when `affiliation` is provided.' },
+    { name: 'affiliation', type: "'friendly' | 'hostile' | 'possibleThreat' | 'neutral' | 'unknown'", required: false, description: 'IFF affiliation. When set, drives the icon-wrapper foreground and background color from AFFILIATION_PALETTES (shared with the map markers in markerStyles.ts). Overrides iconColor / iconBgActive.' },
     { name: 'title', type: 'string', required: true, description: 'Primary heading text (h2) — target name or incident description' },
-    { name: 'subtitle', type: 'string', required: false, description: 'Secondary text below title — typically a target ID in mono font' },
+    { name: 'subtitle', type: 'string', required: false, description: 'Secondary text below title — typically a target ID or timestamp in mono font. Truncates on overflow within the title column.' },
     { name: 'status', type: 'React.ReactNode', required: false, description: 'Status slot — typically a StatusChip component' },
     { name: 'badge', type: 'React.ReactNode', required: false, description: 'Badge slot — optional badge element' },
     { name: 'quickAction', type: 'React.ReactNode', required: false, description: 'Quick action slot — shown only when card is collapsed (open=false), click events are stopped from propagating' },
@@ -47,6 +48,13 @@ export const spec: ComponentSpec = {
       description: 'Icon box background uses activeBg color (#ef4444) at 20% opacity, icon inherits activeBg color',
       implementedInPrototype: true,
       visualNotes: 'Hex opacity calculated dynamically: Math.round(0.2 * 255).toString(16)',
+    },
+    {
+      name: 'with affiliation',
+      trigger: 'affiliation prop set (friendly | hostile | possibleThreat | neutral | unknown)',
+      description: 'Icon glyph and box background come from AFFILIATION_PALETTES — single source of truth shared with the map. Hostile / possibleThreat / unknown render their tinted palette; friendly / neutral fall back to the neutral default surface to avoid white-on-white.',
+      implementedInPrototype: true,
+      visualNotes: 'Background opacity ~0.12 of palette.glyph (via hexToRgba). Icon box also gets aria-label = AFFILIATION_LABELS[affiliation].',
     },
     {
       name: 'with status and badge',
@@ -244,5 +252,7 @@ export const spec: ComponentSpec = {
     'quickAction is only rendered when the card is collapsed — this prevents action buttons from competing with expanded card content.',
     'The h2 title element should be considered in the page heading hierarchy — if cards are inside a section with an h2, this creates duplicate heading levels.',
     'iconBgActive opacity is calculated at render time via hex string manipulation — this could be simplified with CSS color-mix().',
+    'IFF coloring (affiliation prop) takes precedence over lifecycle coloring (iconColor + iconBgActive). The single accent rule from ui-craft: color carries meaning, and affiliation is the meaning when present.',
+    'Flex layout: LEFT container is `min-w-0 flex-1` (can shrink), RIGHT container is `shrink-0` (status/badge/chevron never compress). Title and subtitle both `truncate` inside the LEFT column so long strings end-ellipsize instead of squashing the right side. Always preserve this when modifying the header.',
   ],
 };

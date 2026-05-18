@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
+import type { CSSProperties } from 'react';
 import {
   Eye, Radio, ShieldAlert, Zap, Crosshair, Ban, AlertTriangle,
   Trash2, Send, Compass, Gauge, Navigation, MapPin, CheckCircle2,
@@ -25,7 +26,7 @@ import {
   SplitActionButton, SPLIT_BUTTON_VARIANTS,
   AccordionSection, TelemetryRow,
   TargetCard, CardHeader, CardActions,
-  CardDetails, CardSensors, CardMedia, MEDIA_BADGE_CONFIG, CardLog, CardClosure,
+  CardDetails, CardIdentity, CardSensors, CardMedia, MEDIA_BADGE_CONFIG, CardLog, CardClosure, CopyButton,
   FilterBar, NewUpdatesPill,
   CesiumMap, type CesiumMarker,
   type CardAction, type CardSensor,
@@ -56,6 +57,7 @@ import { useCardSlots, type CardCallbacks, type CardContext } from '@/imports/us
 import {
   cuas_raw, cuas_classified, cuas_classified_bird, cuas_mitigating, cuas_mitigated, cuas_bda_complete,
   flow1_suspicion, flow2_tracking, flow3_onStation, flow4_mission, flow4_complete, flow5_mitigated,
+  drone_friendly, drone_hostile, drone_unknown,
 } from '@/test-utils/mockDetections';
 import type { Detection, RegulusEffector } from '@/imports/ListOfSystems';
 import { getActivityStatus } from '@/imports/useActivityStatus';
@@ -68,10 +70,12 @@ import actionButtonSrc from '@/primitives/ActionButton.tsx?raw';
 import splitActionButtonSrc from '@/primitives/SplitActionButton.tsx?raw';
 import accordionSectionSrc from '@/primitives/AccordionSection.tsx?raw';
 import telemetryRowSrc from '@/primitives/TelemetryRow.tsx?raw';
+import copyButtonSrc from '@/primitives/CopyButton.tsx?raw';
 import targetCardSrc from '@/primitives/TargetCard.tsx?raw';
 import cardHeaderSrc from '@/primitives/CardHeader.tsx?raw';
 import cardActionsSrc from '@/primitives/CardActions.tsx?raw';
 import cardDetailsSrc from '@/primitives/CardDetails.tsx?raw';
+import cardIdentitySrc from '@/primitives/CardIdentity.tsx?raw';
 import cardSensorsSrc from '@/primitives/CardSensors.tsx?raw';
 import cardMediaSrc from '@/primitives/CardMedia.tsx?raw';
 import cardLogSrc from '@/primitives/CardLog.tsx?raw';
@@ -2498,6 +2502,14 @@ const STATE_GROUPS: { label: string; entries: StateEntry[] }[] = [
     ],
   },
   {
+    label: 'Identity & Affiliation (IFF)',
+    entries: [
+      { id: 'aff-friendly', label: 'Friend', detection: drone_friendly, accent: 'idle' },
+      { id: 'aff-hostile', label: 'Enemy', detection: drone_hostile, accent: 'detection' },
+      { id: 'aff-unknown', label: 'Unknown', detection: drone_unknown, accent: 'suspicion' },
+    ],
+  },
+  {
     label: 'Flow Variants',
     entries: [
       { id: 'suspicion', label: 'Suspicion', detection: flow1_suspicion, accent: 'suspicion' },
@@ -3474,6 +3486,100 @@ export function DetectionRow() {
             </ComponentSection>
             )}
 
+            {activeItem === 'copy-button' && (
+            <ComponentSection id="copy-button" name="CopyButton" description="Quiet, hover-revealed icon button that copies a single value to the clipboard. Designed to live inside a Tailwind `group/copy` row so it only appears for the row the operator is pointing at. On success the Check glyph lands with visible presence (~2px larger than Copy, stroke 3 vs 2, color zinc-50 vs zinc-200, overshoot keyframes 0.85 → 1.06 → 1) — still neutral, no green. 40×40 hit target, touch-fallback always-visible, `cursor-pointer`, reduced-motion safe (collapses to a hard swap).">
+              <CodePreviewBlock name="CopyButton" description="Per-row copy affordance composed exactly as it ships inside CardIdentity — w-fit value wrapper, absolute gradient-fade overlay, keyboard-only focus reveal. Hover a row to see the button fade in." tight code={copyButtonSrc} relatedFiles={COMMON_FILES}>
+                {/*
+                  Mirrors the CardIdentity composition: each row is `group/copy`,
+                  the value sits in a `relative w-fit` wrapper so the icon rides
+                  immediately after the text, and the gradient overlay fades into
+                  SURFACE.level2 (the AccordionSection surface CardIdentity
+                  actually renders on). Background here is SURFACE.level1 to match
+                  the real card surface that sits behind that accordion.
+                */}
+                <div className="max-w-sm rounded-lg p-3 flex flex-col gap-3" style={{ backgroundColor: SURFACE.level1 }}>
+                  {[
+                    { label: 'Model', value: 'DJI Matrice 4 T/E', copyLabel: 'Copy model' },
+                    { label: 'Serial Number', value: 'f7k3c251f00cx623', copyLabel: 'Copy serial number' },
+                  ].map((row) => (
+                    <div key={row.label} className="group/copy w-full flex flex-col items-start py-1 gap-1">
+                      <span className="text-xs text-zinc-400">{row.label}</span>
+                      <div className="relative w-fit">
+                        <span
+                          dir="auto"
+                          className="block w-fit text-xs text-zinc-200 font-mono tabular-nums break-all text-end"
+                          style={{ unicodeBidi: 'isolate', fontVariantNumeric: 'tabular-nums slashed-zero' }}
+                        >
+                          {row.value}
+                        </span>
+                        <div
+                          className="pointer-events-none absolute inset-y-0 end-0 flex items-center justify-end ps-4 pe-0 bg-gradient-to-r rtl:bg-gradient-to-l from-transparent to-[var(--card-fade-bg)] to-50% opacity-0 group-hover/copy:opacity-100 has-[:focus-visible]:opacity-100 has-[[data-copied]]:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity duration-150 ease-out"
+                          style={{ ['--card-fade-bg' as string]: SURFACE.level2 } as CSSProperties}
+                        >
+                          <CopyButton
+                            value={row.value}
+                            copyLabel={row.copyLabel}
+                            copiedLabel="Copied"
+                            alwaysVisible
+                            className="pointer-events-auto"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CodePreviewBlock>
+
+              <SectionHeading>Import</SectionHeading>
+              <ImportBlock path="@/primitives" names={['CopyButton']} />
+
+              <SectionHeading>Usage</SectionHeading>
+              <UsageBlock code={copyButtonSrc} name="CopyButton" />
+
+              <SectionHeading>API Reference</SectionHeading>
+              <PropsTable items={[
+                { name: 'value', type: 'string', description: 'Text written to the clipboard. Empty string disables the button.' },
+                { name: 'copyLabel', type: 'string', description: 'Idle-state aria-label + tooltip (compose with the field name at the call site, e.g. "Copy serial number").' },
+                { name: 'copiedLabel', type: 'string', description: 'Success-state aria-label + sr-only announcement.' },
+                { name: 'size', type: "'sm' | 'md'", default: "'sm'", description: 'sm = 14px Copy / 16px Check in a 24px box. md = 16px Copy / 18px Check in a 28px box. Check is rendered ~2px larger than Copy and at stroke 3 (vs 2) to compensate for its larger negative space — equal pixel-size makes the success state read as smaller than the dormant state.' },
+                { name: 'alwaysVisible', type: 'boolean', default: 'false', description: 'Skip the hover-reveal — useful in standalone styleguide previews.' },
+                { name: 'className', type: 'string', default: "''", description: 'Additional classes on the button element.' },
+              ]} />
+
+              <SectionHeading>Examples</SectionHeading>
+              <ExampleBlock title="Always visible (no group/copy parent)" tight>
+                <div className="max-w-sm rounded-lg p-3 flex items-center gap-2" style={{ backgroundColor: SURFACE.level1 }}>
+                  <span
+                    className="flex-1 min-w-0 text-[13px] text-zinc-200 font-mono tabular-nums"
+                    style={{ fontVariantNumeric: 'tabular-nums slashed-zero' }}
+                  >
+                    f7k3c251f00cx623
+                  </span>
+                  <CopyButton value="f7k3c251f00cx623" copyLabel="Copy serial number" copiedLabel="Copied" alwaysVisible />
+                </div>
+              </ExampleBlock>
+
+              <ExampleBlock title="Disabled (empty value)" tight>
+                <div className="max-w-sm rounded-lg p-3 flex items-center gap-2" style={{ backgroundColor: SURFACE.level1 }}>
+                  <span className="flex-1 min-w-0 text-[13px] text-zinc-500 italic">no value</span>
+                  <CopyButton value="" copyLabel="Copy" copiedLabel="Copied" alwaysVisible />
+                </div>
+              </ExampleBlock>
+
+              <ExampleBlock title="Size: md" tight>
+                <div className="max-w-sm rounded-lg p-3 flex items-center gap-2" style={{ backgroundColor: SURFACE.level1 }}>
+                  <span
+                    className="flex-1 min-w-0 text-[13px] text-zinc-200 font-mono tabular-nums"
+                    style={{ fontVariantNumeric: 'tabular-nums slashed-zero' }}
+                  >
+                    TGT-0042
+                  </span>
+                  <CopyButton value="TGT-0042" copyLabel="Copy target id" copiedLabel="Copied" size="md" alwaysVisible />
+                </div>
+              </ExampleBlock>
+            </ComponentSection>
+            )}
+
             {activeItem === 'card-header' && (
             <ComponentSection id="card-header" name="CardHeader" description="Top row of a TargetCard — icon, title, subtitle, status chip, badge, and chevron.">
               <CodePreviewBlock name="CardHeader" description="Top row of a TargetCard — icon, title, subtitle, status chip, badge, and chevron." tight code={cardHeaderSrc} relatedFiles={COMMON_FILES}>
@@ -3620,8 +3726,8 @@ export function DetectionRow() {
             )}
 
             {activeItem === 'card-details' && (
-            <ComponentSection id="card-details" name="CardDetails" description="Collapsible telemetry accordion with a copy-all button. Composes AccordionSection and TelemetryRow in a grid layout for metrics.">
-              <CodePreviewBlock name="CardDetails" description="Collapsible telemetry accordion with a copy-all button; uses AccordionSection and TelemetryRow." tight code={cardDetailsSrc} relatedFiles={CARD_DETAILS_FILES}>
+            <ComponentSection id="card-details" name="CardDetails" description="Collapsible telemetry accordion. Composes AccordionSection and TelemetryRow in a fixed 2-column grid for metrics. Per-field copy lives on CardIdentity; this section is read-only.">
+              <CodePreviewBlock name="CardDetails" description="Collapsible telemetry accordion in a fixed 2-column grid; uses AccordionSection and TelemetryRow." tight code={cardDetailsSrc} relatedFiles={CARD_DETAILS_FILES}>
                 <div className="max-w-sm rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level1 }}>
                   <CardDetails rows={sampleDetailRows} defaultOpen />
                 </div>
@@ -3635,7 +3741,53 @@ export function DetectionRow() {
 
               <SectionHeading>API Reference</SectionHeading>
               <PropsTable items={[
-                { name: 'rows', type: 'DetailRow[]', description: 'Array of { label, value, icon }' },
+                { name: 'rows', type: 'DetailRow[]', description: 'Array of { label, value, icon? } rendered as TelemetryRow children inside a fixed 2-column grid (gap-x-8 / gap-y-2).' },
+                { name: 'title', type: 'string', default: "'Telemetry'", description: 'Section header title shown in the AccordionSection trigger.' },
+                { name: 'classification', type: 'CardDetailsClassification', description: 'Optional classification metadata (type, confidence, color). Accepted by the API but not rendered in the current implementation.' },
+                { name: 'defaultOpen', type: 'boolean', default: 'false', description: 'Start expanded.' },
+                { name: 'className', type: 'string', default: "''", description: 'Passthrough classes on the AccordionSection wrapper.' },
+              ]} />
+            </ComponentSection>
+            )}
+
+            {activeItem === 'card-identity' && (
+            <ComponentSection id="card-identity" name="CardIdentity" description="Collapsible 'General info' accordion that surfaces drone identity (model, serial number, future identity fields) as stacked rows. Sits above CardDetails because identity precedes telemetry in operator scanning order. Each value sits in a `w-fit` wrapper anchored to the row's inline-start edge, so the copy icon rides immediately after the text instead of being pinned to the row's far end. A gradient-fade overlay dissolves overflowing values into the icon. Reveal triggers on row hover, `:focus-visible` (keyboard only — never on mouse-click focus), the copied data-attribute, and touch — never on a plain `:focus`.">
+              <CodePreviewBlock name="CardIdentity" description="Stacked identity rows in a collapsible 'General info' section. Hover a row to reveal the copy button overlay; long values fade under the gradient mask." tight code={cardIdentitySrc} relatedFiles={COMMON_FILES}>
+                {/*
+                  Preview uses SURFACE.level1 to match the real card context:
+                  the card itself is bg-transparent over the sidebar, and
+                  CardIdentity sits inside an AccordionSection that overlays
+                  rgba(255,255,255,0.08) on top of that — landing on
+                  SURFACE.level2, which is exactly what the gradient mask
+                  inside CardIdentity fades into.
+                */}
+                <div className="max-w-sm rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level1 }}>
+                  <CardIdentity
+                    rows={[
+                      { label: 'Model', value: 'DJI Matrice 4 T/E' },
+                      { label: 'Serial Number', value: 'f7k3c251f00cx623' },
+                      { label: 'Long ID (wraps via break-all)', value: 'AB-12CD-34EF-56GH-78IJ-90KL-MNOPQRST' },
+                    ]}
+                    title="General info"
+                    copyLabel="Copy"
+                    copiedLabel="Copied"
+                    defaultOpen
+                  />
+                </div>
+              </CodePreviewBlock>
+
+              <SectionHeading>Import</SectionHeading>
+              <ImportBlock path="@/primitives" names={['CardIdentity']} />
+
+              <SectionHeading>Usage</SectionHeading>
+              <UsageBlock code={cardIdentitySrc} name="CardIdentity" />
+
+              <SectionHeading>API Reference</SectionHeading>
+              <PropsTable items={[
+                { name: 'rows', type: 'IdentityRow[]', description: 'Array of { label, value } entries; each renders as a full-width stacked row with a per-row copy button' },
+                { name: 'title', type: 'string', default: "'General info'", description: 'Section header title' },
+                { name: 'copyLabel', type: 'string', description: 'Verb label for the per-row copy button. Composed with each row label to form the aria-label (e.g. "Copy serial number").' },
+                { name: 'copiedLabel', type: 'string', description: 'Post-success label ("Copied"). Used for icon-button aria-label and aria-live announcement.' },
                 { name: 'defaultOpen', type: 'boolean', default: 'false', description: 'Start expanded' },
               ]} />
             </ComponentSection>

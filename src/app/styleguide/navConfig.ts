@@ -38,6 +38,7 @@ export const NAV: NavGroup[] = [
       { id: 'split-action', label: 'SplitActionButton' },
       { id: 'accordion', label: 'AccordionSection' },
       { id: 'telemetry', label: 'TelemetryRow' },
+      { id: 'copy-button', label: 'CopyButton' },
     ],
   },
   {
@@ -47,6 +48,7 @@ export const NAV: NavGroup[] = [
       { id: 'card-media', label: 'CardMedia' },
       { id: 'card-actions', label: 'CardActions' },
       { id: 'card-details', label: 'CardDetails' },
+      { id: 'card-identity', label: 'CardIdentity' },
       { id: 'card-sensors', label: 'CardSensors' },
       { id: 'card-log', label: 'CardLog' },
       { id: 'card-closure', label: 'CardClosure' },

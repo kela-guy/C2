@@ -6,6 +6,7 @@ import {
   CardActions,
   CardTimeline,
   CardDetails,
+  CardIdentity,
   CardSensors,
   CardMedia,
   CardLog,
@@ -26,6 +27,7 @@ import { useCardSlots, type CardCallbacks, type CardContext } from './useCardSlo
 import { useTargetFilters } from './useTargetFilters';
 import { getActivityStatus, isCompletedActivityStatus, useActivityStatus } from './useActivityStatus';
 import { useStrings, type Strings } from '@/lib/intl';
+import type { Affiliation } from '@/primitives/markerStyles';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -113,6 +115,9 @@ export interface Detection {
   laserAzimuth?: string;
   laserElevation?: string;
   laserRange?: string;
+  affiliation?: Affiliation;
+  model?: string;
+  serialNumber?: string;
 }
 
 export interface MissionWaypoint {
@@ -314,12 +319,20 @@ function UnifiedCard({
         </div>
       )}
 
+      {slots.identity.length > 0 && (
+        <CardIdentity
+          rows={slots.identity}
+          title={los.generalInfoTitle}
+          copyLabel={los.copy}
+          copiedLabel={los.copied}
+        />
+      )}
+
       {showDetails && (
         <CardDetails
           rows={slots.details.rows}
           classification={slots.details.classification}
           title={los.telemetryTitle}
-          copyLabel={los.telemetryCopy}
         />
       )}
 

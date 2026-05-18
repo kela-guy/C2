@@ -1,5 +1,5 @@
 import React from 'react';
-import { Copy, Eye } from '@/lib/icons/central';
+import { Eye } from '@/lib/icons/central';
 import { AccordionSection } from './AccordionSection';
 import { TelemetryRow } from './TelemetryRow';
 
@@ -23,8 +23,6 @@ export interface CardDetailsProps {
   className?: string;
   /** Section header. Defaults to 'Telemetry'. */
   title?: string;
-  /** aria-label / tooltip for the copy-all button. Defaults to 'Copy'. */
-  copyLabel?: string;
 }
 
 export function CardDetails({
@@ -32,31 +30,23 @@ export function CardDetails({
   defaultOpen = false,
   className = '',
   title = 'Telemetry',
-  copyLabel = 'Copy',
 }: CardDetailsProps) {
   if (rows.length === 0) return null;
-
-  const copyAll = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const text = rows.map((r) => `${r.label}: ${r.value}`).join('\n');
-    navigator.clipboard.writeText(text);
-  };
 
   return (
     <AccordionSection title={title} defaultOpen={defaultOpen} icon={Eye} className={className}>
       <div className="w-full py-1">
-        <div className="w-full grid grid-cols-3 gap-x-8 gap-y-2 group/copy relative">
+        {/*
+          Fixed 2-col grid. The previous 3-col layout consistently left a
+          short trailing cell empty (most detection cards expose 2-3 metrics)
+          and the wider columns let long values like "32.46356, 35.00042"
+          breathe without wrapping. Per-field copy lives in CardIdentity;
+          there is no copy-all affordance here.
+        */}
+        <div className="w-full grid grid-cols-2 gap-x-8 gap-y-2">
           {rows.map((row, idx) => (
             <TelemetryRow key={idx} label={row.label} value={row.value} icon={row.icon} />
           ))}
-          <button
-            onClick={copyAll}
-            className="absolute top-0.5 end-0.5 opacity-0 group-hover/copy:opacity-100 transition-opacity p-1 rounded hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
-            aria-label={copyLabel}
-            title={copyLabel}
-          >
-            <Copy size={12} className="text-zinc-400" />
-          </button>
         </div>
       </div>
     </AccordionSection>

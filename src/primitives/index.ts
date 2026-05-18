@@ -9,6 +9,8 @@ export { CardHeader, type CardHeaderProps } from './CardHeader';
 export { CardActions, CARD_ACTION_GROUP, type CardAction, type CardActionGroup, type CardActionStatusStripTone, type CardActionsProps } from './CardActions';
 export { CardTimeline, type TimelineStep, type TimelineStepStatus, type CardTimelineProps } from './CardTimeline';
 export { CardDetails, type DetailRow, type CardDetailsClassification, type CardDetailsProps } from './CardDetails';
+export { CardIdentity, type IdentityRow, type CardIdentityProps } from './CardIdentity';
+export { CopyButton, type CopyButtonProps, type CopyButtonSize } from './CopyButton';
 export { CardSensors, type CardSensor, type CardSensorsProps } from './CardSensors';
 export { CardMedia, type CardMediaProps } from './CardMedia';
 export { MEDIA_BADGE_CONFIG, type MediaBadgeType } from './cardMediaConfig';

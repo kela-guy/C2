@@ -34,6 +34,7 @@ import type { CardAction } from '@/primitives/CardActions';
 import type { SplitDropdownGroup } from '@/primitives/SplitActionButton';
 import type { TimelineStep } from '@/primitives/CardTimeline';
 import type { DetailRow, CardDetailsClassification } from '@/primitives/CardDetails';
+import type { IdentityRow } from '@/primitives/CardIdentity';
 import type { CardSensor } from '@/primitives/CardSensors';
 import type { LogEntry } from '@/primitives/CardLog';
 import type { ClosureOutcome } from '@/primitives/CardClosure';
@@ -117,6 +118,7 @@ export interface CardSlots {
   media: CardMediaProps | null;
   actions: CardAction[];
   timeline: TimelineStep[];
+  identity: IdentityRow[];
   details: { rows: DetailRow[]; classification?: CardDetailsClassification };
   sensors: CardSensor[];
   log: LogEntry[];
@@ -156,9 +158,11 @@ function buildHeaderIcon(target: Detection): React.ElementType {
 
 function buildConfidenceBadge(confidence: number | undefined, classifiedType: string | undefined, t: Strings): React.ReactNode {
   if (confidence == null) return null;
-  const bg = confidence >= 80 ? 'bg-red-500/20 text-red-400'
-    : confidence >= 40 ? 'bg-amber-500/20 text-amber-400'
-    : 'bg-zinc-500/20 text-zinc-400';
+  // Neutral, metadata-style pill. Severity is communicated by the icon-wrapper
+  // affiliation color (AFFILIATION_PALETTES) and the status chip (lifecycle).
+  // The number itself communicates confidence; tinting it red on high-confidence
+  // would double-signal threat and mis-read a 99%-confident bird as hostile.
+  const bg = 'bg-white/[0.06] text-zinc-300';
   const types = t.cards.classifiedTypes;
   const key = (classifiedType ?? 'unknown') as keyof typeof types;
   const typeLabel = types[key] ?? types.unknown;
@@ -186,16 +190,25 @@ function buildHeader(target: Detection, t: Strings): CardHeaderProps {
     || target.status === 'event_neutralized'
     || target.status === 'expired';
 
+  // When affiliation is present, it owns the icon-wrapper color (single source
+  // of truth shared with the map). Fall back to lifecycle coloring otherwise
+  // so existing callers (missions, raw detections, active events) keep their
+  // current treatment.
+  const hasAffiliation = !!target.affiliation;
+
   return {
     icon: Icon,
-    iconColor: isMission
-      ? '#a78bfa'
-      : isRaw
-        ? '#71717a'
-        : isActive
-          ? '#ef4444'
-          : '#9ca3af',
-    iconBgActive: !isMission && !isRaw && isActive,
+    affiliation: target.affiliation,
+    iconColor: hasAffiliation
+      ? undefined
+      : isMission
+        ? '#a78bfa'
+        : isRaw
+          ? '#71717a'
+          : isActive
+            ? '#ef4444'
+            : '#9ca3af',
+    iconBgActive: !hasAffiliation && !isMission && !isRaw && isActive,
     title: isMission
       ? (target.plannedMission?.missionType === 'ptz' ? t.cards.cameraScan : t.cards.droneMission)
       : target.name,
@@ -722,6 +735,14 @@ function buildTimeline(target: Detection, ctx: CardContext, t: Strings): Timelin
   return steps;
 }
 
+function buildIdentity(target: Detection, t: Strings): IdentityRow[] {
+  const dr = t.cards.detailRows;
+  const rows: IdentityRow[] = [];
+  if (target.model) rows.push({ label: dr.model, value: target.model });
+  if (target.serialNumber) rows.push({ label: dr.serialNumber, value: target.serialNumber });
+  return rows;
+}
+
 function buildDetails(target: Detection, t: Strings): { rows: DetailRow[]; classification?: CardDetailsClassification } {
   const dr = t.cards.detailRows;
   const tl = t.cards.typeLabels;
@@ -834,11 +855,12 @@ export function useCardSlots(
   const media = useMemo(() => buildMedia(target, ctx, t), [target, ctx.isCameraActive, t]);
   const actions = useMemo(() => buildActions(target, callbacks, ctx, t), [target, callbacks, ctx, t]);
   const timeline = useMemo(() => buildTimeline(target, ctx, t), [target, ctx.isDroneVerifying, t]);
+  const identity = useMemo(() => buildIdentity(target, t), [target.model, target.serialNumber, t]);
   const details = useMemo(() => buildDetails(target, t), [target, t]);
   const laserPosition = useMemo(() => buildLaserPosition(target, t), [target.laserAzimuth, target.laserElevation, target.laserRange, target.laserDistance, t]);
   const sensors = useMemo(() => buildSensors(target), [target.contributingSensors, target.detectedBySensors]);
   const log = target.actionLog ?? [];
   const closure = useMemo(() => buildClosure(target, callbacks, t), [target.flowPhase, target.flowType, callbacks, t]);
 
-  return { accent, completed, closureType, header, media, actions, timeline, details, sensors, log, closure, laserPosition };
+  return { accent, completed, closureType, header, media, actions, timeline, identity, details, sensors, log, closure, laserPosition };
 }

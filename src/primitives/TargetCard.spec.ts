@@ -201,5 +201,6 @@ export const spec: ComponentSpec = {
     'Auto-scroll logic has a special case for cards near the bottom of a scroll container (isNearBottom threshold: 200px).',
     'dir="rtl" is hardcoded on the root div.',
     'The accent prop is accepted for API compatibility (callers pass it) but currently has no visual effect in the JSX. Task TC-1 will wire it to a spine color bar.',
+    'Drone identity (name / model / serial / IFF affiliation): the header carries name + IFF (via CardHeader.affiliation, icon-wrapper color from AFFILIATION_PALETTES). Model + serial live in a dedicated `CardIdentity` (General info) accordion section above CardDetails, NOT in the header subtitle — the collapsed subtitle stays a single short string (timestamp/id) to avoid overflowing the status chip.',
   ],
 };

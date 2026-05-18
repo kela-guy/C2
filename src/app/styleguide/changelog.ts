@@ -6,6 +6,19 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.2.0',
+    date: 'May 18, 2026',
+    highlights: [
+      '`CardIdentity`: value wrapper switched to `w-fit` so the copy icon rides immediately after the text instead of being pinned to the row\'s far end. Each row\'s `relative w-fit` container also has `text-end` on the `Bdi` so Latin tokens inside RTL rows are visually right-aligned without forcing direction.',
+      '`CardIdentity`: gradient fade-bg now follows `SURFACE.level2` (the real AccordionSection content surface — base sidebar + `rgba(255,255,255,0.08)` overlay) instead of `ELEVATION.baseSurface`. Eliminates the dark wash that used to ring the copy icon.',
+      '`CardIdentity`: overlay narrowed from 56px → 40px (`ps-4`) with a sharper 50% gradient stop (was 60%), so most of the overlay is solid behind the icon and only the inner edge fades.',
+      '`CardIdentity`: fixed a bug where the copy icon stayed visible after a mouse click. Overlay reveal now uses `has-[:focus-visible]` (keyboard-only) instead of `focus-within` (which also matched mouse-induced focus and pinned the overlay open).',
+      '`CopyButton`: success-state presence lift — Check glyph is ~2px larger than Copy (16/18px vs 14/16px), stroke 3 vs 2, color `text-zinc-50` vs `text-zinc-200`, and the entry animation uses overshoot keyframes (`0.85 → 1.06 → 1`, 0.22s, custom easing) so the confirmation lands instead of fading in flat. Still neutral — no green. `cursor-pointer` added. `prefers-reduced-motion` collapses motion to a hard swap while the size/stroke/color lifts still apply.',
+      '`CardDetails`: removed the non-functional copy-all button (no success feedback, no error handling, no aria-live). Grid locked to `grid-cols-2` — the previous `grid-cols-3` consistently left a trailing empty cell and squeezed long values like `32.46356, 35.00042`. Per-field copy lives on `CardIdentity`. `copyLabel` prop and `los.telemetryCopy` i18n keys (he + en) removed.',
+      'Styleguide: `CopyButton` preview rewritten to mirror the production `CardIdentity` composition (w-fit value wrapper, absolute gradient overlay, keyboard-only focus reveal). `CardIdentity` preview surface bumped from `SURFACE.level0` to `SURFACE.level1` so the gradient lands on the realistic backdrop. `CardDetails` props table grew to document `title`, `classification`, and `className`.',
+    ],
+  },
+  {
     version: '1.1.0',
     date: 'May 10, 2026',
     highlights: [

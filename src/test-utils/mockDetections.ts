@@ -220,7 +220,10 @@ export const cuas_raw: Detection = {
 export const cuas_classified: Detection = {
   ...cuas_raw,
   id: 'cuas-002',
-  name: 'רחפן מסווג — DJI Mavic',
+  name: 'Peleg 4T',
+  affiliation: 'hostile',
+  model: 'DJI Matrice 4 T/E',
+  serialNumber: 'f7k3c251f00cx623',
   entityStage: 'classified',
   classifiedType: 'drone',
   confidence: 0.94,
@@ -231,7 +234,7 @@ export const cuas_classified: Detection = {
   ],
   actionLog: [
     { time: '00:14:10', label: 'זיהוי ראשוני' },
-    { time: '00:14:18', label: 'סיווג: רחפן — DJI Mavic — ביטחון 94%' },
+    { time: '00:14:18', label: 'סיווג: רחפן — DJI Matrice 4 T/E — ביטחון 94%' },
   ],
 };
 
@@ -284,6 +287,68 @@ export const cuas_bda_complete: Detection = {
     { time: '00:14:45', label: 'אימות פגיעה — הושלם' },
   ],
 };
+
+// --- Drone identity / IFF affiliation mocks ---
+// These exercise the new icon-wrapper color path (driven by `affiliation`)
+// and the model · SN subtitle / telemetry rows on the Target Card.
+
+export const drone_friendly: Detection = {
+  id: 'drone-friendly-1',
+  name: 'Drone 1',
+  affiliation: 'friendly',
+  model: 'DJI drone',
+  serialNumber: 'd45b9174',
+  type: 'uav',
+  status: 'tracking',
+  timestamp: '00:12:00',
+  createdAtMs: Date.now() - 30_000,
+  coordinates: '32.0950° N, 34.8100° E',
+  distance: '1.2 ק״מ',
+  altitude: '120 מ׳',
+  entityStage: 'classified',
+  classifiedType: 'drone',
+  confidence: 0.99,
+  mitigationStatus: 'idle',
+};
+
+export const drone_hostile: Detection = {
+  id: 'drone-hostile-1',
+  name: 'Peleg 4T',
+  affiliation: 'hostile',
+  model: 'DJI Matrice 4 T/E',
+  serialNumber: 'f7k3c251f00cx623',
+  type: 'uav',
+  status: 'detection',
+  timestamp: '00:14:18',
+  createdAtMs: Date.now() - 60_000,
+  coordinates: '32.0853° N, 34.7818° E',
+  distance: '2.4 ק״מ',
+  altitude: '85 מ׳',
+  entityStage: 'classified',
+  classifiedType: 'drone',
+  confidence: 0.94,
+  mitigationStatus: 'idle',
+};
+
+export const drone_unknown: Detection = {
+  id: 'drone-unknown-1',
+  name: 'Shira 4TD',
+  affiliation: 'unknown',
+  model: 'DJI Matrice 4D/4TD',
+  serialNumber: 'f8hgx253q00a05dq',
+  type: 'uav',
+  status: 'suspicion',
+  timestamp: '00:13:45',
+  createdAtMs: Date.now() - 45_000,
+  coordinates: '32.0900° N, 34.7900° E',
+  distance: '1.8 ק״מ',
+  altitude: '100 מ׳',
+  entityStage: 'raw_detection',
+  confidence: 0.62,
+  mitigationStatus: 'idle',
+};
+
+export const AFFILIATION_DEMO = [drone_friendly, drone_hostile, drone_unknown];
 
 export const CUAS_LIFECYCLE = [
   cuas_raw,

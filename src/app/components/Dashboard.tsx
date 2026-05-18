@@ -727,11 +727,30 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
       : isBird
         ? sim.targetNameBird(opts.nameSuffix)
         : sim.targetNameDrone(opts.nameSuffix);
+
+    // Drone identity (IFF + model + serial). Birds carry no identity. Cars are
+    // ground vehicles, treated as `possibleThreat` here. Drones spawned by the
+    // simulator are inbound CUAS threats, so `hostile`. Model/serial are mock
+    // values drawn from a small fleet so consecutive spawns show variety on
+    // the cards without faking precision the sim doesn't have.
+    const DRONE_MODELS: { model: string; sn: string }[] = [
+      { model: 'DJI Matrice 4 T/E', sn: 'f7k3c251f00cx623' },
+      { model: 'DJI Matrice 4D/4TD', sn: 'f8hgx253q00a05dq' },
+      { model: 'DJI Avata 2', sn: 'f6w8b248g0020h44' },
+      { model: 'DJI Mavic 3 Pro', sn: 'd45b9174a02e7c10' },
+    ];
+    const droneIdentity = !isCar && !isBird
+      ? DRONE_MODELS[Math.floor(Math.random() * DRONE_MODELS.length)]
+      : null;
+
     const rawDetection: Detection = {
       id: targetId,
       name: targetName,
       type: isCar ? 'ground_vehicle' : isBird ? 'unknown' : 'uav',
       classifiedType: isCar ? 'car' : isBird ? 'bird' : 'drone',
+      affiliation: isBird ? 'unknown' : isCar ? 'possibleThreat' : 'hostile',
+      model: droneIdentity?.model,
+      serialNumber: droneIdentity?.sn,
       status: 'detection',
       timestamp: now(),
       createdAtMs: Date.now(),
