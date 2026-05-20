@@ -4,10 +4,10 @@
  * Operator-controlled layouts (picked via the panel's top-end
  * `VideoLayoutPicker` chrome — no auto-selection):
  *
- *   - `single`         — first feed fills the panel.
+ *   - `single`         — `feeds[activeFeedIndex]` fills the panel.
  *   - `stack-2`        — first two feeds vertically split 50/50.
  *   - `grid-2x2`       — up to four feeds in a 2x2 CSS grid.
- *   - `hero-filmstrip` — `feeds[heroIndex]` takes ~78% on top, the rest
+ *   - `hero-filmstrip` — `feeds[activeFeedIndex]` takes ~78% on top, the rest
  *                         render as a horizontal filmstrip below.
  *
  * When the chosen `layout` cannot fit `feeds.length`, the panel falls
@@ -16,15 +16,20 @@
  * operator's intent — only the rendered layout adapts.
  *
  * Drop rules:
- *   - Drop on a tile - replaces that tile's cameraId.
- *   - Drop on the panel background (not a tile) - appends if room
- *     (handled via onPinDevice from the devices panel).
+ *   - Drop on a tile - replaces that tile's cameraId when `onAddToActiveTab`
+ *     is absent; otherwise adds a split stream to the active tab.
+ *   - Drop on the panel background - appends via `onAddToActiveTab` or
+ *     `onPinDevice` when no tile consumed the drop.
  */
 
 import { useCallback, useMemo, useRef } from 'react';
 import { useDrop } from 'react-dnd';
 import { CameraFeedTile } from './CameraFeedTile';
-import { VideoLayoutPicker } from './VideoLayoutPicker';
+import { VideoPanelEmptyState } from './VideoPanelEmptyState';
+import {
+  VideoLayoutPicker,
+  isLayoutEnabledForFeedCount,
+} from './VideoLayoutPicker';
 import type { PickerAsset } from './CameraAssetPicker';
 import {
   DEVICE_CAMERA_DRAG_TYPE,
@@ -53,8 +58,12 @@ export interface VideoPanelProps {
   onTakeControl: (cameraId: string) => void;
   onReleaseControl: (cameraId: string) => void;
   onAssignmentClick?: (cameraId: string) => void;
-  onPinDevice: (deviceId: string) => void;
+  /** Pin a device into a feed slot (panel-level drop fallback). */
+  onPinDevice?: (deviceId: string) => void;
+  /** Append a device to the active tab as split view (dashboard). */
+  onAddToActiveTab?: (deviceId: string) => void;
   onTileFocus?: (cameraId: string) => void;
+  onTileHover?: (cameraId: string | null) => void;
   onZoomChange?: (cameraId: string, zoomLevel: number) => void;
   /** Operator designated a point on a feed as a target. Coordinates are
    * normalised (0..1, top-left origin) to the feed's video bounds. */
@@ -62,11 +71,22 @@ export interface VideoPanelProps {
   /** Operator-chosen layout preset. */
   layout: LayoutKind;
   onLayoutChange: (next: LayoutKind) => void;
-  /** Index into `feeds[]` that should take the hero slot in the
-   *  hero-filmstrip layout. Clamped to `feeds.length - 1` by the
-   *  parent. Ignored by the other three layouts. */
-  heroIndex: number;
-  onHeroChange: (next: number) => void;
+  /** Index into `feeds[]` that the operator is focused on. Drives
+   *  the rendered feed in `single`, the hero in `hero-filmstrip`,
+   *  and the keyboard-shortcut target / focus ring in the multi-
+   *  tile layouts. Clamped to `feeds.length - 1` by the parent. */
+  activeFeedIndex: number;
+  onActiveFeedChange: (next: number) => void;
+  /** When false, the absolute `VideoLayoutPicker` overlay is
+   *  suppressed. Hosts that render the picker in their own chrome
+   *  (e.g. the gridblock panel header) opt out via this flag.
+   *  Defaults to `true` so standalone callers behave as before. */
+  showLayoutPicker?: boolean;
+  /** When false, every tile's per-tile `CameraAssetPicker` is
+   *  suppressed. Hosts that expose asset selection elsewhere (e.g.
+   *  a tab strip in the panel header) opt out via this flag.
+   *  Defaults to `true` so standalone callers behave as before. */
+  showTileAssetPicker?: boolean;
   /** Every device the operator could swap into a tile. Forwarded to
    *  every tile's asset picker. Defaults to an empty array (picker
    *  self-disables). */
@@ -114,6 +134,13 @@ function VideoTileSlot({
   );
 }
 
+const LAYOUT_FALLBACK_ORDER: LayoutKind[] = [
+  'hero-filmstrip',
+  'grid-2x2',
+  'stack-2',
+  'single',
+];
+
 /**
  * Resolve the operator's chosen layout against the current feed count.
  * If the chosen layout can't fit the feeds we have, walk down the
@@ -121,20 +148,11 @@ function VideoTileSlot({
  */
 export function resolveLayout(layout: LayoutKind, feedCount: number): LayoutKind {
   if (feedCount <= 1) return 'single';
-  switch (layout) {
-    case 'single':
-      return 'single';
-    case 'stack-2':
-      return feedCount >= 2 ? 'stack-2' : 'single';
-    case 'grid-2x2':
-      return 'grid-2x2';
-    case 'hero-filmstrip':
-      return feedCount >= 2 ? 'hero-filmstrip' : 'single';
-    default: {
-      const _exhaustive: never = layout;
-      return _exhaustive;
-    }
+  if (isLayoutEnabledForFeedCount(layout, feedCount)) return layout;
+  for (const candidate of LAYOUT_FALLBACK_ORDER) {
+    if (isLayoutEnabledForFeedCount(candidate, feedCount)) return candidate;
   }
+  return 'single';
 }
 
 export function VideoPanel({
@@ -152,20 +170,27 @@ export function VideoPanel({
   onReleaseControl,
   onAssignmentClick,
   onPinDevice,
+  onAddToActiveTab,
   onTileFocus,
+  onTileHover,
   onZoomChange,
   onDesignateTarget,
   layout,
   onLayoutChange,
-  heroIndex,
-  onHeroChange,
+  activeFeedIndex,
+  onActiveFeedChange,
+  showLayoutPicker = true,
+  showTileAssetPicker = true,
   availableAssets,
 }: VideoPanelProps) {
   const resolvedLayout = useMemo(
     () => resolveLayout(layout, feeds.length),
     [layout, feeds.length],
   );
-  const safeHeroIndex = Math.min(Math.max(heroIndex, 0), Math.max(feeds.length - 1, 0));
+  const safeActiveFeedIndex = Math.min(
+    Math.max(activeFeedIndex, 0),
+    Math.max(feeds.length - 1, 0),
+  );
 
   // Camera ids currently mounted in any tile. Used by each tile's
   // asset picker to disable rows that would cause a double-mount.
@@ -251,21 +276,21 @@ export function VideoPanel({
     [feeds, updateFeed],
   );
 
-  // Panel-level drop: appends if room, otherwise routes through onPinDevice
-  // to keep the swap-the-LRU-tile semantics consistent.
+  // Panel-level drop: append to active tab, or legacy pin fallback.
   const [{ isOver, canDrop }, panelDropRef] = useDrop(
     () => ({
       accept: DEVICE_CAMERA_DRAG_TYPE,
       drop: (item: DeviceCameraDragItem, monitor) => {
         if (monitor.didDrop()) return;
-        onPinDevice(item.cameraId);
+        if (onAddToActiveTab) onAddToActiveTab(item.cameraId);
+        else onPinDevice?.(item.cameraId);
       },
       collect: (monitor) => ({
         isOver: monitor.isOver({ shallow: true }),
         canDrop: monitor.canDrop(),
       }),
     }),
-    [onPinDevice],
+    [onAddToActiveTab, onPinDevice],
   );
 
   const showPanelDropAccent = isOver && canDrop;
@@ -291,8 +316,10 @@ export function VideoPanel({
     onFullscreenToggle,
     onAssignmentClick,
     onTileFocus,
+    onTileHover,
     onDesignateTarget,
-    onHeroChange,
+    onActiveFeedChange,
+    onAddToActiveTab,
   });
   refs.current = {
     feeds,
@@ -306,8 +333,10 @@ export function VideoPanel({
     onFullscreenToggle,
     onAssignmentClick,
     onTileFocus,
+    onTileHover,
     onDesignateTarget,
-    onHeroChange,
+    onActiveFeedChange,
+    onAddToActiveTab,
   };
 
   type TileHandlers = {
@@ -323,6 +352,7 @@ export function VideoPanel({
     onAssignmentClick: () => void;
     onDropDevice: (item: DeviceCameraDragItem) => void;
     onFocus: () => void;
+    onHoverChange: (hovering: boolean) => void;
     onResetView: () => void;
     onDesignateTarget: (normX: number, normY: number) => void;
     onPromoteToHero: () => void;
@@ -367,10 +397,22 @@ export function VideoPanel({
         const feed = refs.current.feeds[index];
         if (feed?.cameraId) refs.current.onAssignmentClick?.(feed.cameraId);
       },
-      onDropDevice: (item) => refs.current.handleSwapFeed(index, item.cameraId),
+      onDropDevice: (item) => {
+        if (refs.current.onAddToActiveTab) {
+          refs.current.onAddToActiveTab(item.cameraId);
+        } else {
+          refs.current.handleSwapFeed(index, item.cameraId);
+        }
+      },
       onFocus: () => {
         const feed = refs.current.feeds[index];
         if (feed?.cameraId) refs.current.onTileFocus?.(feed.cameraId);
+        refs.current.onActiveFeedChange(index);
+      },
+      onHoverChange: (hovering) => {
+        const feed = refs.current.feeds[index];
+        if (!feed?.cameraId) return;
+        refs.current.onTileHover?.(hovering ? feed.cameraId : null);
       },
       onResetView: () =>
         refs.current.updateFeed(index, { designateMode: false, showDetections: false }),
@@ -378,7 +420,7 @@ export function VideoPanel({
         const feed = refs.current.feeds[index];
         if (feed?.cameraId) refs.current.onDesignateTarget?.(feed.cameraId, normX, normY);
       },
-      onPromoteToHero: () => refs.current.onHeroChange(index),
+      onPromoteToHero: () => refs.current.onActiveFeedChange(index),
       onSwapAsset: (cameraId) => refs.current.handleSwapFeed(index, cameraId),
     };
     cache[index] = handlers;
@@ -420,12 +462,14 @@ export function VideoPanel({
         onAssignmentClick={h.onAssignmentClick}
         onDropDevice={h.onDropDevice}
         onFocus={h.onFocus}
+        onHoverChange={h.onHoverChange}
         onResetView={h.onResetView}
         onDesignateTarget={h.onDesignateTarget}
         onPromoteToHero={tileVariant === 'thumb' ? h.onPromoteToHero : undefined}
         availableAssets={safeAvailableAssets}
         pinnedCameraIds={pinnedCameraIds}
         onSwapAsset={h.onSwapAsset}
+        showAssetPicker={showTileAssetPicker}
       />
     );
   };
@@ -434,7 +478,9 @@ export function VideoPanel({
   switch (resolvedLayout) {
     case 'single': {
       layoutBody = (
-        <VideoTileSlot className="flex-1">{renderTile(0, 'fill')}</VideoTileSlot>
+        <VideoTileSlot className="flex-1">
+          {renderTile(safeActiveFeedIndex, 'fill')}
+        </VideoTileSlot>
       );
       break;
     }
@@ -442,7 +488,7 @@ export function VideoPanel({
       layoutBody = (
         <div className="flex-1 min-h-0 flex flex-col">
           <VideoTileSlot className="flex-1">{renderTile(0, 'fill')}</VideoTileSlot>
-          <VideoTileSlot className="flex-1 border-t border-white/10">
+          <VideoTileSlot className="flex-1 border-t border-state-hover-strong">
             {renderTile(1, 'fill')}
           </VideoTileSlot>
         </div>
@@ -452,7 +498,7 @@ export function VideoPanel({
     case 'grid-2x2': {
       layoutBody = (
         <div
-          className="flex-1 min-h-0 grid grid-cols-2 grid-rows-2 gap-px bg-white/10"
+          className="flex-1 min-h-0 grid grid-cols-2 grid-rows-2 gap-px bg-state-hover-strong"
           data-testid="video-panel-grid"
         >
           {feeds.slice(0, 4).map((_, i) => (
@@ -465,14 +511,14 @@ export function VideoPanel({
     case 'hero-filmstrip': {
       const thumbIndices = feeds
         .map((_, i) => i)
-        .filter((i) => i !== safeHeroIndex);
+        .filter((i) => i !== safeActiveFeedIndex);
       layoutBody = (
-        <div className="flex-1 min-h-0 flex flex-col gap-px bg-white/10">
+        <div className="flex-1 min-h-0 flex flex-col gap-px bg-state-hover-strong">
           <VideoTileSlot
             className="basis-[78%]"
             testId="video-panel-hero"
           >
-            {renderTile(safeHeroIndex, 'hero')}
+            {renderTile(safeActiveFeedIndex, 'hero')}
           </VideoTileSlot>
           <div
             className="flex-1 min-h-0 grid grid-flow-col auto-cols-fr gap-px"
@@ -493,10 +539,12 @@ export function VideoPanel({
   }
 
   // Picker is hidden when there's at most one feed (no meaningful
-  // layout choice to make). It is positioned `inline-end` so it
+  // layout choice to make), or when the host suppresses it via
+  // `showLayoutPicker={false}` because it renders the picker in its
+  // own chrome (panel header). Positioned `inline-end` so it
   // mirrors with app direction; the picker's own contents stay LTR
   // because the layout-shape glyphs would otherwise read backwards.
-  const showPicker = feeds.length >= 2;
+  const showPicker = showLayoutPicker && feeds.length >= 2;
 
   return (
     <div
@@ -507,10 +555,14 @@ export function VideoPanel({
       // `bg-surface-void` is the formal token for this case — see
       // palette.css §2 for why surface-void exists.
       className={`h-full flex flex-col bg-surface-void relative transition-shadow duration-150 ease-out
-        ${showPanelDropAccent ? 'shadow-[inset_0_0_0_2px_rgba(56,189,248,0.45)]' : ''}`}
+        ${showPanelDropAccent ? 'shadow-[inset_0_0_0_2px_color-mix(in_oklch,var(--accent-info)_45%,transparent)]' : ''}`}
       data-testid="video-panel"
     >
-      {layoutBody}
+      {feeds.length === 0 ? (
+        <VideoPanelEmptyState />
+      ) : (
+        layoutBody
+      )}
 
       {showPicker && (
         <div className="absolute top-2 end-2 z-30 pointer-events-auto">

@@ -1,28 +1,28 @@
 /**
  * CamerasPanel — wires `<VideoPanel>` (camera-v2) into the
- * Gridblock left panel. Driven by `useVideoFeeds` for the feeds
- * + layout slice and `useDevicesAndAssets` for the per-camera /
- * per-drone label, status, and asset-picker derivations that the
- * legacy dashboard owns inline.
+ * Gridblock end panel and owns its own panel chrome so the header
+ * can host camera-specific affordances (asset tabs, layout picker).
  *
- * UX trade-off the v2 surface accepts: in the single-left-panel
- * model the operator can't see the target list and the videos
- * simultaneously the way the legacy three-column layout allows.
- * Validate with the user before cutover; if it bites, the shell
- * supports adding a 4th wide-column slot.
+ * Driven by `useVideoFeeds` for the feeds + layout slice and
+ * `useDevicesAndAssets` for the per-camera / per-drone label,
+ * status, and asset-picker derivations that the legacy dashboard
+ * owns inline.
  */
-import { memo, useCallback, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { VideoPanel } from "@/app/components/camera-v2/VideoPanel";
+import { CameraTabStrip } from "@/app/components/camera-v2/CameraTabStrip";
+import { VideoLayoutPicker } from "@/app/components/camera-v2/VideoLayoutPicker";
 import { CAMERA_ASSETS } from "@/app/components/tacticalAssets";
 import type { PickerAsset } from "@/app/components/camera-v2/CameraAssetPicker";
 import type {
   CameraFeed,
+  CameraFeedTab,
   CameraStatus,
   DetectionBox,
   LayoutKind,
 } from "@/app/components/camera-v2/types";
 import type { FriendlyDrone } from "@/app/hooks/useTacticalTargets";
-import { MAX_VIDEO_FEEDS } from "@/app/hooks/useVideoFeeds";
+import { GridblockPanel } from "@/app/components/gridblock";
 
 const VIDEO_SRC_DAY = "/videos/target-feed.mov";
 const VIDEO_SRC_NIGHT = "/videos/weapon-feed.mp4";
@@ -35,14 +35,24 @@ interface AssetLike {
 }
 
 interface CamerasPanelProps {
+  title: string;
+  onClose: () => void;
+  closeAriaLabel: string;
+  closeTooltip: string;
+
+  tabs: CameraFeedTab[];
+  activeTabIndex: number;
+  onActivateTab: (index: number) => void;
+  onCloseTab: (index: number) => void;
+
   feeds: CameraFeed[];
   onFeedsChange: (feeds: CameraFeed[]) => void;
 
   layout: LayoutKind;
   onLayoutChange: (next: LayoutKind) => void;
 
-  heroIndex: number;
-  onHeroChange: (next: number) => void;
+  activeFeedIndex: number;
+  onActiveFeedChange: (next: number) => void;
 
   cameraOwnership: Record<string, "self" | "other" | "none">;
   setCameraOwnership: React.Dispatch<
@@ -55,6 +65,15 @@ interface CamerasPanelProps {
 
   allDevices: ReadonlyArray<AssetLike>;
   friendlyDrones: ReadonlyArray<FriendlyDrone>;
+
+  pinnedDeviceIds: ReadonlySet<string>;
+  onOpenDeviceTab: (deviceId: string) => void;
+  onAddToActiveTab: (deviceId: string) => void;
+  onAddToTab: (tabIndex: number, deviceId: string) => void;
+  onMergeTab: (sourceTabIndex: number, targetTabIndex: number) => void;
+  onUnpinFeed: (deviceId: string) => void;
+  onTileFocus: (cameraId: string) => void;
+  onTileHover: (cameraId: string | null) => void;
 }
 
 /**
@@ -64,18 +83,34 @@ interface CamerasPanelProps {
 const EMPTY_DETECTIONS: Record<string, DetectionBox[]> = {};
 
 function CamerasPanelImpl({
+  title,
+  onClose,
+  closeAriaLabel,
+  closeTooltip,
+  tabs,
+  activeTabIndex,
+  onActivateTab,
+  onCloseTab,
   feeds,
   onFeedsChange,
   layout,
   onLayoutChange,
-  heroIndex,
-  onHeroChange,
+  activeFeedIndex,
+  onActiveFeedChange,
   cameraOwnership,
   setCameraOwnership,
   cameraZoomById,
   setCameraZoomById,
   allDevices,
   friendlyDrones,
+  pinnedDeviceIds,
+  onOpenDeviceTab,
+  onAddToActiveTab,
+  onAddToTab,
+  onMergeTab,
+  onUnpinFeed,
+  onTileFocus,
+  onTileHover,
 }: CamerasPanelProps) {
   // Local UI state that doesn't belong on the page yet — the
   // legacy dashboard kept these here too. Fullscreen toggle is a
@@ -102,6 +137,11 @@ function CamerasPanelImpl({
           type: d.type as "camera" | "drone",
         })),
     [allDevices, cameraLabelById],
+  );
+
+  const pinnedCameraIds = useMemo(
+    () => new Set(pinnedDeviceIds),
+    [pinnedDeviceIds],
   );
 
   const statusByCameraId = useMemo<Record<string, CameraStatus>>(() => {
@@ -155,8 +195,6 @@ function CamerasPanelImpl({
   );
   const handleDesignateTarget = useCallback(
     (cameraId: string, normX: number, normY: number) => {
-      // No targeting backend yet — record receipt; the in-feed
-      // flash from `DesignateTargetOverlay` is the visual.
       // eslint-disable-next-line no-console
       console.info("[v2] designate target", {
         cameraId,
@@ -167,81 +205,71 @@ function CamerasPanelImpl({
     [],
   );
 
-  // LRU swap path for `<VideoPanel onPinDevice>` — same logic as
-  // the legacy dashboard. Empty slot → fill; room → append; full
-  // → replace the camera focused least recently.
-  const focusOrderRef = useRef<string[]>([]);
-  const handleTileFocus = useCallback((cameraId: string) => {
-    if (!cameraId) return;
-    focusOrderRef.current = [
-      cameraId,
-      ...focusOrderRef.current.filter((id) => id !== cameraId),
-    ];
-  }, []);
-
-  const handlePinDevice = useCallback(
-    (deviceId: string) => {
-      const next = (() => {
-        if (feeds.some((f) => f.cameraId === deviceId)) return feeds;
-        const emptyIdx = feeds.findIndex((f) => !f.cameraId);
-        if (emptyIdx >= 0) {
-          return feeds.map((f, i) =>
-            i === emptyIdx
-              ? { ...f, cameraId: deviceId, mode: "day", playback: undefined }
-              : f,
-          );
-        }
-        if (feeds.length < MAX_VIDEO_FEEDS) {
-          return [
-            ...feeds,
-            { cameraId: deviceId, mode: "day" } as CameraFeed,
-          ];
-        }
-        const order = focusOrderRef.current;
-        const lruCameraId = [...feeds]
-          .map((f) => f.cameraId)
-          .sort((a, b) => {
-            const ai = order.indexOf(a);
-            const bi = order.indexOf(b);
-            return (ai === -1 ? Infinity : ai) - (bi === -1 ? Infinity : bi);
-          })
-          .pop();
-        if (!lruCameraId) return feeds;
-        return feeds.map((f) =>
-          f.cameraId === lruCameraId
-            ? { ...f, cameraId: deviceId, mode: "day", playback: undefined }
-            : f,
-        );
-      })();
-      if (next !== feeds) onFeedsChange(next);
-    },
-    [feeds, onFeedsChange],
-  );
+  const headerActions =
+    tabs.length > 0 ? (
+      <>
+        <CameraTabStrip
+          tabs={tabs}
+          cameraLabelById={cameraLabelById}
+          activeTabIndex={activeTabIndex}
+          onActivate={onActivateTab}
+          onClose={onCloseTab}
+          onAddToTab={onAddToTab}
+          onMergeTab={onMergeTab}
+          onUnpinFeed={onUnpinFeed}
+          availableAssets={availableAssets}
+          pinnedCameraIds={pinnedCameraIds}
+          onPin={onOpenDeviceTab}
+          canPinMore
+        />
+        {feeds.length >= 2 ? (
+          <VideoLayoutPicker
+            value={layout}
+            onChange={onLayoutChange}
+            feedCount={feeds.length}
+            variant="panelHeader"
+            className="shrink-0"
+          />
+        ) : null}
+      </>
+    ) : undefined;
 
   return (
-    <VideoPanel
-      feeds={feeds}
-      onFeedsChange={onFeedsChange}
-      cameraLabelById={cameraLabelById}
-      statusByCameraId={statusByCameraId}
-      detectionsByCameraId={EMPTY_DETECTIONS}
-      videoSrcDay={VIDEO_SRC_DAY}
-      videoSrcNight={VIDEO_SRC_NIGHT}
-      videoSrcPlayback={VIDEO_SRC_PLAYBACK}
-      fullscreen={fullscreen}
-      onFullscreenToggle={handleFullscreenToggle}
-      onTakeControl={handleTakeControl}
-      onReleaseControl={handleReleaseControl}
-      onPinDevice={handlePinDevice}
-      onTileFocus={handleTileFocus}
-      onZoomChange={handleZoomChange}
-      onDesignateTarget={handleDesignateTarget}
-      layout={layout}
-      onLayoutChange={onLayoutChange}
-      heroIndex={heroIndex}
-      onHeroChange={onHeroChange}
-      availableAssets={availableAssets}
-    />
+    <GridblockPanel
+      title={tabs.length === 0 ? title : null}
+      onClose={onClose}
+      closeAriaLabel={closeAriaLabel}
+      closeTooltip={closeTooltip}
+      headerActions={headerActions}
+      testId="dashboard-panel-cameras"
+    >
+      <VideoPanel
+        feeds={feeds}
+        onFeedsChange={onFeedsChange}
+        cameraLabelById={cameraLabelById}
+        statusByCameraId={statusByCameraId}
+        detectionsByCameraId={EMPTY_DETECTIONS}
+        videoSrcDay={VIDEO_SRC_DAY}
+        videoSrcNight={VIDEO_SRC_NIGHT}
+        videoSrcPlayback={VIDEO_SRC_PLAYBACK}
+        fullscreen={fullscreen}
+        onFullscreenToggle={handleFullscreenToggle}
+        onTakeControl={handleTakeControl}
+        onReleaseControl={handleReleaseControl}
+        onAddToActiveTab={onAddToActiveTab}
+        onTileFocus={onTileFocus}
+        onTileHover={onTileHover}
+        onZoomChange={handleZoomChange}
+        onDesignateTarget={handleDesignateTarget}
+        layout={layout}
+        onLayoutChange={onLayoutChange}
+        activeFeedIndex={activeFeedIndex}
+        onActiveFeedChange={onActiveFeedChange}
+        showLayoutPicker={false}
+        showTileAssetPicker={false}
+        availableAssets={availableAssets}
+      />
+    </GridblockPanel>
   );
 }
 

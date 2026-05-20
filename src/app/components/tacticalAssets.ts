@@ -48,10 +48,20 @@ export const LAUNCHER_ASSETS = [
   { id: 'LCHR-NVT-GAMMA', latitude: 32.4506, longitude: 35.0243 },
 ];
 
+export const FLOODLIGHT_FOV_DEG = 60;
+
+/** Stable pseudo-random compass bearing per asset id (0–359). */
+export function bearingFromAssetId(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) {
+    h = (Math.imul(31, h) + id.charCodeAt(i)) | 0;
+  }
+  return ((h % 360) + 360) % 360;
+}
+
 /**
- * Perimeter floodlights. `bearingDeg` is the lamp aim direction, used
- * by the device card's beam visualisation; the map marker itself is
- * orientation-agnostic at the current zooms.
+ * Perimeter floodlights. `bearingDeg` / `fovDeg` drive the map wedge
+ * and the device card beam stats.
  */
 export interface FloodlightAsset {
   id: string;
@@ -59,12 +69,19 @@ export interface FloodlightAsset {
   longitude: number;
   typeLabel: string;
   bearingDeg: number;
+  fovDeg: number;
 }
 
-export const FLOODLIGHT_ASSETS: FloodlightAsset[] = [
-  { id: 'FLD-NVT-PERIMETER-N', latitude: 32.4731, longitude: 34.9978, typeLabel: 'Floodlight (North)', bearingDeg: 350 },
-  { id: 'FLD-NVT-GATE-S', latitude: 32.4571, longitude: 35.0048, typeLabel: 'Floodlight (Gate)', bearingDeg: 180 },
-];
+const FLOODLIGHT_SEEDS = [
+  { id: 'FLD-NVT-PERIMETER-N', latitude: 32.4731, longitude: 34.9978, typeLabel: 'Floodlight (North)' },
+  { id: 'FLD-NVT-GATE-S', latitude: 32.4571, longitude: 35.0048, typeLabel: 'Floodlight (Gate)' },
+] as const;
+
+export const FLOODLIGHT_ASSETS: FloodlightAsset[] = FLOODLIGHT_SEEDS.map((f) => ({
+  ...f,
+  bearingDeg: bearingFromAssetId(f.id),
+  fovDeg: FLOODLIGHT_FOV_DEG,
+}));
 
 /**
  * PA speakers. `coverageRadiusM` drives the soft audible-coverage ring

@@ -9,7 +9,11 @@
 
 export { GridblockShell } from "./GridblockShell";
 export { GridblockHeader } from "./GridblockHeader";
-export { GridblockFooter } from "./GridblockFooter";
+export {
+  GridblockFooter,
+  type ScrubberMarker,
+  type ScrubberSpan,
+} from "./GridblockFooter";
 export { GridblockLeftRail } from "./GridblockLeftRail";
 export { GridblockRightRail } from "./GridblockRightRail";
 export { GridblockRailButton } from "./GridblockRailButton";

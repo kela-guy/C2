@@ -111,7 +111,7 @@ export const spec: ComponentSpec = {
       { name: 'icon-default', value: '#9ca3af (gray-400)', usage: 'Default icon color when not active' },
       { name: 'icon-box-bg', value: 'CARD_TOKENS.iconBox.defaultBg (SURFACE.level3)', usage: 'Icon box background when not active' },
       { name: 'icon-box-active-bg', value: 'CARD_TOKENS.iconBox.activeBg (#ef4444) at 20%', usage: 'Icon box tinted background when active' },
-      { name: 'chevron', value: 'text-zinc-500', usage: 'Chevron icon color' },
+      { name: 'chevron', value: 'text-slate-9', usage: 'Chevron icon color' },
     ],
     typography: [
       { name: 'title', fontFamily: 'Heebo', fontSize: '13px', fontWeight: '600', lineHeight: 'tight', usage: 'Primary heading (h2) via CARD_TOKENS.title' },

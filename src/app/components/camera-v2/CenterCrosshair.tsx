@@ -22,7 +22,7 @@ export function CenterCrosshair() {
       viewBox="0 0 100 100"
       preserveAspectRatio="none"
       aria-hidden="true"
-      className="absolute inset-0 pointer-events-none text-white/35"
+      className="absolute inset-0 pointer-events-none text-slate-12/35"
       data-testid="center-crosshair"
     >
       {/* Vertical arms (top + bottom of a 6-unit gap around centre). */}

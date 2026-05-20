@@ -19,7 +19,15 @@
  * Anything still pending is tracked in `docs/cesium-parity.md`.
  */
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useViewedAt } from '@/app/state/ViewedAtContext';
+import {
+  MotionRegistry,
+  buildMovementSamples,
+  type MovementMode,
+} from '@/lib/motion';
+import { sensorPosition } from '@/app/components/tacticalAssetIndex';
+import { useDirection } from '@/lib/direction';
 import {
   CesiumMap,
   type CesiumHtmlMarker,
@@ -43,7 +51,7 @@ import {
   SPEAKER_ASSETS,
   REGULUS_EFFECTORS,
 } from './tacticalAssets';
-import type { MapAsset } from './tacticalAssets';
+import type { FloodlightAsset, MapAsset } from './tacticalAssets';
 import {
   CameraIcon,
   RadarIcon,
@@ -56,8 +64,23 @@ import {
   DroneIcon,
   MissileIcon,
 } from './tacticalIcons';
-import { CarIcon } from '@/primitives/MapIcons';
-import { Phone } from '@/lib/icons/central';
+import { CarIcon, JamWaveIcon } from '@/primitives/MapIcons';
+import {
+  BellOff,
+  Compass,
+  Radar,
+  ExternalLink,
+  Eye,
+  MapPin,
+  Maximize2,
+  Phone,
+  Radio,
+  Search,
+  Settings,
+  Video,
+  Wrench,
+  X,
+} from '@/lib/icons/central';
 import {
   FOV_RADIUS_M,
   DRONE_FOV_RADIUS_M,
@@ -67,6 +90,10 @@ import {
 } from '@/app/lib/mapGeo';
 import { JAM_FLOW, WEAPON_FLOW, resolveNearestAsset, type FlowAsset } from '@/imports/engagementFlows';
 import { useStrings } from '@/lib/intl';
+import {
+  isMonochromeMapView,
+  type MapViewMode,
+} from '@/app/components/dashboard/mapViewMode';
 import type { Detection, RegulusEffector, LauncherEffector } from '@/imports/ListOfSystems';
 import { accentHex, slateHex } from '@/primitives/accentHex';
 
@@ -76,6 +103,7 @@ import { accentHex, slateHex } from '@/primitives/accentHex';
  * so a route switch from `?map=cesium` to default looks identical.
  *
  *   sensor FOV         → accent-info     (cyan-blue)
+ *   floodlight beam    → accent-warning  (amber)
  *   ECM coverage       → accent-success  (green)
  *   weapon lock        → accent-danger   (red)
  *   active drone trail → slate-12        (white-ish)
@@ -83,6 +111,7 @@ import { accentHex, slateHex } from '@/primitives/accentHex';
  *   raw track          → accent-magenta  (purple-ish)
  */
 const CESIUM_FOV = accentHex('info');
+const CESIUM_FLOODLIGHT_FOV = accentHex('warning');
 const CESIUM_JAM = accentHex('success');
 const CESIUM_TRAIL = slateHex(12);
 const CESIUM_TRAIL_CASING = '#000000';
@@ -160,13 +189,21 @@ export interface CesiumTacticalMapProps {
    * marketing demo route to dispatch units to suspicious vehicles.
    */
   forceUnits?: ForceUnitMarker[];
+  /** Operator-selected basemap style (Ion imagery vs monochrome terrain). */
+  mapViewMode?: MapViewMode;
   /**
-   * When true, renders the basemap in dark monochrome — saturation 0,
-   * brightness < 1, contrast > 1. The marketing demo route turns this on
-   * so the scene-ography reads cleanly on screen recordings; the
-   * production dashboard leaves it off for the full Bing imagery.
+   * Selected closed historical track's full recorded path, rendered
+   * as a dim white "what happened" line behind the bright active
+   * trail. Decoupled from the scrubber — appears the instant the
+   * operator opens a track card and stays until they close it. The
+   * bright trail (from `targets[].trail`) paints over the dim line
+   * up to `viewedAtMs`, so the two layers together tell "the full
+   * story so far + how far the scrubber has played."
    */
-  darkMonochromeMap?: boolean;
+  historicalTrackOverlay?: {
+    id: string;
+    fullPath: { lat: number; lon: number }[];
+  } | null;
 }
 
 /**
@@ -399,15 +436,87 @@ function detectionInteractionState(d: Detection): InteractionState {
   }
 }
 
+type ContextMenuItemDef = {
+  id: string;
+  label: string;
+  icon: ReactNode;
+  disabled?: boolean;
+  destructive?: boolean;
+  separatorBefore?: boolean;
+};
+
+const MENU_ICON_SIZE = 16;
+
+function contextMenuIcon(id: string, destructive?: boolean): ReactNode {
+  const cls = destructive
+    ? 'size-4 shrink-0 text-accent-danger'
+    : 'size-4 shrink-0 text-slate-9';
+  switch (id) {
+    case 'mitigate':
+    case 'activate':
+      return (
+        <span className={cls} aria-hidden>
+          <JamWaveIcon size={MENU_ICON_SIZE} />
+        </span>
+      );
+    case 'mitigate-all':
+      return <Radio size={MENU_ICON_SIZE} className={cls} aria-hidden />;
+    case 'investigate':
+      return <Search size={MENU_ICON_SIZE} className={cls} aria-hidden />;
+    case 'track':
+      return <Eye size={MENU_ICON_SIZE} className={cls} aria-hidden />;
+    case 'open-card':
+    case 'show-video':
+      return <Maximize2 size={MENU_ICON_SIZE} className={cls} aria-hidden />;
+    case 'view-feed':
+      return <Video size={MENU_ICON_SIZE} className={cls} aria-hidden />;
+    case 'open-tab':
+    case 'edit':
+      return <ExternalLink size={MENU_ICON_SIZE} className={cls} aria-hidden />;
+    case 'show-on-map':
+      return <Compass size={MENU_ICON_SIZE} className={cls} aria-hidden />;
+    case 'show-coverage':
+      return <Radar size={MENU_ICON_SIZE} className={cls} aria-hidden />;
+    case 'copy-coordinates':
+      return <MapPin size={MENU_ICON_SIZE} className={cls} aria-hidden />;
+    case 'mute-alerts':
+      return <BellOff size={MENU_ICON_SIZE} className={cls} aria-hidden />;
+    case 'settings':
+      return <Settings size={MENU_ICON_SIZE} className={cls} aria-hidden />;
+    case 'calibrate':
+      return <Wrench size={MENU_ICON_SIZE} className={cls} aria-hidden />;
+    case 'dismiss':
+      return <X size={MENU_ICON_SIZE} className={cls} aria-hidden />;
+    default:
+      return null;
+  }
+}
+
+function menuItem(
+  id: string,
+  label: string,
+  opts?: Omit<ContextMenuItemDef, 'id' | 'label' | 'icon'>,
+): ContextMenuItemDef {
+  return {
+    id,
+    label,
+    icon: contextMenuIcon(id, opts?.destructive),
+    ...opts,
+  };
+}
+
 /**
- * Right-click context-menu state. Mirrors what TacticalMap's Mapbox
- * implementation feeds back through `onContextMenuAction`.
+ * Right-click context-menu state. Item list mirrors `TacticalMap.tsx`
+ * (Mapbox) — built at open time from the clicked entity.
  */
 type ContextMenuState = {
   x: number;
   y: number;
   elementType: 'target' | 'sensor' | 'effector';
   elementId: string;
+  headerLabel?: string;
+  coordinates?: string;
+  items: ContextMenuItemDef[];
 };
 
 function CesiumTacticalMapImpl({
@@ -434,18 +543,60 @@ function CesiumTacticalMapImpl({
   controlIndicator,
   planningScanViz,
   forceUnits,
-  darkMonochromeMap,
+  mapViewMode = 'current',
+  historicalTrackOverlay,
   onMarkerClick,
   onAssetClick,
   onContextMenuAction,
 }: CesiumTacticalMapProps) {
   const t = useStrings().map;
+  const viewedAt = useViewedAt();
   const offlineSet = useMemo(() => new Set(offlineAssetIds ?? []), [offlineAssetIds]);
+  const motionRegistryRef = useRef<MotionRegistry | null>(null);
+  if (!motionRegistryRef.current) {
+    motionRegistryRef.current = new MotionRegistry();
+  }
+  const movementMode: MovementMode = viewedAt.isLive ? 'live' : 'replay';
+  const movementSamples = useMemo(() => {
+    const wallNow = Date.now();
+    const sourceTimeMs = movementMode === 'live' ? wallNow : viewedAt.viewedAtMs;
+    const samples = buildMovementSamples(
+      targets,
+      friendlyDrones,
+      sourceTimeMs,
+      movementMode,
+      offlineSet,
+      targetHeadingFromTrail,
+    );
+    const registry = motionRegistryRef.current!;
+    registry.ingest(samples);
+    if (movementMode === 'live') {
+      registry.advance(wallNow);
+    }
+    return samples;
+  }, [targets, friendlyDrones, viewedAt.viewedAtMs, movementMode, offlineSet]);
+
+  const motionPosition = useCallback(
+    (id: string, lat: number, lon: number) => {
+      const q = motionRegistryRef.current?.peek(id);
+      if (q) return { lat: q.lat, lon: q.lon, headingDeg: q.headingDeg };
+      return { lat, lon, headingDeg: null as number | null };
+    },
+    [],
+  );
   const highlightedSensorSet = useMemo(
     () => new Set(highlightedSensorIds ?? []),
     [highlightedSensorIds],
   );
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [coveragePinnedIds, setCoveragePinnedIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const setFlyToRef = useRef<(req: CesiumMapFlyTo) => void>(() => {});
+  const cameraIds = useMemo(
+    () => new Set(CAMERA_ASSETS.map((a) => a.id)),
+    [],
+  );
   // Tracks which marker the cursor is currently over (DOM-level hover).
   // Drives the white-on-hover ring + tooltip visibility regardless of
   // whether the hover came from this map or from the card sidebar.
@@ -491,19 +642,122 @@ function CesiumTacticalMapImpl({
   onAssetClickRef.current = onAssetClick;
   onContextMenuActionRef.current = onContextMenuAction;
 
+  const buildContextMenuItems = useCallback(
+    (
+      elementType: ContextMenuState['elementType'],
+      elementId: string,
+      headerLabel?: string,
+    ): Omit<ContextMenuState, 'x' | 'y'> => {
+      const m = t.contextMenu;
+      const isOffline = offlineSet.has(elementId);
+
+      if (elementType === 'target') {
+        const target = targets.find((tg) => tg.id === elementId);
+        const items: ContextMenuItemDef[] = [];
+        const canJam =
+          target &&
+          target.classifiedType !== 'bird' &&
+          target.mitigationStatus !== 'mitigated';
+        if (canJam) {
+          items.push(
+            menuItem('mitigate', m.target.mitigate),
+            menuItem('mitigate-all', m.target.mitigateAll),
+          );
+        }
+        if (target?.mitigationStatus === 'mitigated') {
+          items.push(menuItem('investigate', m.target.investigate));
+        }
+        items.push(
+          menuItem('track', m.target.track),
+          menuItem('open-card', m.target.openCard),
+          menuItem('copy-coordinates', m.target.copyLocation, {
+            separatorBefore: true,
+            disabled: !target?.coordinates,
+          }),
+          menuItem('dismiss', m.target.cancel, {
+            destructive: true,
+            separatorBefore: true,
+          }),
+        );
+        return {
+          elementType,
+          elementId,
+          headerLabel: target?.name ?? elementId,
+          coordinates: target?.coordinates,
+          items,
+        };
+      }
+
+      if (elementType === 'effector') {
+        return {
+          elementType,
+          elementId,
+          headerLabel: headerLabel ?? elementId,
+          items: [
+            menuItem('show-on-map', m.asset.showOnMap),
+            menuItem('show-coverage', m.asset.showCoverage),
+            menuItem('activate', m.asset.activateJam, { disabled: isOffline }),
+            menuItem('mute-alerts', m.asset.muteAlerts, {
+              disabled: isOffline,
+              separatorBefore: true,
+            }),
+            menuItem('settings', m.asset.advancedSettings, { disabled: isOffline }),
+            menuItem('calibrate', m.asset.calibrate, { disabled: isOffline }),
+            menuItem('edit', m.asset.editSystem, { disabled: isOffline }),
+          ],
+        };
+      }
+
+      const isCamera = cameraIds.has(elementId);
+      const assetItems: ContextMenuItemDef[] = [];
+      if (isCamera) {
+        assetItems.push(
+          menuItem('show-video', m.asset.showVideo, { disabled: isOffline }),
+          menuItem('view-feed', m.asset.viewFeedPanel, { disabled: isOffline }),
+        );
+      }
+      assetItems.push(
+        menuItem('open-tab', m.asset.openTab, { disabled: isOffline }),
+        menuItem('show-on-map', m.asset.showOnMap),
+        menuItem('show-coverage', m.asset.showCoverage),
+        menuItem('mute-alerts', m.asset.muteAlerts, {
+          disabled: isOffline,
+          separatorBefore: true,
+        }),
+        menuItem('settings', m.asset.advancedSettings, { disabled: isOffline }),
+        menuItem('calibrate', m.asset.calibrate, { disabled: isOffline }),
+        menuItem('edit', m.asset.editSystem, { disabled: isOffline }),
+      );
+
+      return {
+        elementType,
+        elementId,
+        headerLabel: headerLabel ?? elementId,
+        items: assetItems,
+      };
+    },
+    [cameraIds, offlineSet, t.contextMenu, targets],
+  );
+
   const openContextMenu = useCallback(
-    (e: React.MouseEvent, elementType: ContextMenuState['elementType'], elementId: string) => {
-      // Only open when the host page actually wants to handle context
-      // actions. The marketing-demo route, for instance, leaves
-      // `onContextMenuAction` undefined to keep the recording surface
-      // clean — without this guard, right-clicking a marker would still
-      // surface the (Hebrew, dashboard-specific) menu over the demo.
+    (
+      e: React.MouseEvent,
+      elementType: ContextMenuState['elementType'],
+      elementId: string,
+      headerLabel?: string,
+    ) => {
       if (!onContextMenuActionRef.current) return;
       e.preventDefault();
       e.stopPropagation();
-      setContextMenu({ x: e.clientX, y: e.clientY, elementType, elementId });
+      const built = buildContextMenuItems(elementType, elementId, headerLabel);
+      if (built.items.length === 0) return;
+      setContextMenu({
+        x: e.clientX,
+        y: e.clientY,
+        ...built,
+      });
     },
-    [],
+    [buildContextMenuItems],
   );
 
   const closeContextMenu = useCallback(() => setContextMenu(null), []);
@@ -511,10 +765,59 @@ function CesiumTacticalMapImpl({
   const fireContextAction = useCallback(
     (action: string) => {
       if (!contextMenu) return;
-      onContextMenuActionRef.current?.(action, contextMenu.elementType, contextMenu.elementId);
+      if (action === 'copy-coordinates' && contextMenu.coordinates) {
+        void navigator.clipboard.writeText(contextMenu.coordinates);
+        setContextMenu(null);
+        return;
+      }
+      if (action === 'show-coverage') {
+        setCoveragePinnedIds((prev) => {
+          const next = new Set(prev);
+          if (next.has(contextMenu.elementId)) next.delete(contextMenu.elementId);
+          else next.add(contextMenu.elementId);
+          return next;
+        });
+        setContextMenu(null);
+        return;
+      }
+      if (action === 'show-on-map') {
+        let lat: number | undefined;
+        let lon: number | undefined;
+        if (contextMenu.elementType === 'target' && contextMenu.coordinates) {
+          const [a, b] = contextMenu.coordinates.split(',').map((s) => parseFloat(s.trim()));
+          lat = a;
+          lon = b;
+        } else {
+          const pos =
+            sensorPosition(contextMenu.elementId) ??
+            regulusEffectors?.find((r) => r.id === contextMenu.elementId) ??
+            launcherEffectors?.find((l) => l.id === contextMenu.elementId);
+          if (pos) {
+            lat = 'lat' in pos ? pos.lat : undefined;
+            lon = 'lon' in pos ? pos.lon : undefined;
+          }
+          if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+            const drone = friendlyDrones?.find((d) => d.id === contextMenu.elementId);
+            if (drone) {
+              lat = drone.lat;
+              lon = drone.lon;
+            }
+          }
+        }
+        if (Number.isFinite(lat) && Number.isFinite(lon)) {
+          setFlyToRef.current({ lat: lat!, lon: lon!, heightM: 5_000, durationSec: 0.8 });
+        }
+        setContextMenu(null);
+        return;
+      }
+      onContextMenuActionRef.current?.(
+        action,
+        contextMenu.elementType,
+        contextMenu.elementId,
+      );
       setContextMenu(null);
     },
-    [contextMenu],
+    [contextMenu, friendlyDrones, launcherEffectors, regulusEffectors],
   );
 
   /**
@@ -553,10 +856,11 @@ function CesiumTacticalMapImpl({
     if (!target) return null;
     if (target.entityStage !== 'classified') return null;
 
-    const [tLat, tLon] = (target.coordinates ?? '')
+    const [rawLat, rawLon] = (target.coordinates ?? '')
       .split(',')
       .map((s) => parseFloat(s.trim()));
-    if (!Number.isFinite(tLat) || !Number.isFinite(tLon)) return null;
+    if (!Number.isFinite(rawLat) || !Number.isFinite(rawLon)) return null;
+    const targetPos = motionPosition(target.id, rawLat, rawLon);
 
     const buildPair = (
       flow: EngagementFlowKind,
@@ -566,8 +870,8 @@ function CesiumTacticalMapImpl({
       flowDef: typeof JAM_FLOW | typeof WEAPON_FLOW,
     ): EngagementPair => ({
       flow,
-      targetLat: tLat,
-      targetLon: tLon,
+      targetLat: targetPos.lat,
+      targetLon: targetPos.lon,
       effLat: asset.lat,
       effLon: asset.lon,
       effId: asset.id,
@@ -599,7 +903,7 @@ function CesiumTacticalMapImpl({
       if (phase === 'mitigating' && target.mitigatingEffectorId) {
         const eff = effectors.find((e) => e.id === target.mitigatingEffectorId);
         if (eff) {
-          return buildPair('jam', eff, haversineDistanceM(tLat, tLon, eff.lat, eff.lon), phase, JAM_FLOW);
+          return buildPair('jam', eff, haversineDistanceM(targetPos.lat, targetPos.lon, eff.lat, eff.lon), phase, JAM_FLOW);
         }
       }
 
@@ -607,13 +911,13 @@ function CesiumTacticalMapImpl({
       if (hoveredSensorIdFromCard) {
         const eff = effectors.find((e) => e.id === hoveredSensorIdFromCard);
         if (eff) {
-          return buildPair('jam', eff, haversineDistanceM(tLat, tLon, eff.lat, eff.lon), phase, JAM_FLOW);
+          return buildPair('jam', eff, haversineDistanceM(targetPos.lat, targetPos.lon, eff.lat, eff.lon), phase, JAM_FLOW);
         }
       }
 
       // 3 + 4. User override → closest available.
       const overrideId = selectedEffectorIds?.get(activeTargetId);
-      const resolved = resolveNearestAsset(tLat, tLon, effectors, JAM_FLOW.availableFilter, overrideId);
+      const resolved = resolveNearestAsset(targetPos.lat, targetPos.lon, effectors, JAM_FLOW.availableFilter, overrideId);
       if (resolved.active) {
         return buildPair('jam', resolved.active.asset, resolved.active.km * 1000, phase, JAM_FLOW);
       }
@@ -636,19 +940,19 @@ function CesiumTacticalMapImpl({
       if (target.pointingLauncherId) {
         const launcher = launchers.find((l) => l.id === target.pointingLauncherId);
         if (launcher) {
-          return buildPair('weapon', launcher, haversineDistanceM(tLat, tLon, launcher.lat, launcher.lon), phase, WEAPON_FLOW);
+          return buildPair('weapon', launcher, haversineDistanceM(targetPos.lat, targetPos.lon, launcher.lat, launcher.lon), phase, WEAPON_FLOW);
         }
       }
 
       if (hoveredSensorIdFromCard) {
         const launcher = launchers.find((l) => l.id === hoveredSensorIdFromCard);
         if (launcher) {
-          return buildPair('weapon', launcher, haversineDistanceM(tLat, tLon, launcher.lat, launcher.lon), phase, WEAPON_FLOW);
+          return buildPair('weapon', launcher, haversineDistanceM(targetPos.lat, targetPos.lon, launcher.lat, launcher.lon), phase, WEAPON_FLOW);
         }
       }
 
       const overrideId = selectedLauncherIds?.get(activeTargetId);
-      const resolved = resolveNearestAsset(tLat, tLon, launchers, WEAPON_FLOW.availableFilter, overrideId);
+      const resolved = resolveNearestAsset(targetPos.lat, targetPos.lon, launchers, WEAPON_FLOW.availableFilter, overrideId);
       if (resolved.active) {
         return buildPair('weapon', resolved.active.asset, resolved.active.km * 1000, phase, WEAPON_FLOW);
       }
@@ -665,6 +969,8 @@ function CesiumTacticalMapImpl({
     selectedLauncherIds,
     hoveredSensorIdFromCard,
     jammingTargetId,
+    movementSamples,
+    motionPosition,
   ]);
 
   /**
@@ -702,7 +1008,7 @@ function CesiumTacticalMapImpl({
       icon: ReactNode,
       label: string,
       surfaceSize: number = SENSOR_SURFACE,
-      fov?: { rangeM: number; bearingDeg: number; widthDeg: number },
+      fov?: { rangeM: number; bearingDeg: number; widthDeg: number; color?: string },
       ringSize: number = SENSOR_RING,
     ): CesiumHtmlMarker => {
       const isOffline = offlineSet.has(id);
@@ -728,9 +1034,11 @@ function CesiumTacticalMapImpl({
       // Fill opacity matches Mapbox's `FRIENDLY_FOV_FILL_PAINT` (0.40) so the
       // wedge reads at a glance over satellite imagery; highlighted sensors
       // bump up further to call out the active target's contributors.
-      const showFov = !isOffline && (isHovered || isSelected || isHighlighted);
+      const showFov =
+        !isOffline &&
+        (isHovered || isSelected || isHighlighted || coveragePinnedIds.has(id));
       const fovOpacity = isHighlighted ? 0.55 : 0.4;
-      const fovColor = CESIUM_FOV;
+      const fovColor = fov?.color ?? CESIUM_FOV;
 
       // Fingerprint covers everything that affects the rendered marker
       // shape; lat/lon/icon/label/sizes are static for a given id so
@@ -763,7 +1071,7 @@ function CesiumTacticalMapImpl({
           ? { rangeM: fov.rangeM, bearingDeg: fov.bearingDeg, widthDeg: fov.widthDeg, color: fovColor, opacity: fovOpacity }
           : undefined,
         onClick: () => onAssetClickRef.current?.(id),
-        onContextMenu: (e) => openContextMenu(e, 'sensor', id),
+        onContextMenu: (e) => openContextMenu(e, 'sensor', id, label),
         onMouseEnter: () => enterMarker(id),
         onMouseLeave: () => leaveMarker(id),
       };
@@ -771,6 +1079,7 @@ function CesiumTacticalMapImpl({
       return fresh;
     },
     [
+      coveragePinnedIds,
       offlineSet,
       selectedAssetId,
       hoveredSensorIdFromCard,
@@ -786,6 +1095,16 @@ function CesiumTacticalMapImpl({
       rangeM: FOV_RADIUS_M,
       bearingDeg: asset.bearingDeg,
       widthDeg: asset.fovDeg,
+    }),
+    [],
+  );
+
+  const floodlightFov = useCallback(
+    (asset: FloodlightAsset) => ({
+      rangeM: FOV_RADIUS_M,
+      bearingDeg: asset.bearingDeg,
+      widthDeg: asset.fovDeg,
+      color: CESIUM_FLOODLIGHT_FOV,
     }),
     [],
   );
@@ -824,21 +1143,24 @@ function CesiumTacticalMapImpl({
     for (const l of LAUNCHER_ASSETS) {
       push(buildFriendlyAsset(l.id, l.latitude, l.longitude, <LauncherIcon size={LAUNCHER_GLYPH} />, l.id));
     }
-    // Floodlights + PA speakers: rendered as plain friendly assets
-    // (no FOV cone) so the operator can see where these tools sit on
-    // the ground. On/off state is driven by the device cards and
-    // shouldn't add a heavy on-map visual at rest — when an operator
-    // toggles a speaker on or a floodlight beam, that affordance can
-    // be threaded through here later via dedicated marker slices, the
-    // same way Regulus effectors live in `regulusEffectorMarkers`.
     for (const f of FLOODLIGHT_ASSETS) {
-      push(buildFriendlyAsset(f.id, f.latitude, f.longitude, <FloodlightIcon />, f.typeLabel));
+      push(
+        buildFriendlyAsset(
+          f.id,
+          f.latitude,
+          f.longitude,
+          <FloodlightIcon />,
+          f.typeLabel,
+          SENSOR_SURFACE,
+          floodlightFov(f),
+        ),
+      );
     }
     for (const s of SPEAKER_ASSETS) {
       push(buildFriendlyAsset(s.id, s.latitude, s.longitude, <SpeakerIcon />, s.typeLabel));
     }
     return out;
-  }, [buildFriendlyAsset, sensorFov]);
+  }, [buildFriendlyAsset, floodlightFov, sensorFov]);
 
   /**
    * Slice 2 — Regulus effectors. Friendly assets with coverage-ring +
@@ -870,7 +1192,8 @@ function CesiumTacticalMapImpl({
             ? 'selected'
             : 'default';
       const showHoverEffect = isHovered || isEngaged;
-      const showCoverage = showHoverEffect || isJamming;
+      const showCoverage =
+        showHoverEffect || isJamming || coveragePinnedIds.has(e.id);
       const fingerprint = `${state}|${showHoverEffect ? '1' : '0'}|${showCoverage ? '1' : '0'}|${isJamming ? '1' : '0'}|${e.coverageRadiusM}|${e.name}`;
       const cached = cache.get(e.id);
       if (cached && cached.fingerprint === fingerprint) {
@@ -898,7 +1221,7 @@ function CesiumTacticalMapImpl({
         coverageRadiusM: showCoverage ? e.coverageRadiusM : undefined,
         coverageColor: isJamming ? CESIUM_JAM : CESIUM_FOV,
         onClick: () => onAssetClickRef.current?.(e.id),
-        onContextMenu: (ev) => openContextMenu(ev, 'effector', e.id),
+        onContextMenu: (ev) => openContextMenu(ev, 'effector', e.id, e.name),
         onMouseEnter: () => enterMarker(e.id),
         onMouseLeave: () => leaveMarker(e.id),
       };
@@ -910,6 +1233,7 @@ function CesiumTacticalMapImpl({
     }
     return out;
   }, [
+    coveragePinnedIds,
     regulusEffectors,
     jammingJammerAssetId,
     hoveredSensorIdFromCard,
@@ -1057,6 +1381,8 @@ function CesiumTacticalMapImpl({
       }
 
       const style = resolveMarkerStyle(state, 'friendly');
+      const pos = motionPosition(d.id, d.lat, d.lon);
+      const fovBearing = pos.headingDeg ?? d.headingDeg;
       const fresh: CesiumHtmlMarker = {
         id: d.id,
         lat: d.lat,
@@ -1080,10 +1406,10 @@ function CesiumTacticalMapImpl({
             pulse={isHovered || isSelected}
           />
         ),
-        fov: showFov
+        fov: showFov && fovBearing != null
           ? {
               rangeM: DRONE_FOV_RADIUS_M,
-              bearingDeg: d.headingDeg!,
+              bearingDeg: fovBearing,
               widthDeg: d.fovDeg ?? DRONE_FOV_DEG,
               color: CESIUM_FOV,
               opacity: 0.4,
@@ -1091,6 +1417,7 @@ function CesiumTacticalMapImpl({
           : undefined,
         kinematic: !isOffline,
         onClick: () => onAssetClickRef.current?.(d.id),
+        onContextMenu: (e) => openContextMenu(e, 'sensor', d.id, d.name),
         onMouseEnter: () => enterMarker(d.id),
         onMouseLeave: () => leaveMarker(d.id),
       };
@@ -1102,7 +1429,15 @@ function CesiumTacticalMapImpl({
       if (!seen.has(id)) cache.delete(id);
     }
     return out;
-  }, [friendlyDrones, offlineSet, selectedAssetId, hoveredSensorIdFromCard, hoveredMarkerId]);
+  }, [
+    friendlyDrones,
+    offlineSet,
+    selectedAssetId,
+    hoveredSensorIdFromCard,
+    hoveredMarkerId,
+    openContextMenu,
+    motionPosition,
+  ]);
 
   /** Slice 5 — launcher effectors prop. */
   const launcherCacheRef = useRef<
@@ -1158,7 +1493,7 @@ function CesiumTacticalMapImpl({
           />
         ),
         onClick: () => onAssetClickRef.current?.(l.id),
-        onContextMenu: (e) => openContextMenu(e, 'effector', l.id),
+        onContextMenu: (e) => openContextMenu(e, 'sensor', l.id, name),
         onMouseEnter: () => enterMarker(l.id),
         onMouseLeave: () => leaveMarker(l.id),
       };
@@ -1325,6 +1660,10 @@ function CesiumTacticalMapImpl({
     (trail: [number, number][]) => trail.map(([lat, lon]) => ({ lat, lon })),
     [],
   );
+  const trailWithMotionHead = useCallback(
+    (_id: string, points: { lat: number; lon: number }[]) => points,
+    [],
+  );
   const pushCasedTrail = useCallback(
     (
       out: CesiumPolyline[],
@@ -1366,7 +1705,14 @@ function CesiumTacticalMapImpl({
     if (friendlyDrones) {
       for (const d of friendlyDrones) {
         if (!d.trail || d.trail.length < 2) continue;
-        pushCasedTrail(out, `friendly-drone-${d.id}-trail`, tupleToPoints(d.trail), CESIUM_TRAIL, 2, 5);
+        pushCasedTrail(
+          out,
+          `friendly-drone-${d.id}-trail`,
+          trailWithMotionHead(d.id, tupleToPoints(d.trail)),
+          CESIUM_TRAIL,
+          2,
+          5,
+        );
       }
     }
     if (targets) {
@@ -1376,7 +1722,10 @@ function CesiumTacticalMapImpl({
         pushCasedTrail(
           out,
           `target-${t.id}-trail`,
-          t.trail.map((p) => ({ lat: p.lat, lon: p.lon })),
+          trailWithMotionHead(
+            t.id,
+            t.trail.map((p) => ({ lat: p.lat, lon: p.lon })),
+          ),
           CESIUM_TRAIL,
           3,
           7,
@@ -1384,7 +1733,7 @@ function CesiumTacticalMapImpl({
       }
     }
     return out;
-  }, [activeDrone, missionRoute, friendlyDrones, targets, tupleToPoints, pushCasedTrail]);
+  }, [activeDrone, missionRoute, friendlyDrones, targets, tupleToPoints, pushCasedTrail, trailWithMotionHead, movementSamples]);
 
   /** Slice — engagement-related polylines (jamming + active engagement). */
   const engagementPolylines = useMemo<CesiumPolyline[]>(() => {
@@ -1394,13 +1743,14 @@ function CesiumTacticalMapImpl({
       const effectors = regulusEffectors ?? REGULUS_EFFECTORS;
       const jammer = effectors.find((e) => e.id === jammingJammerAssetId);
       if (target && jammer) {
-        const [tLat, tLon] = (target.coordinates ?? '').split(',').map((s) => parseFloat(s.trim()));
-        if (Number.isFinite(tLat) && Number.isFinite(tLon)) {
+        const [rawLat, rawLon] = (target.coordinates ?? '').split(',').map((s) => parseFloat(s.trim()));
+        if (Number.isFinite(rawLat) && Number.isFinite(rawLon)) {
+          const targetPos = motionPosition(target.id, rawLat, rawLon);
           out.push({
             id: 'jamming-engagement-line',
             points: [
               { lat: jammer.lat, lon: jammer.lon },
-              { lat: tLat, lon: tLon },
+              { lat: targetPos.lat, lon: targetPos.lon },
             ],
             color: CESIUM_JAM,
             width: 3,
@@ -1423,7 +1773,7 @@ function CesiumTacticalMapImpl({
       });
     }
     return out;
-  }, [jammingTargetId, jammingJammerAssetId, targets, regulusEffectors, engagementPair]);
+  }, [jammingTargetId, jammingJammerAssetId, targets, regulusEffectors, engagementPair, motionPosition, movementSamples]);
 
   /**
    * Slice — planning-scan fan. Driven by the user's planner UI, not
@@ -1455,9 +1805,42 @@ function CesiumTacticalMapImpl({
     return out;
   }, [planningScanViz]);
 
+  /**
+   * Slice — dim full-path overlay for the selected closed historical
+   * track. Single thin white polyline at low opacity, no casing,
+   * always behind every other polyline so the bright active trail
+   * paints over it cleanly up to `viewedAtMs`. Decoupled from
+   * playback — the operator sees "what happened" the moment they
+   * open the track card.
+   */
+  const historicalTrackOverlayPolylines = useMemo<CesiumPolyline[]>(() => {
+    if (!historicalTrackOverlay || historicalTrackOverlay.fullPath.length < 2) {
+      return [];
+    }
+    return [
+      {
+        id: `history-overlay-${historicalTrackOverlay.id}`,
+        points: historicalTrackOverlay.fullPath,
+        color: `color-mix(in oklch, ${CESIUM_TRAIL} 15%, transparent)`,
+        width: 2,
+        zIndex: -1,
+      },
+    ];
+  }, [historicalTrackOverlay]);
+
   const polylines = useMemo<CesiumPolyline[]>(
-    () => [...trailPolylines, ...engagementPolylines, ...planningScanPolylines],
-    [trailPolylines, engagementPolylines, planningScanPolylines],
+    () => [
+      ...historicalTrackOverlayPolylines,
+      ...trailPolylines,
+      ...engagementPolylines,
+      ...planningScanPolylines,
+    ],
+    [
+      historicalTrackOverlayPolylines,
+      trailPolylines,
+      engagementPolylines,
+      planningScanPolylines,
+    ],
   );
 
   /**
@@ -1475,6 +1858,7 @@ function CesiumTacticalMapImpl({
    */
   const [flyTo, setFlyTo] = useState<CesiumMapFlyTo | null>(null);
   const [fitBounds, setFitBounds] = useState<CesiumMapFitBounds | null>(null);
+  setFlyToRef.current = (req) => setFlyTo(req);
 
   // focusCoords → tight 5 km frustum (≈ Mapbox zoom 15).
   useEffect(() => {
@@ -1520,7 +1904,7 @@ function CesiumTacticalMapImpl({
   // required), so the missing-token guard is skipped in that mode —
   // otherwise the marketing demo would land on the Hebrew warning
   // panel even though the basemap it requests is fully fetchable.
-  if (!CESIUM_ION_TOKEN && !darkMonochromeMap) {
+  if (!CESIUM_ION_TOKEN && !isMonochromeMapView(mapViewMode)) {
     return (
       <div className="absolute inset-0 flex items-center justify-center bg-surface-1 text-slate-11">
         <div className="rounded-md bg-accent-warning-tint px-4 py-3 text-sm shadow-[0_0_0_1px_var(--border-default)]">
@@ -1541,16 +1925,17 @@ function CesiumTacticalMapImpl({
         re-allocates and the world content stays anchored to viewport
         coords while the visible portion is just clipped.
       */}
-      <div className="gridblock-canvas-overflow absolute top-0 bottom-0">
+      <div className="gridblock-canvas-overflow absolute top-0">
         <CesiumMap
           ionToken={CESIUM_ION_TOKEN}
           initialView={DEFAULT_INITIAL_VIEW}
           htmlMarkers={htmlMarkers}
+          motionRegistry={motionRegistryRef.current ?? undefined}
           polylines={polylines}
           flyTo={flyTo}
           fitBounds={fitBounds}
           sceneMode={sceneMode}
-          darkMonochromeMap={darkMonochromeMap}
+          mapViewMode={mapViewMode}
           className="absolute inset-0"
         />
       </div>
@@ -1593,7 +1978,6 @@ function CesiumTacticalMapImpl({
       {contextMenu && (
         <CesiumContextMenu
           state={contextMenu}
-          strings={t.contextMenu}
           onClose={closeContextMenu}
           onAction={fireContextAction}
         />
@@ -1617,52 +2001,53 @@ export const CesiumTacticalMap = memo(CesiumTacticalMapImpl);
  */
 function CesiumContextMenu({
   state,
-  strings,
   onClose,
   onAction,
 }: {
   state: ContextMenuState;
-  strings: import('@/lib/intl').Strings['map']['contextMenu'];
   onClose: () => void;
   onAction: (action: string) => void;
 }) {
-  const items = state.elementType === 'target'
-    ? [
-        { id: 'open-card', label: strings.target.openCard },
-        { id: 'mitigate', label: strings.target.mitigate },
-        { id: 'mitigate-all', label: strings.target.mitigateAll },
-        { id: 'track', label: strings.target.track },
-        { id: 'investigate', label: strings.target.investigate },
-        { id: 'dismiss', label: strings.target.dismiss },
-      ]
-    : state.elementType === 'sensor'
-      ? [{ id: 'view-feed', label: strings.sensor.viewFeed }]
-      : [];
-
-  if (items.length === 0) {
-    onClose();
-    return null;
-  }
+  const { direction } = useDirection();
 
   return (
     <>
-      {/* Backdrop closes the menu on outside click. */}
       <div className="fixed inset-0 z-40" onClick={onClose} onContextMenu={(e) => { e.preventDefault(); onClose(); }} />
       <div
-        className="fixed z-50 min-w-[160px] rounded-md bg-surface-3 py-1 text-slate-12 shadow-[0_0_0_1px_var(--border-default),0_8px_30px_rgba(0,0,0,0.5)]"
+        dir={direction}
+        className="fixed z-50 min-w-[200px] rounded-md bg-surface-3 py-1 text-slate-12 shadow-[0_0_0_1px_var(--border-default),0_8px_30px_rgba(0,0,0,0.5)]"
         style={{ top: state.y, left: state.x }}
         role="menu"
       >
-        {items.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            role="menuitem"
-            onClick={() => onAction(item.id)}
-            className="block w-full px-3 py-1.5 text-end text-[12px] hover:bg-state-hover-strong focus-visible:bg-state-hover-strong focus-visible:outline-none cursor-pointer"
-          >
-            {item.label}
-          </button>
+        {state.headerLabel ? (
+          <div className="px-3 py-1.5 text-[11px] font-semibold text-slate-11 border-b border-border-default truncate text-start">
+            {state.headerLabel}
+          </div>
+        ) : null}
+        {state.items.map((item) => (
+          <Fragment key={item.id}>
+            {item.separatorBefore ? (
+              <div className="my-1 h-px bg-border-default" role="separator" />
+            ) : null}
+            <button
+              type="button"
+              role="menuitem"
+              disabled={item.disabled}
+              onClick={() => {
+                if (!item.disabled) onAction(item.id);
+              }}
+              className={[
+                'flex w-full items-center gap-2.5 px-2.5 py-1.5 text-start text-[12px] focus-visible:outline-none',
+                item.disabled
+                  ? 'opacity-40 cursor-not-allowed'
+                  : 'hover:bg-state-hover-strong focus-visible:bg-state-hover-strong cursor-pointer',
+                item.destructive ? 'text-accent-danger' : 'text-slate-11',
+              ].join(' ')}
+            >
+              {item.icon}
+              <span className="min-w-0 flex-1">{item.label}</span>
+            </button>
+          </Fragment>
         ))}
       </div>
     </>

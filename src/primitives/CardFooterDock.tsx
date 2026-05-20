@@ -50,7 +50,7 @@ export function CardFooterDock({ actions, className }: CardFooterDockProps) {
             )}
           >
             {action.loading ? (
-              <span className="w-3.5 h-3.5 border-2 border-zinc-500 border-t-zinc-200 rounded-full animate-spin" />
+              <span className="w-3.5 h-3.5 border-2 border-slate-9 border-t-slate-11 rounded-full animate-spin" />
             ) : Icon ? (
               <Icon size={14} className="shrink-0" aria-hidden="true" />
             ) : null}

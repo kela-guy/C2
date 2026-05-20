@@ -86,11 +86,20 @@ const DroneDeviceIcon = ({ size = 28, fill = 'white' }: { size?: number; fill?: 
   </svg>
 );
 
+export type SimFriendlyDroneDevice = {
+  id: string;
+  name: string;
+  lat: number;
+  lon: number;
+  altitude: string;
+};
+
 /** Memoized hook returning the full `Device[]` for this app. */
-export function useDevicesFromAssets(): Device[] {
+export function useDevicesFromAssets(
+  friendlyDrones: SimFriendlyDroneDevice[] = [],
+): Device[] {
   const t = useStrings();
   const launcherDeviceName = t.simulation.deviceNames.missileLauncher;
-  const friendly = t.simulation.friendlyDrones;
   return useMemo<Device[]>(() => [
     ...CAMERA_ASSETS.map((a) => ({
       id: a.id,
@@ -189,6 +198,7 @@ export function useDevicesFromAssets(): Device[] {
       operationalStatus: (DEVICE_HEALTH[a.id] ?? 'operational') as Device['operationalStatus'],
       connectionState: (DEVICE_CONNECTION[a.id] ?? 'online') as Device['connectionState'],
       bearingDeg: a.bearingDeg,
+      fovDeg: a.fovDeg,
       Icon: FloodlightIcon,
     })),
     ...SPEAKER_ASSETS.map((a) => ({
@@ -203,31 +213,21 @@ export function useDevicesFromAssets(): Device[] {
       coverageRadiusM: a.coverageRadiusM,
       Icon: SpeakerIcon,
     })),
-    {
-      id: 'FRIENDLY-01',
-      name: friendly.patrol3.name,
-      type: 'drone' as const,
-      lat: 32.470,
-      lon: 35.005,
-      status: 'active' as const,
-      operationalStatus: 'operational' as const,
-      connectionState: 'online' as const,
-      altitude: friendly.patrol3.altitude,
-      Icon: DroneDeviceIcon,
-    },
-    {
-      id: 'FRIENDLY-02',
-      name: friendly.observation7.name,
-      type: 'drone' as const,
-      lat: 32.463,
-      lon: 34.998,
-      status: 'active' as const,
-      operationalStatus: (DEVICE_CONNECTION['FRIENDLY-02'] ?? 'online') as Device['operationalStatus'] === 'malfunctioning'
-        ? 'malfunctioning'
-        : 'operational',
-      connectionState: (DEVICE_CONNECTION['FRIENDLY-02'] ?? 'online') as Device['connectionState'],
-      altitude: friendly.observation7.altitude,
-      Icon: DroneDeviceIcon,
-    },
-  ], [launcherDeviceName, friendly]);
+    ...friendlyDrones.map((d) => {
+      const connection = (DEVICE_CONNECTION[d.id] ?? 'online') as Device['connectionState'];
+      return {
+        id: d.id,
+        name: d.name,
+        type: 'drone' as const,
+        lat: d.lat,
+        lon: d.lon,
+        status: 'active' as const,
+        operationalStatus:
+          connection === 'offline' ? ('malfunctioning' as const) : ('operational' as const),
+        connectionState: connection,
+        altitude: d.altitude,
+        Icon: DroneDeviceIcon,
+      };
+    }),
+  ], [launcherDeviceName, friendlyDrones]);
 }

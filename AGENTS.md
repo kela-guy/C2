@@ -6,6 +6,7 @@ This file is the source of truth for how I want agents to operate in this repo. 
 
 - **Pace.** Deep focus on one thing until it's done. Don't fragment my attention with unrelated suggestions.
 - **Planning.** For any non-trivial task, lay out a detailed plan and wait for my approval before editing. Plan = goals, files touched, approach, risks. Trivial edits (typos, one-line fixes, obvious renames) don't need a plan.
+- **Bug-scan before execution.** Every plan must include a "Bug scan" section before I approve it. Read the files you're about to touch and the call sites that consume them, then list any bugs, dead code, stale comments, broken invariants, or latent issues you spotted in that footprint — even ones unrelated to the task. Each item: one-line description + `file.ts:line`. No items found → say "Bug scan: clean." Don't fix them in the same change unless I say so; the scan is a heads-up, not a license for scope creep.
 - **Autonomy.** Decide small/local things yourself. Stop and ask before architectural or cross-cutting calls: public API shape, data model, new top-level module, dependency choice, anything that ripples across the app.
 - **Iteration shape.** Match the task — small fix → small change; feature → coherent unit. Don't artificially chop or balloon work.
 - **Domains.** I mostly work on frontend / React, design systems & styleguides, and maps / geospatial / Cesium in a C2 context. Bias defaults to that stack.

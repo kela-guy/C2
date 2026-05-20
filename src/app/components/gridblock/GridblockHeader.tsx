@@ -67,13 +67,13 @@ function GridblockHeaderImpl({
 
   return (
     <header
-      className="gridblock-edge-bottom flex items-center justify-between bg-[var(--gridblock-floor)] pr-2"
+      className="gridblock-edge-bottom flex items-center justify-between bg-[var(--gridblock-bar)] pr-2"
       style={{ height: "var(--gridblock-header-height)" }}
     >
       <nav className="flex items-center gap-2">
         {brand}
         {centerSlot}
-        <KelaLogo size={16} className="text-white" />
+        <KelaLogo size={16} className="text-slate-12" />
       </nav>
 
       <nav className="flex items-center gap-1">

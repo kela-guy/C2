@@ -97,11 +97,11 @@ function ControlButton({
           aria-label={label}
           aria-pressed={active ?? undefined}
           className={`flex flex-col items-center justify-center h-[30px] p-2 transition-colors duration-150 ease-out
-            focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none
+            focus-visible:ring-2 focus-visible:ring-border-strong focus-visible:outline-none
             disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.97]
             ${active
-              ? 'bg-white/15 text-white ring-1 ring-inset ring-white/20'
-              : 'text-white/80 hover:text-white hover:bg-white/10'}`}
+              ? 'bg-state-selected text-slate-12 ring-1 ring-inset ring-border-default'
+              : 'text-slate-12/80 hover:text-slate-12 hover:bg-state-hover-strong'}`}
         >
           {children}
         </button>
@@ -195,12 +195,12 @@ function ZoomControl({ zoom, disabled, onChange }: ZoomControlProps) {
         aria-expanded={open}
         aria-controls={popoverId}
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1 px-2 py-2 text-white/80 hover:text-white hover:bg-white/10 transition-colors duration-150 ease-out focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none active:scale-[0.97]"
+        className="flex items-center gap-1 px-2 py-2 text-slate-12/80 hover:text-slate-12 hover:bg-state-hover-strong transition-colors duration-150 ease-out focus-visible:ring-2 focus-visible:ring-border-strong focus-visible:outline-none active:scale-[0.97]"
       >
         <Search size={14} aria-hidden="true" />
         <span
           aria-hidden="true"
-          className="font-mono text-[10px] tabular-nums text-amber-100/95 leading-none min-w-[26px] text-start"
+          className="font-mono text-[10px] tabular-nums text-accent-warning leading-none min-w-[26px] text-start"
         >
           {fmtZoom(zoom)}
         </span>
@@ -227,7 +227,7 @@ function ZoomControl({ zoom, disabled, onChange }: ZoomControlProps) {
           className="absolute -bottom-2 -left-1 -right-1 h-3 pointer-events-auto"
         />
 
-        <div className="flex flex-col items-center gap-1.5 bg-black/75 backdrop-blur-sm ring-1 ring-inset ring-white/10 px-1.5 py-2">
+        <div className="flex flex-col items-center gap-1.5 bg-black/75 backdrop-blur-sm ring-1 ring-inset ring-border-default px-1.5 py-2">
           <input
             type="range"
             min={MIN_ZOOM}
@@ -245,9 +245,9 @@ function ZoomControl({ zoom, disabled, onChange }: ZoomControlProps) {
             // not bidi text direction — leave it hard-coded regardless of
             // the app's writing direction.
             style={{ writingMode: 'vertical-lr', direction: 'rtl' }}
-            className="w-7 h-28 accent-amber-300 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-7 h-28 accent-accent-warning cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
           />
-          <span className="font-mono text-[10px] tabular-nums text-amber-100 min-w-[28px] text-center">
+          <span className="font-mono text-[10px] tabular-nums text-accent-warning min-w-[28px] text-center">
             {fmtZoom(zoom)}
           </span>
         </div>
@@ -270,19 +270,19 @@ function LockButton({ status, onClick }: { status: CameraStatus; onClick: () => 
       ? t.requestingControlCountdown(status.controlRequestCountdown)
       : t.requestingControl;
     icon = <Lock size={14} className="animate-pulse motion-reduce:animate-none" aria-hidden="true" />;
-    tone = 'text-amber-200 bg-amber-500/15 ring-1 ring-inset ring-amber-300/40';
+    tone = 'text-accent-warning bg-accent-warning/15 ring-1 ring-inset ring-accent-warning/40';
   } else if (ownsControl) {
     label = t.releaseControl;
     icon = <LockOpen size={14} aria-hidden="true" />;
-    tone = 'text-emerald-200 bg-emerald-500/20 ring-1 ring-inset ring-emerald-400/40 hover:bg-emerald-500/30';
+    tone = 'text-accent-success bg-accent-success/20 ring-1 ring-inset ring-accent-success/40 hover:bg-accent-success/30';
   } else if (lockedByOther) {
     label = t.lockedByOperator(status.controlOwnerName ?? t.lockedByOtherOperator);
     icon = <Lock size={14} aria-hidden="true" />;
-    tone = 'text-zinc-300 bg-zinc-800/70 ring-1 ring-inset ring-zinc-500/40';
+    tone = 'text-slate-11 bg-surface-3/70 ring-1 ring-inset ring-slate-9/40';
   } else {
     label = t.takeControl;
     icon = <Lock size={14} aria-hidden="true" />;
-    tone = 'text-white/90 hover:text-white hover:bg-white/10';
+    tone = 'text-slate-12/90 hover:text-slate-12 hover:bg-state-hover-strong';
   }
 
   return (
@@ -295,7 +295,7 @@ function LockButton({ status, onClick }: { status: CameraStatus; onClick: () => 
           aria-label={label}
           aria-pressed={ownsControl}
           className={`p-2 transition-colors duration-150 ease-out
-            focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none
+            focus-visible:ring-2 focus-visible:ring-border-strong focus-visible:outline-none
             disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.97]
             ${tone}`}
         >
@@ -377,7 +377,7 @@ export function CameraControlBar({
             onClick={onDesignateModeToggle}
             active={designateMode}
           >
-            <Crosshair size={14} className={designateMode ? 'text-amber-300' : ''} />
+            <Crosshair size={14} className={designateMode ? 'text-accent-warning' : ''} />
           </ControlButton>
           <ZoomControl zoom={zoom} disabled={writeDisabled} onChange={onZoomChange} />
         </div>

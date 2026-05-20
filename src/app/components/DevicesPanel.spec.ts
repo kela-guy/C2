@@ -117,6 +117,18 @@ export const spec: ComponentSpec = {
       implementedInPrototype: true,
     },
     {
+      name: 'row hover actions',
+      trigger: 'Mouse over or focus-within a collapsed device row',
+      description: 'MapPin (center on map) and Pin (camera/drone only) icons fade in at the row inline-end. Pin toggles feed membership when onPinToFeed is wired.',
+      implementedInPrototype: true,
+    },
+    {
+      name: 'pinned to feed',
+      trigger: 'Device id is in pinnedDeviceIds',
+      description: 'Hover strip shows filled Pin; expanded footer pin button reads Unpin with accent tint',
+      implementedInPrototype: true,
+    },
+    {
       name: 'empty results',
       trigger: 'Filter/search combination yields no matching devices',
       description: '"אין מכשירים תואמים" empty state message',
@@ -224,7 +236,7 @@ export const spec: ComponentSpec = {
     {
       trigger: 'hover',
       element: 'Device row',
-      result: 'Calls onDeviceHover with device ID; bg-white/[0.04] highlight',
+      result: 'Calls onDeviceHover with device ID; bg-state-hover highlight',
       animation: { property: 'background-color', from: 'transparent', to: 'rgba(255,255,255,0.04)', duration: '150ms', easing: 'ease-out' },
     },
   ],
@@ -303,7 +315,7 @@ export const spec: ComponentSpec = {
       'aria-label + role="combobox" + aria-expanded on speaker audio-track popover trigger',
     ],
     keyboardNav: ['Tab through search input, Type filter trigger, device rows', 'Enter/Space to expand device row', 'Enter to activate buttons', 'ArrowDown/Up + Enter inside the speaker track combobox'],
-    focusManagement: 'Focus ring (ring-white/25) on all interactive elements',
+    focusManagement: 'Focus ring (ring-border-strong) on all interactive elements',
     screenReaderNotes: 'Tooltips on connection status dots provide state labels. Disabled jam + speaker Play buttons have tooltips with reasons.',
   },
 

@@ -71,16 +71,16 @@ const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
         <div className="py-3 px-3 flex gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[13px] font-medium text-zinc-100 truncate">{data.title}</span>
+              <span className="text-[13px] font-medium text-slate-12 truncate">{data.title}</span>
               <button
                 onClick={(e) => { e.stopPropagation(); toast.dismiss(toastId); flushBatch(); }}
-                className="text-zinc-600 hover:text-zinc-400 transition-[color,opacity] duration-150 shrink-0 opacity-0 group-hover:opacity-100 p-1 -m-1"
+                className="text-slate-8 hover:text-slate-10 transition-[color,opacity] duration-150 shrink-0 opacity-0 group-hover:opacity-100 p-1 -m-1"
                 aria-label={nt.stackCloseAriaLabel}
               >
                 <X size={14} />
               </button>
             </div>
-            <p className="text-[12px] text-zinc-400 leading-relaxed mt-0.5 line-clamp-2">{data.message}</p>
+            <p className="text-[12px] text-slate-10 leading-relaxed mt-0.5 line-clamp-2">{data.message}</p>
           </div>
         </div>
       </div>
@@ -93,20 +93,20 @@ const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
     >
       <div className="py-3 px-3">
         <div className="flex items-center justify-between">
-          <span className="text-[13px] font-medium text-zinc-100">
+          <span className="text-[13px] font-medium text-slate-12">
             {nt.stackNewCount(items.length)}
           </span>
           <div className="flex items-center gap-1.5">
             <button
               onClick={(e) => { e.stopPropagation(); setExpanded(prev => !prev); }}
-              className="text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors px-2 py-1.5 rounded hover:bg-state-hover"
+              className="text-[10px] text-slate-9 hover:text-slate-11 transition-colors px-2 py-1.5 rounded hover:bg-state-hover"
               aria-expanded={expanded}
             >
               {expanded ? nt.stackCollapse : nt.stackExpand}
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); toast.dismiss(toastId); flushBatch(); }}
-              className="text-zinc-600 hover:text-zinc-400 transition-colors p-1 -m-1"
+              className="text-slate-8 hover:text-slate-10 transition-colors p-1 -m-1"
               aria-label={nt.stackCloseAriaLabel}
             >
               <X size={14} />
@@ -115,7 +115,7 @@ const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
         </div>
 
         {!expanded && (
-          <p className="text-[12px] text-zinc-400 mt-1 truncate">
+          <p className="text-[12px] text-slate-10 mt-1 truncate">
             {items[items.length - 1]?.title}
             {items.length > 1 && nt.stackAndMore(items.length - 1)}
           </p>
@@ -150,10 +150,10 @@ const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
                     style={{ backgroundColor: itemAccent }}
                   />
                   <div className="flex-1 min-w-0">
-                    <span className="text-[11px] font-medium text-zinc-200 truncate block">{item.title}</span>
-                    <span className="text-[10px] text-zinc-500 truncate block">{item.message}</span>
+                    <span className="text-[11px] font-medium text-slate-11 truncate block">{item.title}</span>
+                    <span className="text-[10px] text-slate-9 truncate block">{item.message}</span>
                   </div>
-                  <span className="text-[9px] font-mono text-zinc-600 shrink-0 mt-0.5">{item.timestamp}</span>
+                  <span className="text-[9px] font-mono text-slate-8 shrink-0 mt-0.5">{item.timestamp}</span>
                 </div>
               );
             })}

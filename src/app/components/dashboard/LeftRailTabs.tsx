@@ -15,14 +15,15 @@
  * each other.
  */
 
-import { Target, Video, LayoutGrid2 } from "@/lib/icons/central";
+import { History, Target, Video, LayoutGrid2 } from "@/lib/icons/central";
 import type { GridblockRailTab } from "@/app/components/gridblock";
 
-export type DashboardLeftTabId = "targets" | "devices";
+export type DashboardLeftTabId = "targets" | "devices" | "history";
 
 interface DashboardLeftTabLabels {
   targets: string;
   devices: string;
+  history: string;
 }
 
 export function getDashboardLeftTabs(
@@ -31,6 +32,7 @@ export function getDashboardLeftTabs(
   return [
     { id: "targets", label: labels.targets, icon: <Target size={16} /> },
     { id: "devices", label: labels.devices, icon: <LayoutGrid2 size={16} /> },
+    { id: "history", label: labels.history, icon: <History size={16} /> },
   ];
 }
 

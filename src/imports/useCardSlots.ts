@@ -8,9 +8,6 @@ import {
   Ban,
   MapPin,
   Scan,
-  Ruler,
-  Clock,
-  Mountain,
   Check,
   ScanLine,
   Route,
@@ -25,8 +22,6 @@ import {
   EyeOff,
   Lock,
   Timer,
-  Compass,
-  ArrowUpDown,
 } from '@/lib/icons/central';
 import { DroneCardIcon, MissileCardIcon, CarCardIcon } from '@/primitives/MapIcons';
 import type { ThreatAccent } from '@/primitives/tokens';
@@ -171,9 +166,9 @@ function buildHeaderIcon(target: Detection): React.ElementType {
 
 function buildConfidenceBadge(confidence: number | undefined, classifiedType: string | undefined, t: Strings): React.ReactNode {
   if (confidence == null) return null;
-  const bg = confidence >= 80 ? 'bg-red-500/20 text-red-400'
-    : confidence >= 40 ? 'bg-amber-500/20 text-amber-400'
-    : 'bg-zinc-500/20 text-zinc-400';
+  const bg = confidence >= 80 ? 'bg-accent-danger/20 text-accent-danger'
+    : confidence >= 40 ? 'bg-accent-warning/20 text-accent-warning'
+    : 'bg-state-hover-strong text-slate-10';
   const types = t.cards.classifiedTypes;
   const key = (classifiedType ?? 'unknown') as keyof typeof types;
   const typeLabel = types[key] ?? types.unknown;
@@ -391,7 +386,7 @@ function buildFlowActions(
     const cameraPointing = !!ctx.isCameraPointing;
     const cameraActive = !!ctx.isCameraActive;
     const CameraLockedIcon = (props: React.SVGProps<SVGSVGElement>) =>
-      React.createElement(Check, { ...props, className: `${props.className ?? ''} text-emerald-400` });
+      React.createElement(Check, { ...props, className: `${props.className ?? ''} text-accent-success` });
 
     actions.push({
       id: 'point-camera',
@@ -402,7 +397,7 @@ function buildFlowActions(
       group: 'secondary',
       loading: cameraPointing,
       onClick: (e) => { e.stopPropagation(); if (!cameraActive) callbacks.onVerify?.('investigate'); },
-      className: cameraActive ? 'text-white cursor-default' : '',
+      className: cameraActive ? 'text-slate-12 cursor-default' : '',
     });
   }
 
@@ -450,7 +445,7 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
         group: 'secondary' as const,
         disabled: true,
         onClick: (e: React.MouseEvent) => { e.stopPropagation(); },
-        className: 'ring-1 ring-amber-400/35',
+        className: 'ring-1 ring-accent-warning/35',
       });
     } else if (allBusy && !cameraActive) {
       actions.push({
@@ -461,7 +456,7 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
         size: 'sm' as const,
         group: 'secondary' as const,
         onClick: (e: React.MouseEvent) => { e.stopPropagation(); callbacks.onRequestCameraControl?.(); },
-        className: 'ring-1 ring-amber-400/40',
+        className: 'ring-1 ring-accent-warning/40',
       });
     } else if (cameraActive) {
       actions.push({
@@ -741,10 +736,10 @@ function buildDetails(target: Detection, t: Strings): { rows: DetailRow[]; class
   const dr = t.cards.detailRows;
   const tl = t.cards.typeLabels;
   const rows: DetailRow[] = [];
-  rows.push({ label: dr.location, value: target.coordinates, icon: MapPin });
-  if (target.altitude) rows.push({ label: dr.altitude, value: target.altitude, icon: Mountain });
-  rows.push({ label: dr.distance, value: target.distance, icon: Ruler });
-  if (target.lastSeenAt) rows.push({ label: dr.lastSeen, value: target.lastSeenAt, icon: Clock });
+  rows.push({ label: dr.location, value: target.coordinates });
+  if (target.altitude) rows.push({ label: dr.altitude, value: target.altitude });
+  rows.push({ label: dr.distance, value: target.distance });
+  if (target.lastSeenAt) rows.push({ label: dr.lastSeen, value: target.lastSeenAt });
 
   let classification: CardDetailsClassification | undefined;
   if (target.entityStage === 'classified') {
@@ -752,20 +747,20 @@ function buildDetails(target: Detection, t: Strings): { rows: DetailRow[]; class
       drone: tl.drone, bird: tl.bird, aircraft: tl.aircraft, car: tl.car, unknown: tl.unknown,
     };
     const colorClasses: Record<string, string> = {
-      drone: 'text-red-400', bird: 'text-amber-400', aircraft: 'text-zinc-300', car: 'text-orange-400',
+      drone: 'text-accent-danger', bird: 'text-accent-warning', aircraft: 'text-slate-11', car: 'text-accent-tracking',
     };
     classification = {
       type: target.classifiedType ?? 'unknown',
       typeLabel: typeLabels[target.classifiedType ?? 'unknown'] ?? tl.unknown,
       confidence: typeof target.confidence === 'number' ? target.confidence : undefined,
-      colorClass: colorClasses[target.classifiedType ?? ''] ?? 'text-zinc-300',
+      colorClass: colorClasses[target.classifiedType ?? ''] ?? 'text-slate-11',
     };
   } else if (target.entityStage === 'raw_detection') {
     classification = {
       type: 'unknown',
       typeLabel: tl.unknownDetection,
       confidence: typeof target.confidence === 'number' ? target.confidence : undefined,
-      colorClass: 'text-zinc-400',
+      colorClass: 'text-slate-10',
     };
   }
 
@@ -775,9 +770,9 @@ function buildDetails(target: Detection, t: Strings): { rows: DetailRow[]; class
 function buildLaserPosition(target: Detection, t: Strings): DetailRow[] {
   const dr = t.cards.detailRows;
   const rows: DetailRow[] = [];
-  if (target.laserAzimuth) rows.push({ label: dr.azimuth, value: target.laserAzimuth, icon: Compass });
-  if (target.laserElevation) rows.push({ label: dr.elevation, value: target.laserElevation, icon: ArrowUpDown });
-  if (target.laserRange || target.laserDistance) rows.push({ label: dr.range, value: target.laserRange ?? target.laserDistance!, icon: Ruler });
+  if (target.laserAzimuth) rows.push({ label: dr.azimuth, value: target.laserAzimuth });
+  if (target.laserElevation) rows.push({ label: dr.elevation, value: target.laserElevation });
+  if (target.laserRange || target.laserDistance) rows.push({ label: dr.range, value: target.laserRange ?? target.laserDistance! });
   return rows;
 }
 

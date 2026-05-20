@@ -14,6 +14,16 @@ interface GridblockPanelProps {
   closeTooltip?: string;
   testId?: string;
   /**
+   * Optional node rendered inside the header strip, between the title
+   * and the close button. Use for panel-scoped chrome that needs to
+   * sit alongside the title rather than below it — e.g. tab strips,
+   * a layout picker, or a small action cluster.
+   *
+   * The slot is laid out as `flex-1 min-w-0` so children can scroll
+   * horizontally when the header is narrow. Pass content unstyled.
+   */
+  headerActions?: ReactNode;
+  /**
    * Optional sticky strip rendered between the header and the scroll body.
    * Typical content: a search input + filter chips, a tab bar, or a
    * count + sort row. Lives outside the scroll container so it stays
@@ -43,6 +53,7 @@ function GridblockPanelImpl({
   closeAriaLabel,
   closeTooltip,
   testId = "gridblock-panel",
+  headerActions,
   toolbar,
   footer,
   children,
@@ -79,10 +90,17 @@ function GridblockPanelImpl({
       data-testid={testId}
       className="flex h-full w-full flex-col"
     >
-      <header className="flex h-8 items-center justify-between border-b border-[var(--gridblock-border)] bg-[var(--gridblock-bar)] pr-1.5">
-        <h4 className="relative ps-2 text-[12px] font-semibold leading-4 text-[var(--gridblock-text-primary)]">
-          {title}
-        </h4>
+      <header className="flex h-8 items-center border-b border-[var(--gridblock-border)] bg-[var(--gridblock-bar)]">
+        {title !== null && title !== undefined && title !== "" ? (
+          <h4 className="relative shrink-0 ps-2 text-[12px] font-semibold leading-4 text-[var(--gridblock-text-primary)]">
+            {title}
+          </h4>
+        ) : null}
+        {headerActions ? (
+          <div className="flex h-full min-w-0 flex-1 items-center">{headerActions}</div>
+        ) : (
+          <div className="flex-1" />
+        )}
         {closeTooltip ? (
           <Tooltip>
             <TooltipTrigger asChild>{closeBtn}</TooltipTrigger>

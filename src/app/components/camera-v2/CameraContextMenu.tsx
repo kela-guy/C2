@@ -77,9 +77,9 @@ export function CameraContextMenu({
           className="rounded-none gap-2.5 text-xs"
         >
           {ownsControl ? (
-            <LockOpen size={14} className="text-emerald-300" />
+            <LockOpen size={14} className="text-accent-success" />
           ) : (
-            <Lock size={14} className={lockedByOther ? 'text-zinc-400' : 'text-white/80'} />
+            <Lock size={14} className={lockedByOther ? 'text-slate-10' : 'text-slate-12/80'} />
           )}
           <span className="flex-1">
             {ownsControl
@@ -94,18 +94,18 @@ export function CameraContextMenu({
         <ContextMenuSeparator />
 
         <ContextMenuItem onClick={onModeToggle} disabled={writeDisabled} className="rounded-none gap-2.5 text-xs">
-          {mode === 'day' ? <Moon size={14} className="text-sky-300" /> : <Sun size={14} className="text-amber-300" />}
+          {mode === 'day' ? <Moon size={14} className="text-accent-info" /> : <Sun size={14} className="text-accent-warning" />}
           <span className="flex-1">{mode === 'day' ? t.switchToNight : t.switchToDay}</span>
           <ContextMenuShortcut>D</ContextMenuShortcut>
         </ContextMenuItem>
 
         <ContextMenuItem onClick={onDetectionsToggle} className="rounded-none gap-2.5 text-xs">
-          <ScanSearch size={14} className={detectionsOn ? 'text-emerald-300' : 'text-white/80'} />
+          <ScanSearch size={14} className={detectionsOn ? 'text-accent-success' : 'text-slate-12/80'} />
           <span className="flex-1">{detectionsOn ? t.hideAiDetections : t.showAiDetections}</span>
         </ContextMenuItem>
 
         <ContextMenuItem onClick={onDesignateModeToggle} className="rounded-none gap-2.5 text-xs">
-          <Crosshair size={14} className={designateMode ? 'text-amber-300' : 'text-white/80'} />
+          <Crosshair size={14} className={designateMode ? 'text-accent-warning' : 'text-slate-12/80'} />
           <span className="flex-1">{designateMode ? t.cancelDesignate : t.designateTarget}</span>
           <ContextMenuShortcut>X</ContextMenuShortcut>
         </ContextMenuItem>
@@ -113,12 +113,12 @@ export function CameraContextMenu({
         <ContextMenuSeparator />
 
         <ContextMenuItem onClick={onResetView} className="rounded-none gap-2.5 text-xs">
-          <RotateCcw size={14} className="text-white/80" />
+          <RotateCcw size={14} className="text-slate-12/80" />
           <span className="flex-1">{t.resetView}</span>
         </ContextMenuItem>
 
         <ContextMenuItem onClick={onOpenSettings} className="rounded-none gap-2.5 text-xs">
-          <Settings size={14} className="text-white/80" />
+          <Settings size={14} className="text-slate-12/80" />
           <span className="flex-1">{t.settings}</span>
           <ContextMenuShortcut>S</ContextMenuShortcut>
         </ContextMenuItem>
@@ -127,7 +127,7 @@ export function CameraContextMenu({
           <>
             <ContextMenuSeparator />
             <ContextMenuItem onClick={onPinToGrid} className="rounded-none gap-2.5 text-xs">
-              <Pin size={14} className="text-white/80" />
+              <Pin size={14} className="text-slate-12/80" />
               <span className="flex-1">{t.pinToGrid}</span>
             </ContextMenuItem>
           </>

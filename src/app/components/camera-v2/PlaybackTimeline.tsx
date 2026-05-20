@@ -115,10 +115,10 @@ export function PlaybackTimeline({
           onCommit={handleSliderCommit}
         />
 
-        <span className="font-mono text-[10px] tabular-nums text-white/85 min-w-[40px] text-end">
+        <span className="font-mono text-[10px] tabular-nums text-slate-12/85 min-w-[40px] text-end">
           {fmtClock(positionSec)}
         </span>
-        <span className="font-mono text-[10px] tabular-nums text-white/55 min-w-[44px] text-end">
+        <span className="font-mono text-[10px] tabular-nums text-slate-9 min-w-[44px] text-end">
           -{fmtClock(remaining)}
         </span>
       </div>
@@ -150,11 +150,11 @@ function TransportButton({
           disabled={disabled}
           aria-label={label}
           className={`size-9 inline-flex items-center justify-center transition-colors duration-150 ease-out
-            focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none
+            focus-visible:ring-2 focus-visible:ring-border-strong focus-visible:outline-none
             disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.97]
             ${primary
-              ? 'text-white hover:bg-white/15'
-              : 'text-white/85 hover:text-white hover:bg-white/10'}`}
+              ? 'text-slate-12 hover:bg-state-selected'
+              : 'text-slate-12/85 hover:text-slate-12 hover:bg-state-hover-strong'}`}
         >
           {children}
         </button>
@@ -204,12 +204,12 @@ function PlaybackScrubber({
         aria-label={t.playbackPositionAriaLabel}
         className="relative flex w-full touch-none items-center select-none data-[disabled]:opacity-50"
       >
-        <SliderPrimitive.Track className="relative grow h-1.5 bg-white/15 overflow-visible">
-          <SliderPrimitive.Range className="absolute h-full bg-red-400" />
+        <SliderPrimitive.Track className="relative grow h-1.5 bg-state-selected overflow-visible">
+          <SliderPrimitive.Range className="absolute h-full bg-accent-historical" />
         </SliderPrimitive.Track>
         <SliderPrimitive.Thumb
           aria-label={t.playbackPositionAriaLabel}
-          className="block size-4 rounded-full bg-red-300 ring-2 ring-red-500 shadow-md hover:scale-110 transition-transform focus-visible:ring-4 focus-visible:ring-red-300/50 focus-visible:outline-none disabled:pointer-events-none"
+          className="block size-4 rounded-full bg-accent-historical ring-2 ring-accent-historical shadow-md hover:scale-110 transition-transform focus-visible:ring-4 focus-visible:ring-accent-historical/50 focus-visible:outline-none disabled:pointer-events-none"
         />
       </SliderPrimitive.Root>
     </div>

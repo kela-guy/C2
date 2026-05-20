@@ -16,7 +16,7 @@
  * device-specific simulation flows that haven't been ported. The
  * panel keeps rendering without them.
  */
-import { memo, useCallback } from "react";
+import { memo } from "react";
 import { DevicesPanel } from "@/app/components/DevicesPanel";
 import { useCameraPresets } from "@/app/components/useDevicesFromAssets";
 import type { Device } from "@/app/components/DevicesPanel";
@@ -28,11 +28,15 @@ interface DevicesPanelHostProps {
   onClose: () => void;
   focusedDeviceId: string | null;
   onSelectAsset: (id: string | null) => void;
+  onDeviceHover: (id: string | null) => void;
   /**
    * Called when the operator clicks "fly to" on a device row. The
    * page should drive the map's focus-request state in response.
    */
   onFlyTo: (lat: number, lon: number) => void;
+  onPinToFeed?: (deviceId: string) => void;
+  onUnpinFromFeed?: (deviceId: string) => void;
+  pinnedDeviceIds?: ReadonlySet<string>;
 }
 
 function DevicesPanelHostImpl({
@@ -41,16 +45,14 @@ function DevicesPanelHostImpl({
   onClose,
   focusedDeviceId,
   onSelectAsset,
+  onDeviceHover,
   onFlyTo,
+  onPinToFeed,
+  onUnpinFromFeed,
+  pinnedDeviceIds,
 }: DevicesPanelHostProps) {
   const t = useStrings();
   const cameraPresets = useCameraPresets();
-
-  // No-op hover handler — the v2 dashboard doesn't yet drive the
-  // map's hovered-sensor halo from the devices panel. Wiring it
-  // requires lifting `hoveredSensorIdFromCard` to the page; defer
-  // until a follow-up.
-  const handleHover = useCallback((_id: string | null) => {}, []);
 
   return (
     <DevicesPanel
@@ -58,7 +60,7 @@ function DevicesPanelHostImpl({
       open={open}
       onClose={onClose}
       onFlyTo={onFlyTo}
-      onDeviceHover={handleHover}
+      onDeviceHover={onDeviceHover}
       onDeviceSelect={onSelectAsset}
       focusedDeviceId={focusedDeviceId}
       title={t.dashboard.devicesPanelTitle}
@@ -67,6 +69,9 @@ function DevicesPanelHostImpl({
       typeLabels={t.devices.typeLabels}
       connectionStateLabels={t.devices.connectionLabels}
       strings={t.devices.strings}
+      onPinToFeed={onPinToFeed}
+      onUnpinFromFeed={onUnpinFromFeed}
+      pinnedDeviceIds={pinnedDeviceIds}
     />
   );
 }

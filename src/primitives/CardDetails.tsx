@@ -1,12 +1,16 @@
-import React from 'react';
-import { Copy, Eye } from '@/lib/icons/central';
+import { Eye } from '@/lib/icons/central';
 import { AccordionSection } from './AccordionSection';
 import { TelemetryRow } from './TelemetryRow';
 
 export interface DetailRow {
   label: string;
   value: string;
-  icon?: React.ElementType;
+  /**
+   * Optional payload for click-to-copy on this row. When set, the
+   * row's value becomes a button — display stays as `value` (e.g.
+   * compact UTM), clipboard receives `copyValue` (e.g. raw lat/lon).
+   */
+  copyValue?: string;
 }
 
 export interface CardDetailsClassification {
@@ -25,7 +29,21 @@ export interface CardDetailsProps {
   title?: string;
   /** aria-label / tooltip for the copy-all button. Defaults to 'Copy'. */
   copyLabel?: string;
+  /**
+   * Grid column count for the rows. Defaults to 2 — long Hebrew labels
+   * and full-precision values both need more horizontal room than a
+   * 3-up grid leaves, so the 2-column form is the standard density.
+   * Pick 3 only for sections where values are guaranteed short (e.g.
+   * one-glyph status flags).
+   */
+  cols?: 1 | 2 | 3;
 }
+
+const GRID_COLS_CLASS: Record<NonNullable<CardDetailsProps['cols']>, string> = {
+  1: 'grid-cols-1',
+  2: 'grid-cols-2',
+  3: 'grid-cols-3',
+};
 
 export function CardDetails({
   rows,
@@ -33,30 +51,23 @@ export function CardDetails({
   className = '',
   title = 'Telemetry',
   copyLabel = 'Copy',
+  cols = 2,
 }: CardDetailsProps) {
   if (rows.length === 0) return null;
-
-  const copyAll = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const text = rows.map((r) => `${r.label}: ${r.value}`).join('\n');
-    navigator.clipboard.writeText(text);
-  };
 
   return (
     <AccordionSection title={title} defaultOpen={defaultOpen} icon={Eye} className={className}>
       <div className="w-full py-1">
-        <div className="w-full grid grid-cols-3 gap-x-8 gap-y-2 group/copy relative">
+        <div className={`w-full grid ${GRID_COLS_CLASS[cols]} gap-x-8 gap-y-2`}>
           {rows.map((row, idx) => (
-            <TelemetryRow key={idx} label={row.label} value={row.value} icon={row.icon} />
+            <TelemetryRow
+              key={idx}
+              label={row.label}
+              value={row.value}
+              copyValue={row.copyValue}
+              copyLabel={copyLabel}
+            />
           ))}
-          <button
-            onClick={copyAll}
-            className="absolute top-0.5 end-0.5 opacity-0 group-hover/copy:opacity-100 transition-opacity p-1 rounded hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
-            aria-label={copyLabel}
-            title={copyLabel}
-          >
-            <Copy size={12} className="text-zinc-400" />
-          </button>
         </div>
       </div>
     </AccordionSection>

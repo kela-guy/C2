@@ -280,6 +280,7 @@ export function useEffectorWorkflow({
         extraEndTargetFields: {
           missionType: "jamming",
           missionStatus: "waiting_confirmation",
+          activityStatus: "mitigated" as const,
         },
         delayMs: 3000,
       }),
@@ -329,6 +330,7 @@ export function useEffectorWorkflow({
               ? {
                   ...tgt,
                   mitigationStatus: "mitigated" as const,
+                  activityStatus: "mitigated" as const,
                   missionType: "jamming" as const,
                   missionStatus: "waiting_confirmation" as const,
                 }

@@ -92,7 +92,7 @@ export function DesignateTargetOverlay({ active, onDesignate }: DesignateTargetO
           aria-label={t.bannerAriaLabel}
         >
           <div
-            className="absolute inset-0 pointer-events-none shadow-[inset_0_0_0_2px_rgba(252,211,77,0.55)]"
+            className="absolute inset-0 pointer-events-none shadow-[inset_0_0_0_2px_color-mix(in_oklch,var(--accent-warning)_55%,transparent)]"
             aria-hidden="true"
           />
 
@@ -100,7 +100,7 @@ export function DesignateTargetOverlay({ active, onDesignate }: DesignateTargetO
             className="absolute inset-x-0 top-12 flex justify-center pointer-events-none"
             aria-hidden="true"
           >
-            <div className="px-2.5 py-1 bg-amber-400/95 text-black text-[10px] font-semibold uppercase tracking-[0.18em] shadow-[0_0_0_1px_rgba(0,0,0,0.45),0_6px_18px_rgba(0,0,0,0.5)]">
+            <div className="px-2.5 py-1 bg-accent-warning/95 text-black text-[10px] font-semibold uppercase tracking-[0.18em] shadow-[0_0_0_1px_rgba(0,0,0,0.45),0_6px_18px_rgba(0,0,0,0.5)]">
               {t.bannerText}
             </div>
           </div>
@@ -166,8 +166,8 @@ function DesignationFlash({ x, y }: { x: number; y: number }) {
       className="absolute"
       style={{ left: x - half, top: y - half, width: size, height: size }}
     >
-      <span className="absolute inset-0 rounded-full ring-2 ring-amber-300/80 animate-ping motion-reduce:animate-none" />
-      <span className="absolute inset-[35%] rounded-full bg-amber-300 shadow-[0_0_8px_rgba(252,211,77,0.7)]" />
+      <span className="absolute inset-0 rounded-full ring-2 ring-accent-warning/80 animate-ping motion-reduce:animate-none" />
+      <span className="absolute inset-[35%] rounded-full bg-accent-warning shadow-[0_0_8px_color-mix(in_oklch,var(--accent-warning)_70%,transparent)]" />
     </div>
   );
 }

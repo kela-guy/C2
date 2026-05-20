@@ -80,7 +80,7 @@ export const spec: ComponentSpec = {
     {
       trigger: 'focus',
       element: 'Header area',
-      result: 'Focus ring appears (ring-2 ring-white/25)',
+      result: 'Focus ring appears (ring-2 ring-border-strong)',
       keyboard: 'Tab',
     },
   ],

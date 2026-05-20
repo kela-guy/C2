@@ -4,7 +4,7 @@ import * as React from "react";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react";
 
-import { MenuSurface } from "@/primitives/Substrate";
+import { Elevated, MenuSurface } from "@/primitives/Substrate";
 import { cn } from "./utils";
 
 function DropdownMenu({
@@ -21,25 +21,31 @@ function DropdownMenuPortal({
   );
 }
 
-function DropdownMenuTrigger({
-  ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.Trigger>) {
-  return (
-    <DropdownMenuPrimitive.Trigger
-      data-slot="dropdown-menu-trigger"
-      {...props}
-    />
-  );
-}
+const DropdownMenuTrigger = React.forwardRef<
+  React.ElementRef<typeof DropdownMenuPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Trigger>
+>(({ ...props }, ref) => (
+  <DropdownMenuPrimitive.Trigger
+    ref={ref}
+    data-slot="dropdown-menu-trigger"
+    {...props}
+  />
+));
+DropdownMenuTrigger.displayName = DropdownMenuPrimitive.Trigger.displayName;
 
 function DropdownMenuContent({
   className,
   sideOffset = 4,
+  surfaceLift = 2,
+  align,
   ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
+}: React.ComponentProps<typeof DropdownMenuPrimitive.Content> & {
+  /** Substrate lift above the mounting context. Menus default to +2. */
+  surfaceLift?: number;
+}) {
   return (
     <DropdownMenuPrimitive.Portal>
-      <MenuSurface asChild>
+      <Elevated lift={surfaceLift} asChild>
         <DropdownMenuPrimitive.Content
           data-slot="dropdown-menu-content"
           sideOffset={sideOffset}
@@ -48,8 +54,9 @@ function DropdownMenuContent({
             className,
           )}
           {...props}
+          align={align}
         />
-      </MenuSurface>
+      </Elevated>
     </DropdownMenuPrimitive.Portal>
   );
 }
@@ -233,6 +240,7 @@ function DropdownMenuSubTrigger({
 
 function DropdownMenuSubContent({
   className,
+  align,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.SubContent>) {
   return (
@@ -244,6 +252,7 @@ function DropdownMenuSubContent({
           className,
         )}
         {...props}
+        align={align}
       />
     </MenuSurface>
   );

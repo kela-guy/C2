@@ -11,6 +11,11 @@
  * switch to — in that case the picker self-disables but we still
  * render it so the operator sees the camera label in its usual spot.
  *
+ * Hosts that already surface asset selection elsewhere (e.g. the
+ * Gridblock cameras panel header tab strip) pass
+ * `showAssetPicker={false}` to suppress the per-tile picker. The
+ * compass strip stays centred via the conditional layout below.
+ *
  * `pointer-events-none` lives on the wrapper so the live frame stays
  * interactive (designate-target click-through, focus, drop-target),
  * and individual children re-enable pointer events as needed.
@@ -38,6 +43,10 @@ interface CameraTopHudProps {
    *  the same device. */
   pinnedCameraIds: Set<string>;
   onSwapAsset: (cameraId: string) => void;
+  /** Hide the per-tile asset picker. Defaults to `true`. Hosts that
+   *  expose asset selection elsewhere (e.g. tab strip in the panel
+   *  header) pass `false` to avoid duplicate affordances. */
+  showAssetPicker?: boolean;
 }
 
 export function CameraTopHud({
@@ -47,28 +56,35 @@ export function CameraTopHud({
   availableAssets,
   pinnedCameraIds,
   onSwapAsset,
+  showAssetPicker = true,
 }: CameraTopHudProps) {
   return (
     <div className="absolute inset-x-0 top-0 z-20 pointer-events-none">
       <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/55 via-black/20 to-transparent" />
 
-      <div className="relative flex items-start justify-between gap-2 pt-2.5 px-3">
-        <CameraAssetPicker
-          currentCameraId={cameraId}
-          currentLabel={cameraLabel}
-          availableAssets={availableAssets}
-          pinnedCameraIds={pinnedCameraIds}
-          onSwapAsset={onSwapAsset}
-        />
+      <div
+        className={`relative flex items-start gap-2 pt-2.5 px-3 ${showAssetPicker ? 'justify-between' : 'justify-center'}`}
+      >
+        {showAssetPicker ? (
+          <CameraAssetPicker
+            currentCameraId={cameraId}
+            currentLabel={cameraLabel}
+            availableAssets={availableAssets}
+            pinnedCameraIds={pinnedCameraIds}
+            onSwapAsset={onSwapAsset}
+          />
+        ) : null}
         <CameraCompassStrip
           bearingDeg={status.bearingDeg}
           className="pointer-events-none"
         />
-        {/* Spacer that mirrors the picker's footprint so the compass
-            strip stays visually centred regardless of the device
-            label's length. The picker max-truncates at 14ch, so a
-            ~6rem reservation matches it within tolerance. */}
-        <div aria-hidden="true" className="w-[6rem] shrink-0" />
+        {showAssetPicker ? (
+          // Spacer that mirrors the picker's footprint so the compass
+          // strip stays visually centred regardless of the device
+          // label's length. The picker max-truncates at 14ch, so a
+          // ~6rem reservation matches it within tolerance.
+          <div aria-hidden="true" className="w-[6rem] shrink-0" />
+        ) : null}
       </div>
     </div>
   );

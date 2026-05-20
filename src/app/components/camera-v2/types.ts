@@ -15,8 +15,9 @@ export type LinkedDeviceType = 'radar' | 'lidar' | 'drone' | 'camera';
  * Layout preset chosen by the operator from the panel-level layout
  * picker. The picker is *manual* — the panel does not auto-pick based
  * on feed count anymore. When the chosen preset cannot fit the current
- * feed count (e.g. Hero+Filmstrip with 1 feed), the panel falls back
+ * feed count (e.g. grid-2x2 with 3 feeds), the panel falls back
  * deterministically: hero-filmstrip → grid-2x2 → stack-2 → single.
+ * Picker disabled state uses the same rules (`isLayoutEnabledForFeedCount`).
  */
 export type LayoutKind = 'single' | 'stack-2' | 'grid-2x2' | 'hero-filmstrip';
 
@@ -32,6 +33,17 @@ export interface CameraFeed {
    */
   designateMode?: boolean;
   playback?: PlaybackState;
+}
+
+/**
+ * A tabbed workspace in the cameras panel header. Each tab owns its
+ * own stream group, layout preset, and focal feed index.
+ */
+export interface CameraFeedTab {
+  id: string;
+  feeds: CameraFeed[];
+  layout: LayoutKind;
+  activeFeedIndex: number;
 }
 
 /**

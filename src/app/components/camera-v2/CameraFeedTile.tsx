@@ -75,6 +75,7 @@ interface CameraFeedTileProps {
   onAssignmentClick?: () => void;
   onDropDevice: (item: DeviceCameraDragItem) => void;
   onFocus?: () => void;
+  onHoverChange?: (hovering: boolean) => void;
   onResetView?: () => void;
   /** Fired when the operator designates a point on the feed as a target.
    * Coordinates are normalised to the feed (0..1, top-left origin). */
@@ -96,6 +97,9 @@ interface CameraFeedTileProps {
    *  panel reuses the same swap path drag-drop uses, so playback
    *  resets cleanly between cameras. */
   onSwapAsset?: (cameraId: string) => void;
+  /** Hide the per-tile asset picker (defaults to `true`). Hosts that
+   *  expose asset selection in their own chrome pass `false`. */
+  showAssetPicker?: boolean;
 }
 
 export function CameraFeedTile({
@@ -121,12 +125,14 @@ export function CameraFeedTile({
   onAssignmentClick,
   onDropDevice,
   onFocus,
+  onHoverChange,
   onResetView,
   onDesignateTarget,
   onPromoteToHero,
   availableAssets,
   pinnedCameraIds,
   onSwapAsset,
+  showAssetPicker,
 }: CameraFeedTileProps) {
   const tile = useStrings().camera.feedTile;
   const [hovered, setHovered] = useState(false);
@@ -253,10 +259,10 @@ export function CameraFeedTile({
         // contract. A near-black surface keeps empty tiles distinct
         // from the substrate-1 page bg around them.
         className={`w-full h-full relative flex items-center justify-center bg-surface-void transition-shadow duration-150 ease-out
-          ${showDropAccent ? 'shadow-[inset_0_0_0_2px_rgba(56,189,248,0.6)]' : ''}`}
+          ${showDropAccent ? 'shadow-[inset_0_0_0_2px_color-mix(in_oklch,var(--accent-info)_60%,transparent)]' : ''}`}
       >
-        <div className="flex flex-col items-center gap-2 text-white/60">
-          <Pin size={16} className="text-white/30" aria-hidden="true" />
+        <div className="flex flex-col items-center gap-2 text-slate-12/60">
+          <Pin size={16} className="text-slate-12/30" aria-hidden="true" />
           <span className="text-xs">{emptySlotHint ?? tile.defaultEmptySlotHint}</span>
         </div>
       </div>
@@ -321,8 +327,14 @@ export function CameraFeedTile({
         tabIndex={0}
         role="region"
         aria-label={`Camera feed: ${cameraLabel}`}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        onMouseEnter={() => {
+          setHovered(true);
+          onHoverChange?.(true);
+        }}
+        onMouseLeave={() => {
+          setHovered(false);
+          onHoverChange?.(false);
+        }}
         onFocus={() => {
           setFocusWithin(true);
           onFocus?.();
@@ -334,7 +346,7 @@ export function CameraFeedTile({
         onDoubleClick={handleTileDoubleClick}
         className={`w-full h-full relative isolate bg-black overflow-hidden focus:outline-none transition-shadow duration-150 ease-out
           ${cursorClass}
-          ${showDropAccent ? 'shadow-[inset_0_0_0_2px_rgba(56,189,248,0.6)]' : 'focus-visible:shadow-[inset_0_0_0_2px_rgba(255,255,255,0.3)]'}`}
+          ${showDropAccent ? 'shadow-[inset_0_0_0_2px_color-mix(in_oklch,var(--accent-info)_60%,transparent)]' : 'focus-visible:shadow-[inset_0_0_0_2px_var(--border-strong)]'}`}
         data-tile-variant={tileVariant}
       >
         {/* Live frame — always rendered. When playback is open it
@@ -423,6 +435,7 @@ export function CameraFeedTile({
           availableAssets={availableAssets ?? []}
           pinnedCameraIds={pinnedCameraIds ?? EMPTY_PINNED_SET}
           onSwapAsset={onSwapAsset ?? noopSwap}
+          showAssetPicker={showAssetPicker}
         />
 
         {/* Detection signal: state-based ring + one-shot pulse on new.
@@ -452,10 +465,10 @@ export function CameraFeedTile({
               data-no-promote
               data-testid="promote-to-hero"
               className="pointer-events-auto inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-sm
-                bg-black/60 backdrop-blur-sm ring-1 ring-inset ring-white/20
-                text-white text-xs font-medium
-                hover:bg-black/75 hover:ring-white/30
-                focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/50
+                bg-black/60 backdrop-blur-sm ring-1 ring-inset ring-border-default
+                text-slate-12 text-xs font-medium
+                hover:bg-black/75 hover:ring-border-strong
+                focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong
                 active:scale-[0.98] transition-[background-color,box-shadow,transform] duration-150 ease-out"
             >
               <Maximize2 size={12} aria-hidden="true" />

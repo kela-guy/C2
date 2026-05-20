@@ -127,7 +127,7 @@ export const spec: ComponentSpec = {
       { name: 'row-bg', value: 'CARD_TOKENS.surface.level4', usage: 'Sensor row background color' },
       { name: 'row-ring', value: 'rgba(255,255,255,0.1)', usage: 'Default row border ring (shadow)' },
       { name: 'row-hover-ring', value: 'rgba(6,182,212,0.3)', usage: 'Cyan hover ring highlight' },
-      { name: 'row-text', value: 'white', usage: 'Primary row text color (text-white)' },
+      { name: 'row-text', value: 'slate-12', usage: 'Primary row text color (text-slate-12)' },
       { name: 'icon-opacity', value: '0.6', usage: 'Sensor icon opacity (opacity-60)' },
       { name: 'distance-text', value: '#a1a1aa (zinc-400)', usage: 'Distance label text color' },
       { name: 'top-border', value: 'CARD_TOKENS.surface.level2', usage: 'Inset top border via box-shadow' },

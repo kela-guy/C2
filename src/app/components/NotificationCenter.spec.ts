@@ -116,7 +116,7 @@ export const spec: ComponentSpec = {
     {
       trigger: 'hover',
       element: 'Notification row',
-      result: 'Row background highlights to bg-white/[0.03]',
+      result: 'Row background highlights to bg-state-hover',
       animation: { property: 'background-color', from: 'transparent', to: 'rgba(255,255,255,0.03)', duration: '150ms', easing: 'ease' },
     },
   ],

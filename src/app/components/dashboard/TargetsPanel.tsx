@@ -53,9 +53,9 @@ function TargetsPanelImpl({
 
   const handleTargetClick = useCallback(
     (target: Detection) => {
-      onActiveTargetChange(target.id);
+      onActiveTargetChange(target.id === activeTargetId ? null : target.id);
     },
-    [onActiveTargetChange],
+    [activeTargetId, onActiveTargetChange],
   );
 
   const handleDismiss = useCallback(

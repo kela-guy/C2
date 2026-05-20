@@ -93,7 +93,7 @@ const NotificationRow = ({ item }: { item: NotificationItem }) => {
           <span className="text-[11px] font-medium uppercase tracking-wider text-slate-11 group-hover:text-slate-12 transition-colors">
             {item.sender}
           </span>
-          <span className="text-[10px] text-zinc-500 font-medium font-mono tabular-nums">
+          <span className="text-[10px] text-slate-9 font-medium font-mono tabular-nums">
             {item.time}
           </span>
         </div>

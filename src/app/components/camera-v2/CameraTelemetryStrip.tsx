@@ -33,7 +33,7 @@ export function CameraTelemetryStrip({ visible, status }: CameraTelemetryStripPr
       */}
       <DirIsland
         direction="ltr"
-        className="flex items-center gap-3 bg-black/55 backdrop-blur-sm ring-1 ring-inset ring-white/10 px-2.5 py-1.5"
+        className="flex items-center gap-3 bg-black/55 backdrop-blur-sm ring-1 ring-inset ring-border-default px-2.5 py-1.5"
       >
         <Stat label="ALT" value={`${(status.altitudeM ?? 0).toFixed(0)}m`} />
         <Divider />
@@ -46,12 +46,12 @@ export function CameraTelemetryStrip({ visible, status }: CameraTelemetryStripPr
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center gap-1.5">
-      <span className="text-[9px] font-medium text-white/55 uppercase tracking-wider">{label}</span>
-      <span className="font-mono text-[11px] tabular-nums text-white/95">{value}</span>
+      <span className="text-[9px] font-medium text-slate-9 uppercase tracking-wider">{label}</span>
+      <span className="font-mono text-[11px] tabular-nums text-slate-12">{value}</span>
     </div>
   );
 }
 
 function Divider() {
-  return <span className="w-px h-3 bg-white/15" aria-hidden="true" />;
+  return <span className="w-px h-3 bg-state-selected" aria-hidden="true" />;
 }

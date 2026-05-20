@@ -27,8 +27,8 @@ export function CardClosure({
   return (
     <div className={`p-3 space-y-2 ${className}`} style={{ boxShadow: `inset 0 1px 0 0 ${CARD_TOKENS.surface.level2}` }}>
       <div className="flex items-center gap-2">
-        <CheckCircle2 size={14} className="text-zinc-400" aria-hidden="true" />
-        <span className="text-xs font-bold text-zinc-300">{title}</span>
+        <CheckCircle2 size={14} className="text-slate-10" aria-hidden="true" />
+        <span className="text-xs font-bold text-slate-11">{title}</span>
       </div>
       <div className="grid grid-cols-2 gap-1.5">
         {outcomes.map((outcome) => {
@@ -42,10 +42,10 @@ export function CardClosure({
                 e.stopPropagation();
                 onSelect(outcome.id);
               }}
-              className="h-auto min-h-0 w-full justify-start px-2.5 py-2 rounded text-zinc-300 transition-colors text-[11px] font-medium text-end gap-1.5 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 hover:bg-white/[0.08]"
+              className="h-auto min-h-0 w-full justify-start px-2.5 py-2 rounded text-slate-11 transition-colors text-[11px] font-medium text-end gap-1.5 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong hover:bg-state-pressed"
               style={{ backgroundColor: CARD_TOKENS.surface.level3, boxShadow: `0 0 0 1px ${CARD_TOKENS.surface.level3}` }}
             >
-              {OutcomeIcon && <OutcomeIcon size={12} className="shrink-0 text-zinc-500" aria-hidden="true" />}
+              {OutcomeIcon && <OutcomeIcon size={12} className="shrink-0 text-slate-9" aria-hidden="true" />}
               {outcome.label}
             </Button>
           );

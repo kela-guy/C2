@@ -49,7 +49,7 @@ export const spec: ComponentSpec = {
       trigger: 'Mouse enters pill',
       description: 'Background lightens to sky-400',
       implementedInPrototype: true,
-      visualNotes: 'hover:bg-sky-400',
+      visualNotes: 'hover:bg-accent-info',
     },
     {
       name: 'active press',
@@ -117,7 +117,7 @@ export const spec: ComponentSpec = {
       'Enter/Space: activates click (native button)',
       'Tab: focusable in tab order',
     ],
-    focusManagement: 'Focus ring via focus-visible:ring-2 ring-white/30.',
+    focusManagement: 'Focus ring via focus-visible:ring-2 ring-border-strong.',
     screenReaderNotes: 'Button announces count in Hebrew. Entity type labels provide type context.',
   },
 

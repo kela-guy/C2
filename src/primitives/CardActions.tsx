@@ -55,10 +55,10 @@ type StatusStripProps = {
 };
 
 const STATUS_STRIP_ICON_TONE: Record<CardActionStatusStripTone, string> = {
-  success: 'text-emerald-400',
-  info: 'text-sky-400',
-  warning: 'text-amber-400',
-  danger: 'text-red-400',
+  success: 'text-accent-success',
+  info: 'text-accent-info',
+  warning: 'text-accent-warning',
+  danger: 'text-accent-danger',
 };
 
 function StatusStrip({ strip, dataTour }: StatusStripProps) {
@@ -66,7 +66,7 @@ function StatusStrip({ strip, dataTour }: StatusStripProps) {
   return (
     <div
       role="status"
-      className="w-full min-h-[30px] flex items-center justify-center gap-2 px-3 text-[10px] font-medium text-zinc-300 cursor-default select-none pointer-events-none"
+      className="w-full min-h-[30px] flex items-center justify-center gap-2 px-3 text-[10px] font-medium text-slate-11 cursor-default select-none pointer-events-none"
       {...(dataTour ? { 'data-tour': dataTour } : {})}
     >
       {Icon && <Icon size={11} className={`shrink-0 ${STATUS_STRIP_ICON_TONE[strip.tone]}`} aria-hidden="true" />}
@@ -147,7 +147,7 @@ export function CardActions({
     const ungrouped = actions.filter(a => !a.group && !a.dropdownActions);
 
     return (
-      <div className={`px-2 py-2 ${className}`}>
+      <div className={`px-2 py-2 bg-surface-2 ${className}`}>
         <div className="flex flex-col gap-1.5">
           {/* Primary row */}
           {primaryActions.length > 0 && (
@@ -269,7 +269,7 @@ export function CardActions({
   const cols = Math.min(rest.length || primary.length, 4);
 
   return (
-    <div className={`px-2 py-2 ${className}`}>
+    <div className={`px-2 py-2 bg-surface-2 ${className}`}>
       <div
         className="grid gap-1.5"
         style={{ gridTemplateColumns: `repeat(${cols || 1}, 1fr)` }}
@@ -333,7 +333,7 @@ function renderConfirmDialog(
   return (
     <div
       className="mt-1 p-3 rounded"
-      style={{ boxShadow: `0 0 0 1px ${CARD_TOKENS.surface.level2}`, backgroundColor: `rgba(255,255,255,${CARD_TOKENS.elevation.overlay.level2})` }}
+      style={{ boxShadow: `0 0 0 1px ${CARD_TOKENS.surface.level2}`, backgroundColor: 'var(--state-hover-strong)' }}
       role="alertdialog"
       aria-labelledby="confirm-title"
       aria-describedby={confirmingAction.confirm!.description ? 'confirm-desc' : undefined}
@@ -341,25 +341,25 @@ function renderConfirmDialog(
     >
       {confirmStep === 1 ? (
         <>
-          <div id="confirm-title" className="text-[11px] font-semibold text-zinc-200 mb-2">
+          <div id="confirm-title" className="text-[11px] font-semibold text-slate-11 mb-2">
             {confirmingAction.confirm!.title}
           </div>
           {confirmingAction.confirm!.description && (
-            <div id="confirm-desc" className="text-[10px] text-zinc-400 mb-3 text-pretty">
+            <div id="confirm-desc" className="text-[10px] text-slate-10 mb-3 text-pretty">
               {confirmingAction.confirm!.description}
             </div>
           )}
           <div className="flex gap-2">
             <button
               onClick={handleConfirm}
-              className="flex-1 h-8 rounded bg-[oklch(0.348_0.111_17)] hover:bg-[oklch(0.445_0.151_17)] active:bg-[oklch(0.295_0.082_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)] text-[11px] font-semibold transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+              className="flex-1 h-8 rounded bg-accent-danger-soft hover:bg-accent-danger text-slate-12 ring-1 ring-inset ring-accent-danger-soft/40 text-[11px] font-semibold transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-border-strong"
               aria-label={primaryConfirm}
             >
               {primaryConfirm}
             </button>
             <button
               onClick={handleCancel}
-              className="flex-1 h-8 rounded bg-[oklch(0.302_0_0)] hover:bg-[oklch(0.388_0_0)] active:bg-[oklch(0.238_0_0)] text-white text-[11px] font-medium transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+              className="flex-1 h-8 rounded bg-surface-4 hover:bg-surface-5 text-slate-12 text-[11px] font-medium transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-border-strong"
               aria-label={strings.cancelLabel}
             >
               {strings.cancelLabel}
@@ -368,18 +368,18 @@ function renderConfirmDialog(
         </>
       ) : (
         <>
-          <div id="confirm-title" className="text-[11px] font-bold text-[oklch(0.863_0.102_17)] mb-2">{strings.finalConfirmTitle}</div>
+          <div id="confirm-title" className="text-[11px] font-bold text-accent-danger mb-2">{strings.finalConfirmTitle}</div>
           <div className="flex gap-2">
             <button
               onClick={handleConfirm}
-              className="flex-1 h-8 rounded bg-[oklch(0.348_0.111_17)] hover:bg-[oklch(0.445_0.151_17)] active:bg-[oklch(0.295_0.082_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)] text-[11px] font-bold transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+              className="flex-1 h-8 rounded bg-accent-danger-soft hover:bg-accent-danger text-slate-12 ring-1 ring-inset ring-accent-danger-soft/40 text-[11px] font-bold transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-border-strong"
               aria-label={finalConfirm}
             >
               {finalConfirm}
             </button>
             <button
               onClick={handleCancel}
-              className="flex-1 h-8 rounded bg-[oklch(0.302_0_0)] hover:bg-[oklch(0.388_0_0)] active:bg-[oklch(0.238_0_0)] text-white text-[11px] font-medium transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+              className="flex-1 h-8 rounded bg-surface-4 hover:bg-surface-5 text-slate-12 text-[11px] font-medium transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-border-strong"
               aria-label={strings.cancelLabel}
             >
               {strings.cancelLabel}

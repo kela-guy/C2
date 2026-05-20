@@ -328,7 +328,7 @@ function UnifiedCard({
           <div className="w-full py-1">
             <div className="grid grid-cols-3 grid-rows-1 gap-0">
               {slots.laserPosition.map((row, idx) => (
-                <TelemetryRow key={idx} label={row.label} value={row.value} icon={row.icon} />
+                <TelemetryRow key={idx} label={row.label} value={row.value} />
               ))}
             </div>
           </div>

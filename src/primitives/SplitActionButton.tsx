@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChevronDown, Loader2 } from '@/lib/icons/central';
+import { useIsRtl } from '@/lib/direction';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { cn } from '@/shared/components/ui/utils';
 import {
@@ -30,28 +31,28 @@ export interface SplitDropdownGroup {
 
 export const SPLIT_BUTTON_VARIANTS = {
   fill: {
-    base: 'bg-white/[0.08]',
-    hover: 'hover:bg-white/[0.14]',
-    active: 'active:bg-white/[0.06]',
-    text: 'text-zinc-200',
+    base: 'bg-state-pressed',
+    hover: 'hover:bg-state-selected',
+    active: 'active:bg-state-hover-strong',
+    text: 'text-slate-11',
   },
   ghost: {
-    base: 'bg-zinc-800',
-    hover: 'hover:bg-zinc-700',
-    active: 'active:bg-zinc-900',
-    text: 'text-white',
+    base: 'bg-surface-3',
+    hover: 'hover:bg-surface-4',
+    active: 'active:bg-surface-2',
+    text: 'text-slate-12',
   },
   danger: {
-    base: 'bg-[oklch(0.435_0.151_25)]',
-    hover: 'hover:bg-[oklch(0.485_0.151_25)]',
-    active: 'active:bg-[oklch(0.385_0.151_25)]',
-    text: 'text-white',
+    base: 'bg-accent-danger-soft',
+    hover: 'hover:bg-accent-danger',
+    active: 'active:bg-accent-danger-soft/80',
+    text: 'text-slate-12',
   },
   warning: {
-    base: 'bg-[oklch(0.501_0.166_75)]',
-    hover: 'hover:bg-[oklch(0.551_0.166_75)]',
-    active: 'active:bg-[oklch(0.451_0.166_75)]',
-    text: 'text-white',
+    base: 'bg-accent-warning-soft',
+    hover: 'hover:bg-accent-warning',
+    active: 'active:bg-accent-warning-soft/80',
+    text: 'text-slate-12',
   },
 } as const;
 
@@ -107,6 +108,8 @@ export function SplitActionButton({
   moreActionsLabel = 'More actions',
   placeholder = 'Select',
 }: SplitActionButtonProps) {
+  const isRtl = useIsRtl();
+  const dir: 'rtl' | 'ltr' = isRtl ? 'rtl' : 'ltr';
   const prefersReducedMotion = useReducedMotion();
   const [menuOpen, setMenuOpen] = React.useState(false);
   const shellRef = React.useRef<HTMLDivElement>(null);
@@ -126,7 +129,7 @@ export function SplitActionButton({
     !hasSubtitle && sz.height, sz.text, sz.font, c.text,
     c.base, c.hover, c.active,
     'transition-[background-color,transform] duration-150 ease-out',
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/30',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-border-strong',
   );
 
   const shellDimmed = dimDisabledShell && !loading && isDisabled;
@@ -144,7 +147,7 @@ export function SplitActionButton({
       : 'active:scale-[0.98] will-change-transform';
 
   return (
-    <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+    <DropdownMenu dir={dir} open={menuOpen} onOpenChange={setMenuOpen}>
       {/*
         Two real, sibling buttons inside a shared shell. Only the
         chevron is wrapped in `DropdownMenuTrigger` so it is the *only*
@@ -214,7 +217,7 @@ export function SplitActionButton({
                 <span>{label}</span>
               )}
               {hasBadge && (
-                <span className="text-[10px] font-medium bg-white/[0.12] px-1.5 py-0.5 rounded leading-none whitespace-nowrap">
+                <span className="text-[10px] font-medium bg-state-selected px-1.5 py-0.5 rounded leading-none whitespace-nowrap">
                   {badge}
                 </span>
               )}
@@ -252,14 +255,13 @@ export function SplitActionButton({
         side="bottom"
         align="end"
         sideOffset={6}
-        style={shellWidth ? { minWidth: shellWidth } : undefined}
+        surfaceLift={5}
+        style={{
+          ...(shellWidth ? { minWidth: shellWidth } : {}),
+          transformOrigin: isRtl ? 'right top' : 'left top',
+        }}
         className={cn(
-          // `align="end"` already anchors the popover to the inline-end
-          // corner; keep the transform origin matching the trigger
-          // (Radix's CSS variable handles direction internally).
-          // Surface + shadow now come from <MenuSurface> in
-          // ui/dropdown-menu.tsx (substrate lift +2).
-          'rounded-lg border-none p-1 [transform-origin:var(--radix-dropdown-menu-content-transform-origin)] text-slate-12',
+          'rounded-[2px] border-none p-1 data-no-rtl-flip text-slate-12',
           prefersReducedMotion && 'data-[state=open]:animate-none data-[state=closed]:animate-none',
         )}
         onCloseAutoFocus={(e) => e.preventDefault()}
@@ -267,20 +269,23 @@ export function SplitActionButton({
           {dropdownGroups ? (
             dropdownGroups.map((group, gi) => (
               <React.Fragment key={group.label ?? gi}>
-                {gi > 0 && <DropdownMenuSeparator className="my-1 bg-white/10" />}
+                {gi > 0 && <DropdownMenuSeparator className="my-1 bg-state-hover-strong" />}
                 <DropdownMenuGroup>
                   {group.label && (
-                    <DropdownMenuLabel className="px-2.5 py-1.5 text-[10px] font-medium text-zinc-500 uppercase tracking-wider">
+                    <DropdownMenuLabel className="px-2.5 py-1.5 text-[10px] font-medium text-slate-9 uppercase tracking-wider">
                       {group.label}
                     </DropdownMenuLabel>
                   )}
-                  {group.items.map((item) => {
+                  {group.items.map((item, ii) => {
                     const ItemIcon = item.icon;
                     return (
+                      <React.Fragment key={item.id}>
+                        {ii > 0 && (
+                          <DropdownMenuSeparator className="my-1 bg-state-hover-strong" />
+                        )}
                       <DropdownMenuItem
-                        key={item.id}
                         disabled={item.disabled}
-                        className="group flex w-full flex-row items-center justify-start gap-2 rounded-md px-2.5 py-2 text-xs text-zinc-200 cursor-pointer transition-[background-color,color] duration-150 ease-out hover:bg-white/[0.08] hover:text-white focus:bg-white/[0.08] focus:text-white"
+                        className="group flex w-full flex-row items-center justify-start gap-2 rounded-[2px] px-2.5 py-2 text-xs text-slate-11 cursor-pointer transition-[background-color,color] duration-150 ease-out hover:bg-state-pressed hover:text-slate-12 focus:bg-state-pressed focus:text-slate-12"
                         onClick={(e) => {
                           e.stopPropagation();
                           item.onClick(e);
@@ -292,27 +297,31 @@ export function SplitActionButton({
                       >
                         <span className={cn(
                           'w-0.5 self-stretch rounded-full shrink-0',
-                          item.active ? 'bg-white' : 'bg-transparent',
+                          item.active ? 'bg-slate-12' : 'bg-transparent',
                         )} />
                         {ItemIcon && <ItemIcon size={14} className="shrink-0" aria-hidden="true" />}
                         <span className="min-w-0 flex-1 text-start">{item.label}</span>
-                        <span className="text-[10px] text-white/40 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                        <span className="text-[10px] text-slate-9 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                           {placeholder}
                         </span>
                       </DropdownMenuItem>
+                      </React.Fragment>
                     );
                   })}
                 </DropdownMenuGroup>
               </React.Fragment>
             ))
           ) : (
-            dropdownItems.map((item) => {
+            dropdownItems.map((item, i) => {
               const ItemIcon = item.icon;
               return (
+                <React.Fragment key={item.id}>
+                  {i > 0 && (
+                    <DropdownMenuSeparator className="my-1 bg-state-hover-strong" />
+                  )}
                 <DropdownMenuItem
-                  key={item.id}
                   disabled={item.disabled}
-                  className="flex w-full flex-row items-center justify-start gap-2 rounded-md px-2.5 py-2 text-xs text-zinc-200 cursor-pointer transition-[background-color,color] duration-150 ease-out hover:bg-white/[0.08] hover:text-white focus:bg-white/[0.08] focus:text-white"
+                  className="flex w-full flex-row items-center justify-start gap-2 rounded-[2px] px-2.5 py-2 text-xs text-slate-11 cursor-pointer transition-[background-color,color] duration-150 ease-out hover:bg-state-pressed hover:text-slate-12 focus:bg-state-pressed focus:text-slate-12"
                   onClick={(e) => {
                     e.stopPropagation();
                     item.onClick(e);
@@ -321,6 +330,7 @@ export function SplitActionButton({
                   {ItemIcon && <ItemIcon size={14} className="shrink-0" aria-hidden="true" />}
                   <span className="min-w-0 flex-1 text-start">{item.label}</span>
                 </DropdownMenuItem>
+                </React.Fragment>
               );
             })
           )}

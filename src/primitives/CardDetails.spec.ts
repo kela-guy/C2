@@ -8,10 +8,13 @@ export const spec: ComponentSpec = {
   status: 'prototype',
 
   props: [
-    { name: 'rows', type: 'DetailRow[]', required: true, description: 'Array of { label, value, icon? } entries rendered via TelemetryRow components' },
+    { name: 'rows', type: 'DetailRow[]', required: true, description: 'Array of { label, value, copyValue? } entries rendered via TelemetryRow components' },
     { name: 'classification', type: 'CardDetailsClassification', required: false, description: 'Classification badge showing type, confidence %, and color — currently unused in render' },
     { name: 'defaultOpen', type: 'boolean', required: false, defaultValue: 'false', description: 'Whether the accordion section starts expanded' },
     { name: 'className', type: 'string', required: false, defaultValue: "''", description: 'Additional CSS classes on the AccordionSection wrapper' },
+    { name: 'title', type: 'string', required: false, defaultValue: "'Telemetry'", description: 'Accordion section header text' },
+    { name: 'copyLabel', type: 'string', required: false, defaultValue: "'Copy'", description: 'aria-label / tooltip forwarded to each row\'s copy button when copyValue is set' },
+    { name: 'cols', type: '1 | 2 | 3', required: false, defaultValue: '2', description: 'Grid column count for the rows. Defaults to 2 — Hebrew labels and full-precision values both need horizontal room. Pick 3 only for short-value sections.' },
   ],
 
   states: [
@@ -99,8 +102,8 @@ export const spec: ComponentSpec = {
 
   tokens: {
     colors: [
-      { name: 'copy-icon', value: 'text-zinc-400', usage: 'Copy button icon color' },
-      { name: 'copy-hover-bg', value: 'hover:bg-white/10', usage: 'Copy button hover background' },
+      { name: 'copy-icon', value: 'text-slate-10', usage: 'Copy button icon color' },
+      { name: 'copy-hover-bg', value: 'hover:bg-state-hover-strong', usage: 'Copy button hover background' },
     ],
     typography: [
       { name: 'section-title', fontFamily: 'Heebo', fontSize: '11px', fontWeight: '600', lineHeight: '1.4', usage: 'Accordion section title (via AccordionSection)' },

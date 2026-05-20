@@ -11,9 +11,22 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/shared/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/dropdown-menu";
+import { useIsRtl } from "@/lib/direction";
 import { useStrings } from "@/lib/intl";
+import type { MapViewMode } from "./mapViewMode";
 
 interface MapToolbarProps {
+  mapViewMode: MapViewMode;
+  onMapViewModeChange: (mode: MapViewMode) => void;
   onDropLocation?: () => void;
   onMeasure?: () => void;
   /**
@@ -22,17 +35,19 @@ interface MapToolbarProps {
    * military grid) — the toolbar only forwards the trimmed value.
    */
   onCoordSearch?: (raw: string) => void;
-  onOpenMapSettings?: () => void;
 }
 
 export function MapToolbar({
+  mapViewMode,
+  onMapViewModeChange,
   onDropLocation,
   onMeasure,
   onCoordSearch,
-  onOpenMapSettings,
 }: MapToolbarProps) {
   const t = useStrings();
+  const isRtl = useIsRtl();
   const labels = t.gridblock.mapToolbar;
+  const [mapMenuOpen, setMapMenuOpen] = useState(false);
 
   return (
     <header className="flex h-8 shrink-0 items-center justify-between gap-2 overflow-hidden border-b border-[var(--gridblock-border)] bg-[var(--gridblock-bar)] text-xs leading-4 text-[var(--gridblock-text-secondary)]">
@@ -60,21 +75,47 @@ export function MapToolbar({
       </div>
 
       <div className="flex h-full w-8 items-center justify-center border-r border-r-white/10">
-        <Tooltip>
-          <TooltipTrigger asChild>
+        <DropdownMenu open={mapMenuOpen} onOpenChange={setMapMenuOpen}>
+          <DropdownMenuTrigger asChild>
             <button
               type="button"
-              onClick={onOpenMapSettings}
               aria-label={labels.mapSettings}
-              className="flex h-7 min-w-7 items-center justify-center rounded-sm px-1.5 text-[var(--gridblock-text-secondary)] transition-colors duration-150 hover:bg-state-hover-strong hover:text-[var(--gridblock-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--gridblock-accent-500-rgb),0.6)]"
+              title={labels.mapSettings}
+              className="flex size-8 items-center justify-center rounded-none text-[var(--gridblock-text-secondary)] transition-colors duration-150 hover:bg-state-hover-strong hover:text-[var(--gridblock-text-primary)] focus-visible:outline-none focus-visible:shadow-[0_0_0_2px_var(--border-strong)] data-[state=open]:bg-state-hover-strong data-[state=open]:text-[var(--gridblock-text-primary)]"
             >
               <SlidersHorizontal size={18} />
             </button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" sideOffset={6}>
-            {labels.mapSettings}
-          </TooltipContent>
-        </Tooltip>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            dir={isRtl ? "rtl" : "ltr"}
+            side="bottom"
+            align="end"
+            sideOffset={6}
+            className="min-w-[200px] rounded-sm border-border-default bg-surface-3 p-1 text-start text-slate-11"
+          >
+            <DropdownMenuLabel className="block w-full px-2 py-1.5 text-start text-[11px] font-semibold text-slate-11">
+              {labels.mapViewSection}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator className="bg-border-default" />
+            <DropdownMenuRadioGroup
+              value={mapViewMode}
+              onValueChange={(value) => onMapViewModeChange(value as MapViewMode)}
+            >
+              <DropdownMenuRadioItem
+                value="current"
+                className="rounded-sm py-1.5 text-start text-[12px] text-slate-12 focus:bg-state-hover-strong focus:text-slate-12"
+              >
+                {labels.mapViewCurrent}
+              </DropdownMenuRadioItem>
+              <DropdownMenuRadioItem
+                value="monochromeTerrain"
+                className="rounded-sm py-1.5 text-start text-[12px] text-slate-12 focus:bg-state-hover-strong focus:text-slate-12"
+              >
+                {labels.mapViewMonochromeTerrain}
+              </DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

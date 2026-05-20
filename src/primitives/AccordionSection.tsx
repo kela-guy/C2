@@ -5,7 +5,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/shared/components/ui/collapsible";
-import { CARD_TOKENS } from "./tokens";
 
 export function AccordionSection({
   title,
@@ -28,11 +27,11 @@ export function AccordionSection({
       className={["group", className].filter(Boolean).join(" ")}
     >
       <CollapsibleTrigger
-        className="flex w-full cursor-pointer items-center justify-between rounded-none bg-white/[0.05] p-[8px] transition-colors hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+        className="flex w-full cursor-pointer items-center justify-between rounded-none p-[8px] transition-colors hover:bg-state-hover data-[state=open]:bg-state-hover-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong"
       >
-        <div className="flex items-center gap-2 text-sm font-normal text-zinc-300">
+        <div className="flex items-center gap-2 text-sm font-normal text-slate-11">
           {HeaderIcon && (
-            <HeaderIcon size={14} className="text-zinc-500" aria-hidden="true" />
+            <HeaderIcon size={14} className="text-slate-12" aria-hidden="true" />
           )}
           {title}
         </div>
@@ -40,7 +39,7 @@ export function AccordionSection({
         <div className="flex items-center gap-2">
           {headerAction}
           <div
-            className="text-zinc-500 transition-transform duration-200 group-data-[state=open]:rotate-180"
+            className="text-slate-9 transition-transform duration-200 group-data-[state=open]:rotate-180"
             aria-hidden="true"
           >
             <ChevronDown size={16} />
@@ -49,12 +48,7 @@ export function AccordionSection({
       </CollapsibleTrigger>
 
       <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
-        <div
-          className="flex flex-wrap px-[8px] py-[0px]"
-          style={{
-            backgroundColor: `rgba(255,255,255,${CARD_TOKENS.elevation.overlay.level2})`,
-          }}
-        >
+        <div className="flex flex-wrap bg-surface-4 px-[8px] py-[0px]">
           {children}
         </div>
       </CollapsibleContent>

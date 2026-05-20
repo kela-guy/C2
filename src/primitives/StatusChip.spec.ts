@@ -43,7 +43,7 @@ export const spec: ComponentSpec = {
       description: 'Neutral gray for unknown or unclassified status',
       implementedInPrototype: true,
       storyProps: { label: 'לא ידוע', color: 'gray' },
-      visualNotes: 'bg-[rgba(255,255,255,0.15)] text-white',
+      visualNotes: 'bg-state-selected text-slate-12',
     },
     {
       name: 'loading',
@@ -167,7 +167,7 @@ export const spec: ComponentSpec = {
 
   notes: [
     'Currently uses if/else chain for color mapping — consider a lookup object for extensibility.',
-    'The gray variant falls through to the default bg/text, which is rgba(255,255,255,0.15)/text-white.',
+    'The gray variant falls through to the default bg/text, which is bg-state-selected/text-slate-12.',
     'whitespace-nowrap is applied but no max-width or truncation exists for very long labels.',
   ],
 };

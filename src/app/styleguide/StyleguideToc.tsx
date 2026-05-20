@@ -74,7 +74,7 @@ export function StyleguideToc({
                 onSelect(a.id);
                 document.getElementById(a.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
               }}
-              className="relative py-1 text-[.8125rem] leading-[1.125rem] no-underline transition-colors duration-150 ease-out before:absolute before:inset-y-px before:-left-[13px] before:w-px before:rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 hover:text-white data-[active=true]:text-white data-[active=true]:font-semibold data-[active=true]:before:w-0.5 data-[active=true]:before:bg-white data-[active=false]:text-white/50 data-[active=false]:before:bg-transparent"
+              className="relative py-1 text-[.8125rem] leading-[1.125rem] no-underline transition-colors duration-150 ease-out before:absolute before:inset-y-px before:-left-[13px] before:w-px before:rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong hover:text-slate-12 data-[active=true]:text-slate-12 data-[active=true]:font-semibold data-[active=true]:before:w-0.5 data-[active=true]:before:bg-slate-12 data-[active=false]:text-slate-9 data-[active=false]:before:bg-transparent"
             >
               {a.label}
             </a>

@@ -34,8 +34,8 @@ export function NewUpdatesPill({
         onClick={onClick}
         aria-label={text}
         className={cn(
-          'h-8 gap-1.5 rounded-full border-0 bg-sky-500 px-3 text-[12px] font-semibold text-white shadow-[0_8px_24px_rgba(29,155,240,0.35),0_0_0_1px_rgba(255,255,255,0.1)] transition-[background-color,transform] duration-150 ease-out hover:bg-sky-400 focus-visible:border-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 active:scale-[0.98]',
-          'hover:text-white',
+          'h-8 gap-1.5 rounded-full border-0 bg-accent-info px-3 text-[12px] font-semibold text-slate-1 shadow-[0_8px_24px_color-mix(in_oklch,var(--accent-info)_35%,transparent),0_0_0_1px_var(--border-default)] transition-[background-color,transform] duration-150 ease-out hover:bg-accent-info/90 focus-visible:border-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong active:scale-[0.98]',
+          'hover:text-slate-1',
         )}
       >
         <ArrowUp className="size-[13px]" size={13} strokeWidth={2.5} aria-hidden="true" />

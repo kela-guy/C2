@@ -181,14 +181,14 @@ export function MapMarker({
                 left: cx - badgeSize / 2,
                 top: cy - badgeSize / 2,
                 background: hexToRgba(badgeFill, badgeOpacity),
-                border: '1px solid rgba(255,255,255,0.2)',
+                border: '1px solid var(--border-default)',
                 boxShadow: '0px 0px 0px 1px rgba(0,0,0,1)',
                 opacity: layerDim(5),
                 transition: 'opacity 300ms ease',
               }}
             >
               <span
-                className="font-bold text-white/80 leading-none select-none"
+                className="font-bold text-slate-12/80 leading-none select-none"
                 style={{ fontSize }}
               >
                 {compassLetter}
@@ -204,14 +204,17 @@ export function MapMarker({
             style={{
               right: -2,
               bottom: -2,
-              background: statusBadgeTone === 'danger' ? 'rgba(239,68,68,0.9)' : 'rgba(24,24,27,0.9)',
-              border: '1px solid rgba(255,255,255,0.2)',
+              background:
+                statusBadgeTone === 'danger'
+                  ? 'color-mix(in oklch, var(--accent-danger) 90%, transparent)'
+                  : 'color-mix(in oklch, var(--surface-2) 90%, transparent)',
+              border: '1px solid var(--border-default)',
               boxShadow: '0px 0px 0px 1px rgba(0,0,0,0.7)',
               opacity: layerDim(5),
               transition: 'opacity 300ms ease',
             }}
           >
-            <span className="text-[9px] font-bold leading-none text-white">
+            <span className="text-[9px] font-bold leading-none text-slate-12">
               {statusBadgeText}
             </span>
           </div>
@@ -229,12 +232,12 @@ export function MapMarker({
             backdropFilter: 'blur(12px)',
             borderRadius: 4,
             padding: '3px 8px',
-            boxShadow: '0 0 0 1px rgba(255,255,255,0.1), 0 4px 12px rgba(0,0,0,0.4)',
+            boxShadow: '0 0 0 1px var(--border-default), 0 4px 12px rgba(0,0,0,0.4)',
             opacity: layerDim(5),
             transition: 'opacity 300ms ease',
           }}
         >
-          <span className="text-xs font-medium text-white">{label}</span>
+          <span className="text-xs font-medium text-slate-12">{label}</span>
         </div>
       )}
     </div>

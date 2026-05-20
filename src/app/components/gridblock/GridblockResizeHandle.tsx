@@ -10,11 +10,26 @@
  * the browser window, or any other scenario where the page would
  * otherwise stop hearing pointer traffic.
  *
+ * Three-zone gesture model:
+ *
+ *   width >= snapMinPx           → free resize, persist live.
+ *   closeThresholdPx <= w < snap → elastic zone. Live state tracks
+ *                                  the cursor; on release the
+ *                                  handle snaps the stored width
+ *                                  back to snapMinPx.
+ *   width < closeThresholdPx     → on release, the handle resets
+ *                                  the stored width to snapMinPx
+ *                                  and calls `onClose()`. The
+ *                                  reset-then-close order means
+ *                                  the next time the panel re-opens
+ *                                  it does so at a usable width.
+ *
  * Safety nets: pointer capture is the primary release mechanism,
  * but we also listen for `window` blur / `visibilitychange` and
  * abort the drag if the app loses focus mid-gesture. That covers
  * alt-tab and OS-level interruptions where the browser will never
- * fire a `pointerup` at all.
+ * fire a `pointerup` at all. All exit paths route through the
+ * same `endDrag` so the close/snap resolution runs exactly once.
  *
  * RTL math: in RTL, grid columns paint right-to-left, which means
  * a positive `clientX` delta visually shrinks the inline-start
@@ -44,7 +59,11 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 
-import { PANEL_WIDTH_MIN_PX } from "@/app/hooks/useGridblockPanelSizes";
+import {
+  PANEL_WIDTH_CLOSE_THRESHOLD_PX,
+  PANEL_WIDTH_MAX_PX,
+  PANEL_WIDTH_MIN_PX,
+} from "@/app/hooks/useGridblockPanelSizes";
 
 interface GridblockResizeHandleProps {
   /**
@@ -59,10 +78,42 @@ interface GridblockResizeHandleProps {
   /**
    * Callback invoked on every drag move and keyboard nudge with the
    * new width in CSS pixels. The hook is responsible for clamping.
+   * During the elastic zone the controlling hook should accept
+   * values below `snapMinPx` so the panel renders mid-drag.
    */
   onResize: (widthPx: number) => void;
+  /**
+   * Called once at the end of a drag whose final width fell below
+   * `closeThresholdPx`. The handle resets the stored width to
+   * `snapMinPx` before invoking this callback, so consumers only
+   * need to clear their open/closed state. Omit to disable the
+   * drag-to-close behavior — sub-threshold drags then snap back
+   * to MIN like any other elastic release.
+   */
+  onClose?: () => void;
   /** Accessible label, e.g. "Resize targets panel". */
   ariaLabel: string;
+  /**
+   * Snap-back floor. On release, widths below this value snap up
+   * to it (or, if below `closeThresholdPx` and `onClose` is set,
+   * trigger close). Also reported via `aria-valuemin`. Defaults to
+   * the shared `PANEL_WIDTH_MIN_PX`.
+   */
+  snapMinPx?: number;
+  /**
+   * Drag-release width at which the handle treats the gesture as
+   * "drag to close" instead of a snap-back. Only consulted when
+   * `onClose` is provided. Defaults to the shared
+   * `PANEL_WIDTH_CLOSE_THRESHOLD_PX`.
+   */
+  closeThresholdPx?: number;
+  /**
+   * Upper bound reported via `aria-valuemax`. Defaults to the
+   * inline-start cap (`PANEL_WIDTH_MAX_PX`). Pass the side-specific
+   * cap (or a runtime override, e.g. PANEL_WIDTH_END_MAX_HISTORY_PX)
+   * so screen readers reflect the operative ceiling.
+   */
+  maxPx?: number;
 }
 
 /**
@@ -84,7 +135,11 @@ export function GridblockResizeHandle({
   side,
   widthPx,
   onResize,
+  onClose,
   ariaLabel,
+  snapMinPx = PANEL_WIDTH_MIN_PX,
+  closeThresholdPx = PANEL_WIDTH_CLOSE_THRESHOLD_PX,
+  maxPx = PANEL_WIDTH_MAX_PX,
 }: GridblockResizeHandleProps) {
   const handleRef = useRef<HTMLDivElement | null>(null);
 
@@ -96,7 +151,25 @@ export function GridblockResizeHandle({
     | { x: number; widthPx: number; sign: 1 | -1; pointerId: number }
     | null
   >(null);
+  // Latest width emitted during the in-flight drag. Refreshed on
+  // every pointermove so `endDrag` can resolve snap/close against
+  // the true gesture endpoint, independent of prop sync timing.
+  const lastWidthRef = useRef<number>(widthPx);
   const [isDragging, setIsDragging] = useState(false);
+
+  // Stable refs so endDrag — which is itself memoised — doesn't
+  // need to re-bind every render when props change. Snap/close
+  // resolution always reads the current values.
+  const onResizeRef = useRef(onResize);
+  const onCloseRef = useRef(onClose);
+  const snapMinRef = useRef(snapMinPx);
+  const closeThresholdRef = useRef(closeThresholdPx);
+  useEffect(() => {
+    onResizeRef.current = onResize;
+    onCloseRef.current = onClose;
+    snapMinRef.current = snapMinPx;
+    closeThresholdRef.current = closeThresholdPx;
+  });
 
   /**
    * Tear-down used by every drag-exit path (normal release, capture
@@ -105,11 +178,18 @@ export function GridblockResizeHandle({
    * flag, and the pointer-capture handle all clear together — there
    * is no scenario where we leave the shell with `data-gridblock-
    * resizing` stuck and the column transition wedged off.
+   *
+   * After teardown, resolves the gesture endpoint against the
+   * close threshold and snap floor: below close → reset + close,
+   * below snap → snap up, otherwise no-op (live path already
+   * emitted the final width).
    */
   const endDrag = useCallback(() => {
     const node = handleRef.current;
     const start = dragStartRef.current;
-    if (node && start && node.hasPointerCapture(start.pointerId)) {
+    if (!start) return; // Already torn down (e.g. blur + pointerup).
+
+    if (node && node.hasPointerCapture(start.pointerId)) {
       // Release defensively; in most paths the browser will have
       // already auto-released on `pointerup`, but explicit release
       // is cheap and lets the focus / visibility safety nets bail
@@ -124,6 +204,17 @@ export function GridblockResizeHandle({
     dragStartRef.current = null;
     setIsDragging(false);
     delete document.documentElement.dataset.gridblockResizing;
+
+    const last = lastWidthRef.current;
+    const snap = snapMinRef.current;
+    const close = closeThresholdRef.current;
+    const onCloseFn = onCloseRef.current;
+    if (onCloseFn && last < close) {
+      onResizeRef.current(snap);
+      onCloseFn();
+    } else if (last < snap) {
+      onResizeRef.current(snap);
+    }
   }, []);
 
   const handlePointerDown = useCallback(
@@ -183,6 +274,7 @@ export function GridblockResizeHandle({
         sign,
         pointerId: event.pointerId,
       };
+      lastWidthRef.current = startWidth;
       setIsDragging(true);
       document.documentElement.dataset.gridblockResizing = "";
     },
@@ -194,7 +286,9 @@ export function GridblockResizeHandle({
       const start = dragStartRef.current;
       if (!start || event.pointerId !== start.pointerId) return;
       const delta = event.clientX - start.x;
-      onResize(start.widthPx + delta * start.sign);
+      const next = start.widthPx + delta * start.sign;
+      lastWidthRef.current = next;
+      onResize(next);
     },
     [onResize],
   );
@@ -268,7 +362,8 @@ export function GridblockResizeHandle({
       aria-orientation="vertical"
       aria-label={ariaLabel}
       aria-valuenow={widthPx}
-      aria-valuemin={PANEL_WIDTH_MIN_PX}
+      aria-valuemin={snapMinPx}
+      aria-valuemax={maxPx}
       tabIndex={0}
       data-side={side}
       data-dragging={isDragging || undefined}

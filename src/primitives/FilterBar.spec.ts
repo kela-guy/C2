@@ -50,7 +50,7 @@ export const spec: ComponentSpec = {
       trigger: 'activeFilterCount > 0',
       description: 'Reset button appears with filter count badge, popover triggers have sky-blue highlight',
       implementedInPrototype: true,
-      visualNotes: 'bg-sky-500/12 on active filter buttons, sky-300 count badge',
+      visualNotes: 'bg-accent-info/12 on active filter buttons, accent-info count badge',
     },
     {
       name: 'empty sensors list',
@@ -123,7 +123,7 @@ export const spec: ComponentSpec = {
       { name: 'search-bg', value: 'rgba(255,255,255,0.04)', usage: 'Search input background' },
       { name: 'search-ring', value: 'rgba(255,255,255,0.07)', usage: 'Search input border' },
       { name: 'search-focus-ring', value: 'rgba(56,189,248,0.35)', usage: 'Search input focus border (sky-400)' },
-      { name: 'search-icon', value: 'text-zinc-500', usage: 'Search and clear icons' },
+      { name: 'search-icon', value: 'text-slate-9', usage: 'Search and clear icons' },
       { name: 'button-bg', value: 'rgba(255,255,255,0.06)', usage: 'Filter button idle background' },
       { name: 'button-bg-hover', value: 'rgba(255,255,255,0.10)', usage: 'Filter button hover background' },
       { name: 'button-active', value: 'rgba(14,165,233,0.12)', usage: 'Active filter highlight (sky-500/12)' },
@@ -132,7 +132,7 @@ export const spec: ComponentSpec = {
       { name: 'checkbox-active-border', value: 'rgba(56,189,248,0.4)', usage: 'Active checkbox border (sky-400)' },
       { name: 'checkbox-active-bg', value: 'rgba(14,165,233,0.2)', usage: 'Active checkbox background (sky-500)' },
       { name: 'badge-bg', value: 'rgba(14,165,233,0.15)', usage: 'Filter count badge background' },
-      { name: 'badge-text', value: 'text-sky-300', usage: 'Filter count badge text' },
+      { name: 'badge-text', value: 'text-accent-info', usage: 'Filter count badge text' },
     ],
     typography: [
       { name: 'search-input', fontFamily: 'inherit', fontSize: '11px', fontWeight: '400', lineHeight: '28px (h-7)', usage: 'Search input text' },

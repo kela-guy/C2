@@ -66,7 +66,7 @@ import paletteCssSrc from '@/styles/palette.css?raw';
 import substrateSrc from '@/primitives/Substrate.tsx?raw';
 import accentHexSrc from '@/primitives/accentHex.ts?raw';
 import { Elevated, PopoverSurface } from '@/primitives/Substrate';
-import { ACCENT_HEX, SLATE_HEX, DISPOSITION_HEX } from '@/primitives/accentHex';
+import { ACCENT_HEX, SLATE_HEX, DISPOSITION_HEX, accentHex, slateHex } from '@/primitives/accentHex';
 
 import statusChipSrc from '@/primitives/StatusChip.tsx?raw';
 import actionButtonSrc from '@/primitives/ActionButton.tsx?raw';
@@ -235,21 +235,21 @@ function CesiumFlyToDemo() {
           <button
             type="button"
             onClick={() => flyTo(32.4776, 34.9913, 4000)}
-            className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.04] shadow-[0_0_0_1px_rgba(255,255,255,0.06)] px-3 py-1.5 text-[13px] font-medium text-n-11 hover:bg-white/[0.08] hover:text-white transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-md bg-state-hover shadow-[0_0_0_1px_var(--border-default)] px-3 py-1.5 text-[13px] font-medium text-n-11 hover:bg-state-pressed hover:text-slate-12 transition-colors"
           >
             Fly to Camera North
           </button>
           <button
             type="button"
             onClick={() => flyTo(32.4646, 35.0213, 4000)}
-            className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.04] shadow-[0_0_0_1px_rgba(255,255,255,0.06)] px-3 py-1.5 text-[13px] font-medium text-n-11 hover:bg-white/[0.08] hover:text-white transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-md bg-state-hover shadow-[0_0_0_1px_var(--border-default)] px-3 py-1.5 text-[13px] font-medium text-n-11 hover:bg-state-pressed hover:text-slate-12 transition-colors"
           >
             Fly to Regulus East
           </button>
           <button
             type="button"
             onClick={() => flyTo(32.466, 35.005, 12000)}
-            className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.04] shadow-[0_0_0_1px_rgba(255,255,255,0.06)] px-3 py-1.5 text-[13px] font-medium text-n-11 hover:bg-white/[0.08] hover:text-white transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-md bg-state-hover shadow-[0_0_0_1px_var(--border-default)] px-3 py-1.5 text-[13px] font-medium text-n-11 hover:bg-state-pressed hover:text-slate-12 transition-colors"
           >
             Zoom out
           </button>
@@ -281,35 +281,35 @@ function PlaybackLayoutMockup() {
       <div className="text-[11px] font-medium text-n-12">
         50/50 split — live on top, playback on the bottom
       </div>
-      <div className="relative aspect-video rounded-md overflow-hidden bg-black ring-1 ring-white/10">
+      <div className="relative aspect-video rounded-md overflow-hidden bg-black ring-1 ring-border-default">
         {/* Live frame (top half) — hosts the live HUD so its bottom
             control bar sits just above the red divider on hover. */}
         <div className="absolute top-0 inset-x-0 h-1/2 bg-[radial-gradient(circle_at_30%_40%,#1f2937,#0a0a0a_70%)]">
           <div className="absolute top-1.5 start-1.5 inline-flex items-center gap-1 bg-black/65 px-1.5 py-0.5">
-            <span className="size-1.5 rounded-full bg-red-500" />
-            <span className="text-[8px] font-mono font-semibold text-white uppercase tracking-wider">
+            <span className="size-1.5 rounded-full bg-accent-danger" />
+            <span className="text-[8px] font-mono font-semibold text-slate-12 uppercase tracking-wider">
               Live
             </span>
           </div>
           <div className="absolute inset-x-1.5 bottom-1 flex items-center gap-1">
-            <div className="h-3 flex-1 rounded-sm bg-black/55 ring-1 ring-white/10" />
-            <div className="size-3 rounded-sm bg-black/55 ring-1 ring-white/10" />
+            <div className="h-3 flex-1 rounded-sm bg-black/55 ring-1 ring-border-default" />
+            <div className="size-3 rounded-sm bg-black/55 ring-1 ring-border-default" />
           </div>
         </div>
 
         {/* Playback frame (bottom half) */}
-        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-[radial-gradient(circle_at_50%_50%,#3f1d1d,#1a0a0a_70%)] border-t-2 border-red-500/80">
-          <div className="absolute top-1 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 bg-red-600/90 px-1.5 py-0.5">
-            <span className="text-[7px] font-mono font-semibold text-white uppercase tracking-wider">
+        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-[radial-gradient(circle_at_50%_50%,#3f1d1d,#1a0a0a_70%)] border-t-2 border-accent-danger/80">
+          <div className="absolute top-1 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 bg-accent-danger/90 px-1.5 py-0.5">
+            <span className="text-[7px] font-mono font-semibold text-slate-12 uppercase tracking-wider">
               Playback
             </span>
           </div>
           <div className="absolute inset-x-2 bottom-1.5 flex items-center gap-2">
-            <span className="text-[7px] font-mono text-white/85">▶</span>
-            <div className="h-1 flex-1 rounded-full bg-white/15">
-              <div className="h-full w-1/2 rounded-full bg-red-400" />
+            <span className="text-[7px] font-mono text-slate-12/85">▶</span>
+            <div className="h-1 flex-1 rounded-full bg-state-selected">
+              <div className="h-full w-1/2 rounded-full bg-accent-danger" />
             </div>
-            <span className="text-[7px] font-mono text-white/55 tabular-nums">00:32</span>
+            <span className="text-[7px] font-mono text-slate-9 tabular-nums">00:32</span>
           </div>
         </div>
       </div>
@@ -350,51 +350,51 @@ function PlaybackStatusMockup({ variant }: { variant: PlaybackStatusVariant }) {
   return (
     <div className="space-y-2">
       <div className="text-[11px] font-medium text-n-12">{meta.title}</div>
-      <div className="relative aspect-video rounded-md overflow-hidden bg-black ring-1 ring-white/10">
+      <div className="relative aspect-video rounded-md overflow-hidden bg-black ring-1 ring-border-default">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,#3f1d1d,#1a0a0a_70%)]" />
-        <div className="absolute top-1.5 start-1.5 inline-flex items-center gap-1 bg-red-600/90 px-1.5 py-0.5">
-          <span className="size-1 rounded-full bg-white" />
-          <span className="text-[8px] font-mono font-semibold text-white uppercase tracking-wider">
+        <div className="absolute top-1.5 start-1.5 inline-flex items-center gap-1 bg-accent-danger/90 px-1.5 py-0.5">
+          <span className="size-1 rounded-full bg-slate-12" />
+          <span className="text-[8px] font-mono font-semibold text-slate-12 uppercase tracking-wider">
             Playback
           </span>
         </div>
 
         {variant === 'loading' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/60">
-            <Loader2 size={16} className="text-white/85 animate-spin motion-reduce:animate-none" />
-            <span className="text-[9px] text-white/85 font-mono uppercase tracking-wider">
+            <Loader2 size={16} className="text-slate-12/85 animate-spin motion-reduce:animate-none" />
+            <span className="text-[9px] text-slate-12/85 font-mono uppercase tracking-wider">
               טוען הקלטה…
             </span>
           </div>
         )}
         {variant === 'buffering' && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/35">
-            <Loader2 size={16} className="text-white/85 animate-spin motion-reduce:animate-none" />
+            <Loader2 size={16} className="text-slate-12/85 animate-spin motion-reduce:animate-none" />
           </div>
         )}
         {variant === 'ended' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/60">
-            <div className="inline-flex items-center gap-1 px-2 py-1 bg-red-500 text-white text-[9px] uppercase tracking-wider font-semibold">
+            <div className="inline-flex items-center gap-1 px-2 py-1 bg-accent-danger text-slate-12 text-[9px] uppercase tracking-wider font-semibold">
               ▶ נגן שוב
             </div>
-            <span className="text-[8px] text-white/55 uppercase tracking-wider">
+            <span className="text-[8px] text-slate-9 uppercase tracking-wider">
               ההקלטה הסתיימה
             </span>
           </div>
         )}
         {variant === 'error' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/70 px-3 text-center">
-            <AlertTriangle size={16} className="text-red-300" />
-            <span className="text-[9px] text-white">הפיד אינו זמין כרגע</span>
-            <span className="text-[8px] text-white/55 uppercase tracking-wider">
+            <AlertTriangle size={16} className="text-accent-danger" />
+            <span className="text-[9px] text-slate-12">הפיד אינו זמין כרגע</span>
+            <span className="text-[8px] text-slate-9 uppercase tracking-wider">
               ↻ נסה שוב
             </span>
           </div>
         )}
         {(variant === 'paused' || variant === 'playing') && (
-          <div className="absolute bottom-1 inset-x-1.5 flex items-center justify-between text-[8px] font-mono text-white/85">
+          <div className="absolute bottom-1 inset-x-1.5 flex items-center justify-between text-[8px] font-mono text-slate-12/85">
             <span className="tabular-nums">00:32</span>
-            <span className="text-white/55 tabular-nums">-00:28</span>
+            <span className="text-slate-9 tabular-nums">-00:28</span>
           </div>
         )}
       </div>
@@ -570,7 +570,7 @@ function PreviewPanel({
   return (
     <div
       dir="rtl"
-      className={`rounded-xl shadow-[0_0_0_1px_rgba(255,255,255,0.06)] ${tight ? 'p-6' : 'p-10'} ${isCenter ? 'flex items-center justify-center min-h-[200px]' : ''} ${className}`}
+      className={`rounded-xl shadow-[0_0_0_1px_var(--border-default)] ${tight ? 'p-6' : 'p-10'} ${isCenter ? 'flex items-center justify-center min-h-[200px]' : ''} ${className}`}
       style={{ backgroundColor: SURFACE.level0, ...gridStyle }}
     >
       {children}
@@ -613,7 +613,7 @@ function IconCatalogTile({ name, icon }: { name: string; icon: React.ReactNode }
   const downloadHref = iconPublicUrl('tactical', `${name}.svg`);
 
   return (
-    <div className="group flex flex-col items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
+    <div className="group flex flex-col items-center gap-3 rounded-xl border border-border-default bg-state-hover p-5">
       <div ref={svgRef} className="flex items-center justify-center size-12">
         {icon}
       </div>
@@ -623,15 +623,15 @@ function IconCatalogTile({ name, icon }: { name: string; icon: React.ReactNode }
           type="button"
           onClick={copySvg}
           aria-label={copied ? 'Copied' : 'Copy SVG'}
-          className="p-2.5 rounded-md text-n-120 hover:text-n-11 hover:bg-white/[0.08] active:scale-[0.98] transition-[color,background-color,transform] duration-150 ease-out cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+          className="p-2.5 rounded-md text-n-120 hover:text-n-11 hover:bg-state-pressed active:scale-[0.98] transition-[color,background-color,transform] duration-150 ease-out cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong"
         >
-          {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+          {copied ? <Check size={14} className="text-accent-success" /> : <Copy size={14} />}
         </button>
         <a
           href={downloadHref}
           download={`${name}.svg`}
           aria-label="Download SVG"
-          className="p-2.5 rounded-md text-n-120 hover:text-n-11 hover:bg-white/[0.08] active:scale-[0.98] transition-[color,background-color,transform] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+          className="p-2.5 rounded-md text-n-120 hover:text-n-11 hover:bg-state-pressed active:scale-[0.98] transition-[color,background-color,transform] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong"
         >
           <Download size={14} />
         </a>
@@ -644,7 +644,7 @@ function StyleguideDeviceTile({ label, children, width = 380 }: { label: string;
   return (
     <div className="flex flex-col gap-2">
       <span className="text-[11px] font-medium text-n-9">{label}</span>
-      <div className="bg-n-1 border border-white/10 rounded-lg overflow-hidden" style={{ width }}>
+      <div className="bg-n-1 border border-border-default rounded-lg overflow-hidden" style={{ width }}>
         {children}
       </div>
     </div>
@@ -652,7 +652,7 @@ function StyleguideDeviceTile({ label, children, width = 380 }: { label: string;
 }
 
 function StyleguideBatteryIcon({ pct }: { pct: number }) {
-  const colorClass = pct > 60 ? 'text-emerald-400' : pct > 30 ? 'text-amber-400' : pct >= 20 ? 'text-orange-400' : 'text-red-400';
+  const colorClass = pct > 60 ? 'text-accent-success' : pct > 30 ? 'text-accent-warning' : pct >= 20 ? 'text-accent-tracking' : 'text-accent-danger';
   const fillWidth = Math.max(1, (pct / 100) * 17);
   return (
     <svg className={colorClass} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" width={16} height={16}>
@@ -691,10 +691,10 @@ interface PropDef {
 function PropsTable({ items }: { items: PropDef[] }) {
   return (
     <div className="space-y-4 mt-6 mb-4">
-      <div className="overflow-x-auto rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)]" dir="ltr">
+      <div className="overflow-x-auto rounded-lg shadow-[0_0_0_1px_var(--border-default)]" dir="ltr">
         <table className="w-full text-[13px]" dir="ltr">
           <thead>
-            <tr className="border-b border-white/5" style={{ backgroundColor: SURFACE.level1 }}>
+            <tr className="border-b border-border-subtle" style={{ backgroundColor: SURFACE.level1 }}>
               <th className="py-2.5 px-4 text-left font-medium text-n-10">Prop</th>
               <th className="py-2.5 px-4 text-left font-medium text-n-10">Type</th>
               <th className="py-2.5 px-4 text-left font-medium text-n-10">Default</th>
@@ -703,8 +703,8 @@ function PropsTable({ items }: { items: PropDef[] }) {
           </thead>
           <tbody>
             {items.map((p) => (
-              <tr key={p.name} className="border-b border-white/[0.03] last:border-0">
-                <td className="py-3 px-4 font-mono text-[13px] text-sky-300/90 font-medium">{p.name}</td>
+              <tr key={p.name} className="border-b border-border-subtle last:border-0">
+                <td className="py-3 px-4 font-mono text-[13px] text-accent-info/90 font-medium">{p.name}</td>
                 <td className="py-3 px-4 font-mono text-n-9">{p.type}</td>
                 <td className="py-3 px-4 font-mono text-n-9">{p.default ?? '—'}</td>
                 <td className="py-3 px-4 text-n-9">{p.description}</td>
@@ -758,7 +758,7 @@ function InteractionFlowBlock({
     <div id={id} className="scroll-mt-20 space-y-2.5">
       <div className="space-y-1">
         <h4 className="text-[15px] font-semibold text-n-12 tracking-tight">{title}</h4>
-        <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide">{description}</p>
+        <p className="text-[16px] font-normal leading-relaxed text-slate-9 tracking-wide">{description}</p>
       </div>
 
       <div
@@ -795,7 +795,7 @@ function InteractionFlowBlock({
 
           {/* Card zone */}
           <div
-            className="w-[280px] shrink-0 border-l border-white/[0.06] flex flex-col"
+            className="w-[280px] shrink-0 border-l border-border-default flex flex-col"
             style={{ backgroundColor: SURFACE.level1 }}
             {...(!mapInteractive
               ? { onMouseEnter: () => setHovered(true), onMouseLeave: () => setHovered(false) }
@@ -807,11 +807,11 @@ function InteractionFlowBlock({
         </div>
 
         {/* Step sequence */}
-        <div className="border-t border-white/[0.06] px-5 py-4">
+        <div className="border-t border-border-default px-5 py-4">
           <div className="space-y-3">
             {steps.map((step, i) => (
               <div key={i} className="flex gap-3">
-                <span className="text-[11px] font-bold text-sky-400 tabular-nums font-mono leading-[1.6] shrink-0 w-4 text-right">{i + 1}</span>
+                <span className="text-[11px] font-bold text-accent-info tabular-nums font-mono leading-[1.6] shrink-0 w-4 text-right">{i + 1}</span>
                 <div className="flex flex-col gap-0.5 min-w-0">
                   <span className="text-[13px] font-medium text-n-11">{step.label}</span>
                   {step.detail && (
@@ -883,7 +883,7 @@ function TargetCardFlows() {
             onMouseLeave={() => setFlow1Hovered(false)}
           >
             <div
-              className="transition-colors hover:bg-white/5"
+              className="transition-colors hover:bg-state-hover"
               style={{ padding: `${CARD_TOKENS.header.paddingY}px ${CARD_TOKENS.header.paddingX}px` }}
             >
               <CardHeader
@@ -944,7 +944,7 @@ function TargetCardFlows() {
             onClick={() => setFlow2Open(prev => !prev)}
           >
             <div
-              className="transition-colors hover:bg-white/5"
+              className="transition-colors hover:bg-state-hover"
               style={{
                 padding: `${CARD_TOKENS.header.paddingY}px ${CARD_TOKENS.header.paddingX}px`,
                 backgroundColor: flow2Open ? `rgba(255,255,255,${CARD_TOKENS.header.selectedBgOpacity})` : undefined,
@@ -1281,7 +1281,7 @@ function DeviceCardFlows() {
         description="Hovering a device row in the DevicesPanel highlights the corresponding asset marker on the map with inner glow + pulse."
         cardZone={
           <div className="overflow-hidden" style={{ backgroundColor: 'rgb(9,9,11)', borderRadius: CARD_TOKENS.container.borderRadius }}>
-            <div dir="rtl" className="px-4 py-1.5 text-xs font-normal uppercase tracking-wider text-white border-b border-white/5 bg-white/5">
+            <div dir="rtl" className="px-4 py-1.5 text-xs font-normal uppercase tracking-wider text-slate-12 border-b border-border-subtle bg-state-hover">
               מצלמות (2)
             </div>
             <DeviceRow
@@ -1346,7 +1346,7 @@ function DeviceCardFlows() {
         description="Clicking a sensor, effector, or launcher icon on the map opens the DevicesPanel with that device focused. Hovering a row highlights the marker."
         cardZone={
           <div className="overflow-hidden" style={{ backgroundColor: 'rgb(9,9,11)', borderRadius: CARD_TOKENS.container.borderRadius }}>
-            <div dir="rtl" className="px-4 py-1.5 text-xs font-normal uppercase tracking-wider text-white border-b border-white/5 bg-white/5">
+            <div dir="rtl" className="px-4 py-1.5 text-xs font-normal uppercase tracking-wider text-slate-12 border-b border-border-subtle bg-state-hover">
               מצלמות (2)
             </div>
             <DeviceRow
@@ -1414,17 +1414,17 @@ function DeviceCardFlows() {
         description="Drag the FOV cone tip to aim the camera. When the cone covers the target the marker activates."
         cardZone={
           <div className="overflow-hidden" style={{ backgroundColor: 'rgb(9,9,11)', borderRadius: CARD_TOKENS.container.borderRadius }}>
-            <div dir="rtl" className="px-4 py-1.5 text-xs font-normal uppercase tracking-wider text-white border-b border-white/5 bg-white/5">
+            <div dir="rtl" className="px-4 py-1.5 text-xs font-normal uppercase tracking-wider text-slate-12 border-b border-border-subtle bg-state-hover">
               מצלמות (1)
             </div>
 
-            <div dir="rtl" className="flex items-center gap-2.5 px-4 py-2.5 text-right border-b border-white/[0.06] bg-white/[0.04]">
-              <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-white/10">
-                <CameraIcon size={20} fill="white" />
+            <div dir="rtl" className="flex items-center gap-2.5 px-4 py-2.5 text-right border-b border-border-default bg-state-hover">
+              <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-state-hover-strong">
+                <CameraIcon size={20} fill={slateHex(12)} />
               </div>
               <div className="flex-1 min-w-0">
                 <span className="text-[13px] font-medium text-n-10 block truncate">מצלמה PTZ-N</span>
-                <div className="text-[11px] font-mono tabular-nums text-white/50 truncate">
+                <div className="text-[11px] font-mono tabular-nums text-slate-9 truncate">
                   כיוון {Math.round((flow7Angle * 180) / Math.PI + 90)}° · שדה ראייה 60°
                 </div>
               </div>
@@ -1705,7 +1705,7 @@ function EngagementLineAnimatedPreview({ color }: { color: string }) {
   return (
     <div
       ref={containerRef}
-      className="relative rounded-xl border border-white/10"
+      className="relative rounded-xl border border-border-default"
       style={{
         background: `radial-gradient(circle at 50% 50%, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0.4) 100%), ${SURFACE.level0}`,
         height: 150,
@@ -1776,7 +1776,7 @@ function EngagementLineFlows() {
       <div id="engagement-anatomy" className="scroll-mt-12 space-y-6">
         <div className="space-y-2">
           <h3 className="text-lg font-semibold text-n-12">Line Anatomy</h3>
-          <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide">
+          <p className="text-[16px] font-normal leading-relaxed text-slate-9 tracking-wide">
             Dashed engagement line with spring-eased traveling particles and a midpoint distance badge. Connects the selected effector to the active target via Mapbox GL layers.
           </p>
         </div>
@@ -1806,17 +1806,17 @@ function EngagementLineFlows() {
               <div className="space-y-1.5">
                 <span className="text-[11px] font-semibold text-n-9 uppercase tracking-[0.06em]">Dashed line</span>
                 <div className="space-y-1 font-mono text-n-10">
-                  <div>dash: <span className="text-sky-300/80">[4, 4]</span> period: <span className="text-sky-300/80">8</span></div>
-                  <div>cycle: <span className="text-sky-300/80">32</span> steps, <span className="text-sky-300/80">~20ms</span> throttle</div>
-                  <div>width: <span className="text-sky-300/80">2px</span></div>
+                  <div>dash: <span className="text-accent-info/80">[4, 4]</span> period: <span className="text-accent-info/80">8</span></div>
+                  <div>cycle: <span className="text-accent-info/80">32</span> steps, <span className="text-accent-info/80">~20ms</span> throttle</div>
+                  <div>width: <span className="text-accent-info/80">2px</span></div>
                 </div>
               </div>
               <div className="space-y-1.5">
                 <span className="text-[11px] font-semibold text-n-9 uppercase tracking-[0.06em]">Particles</span>
                 <div className="space-y-1 font-mono text-n-10">
-                  <div>count: <span className="text-sky-300/80">3</span> speed: <span className="text-sky-300/80">0.25</span>/s</div>
-                  <div>spring: <span className="text-sky-300/80">160</span> / <span className="text-sky-300/80">70</span> / <span className="text-sky-300/80">1</span></div>
-                  <div>glow: r<span className="text-sky-300/80">14</span> α<span className="text-sky-300/80">0.225</span> core: r<span className="text-sky-300/80">4</span> α<span className="text-sky-300/80">0.9</span></div>
+                  <div>count: <span className="text-accent-info/80">3</span> speed: <span className="text-accent-info/80">0.25</span>/s</div>
+                  <div>spring: <span className="text-accent-info/80">160</span> / <span className="text-accent-info/80">70</span> / <span className="text-accent-info/80">1</span></div>
+                  <div>glow: r<span className="text-accent-info/80">14</span> α<span className="text-accent-info/80">0.225</span> core: r<span className="text-accent-info/80">4</span> α<span className="text-accent-info/80">0.9</span></div>
                 </div>
               </div>
             </div>
@@ -1825,16 +1825,16 @@ function EngagementLineFlows() {
                 <span className="text-[11px] font-semibold text-n-9 uppercase tracking-[0.06em]">Colors</span>
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2 font-mono text-n-10">
-                    <span className="inline-block w-3 h-3 rounded-full bg-white border border-white/20" />
-                    standby <span className="text-sky-300/80">#ffffff</span>
+                    <span className="inline-block w-3 h-3 rounded-full bg-slate-12 border border-border-default" />
+                    standby <span className="text-accent-info/80">#ffffff</span>
                   </div>
                   <div className="flex items-center gap-2 font-mono text-n-10">
                     <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: '#f59e0b' }} />
-                    weapon pointing <span className="text-sky-300/80">#f59e0b</span>
+                    weapon pointing <span className="text-accent-info/80">#f59e0b</span>
                   </div>
                   <div className="flex items-center gap-2 font-mono text-n-10">
                     <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: '#ef4444' }} />
-                    mitigating / locked <span className="text-sky-300/80">#ef4444</span>
+                    mitigating / locked <span className="text-accent-info/80">#ef4444</span>
                   </div>
                 </div>
               </div>
@@ -1842,13 +1842,13 @@ function EngagementLineFlows() {
                 <span className="text-[11px] font-semibold text-n-9 uppercase tracking-[0.06em]">Badge</span>
                 <div className="space-y-1 font-mono text-n-10">
                   <div>pos: <span className="text-n-9">midpoint</span></div>
-                  <div>shadow: <span className="text-sky-300/80">0 2px 8px</span> rgba(0,0,0,0.4)</div>
+                  <div>shadow: <span className="text-accent-info/80">0 2px 8px</span> rgba(0,0,0,0.4)</div>
                   <div>&lt;1000m → Xm, else → X.X km</div>
                 </div>
               </div>
             </div>
-            <div className="text-[12px] text-white/50">
-              Both animations respect <code className="text-white/60 font-mono">prefers-reduced-motion: reduce</code> — line and particles render statically.
+            <div className="text-[12px] text-slate-9">
+              Both animations respect <code className="text-slate-12/60 font-mono">prefers-reduced-motion: reduce</code> — line and particles render statically.
             </div>
           </div>
         </CodePreviewBlock>
@@ -1871,9 +1871,9 @@ function InlineCopyButton({ text }: { text: string }) {
     <button
       onClick={handleCopy}
       aria-label={copied ? 'Copied' : 'Copy code'}
-      className="p-1.5 rounded cursor-pointer text-n-7 hover:text-n-10 hover:bg-white/[0.08] active:scale-[0.98] transition-[color,background-color,transform] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+      className="p-1.5 rounded cursor-pointer text-n-7 hover:text-n-10 hover:bg-state-pressed active:scale-[0.98] transition-[color,background-color,transform] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong"
     >
-      {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
+      {copied ? <Check size={13} className="text-accent-success" /> : <Copy size={13} />}
     </button>
   );
 }
@@ -1881,7 +1881,7 @@ function InlineCopyButton({ text }: { text: string }) {
 function ImportBlock({ path, names }: { path: string; names: string[] }) {
   const code = `import { ${names.join(', ')} } from '${path}'`;
   return (
-    <div className="flex items-center rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)] overflow-hidden" style={{ backgroundColor: SURFACE.level0 }}>
+    <div className="flex items-center rounded-lg shadow-[0_0_0_1px_var(--border-default)] overflow-hidden" style={{ backgroundColor: SURFACE.level0 }}>
       <div className="flex-1 min-w-0 px-4 py-3 overflow-x-auto">
         <HighlightedCode code={code} />
       </div>
@@ -1899,7 +1899,7 @@ function ChangelogLine({ text }: { text: string }) {
     <>
       {parts.map((part, i) =>
         part.startsWith('`') && part.endsWith('`') ? (
-          <code key={i} className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">
+          <code key={i} className="text-[13px] font-mono text-accent-info/80 bg-state-hover px-1.5 py-0.5 rounded">
             {part.slice(1, -1)}
           </code>
         ) : (
@@ -1912,7 +1912,7 @@ function ChangelogLine({ text }: { text: string }) {
 
 function QuickStartCodeBlock({ code }: { code: string }) {
   return (
-    <div className="flex items-start rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)] overflow-hidden" style={{ backgroundColor: SURFACE.level0 }}>
+    <div className="flex items-start rounded-lg shadow-[0_0_0_1px_var(--border-default)] overflow-hidden" style={{ backgroundColor: SURFACE.level0 }}>
       <div className="flex-1 min-w-0 px-4 py-3 overflow-x-auto">
         <HighlightedCode code={code} />
       </div>
@@ -1959,7 +1959,7 @@ function UsageBlock({ code, name }: { code: string; name: string }) {
   }, [code, name]);
 
   return (
-    <div className="flex items-start rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)] overflow-hidden" style={{ backgroundColor: SURFACE.level0 }}>
+    <div className="flex items-start rounded-lg shadow-[0_0_0_1px_var(--border-default)] overflow-hidden" style={{ backgroundColor: SURFACE.level0 }}>
       <div className="flex-1 min-w-0 px-4 py-3 overflow-x-auto">
         <HighlightedCode code={snippet} />
       </div>
@@ -2109,7 +2109,7 @@ function CopyIconButton({ text }: { text: string }) {
     <button
       onClick={handleCopy}
       aria-label={copied ? 'Copied' : 'Copy component as markdown'}
-      className="flex items-center gap-1.5 h-7 px-2.5 rounded-[10px_4px_4px_4px] cursor-pointer text-n-120 hover:text-n-11 hover:bg-white/[0.06] active:scale-[0.98] transition-[color,background-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/30"
+      className="flex items-center gap-1.5 h-7 px-2.5 rounded-[10px_4px_4px_4px] cursor-pointer text-n-120 hover:text-n-11 hover:bg-state-hover-strong active:scale-[0.98] transition-[color,background-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-border-strong"
     >
       <AnimatePresence mode="wait" initial={false}>
         {copied ? (
@@ -2121,8 +2121,8 @@ function CopyIconButton({ text }: { text: string }) {
             exit={prefersReducedMotion ? undefined : { opacity: 0, scale: 0.9 }}
             transition={iconTransition}
           >
-            <Check size={13} className="text-emerald-400" />
-            <span className="text-[11px] font-medium text-emerald-400">Copied</span>
+            <Check size={13} className="text-accent-success" />
+            <span className="text-[11px] font-medium text-accent-success">Copied</span>
           </motion.span>
         ) : (
           <motion.span
@@ -2178,13 +2178,13 @@ function CodePreviewBlock({
   );
 
   return (
-    <div className="rounded-xl shadow-[0_0_0_1px_rgba(255,255,255,0.06)] overflow-hidden" style={{ backgroundColor: SURFACE.level0 }}>
-      <div className="flex items-center border-b border-white/[0.06]">
+    <div className="rounded-xl shadow-[0_0_0_1px_var(--border-default)] overflow-hidden" style={{ backgroundColor: SURFACE.level0 }}>
+      <div className="flex items-center border-b border-border-default">
         {tabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`px-3 py-2.5 text-[13px] font-medium cursor-pointer transition-[color,border-color] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/25 ${
+            className={`px-3 py-2.5 text-[13px] font-medium cursor-pointer transition-[color,border-color] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-border-strong ${
               tab === t.id
                 ? 'text-n-12 border-b-2 border-n-12'
                 : 'text-n-9 hover:text-n-11 border-b-2 border-transparent'
@@ -2219,15 +2219,15 @@ function CodePreviewBlock({
       )}
       {tab === 'files' && hasFiles && (
         <div className="flex">
-          <div className="shrink-0 border-r border-white/[0.06] py-3 min-w-[200px] max-w-[240px]">
+          <div className="shrink-0 border-r border-border-default py-3 min-w-[200px] max-w-[240px]">
             {relatedFiles.map((f, i) => (
               <button
                 key={f.file}
                 onClick={() => setActiveFile(i)}
                 className={`block w-full text-left px-4 py-2 text-[13px] font-mono cursor-pointer transition-colors duration-100 ${
                   activeFile === i
-                    ? 'text-sky-300/90 bg-white/[0.06]'
-                    : 'text-white/40 hover:text-white/70 hover:bg-white/[0.02]'
+                    ? 'text-accent-info/90 bg-state-hover-strong'
+                    : 'text-slate-9 hover:text-slate-11 hover:bg-state-hover'
                 }`}
               >
                 {f.file}
@@ -2259,8 +2259,8 @@ function CopyIcon({ copied }: { copied: boolean }) {
         className="flex items-center justify-center"
       >
         {copied
-          ? <Check size={14} className="text-emerald-400" />
-          : <Copy size={14} className="text-white/90" />}
+          ? <Check size={14} className="text-accent-success" />
+          : <Copy size={14} className="text-slate-12/90" />}
       </motion.span>
     </AnimatePresence>
   );
@@ -2423,7 +2423,7 @@ function ElevationRamp() {
   return (
     <div className="space-y-6">
       {/* ── Ramp strip ── */}
-      <div className="flex rounded-xl overflow-hidden shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
+      <div className="flex rounded-xl overflow-hidden shadow-[0_0_0_1px_var(--border-default)]">
         {levels.map(({ key, opacity, hex }) => (
           <button
             key={key}
@@ -2452,9 +2452,9 @@ function ElevationRamp() {
 
       {/* ── Base + shadow ── */}
       <div className="flex gap-6 pt-2">
-        <div className="flex items-center gap-3 rounded-lg px-3 py-2 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]" style={{ backgroundColor: SURFACE.level0 }}>
+        <div className="flex items-center gap-3 rounded-lg px-3 py-2 shadow-[0_0_0_1px_var(--border-default)]" style={{ backgroundColor: SURFACE.level0 }}>
           <div
-            className="w-6 h-6 rounded shadow-[0_0_0_1px_rgba(255,255,255,0.1)]"
+            className="w-6 h-6 rounded shadow-[0_0_0_1px_var(--border-strong)]"
             style={{ backgroundColor: ELEVATION.baseSurface }}
           />
           <div className="flex flex-col gap-0.5">
@@ -2463,7 +2463,7 @@ function ElevationRamp() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 rounded-lg px-3 py-2 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]" style={{ backgroundColor: SURFACE.level0 }}>
+        <div className="flex items-center gap-3 rounded-lg px-3 py-2 shadow-[0_0_0_1px_var(--border-default)]" style={{ backgroundColor: SURFACE.level0 }}>
           <div
             className="w-10 h-6 rounded"
             style={{ backgroundColor: SURFACE.level2, boxShadow: ELEVATION.shadow }}
@@ -2674,8 +2674,8 @@ function CardStatePlayground() {
                     onClick={() => setActiveId(e.id)}
                     className={`flex items-center gap-1.5 h-7 px-2.5 rounded-md text-[11px] font-medium cursor-pointer transition-[color,background-color,box-shadow] duration-150 ease-out active:scale-[0.98] ${
                       isActive
-                        ? 'bg-white/[0.1] text-n-12 shadow-[0_0_0_1px_rgba(255,255,255,0.15)]'
-                        : 'text-n-120 hover:text-n-10 hover:bg-white/[0.04]'
+                        ? 'bg-state-hover-strong text-n-12 shadow-[0_0_0_1px_var(--border-strong)]'
+                        : 'text-n-120 hover:text-n-10 hover:bg-state-hover'
                     }`}
                   >
                     <span
@@ -2701,38 +2701,38 @@ function CardStatePlayground() {
       {/* Visual properties annotation */}
       <div className="space-y-2.5">
         <h3 className="text-[13px] font-medium text-n-10">Computed Visual Properties</h3>
-        <div className="overflow-x-auto rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)]" dir="ltr">
+        <div className="overflow-x-auto rounded-lg shadow-[0_0_0_1px_var(--border-default)]" dir="ltr">
           <table className="w-full text-[12px]" dir="ltr">
             <thead>
-              <tr className="border-b border-white/5" style={{ backgroundColor: SURFACE.level1 }}>
+              <tr className="border-b border-border-subtle" style={{ backgroundColor: SURFACE.level1 }}>
                 <th className="py-2 px-3 text-left font-medium text-n-9">Property</th>
                 <th className="py-2 px-3 text-left font-medium text-n-9">Value</th>
                 <th className="py-2 px-3 text-left font-medium text-n-9">Visual</th>
               </tr>
             </thead>
             <tbody>
-              <tr className="border-b border-white/[0.03]">
-                <td className="py-2 px-3 font-mono text-sky-300/80">accent</td>
+              <tr className="border-b border-border-subtle">
+                <td className="py-2 px-3 font-mono text-accent-info/80">accent</td>
                 <td className="py-2 px-3 font-mono text-n-10">{slots.accent}</td>
                 <td className="py-2 px-3">
                   <div className="flex items-center gap-2">
                     <div
-                      className="w-4 h-4 rounded shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
+                      className="w-4 h-4 rounded shadow-[0_0_0_1px_var(--border-default)]"
                       style={{ backgroundColor: CARD_TOKENS.spine.colors[slots.accent] }}
                     />
                     <span className="font-mono text-n-9 text-[11px]">{CARD_TOKENS.spine.colors[slots.accent]}</span>
                   </div>
                 </td>
               </tr>
-              <tr className="border-b border-white/[0.03]">
-                <td className="py-2 px-3 font-mono text-sky-300/80">completed</td>
+              <tr className="border-b border-border-subtle">
+                <td className="py-2 px-3 font-mono text-accent-info/80">completed</td>
                 <td className="py-2 px-3 font-mono text-n-10">{slots.completed ? 'true' : 'false'}</td>
                 <td className="py-2 px-3 text-n-9">
                   {slots.completed ? 'saturate(0.4) brightness(0.85)' : 'none'}
                 </td>
               </tr>
-              <tr className="border-b border-white/[0.03]">
-                <td className="py-2 px-3 font-mono text-sky-300/80">icon</td>
+              <tr className="border-b border-border-subtle">
+                <td className="py-2 px-3 font-mono text-accent-info/80">icon</td>
                 <td className="py-2 px-3 font-mono text-n-10">{iconName}</td>
                 <td className="py-2 px-3">
                   {slots.header.icon && (
@@ -2753,14 +2753,14 @@ function CardStatePlayground() {
                   )}
                 </td>
               </tr>
-              <tr className="border-b border-white/[0.03]">
-                <td className="py-2 px-3 font-mono text-sky-300/80">iconColor</td>
+              <tr className="border-b border-border-subtle">
+                <td className="py-2 px-3 font-mono text-accent-info/80">iconColor</td>
                 <td className="py-2 px-3 font-mono text-n-10">{slots.header.iconColor ?? 'none'}</td>
                 <td className="py-2 px-3">
                   {slots.header.iconColor && (
                     <div className="flex items-center gap-2">
                       <div
-                        className="w-4 h-4 rounded shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
+                        className="w-4 h-4 rounded shadow-[0_0_0_1px_var(--border-default)]"
                         style={{ backgroundColor: slots.header.iconColor }}
                       />
                       <span className="font-mono text-n-9 text-[11px]">{slots.header.iconColor}</span>
@@ -2768,8 +2768,8 @@ function CardStatePlayground() {
                   )}
                 </td>
               </tr>
-              <tr className="border-b border-white/[0.03]">
-                <td className="py-2 px-3 font-mono text-sky-300/80">iconBgActive</td>
+              <tr className="border-b border-border-subtle">
+                <td className="py-2 px-3 font-mono text-accent-info/80">iconBgActive</td>
                 <td className="py-2 px-3 font-mono text-n-10">{slots.header.iconBgActive ? 'true' : 'false'}</td>
                 <td className="py-2 px-3 text-n-9">
                   {slots.header.iconBgActive
@@ -2777,22 +2777,22 @@ function CardStatePlayground() {
                     : CARD_TOKENS.iconBox.defaultBg}
                 </td>
               </tr>
-              <tr className="border-b border-white/[0.03]">
-                <td className="py-2 px-3 font-mono text-sky-300/80">closureType</td>
+              <tr className="border-b border-border-subtle">
+                <td className="py-2 px-3 font-mono text-accent-info/80">closureType</td>
                 <td className="py-2 px-3 font-mono text-n-10">{slots.closureType ?? 'null'}</td>
                 <td className="py-2 px-3 text-n-9">
                   {slots.closureType === 'manual' ? 'Hand icon — manual closure' : slots.closureType === 'auto' ? 'Zap icon — auto closure' : '—'}
                 </td>
               </tr>
-              <tr className="border-b border-white/[0.03]">
-                <td className="py-2 px-3 font-mono text-sky-300/80">activityStatus</td>
+              <tr className="border-b border-border-subtle">
+                <td className="py-2 px-3 font-mono text-accent-info/80">activityStatus</td>
                 <td className="py-2 px-3 font-mono text-n-10">{activityStatus}</td>
                 <td className="py-2 px-3">
                   <StatusChip label={chipLabel} color={chipColor} />
                 </td>
               </tr>
-              <tr className="border-b border-white/[0.03] last:border-0">
-                <td className="py-2 px-3 font-mono text-sky-300/80">badge</td>
+              <tr className="border-b border-border-subtle last:border-0">
+                <td className="py-2 px-3 font-mono text-accent-info/80">badge</td>
                 <td className="py-2 px-3 font-mono text-n-10">
                   {slots.header.badge ? 'visible' : 'hidden'}
                 </td>
@@ -2987,7 +2987,7 @@ export default function StyleguidePage() {
 
   return (
     <TooltipProvider>
-      <div dir="ltr" className="flex min-h-screen bg-[#09090b] text-white font-sans antialiased">
+      <div dir="ltr" className="flex min-h-screen bg-surface-1 text-slate-12 font-sans antialiased">
 
         <StyleguideSidebar
           activeItem={activeItem}
@@ -3004,7 +3004,7 @@ export default function StyleguidePage() {
             <main id="top" className="flex-1 min-w-0 overflow-y-auto py-4 pr-4">
               <div
                 className="rounded-2xl bg-[#0c0c0e] min-h-[calc(100vh-2rem)]"
-                style={{ boxShadow: '0 0 0 1px rgba(255,255,255,0.06), 0 2px 8px rgba(0,0,0,0.2)' }}
+                style={{ boxShadow: '0 0 0 1px var(--border-default), 0 2px 8px rgba(0,0,0,0.2)' }}
               >
               <div className="px-8 py-10 sm:px-10 lg:px-14 lg:py-12 pb-24">
               <motion.div
@@ -3022,7 +3022,7 @@ export default function StyleguidePage() {
             >
               <Suspense
                 fallback={
-                  <div className="flex items-center justify-center min-h-[240px] rounded-xl bg-white/[0.02] shadow-[0_0_0_1px_rgba(255,255,255,0.06)] text-[13px] text-n-9">
+                  <div className="flex items-center justify-center min-h-[240px] rounded-xl bg-state-hover shadow-[0_0_0_1px_var(--border-default)] text-[13px] text-n-9">
                     Loading icon library…
                   </div>
                 }
@@ -3038,16 +3038,16 @@ export default function StyleguidePage() {
 
                 <div className="space-y-3">
                   <SectionHeading>Install</SectionHeading>
-                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide">
+                  <p className="text-[16px] font-normal leading-relaxed text-slate-9 tracking-wide">
                     Install every component, token, and icon in one command:
                   </p>
                   <QuickStartCodeBlock code="npx shadcn@latest add @c2/all" />
-                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide mt-2">
+                  <p className="text-[16px] font-normal leading-relaxed text-slate-9 tracking-wide mt-2">
                     Or pick only what you need:
                   </p>
                   <QuickStartCodeBlock code="npx shadcn@latest add @c2/button @c2/target-card @c2/status-chip" />
-                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide mt-2">
-                    Dependencies are resolved automatically — installing <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">target-card</code> pulls in <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">tokens</code>, <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">utils</code>, and any other internal dependencies.
+                  <p className="text-[16px] font-normal leading-relaxed text-slate-9 tracking-wide mt-2">
+                    Dependencies are resolved automatically — installing <code className="text-[13px] font-mono text-accent-info/80 bg-state-hover px-1.5 py-0.5 rounded">target-card</code> pulls in <code className="text-[13px] font-mono text-accent-info/80 bg-state-hover px-1.5 py-0.5 rounded">tokens</code>, <code className="text-[13px] font-mono text-accent-info/80 bg-state-hover px-1.5 py-0.5 rounded">utils</code>, and any other internal dependencies.
                   </p>
                 </div>
 
@@ -3068,21 +3068,21 @@ export function DetectionRow() {
 
                 <div className="space-y-3">
                   <SectionHeading>Project setup</SectionHeading>
-                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide mb-3">
+                  <p className="text-[16px] font-normal leading-relaxed text-slate-9 tracking-wide mb-3">
                     First time? Complete these steps before installing components.
                   </p>
 
-                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide">
-                    <span className="text-n-11 font-medium">1.</span>{' '}Requires <span className="text-n-11 font-medium">Vite + React + TypeScript + Tailwind CSS v4</span> with <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">@/*</code> path aliases configured.
+                  <p className="text-[16px] font-normal leading-relaxed text-slate-9 tracking-wide">
+                    <span className="text-n-11 font-medium">1.</span>{' '}Requires <span className="text-n-11 font-medium">Vite + React + TypeScript + Tailwind CSS v4</span> with <code className="text-[13px] font-mono text-accent-info/80 bg-state-hover px-1.5 py-0.5 rounded">@/*</code> path aliases configured.
                   </p>
 
-                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide mt-4">
-                    <span className="text-n-11 font-medium">2.</span>{' '}Initialize shadcn if you don't have a <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">components.json</code> yet:
+                  <p className="text-[16px] font-normal leading-relaxed text-slate-9 tracking-wide mt-4">
+                    <span className="text-n-11 font-medium">2.</span>{' '}Initialize shadcn if you don't have a <code className="text-[13px] font-mono text-accent-info/80 bg-state-hover px-1.5 py-0.5 rounded">components.json</code> yet:
                   </p>
                   <QuickStartCodeBlock code="npx shadcn@latest init" />
 
-                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide mt-4">
-                    <span className="text-n-11 font-medium">3.</span>{' '}Add the C2 registry to your <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">components.json</code>:
+                  <p className="text-[16px] font-normal leading-relaxed text-slate-9 tracking-wide mt-4">
+                    <span className="text-n-11 font-medium">3.</span>{' '}Add the C2 registry to your <code className="text-[13px] font-mono text-accent-info/80 bg-state-hover px-1.5 py-0.5 rounded">components.json</code>:
                   </p>
                   <QuickStartCodeBlock code={`// components.json
 {
@@ -3091,25 +3091,25 @@ export function DetectionRow() {
   }
 }`} />
 
-                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide mt-4">
+                  <p className="text-[16px] font-normal leading-relaxed text-slate-9 tracking-wide mt-4">
                     <span className="text-n-11 font-medium">4.</span>{' '}Import the C2 theme in your CSS entry point:
                   </p>
                   <QuickStartCodeBlock code={`/* src/styles/index.css */
 @import "tailwindcss";
 @import "./theme.css";
 @import "./fonts.css";`} />
-                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide mt-1.5">
-                    Copy <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">theme.css</code> and <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">fonts.css</code> from the C2 Hub repo into your project's styles directory.
+                  <p className="text-[16px] font-normal leading-relaxed text-slate-9 tracking-wide mt-1.5">
+                    Copy <code className="text-[13px] font-mono text-accent-info/80 bg-state-hover px-1.5 py-0.5 rounded">theme.css</code> and <code className="text-[13px] font-mono text-accent-info/80 bg-state-hover px-1.5 py-0.5 rounded">fonts.css</code> from the C2 Hub repo into your project's styles directory.
                   </p>
                 </div>
 
                 <div className="space-y-3">
                   <SectionHeading>Updating</SectionHeading>
-                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide">
+                  <p className="text-[16px] font-normal leading-relaxed text-slate-9 tracking-wide">
                     Preview changes before updating:
                   </p>
                   <QuickStartCodeBlock code="npx shadcn@latest diff @c2/button" />
-                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide mt-3">
+                  <p className="text-[16px] font-normal leading-relaxed text-slate-9 tracking-wide mt-3">
                     Apply the update:
                   </p>
                   <QuickStartCodeBlock code="npx shadcn@latest add @c2/button --overwrite" />
@@ -3132,14 +3132,14 @@ export function DetectionRow() {
                         v{entry.version}
                       </h3>
                       {i === 0 && (
-                        <span className="text-[11px] font-medium bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full select-none">
+                        <span className="text-[11px] font-medium bg-accent-success-tint text-accent-success px-2 py-0.5 rounded-full select-none">
                           Latest
                         </span>
                       )}
                     </div>
                     <ul className="space-y-1.5 pl-4">
                       {entry.highlights.map((item) => (
-                        <li key={item} className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide list-disc marker:text-white/30" style={{ textWrap: 'pretty' }}>
+                        <li key={item} className="text-[16px] font-normal leading-relaxed text-slate-9 tracking-wide list-disc marker:text-slate-12/30" style={{ textWrap: 'pretty' }}>
                           <ChangelogLine text={item} />
                         </li>
                       ))}
@@ -3153,13 +3153,13 @@ export function DetectionRow() {
             {activeItem === 'styling' && (
             <ComponentSection id="styling" name="Styling" description="OKLCH palette, substrate ladder, tactical accents, and typography setup. Everything routes through palette.css.">
               <SectionHeading>palette.css — single source of truth</SectionHeading>
-              <p className="text-[16px] font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
+              <p className="text-[16px] font-normal text-slate-9 mb-4 leading-relaxed tracking-wide">
                 One file holds the entire color system: a 12-step slate ramp at hue 256, an 8-level substrate ladder + void, shadows, borders, state washes, tactical accents (vivid + soft + tints), and operator dispositions. Painted by <code className="text-[13px] font-mono text-n-10">[data-substrate=&quot;N&quot;]</code> attribute selectors so the <code className="text-[13px] font-mono text-n-10">&lt;Elevated&gt;</code> primitive only sets one attribute, not inline styles.
               </p>
               <CodePreviewBlock name="palette.css" description="OKLCH slate ramp, substrate ladder, accents, dispositions, state overlays, and APCA reference table." code={paletteCssSrc} />
 
               <SectionHeading>Theme CSS bindings</SectionHeading>
-              <p className="text-[16px] font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
+              <p className="text-[16px] font-normal text-slate-9 mb-4 leading-relaxed tracking-wide">
                 <code className="text-[13px] font-mono text-n-10">theme.css</code> maps shadcn semantic tokens onto the palette and <code className="text-[13px] font-mono text-n-10">tailwind.css</code> publishes them as utility classes. <code className="text-[13px] font-mono text-n-10">index.css</code> carries global resets + the Sonner toast block.
               </p>
               <div className="space-y-6">
@@ -3168,7 +3168,7 @@ export function DetectionRow() {
               </div>
 
               <SectionHeading>Slate ramp</SectionHeading>
-              <p className="text-[16px] font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
+              <p className="text-[16px] font-normal text-slate-9 mb-4 leading-relaxed tracking-wide">
                 12-step perceptually-uniform OKLCH ramp at hue 256 (cool blue-gray). Step 1 is the deepest background, 12 is the highest-emphasis foreground. Adjacent steps are ~0.06–0.08 L apart so they're perceptibly distinct.
               </p>
               <PreviewPanel align="stretch">
@@ -3176,7 +3176,7 @@ export function DetectionRow() {
               </PreviewPanel>
 
               <SectionHeading>Substrate ladder</SectionHeading>
-              <p className="text-[16px] font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
+              <p className="text-[16px] font-normal text-slate-9 mb-4 leading-relaxed tracking-wide">
                 Eight surface levels + a void below substrate 1. <code className="text-[13px] font-mono text-n-10">&lt;Elevated lift=&#123;n&#125;&gt;</code> walks up from the current substrate; <code className="text-[13px] font-mono text-n-10">&lt;Elevated level=&#123;n&#125;&gt;</code> jumps absolute. Nested popovers automatically stack one level above their parent, so depth reads even on dark backgrounds.
               </p>
               <PreviewPanel align="stretch">
@@ -3184,7 +3184,7 @@ export function DetectionRow() {
               </PreviewPanel>
 
               <SectionHeading>Tactical accents</SectionHeading>
-              <p className="text-[16px] font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
+              <p className="text-[16px] font-normal text-slate-9 mb-4 leading-relaxed tracking-wide">
                 Vivid accents for severity (danger / warning / tracking / success / info / historical / cyan / magenta) and soft variants for muted CTAs. Use <code className="text-[13px] font-mono text-n-10">var(--accent-*)</code> in CSS contexts; use <code className="text-[13px] font-mono text-n-10">accentHex(name)</code> for SVG attributes, Mapbox paint expressions, Cesium materials, and inline color props.
               </p>
               <PreviewPanel align="stretch">
@@ -3192,7 +3192,7 @@ export function DetectionRow() {
               </PreviewPanel>
 
               <SectionHeading>Dispositions</SectionHeading>
-              <p className="text-[16px] font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
+              <p className="text-[16px] font-normal text-slate-9 mb-4 leading-relaxed tracking-wide">
                 Operator labels for track classification — independent of severity accents so the two systems can vary without dragging each other.
               </p>
               <PreviewPanel align="stretch">
@@ -3200,7 +3200,7 @@ export function DetectionRow() {
               </PreviewPanel>
 
               <SectionHeading>Role primitives</SectionHeading>
-              <p className="text-[16px] font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
+              <p className="text-[16px] font-normal text-slate-9 mb-4 leading-relaxed tracking-wide">
                 Substrate.tsx exports role wrappers (<code className="text-[13px] font-mono text-n-10">PopoverSurface</code>, <code className="text-[13px] font-mono text-n-10">MenuSurface</code>, <code className="text-[13px] font-mono text-n-10">DialogSurface</code>, …). Each wraps <code className="text-[13px] font-mono text-n-10">&lt;Elevated&gt;</code> with the recommended lift for its role. UI primitives in <code className="text-[13px] font-mono text-n-10">ui/*.tsx</code> consume these — never paint surfaces directly.
               </p>
               <div className="space-y-6">
@@ -3209,12 +3209,12 @@ export function DetectionRow() {
               </div>
 
               <SectionHeading>Neutral Scale</SectionHeading>
-              <p className="text-[16px] font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
+              <p className="text-[16px] font-normal text-slate-9 mb-4 leading-relaxed tracking-wide">
                 12-step achromatic OKLCH ramp. Use <code className="text-[13px] font-mono text-n-10">text-n-8</code>, <code className="text-[13px] font-mono text-n-10">bg-n-3</code>, etc.
               </p>
               <PreviewPanel align="stretch">
                 <div className="space-y-3" dir="ltr">
-                  <div className="flex rounded-xl overflow-hidden shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
+                  <div className="flex rounded-xl overflow-hidden shadow-[0_0_0_1px_var(--border-default)]">
                     {NEUTRAL_STEPS.map(({ step, color }) => (
                       <div key={step} className="flex-1 h-16" style={{ backgroundColor: color }} />
                     ))}
@@ -3230,7 +3230,7 @@ export function DetectionRow() {
               </PreviewPanel>
 
               <SectionHeading>Elevation</SectionHeading>
-              <p className="text-[16px] font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
+              <p className="text-[16px] font-normal text-slate-9 mb-4 leading-relaxed tracking-wide">
                 Surfaces rise from a dark base ({ELEVATION.baseSurface}) by mixing white overlays at increasing opacity. Click any level to copy its hex.
               </p>
               <PreviewPanel align="stretch">
@@ -3244,7 +3244,7 @@ export function DetectionRow() {
                     <span className="text-[10px] font-semibold uppercase tracking-widest text-n-9 mb-1 block">Sans — Heebo</span>
                     <p className="font-sans text-base text-n-11">אבגדהו The quick brown fox jumps over the lazy dog — 0123456789</p>
                   </div>
-                  <div className="border-t border-white/5 pt-3">
+                  <div className="border-t border-border-subtle pt-3">
                     <span className="text-[10px] font-semibold uppercase tracking-widest text-n-9 mb-1 block">Mono — IBM Plex Mono</span>
                     <p className="font-mono text-base text-n-11">const x = 42; // 0123456789 → tabular-nums</p>
                   </div>
@@ -3252,24 +3252,24 @@ export function DetectionRow() {
               </PreviewPanel>
 
               <SectionHeading>Press feedback</SectionHeading>
-              <p className="text-[16px] font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
+              <p className="text-[16px] font-normal text-slate-9 mb-4 leading-relaxed tracking-wide">
                 Every interactive surface (buttons, list rows, icon affordances, filter triggers, combobox triggers) responds to <code className="text-[13px] font-mono text-n-10">:active</code> with a subtle <code className="text-[13px] font-mono text-n-10">scale(0.98)</code>. The scale is intentionally tiny so the feedback registers without feeling bouncy or toy-like. Pair it with a 150ms transform transition.
               </p>
               <PreviewPanel align="stretch" className="flex">
                 <div className="flex flex-wrap items-center gap-3" dir="ltr">
-                  <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-[12px] font-medium text-white/80 bg-white/[0.06] hover:bg-white/[0.1] active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out">
+                  <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-[12px] font-medium text-slate-12/80 bg-state-hover-strong hover:bg-state-selected active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out">
                     Press me
                   </button>
                   <Button variant="secondary" size="sm" className="active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out">
                     Secondary
                   </Button>
-                  <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-[12px] font-medium bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out">
+                  <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-[12px] font-medium bg-accent-warning/15 text-accent-warning hover:bg-accent-warning/25 active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out">
                     Stateful
                   </button>
                 </div>
               </PreviewPanel>
               <p className="text-[13px] text-n-9 mt-3 leading-relaxed">
-                Drop-in classes: <code className="text-[12px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">active:scale-[0.98]</code> + <code className="text-[12px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">transition-[background-color,color,transform] duration-150 ease-out</code>. If a button only animates on hover (no transform), it's safe to use the shorter <code className="text-[12px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">transition-colors</code> instead — but keep the scale value at <code className="text-[12px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">0.98</code> for consistency with the rest of the app.
+                Drop-in classes: <code className="text-[12px] font-mono text-accent-info/80 bg-state-hover px-1.5 py-0.5 rounded">active:scale-[0.98]</code> + <code className="text-[12px] font-mono text-accent-info/80 bg-state-hover px-1.5 py-0.5 rounded">transition-[background-color,color,transform] duration-150 ease-out</code>. If a button only animates on hover (no transform), it's safe to use the shorter <code className="text-[12px] font-mono text-accent-info/80 bg-state-hover px-1.5 py-0.5 rounded">transition-colors</code> instead — but keep the scale value at <code className="text-[12px] font-mono text-accent-info/80 bg-state-hover px-1.5 py-0.5 rounded">0.98</code> for consistency with the rest of the app.
               </p>
             </ComponentSection>
             )}
@@ -3979,7 +3979,7 @@ export function DetectionRow() {
             {activeItem === 'devices-panel' && (
             <ComponentSection id="devices-panel" name="DevicesPanel" description="Right-hand sidebar listing all connected field devices grouped by type. Supports search, type-filter isolation, device expansion with stats grid, camera preview with presets, ECM jam activation, mute with 30-min countdown, drone wipers/calibration, and drag-to-camera-viewer for camera rows.">
               <CodePreviewBlock name="DevicesPanel" description="Full interactive panel — try searching, filtering by type, expanding rows, toggling the floodlight Switch, and pressing Play on a speaker." tight code={devicesPanelSrc} relatedFiles={DEVICES_PANEL_FILES}>
-                <div className="relative mx-auto overflow-hidden rounded-lg border border-white/10" style={{ width: LAYOUT_TOKENS.sidebarWidthPx, height: 520 }}>
+                <div className="relative mx-auto overflow-hidden rounded-lg border border-border-default" style={{ width: LAYOUT_TOKENS.sidebarWidthPx, height: 520 }}>
                   <DevicesPanel
                     devices={devicesPanelDemoDevices}
                     open
@@ -4029,7 +4029,7 @@ export function DetectionRow() {
               ]} />
 
               <SectionHeading>DevicesPanelStrings</SectionHeading>
-              <p className="text-[16px] font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
+              <p className="text-[16px] font-normal text-slate-9 mb-4 leading-relaxed tracking-wide">
                 Every user-facing label inside the panel is keyed off a single <code className="text-[13px] font-mono text-n-10">DevicesPanelStrings</code> object so consumers can localise without forking the component. Pass overrides via the <code className="text-[13px] font-mono text-n-10">strings</code> prop; missing keys fall back to the English defaults shown here.
               </p>
               <PropsTable items={[
@@ -4084,7 +4084,7 @@ export function DetectionRow() {
                 <StyleguideDeviceTile label="When no devices match the current search or filter, the panel shows this placeholder.">
                   <div dir="rtl" className="flex flex-col">
                     <div className="flex items-center justify-between px-4 pt-3 pb-2">
-                      <h2 className="text-xs font-medium text-white uppercase tracking-wider">מכשירים (0)</h2>
+                      <h2 className="text-xs font-medium text-slate-12 uppercase tracking-wider">מכשירים (0)</h2>
                       <div className="p-2 -m-1 rounded text-n-120"><X size={14} /></div>
                     </div>
                     <FilterBar
@@ -4108,8 +4108,8 @@ export function DetectionRow() {
               <ExampleBlock id="devices-header" title="Header" tight>
                 <StyleguideDeviceTile label="Panel title with device count and close button.">
                   <div className="flex items-center justify-between px-4 pt-3 pb-2">
-                    <h2 className="text-xs font-medium text-white uppercase tracking-wider">מכשירים (16)</h2>
-                    <button className="p-2 -m-1 rounded hover:bg-white/10 text-n-120 hover:text-n-10 transition-colors">
+                    <h2 className="text-xs font-medium text-slate-12 uppercase tracking-wider">מכשירים (16)</h2>
+                    <button className="p-2 -m-1 rounded hover:bg-state-hover-strong text-n-120 hover:text-n-10 transition-colors">
                       <X size={14} />
                     </button>
                   </div>
@@ -4158,7 +4158,7 @@ export function DetectionRow() {
               {/* ── Group header ────────────────────────────────── */}
               <ExampleBlock title="Group header" tight>
                 <StyleguideDeviceTile label="Each device type gets a grouped section header with count.">
-                  <div className="px-4 py-1.5 text-xs font-normal uppercase tracking-wider text-white border-b border-white/5 bg-white/5">
+                  <div className="px-4 py-1.5 text-xs font-normal uppercase tracking-wider text-slate-12 border-b border-border-subtle bg-state-hover">
                     מצלמות (3)
                   </div>
                 </StyleguideDeviceTile>
@@ -4168,14 +4168,14 @@ export function DetectionRow() {
               <ExampleBlock id="devices-rows" title="Device row — collapsed states" tight>
                 <div className="space-y-4">
                   <StyleguideDeviceTile label="Normal — camera device with battery indicator.">
-                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right border-b border-white/[0.06] hover:bg-white/[0.04] cursor-grab">
-                      <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-white/10">
-                        <CameraIcon size={20} fill="white" />
+                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right border-b border-border-default hover:bg-state-hover cursor-grab">
+                      <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-state-hover-strong">
+                        <CameraIcon size={20} fill={slateHex(12)} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-[13px] font-medium text-n-10">PTZ Camera (North)</span>
-                          <span className="flex items-center gap-1.5 text-[11px] font-['Heebo'] tabular-nums text-white/50">
+                          <span className="flex items-center gap-1.5 text-[11px] font-['Heebo'] tabular-nums text-slate-9">
                             <StyleguideBatteryIcon pct={18} />
                             18%
                           </span>
@@ -4185,30 +4185,30 @@ export function DetectionRow() {
                   </StyleguideDeviceTile>
 
                   <StyleguideDeviceTile label="Malfunctioning — orange icon, warning triangle, connection dot.">
-                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right border-b border-white/[0.06] hover:bg-white/[0.04] cursor-pointer">
-                      <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-orange-900/40">
-                        <SensorIcon size={20} fill="#f97316" />
-                        <span className="absolute -bottom-0.5 -right-0.5 size-2 rounded-full ring-2 ring-n-1 bg-amber-400" />
+                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right border-b border-border-default hover:bg-state-hover cursor-pointer">
+                      <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-accent-warning-soft/40">
+                        <SensorIcon size={20} fill={accentHex('warning')} />
+                        <span className="absolute -bottom-0.5 -right-0.5 size-2 rounded-full ring-2 ring-n-1 bg-accent-warning" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[13px] font-medium text-orange-300">Magos (South)</span>
-                          <AlertTriangle size={11} className="text-orange-400 shrink-0" />
+                          <span className="text-[13px] font-medium text-accent-warning">Magos (South)</span>
+                          <AlertTriangle size={11} className="text-accent-warning shrink-0" />
                         </div>
                       </div>
                     </div>
                   </StyleguideDeviceTile>
 
                   <StyleguideDeviceTile label="Muted — BellOff icon with 30-min countdown timer.">
-                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right border-b border-white/[0.06] bg-white/[0.04] cursor-pointer">
-                      <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-white/10">
-                        <RadarIcon size={20} fill="white" />
+                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right border-b border-border-default bg-state-hover cursor-pointer">
+                      <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-state-hover-strong">
+                        <RadarIcon size={20} fill={slateHex(12)} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-[13px] font-medium text-n-10">RADA ieMHR</span>
-                          <span className="flex items-center gap-1 text-xs font-mono tabular-nums text-white">
-                            <BellOff size={12} className="text-white" />
+                          <span className="flex items-center gap-1 text-xs font-mono tabular-nums text-slate-12">
+                            <BellOff size={12} className="text-slate-12" />
                             28:42
                           </span>
                         </div>
@@ -4217,15 +4217,15 @@ export function DetectionRow() {
                   </StyleguideDeviceTile>
 
                   <StyleguideDeviceTile label="ECM row — jam button inline on the collapsed row.">
-                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right border-b border-white/[0.06] hover:bg-white/[0.04] cursor-pointer">
-                      <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-white/10">
-                        <SensorIcon size={20} fill="white" />
+                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right border-b border-border-default hover:bg-state-hover cursor-pointer">
+                      <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-state-hover-strong">
+                        <SensorIcon size={20} fill={slateHex(12)} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <span className="text-[13px] font-medium text-n-10">Regulus North</span>
-                        <div className="text-[11px] font-mono tabular-nums text-white/50">1.5km</div>
+                        <div className="text-[11px] font-mono tabular-nums text-slate-9">1.5km</div>
                       </div>
-                      <button className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium bg-[oklch(0.348_0.111_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)]">
+                      <button className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium bg-accent-danger-soft text-slate-12 ring-1 ring-inset ring-accent-danger-soft/40">
                         <StyleguideJamIcon size={12} />
                         הפעל
                       </button>
@@ -4238,13 +4238,13 @@ export function DetectionRow() {
               <ExampleBlock title="Connection state dots" tight>
                 <div className="grid grid-cols-3 gap-3">
                   {([
-                    { label: 'Warning (אזהרה)', color: 'bg-amber-400' },
-                    { label: 'Error (שגיאה)', color: 'bg-red-400' },
+                    { label: 'Warning (אזהרה)', color: 'bg-accent-warning' },
+                    { label: 'Error (שגיאה)', color: 'bg-accent-danger' },
                     { label: 'Offline (לא מקוון)', color: 'bg-n-120' },
                   ] as const).map(({ label, color }) => (
-                    <div key={label} className="flex flex-col items-center gap-2 rounded-lg border border-white/[0.06] bg-black/20 p-4">
-                      <div className="relative w-8 h-8 rounded flex items-center justify-center bg-white/10">
-                        <SensorIcon size={20} fill="white" />
+                    <div key={label} className="flex flex-col items-center gap-2 rounded-lg border border-border-default bg-black/20 p-4">
+                      <div className="relative w-8 h-8 rounded flex items-center justify-center bg-state-hover-strong">
+                        <SensorIcon size={20} fill={slateHex(12)} />
                         <span className={`absolute -bottom-0.5 -right-0.5 size-2 rounded-full ring-2 ring-n-1 ${color}`} />
                       </div>
                       <span className="text-[10px] font-mono text-n-9">{label}</span>
@@ -4262,8 +4262,8 @@ export function DetectionRow() {
                     { pct: 63, label: 'Medium' },
                     { pct: 91, label: 'Good' },
                   ] as const).map(({ pct, label }) => (
-                    <div key={pct} className="flex flex-col items-center gap-2 rounded-lg border border-white/[0.06] bg-black/20 p-4">
-                      <span className="flex items-center gap-1.5 text-[11px] font-['Heebo'] tabular-nums text-white/50">
+                    <div key={pct} className="flex flex-col items-center gap-2 rounded-lg border border-border-default bg-black/20 p-4">
+                      <span className="flex items-center gap-1.5 text-[11px] font-['Heebo'] tabular-nums text-slate-9">
                         <StyleguideBatteryIcon pct={pct} />
                         {pct}%
                       </span>
@@ -4276,35 +4276,35 @@ export function DetectionRow() {
               {/* ── Expanded — Camera device ────────────────────── */}
               <ExampleBlock id="devices-camera" title="Expanded — Camera device" tight>
                 <StyleguideDeviceTile label="Camera rows expand to show preset tabs, live preview, stats grid, and action bar. Camera rows are draggable to the viewer panel.">
-                  <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right bg-white/[0.04] border-b border-white/[0.06] cursor-grab">
-                    <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-white/10">
-                      <CameraIcon size={20} fill="white" />
+                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right bg-state-hover border-b border-border-default cursor-grab">
+                    <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-state-hover-strong">
+                      <CameraIcon size={20} fill={slateHex(12)} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-[13px] font-medium text-n-10">PTZ Camera (North)</span>
-                        <span className="flex items-center gap-1.5 text-[11px] font-['Heebo'] tabular-nums text-white/50">
+                        <span className="flex items-center gap-1.5 text-[11px] font-['Heebo'] tabular-nums text-slate-9">
                           <StyleguideBatteryIcon pct={18} />
                           18%
                         </span>
                       </div>
                     </div>
                   </div>
-                  <div className="flex flex-col bg-white/[0.03]">
-                    <div className="flex items-center gap-0 px-3 border-b border-white/[0.06]">
+                  <div className="flex flex-col bg-state-hover">
+                    <div className="flex items-center gap-0 px-3 border-b border-border-default">
                       {['רגיל', 'לילה', 'זום'].map((tab, i) => (
-                        <button key={tab} className={`px-3 py-2 text-[12px] font-medium border-b-2 ${i === 0 ? 'text-white border-white' : 'text-n-120 border-transparent hover:text-n-10'}`}>
+                        <button key={tab} className={`px-3 py-2 text-[12px] font-medium border-b-2 ${i === 0 ? 'text-slate-12 border-border-strong' : 'text-n-120 border-transparent hover:text-n-10'}`}>
                           {tab}
                         </button>
                       ))}
                     </div>
-                    <div className="relative w-full h-[200px] overflow-hidden bg-black shadow-[0_0_0_1px_rgba(255,255,255,0.1)]">
+                    <div className="relative w-full h-[200px] overflow-hidden bg-black shadow-[0_0_0_1px_var(--border-default)]">
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <Camera size={24} className="text-white/20" />
+                        <Camera size={24} className="text-slate-12/20" />
                       </div>
                       <div className="absolute top-1.5 right-1.5 flex items-center gap-1 bg-black/80 px-1.5 py-0.5 rounded-sm">
-                        <div className="size-1.5 rounded-full bg-red-500 animate-pulse" />
-                        <span className="text-[9px] font-medium text-white/90 uppercase tracking-wide">Live</span>
+                        <div className="size-1.5 rounded-full bg-accent-danger animate-pulse" />
+                        <span className="text-[9px] font-medium text-slate-12/90 uppercase tracking-wide">Live</span>
                       </div>
                     </div>
                     <div className="grid grid-cols-3 gap-x-4 gap-y-5 px-4 py-3">
@@ -4312,21 +4312,21 @@ export function DetectionRow() {
                         { l: 'מיקום', v: '32.4700, 35.0050' },
                         { l: 'כיוון', v: '45°' },
                         { l: 'שדה ראייה', v: '120°' },
-                        { l: 'תקינות', v: 'תקין', c: 'text-emerald-400' },
-                        { l: 'סוללה', v: '18%', c: 'text-red-400' },
+                        { l: 'תקינות', v: 'תקין', c: 'text-accent-success' },
+                        { l: 'סוללה', v: '18%', c: 'text-accent-danger' },
                       ].map(r => (
                         <div key={r.l} className="flex flex-col gap-1 text-xs">
-                          <span className="text-white/60 text-[10px]">{r.l}</span>
-                          <span className={`font-sans tabular-nums text-xs ${r.c ?? 'text-white'}`}>{r.v}</span>
+                          <span className="text-slate-12/60 text-[10px]">{r.l}</span>
+                          <span className={`font-sans tabular-nums text-xs ${r.c ?? 'text-slate-12'}`}>{r.v}</span>
                         </div>
                       ))}
                     </div>
-                    <div className="flex items-center gap-2 px-2 py-1.5 border-t border-white/[0.06]">
-                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06] hover:bg-white/10">
+                    <div className="flex items-center gap-2 px-2 py-1.5 border-t border-border-default">
+                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-slate-12/70 bg-state-hover-strong hover:bg-state-selected">
                         <MapPin size={12} />
                         מרכז במפה
                       </button>
-                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06] hover:bg-white/10">
+                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-slate-12/70 bg-state-hover-strong hover:bg-state-selected">
                         <BellOff size={12} />
                         השתק
                       </button>
@@ -4339,38 +4339,38 @@ export function DetectionRow() {
               <ExampleBlock id="devices-ecm" title="Expanded — ECM device (jam button states)" tight>
                 <div className="space-y-4">
                   <StyleguideDeviceTile label="Ready — jam button enabled.">
-                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right bg-white/[0.04] border-b border-white/[0.06]">
-                      <div className="w-8 h-8 rounded flex items-center justify-center shrink-0 bg-white/10">
-                        <SensorIcon size={20} fill="white" />
+                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right bg-state-hover border-b border-border-default">
+                      <div className="w-8 h-8 rounded flex items-center justify-center shrink-0 bg-state-hover-strong">
+                        <SensorIcon size={20} fill={slateHex(12)} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <span className="text-[13px] font-medium text-n-10">Regulus North</span>
-                        <div className="text-[11px] font-mono tabular-nums text-white/50">1.5km</div>
+                        <div className="text-[11px] font-mono tabular-nums text-slate-9">1.5km</div>
                       </div>
-                      <button className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium bg-[oklch(0.348_0.111_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)]">
+                      <button className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium bg-accent-danger-soft text-slate-12 ring-1 ring-inset ring-accent-danger-soft/40">
                         <StyleguideJamIcon size={12} />
                         הפעל
                       </button>
                     </div>
-                    <div className="flex flex-col bg-white/[0.03]">
+                    <div className="flex flex-col bg-state-hover">
                       <div className="grid grid-cols-3 gap-x-4 gap-y-5 px-4 py-3">
                         {[
                           { l: 'מיקום', v: '32.4650, 35.0020' },
                           { l: 'כיסוי', v: '1,500m' },
-                          { l: 'תקינות', v: 'תקין', c: 'text-emerald-400' },
+                          { l: 'תקינות', v: 'תקין', c: 'text-accent-success' },
                         ].map(r => (
                           <div key={r.l} className="flex flex-col gap-1 text-xs">
-                            <span className="text-white/60 text-[10px]">{r.l}</span>
-                            <span className={`font-sans tabular-nums text-xs ${r.c ?? 'text-white'}`}>{r.v}</span>
+                            <span className="text-slate-12/60 text-[10px]">{r.l}</span>
+                            <span className={`font-sans tabular-nums text-xs ${r.c ?? 'text-slate-12'}`}>{r.v}</span>
                           </div>
                         ))}
                       </div>
-                      <div className="flex items-center gap-2 px-2 py-1.5 border-t border-white/[0.06]">
-                        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06]">
+                      <div className="flex items-center gap-2 px-2 py-1.5 border-t border-border-default">
+                        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-slate-12/70 bg-state-hover-strong">
                           <MapPin size={12} />
                           מרכז במפה
                         </button>
-                        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06]">
+                        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-slate-12/70 bg-state-hover-strong">
                           <BellOff size={12} />
                           השתק
                         </button>
@@ -4379,14 +4379,14 @@ export function DetectionRow() {
                   </StyleguideDeviceTile>
 
                   <StyleguideDeviceTile label="Active — jam already running, button shows active state.">
-                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right bg-white/[0.04] border-b border-white/[0.06]">
-                      <div className="w-8 h-8 rounded flex items-center justify-center shrink-0 bg-white/10">
-                        <SensorIcon size={20} fill="white" />
+                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right bg-state-hover border-b border-border-default">
+                      <div className="w-8 h-8 rounded flex items-center justify-center shrink-0 bg-state-hover-strong">
+                        <SensorIcon size={20} fill={slateHex(12)} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <span className="text-[13px] font-medium text-n-10">Regulus East</span>
                       </div>
-                      <button disabled className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium opacity-40 cursor-not-allowed bg-[oklch(0.348_0.111_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)]">
+                      <button disabled className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium opacity-40 cursor-not-allowed bg-accent-danger-soft text-slate-12 ring-1 ring-inset ring-accent-danger-soft/40">
                         <StyleguideJamIcon size={12} />
                         שיבוש פעיל
                       </button>
@@ -4394,18 +4394,18 @@ export function DetectionRow() {
                   </StyleguideDeviceTile>
 
                   <StyleguideDeviceTile label="Malfunctioning — jam disabled, device in error state.">
-                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right bg-white/[0.04] border-b border-white/[0.06]">
-                      <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-orange-900/40">
-                        <SensorIcon size={20} fill="#f97316" />
-                        <span className="absolute -bottom-0.5 -right-0.5 size-2 rounded-full ring-2 ring-n-1 bg-red-400" />
+                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right bg-state-hover border-b border-border-default">
+                      <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-accent-warning-soft/40">
+                        <SensorIcon size={20} fill={accentHex('warning')} />
+                        <span className="absolute -bottom-0.5 -right-0.5 size-2 rounded-full ring-2 ring-n-1 bg-accent-danger" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[13px] font-medium text-orange-300">Regulus South</span>
-                          <AlertTriangle size={11} className="text-orange-400 shrink-0" />
+                          <span className="text-[13px] font-medium text-accent-warning">Regulus South</span>
+                          <AlertTriangle size={11} className="text-accent-warning shrink-0" />
                         </div>
                       </div>
-                      <button disabled className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium opacity-40 cursor-not-allowed bg-[oklch(0.348_0.111_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)]">
+                      <button disabled className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium opacity-40 cursor-not-allowed bg-accent-danger-soft text-slate-12 ring-1 ring-inset ring-accent-danger-soft/40">
                         <StyleguideJamIcon size={12} />
                         הפעל
                       </button>
@@ -4417,44 +4417,44 @@ export function DetectionRow() {
               {/* ── Expanded — Drone device ─────────────────────── */}
               <ExampleBlock id="devices-drone" title="Expanded — Drone device" tight>
                 <StyleguideDeviceTile label="Drone rows show altitude, wipers toggle, and calibration button with three states.">
-                  <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right bg-white/[0.04] border-b border-white/[0.06] cursor-pointer">
-                    <div className="w-8 h-8 rounded flex items-center justify-center shrink-0 bg-white/10">
-                      <svg width={20} height={20} viewBox="0 0 28 32" fill="none"><path d="M23.334 15.7502L9.33696 0.583495L5.86139 4.0835L10.5007 11.0835L9.32456 15.7502L10.5007 20.4168L5.86139 27.4168L9.32456 30.6801L23.334 15.7502Z" fill="white" stroke="#0a0a0a" strokeWidth="1"/></svg>
+                  <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right bg-state-hover border-b border-border-default cursor-pointer">
+                    <div className="w-8 h-8 rounded flex items-center justify-center shrink-0 bg-state-hover-strong">
+                      <svg width={20} height={20} viewBox="0 0 28 32" fill="none"><path d="M23.334 15.7502L9.33696 0.583495L5.86139 4.0835L10.5007 11.0835L9.32456 15.7502L10.5007 20.4168L5.86139 27.4168L9.32456 30.6801L23.334 15.7502Z" fill={slateHex(12)} stroke="#0a0a0a" strokeWidth="1"/></svg>
                     </div>
                     <div className="flex-1 min-w-0">
                       <span className="text-[13px] font-medium text-n-10">סיור-3</span>
                     </div>
                   </div>
-                  <div className="flex flex-col bg-white/[0.03]">
+                  <div className="flex flex-col bg-state-hover">
                     <div className="grid grid-cols-3 gap-x-4 gap-y-5 px-4 py-3">
                       {[
                         { l: 'מיקום', v: '32.4700, 35.0050' },
                         { l: 'גובה', v: '80 מ׳' },
-                        { l: 'תקינות', v: 'תקין', c: 'text-emerald-400' },
+                        { l: 'תקינות', v: 'תקין', c: 'text-accent-success' },
                       ].map(r => (
                         <div key={r.l} className="flex flex-col gap-1 text-xs">
-                          <span className="text-white/60 text-[10px]">{r.l}</span>
-                          <span className={`font-sans tabular-nums text-xs ${r.c ?? 'text-white'}`}>{r.v}</span>
+                          <span className="text-slate-12/60 text-[10px]">{r.l}</span>
+                          <span className={`font-sans tabular-nums text-xs ${r.c ?? 'text-slate-12'}`}>{r.v}</span>
                         </div>
                       ))}
                     </div>
-                    <div className="flex items-center gap-2 px-2 py-1.5 border-t border-white/[0.06]">
-                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06]">
+                    <div className="flex items-center gap-2 px-2 py-1.5 border-t border-border-default">
+                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-slate-12/70 bg-state-hover-strong">
                         <MapPin size={12} />
                         מרכז במפה
                       </button>
-                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06]">
+                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-slate-12/70 bg-state-hover-strong">
                         <BellOff size={12} />
                         השתק
                       </button>
-                      <div className="w-px h-5 bg-white/[0.08] mx-0.5" />
+                      <div className="w-px h-5 bg-state-pressed mx-0.5" />
                       <div className="flex items-center gap-2">
-                        <span className="text-[11px] text-white/60">מגבים</span>
-                        <div className="h-[18px] w-8 rounded-full bg-white/10 relative">
-                          <div className="absolute left-[2px] top-[2px] size-[14px] rounded-full bg-white/60 transition-transform" />
+                        <span className="text-[11px] text-slate-12/60">מגבים</span>
+                        <div className="h-[18px] w-8 rounded-full bg-state-hover-strong relative">
+                          <div className="absolute left-[2px] top-[2px] size-[14px] rounded-full bg-slate-12/60 transition-transform" />
                         </div>
                       </div>
-                      <button className="ml-auto flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06]">
+                      <button className="ml-auto flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-slate-12/70 bg-state-hover-strong">
                         <Wrench size={12} />
                         כיול
                       </button>
@@ -4466,10 +4466,10 @@ export function DetectionRow() {
                   {([
                     { label: 'Idle', icon: <Wrench size={12} />, text: 'כיול' },
                     { label: 'Running', icon: <Loader2 size={12} className="animate-spin" />, text: 'מכייל...' },
-                    { label: 'Done', icon: <Check size={12} className="text-emerald-400" />, text: 'הושלם' },
+                    { label: 'Done', icon: <Check size={12} className="text-accent-success" />, text: 'הושלם' },
                   ] as const).map(({ label, icon, text }) => (
-                    <div key={label} className="flex flex-col items-center gap-2 rounded-lg border border-white/[0.06] bg-black/20 p-4">
-                      <button disabled={label !== 'Idle'} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06] disabled:opacity-50 disabled:cursor-not-allowed">
+                    <div key={label} className="flex flex-col items-center gap-2 rounded-lg border border-border-default bg-black/20 p-4">
+                      <button disabled={label !== 'Idle'} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-slate-12/70 bg-state-hover-strong disabled:opacity-50 disabled:cursor-not-allowed">
                         {icon}
                         {text}
                       </button>
@@ -4483,9 +4483,9 @@ export function DetectionRow() {
               <ExampleBlock id="devices-speaker" title="Expanded — Speaker device" tight>
                 <div className="space-y-4">
                   <StyleguideDeviceTile label="Idle — secondary Play button (custom solid triangle icon) sits inline on the collapsed row.">
-                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right border-b border-white/[0.06]">
-                      <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-white/10">
-                        <SpeakerIcon size={20} fill="white" />
+                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right border-b border-border-default">
+                      <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-state-hover-strong">
+                        <SpeakerIcon size={20} fill={slateHex(12)} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <span className="text-[13px] font-medium text-n-10">PA Speaker (Gate)</span>
@@ -4498,9 +4498,9 @@ export function DetectionRow() {
                   </StyleguideDeviceTile>
 
                   <StyleguideDeviceTile label="Broadcasting — Stop icon swaps in, the active state is mirrored on the row icon and a 'משדר' chip near the device name.">
-                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right border-b border-white/[0.06]">
-                      <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-white/10">
-                        <SpeakerIcon size={20} fill="white" />
+                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right border-b border-border-default">
+                      <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-state-hover-strong">
+                        <SpeakerIcon size={20} fill={slateHex(12)} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 min-w-0">
@@ -4516,9 +4516,9 @@ export function DetectionRow() {
                   </StyleguideDeviceTile>
 
                   <StyleguideDeviceTile label="Expanded — track combobox is anchored at the start of the footer (right edge in RTL), then a divider, then the standard fly-to / mute pair.">
-                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right bg-white/[0.04] border-b border-white/[0.06]">
-                      <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-white/10">
-                        <SpeakerIcon size={20} fill="white" />
+                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right bg-state-hover border-b border-border-default">
+                      <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-state-hover-strong">
+                        <SpeakerIcon size={20} fill={slateHex(12)} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <span className="text-[13px] font-medium text-n-10">PA Speaker (Gate)</span>
@@ -4528,23 +4528,23 @@ export function DetectionRow() {
                         נגן
                       </Button>
                     </div>
-                    <div className="flex flex-col bg-white/[0.03]">
-                      <div className="flex items-center gap-2 px-2 py-1.5 border-t border-white/[0.06]">
-                        <div className="flex items-center gap-2 min-w-0 h-7 rounded bg-white/[0.05] text-white/[0.64]">
+                    <div className="flex flex-col bg-state-hover">
+                      <div className="flex items-center gap-2 px-2 py-1.5 border-t border-border-default">
+                        <div className="flex items-center gap-2 min-w-0 h-7 rounded bg-state-hover text-slate-12/[0.64]">
                           <button
                             type="button"
-                            className="inline-flex items-center justify-between gap-2 h-7 min-w-0 max-w-[160px] px-2 rounded text-[11px] font-medium text-white/[0.64] bg-transparent transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25"
+                            className="inline-flex items-center justify-between gap-2 h-7 min-w-0 max-w-[160px] px-2 rounded text-[11px] font-medium text-slate-12/[0.64] bg-transparent transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong"
                           >
                             <span className="truncate">אזעקת אש</span>
                             <ChevronsUpDown size={12} className="shrink-0 opacity-60" />
                           </button>
                         </div>
-                        <div className="w-px h-5 bg-white/[0.08] mx-0.5" />
-                        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06]">
+                        <div className="w-px h-5 bg-state-pressed mx-0.5" />
+                        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-slate-12/70 bg-state-hover-strong">
                           <MapPin size={12} />
                           מרכז במפה
                         </button>
-                        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06]">
+                        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-slate-12/70 bg-state-hover-strong">
                           <BellOff size={12} />
                           השתק
                         </button>
@@ -4558,66 +4558,66 @@ export function DetectionRow() {
               <ExampleBlock id="devices-floodlight" title="Expanded — Floodlight device" tight>
                 <div className="space-y-4">
                   <StyleguideDeviceTile label="Off — inline Switch lives on the collapsed row, status text reads ‘כבוי’.">
-                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right border-b border-white/[0.06]">
-                      <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-white/10">
-                        <FloodlightIcon size={20} fill="white" />
+                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right border-b border-border-default">
+                      <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-state-hover-strong">
+                        <FloodlightIcon size={20} fill={slateHex(12)} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <span className="text-[13px] font-medium text-n-10">Floodlight (North)</span>
                       </div>
-                      <span className="text-[11px] text-white/60 shrink-0">כבוי</span>
+                      <span className="text-[11px] text-slate-12/60 shrink-0">כבוי</span>
                       <Switch checked={false} aria-label="הפעל זרקור" className="shrink-0" />
                     </div>
                   </StyleguideDeviceTile>
 
                   <StyleguideDeviceTile label="On — Switch in the checked state, the active icon variant lights up, and the inline label flips to ‘דלוק’.">
-                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right border-b border-white/[0.06]">
-                      <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-white/10">
-                        <FloodlightIcon size={20} fill="white" active />
+                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right border-b border-border-default">
+                      <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-state-hover-strong">
+                        <FloodlightIcon size={20} fill={slateHex(12)} active />
                       </div>
                       <div className="flex-1 min-w-0">
                         <span className="text-[13px] font-medium text-n-10">Floodlight (South)</span>
                       </div>
-                      <span className="text-[11px] text-amber-300 shrink-0">דלוק</span>
+                      <span className="text-[11px] text-accent-warning shrink-0">דלוק</span>
                       <Switch checked aria-label="כבה זרקור" className="shrink-0" />
                     </div>
                   </StyleguideDeviceTile>
 
                   <StyleguideDeviceTile label="Expanded — the same Switch is duplicated inside the footer next to the standard fly-to / mute pair so the toggle remains reachable while the row is open.">
-                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right bg-white/[0.04] border-b border-white/[0.06]">
-                      <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-white/10">
-                        <FloodlightIcon size={20} fill="white" active />
+                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right bg-state-hover border-b border-border-default">
+                      <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-state-hover-strong">
+                        <FloodlightIcon size={20} fill={slateHex(12)} active />
                       </div>
                       <div className="flex-1 min-w-0">
                         <span className="text-[13px] font-medium text-n-10">Floodlight (South)</span>
                       </div>
-                      <span className="text-[11px] text-amber-300 shrink-0">דלוק</span>
+                      <span className="text-[11px] text-accent-warning shrink-0">דלוק</span>
                       <Switch checked aria-label="כבה זרקור" className="shrink-0" />
                     </div>
-                    <div className="flex flex-col bg-white/[0.03]">
+                    <div className="flex flex-col bg-state-hover">
                       <div className="grid grid-cols-3 gap-x-4 gap-y-5 px-4 py-3">
                         {[
                           { l: 'מיקום', v: '32.4690, 34.9990' },
-                          { l: 'תקינות', v: 'תקין', c: 'text-emerald-400' },
+                          { l: 'תקינות', v: 'תקין', c: 'text-accent-success' },
                         ].map(r => (
                           <div key={r.l} className="flex flex-col gap-1 text-xs">
-                            <span className="text-white/60 text-[10px]">{r.l}</span>
-                            <span className={`font-sans tabular-nums text-xs ${r.c ?? 'text-white'}`}>{r.v}</span>
+                            <span className="text-slate-12/60 text-[10px]">{r.l}</span>
+                            <span className={`font-sans tabular-nums text-xs ${r.c ?? 'text-slate-12'}`}>{r.v}</span>
                           </div>
                         ))}
                       </div>
-                      <div className="flex items-center gap-2 px-2 py-1.5 border-t border-white/[0.06]">
-                        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06]">
+                      <div className="flex items-center gap-2 px-2 py-1.5 border-t border-border-default">
+                        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-slate-12/70 bg-state-hover-strong">
                           <MapPin size={12} />
                           מרכז במפה
                         </button>
-                        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06]">
+                        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-slate-12/70 bg-state-hover-strong">
                           <BellOff size={12} />
                           השתק
                         </button>
-                        <div className="w-px h-5 bg-white/[0.08] mx-0.5" />
+                        <div className="w-px h-5 bg-state-pressed mx-0.5" />
                         <div className="flex items-center gap-2">
-                          <span className="text-[11px] text-white/60">זרקור</span>
+                          <span className="text-[11px] text-slate-12/60">זרקור</span>
                           <Switch checked aria-label="כבה זרקור" />
                         </div>
                       </div>
@@ -4631,11 +4631,11 @@ export function DetectionRow() {
                 <div className="space-y-4">
                   <StyleguideDeviceTile label="Default state — fly-to and mute buttons.">
                     <div className="flex items-center gap-2 px-2 py-1.5">
-                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90">
+                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-slate-12/70 bg-state-hover-strong hover:bg-state-selected hover:text-slate-12/90">
                         <MapPin size={12} />
                         מרכז במפה
                       </button>
-                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90">
+                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-slate-12/70 bg-state-hover-strong hover:bg-state-selected hover:text-slate-12/90">
                         <BellOff size={12} />
                         השתק
                       </button>
@@ -4644,11 +4644,11 @@ export function DetectionRow() {
 
                   <StyleguideDeviceTile label="Muted state — amber highlight on the mute button.">
                     <div className="flex items-center gap-2 px-2 py-1.5">
-                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90">
+                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-slate-12/70 bg-state-hover-strong hover:bg-state-selected hover:text-slate-12/90">
                         <MapPin size={12} />
                         מרכז במפה
                       </button>
-                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium bg-amber-500/15 text-amber-400 hover:bg-amber-500/25">
+                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium bg-accent-warning/15 text-accent-warning hover:bg-accent-warning/25">
                         <BellOff size={12} />
                         בטל השתקה
                       </button>
@@ -4661,17 +4661,17 @@ export function DetectionRow() {
               <ExampleBlock id="devices-track-combobox" title="Audio-track combobox" tight>
                 <div className="space-y-3">
                   <p className="text-[13px] text-n-9 leading-relaxed">
-                    The speaker audio-track picker is the canonical "combobox with search" pattern in the app. It composes <code className="text-[12px] font-mono text-sky-300/80 bg-white/[0.04] px-1 py-0.5 rounded">Popover</code> for the open/close affordance with <code className="text-[12px] font-mono text-sky-300/80 bg-white/[0.04] px-1 py-0.5 rounded">cmdk</code>'s <code className="text-[12px] font-mono text-sky-300/80 bg-white/[0.04] px-1 py-0.5 rounded">Command</code> for the search input + filtered list. Use it whenever a Select would otherwise need an in-list search.
+                    The speaker audio-track picker is the canonical "combobox with search" pattern in the app. It composes <code className="text-[12px] font-mono text-accent-info/80 bg-state-hover px-1 py-0.5 rounded">Popover</code> for the open/close affordance with <code className="text-[12px] font-mono text-accent-info/80 bg-state-hover px-1 py-0.5 rounded">cmdk</code>'s <code className="text-[12px] font-mono text-accent-info/80 bg-state-hover px-1 py-0.5 rounded">Command</code> for the search input + filtered list. Use it whenever a Select would otherwise need an in-list search.
                   </p>
                   <p className="text-[13px] text-n-9 leading-relaxed">
-                    Direction-aware notes: trigger uses <code className="text-[12px] font-mono text-sky-300/80 bg-white/[0.04] px-1 py-0.5 rounded">align="start"</code> so the popover anchors to the start edge in both LTR and RTL; the content overrides Radix's dynamic <code className="text-[12px] font-mono text-sky-300/80 bg-white/[0.04] px-1 py-0.5 rounded">--radix-popover-content-transform-origin</code> with <code className="text-[12px] font-mono text-sky-300/80 bg-white/[0.04] px-1 py-0.5 rounded">origin-top-left rtl:origin-top-right</code> so the open-animation scales out from the visually-correct corner.
+                    Direction-aware notes: trigger uses <code className="text-[12px] font-mono text-accent-info/80 bg-state-hover px-1 py-0.5 rounded">align="start"</code> so the popover anchors to the start edge in both LTR and RTL; the content overrides Radix's dynamic <code className="text-[12px] font-mono text-accent-info/80 bg-state-hover px-1 py-0.5 rounded">--radix-popover-content-transform-origin</code> with <code className="text-[12px] font-mono text-accent-info/80 bg-state-hover px-1 py-0.5 rounded">origin-top-left rtl:origin-top-right</code> so the open-animation scales out from the visually-correct corner.
                   </p>
-                  <div dir="rtl" className="rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)] p-6 flex justify-center" style={{ backgroundColor: SURFACE.level0 }}>
+                  <div dir="rtl" className="rounded-lg shadow-[0_0_0_1px_var(--border-default)] p-6 flex justify-center" style={{ backgroundColor: SURFACE.level0 }}>
                     <Popover open={comboboxDemoOpen} onOpenChange={setComboboxDemoOpen}>
                       <PopoverTrigger asChild>
                         <button
                           type="button"
-                          className="inline-flex items-center justify-between gap-2 h-7 min-w-[160px] max-w-[220px] px-2 rounded text-[11px] font-medium text-white/[0.64] bg-white/[0.05] transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25"
+                          className="inline-flex items-center justify-between gap-2 h-7 min-w-[160px] max-w-[220px] px-2 rounded text-[11px] font-medium text-slate-12/[0.64] bg-state-hover transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong"
                         >
                           <span className="truncate">
                             {DEFAULT_SPEAKER_TRACKS.find((t) => t.id === comboboxDemoTrack)?.label ?? 'Track'}
@@ -4701,7 +4701,7 @@ export function DetectionRow() {
                                 >
                                   <span className="flex-1 truncate">{track.label}</span>
                                   {track.id === comboboxDemoTrack && (
-                                    <Check size={12} className="shrink-0 text-white/80" />
+                                    <Check size={12} className="shrink-0 text-slate-12/80" />
                                   )}
                                 </CommandItem>
                               ))}
@@ -4712,7 +4712,7 @@ export function DetectionRow() {
                     </Popover>
                   </div>
                   <p className="text-[12px] text-n-7 leading-relaxed">
-                    Keyboard: <code className="text-[11px] font-mono text-n-9 bg-white/[0.04] px-1 py-0.5 rounded">Enter</code> / <code className="text-[11px] font-mono text-n-9 bg-white/[0.04] px-1 py-0.5 rounded">Space</code> opens the popover, <code className="text-[11px] font-mono text-n-9 bg-white/[0.04] px-1 py-0.5 rounded">↑</code>/<code className="text-[11px] font-mono text-n-9 bg-white/[0.04] px-1 py-0.5 rounded">↓</code> moves through filtered items, <code className="text-[11px] font-mono text-n-9 bg-white/[0.04] px-1 py-0.5 rounded">Enter</code> commits, <code className="text-[11px] font-mono text-n-9 bg-white/[0.04] px-1 py-0.5 rounded">Esc</code> dismisses.
+                    Keyboard: <code className="text-[11px] font-mono text-n-9 bg-state-hover px-1 py-0.5 rounded">Enter</code> / <code className="text-[11px] font-mono text-n-9 bg-state-hover px-1 py-0.5 rounded">Space</code> opens the popover, <code className="text-[11px] font-mono text-n-9 bg-state-hover px-1 py-0.5 rounded">↑</code>/<code className="text-[11px] font-mono text-n-9 bg-state-hover px-1 py-0.5 rounded">↓</code> moves through filtered items, <code className="text-[11px] font-mono text-n-9 bg-state-hover px-1 py-0.5 rounded">Enter</code> commits, <code className="text-[11px] font-mono text-n-9 bg-state-hover px-1 py-0.5 rounded">Esc</code> dismisses.
                   </p>
                 </div>
               </ExampleBlock>
@@ -4748,7 +4748,7 @@ export function DetectionRow() {
                     return (
                       <div key={aff} className="flex flex-col items-center gap-2">
                         <MapMarker icon={<SensorIcon size={34} fill={s.glyphColor} />} style={s} surfaceSize={48} ringSize={38} />
-                        <span className="text-xs font-mono font-normal text-white">{aff}</span>
+                        <span className="text-xs font-mono font-normal text-slate-12">{aff}</span>
                       </div>
                     );
                   })}
@@ -4766,7 +4766,7 @@ export function DetectionRow() {
               <div id="layer-anatomy" className="scroll-mt-12 space-y-6 pt-10">
                 <div className="space-y-2">
                   <h3 className="text-lg font-semibold text-n-12">Layer Anatomy</h3>
-                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide">
+                  <p className="text-[16px] font-normal leading-relaxed text-slate-9 tracking-wide">
                     Each marker composites 4 concentric layers plus optional overlays. Hover a layer card to spotlight it on the preview.
                   </p>
                 </div>
@@ -4782,8 +4782,8 @@ export function DetectionRow() {
                         key={layer}
                         className={`rounded-lg border px-3 py-2.5 cursor-default transition-all duration-200 ${
                           hoveredLayer === num
-                            ? 'border-white/20 bg-white/[0.06]'
-                            : 'border-white/[0.06] bg-white/[0.03]'
+                            ? 'border-border-strong bg-state-hover-strong'
+                            : 'border-border-default bg-state-hover'
                         }`}
                         onMouseEnter={() => handleLayerEnter(num)}
                         onMouseLeave={handleLayerLeave}
@@ -4794,8 +4794,8 @@ export function DetectionRow() {
                     <div
                       className={`rounded-lg border px-3 py-2.5 cursor-default transition-all duration-200 ${
                         hoveredLayer === 5
-                          ? 'border-white/20 bg-white/[0.06]'
-                          : 'border-white/[0.06] bg-white/[0.03]'
+                          ? 'border-border-strong bg-state-hover-strong'
+                          : 'border-border-default bg-state-hover'
                       }`}
                       onMouseEnter={() => handleLayerEnter(5)}
                       onMouseLeave={handleLayerLeave}
@@ -4803,13 +4803,13 @@ export function DetectionRow() {
                       <span className="text-sm font-semibold text-n-11">Overlays</span>
                     </div>
                   </div>
-                  <div className="flex items-center justify-center rounded-xl border border-white/10 p-8" style={{ background: 'radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.25) 0%, rgba(0, 0, 0, 1) 61%)' }}>
+                  <div className="flex items-center justify-center rounded-xl border border-border-default p-8" style={{ background: 'radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.25) 0%, rgba(0, 0, 0, 1) 61%)' }}>
                     <div className="relative" style={{ transition: 'filter 300ms ease' }}>
                       {(() => {
                         const style = resolveMarkerStyle('default', 'friendly');
                         return (
                           <MapMarker
-                            icon={<SensorIcon size={48} fill="#ffffff" />}
+                            icon={<SensorIcon size={48} fill={slateHex(12)} />}
                             style={style}
                             surfaceSize={72}
                             ringSize={56}
@@ -4830,7 +4830,7 @@ export function DetectionRow() {
               <div id="state-matrix" className="scroll-mt-12 space-y-6 pt-10">
                 <div className="space-y-2">
                   <h3 className="text-lg font-semibold text-n-12">Interaction State Matrix</h3>
-                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide">
+                  <p className="text-[16px] font-normal leading-relaxed text-slate-9 tracking-wide">
                     {INTERACTION_STATES.length} interaction states &times; {AFFILIATIONS.length} affiliations = {INTERACTION_STATES.length * AFFILIATIONS.length} visual combinations. Hover a state card to preview it. Click an affiliation dot to change the hero.
                   </p>
                 </div>
@@ -4860,8 +4860,8 @@ export function DetectionRow() {
                             key={state}
                             className={`flex items-center gap-4 rounded-lg border px-3 py-2.5 cursor-default transition-all duration-200 w-full justify-start ${
                               isHovered
-                                ? 'border-white/20 bg-white/[0.06]'
-                                : 'border-white/[0.06] bg-white/[0.03]'
+                                ? 'border-border-strong bg-state-hover-strong'
+                                : 'border-border-default bg-state-hover'
                             }`}
                             onMouseEnter={() => handleStateEnter(state, aff)}
                             onMouseLeave={handleStateLeave}
@@ -4885,7 +4885,7 @@ export function DetectionRow() {
                   </div>
 
                   {/* Hero column */}
-                  <div className="flex flex-col items-center gap-5 rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 self-start sticky top-4 w-[280px] shrink-0">
+                  <div className="flex flex-col items-center gap-5 rounded-xl border border-border-default bg-state-hover p-6 self-start sticky top-4 w-[280px] shrink-0">
                     {(() => {
                       const heroStyle = resolveMarkerStyle(explorerState, hoveredAff ?? explorerAff);
                       return (
@@ -4911,7 +4911,7 @@ export function DetectionRow() {
               <div id="icon-catalog" className="scroll-mt-12 space-y-6 pt-10">
                 <div className="space-y-2">
                   <h3 className="text-lg font-semibold text-n-12">Icon Catalog</h3>
-                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide">
+                  <p className="text-[16px] font-normal leading-relaxed text-slate-9 tracking-wide">
                     Tactical SVG icons used inside map markers on the Mapbox canvas. Each icon accepts a <code className="text-n-10">fill</code> prop.
                   </p>
                   <a
@@ -4920,7 +4920,7 @@ export function DetectionRow() {
                       e.preventDefault();
                       setActiveItem('icon-library');
                     }}
-                    className="inline-flex items-center gap-1 text-[13px] text-sky-300/90 hover:text-sky-200 transition-colors duration-150"
+                    className="inline-flex items-center gap-1 text-[13px] text-accent-info/90 hover:text-accent-info transition-colors duration-150"
                   >
                     → See the full Icon Library
                   </a>
@@ -4928,17 +4928,17 @@ export function DetectionRow() {
 
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
                   {([
-                    { name: 'SensorIcon', el: <SensorIcon size={32} fill="white" /> },
-                    { name: 'CameraIcon', el: <CameraIcon size={32} fill="white" /> },
-                    { name: 'RadarIcon', el: <RadarIcon size={32} fill="white" /> },
-                    { name: 'LidarIcon', el: <LidarIcon size={32} fill="white" /> },
-                    { name: 'LauncherIcon', el: <LauncherIcon size={32} fill="white" /> },
-                    { name: 'DroneHiveIcon', el: <DroneHiveIcon size={32} fill="white" /> },
-                    { name: 'DroneIcon', el: <DroneIcon color="white" /> },
-                    { name: 'MissileIcon', el: <MissileIcon fill="white" /> },
-                    { name: 'CarIcon', el: <CarIcon color="white" size={32} /> },
-                    { name: 'FloodlightIcon', el: <FloodlightIcon size={32} fill="white" /> },
-                    { name: 'SpeakerIcon', el: <SpeakerIcon size={32} fill="white" /> },
+                    { name: 'SensorIcon', el: <SensorIcon size={32} fill={slateHex(12)} /> },
+                    { name: 'CameraIcon', el: <CameraIcon size={32} fill={slateHex(12)} /> },
+                    { name: 'RadarIcon', el: <RadarIcon size={32} fill={slateHex(12)} /> },
+                    { name: 'LidarIcon', el: <LidarIcon size={32} fill={slateHex(12)} /> },
+                    { name: 'LauncherIcon', el: <LauncherIcon size={32} fill={slateHex(12)} /> },
+                    { name: 'DroneHiveIcon', el: <DroneHiveIcon size={32} fill={slateHex(12)} /> },
+                    { name: 'DroneIcon', el: <DroneIcon color={slateHex(12)} /> },
+                    { name: 'MissileIcon', el: <MissileIcon fill={slateHex(12)} /> },
+                    { name: 'CarIcon', el: <CarIcon color={slateHex(12)} size={32} /> },
+                    { name: 'FloodlightIcon', el: <FloodlightIcon size={32} fill={slateHex(12)} /> },
+                    { name: 'SpeakerIcon', el: <SpeakerIcon size={32} fill={slateHex(12)} /> },
                   ] as { name: string; el: React.ReactNode }[]).map(({ name, el }) => (
                     <IconCatalogTile key={name} name={name} icon={el} />
                   ))}
@@ -4957,15 +4957,15 @@ export function DetectionRow() {
             >
               <SectionHeading>Basics — Bing Aerial via Cesium Ion (2D)</SectionHeading>
               <p className="text-[14px] leading-6 text-n-10">
-                Imagery: Cesium Ion asset id <code className="text-[13px] font-mono bg-white/[0.06] px-1 py-0.5 rounded">2</code>{' '}
+                Imagery: Cesium Ion asset id <code className="text-[13px] font-mono bg-state-hover-strong px-1 py-0.5 rounded">2</code>{' '}
                 (Bing Maps Aerial). Token comes from the{' '}
-                <code className="text-[13px] font-mono bg-white/[0.06] px-1 py-0.5 rounded">VITE_CESIUM_ION_TOKEN</code>{' '}
-                env var (see <code className="text-[13px] font-mono bg-white/[0.06] px-1 py-0.5 rounded">.env.example</code>).
-                Scene mode is <code className="text-[13px] font-mono bg-white/[0.06] px-1 py-0.5 rounded">'2D'</code> for parity with the top-down Mapbox view.
+                <code className="text-[13px] font-mono bg-state-hover-strong px-1 py-0.5 rounded">VITE_CESIUM_ION_TOKEN</code>{' '}
+                env var (see <code className="text-[13px] font-mono bg-state-hover-strong px-1 py-0.5 rounded">.env.example</code>).
+                Scene mode is <code className="text-[13px] font-mono bg-state-hover-strong px-1 py-0.5 rounded">'2D'</code> for parity with the top-down Mapbox view.
               </p>
 
               {!CESIUM_ION_TOKEN ? (
-                <div className="rounded-md p-4 text-[13px] text-amber-300 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] bg-amber-500/[0.06]">
+                <div className="rounded-md p-4 text-[13px] text-accent-warning shadow-[0_0_0_1px_var(--border-default)] bg-accent-warning/[0.06]">
                   <strong>Token missing.</strong> Set <code className="font-mono">VITE_CESIUM_ION_TOKEN</code> in <code className="font-mono">.env.local</code> and restart the dev server.
                 </div>
               ) : (
@@ -5040,13 +5040,13 @@ export function DetectionRow() {
                     <strong className="text-n-12">True 3D globe + terrain.</strong> Cesium World Terrain (Ion asset 1) renders real elevation. Sensor lines-of-sight, drone altitude, missile trajectories all become visually correct in 3D, not faked with flat overlays.
                   </li>
                   <li>
-                    <strong className="text-n-12">Time-dynamic data (CZML).</strong> Replay engagements with a built-in clock + scrub bar. Drone, missile, jam, target tracks all driven by timestamped properties — not hand-rolled <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">requestAnimationFrame</code> loops.
+                    <strong className="text-n-12">Time-dynamic data (CZML).</strong> Replay engagements with a built-in clock + scrub bar. Drone, missile, jam, target tracks all driven by timestamped properties — not hand-rolled <code className="font-mono text-[13px] bg-state-hover-strong px-1 rounded">requestAnimationFrame</code> loops.
                   </li>
                   <li>
                     <strong className="text-n-12">3D Tiles for assets.</strong> Buildings, photogrammetry, ground stations as 3D-Tiles models. Camera collision, occlusion, and identification become possible.
                   </li>
                   <li>
-                    <strong className="text-n-12">Real line-of-sight visualization.</strong> Cesium has <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">Cesium.SensorVolume</code>-style primitives + the <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">cesium-sensor-volumes</code> add-on that draw conic / rectangular / spherical sensor volumes intersected with terrain.
+                    <strong className="text-n-12">Real line-of-sight visualization.</strong> Cesium has <code className="font-mono text-[13px] bg-state-hover-strong px-1 rounded">Cesium.SensorVolume</code>-style primitives + the <code className="font-mono text-[13px] bg-state-hover-strong px-1 rounded">cesium-sensor-volumes</code> add-on that draw conic / rectangular / spherical sensor volumes intersected with terrain.
                   </li>
                   <li>
                     <strong className="text-n-12">Atmospheric + sun lighting.</strong> Day/night terminator, cast shadows, atmospheric scattering — useful for surveillance scenarios that depend on sun angle.
@@ -5068,8 +5068,8 @@ export function DetectionRow() {
                 <ol className="space-y-2 text-[14px] leading-6 text-n-10 list-decimal ps-6 marker:text-n-9">
                   <li>Switch this primitive to 3D mode behind a toggle, layer in Cesium World Terrain.</li>
                   <li>Move drone / missile / engagement-line animations to CZML so the clock / scrub UI works.</li>
-                  <li>Replace the flat FOV polygon with a real <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">SensorVolume</code> (terrain-clipped 3D cone).</li>
-                  <li>Wire <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">CesiumMap</code> into <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">Dashboard</code> behind a feature flag, then deprecate <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">TacticalMap</code> when parity is full.</li>
+                  <li>Replace the flat FOV polygon with a real <code className="font-mono text-[13px] bg-state-hover-strong px-1 rounded">SensorVolume</code> (terrain-clipped 3D cone).</li>
+                  <li>Wire <code className="font-mono text-[13px] bg-state-hover-strong px-1 rounded">CesiumMap</code> into <code className="font-mono text-[13px] bg-state-hover-strong px-1 rounded">Dashboard</code> behind a feature flag, then deprecate <code className="font-mono text-[13px] bg-state-hover-strong px-1 rounded">TacticalMap</code> when parity is full.</li>
                 </ol>
               </div>
             </ComponentSection>
@@ -5109,16 +5109,16 @@ export function DetectionRow() {
               <SectionHeading>Notes</SectionHeading>
               <ul className="space-y-3 text-[14px] leading-6 text-n-10 list-disc ps-6 marker:text-n-9">
                 <li>
-                  <strong className="text-n-12">Time always flows L→R.</strong> The transport sits inside <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">&lt;DirIsland direction=&quot;ltr&quot;&gt;</code>. Hebrew tooltip labels still render correctly because the island only repositions chrome, not text.
+                  <strong className="text-n-12">Time always flows L→R.</strong> The transport sits inside <code className="font-mono text-[13px] bg-state-hover-strong px-1 rounded">&lt;DirIsland direction=&quot;ltr&quot;&gt;</code>. Hebrew tooltip labels still render correctly because the island only repositions chrome, not text.
                 </li>
                 <li>
                   <strong className="text-n-12">Foreign-locked tiles stay fully usable.</strong> Playback is read-only investigation, not a control op. Only mutating actions (mode swap, zoom slider) are disabled on a foreign-locked tile.
                 </li>
                 <li>
-                  <strong className="text-n-12">No persistence.</strong> Every open starts fresh — there are no preferences, no bookmarks, and no position carry-over. Camera swaps reset playback to <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">undefined</code> at the panel level so a stale position can&apos;t leak across cameras in a 4-up grid.
+                  <strong className="text-n-12">No persistence.</strong> Every open starts fresh — there are no preferences, no bookmarks, and no position carry-over. Camera swaps reset playback to <code className="font-mono text-[13px] bg-state-hover-strong px-1 rounded">undefined</code> at the panel level so a stale position can&apos;t leak across cameras in a 4-up grid.
                 </li>
                 <li>
-                  <strong className="text-n-12">Settings toggle.</strong> The Switch primitive is retuned for our dark popover (white/15 off-state with an inset hairline ring, emerald on-state, 200ms color and thumb transitions). Off and on both read clearly against <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">bg-[#1a1a1a]/95</code>.
+                  <strong className="text-n-12">Settings toggle.</strong> The Switch primitive is retuned for our dark popover (white/15 off-state with an inset hairline ring, emerald on-state, 200ms color and thumb transitions). Off and on both read clearly against <code className="font-mono text-[13px] bg-state-hover-strong px-1 rounded">bg-[#1a1a1a]/95</code>.
                 </li>
               </ul>
             </ComponentSection>

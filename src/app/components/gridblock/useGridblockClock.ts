@@ -156,3 +156,28 @@ export function formatGridblockTickLabel(
   const p = partsIn(d, tz);
   return `${p.hh}:${p.mm}${tzSuffix(tz, d)}`;
 }
+
+/**
+ * `17:45:30Z` — second-precision tick label for scrubber windows
+ * short enough that minute resolution is too coarse (≤ 15 min).
+ */
+export function formatGridblockSecondTickLabel(
+  d: Date,
+  tz: string = UTC_TZ,
+): string {
+  const p = partsIn(d, tz);
+  return `${p.hh}:${p.mm}:${p.ss}${tzSuffix(tz, d)}`;
+}
+
+/**
+ * `Mon 11` — day-precision tick label for scrubber windows that
+ * span days. No tz suffix: at day resolution the offset stops
+ * mattering and the suffix only adds noise.
+ */
+export function formatGridblockDateTickLabel(
+  d: Date,
+  tz: string = UTC_TZ,
+): string {
+  const p = partsIn(d, tz);
+  return `${p.weekday} ${p.day}`;
+}

@@ -25,10 +25,10 @@ function Switch({
       data-slot="switch"
       className={cn(
         "peer relative inline-flex h-[1.15rem] w-8 shrink-0 items-center rounded-full",
-        "ring-1 ring-inset ring-white/10",
-        "data-[state=unchecked]:bg-white/15 data-[state=checked]:bg-emerald-500/80",
+        "ring-1 ring-inset ring-border-default",
+        "data-[state=unchecked]:bg-state-selected data-[state=checked]:bg-accent-success/80",
         "transition-colors duration-200 ease-out",
-        "outline-none focus-visible:ring-2 focus-visible:ring-white/40",
+        "outline-none focus-visible:ring-2 focus-visible:ring-border-strong",
         "disabled:cursor-not-allowed disabled:opacity-50",
         className,
       )}
@@ -37,7 +37,7 @@ function Switch({
       <SwitchPrimitive.Thumb
         data-slot="switch-thumb"
         className={cn(
-          "pointer-events-none block size-4 rounded-full bg-white shadow-sm ring-0",
+          "pointer-events-none block size-4 rounded-full bg-slate-12 shadow-sm ring-0",
           "transition-transform duration-200 ease-out",
           // Physical X-translation isn't direction-aware; use rtl: variants
           // so the thumb travels the trailing edge in RTL contexts (Hebrew),

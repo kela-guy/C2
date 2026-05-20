@@ -100,12 +100,12 @@ export function CameraAssetPicker({
           aria-label={tile.switchAssetTriggerAriaLabel}
           disabled={!hasOtherSwitchable}
           className={`pointer-events-auto inline-flex items-center gap-1 px-2 py-1 rounded-sm
-            bg-black/35 backdrop-blur-sm ring-1 ring-inset ring-white/10
-            text-[11px] font-medium text-white/90 leading-none
+            bg-black/35 backdrop-blur-sm ring-1 ring-inset ring-border-default
+            text-[11px] font-medium text-slate-12/90 leading-none
             transition-colors duration-150 ease-out
-            hover:bg-black/55 hover:text-white
-            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40
-            data-[state=open]:bg-black/55 data-[state=open]:text-white
+            hover:bg-black/55 hover:text-slate-12
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong
+            data-[state=open]:bg-black/55 data-[state=open]:text-slate-12
             disabled:opacity-60 disabled:cursor-default disabled:hover:bg-black/35`}
         >
           <span className="truncate max-w-[14ch]">{currentLabel}</span>
@@ -113,7 +113,7 @@ export function CameraAssetPicker({
             <ChevronDown
               size={12}
               aria-hidden="true"
-              className="text-white/70"
+              className="text-slate-12/70"
             />
           )}
         </button>

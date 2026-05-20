@@ -11,8 +11,9 @@ export const spec: ComponentSpec = {
   props: [
     { name: 'value', type: "LayoutKind ('single' | 'stack-2' | 'grid-2x2' | 'hero-filmstrip')", required: true, description: 'Currently-selected layout. The picker never auto-corrects this; rendering fallback is the panel\'s job.' },
     { name: 'onChange', type: '(next: LayoutKind) => void', required: true, description: 'Fired when the operator picks a non-disabled, non-selected option.' },
-    { name: 'feedCount', type: 'number', required: true, description: 'Drives per-option disabled state. Stack-2 and Hero+Filmstrip require >= 2 feeds; Single and Grid 2x2 require >= 1.' },
+    { name: 'feedCount', type: 'number', required: true, description: 'Drives per-option disabled state via `isLayoutEnabledForFeedCount`: stack-2 only when feedCount === 2; grid-2x2 when feedCount is 1, 2, or 4 (not 3 or 5); hero-filmstrip when feedCount >= 2; single when feedCount >= 1.' },
     { name: 'className', type: 'string', required: false, description: 'Forwarded to the segmented row wrapper for parent-side positioning tweaks.' },
+    { name: 'variant', type: "'overlay' | 'panelHeader'", required: false, description: "Defaults to `overlay` — the standalone glass control that floats over the video well. `panelHeader` drops the glass ring + rounded background so it can sit flush inside a gridblock panel header, using the surrounding chrome's seams instead." },
   ],
 
   states: [
@@ -20,12 +21,13 @@ export const spec: ComponentSpec = {
     { name: 'selected = single', trigger: "value === 'single'", description: 'Square icon active.', implementedInPrototype: true, storyProps: { value: 'single', feedCount: 4 } },
     { name: 'selected = stack-2', trigger: "value === 'stack-2'", description: 'Rows2 icon active.', implementedInPrototype: true, storyProps: { value: 'stack-2', feedCount: 4 } },
     { name: 'selected = hero-filmstrip', trigger: "value === 'hero-filmstrip'", description: 'LayoutPanelTop icon active.', implementedInPrototype: true, storyProps: { value: 'hero-filmstrip', feedCount: 5 } },
-    { name: 'option disabled (insufficient feeds)', trigger: 'feedCount < option.minFeeds', description: 'Icon is muted to opacity-30 and pointer events are blocked. Click is a no-op even if the icon is somehow focused.', implementedInPrototype: true, storyProps: { value: 'single', feedCount: 1 } },
+    { name: 'option disabled (feed count mismatch)', trigger: '!isLayoutEnabledForFeedCount(id, feedCount)', description: 'Icon is muted to opacity-30 and pointer events are blocked. E.g. grid-2x2 is disabled with 3 feeds; stack-2 is disabled unless exactly 2 feeds.', implementedInPrototype: true, storyProps: { value: 'grid-2x2', feedCount: 3 } },
     { name: 'hovered (non-selected)', trigger: 'pointer enters a non-selected, non-disabled icon', description: 'Background fades to white/10; icon brightens to white.', implementedInPrototype: true },
     { name: 'focus-visible', trigger: 'keyboard focus on an icon', description: 'Inset 1px white/40 ring; selection still requires Space/Enter.', implementedInPrototype: true },
     { name: 'loading', trigger: 'never', description: 'No async behaviour — picker reflects parent state synchronously. Listed to satisfy the mandatory checklist.', implementedInPrototype: false },
     { name: 'error', trigger: 'never', description: 'No error path — selecting an invalid option is prevented client-side via disabled state.', implementedInPrototype: false },
     { name: 'empty', trigger: 'parent hides the picker when feeds.length <= 1', description: 'Picker is unmounted by VideoPanel when there is no meaningful choice.', implementedInPrototype: true },
+    { name: 'panel header variant', trigger: "variant === 'panelHeader'", description: 'Picker renders flush inside a 32px panel header: no glass background, no rounded ring, each icon button stretches to the header height. Selected state still uses bg-state-selected; hover uses bg-state-hover.', implementedInPrototype: true, storyProps: { value: 'grid-2x2', feedCount: 4, variant: 'panelHeader' } },
   ],
 
   interactions: [
@@ -78,7 +80,7 @@ export const spec: ComponentSpec = {
 
   notes: [
     'Picker is intentionally `dir="ltr"`. Icon glyphs schematise the layout shape; mirroring them in RTL apps would invert the schematic and confuse the operator.',
-    'Disabled rules are hard-coded against feed count — the picker has no opinion about *why* a layout would be invalid beyond "not enough feeds". Future additions (e.g. premium tier locks) should add a separate `disabledReason` prop, not extend this rule.',
-    'Visual chrome (glass bg, ring, divides) intentionally matches the camera control bar palette so operators read the picker as part of the same family of panel-level controls.',
+    'Disabled rules live in `isLayoutEnabledForFeedCount` (exported from this module, shared with `VideoPanel.resolveLayout`). Stack-2 is exact-count (2); grid-2x2 excludes 3-up and 5+ feeds; hero-filmstrip is the primary multi-feed layout for 3 and 5 streams. Future additions (e.g. premium tier locks) should add a separate `disabledReason` prop, not extend this rule.',
+    'Visual chrome (glass bg, ring, divides) on the `overlay` variant intentionally matches the camera control bar palette so operators read the picker as part of the same family of panel-level controls. The `panelHeader` variant trades that vocabulary for the gridblock header palette so it belongs to the chrome it sits inside.',
   ],
 };

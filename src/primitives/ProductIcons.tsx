@@ -11,6 +11,8 @@
  * inherit the surrounding text colour by default.
  */
 
+import { slateHex } from './accentHex';
+
 interface StrokeIconProps {
   size?: number;
   strokeWidth?: number;
@@ -83,7 +85,7 @@ interface BatteryIconProps {
  * threshold. Used per-device in the DevicesPanel battery readout.
  */
 export function BatteryIcon({ pct, size = 16, className = '' }: BatteryIconProps) {
-  const colorClass = pct > 60 ? 'text-emerald-400' : pct > 30 ? 'text-amber-400' : pct >= 20 ? 'text-orange-400' : 'text-red-400';
+  const colorClass = pct > 60 ? 'text-accent-success' : pct > 30 ? 'text-accent-warning' : pct >= 20 ? 'text-accent-tracking' : 'text-accent-danger';
   const fillWidth = Math.max(1, (pct / 100) * 17);
   return (
     <svg className={`${colorClass} ${className}`.trim()} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" width={size} height={size}>
@@ -105,7 +107,7 @@ interface DroneDeviceIconProps {
  * Solid arrow-shaped drone glyph used in the device list rows. Distinct
  * from the tactical-map `DroneIcon` which is rotated by heading.
  */
-export function DroneDeviceIcon({ size = 28, fill = 'white', className = '' }: DroneDeviceIconProps) {
+export function DroneDeviceIcon({ size = 28, fill = slateHex(12), className = '' }: DroneDeviceIconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 28 32" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
       <path

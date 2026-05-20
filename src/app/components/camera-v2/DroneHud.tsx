@@ -37,8 +37,8 @@ export function DroneHud({ status }: DroneHudProps) {
   const distance = status.distanceFromHomeM ?? 0;
   const headingToHomeDelta = Math.round(bearingDelta(status.bearingDeg, 0));
 
-  const batteryColor = battery <= 20 ? 'text-red-400' : battery <= 40 ? 'text-amber-300' : 'text-emerald-300';
-  const signalColor = signal <= 25 ? 'text-red-400' : signal <= 50 ? 'text-amber-300' : 'text-emerald-300';
+  const batteryColor = battery <= 20 ? 'text-accent-danger' : battery <= 40 ? 'text-accent-warning' : 'text-accent-success';
+  const signalColor = signal <= 25 ? 'text-accent-danger' : signal <= 50 ? 'text-accent-warning' : 'text-accent-success';
 
   return (
     <div
@@ -47,7 +47,7 @@ export function DroneHud({ status }: DroneHudProps) {
     >
       <DirIsland
         direction="ltr"
-        className="flex flex-col gap-1.5 bg-black/45 backdrop-blur-sm ring-1 ring-inset ring-white/10 px-2 py-2"
+        className="flex flex-col gap-1.5 bg-black/45 backdrop-blur-sm ring-1 ring-inset ring-border-default px-2 py-2"
       >
         <Tile
           icon={battery <= 20 ? <BatteryLow size={13} className={batteryColor} /> : <Battery size={13} className={batteryColor} />}
@@ -64,12 +64,12 @@ export function DroneHud({ status }: DroneHudProps) {
           bar={signal / 100}
         />
         <Tile
-          icon={<Home size={12} className="text-white/70" />}
+          icon={<Home size={12} className="text-slate-12/70" />}
           label="HOME"
           value={`${Math.round(distance)}m`}
         />
         <Tile
-          icon={<Compass size={12} className="text-white/70" />}
+          icon={<Compass size={12} className="text-slate-12/70" />}
           label="REL"
           value={`${headingToHomeDelta >= 0 ? '+' : ''}${headingToHomeDelta}\u00b0`}
         />
@@ -95,15 +95,15 @@ function Tile({
     <div className="flex flex-col gap-0.5 min-w-[64px]">
       <div className="flex items-center gap-1.5">
         {icon}
-        <span className="text-[8.5px] font-medium text-white/55 uppercase tracking-[0.18em]">{label}</span>
+        <span className="text-[8.5px] font-medium text-slate-9 uppercase tracking-[0.18em]">{label}</span>
       </div>
-      <span className={`font-mono text-[12px] leading-none tabular-nums ${accent ?? 'text-white/95'}`}>
+      <span className={`font-mono text-[12px] leading-none tabular-nums ${accent ?? 'text-slate-12'}`}>
         {value}
       </span>
       {typeof bar === 'number' && (
-        <div className="h-0.5 w-full bg-white/10 overflow-hidden">
+        <div className="h-0.5 w-full bg-state-hover-strong overflow-hidden">
           <div
-            className={`h-full ${accent ? accent.replace('text-', 'bg-') : 'bg-white/60'}`}
+            className={`h-full ${accent ? accent.replace('text-', 'bg-') : 'bg-slate-12/60'}`}
             style={{ width: `${Math.max(0, Math.min(1, bar)) * 100}%` }}
           />
         </div>

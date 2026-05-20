@@ -114,7 +114,7 @@ export const spec: ComponentSpec = {
     {
       trigger: 'focus',
       element: 'Either segment',
-      result: 'Focus ring: ring-2 ring-inset ring-white/30',
+      result: 'Focus ring: ring-2 ring-inset ring-border-strong',
       keyboard: 'Tab',
     },
   ],
@@ -123,7 +123,7 @@ export const spec: ComponentSpec = {
     colors: [
       { name: 'fill-bg', value: 'rgba(34,139,230,0.15)', usage: 'Fill variant base background' },
       { name: 'fill-text', value: '#74c0fc', usage: 'Fill variant text color' },
-      { name: 'ghost-bg', value: 'bg-zinc-800', usage: 'Ghost variant base background' },
+      { name: 'ghost-bg', value: 'bg-surface-3', usage: 'Ghost variant base background' },
       { name: 'danger-bg', value: 'oklch(0.348 0.111 17)', usage: 'Danger variant base background' },
       { name: 'danger-text', value: 'oklch(0.927 0.062 17)', usage: 'Danger variant text color' },
       { name: 'warning-bg', value: 'oklch(0.348 0.111 70)', usage: 'Warning variant base background' },
@@ -177,7 +177,7 @@ export const spec: ComponentSpec = {
       'Arrow keys inside the open menu: navigate items (Radix)',
       'Escape: close dropdown menu (Radix)',
     ],
-    focusManagement: 'Focus ring via focus-visible:ring-2 ring-inset ring-white/30. Dropdown close auto-focus is prevented via onCloseAutoFocus.',
+    focusManagement: 'Focus ring via focus-visible:ring-2 ring-inset ring-border-strong. Dropdown close auto-focus is prevented via onCloseAutoFocus.',
     screenReaderNotes: 'Primary button is announced with its visible label; the chevron is announced separately as "More actions". aria-busy and aria-live announce loading state changes. Radix DropdownMenu manages its own ARIA roles for the menu surface.',
   },
 

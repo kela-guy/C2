@@ -129,7 +129,7 @@ export const spec: ComponentSpec = {
       '/ — global shortcut to focus search',
       'Esc — clear search query when input is focused',
     ],
-    focusManagement: 'Standard focus-visible:ring-2 ring-white/25 across all interactive elements.',
+    focusManagement: 'Standard focus-visible:ring-2 ring-border-strong across all interactive elements.',
   },
 
   tasks: [

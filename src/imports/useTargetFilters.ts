@@ -1,5 +1,4 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { Radio, SlidersHorizontal } from '@/lib/icons/central';
 import { CAMERA_ASSETS, LIDAR_ASSETS, RADAR_ASSETS } from '@/app/components/tacticalAssets';
 import type { FilterDef } from '@/primitives/FilterBar';
 import { useStrings, getStrings, type Locale } from '@/lib/intl';
@@ -219,13 +218,12 @@ export function useTargetFilters(targets: Detection[], scope: FilterScope) {
       {
         id: STATUS_FILTER_ID,
         label: t.chipLabels.activityStatus,
-        icon: SlidersHorizontal,
         options: (Object.keys(t.activityStatusLabels) as ActivityStatus[]).map((status) => ({
           value: status,
           label: t.activityStatusLabels[status],
         })),
         summarize: (selectedValues) => {
-          if (selectedValues.length === 0) return t.summaries.allStatuses;
+          if (selectedValues.length === 0) return '';
           if (selectedValues.length === 1) return t.activityStatusLabels[selectedValues[0] as ActivityStatus];
           if (
             selectedValues.length === 2 &&
@@ -240,11 +238,10 @@ export function useTargetFilters(targets: Detection[], scope: FilterScope) {
       {
         id: SENSOR_FILTER_ID,
         label: t.chipLabels.sensor,
-        icon: Radio,
         options: availableSensors.map((s) => ({ value: s.id, label: s.label })),
         emptyLabel: t.summaries.noSensorsAvailable,
         summarize: (selectedValues) => {
-          if (selectedValues.length === 0) return t.summaries.allSensors;
+          if (selectedValues.length === 0) return '';
           if (selectedValues.length === 1) {
             return availableSensors.find((s) => s.id === selectedValues[0])?.label ?? t.summaries.oneSelected;
           }

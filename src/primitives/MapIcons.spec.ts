@@ -47,7 +47,7 @@ export const spec: ComponentSpec = {
     },
     {
       name: 'color inherited',
-      trigger: 'Parent element has text color class (e.g. text-red-400)',
+      trigger: 'Parent element has text color class (e.g. text-accent-danger)',
       description: 'Icon inherits parent text color via currentColor',
       implementedInPrototype: true,
     },

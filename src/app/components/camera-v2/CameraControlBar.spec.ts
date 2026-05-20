@@ -93,7 +93,7 @@ export const spec: ComponentSpec = {
       'Tabbing into the zoom trigger opens the popover; another Tab focuses the slider; Arrow keys move it by 0.1x',
       'Tooltips show keyboard hints (T, D, X, S, F)',
     ],
-    focusManagement: 'focus-visible:ring-2 ring-white/25 on every button; bar stays open while focus is inside the tile; zoom popover uses focus-capture/blur-capture to keep itself open while focus is anywhere in its wrapper',
+    focusManagement: 'focus-visible:ring-2 ring-border-strong on every button; bar stays open while focus is inside the tile; zoom popover uses focus-capture/blur-capture to keep itself open while focus is anywhere in its wrapper',
   },
 
   tasks: [],

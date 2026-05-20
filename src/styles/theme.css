@@ -340,3 +340,14 @@
   outline: none;
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);
 }
+
+/*
+ * Cesium widget — hide the bottom credits bar (Ion logo + "Upgrade for
+ * commercial use." + "Data attribution"). It floats over the map at the
+ * bottom-left and clashes with our own chrome (the return-to-live pill
+ * sits in the same band). Attribution requirements for our Ion plan are
+ * met elsewhere; revisit if the licence terms change.
+ */
+.cesium-viewer-bottom {
+  display: none;
+}

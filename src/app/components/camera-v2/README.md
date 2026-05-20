@@ -71,14 +71,17 @@ the dashboard once approved and the route removed.
 
 ## Pin & swap
 
-- The devices panel exposes a `Pin` button on camera + drone cards
-  (`onPinToFeed` prop). Clicking pins the device into the next available slot,
-  appends, or swaps the least-recently-focused tile when the panel is full.
+- Pin/unpin/LRU logic lives in `useVideoFeeds` (`pinDevice`, `unpinDevice`,
+  `recordTileFocus`, `pinnedDeviceIds`). `CamerasPanel` and `DevicesPanel`
+  both call into the same hook via Dashboard wiring.
+- The devices panel exposes hover-revealed pin + center-on-map icons on
+  camera + drone rows (`onPinToFeed` / `onUnpinFromFeed`). The expanded card
+  footer still has a text pin button.
+- When `feeds.length === 0`, `VideoPanel` renders `VideoPanelEmptyState`
+  with copy pointing operators to pin from the devices list.
 - Each tile is a drop target. Drop on a tile → swap. Drop on the panel
   background → same logic as click-to-pin.
 - Maximum feed count is 5 (so `hero-filmstrip` can hold a hero + 4 thumbs).
-  The pin handler enforces this at the parent (`PlaygroundPage.MAX_FEEDS`,
-  later `Dashboard`).
 
 ## Layouts
 
@@ -99,7 +102,7 @@ operator intent — only the rendered layout adapts.
 
 ### Hero+Filmstrip
 
-- `feeds[heroIndex]` takes the top ~78% of panel height. Same chrome as
+- `feeds[activeFeedIndex]` takes the top ~78% of panel height. Same chrome as
   `fill` (full HUD, control bar, designate, playback split).
 - Remaining feeds render as a horizontal grid (`grid-flow-col
   auto-cols-fr`) across the bottom ~22%. Each thumb gets a centered
@@ -232,10 +235,11 @@ Once the `/playground` design is locked in, this is the swap into the live
 2. **Lift state** into Dashboard:
 
    - `panelFullscreen: boolean`
-   - `layout: LayoutKind` and `heroIndex: number` (default `'grid-2x2'` /
-     `0`). Persist both to `localStorage` under `c2.video-layout.v1` —
-     `PlaygroundPage` already has the read/write helpers; lift them
-     verbatim. Clamp `heroIndex` whenever a feed is removed.
+   - `layout: LayoutKind` and `activeFeedIndex: number` (default `'grid-2x2'` /
+     `0`). Persist them — plus `feeds[]` (cameraId + mode) — to
+     `localStorage` under `c2.video-layout.v1`. `useVideoFeeds` owns the
+     read/write + one-shot migration from the legacy `{ layout, heroIndex }`
+     shape. Clamp `activeFeedIndex` whenever a feed is removed.
    - `ownership: Record<string, 'self' | 'other' | 'none'>` (replaces today's
      `cameraControlRequest` countdown — keep the 10s request flow but write
      the result into `ownership` on completion).
@@ -270,9 +274,9 @@ Once the `/playground` design is locked in, this is the swap into the live
    `ResizablePanel.defaultSize` to 0 (or hide it) and the video panel's to
    100. Otherwise keep the existing 55/45 split.
 
-6. **Devices panel**: pass `onPinToFeed` so operators can pin from the
-   existing `DevicesPanel`. The panel-level drop already works because
-   `VideoPanel` registers a `useDrop` itself.
+6. **Devices panel**: `DevicesPanelHost` passes `onPinToFeed` /
+   `onUnpinFromFeed` / `pinnedDeviceIds` from `useVideoFeeds`. The panel-level
+   drop already works because `VideoPanel` registers a `useDrop` itself.
 
 7. **Delete the legacy files**:
 

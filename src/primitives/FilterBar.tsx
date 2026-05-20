@@ -17,8 +17,6 @@ export interface FilterDef {
   id: string;
   /** Trigger label, shown on the filter button. */
   label: string;
-  /** Optional leading icon for the trigger button. */
-  icon?: React.ElementType;
   /** Available options for this filter. */
   options: FilterOption[];
   /** Optional label rendered when `options` is empty. Defaults to the bar's `emptyOptionsLabel`. */
@@ -93,33 +91,54 @@ export function FilterBar({
     onFilterChange(filterId, next);
   };
 
-  // Lay filters across columns; reset takes the last cell.
-  const colCount = filters.length + 1;
+  const colCount = filters.length;
 
   return (
-    <div className="border-b border-white/5 px-2 py-1.5">
+    <div className="border-b border-border-subtle px-2 py-1.5">
       <div className="flex items-center gap-1.5">
         <div className="relative flex-1">
-          <Search size={12} className="absolute start-2.5 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" aria-hidden="true" />
+          <Search
+            size={12}
+            className={`pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 transition-colors duration-150 ${
+              query ? 'text-accent-info' : 'text-slate-9'
+            }`}
+            aria-hidden="true"
+          />
           <input
             type="text"
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder={searchPlaceholder}
             aria-label={searchAriaLabel}
-            className="h-7 w-full rounded bg-white/[0.04] ps-7 pe-7 text-[11px] text-zinc-100 shadow-[0_0_0_1px_rgba(255,255,255,0.07)] placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sky-400/40 focus-visible:shadow-[0_0_0_1px_rgba(56,189,248,0.35)]"
+            className={`h-7 w-full border ps-7 pe-7 text-[11px] text-slate-12 placeholder:text-slate-9 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong ${
+              query
+                ? 'border-accent-info-soft bg-accent-info-tint'
+                : 'border-border-default bg-state-hover-strong'
+            }`}
           />
           {query && (
             <button
               type="button"
               onClick={() => onQueryChange('')}
-              className="absolute end-1.5 top-1/2 flex h-5 w-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded text-zinc-500 transition-colors duration-150 before:absolute before:-inset-2 before:content-[''] hover:bg-white/5 hover:text-zinc-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20"
+              className="absolute end-1.5 top-1/2 flex h-5 w-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded text-slate-9 transition-colors duration-150 before:absolute before:-inset-2 before:content-[''] hover:bg-state-hover hover:text-slate-11 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong"
               aria-label={clearSearchAriaLabel}
             >
               <X size={10} aria-hidden="true" />
             </button>
           )}
         </div>
+        <button
+          type="button"
+          onClick={onReset}
+          disabled={activeFilterCount === 0}
+          title={resetLabel}
+          className={`inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded bg-state-hover-strong text-slate-12 transition-[opacity,transform] duration-150 hover:bg-state-selected focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong active:scale-[0.99] disabled:cursor-default motion-reduce:active:scale-100 ${
+            activeFilterCount === 0 ? 'pointer-events-none opacity-0' : 'opacity-100'
+          }`}
+          aria-label={resetAriaLabel}
+        >
+          <TimerReset size={12} aria-hidden="true" />
+        </button>
       </div>
 
       <div
@@ -135,7 +154,6 @@ export function FilterBar({
               key={def.id}
               open={openId === def.id}
               onOpenChange={(open) => setOpenId(open ? def.id : null)}
-              icon={def.icon}
               label={def.label}
               value={value}
               active={selected.length > 0}
@@ -149,19 +167,6 @@ export function FilterBar({
             </FilterPopoverButton>
           );
         })}
-
-        <button
-          type="button"
-          onClick={onReset}
-          disabled={activeFilterCount === 0}
-          className={`inline-flex h-7 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded bg-white/[0.06] px-2 text-xs font-medium text-white transition-[opacity,transform] duration-150 hover:bg-white/[0.10] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 active:scale-[0.99] disabled:cursor-default motion-reduce:active:scale-100 ${
-            activeFilterCount === 0 ? 'pointer-events-none opacity-0' : 'opacity-100'
-          }`}
-          aria-label={resetAriaLabel}
-        >
-          <TimerReset size={11} className="shrink-0" aria-hidden="true" />
-          <span>{resetLabel}</span>
-        </button>
       </div>
     </div>
   );
@@ -170,7 +175,6 @@ export function FilterBar({
 function FilterPopoverButton({
   open,
   onOpenChange,
-  icon: Icon,
   label,
   value,
   active,
@@ -178,7 +182,6 @@ function FilterPopoverButton({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  icon?: React.ElementType;
   label: string;
   value: string;
   active: boolean;
@@ -189,18 +192,17 @@ function FilterPopoverButton({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className={`inline-flex h-7 w-full cursor-pointer items-center justify-center gap-1.5 rounded px-2 text-xs font-medium text-white transition-[background-color,transform] duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 active:scale-[0.99] motion-reduce:active:scale-100 ${
+          className={`inline-flex h-7 w-full cursor-pointer items-center justify-center gap-1.5 rounded px-2 text-xs font-medium text-slate-12 transition-[background-color,transform] duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong active:scale-[0.99] motion-reduce:active:scale-100 ${
             active || open
-              ? 'bg-sky-500/[0.12]'
-              : 'bg-white/[0.06] hover:bg-white/[0.10]'
+              ? 'bg-accent-info-tint'
+              : 'bg-state-hover-strong hover:bg-state-selected'
           }`}
           aria-haspopup="dialog"
           aria-expanded={open}
           aria-label={label}
         >
-          {Icon && <Icon size={11} className="shrink-0 opacity-80" aria-hidden="true" />}
           <span className="shrink-0">{label}</span>
-          <span className="flex-1 truncate text-end text-zinc-400 tabular-nums">{value}</span>
+          <span className="flex-1 truncate text-end text-slate-10 tabular-nums">{value}</span>
           <ChevronDown
             size={10}
             className={`ms-auto shrink-0 opacity-50 transition-transform duration-150 motion-reduce:transition-none ${open ? 'rotate-180' : ''}`}
@@ -221,7 +223,7 @@ function FilterPopoverButton({
         // the corner adjacent to the trigger.
         align="start"
         sideOffset={4}
-        className="w-64 overflow-hidden rounded-lg p-0.5 shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_4px_12px_rgba(0,0,0,0.25),0_16px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl [transform-origin:var(--radix-popover-content-transform-origin)] data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-1 data-[side=top]:slide-in-from-bottom-1 data-[state=open]:duration-150 data-[state=closed]:duration-100"
+        className="w-64 overflow-hidden rounded-lg p-0.5 shadow-[0_0_0_1px_var(--border-default),0_4px_12px_rgba(0,0,0,0.25),0_16px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl [transform-origin:var(--radix-popover-content-transform-origin)] data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-1 data-[side=top]:slide-in-from-bottom-1 data-[state=open]:duration-150 data-[state=closed]:duration-100"
       >
         <div className="overflow-y-auto p-0.5">{children}</div>
       </PopoverContent>
@@ -244,7 +246,7 @@ function MultiSelectList({
 
   if (items.length === 0) {
     return (
-      <div className="px-3 py-4 text-center text-[10px] text-zinc-500">
+      <div className="px-3 py-4 text-center text-[10px] text-slate-9">
         {emptyLabel}
       </div>
     );
@@ -260,17 +262,17 @@ function MultiSelectList({
           <label
             key={item.value}
             htmlFor={fieldId}
-            className={`flex h-7 cursor-pointer items-center gap-2.5 rounded-md px-2.5 text-start text-xs transition-colors duration-150 focus-within:bg-white/10 focus-within:outline-none ${
+            className={`flex h-7 cursor-pointer items-center gap-2.5 rounded-md px-2.5 text-start text-xs transition-colors duration-150 focus-within:bg-state-hover-strong focus-within:outline-none ${
               active
-                ? 'text-sky-100'
-                : 'text-zinc-300 hover:bg-white/[0.04] hover:text-white'
+                ? 'text-accent-info'
+                : 'text-slate-11 hover:bg-state-hover hover:text-slate-12'
             }`}
           >
             <Checkbox
               id={fieldId}
               checked={active}
               onCheckedChange={() => onToggle(item.value)}
-              className="size-3 shrink-0 rounded-[3px] border-white/10 !bg-transparent !shadow-none data-[state=checked]:!border-sky-400/40 data-[state=checked]:!bg-sky-500/20 data-[state=checked]:!text-sky-200 [&_svg]:size-2 [&_svg]:stroke-[3]"
+              className="size-3 shrink-0 rounded-[3px] border-border-default !bg-transparent !shadow-none data-[state=checked]:!border-accent-info-soft data-[state=checked]:!bg-accent-info-tint data-[state=checked]:!text-accent-info [&_svg]:size-2 [&_svg]:stroke-[3]"
             />
             {ItemIcon && <ItemIcon size={12} className="shrink-0 opacity-80" aria-hidden="true" />}
             <span className="flex-1 truncate">{item.label}</span>

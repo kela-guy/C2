@@ -16,7 +16,10 @@
  */
 
 import { useCallback, useState } from "react";
-import { useDevicesFromAssets } from "@/app/components/useDevicesFromAssets";
+import {
+  useDevicesFromAssets,
+  type SimFriendlyDroneDevice,
+} from "@/app/components/useDevicesFromAssets";
 import type { Device } from "@/app/components/DevicesPanel";
 
 export interface DevicesAndAssetsApi {
@@ -47,8 +50,10 @@ export interface DevicesAndAssetsApi {
   closeAndClear: () => void;
 }
 
-export function useDevicesAndAssets(): DevicesAndAssetsApi {
-  const allDevices = useDevicesFromAssets();
+export function useDevicesAndAssets(
+  friendlyDrones: SimFriendlyDroneDevice[] = [],
+): DevicesAndAssetsApi {
+  const allDevices = useDevicesFromAssets(friendlyDrones);
   const [devicesPanelOpen, setDevicesPanelOpen] = useState(false);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [focusedDeviceId, setFocusedDeviceId] = useState<string | null>(null);

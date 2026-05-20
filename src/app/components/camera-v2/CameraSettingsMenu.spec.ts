@@ -85,7 +85,7 @@ export const spec: ComponentSpec = {
   notes: [
     'About section is intentionally text-only - no edit handles - so the popover stays a fast settings switcher rather than a properties editor.',
     'When playbackEnabled flips on, `VideoPanel.handlePlaybackToggle` builds an open-state via `makeOpenPlaybackState` (rewinds 30s, paused).',
-    'The Switch primitive was retuned for this popover specifically: the off-state uses `bg-white/15` with an inset white/10 ring so it stays visible against `bg-[#1a1a1a]/95`, and both the track and thumb animate over 200ms ease-out so the flip never feels instant. The shadcn defaults read as invisible in our dark theme.',
+    'The Switch primitive was retuned for this popover specifically: the off-state uses `bg-state-selected` with an inset border-default ring so it stays visible against `bg-[#1a1a1a]/95`, and both the track and thumb animate over 200ms ease-out so the flip never feels instant. The shadcn defaults read as invisible in our dark theme.',
     'The toggle is always enabled when a feed is mounted. There is no archive-availability gate; the previous "disabled with reason" copy was over-engineered for a prototype playground.',
     'The (P) shortcut hint next to the row label matches the tile-level `P` shortcut wired in `CameraFeedTile`.',
   ],

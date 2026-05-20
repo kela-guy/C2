@@ -99,7 +99,7 @@ export const spec: ComponentSpec = {
     {
       trigger: 'focus',
       element: 'Header bar',
-      result: 'Focus ring appears (ring-2, ring-white/25)',
+      result: 'Focus ring appears (ring-2, ring-border-strong)',
       keyboard: 'Tab to focus, Enter/Space to toggle',
     },
   ],
@@ -108,8 +108,8 @@ export const spec: ComponentSpec = {
     colors: [
       { name: 'header-bg', value: 'rgba(255,255,255,0.05)', usage: 'Header bar background' },
       { name: 'header-bg-hover', value: 'rgba(255,255,255,0.08)', usage: 'Header bar hover state' },
-      { name: 'title-color', value: 'text-zinc-300', usage: 'Section title text' },
-      { name: 'icon-color', value: 'text-zinc-500', usage: 'Header icon and chevron color' },
+      { name: 'title-color', value: 'text-slate-11', usage: 'Section title text' },
+      { name: 'icon-color', value: 'text-slate-9', usage: 'Header icon and chevron color' },
       { name: 'content-bg', value: `rgba(255,255,255,${0.08})`, usage: 'Content panel background via CARD_TOKENS.elevation.overlay.level2' },
       { name: 'focus-ring', value: 'rgba(255,255,255,0.25)', usage: 'Focus-visible ring color' },
     ],

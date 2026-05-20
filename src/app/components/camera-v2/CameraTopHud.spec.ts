@@ -13,6 +13,7 @@ export const spec: ComponentSpec = {
     { name: 'mode', type: '"day" | "night"', required: true, description: 'Current optical mode for the day/night pill' },
     { name: 'status', type: 'CameraStatus', required: true, description: 'Bearing, FOV, ownership, assignment, linked-from device, area name' },
     { name: 'onAssignmentClick', type: '() => void', required: false, description: 'Click handler on the assignment pill (e.g. focus target on map)' },
+    { name: 'showAssetPicker', type: 'boolean', required: false, description: "Defaults to `true`. Hosts that expose asset selection elsewhere (e.g. the cameras panel header tab strip) pass `false`. With it suppressed the inline-start pill is unmounted and the compass strip recentres against the empty space." },
   ],
 
   states: [
@@ -25,6 +26,7 @@ export const spec: ComponentSpec = {
     { name: 'error', trigger: 'Telemetry stream errored', description: 'Show error tag in the top cluster', implementedInPrototype: false },
     { name: 'disabled', trigger: 'Camera offline', description: 'Pills shown with reduced opacity', implementedInPrototype: false },
     { name: 'empty', trigger: 'Not applicable - HUD only renders for live feeds', description: '-', implementedInPrototype: true },
+    { name: 'asset picker suppressed', trigger: 'showAssetPicker === false', description: 'Per-tile asset picker is unmounted; the inner row uses `justify-center` so the compass strip is centred in the tile horizontally. Used by the gridblock cameras panel which exposes asset selection in its header tab strip.', implementedInPrototype: true },
   ],
 
   interactions: [
@@ -53,7 +55,7 @@ export const spec: ComponentSpec = {
   accessibility: {
     ariaAttributes: ['Compass strip is role="img" with sr-only description', 'Linked-from pill is wrapped in a tooltip for sighted users + retains label for SR'],
     keyboardNav: ['Assignment pill is keyboard-focusable when present'],
-    focusManagement: 'focus-visible:ring-2 ring-white/25 on the assignment pill',
+    focusManagement: 'focus-visible:ring-2 ring-border-strong on the assignment pill',
   },
 
   tasks: [],

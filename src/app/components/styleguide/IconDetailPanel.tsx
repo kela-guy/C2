@@ -93,7 +93,7 @@ export function IconDetailPanel({ entry, previewSize, renderMode, onClose }: Ico
       testId="icon-detail-panel"
     >
       <div className="space-y-5 p-5">
-        <div className="flex items-center justify-center min-h-[140px] rounded-lg bg-black/30 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)] text-white">
+        <div className="flex items-center justify-center min-h-[140px] rounded-lg bg-black/30 shadow-[inset_0_0_0_1px_var(--border-default)] text-slate-12">
           {PreviewBody ? (
             <PreviewBody
               size={96}
@@ -130,7 +130,7 @@ export function IconDetailPanel({ entry, previewSize, renderMode, onClose }: Ico
             {entry.keywords.map((kw) => (
               <span
                 key={kw}
-                className="text-[11px] px-1.5 py-0.5 rounded bg-white/[0.04] text-n-10"
+                className="text-[11px] px-1.5 py-0.5 rounded bg-state-hover text-n-10"
               >
                 {kw}
               </span>
@@ -140,10 +140,10 @@ export function IconDetailPanel({ entry, previewSize, renderMode, onClose }: Ico
 
         <div className="space-y-2">
           <h4 className="text-[11px] uppercase tracking-wider text-n-120">Import</h4>
-          <pre className="text-[12px] leading-[1.65] font-mono text-sky-200/90 whitespace-pre-wrap break-all bg-black/30 rounded-md px-3 py-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
+          <pre className="text-[12px] leading-[1.65] font-mono text-accent-info/90 whitespace-pre-wrap break-all bg-black/30 rounded-md px-3 py-2 shadow-[inset_0_0_0_1px_var(--border-default)]">
             {importSnippet}
           </pre>
-          <pre className="text-[12px] leading-[1.65] font-mono text-emerald-200/90 whitespace-pre-wrap break-all bg-black/30 rounded-md px-3 py-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
+          <pre className="text-[12px] leading-[1.65] font-mono text-accent-success/90 whitespace-pre-wrap break-all bg-black/30 rounded-md px-3 py-2 shadow-[inset_0_0_0_1px_var(--border-default)]">
             {usageSnippet}
           </pre>
         </div>
@@ -188,10 +188,10 @@ export function IconDetailPanel({ entry, previewSize, renderMode, onClose }: Ico
                     role="radio"
                     aria-checked={active}
                     onClick={() => setPngSize(s)}
-                    className={`flex-1 px-2 py-1.5 text-[11px] font-mono rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25
+                    className={`flex-1 px-2 py-1.5 text-[11px] font-mono rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong
                       ${active
-                        ? 'bg-white/[0.10] text-n-12 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]'
-                        : 'bg-white/[0.02] text-n-10 hover:bg-white/[0.06]'}`}
+                        ? 'bg-state-hover-strong text-n-12 shadow-[inset_0_0_0_1px_var(--border-default)]'
+                        : 'bg-state-hover text-n-10 hover:bg-state-hover-strong'}`}
                   >
                     {s}
                   </button>
@@ -224,7 +224,7 @@ function ActionButton({ label, tooltip, icon, onClick, busy }: ActionButtonProps
           onClick={onClick}
           disabled={busy}
           aria-label={tooltip}
-          className="flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-md text-[12px] font-medium text-n-11 bg-white/[0.04] hover:bg-white/[0.08] active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 transition-[color,background-color,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 cursor-pointer"
+          className="flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-md text-[12px] font-medium text-n-11 bg-state-hover hover:bg-state-pressed active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 transition-[color,background-color,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong cursor-pointer"
         >
           {icon}
           <span>{label}</span>

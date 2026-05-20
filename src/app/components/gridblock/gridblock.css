@@ -21,14 +21,15 @@
   /*
    * Surface tiers — the four named levels the team talks in.
    *
-   *   Floor → substrate 2  the dashboard canvas (shell, header,
-   *                        footer, rails, map inset)
+   *   Floor → substrate 2  the dashboard canvas (shell, rails,
+   *                        map inset, panel moats)
    *   Panel → substrate 2  panel bodies, scroll content wells —
    *                        intentionally flush with the Floor so
    *                        panels feel like cut-outs of the canvas,
    *                        delineated only by chrome (Bars + seams).
    *   Bar   → substrate 3  title bars, toolbars, sticky strips,
-   *                        category headers — chrome perimeter
+   *                        category headers, chrome perimeter
+   *                        (header, footer)
    *   Pop   → substrate 6  popovers, dropdowns, dialogs, sheets,
    *                        FAB-hover — anything floating above
    *
@@ -181,40 +182,56 @@
 
 /*
  * Canvas-overflow wrapper. Sits inside the map cell and extends
- * laterally past the visible cell by exactly the open panel widths,
- * driven by --map-overflow-left/right vars set on the map cell
- * wrapper in GridblockShell. The tile's overflow:hidden clips the
- * excess. The wrapper's CSS width comes out to a stable
- * `viewport - 2 * rail - 8` regardless of panel state — so the
- * Cesium canvas inside never re-pins on a panel toggle.
+ * past the visible cell on three axes (inline-start, inline-end,
+ * block-end) by the open panel/footer widths, driven by
+ * --map-overflow-left/right/bottom vars set on ancestors. The
+ * tile's overflow:hidden clips the excess. The wrapper's CSS box
+ * stays at a stable `viewport - 2 * rail - 8` wide x `cell - toolbar`
+ * tall regardless of panel or History-timeline state — so the
+ * Cesium canvas inside never re-pins.
  *
- * The left/right transition matches the grid-template-columns
- * transition exactly (same duration + easing tokens), so during a
- * panel slide the wrapper's box width stays perfectly invariant
- * frame-by-frame instead of breathing in and out.
+ * All three transitions match the grid-template-columns and
+ * footer-wrapper height transitions (same duration + easing
+ * tokens), so during a slide the wrapper's box stays perfectly
+ * invariant frame-by-frame. If easings drift, the wrapper breathes
+ * by a few pixels mid-animation and Cesium's ResizeObserver fires
+ * per frame — exactly what this construct exists to prevent.
  */
 .gridblock-canvas-overflow {
   /*
-   * Symmetric overflow: extend the wrapper by half the total open-panel
-   * width on each side. Chrome already sits centered in the visible cell,
-   * so symmetric overflow keeps wrapper center = chrome center = visible
-   * cell center frame-by-frame. The world point Cesium renders at the
-   * framebuffer's pixel center tracks the visible cell center as a side
-   * effect of the layout animation — no separate compositor transform,
-   * so the layout pass and the camera pan are driven by a single timing
-   * pipeline (no drift between left/right and transform).
+   * Symmetric overflow on the inline axis: extend the wrapper by
+   * half the total open-panel width on each side. Chrome already
+   * sits centered in the visible cell, so symmetric overflow keeps
+   * wrapper center = chrome center = visible cell center frame-by-
+   * frame. The world point Cesium renders at the framebuffer's
+   * pixel center tracks the visible cell center as a side effect
+   * of the layout animation — no separate compositor transform, so
+   * the layout pass and the camera pan are driven by a single
+   * timing pipeline (no drift between left/right and transform).
    *
-   * Width is still invariant: chrome.width + LP + RP = viewport - 2*rail
-   * - 2*inset, so Cesium's ResizeObserver doesn't fire on panel toggles.
+   * Block-axis overflow is asymmetric on the block-end side only
+   * (the History timeline always mounts at the bottom of the map
+   * cell). The footer wrapper has `position: relative` so it paints
+   * on top of the canvas extension that now reaches into its row,
+   * giving the visual reading of "footer rises over a stable map"
+   * rather than "map squeezes upward".
+   *
+   * Width/height is invariant:
+   *   width  = chrome.width  + LP + RP = viewport - 2*rail - 2*inset
+   *   height = chrome.height + footer  = cell - toolbar
+   * so Cesium's ResizeObserver doesn't fire on panel or History
+   * toggles.
    */
   --map-overflow-half: calc(
     (var(--map-overflow-left, 0px) + var(--map-overflow-right, 0px)) / 2
   );
   left: calc(0px - var(--map-overflow-half));
   right: calc(0px - var(--map-overflow-half));
+  bottom: calc(0px - var(--map-overflow-bottom, 0px));
   transition:
     left var(--gridblock-dur-reveal) var(--gridblock-ease-in-out),
-    right var(--gridblock-dur-reveal) var(--gridblock-ease-in-out);
+    right var(--gridblock-dur-reveal) var(--gridblock-ease-in-out),
+    bottom var(--gridblock-dur-reveal) var(--gridblock-ease-in-out);
 }
 [data-gridblock-resizing] .gridblock-canvas-overflow {
   transition: none;
@@ -549,12 +566,12 @@
 .gridblock-tick-label {
   /* `bottom: 100%` puts the label's bottom edge AT the track's
    * top edge — i.e. immediately above the bar. `padding-bottom`
-   * adds a 4px breath between the label baseline and the bar.
+   * adds a 1px breath between the label baseline and the bar.
    * `translateX(-50%)` centers the label on its `leftPct`. */
   position: absolute;
   bottom: 100%;
   transform: translateX(-50%);
-  padding-bottom: 4px;
+  padding-bottom: 1px;
   font-size: 10px;
   line-height: 12px;
   color: var(--gridblock-text-muted);
@@ -573,6 +590,62 @@
   background: color-mix(in oklch, var(--slate-12) 28%, transparent);
   transform: translateX(-50%);
   pointer-events: none;
+}
+
+/* Selected-track band — paints the wall-clock span of the selected
+ * historical track on the scrubber as a thin horizontal lane behind
+ * the markers and handle. Color leans on --accent-historical (the
+ * same hue the History pill uses) so the operator reads the lane
+ * as "you are scrubbing inside this track". Sits below ticks and
+ * markers via z-index so dot/handle hits still win; pointer-events
+ * off so clicking the band still seeks via the track. */
+.gridblock-track-band {
+  position: absolute;
+  top: 50%;
+  height: 4px;
+  transform: translateY(-50%);
+  background: color-mix(
+    in oklch,
+    var(--accent-historical) 28%,
+    transparent
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Pinned-event marker on the scrubber. Sits centered on the 4px
+ * track and lifts a few pixels above so the dot reads as a
+ * "moment of interest" without competing with the handle (which
+ * extends below the bar). The button itself is a 16x16 hit
+ * target; the visible dot is rendered via ::before so the click
+ * target stays comfortable without bloating the dot. */
+.gridblock-event-marker {
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  z-index: 1;
+}
+.gridblock-event-marker::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 9999px;
+  background: var(--accent-warning);
+  box-shadow: 0 0 0 1px var(--gridblock-bar);
+  transition: transform 120ms ease;
+}
+.gridblock-event-marker:hover::before,
+.gridblock-event-marker:focus-visible::before {
+  transform: scale(1.25);
+}
+.gridblock-event-marker:focus-visible {
+  outline: none;
 }
 
 /* ============================================================

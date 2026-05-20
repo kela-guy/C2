@@ -61,7 +61,7 @@ export const spec: ComponentSpec = {
       'Arrow keys move the scrubber when focused',
       '`Esc` exits the slider focus before bubbling to tile-level Esc',
     ],
-    focusManagement: 'focus-visible:ring-2 ring-white/25 on every button + scrubber thumb. `keyDownCapture` filters tile-level shortcut letters (P/F/S/T/D/X) so they never re-trigger the parent.',
+    focusManagement: 'focus-visible:ring-2 ring-border-strong on every button + scrubber thumb. `keyDownCapture` filters tile-level shortcut letters (P/F/S/T/D/X) so they never re-trigger the parent.',
   },
 
   tasks: [

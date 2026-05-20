@@ -143,14 +143,14 @@ export default function IconLibrary() {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleSearchKey}
             placeholder="Search icons by name, keyword, or source… (press /)"
-            className="w-full pl-9 pr-9 py-2 text-[13px] bg-white/[0.03] rounded-md text-n-12 placeholder:text-n-120 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] focus-visible:outline-none focus-visible:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.18)] transition-shadow duration-150"
+            className="w-full pl-9 pr-9 py-2 text-[13px] bg-state-hover rounded-md text-n-12 placeholder:text-n-120 shadow-[inset_0_0_0_1px_var(--border-default)] focus-visible:outline-none focus-visible:shadow-[inset_0_0_0_1px_var(--border-strong)] transition-shadow duration-150"
           />
           {query.length > 0 && (
             <button
               type="button"
               onClick={() => setQuery('')}
               aria-label="Clear search"
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-n-120 hover:text-n-11 hover:bg-white/[0.08] transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-n-120 hover:text-n-11 hover:bg-state-pressed transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong"
             >
               <X size={12} />
             </button>
@@ -169,10 +169,10 @@ export default function IconLibrary() {
                   role="radio"
                   aria-checked={active}
                   onClick={() => setPreviewSize(size)}
-                  className={`px-2.5 py-1 text-[12px] font-mono rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25
+                  className={`px-2.5 py-1 text-[12px] font-mono rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong
                     ${active
-                      ? 'bg-white/[0.10] text-n-12 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]'
-                      : 'bg-white/[0.02] text-n-10 hover:bg-white/[0.06]'}`}
+                      ? 'bg-state-hover-strong text-n-12 shadow-[inset_0_0_0_1px_var(--border-default)]'
+                      : 'bg-state-hover text-n-10 hover:bg-state-hover-strong'}`}
                 >
                   {size}
                 </button>
@@ -191,10 +191,10 @@ export default function IconLibrary() {
                   role="radio"
                   aria-checked={active}
                   onClick={() => setRenderMode(value)}
-                  className={`px-2.5 py-1 text-[12px] rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25
+                  className={`px-2.5 py-1 text-[12px] rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong
                     ${active
-                      ? 'bg-white/[0.10] text-n-12 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]'
-                      : 'bg-white/[0.02] text-n-10 hover:bg-white/[0.06]'}`}
+                      ? 'bg-state-hover-strong text-n-12 shadow-[inset_0_0_0_1px_var(--border-default)]'
+                      : 'bg-state-hover text-n-10 hover:bg-state-hover-strong'}`}
                 >
                   {label}
                 </button>
@@ -213,10 +213,10 @@ export default function IconLibrary() {
               type="button"
               onClick={() => setFilter(f)}
               aria-pressed={active}
-              className={`px-2.5 py-1 text-[12px] rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25
+              className={`px-2.5 py-1 text-[12px] rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong
                 ${active
-                  ? 'bg-white/[0.10] text-n-12 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]'
-                  : 'bg-white/[0.02] text-n-10 hover:bg-white/[0.06]'}`}
+                  ? 'bg-state-hover-strong text-n-12 shadow-[inset_0_0_0_1px_var(--border-default)]'
+                  : 'bg-state-hover text-n-10 hover:bg-state-hover-strong'}`}
             >
               {FILTER_LABELS[f]}
               <span className="ml-1.5 text-[11px] text-n-120">{counts[f]}</span>
@@ -305,12 +305,12 @@ function IconTile({ entry, size, renderMode, selected, onSelect }: IconTileProps
           onClick={onSelect}
           aria-pressed={selected}
           title={entry.name}
-          className={`group flex flex-col items-center justify-between gap-2 aspect-[1/1] rounded-lg p-2 text-n-10 transition-[color,background-color,box-shadow] duration-150 ease-out cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25
+          className={`group flex flex-col items-center justify-between gap-2 aspect-[1/1] rounded-lg p-2 text-n-10 transition-[color,background-color,box-shadow] duration-150 ease-out cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong
             ${selected
-              ? 'bg-white/[0.08] text-n-12 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.18)]'
-              : 'bg-white/[0.02] hover:bg-white/[0.05] hover:text-n-11 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]'}`}
+              ? 'bg-state-pressed text-n-12 shadow-[inset_0_0_0_1px_var(--border-strong)]'
+              : 'bg-state-hover hover:bg-state-hover-strong hover:text-n-11 shadow-[inset_0_0_0_1px_var(--border-default)]'}`}
         >
-          <div className="flex-1 flex items-center justify-center w-full text-white">
+          <div className="flex-1 flex items-center justify-center w-full text-slate-12">
             {Component ? (
               <Component
                 size={size}
@@ -360,12 +360,12 @@ interface EmptyStateProps {
 
 function EmptyState({ onReset }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 min-h-[240px] rounded-lg bg-white/[0.02] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)] text-center px-6">
+    <div className="flex flex-col items-center justify-center gap-3 min-h-[240px] rounded-lg bg-state-hover shadow-[inset_0_0_0_1px_var(--border-default)] text-center px-6">
       <p className="text-[13px] text-n-9">No icons match — try clearing the category.</p>
       <button
         type="button"
         onClick={onReset}
-        className="px-3 py-1.5 text-[12px] font-medium text-n-12 bg-white/[0.06] hover:bg-white/[0.10] rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+        className="px-3 py-1.5 text-[12px] font-medium text-n-12 bg-state-hover-strong hover:bg-state-selected rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong"
       >
         Reset filters
       </button>

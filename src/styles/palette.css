@@ -161,10 +161,11 @@
   --accent-cyan:       oklch(0.790 0.130 200);
   --accent-magenta:    oklch(0.700 0.200 340);
 
-  --accent-danger-soft:  oklch(0.395 0.110 27);
-  --accent-warning-soft: oklch(0.420 0.090 70);
-  --accent-success-soft: oklch(0.430 0.090 145);
-  --accent-info-soft:    oklch(0.430 0.070 230);
+  --accent-danger-soft:     oklch(0.395 0.110 27);
+  --accent-warning-soft:    oklch(0.420 0.090 70);
+  --accent-success-soft:    oklch(0.430 0.090 145);
+  --accent-info-soft:       oklch(0.430 0.070 230);
+  --accent-historical-soft: oklch(0.58 0.19 275);
 
   /*
    * Translucent "tint" overlays for highlight rows / pills.

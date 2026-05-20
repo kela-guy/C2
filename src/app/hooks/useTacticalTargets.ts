@@ -2,10 +2,8 @@
  * useTacticalTargets — owns the tactical target lifecycle:
  *
  *   - `targets` state (every detection / classified entity on the map)
- *   - `friendlyDrones` patrol simulation (4 Hz position updates,
+ *   - `friendlyDrones` patrol simulation (10 Hz position updates,
  *     1 Hz trail breadcrumb sampling)
- *   - hostile-drone loitering simulation (4 Hz position updates,
- *     1 Hz trail sampling, with steering toward area bounds)
  *   - CUAS spawn primitive (`spawnCuasTarget`) and the three
  *     scenario starters (single, full, swarm)
  *   - cleanup of every long-lived timer on unmount
@@ -92,33 +90,36 @@ export interface TacticalTargetsApi {
   /** Spawns 20 targets in a circular swarm. */
   runSwarmScenario: () => void;
   /**
-   * Tracks ids that are still on their initial approach path. The
-   * loiter simulation skips these so the approach interpolation
-   * isn't fought by random steering.
+   * Tracks ids that are still on their initial approach path.
    */
   approachingTargetIds: MutableRefObject<Set<string>>;
 }
 
 // ─── Constants ───────────────────────────────────────────────────────
 
-// Tick at 500 ms (2 Hz). The kinematic motion track in CesiumMap
-// smoothly interpolates between samples at frame rate, so the visible
-// movement is still fluid. Previously this was 250ms (4 Hz) which
-// doubled React reconciliation work without any visible benefit, since
-// the per-frame interpolation already fills the gap. Trail breadcrumbs
-// stay at ~1 Hz (sample every 2 ticks) — same cadence as before.
-const PATROL_TICK_MS = 500;
-// Per-tick step doubled to keep the same on-map drone speed despite the
-// halved tick rate (was 0.008 at 250ms = 0.032/s; now 0.016 at 500ms = 0.032/s).
-const PATROL_SPEED = 0.016;
-const TRAIL_SAMPLE_EVERY = 2;
+// 10 Hz telemetry — typical fused track/GPS cadence. Cesium motion
+// interpolates between samples at frame rate; trail stays ~1 Hz.
+const TELEMETRY_TICK_MS = 100;
+const PATROL_TICK_MS = TELEMETRY_TICK_MS;
+const PATROL_SPEED = 0.0032;
+const TRAIL_SAMPLE_EVERY = 10;
 const TRAIL_MAX_POINTS = 40;
 
-// Hostile drone loitering bounds (asset area + padding).
-const AREA_MIN_LAT = 32.4506;
-const AREA_MAX_LAT = 32.4806;
-const AREA_MIN_LON = 34.9813;
-const AREA_MAX_LON = 35.0263;
+const APPROACH_TOTAL_MS = 24000;
+const APPROACH_TICK_MS = TELEMETRY_TICK_MS;
+const APPROACH_STEPS = APPROACH_TOTAL_MS / APPROACH_TICK_MS;
+const APPROACH_MILESTONE_MAGOS = Math.round(APPROACH_STEPS * (2 / 12));
+const APPROACH_MILESTONE_ELTA = Math.round(APPROACH_STEPS * (3 / 12));
+const APPROACH_MILESTONE_CLASSIFY = Math.round(APPROACH_STEPS * (5 / 12));
+
+function formatMovingCoord(lat: number, lon: number): string {
+  return `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+}
+
+function smoothstep01(t: number): number {
+  const x = t < 0 ? 0 : t > 1 ? 1 : t;
+  return x * x * (3 - 2 * x);
+}
 
 // Cached Hebrew locale time formatter. Reused across all hot paths
 // so we don't allocate a fresh `Intl.DateTimeFormat` (a heavy ICU
@@ -289,27 +290,7 @@ export function useTacticalTargets(): TacticalTargetsApi {
     }));
   });
 
-  // Approaching targets are still on their initial spawn-trajectory
-  // path. The loiter sim must skip them so the approach
-  // interpolation isn't fought by random steering.
   const approachingTargetIds = useRef<Set<string>>(new Set());
-
-  // Per-target loiter state — home position, current heading,
-  // target heading, etc. Cleaned up when a target leaves the active
-  // drone set.
-  const loiterStateRef = useRef<
-    Record<
-      string,
-      {
-        homeLat: number;
-        homeLon: number;
-        heading: number;
-        targetHeading: number;
-        nextTurnTick: number;
-        tick: number;
-      }
-    >
-  >({});
 
   // Scenario interval refs.
   const cuasIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -423,190 +404,6 @@ export function useTacticalTargets(): TacticalTargetsApi {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Hostile drone loiter sim ──────────────────────────────────────
-  useEffect(() => {
-    if (!isSimEnabled()) return;
-    // 2 Hz tick (was 4 Hz / 250ms). SPEED + TURN_RATE doubled to
-    // preserve the same per-second motion profile despite the halved
-    // tick rate. Trail still samples at ~1 Hz via SAMPLE_EVERY=2.
-    const TICK_MS = 500;
-    const SPEED = 0.00024; // degrees per tick (~26m, was 13m at 250ms)
-    const TURN_RATE = 0.16; // max radians per tick (was 0.08 at 250ms)
-    const HOME_RADIUS = 0.006; // ~650m before steering back
-    const LOITER_TRAIL_SAMPLE_EVERY = 2;
-    let trailTick = 0;
-
-    let timerId: ReturnType<typeof setInterval> | null = null;
-
-    const runTick = () => {
-      measure(
-        "Sim",
-        "sim.hostileLoiter",
-        () => {
-          trailTick++;
-          const sampleTrail = trailTick % LOITER_TRAIL_SAMPLE_EVERY === 0;
-          const activeLoiterIds = new Set<string>();
-          setTargets((prev) => {
-            // Track whether ANY target actually changed this tick. When
-            // there are no active loiter drones (the most common case
-            // before scenarios run), we want to return `prev` unchanged
-            // so React skips the entire downstream render cascade
-            // (CesiumTacticalMap memo chain → htmlMarkers concat →
-            // Cesium effect → preRender requestRender). Without this
-            // bailout, `.map()` always allocates a new outer array
-            // even when every element returns the same reference.
-            let arrayChanged = false;
-            const next = prev.map((tg) => {
-              if (approachingTargetIds.current.has(tg.id)) return tg;
-
-              const isActiveDrone =
-                tg.entityStage === "classified" &&
-                tg.classifiedType === "drone" &&
-                tg.mitigationStatus !== "mitigating" &&
-                tg.mitigationStatus !== "mitigated" &&
-                tg.status !== "event_resolved" &&
-                tg.status !== "event_neutralized" &&
-                tg.status !== "expired";
-              if (!isActiveDrone) return tg;
-              activeLoiterIds.add(tg.id);
-
-              const [curLat, curLon] = tg.coordinates
-                .split(",")
-                .map((s) => parseFloat(s.trim()));
-              if (isNaN(curLat) || isNaN(curLon)) return tg;
-
-              if (!loiterStateRef.current[tg.id]) {
-                loiterStateRef.current[tg.id] = {
-                  homeLat: curLat,
-                  homeLon: curLon,
-                  heading: Math.random() * Math.PI * 2,
-                  targetHeading: Math.random() * Math.PI * 2,
-                  nextTurnTick: 8 + Math.floor(Math.random() * 15),
-                  tick: 0,
-                };
-              }
-
-              const state = loiterStateRef.current[tg.id];
-              state.tick++;
-
-              if (state.tick >= state.nextTurnTick) {
-                state.targetHeading = Math.random() * Math.PI * 2;
-                state.nextTurnTick =
-                  state.tick + 10 + Math.floor(Math.random() * 20);
-              }
-
-              const dFromHome = Math.sqrt(
-                (curLat - state.homeLat) ** 2 + (curLon - state.homeLon) ** 2,
-              );
-              if (dFromHome > HOME_RADIUS) {
-                state.targetHeading = Math.atan2(
-                  state.homeLon - curLon,
-                  state.homeLat - curLat,
-                );
-              }
-
-              const latMargin = 0.003;
-              const lonMargin = 0.003;
-              if (curLat < AREA_MIN_LAT + latMargin)
-                state.targetHeading = Math.PI * 0.5 * (Math.random() - 0.5);
-              if (curLat > AREA_MAX_LAT - latMargin)
-                state.targetHeading =
-                  Math.PI + Math.PI * 0.5 * (Math.random() - 0.5);
-              if (curLon < AREA_MIN_LON + lonMargin)
-                state.targetHeading =
-                  Math.PI * 0.5 + Math.PI * 0.5 * (Math.random() - 0.5);
-              if (curLon > AREA_MAX_LON - lonMargin)
-                state.targetHeading =
-                  -Math.PI * 0.5 + Math.PI * 0.5 * (Math.random() - 0.5);
-
-              let diff = state.targetHeading - state.heading;
-              while (diff > Math.PI) diff -= Math.PI * 2;
-              while (diff < -Math.PI) diff += Math.PI * 2;
-              state.heading +=
-                Math.sign(diff) * Math.min(Math.abs(diff), TURN_RATE);
-
-              const newLat = curLat + Math.cos(state.heading) * SPEED;
-              const newLon = curLon + Math.sin(state.heading) * SPEED;
-
-              const clampedLat = Math.max(
-                AREA_MIN_LAT,
-                Math.min(AREA_MAX_LAT, newLat),
-              );
-              const clampedLon = Math.max(
-                AREA_MIN_LON,
-                Math.min(AREA_MAX_LON, newLon),
-              );
-
-              const nextCoords = `${clampedLat.toFixed(5)}, ${clampedLon.toFixed(5)}`;
-              // If the rounded position string is identical AND we're
-              // not appending a trail breadcrumb, this drone hasn't
-              // visibly changed. Skip the spread so React reconciles
-              // less and the outer array can stay reference-equal.
-              if (nextCoords === tg.coordinates && !sampleTrail) return tg;
-
-              let nextTrail = tg.trail;
-              if (sampleTrail) {
-                const now = nowLocaleTime();
-                const updatedTrail = [
-                  ...(tg.trail ?? []),
-                  { lat: clampedLat, lon: clampedLon, timestamp: now },
-                ];
-                nextTrail =
-                  updatedTrail.length > 60
-                    ? updatedTrail.slice(-60)
-                    : updatedTrail;
-              }
-
-              arrayChanged = true;
-              return {
-                ...tg,
-                coordinates: nextCoords,
-                trail: nextTrail,
-              };
-            });
-            return arrayChanged ? next : prev;
-          });
-
-          // Prune stale loiter state.
-          const store = loiterStateRef.current;
-          for (const id in store) {
-            if (!activeLoiterIds.has(id)) {
-              delete store[id];
-            }
-          }
-        },
-        { properties: { tick: trailTick } },
-      );
-    };
-
-    const start = () => {
-      if (timerId != null) return;
-      timerId = setInterval(runTick, TICK_MS);
-    };
-    const stop = () => {
-      if (timerId == null) return;
-      clearInterval(timerId);
-      timerId = null;
-    };
-    const onVisibility = () => {
-      if (document.hidden) stop();
-      else start();
-    };
-
-    if (typeof document === "undefined" || !document.hidden) start();
-    if (typeof document !== "undefined") {
-      document.addEventListener("visibilitychange", onVisibility);
-    }
-
-    return () => {
-      stop();
-      if (typeof document !== "undefined") {
-        document.removeEventListener("visibilitychange", onVisibility);
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // ── Master cleanup on unmount ─────────────────────────────────────
   useEffect(() => {
     const cuasRefs = [
@@ -662,7 +459,7 @@ export function useTacticalTargets(): TacticalTargetsApi {
         status: "detection",
         timestamp: now(),
         createdAtMs: Date.now(),
-        coordinates: `${opts.startLat.toFixed(5)}, ${opts.startLon.toFixed(5)}`,
+        coordinates: formatMovingCoord(opts.startLat, opts.startLon),
         distance: sim.distanceKm("3.2"),
         entityStage: "classified",
         priority: getPriorityBaseline({
@@ -720,7 +517,7 @@ export function useTacticalTargets(): TacticalTargetsApi {
       opts.intervalRef.current = setInterval(() => {
         step++;
         const tnow = now();
-        const progress = Math.min(step / 12, 1);
+        const progress = smoothstep01(Math.min(step / APPROACH_STEPS, 1));
         const curLat = opts.startLat + (opts.endLat - opts.startLat) * progress;
         const curLon = opts.startLon + (opts.endLon - opts.startLon) * progress;
         const distKm = (3.2 - progress * 2.5).toFixed(1);
@@ -729,17 +526,23 @@ export function useTacticalTargets(): TacticalTargetsApi {
           prev.map((tgt) => {
             if (tgt.id !== targetId) return tgt;
             const updated = { ...tgt };
-            updated.coordinates = `${curLat.toFixed(5)}, ${curLon.toFixed(5)}`;
+            updated.coordinates = formatMovingCoord(curLat, curLon);
             updated.distance = sim.distanceKm(distKm);
             updated.timestamp = tnow;
             if (tgt.altitude != null)
               updated.altitude = sim.altitudeM(
                 Math.round(120 + Math.sin(progress * Math.PI) * 30),
               );
-            updated.trail = [
-              ...(tgt.trail ?? []),
-              { lat: curLat, lon: curLon, timestamp: tnow },
-            ];
+            const approachSampleTrail =
+              step === 1 ||
+              step % 10 === 0 ||
+              step === APPROACH_STEPS;
+            updated.trail = approachSampleTrail
+              ? [
+                  ...(tgt.trail ?? []),
+                  { lat: curLat, lon: curLon, timestamp: tnow },
+                ]
+              : tgt.trail;
             const currentRange = 2840 - progress * 1800;
             updated.laserDistance = sim.laserDistanceM(
               Math.round(currentRange),
@@ -748,7 +551,7 @@ export function useTacticalTargets(): TacticalTargetsApi {
             updated.laserElevation = `${(2.39 + progress * 3.5).toFixed(2)}°`;
             updated.laserRange = `${currentRange.toFixed(2)} m`;
 
-            if (step === 2 && tgt.entityStage === "raw_detection") {
+            if (step === APPROACH_MILESTONE_MAGOS && tgt.entityStage === "raw_detection") {
               updated.confidence = 45;
               updated.contributingSensors = [
                 ...(tgt.contributingSensors ?? []),
@@ -774,7 +577,7 @@ export function useTacticalTargets(): TacticalTargetsApi {
               });
             }
 
-            if (step === 3 && tgt.entityStage === "raw_detection") {
+            if (step === APPROACH_MILESTONE_ELTA && tgt.entityStage === "raw_detection") {
               updated.contributingSensors = [
                 ...(updated.contributingSensors ?? []),
                 {
@@ -800,7 +603,7 @@ export function useTacticalTargets(): TacticalTargetsApi {
               });
             }
 
-            if (step === 5 && tgt.entityStage === "raw_detection") {
+            if (step === APPROACH_MILESTONE_CLASSIFY && tgt.entityStage === "raw_detection") {
               updated.entityStage = "classified";
               if (opts.isBird) {
                 updated.classifiedType = "bird";
@@ -853,11 +656,11 @@ export function useTacticalTargets(): TacticalTargetsApi {
           }),
         );
 
-        if (step >= 12) {
+        if (step >= APPROACH_STEPS) {
           if (opts.intervalRef.current) clearInterval(opts.intervalRef.current);
           approachingTargetIds.current.delete(targetId);
         }
-      }, 2000);
+      }, APPROACH_TICK_MS);
 
       return targetId;
     },

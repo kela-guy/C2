@@ -10,6 +10,8 @@
     "build:perf": "PERF_BUILD=1 vite build",
     "dev": "vite",
     "lint:no-hex": "node scripts/lint-no-hex.mjs",
+    "test": "vitest run",
+    "test:motion": "vitest run src/lib/motion",
     "registry:build": "shadcn build && node scripts/registry-postbuild.mjs"
   },
   "dependencies": {
@@ -87,7 +89,8 @@
     "shadcn": "^4.1.2",
     "tailwindcss": "4.1.12",
     "typescript": "^5.9.3",
-    "vite": "^6.4.1"
+    "vite": "^6.4.1",
+    "vitest": "^3.2.4"
   },
   "peerDependencies": {
     "react": "18.3.1",

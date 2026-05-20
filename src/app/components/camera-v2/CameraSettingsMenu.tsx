@@ -53,11 +53,11 @@ export function CameraSettingsMenu({
               aria-label={t.settingsTriggerAriaLabel}
               aria-pressed={open}
               className={`p-2 transition-colors duration-150 ease-out
-                focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none
+                focus-visible:ring-2 focus-visible:ring-border-strong focus-visible:outline-none
                 active:scale-[0.97]
                 ${open
-                  ? 'bg-white/15 text-white ring-1 ring-inset ring-white/20'
-                  : 'text-white/80 hover:text-white hover:bg-white/10'}`}
+                  ? 'bg-state-selected text-slate-12 ring-1 ring-inset ring-border-default'
+                  : 'text-slate-12/80 hover:text-slate-12 hover:bg-state-hover-strong'}`}
             >
               <Settings size={14} />
             </button>
@@ -112,7 +112,7 @@ export function CameraSettingsMenu({
               onClick={onModeToggle}
               disabled={writeDisabled}
               aria-label={mode === 'day' ? t.switchToNightAriaLabel : t.switchToDayAriaLabel}
-              className="p-1.5 text-white/85 hover:text-white hover:bg-white/10 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
+              className="p-1.5 text-slate-12/85 hover:text-slate-12 hover:bg-state-hover-strong transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-border-strong focus-visible:outline-none"
             >
               {mode === 'day' ? <Moon size={13} /> : <Sun size={13} />}
             </button>
@@ -126,7 +126,7 @@ export function CameraSettingsMenu({
 function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="px-3 py-2.5">
-      <div className="flex items-center gap-1.5 mb-2 text-[10px] font-semibold text-white/55 uppercase tracking-[0.18em]">
+      <div className="flex items-center gap-1.5 mb-2 text-[10px] font-semibold text-slate-9 uppercase tracking-[0.18em]">
         {icon}
         <span>{title}</span>
       </div>
@@ -136,7 +136,7 @@ function Section({ title, icon, children }: { title: string; icon: React.ReactNo
 }
 
 function SectionDivider() {
-  return <div className="h-px bg-white/10" aria-hidden="true" />;
+  return <div className="h-px bg-state-hover-strong" aria-hidden="true" />;
 }
 
 function Row({
@@ -157,19 +157,19 @@ function Row({
   return (
     <div className={`flex items-center justify-between gap-2 ${disabled ? 'opacity-50' : ''}`}>
       <div className="flex flex-col gap-0.5 min-w-0">
-        <span className="text-xs text-white/95 flex items-center gap-1.5">
+        <span className="text-xs text-slate-12 flex items-center gap-1.5">
           <span className="truncate">{label}</span>
           {shortcutHint && (
             <kbd
               aria-hidden="true"
-              className="font-mono text-[9px] text-white/55 px-1 py-px ring-1 ring-inset ring-white/15 rounded"
+              className="font-mono text-[9px] text-slate-9 px-1 py-px ring-1 ring-inset ring-border-default rounded"
             >
               {shortcutHint}
             </kbd>
           )}
         </span>
         {description && (
-          <span className="text-[10px] text-white/55 leading-snug">{description}</span>
+          <span className="text-[10px] text-slate-9 leading-snug">{description}</span>
         )}
       </div>
       {children}

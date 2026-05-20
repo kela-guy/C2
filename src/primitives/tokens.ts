@@ -52,7 +52,7 @@ const ELEVATION = {
    * here for inline-style consumers; new code should use
    * `shadow-[var(--shadow-N)]` via Tailwind instead.
    */
-  shadow: 'var(--shadow-3)',
+  shadow: 'var(--shadow-4)',
 } as const;
 
 type ElevationLevel = keyof typeof ELEVATION.overlay;
@@ -97,9 +97,9 @@ export function overlayAt(level: ElevationLevel): string {
 
 export const CARD_TOKENS = {
   container: {
-    bgColor: SURFACE.level1,
+    bgColor: SURFACE.level3,
     borderColor: 'transparent',
-    borderRadius: 2,
+    borderRadius: 4,
     borderWidth: 0,
     marginBottom: 10,
     completedOpacity: 0.65,
@@ -136,7 +136,7 @@ export const CARD_TOKENS = {
     activeBgOpacity: 0.2,
   },
   content: {
-    bgColor: SURFACE.level0,
+    bgColor: SURFACE.level4,
     borderColor: SURFACE.level2,
     paddingX: 8,
     paddingY: 6,

@@ -11,9 +11,9 @@
 import { ShieldAlert, AlertTriangle } from '@/lib/icons/central';
 
 export const MEDIA_BADGE_CONFIG = {
-  threat: { icon: ShieldAlert, color: 'text-red-500', usage: 'Confirmed threat detection' },
-  warning: { icon: AlertTriangle, color: 'text-zinc-400', usage: 'Unconfirmed or low-confidence' },
-  bird: { icon: ShieldAlert, color: 'text-amber-400', usage: 'Bird / false positive' },
+  threat: { icon: ShieldAlert, color: 'text-accent-danger', usage: 'Confirmed threat detection' },
+  warning: { icon: AlertTriangle, color: 'text-slate-10', usage: 'Unconfirmed or low-confidence' },
+  bird: { icon: ShieldAlert, color: 'text-accent-warning', usage: 'Bird / false positive' },
 } as const;
 
 export type MediaBadgeType = keyof typeof MEDIA_BADGE_CONFIG;

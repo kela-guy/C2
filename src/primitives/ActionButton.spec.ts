@@ -33,7 +33,7 @@ export const spec: ComponentSpec = {
       trigger: 'variant="fill"',
       description: 'Gray filled background, no border or ring, flex-1 width',
       implementedInPrototype: true,
-      visualNotes: 'bg-white/10 border-0 text-zinc-200',
+      visualNotes: 'bg-state-hover-strong border-0 text-slate-11',
     },
     {
       name: 'ghost variant',
@@ -105,7 +105,7 @@ export const spec: ComponentSpec = {
     {
       trigger: 'focus',
       element: 'Button',
-      result: 'Focus ring appears (ring-2, ring-white/25)',
+      result: 'Focus ring appears (ring-2, ring-border-strong)',
       keyboard: 'Tab to focus',
     },
     {

@@ -75,9 +75,8 @@ export function TargetCard({
         }}
       >
         <Card
-          className="group/card relative w-full gap-0 overflow-hidden border-0 bg-transparent p-0 text-white shadow-none transition-colors rounded-none"
+          className="group/card relative w-full gap-0 overflow-hidden rounded-none border border-border-subtle bg-surface-4 p-0 text-slate-12 shadow-none transition-colors"
           style={{
-            backgroundColor: d.container.bgColor,
             borderRadius: `${d.container.borderRadius}px`,
             filter: completed ? 'saturate(0.4) brightness(0.85)' : undefined,
             boxShadow,
@@ -85,12 +84,9 @@ export function TargetCard({
         >
           <CollapsibleTrigger asChild>
             <div
-              className="transition-colors cursor-pointer hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
+              className="cursor-pointer transition-colors hover:bg-state-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong"
               style={{
                 padding: `${d.header.paddingY}px ${d.header.paddingX}px`,
-                backgroundColor: open
-                  ? `rgba(255,255,255,${d.header.selectedBgOpacity})`
-                  : undefined,
                 borderTopLeftRadius: `${d.container.borderRadius}px`,
                 borderTopRightRadius: `${d.container.borderRadius}px`,
               }}
@@ -107,9 +103,8 @@ export function TargetCard({
             >
               {children != null && (
                 <div
-                  className="flex flex-col gap-px"
+                  className="flex flex-col gap-px bg-surface-5"
                   style={{
-                    backgroundColor: d.content.bgColor,
                     boxShadow: `inset 0 1px 0 0 ${d.content.borderColor}`,
                   }}
                 >

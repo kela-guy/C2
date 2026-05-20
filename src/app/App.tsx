@@ -10,6 +10,13 @@ import StyleguidePage from "./components/StyleguidePage";
 import { TooltipProvider } from "./components/ui/tooltip";
 import { DirectionProvider } from "@/lib/direction";
 
+// Dev-only card-tuning sandbox. Lazy-loaded behind `import.meta.env.DEV`
+// so it tree-shakes out of production bundles. See
+// `src/app/components/card-sandbox/CardDesignSandbox.tsx`.
+const CardDesignSandbox = import.meta.env.DEV
+  ? lazy(() => import("./components/card-sandbox/CardDesignSandbox"))
+  : null;
+
 // Dev-only perf HUD. Lazy-loaded so the import chain (stats-gl, sink,
 // observers) is dropped from production bundles via tree-shaking on
 // the `import.meta.env.DEV` constant. Becomes visible only when the
@@ -70,6 +77,16 @@ export default function App() {
                 marketing-only adjustments land.
               */}
               <Route path="/demo" element={<Dashboard demoMode />} />
+              {CardDesignSandbox && (
+                <Route
+                  path="/card-sandbox"
+                  element={
+                    <Suspense fallback={null}>
+                      <CardDesignSandbox />
+                    </Suspense>
+                  }
+                />
+              )}
             </Routes>
             <ScopedPerfHud />
           </BrowserRouter>

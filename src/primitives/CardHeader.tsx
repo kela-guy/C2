@@ -1,5 +1,4 @@
 import React from 'react';
-import { ChevronDown } from '@/lib/icons/central';
 import { CARD_TOKENS } from './tokens';
 
 export interface CardHeaderProps {
@@ -32,7 +31,7 @@ export function CardHeader({
       <div className="flex items-center gap-2 shrink-0">
         {Icon && (
           <div
-            className={`flex items-center justify-center shrink-0${!iconColor && !iconBgActive ? ' text-zinc-400' : ''}`}
+            className={`flex items-center justify-center shrink-0${!iconColor && !iconBgActive ? ' text-slate-10' : ''}`}
             style={{
               width: `${d.iconBox.size}px`,
               height: `${d.iconBox.size}px`,
@@ -80,9 +79,22 @@ export function CardHeader({
         {status}
 
         <div
-          className={`text-zinc-500 shrink-0 transition-transform duration-200${open ? ' rotate-180' : ''}`}
+          className={`text-slate-9 shrink-0 transition-transform duration-200${open ? ' rotate-180' : ''}`}
         >
-          <ChevronDown size={d.animation.chevronSize} aria-hidden="true" />
+          <svg
+            width={d.animation.chevronSize}
+            height={d.animation.chevronSize}
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M6 9.5L12 15.5L18 9.5"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="square"
+            />
+          </svg>
         </div>
       </div>
     </div>

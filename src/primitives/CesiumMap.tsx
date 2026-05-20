@@ -13,10 +13,10 @@
  * No app-domain coupling. Pass your own data via props.
  */
 
-import React, { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import * as Cesium from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
-import { createMotionTrack, type MotionTrack } from '@/lib/motionTracker';
+import { MotionRegistry, createMotionTrack, type MotionTrack } from '@/lib/motion';
 
 /**
  * Minimum container size (px) before we're willing to construct
@@ -162,6 +162,12 @@ export interface CesiumMapProps {
   markers?: CesiumMarker[];
   /** Markers rendered as DOM overlays positioned via scene transforms. */
   htmlMarkers?: CesiumHtmlMarker[];
+  /**
+   * When set, kinematic marker positions are read from this registry
+   * (ingested upstream with source timestamps). Omit for legacy
+   * in-map ingestion via `htmlMarkers[].kinematic`.
+   */
+  motionRegistry?: MotionRegistry;
   /** Polylines / trails (drone tracks, engagement lines, mission routes). */
   polylines?: CesiumPolyline[];
   /** Imperatively fly the camera to a position; pass a NEW object each time you want to fly. */
@@ -183,17 +189,11 @@ export interface CesiumMapProps {
    */
   ionImageryAssetId?: number;
   /**
-   * When true, replaces the default Bing Aerial (Cesium Ion) basemap
-   * with CartoDB's "Dark Matter" tiles — a flat, dark, vector-style
-   * monochrome map (just roads, water, and labels on a near-black
-   * canvas). Designed for marketing-demo recordings where a stylised
-   * tactical chart reads better than tinted satellite imagery.
-   *
-   * Read once at mount; flipping the prop later has no effect (the
-   * basemap is baked into the viewer's imagery layers and swapping it
-   * mid-session would tear down + re-tessellate every tile).
+   * Basemap style. `current` uses Cesium Ion imagery (Bing Aerial by
+   * default). `monochromeTerrain` uses Carto dark no-labels tiles with
+   * lifted brightness/gamma for a tactical chart look.
    */
-  darkMonochromeMap?: boolean;
+  mapViewMode?: CesiumMapViewMode;
   /**
    * Live brightness multiplier applied to the active imagery layer
    * (1.0 = identity). Updates flow through a `useEffect` so the parent
@@ -312,17 +312,34 @@ const SCENE_MODE_MAP: Record<CesiumSceneMode, Cesium.SceneMode> = {
   '3D': Cesium.SceneMode.SCENE3D,
 };
 
+export type CesiumMapViewMode = 'current' | 'monochromeTerrain';
+
+const IMAGERY_DEFAULTS = {
+  monochromeTerrain: { brightness: 1.9, gamma: 0.7 },
+  current: { brightness: 1.0, gamma: 1.0 },
+} as const;
+
+function createMonochromeImageryProvider() {
+  return new Cesium.UrlTemplateImageryProvider({
+    url: 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png',
+    subdomains: ['a', 'b', 'c', 'd'],
+    maximumLevel: 19,
+    credit: '© OpenStreetMap contributors © CARTO',
+  });
+}
+
 export function CesiumMap({
   ionToken,
   initialView,
   markers,
   htmlMarkers,
+  motionRegistry,
   polylines,
   flyTo,
   fitBounds,
   sceneMode = '2D',
   ionImageryAssetId = 2,
-  darkMonochromeMap = false,
+  mapViewMode = 'current',
   mapBrightness,
   mapGamma,
   onMarkerClick,
@@ -357,11 +374,23 @@ export function CesiumMap({
    * asynchronously and the effect re-applies once it lands.
    */
   const imageryLayerRef = useRef<Cesium.ImageryLayer | null>(null);
+  const imageryRequestIdRef = useRef(0);
   const markerEntitiesRef = useRef<Map<string, Cesium.Entity>>(new Map());
   const fovEntitiesRef = useRef<Cesium.Entity[]>([]);
   const coverageEntitiesRef = useRef<Cesium.Entity[]>([]);
-  /** Geometry entities (FOV / coverage) attached to HTML markers. */
-  const htmlGeometryEntitiesRef = useRef<Cesium.Entity[]>([]);
+  /**
+   * Geometry entities (FOV / coverage) attached to HTML markers,
+   * keyed by `${marker.id}__fov` / `${marker.id}__coverage` with a
+   * content fingerprint so the reconciler can skip Cesium work
+   * when nothing about a given marker's geometry actually changed.
+   * Tearing all entities down and re-adding them every render
+   * caused FOV cones to flicker / disappear during 60fps history
+   * playback — any marker tick (e.g. the projected target's trail
+   * growing) re-mints `htmlMarkers`, even when no FOV did.
+   */
+  const htmlGeometryEntitiesRef = useRef<
+    Map<string, { entity: Cesium.Entity; fingerprint: string }>
+  >(new Map());
   /**
    * Polyline entities (trails, engagement lines, etc.) keyed by their
    * stable `CesiumPolyline.id`. Keyed (not array) so the polylines effect
@@ -468,6 +497,8 @@ export function CesiumMap({
    */
   const motionTracksRef = useRef<Map<string, MotionTrack>>(new Map());
   const kinematicCartesianScratchRef = useRef<Map<string, Cesium.Cartesian3>>(new Map());
+  const motionRegistryRef = useRef(motionRegistry);
+  motionRegistryRef.current = motionRegistry;
 
   /**
    * Lazy terrain promise. Created on first 2D → 3D transition and
@@ -496,16 +527,11 @@ export function CesiumMap({
     const initial = el.getBoundingClientRect();
     consider(initial.width, initial.height);
 
+    // Only job: flip `mountReady` once the container has non-zero size.
+    // Cesium's own ResizeObserver handles canvas resize from there on.
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
         consider(entry.contentRect.width, entry.contentRect.height);
-        // No `scheduleRender()` here. The viewer-bootstrap effect now
-        // pins the canvas backing store at construction and silences
-        // Cesium's own ResizeObserver (Lattice pattern), so layout
-        // changes don't trigger framebuffer reallocation. This RO's
-        // only remaining job is to flip `mountReady` true once the
-        // container has non-zero size — once that's done the
-        // observer is essentially idle but harmless to leave attached.
       }
     });
     ro.observe(el);
@@ -548,7 +574,7 @@ export function CesiumMap({
         maximumRenderTimeChange: Infinity,
         // 2 samples is a real edge-smoothing improvement over 1 at
         // half the cost of Cesium's default 4. Combined with the
-        // DPR-matched backing store below, lines and label outlines
+        // DPR-capped `resolutionScale` below, lines and label outlines
         // read crisp without the fragment-shader cost of full 4x MSAA.
         msaaSamples: 2,
         // Defensive: explicit power-preference + don't bail on
@@ -571,6 +597,14 @@ export function CesiumMap({
     // Combined with `requestRenderMode` above this only matters when
     // something is animating (kinematic markers, camera flyTo, etc.).
     viewer.targetFrameRate = 30;
+
+    // Cap effective DPR at 2 on high-DPR displays. `useBrowserRecommendedResolution`
+    // defaults to true — Cesium then *ignores* `devicePixelRatio` and multiplies
+    // canvas CSS dimensions by `resolutionScale` alone (see Cesium d.ts:
+    // "render at the browser's recommended resolution and ignore
+    // window.devicePixelRatio"). So at DPR 2 we need scale=2 for retina-sharp
+    // pixels, and we cap at 2 to keep DPR 3 phones from paying 3× fragment cost.
+    viewer.resolutionScale = Math.min(window.devicePixelRatio || 1, 2);
 
     // Strip scene effects we never see in the default 2D top-down
     // tactical view. Atmosphere/sun/moon/fog/shadows are pure GPU cost
@@ -613,146 +647,7 @@ export function CesiumMap({
     cam.inertiaTranslate = 0.5;
     cam.inertiaZoom = 0.5;
 
-    // ── Pin the WebGL backing store ourselves ─────────────────────────────
-    //
-    // Cesium's internal `ResizeObserver` + `_forceResize` reallocate the
-    // framebuffer every frame the cell width changes — during a 240ms
-    // panel transition that's ~14 `configureCanvasSize` calls of
-    // main-thread work. We disable Cesium's path below and drive the
-    // pin ourselves at DPR-matched resolution so Retina labels stay
-    // crisp. DPR is capped at 2 — 3x phones / 4K-scaled monitors would
-    // otherwise pay 9x the fragment-shader cost.
-    const canvas = viewer.canvas;
-    const pinBackingStore = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const w = Math.max(1, Math.round(canvas.clientWidth * dpr));
-      const h = Math.max(1, Math.round(canvas.clientHeight * dpr));
-      if (canvas.width === w && canvas.height === h) return;
-      canvas.width = w;
-      canvas.height = h;
-      viewer.scene.requestRender();
-    };
-    pinBackingStore();
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
-
-    // Silence Cesium's auto-resize machinery so panel transitions don't
-    // trigger per-frame `configureCanvasSize`. Two private hooks; both must
-    // be neutralised because they're independent paths to the resize:
-    //   1. `_resizeObserver` fires on element size change.
-    //   2. `_forceResize` is read inside the render loop and triggers
-    //      `resize()` even when the RO never fired.
-    // Optional chaining keeps us crash-free if a future Cesium upgrade
-    // renames either symbol — failure mode is "transitions feel laggy
-    // again", visible but recoverable.
-    type CesiumPrivateWidget = {
-      _resizeObserver?: { disconnect(): void };
-      resize?: () => void;
-      _forceResize?: boolean;
-    };
-    const widget = (
-      viewer as unknown as { _cesiumWidget?: CesiumPrivateWidget }
-    )._cesiumWidget;
-    if (widget?._resizeObserver) {
-      try {
-        widget._resizeObserver.disconnect();
-      } catch {
-        /* private API may have changed shape — fall through */
-      }
-    }
-    if (widget) {
-      widget.resize = () => {
-        /* intentionally empty — backing store is fixed at init */
-      };
-      try {
-        Object.defineProperty(widget, '_forceResize', {
-          configurable: true,
-          get: () => false,
-          set: () => {
-            /* swallow writes from internal Cesium code paths */
-          },
-        });
-      } catch {
-        /* defineProperty can throw on a sealed object — best-effort */
-      }
-    }
-
-    // Re-pin once per frame via rAF coalescing. Multiple `ResizeObserver`
-    // fires within the same frame collapse to one `pinBackingStore()` call,
-    // so a 240ms panel transition produces ~7 re-pins (one per painted
-    // frame at the 30 fps cap) instead of ~14. Each re-pin produces a
-    // fresh, correct-aspect frame, so the operator never sees the canvas
-    // texture stretch during the slide. Drag-resize on the splitter gets
-    // the same smooth behaviour for free.
-    let repinFrame: number | null = null;
-    const repinObserver = new ResizeObserver(() => {
-      if (repinFrame !== null) return;
-      repinFrame = window.requestAnimationFrame(() => {
-        repinFrame = null;
-        pinBackingStore();
-      });
-    });
-    repinObserver.observe(canvas);
-    const cleanupBackingStore = () => {
-      repinObserver.disconnect();
-      if (repinFrame !== null) {
-        window.cancelAnimationFrame(repinFrame);
-        repinFrame = null;
-      }
-    };
-
-    // Imagery. Two modes:
-    //   1. `darkMonochromeMap` — CARTO Dark Matter (no-labels) raster
-    //      tiles. Public CDN, no token. Used by `/demo` so recordings
-    //      read cleanly against bright markers without depending on
-    //      the Ion satellite. Synchronous construction (no `fromAssetId`
-    //      promise), so we add immediately.
-    //   2. Default — Bing Aerial via Cesium Ion (asset 2 by default).
-    //      Guard against the viewer being destroyed (StrictMode
-    //      double-mount, fast nav) before the imagery promise resolves
-    //      — otherwise we crash inside Cesium internals.
-    // Per-basemap defaults for the brightness/gamma knobs. The active
-    // values are reapplied by the `mapBrightness` / `mapGamma` effect
-    // below — these defaults only matter on first mount (and as the
-    // fallback when the parent doesn't override).
-    const DARK_DEFAULTS = { brightness: 1.9, gamma: 0.7 } as const;
-    const ION_DEFAULTS = { brightness: 1.0, gamma: 1.0 } as const;
-    const defaults = darkMonochromeMap ? DARK_DEFAULTS : ION_DEFAULTS;
-
-    if (darkMonochromeMap) {
-      const provider = new Cesium.UrlTemplateImageryProvider({
-        // CARTO Dark Matter (no labels). `{s}` rotates through the
-        // listed subdomains for connection parallelism.
-        url: 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png',
-        subdomains: ['a', 'b', 'c', 'd'],
-        maximumLevel: 19,
-        credit: '© OpenStreetMap contributors © CARTO',
-      });
-      const layer = viewer.imageryLayers.addImageryProvider(provider);
-      // CARTO Dark Matter ships almost-black land — perfect for a
-      // recording stage but too dim for actual operators. Lift it
-      // toward a still-dark-but-legible "tactical chart" tone:
-      //   - brightness > 1 amplifies pixel luminance
-      //   - gamma < 1 lightens midtones more than highlights, which
-      //     pulls roads/coastline out of the shadows without blowing
-      //     out the few bright pixels (water, labels-adjacent tiles).
-      layer.brightness = mapBrightness ?? defaults.brightness;
-      layer.gamma = mapGamma ?? defaults.gamma;
-      imageryLayerRef.current = layer;
-    } else {
-      Cesium.IonImageryProvider.fromAssetId(ionImageryAssetId)
-        .then((provider) => {
-          if (viewer.isDestroyed()) return;
-          const layer = viewer.imageryLayers.addImageryProvider(provider);
-          layer.brightness = mapBrightness ?? defaults.brightness;
-          layer.gamma = mapGamma ?? defaults.gamma;
-          imageryLayerRef.current = layer;
-        })
-        .catch((err) => {
-          if (viewer.isDestroyed()) return;
-          console.error('[CesiumMap] failed to load Ion imagery:', err);
-        });
-    }
+    // Basemap imagery is applied by the `mapViewMode` effect below.
 
     // Cesium World Terrain is loaded lazily on first 3D entry — see
     // the scene-mode effect below. The default `EllipsoidTerrainProvider`
@@ -825,11 +720,15 @@ export function CesiumMap({
       // rendering — Cesium's request-render mode would otherwise idle
       // out after one frame and the marker would visibly freeze.
       let kinematicActive = false;
+      const registry = motionRegistryRef.current;
       for (const [id, node] of nodes) {
-        const track = tracks.get(id);
         let cart: Cesium.Cartesian3 | undefined;
-        if (track) {
-          const s = track.query(now);
+        const registrySample = registry?.has(id) ? registry.query(id, now) : null;
+        const legacyTrack = registrySample ? null : tracks.get(id);
+        const kinematicSample = registrySample ?? legacyTrack?.query(now) ?? null;
+
+        if (kinematicSample) {
+          const s = kinematicSample;
           const scratch = kinematicScratch.get(id);
           if (scratch) {
             let alt = 0;
@@ -926,14 +825,13 @@ export function CesiumMap({
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-      cleanupBackingStore();
       removePreRender();
       viewer.destroy();
       viewerRef.current = null;
       markerEntitiesRef.current.clear();
       fovEntitiesRef.current = [];
       coverageEntitiesRef.current = [];
-      htmlGeometryEntitiesRef.current = [];
+      htmlGeometryEntitiesRef.current.clear();
       polylineEntitiesRef.current.clear();
       polylineFingerprintRef.current.clear();
       polylineParticleEntitiesRef.current.clear();
@@ -943,9 +841,68 @@ export function CesiumMap({
       kinematicCartesianScratchRef.current.clear();
       htmlMarkerCartographicRef.current.clear();
       htmlMarkerStaticHeightSampledRef.current.clear();
+      imageryLayerRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mountReady]);
+
+  // ── Basemap imagery (live swap) ─────────────────────────────────────────
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || viewer.isDestroyed()) return;
+
+    const requestId = ++imageryRequestIdRef.current;
+    const monochrome = mapViewMode === 'monochromeTerrain';
+    const defaults = monochrome
+      ? IMAGERY_DEFAULTS.monochromeTerrain
+      : IMAGERY_DEFAULTS.current;
+
+    const removeCurrentLayer = () => {
+      const layer = imageryLayerRef.current;
+      if (!layer || viewer.isDestroyed()) return;
+      viewer.imageryLayers.remove(layer, true);
+      imageryLayerRef.current = null;
+    };
+
+    removeCurrentLayer();
+
+    if (monochrome) {
+      const layer = viewer.imageryLayers.addImageryProvider(
+        createMonochromeImageryProvider(),
+      );
+      layer.brightness = mapBrightness ?? defaults.brightness;
+      layer.gamma = mapGamma ?? defaults.gamma;
+      imageryLayerRef.current = layer;
+      scheduleRender();
+      return () => {
+        imageryRequestIdRef.current++;
+        removeCurrentLayer();
+      };
+    }
+
+    Cesium.IonImageryProvider.fromAssetId(ionImageryAssetId)
+      .then((provider) => {
+        if (viewer.isDestroyed() || requestId !== imageryRequestIdRef.current) {
+          return;
+        }
+        const layer = viewer.imageryLayers.addImageryProvider(provider);
+        layer.brightness = mapBrightness ?? defaults.brightness;
+        layer.gamma = mapGamma ?? defaults.gamma;
+        imageryLayerRef.current = layer;
+        scheduleRender();
+      })
+      .catch((err) => {
+        if (viewer.isDestroyed() || requestId !== imageryRequestIdRef.current) {
+          return;
+        }
+        console.error('[CesiumMap] failed to load Ion imagery:', err);
+      });
+
+    return () => {
+      imageryRequestIdRef.current++;
+      removeCurrentLayer();
+    };
+  }, [mapViewMode, ionImageryAssetId, mountReady, scheduleRender]);
 
   // ── Lazy entity-pick handlers ────────────────────────────────────────────
   // `scene.pick` is a per-pixel framebuffer readback; running it on every
@@ -980,23 +937,33 @@ export function CesiumMap({
     return () => handler.destroy();
   }, [markers, onMarkerClick, onMarkerHover]);
 
-  // ── HTML marker positions ────────────────────────────────────────────────
-  // Re-compute Cartesian3 cache whenever `htmlMarkers` changes. The
-  // per-frame loop reads from this cache, so it stays cheap.
-  //
-  // Kinematic markers don't write to the static cache — instead, the new
-  // lat/lon is pushed as a sample to the per-id motion track, and the
-  // per-frame preRender loop queries the track at frame time. Tracks /
-  // scratch buffers for ids that left the prop set are dropped here so
-  // they don't leak across long sessions.
+  const staticHtmlMarkerKey = useMemo(() => {
+    if (!htmlMarkers) return '';
+    return htmlMarkers
+      .filter((m) => !m.kinematic)
+      .map((m) => `${m.id}:${m.lat.toFixed(6)}:${m.lon.toFixed(6)}`)
+      .join('|');
+  }, [htmlMarkers]);
+
+  // ── Static HTML marker Cartesian cache ───────────────────────────────────
   useEffect(() => {
     const cache = htmlMarkerCartesianRef.current;
     const cartographics = htmlMarkerCartographicRef.current;
     cache.clear();
     cartographics.clear();
-    // Static-marker terrain cache is keyed off the id+lat+lon that
-    // produced it; rebuilding the Cartesian3 cache invalidates it.
     htmlMarkerStaticHeightSampledRef.current.clear();
+    if (!htmlMarkers) return;
+    for (const m of htmlMarkers) {
+      if (m.kinematic) continue;
+      cache.set(m.id, Cesium.Cartesian3.fromDegrees(m.lon, m.lat));
+      cartographics.set(m.id, { lat: m.lat, lon: m.lon });
+    }
+    scheduleRender();
+  }, [staticHtmlMarkerKey, htmlMarkers, scheduleRender]);
+
+  // ── Legacy in-map kinematic ingestion (no upstream registry) ─────────────
+  useEffect(() => {
+    if (motionRegistry) return;
     if (!htmlMarkers) {
       motionTracksRef.current.clear();
       kinematicCartesianScratchRef.current.clear();
@@ -1006,38 +973,44 @@ export function CesiumMap({
     const liveKinematicIds = new Set<string>();
     const sampleAt = Date.now();
     for (const m of htmlMarkers) {
-      if (m.kinematic) {
-        liveKinematicIds.add(m.id);
-        let track = motionTracksRef.current.get(m.id);
-        if (!track) {
-          track = createMotionTrack();
-          motionTracksRef.current.set(m.id, track);
-          kinematicCartesianScratchRef.current.set(m.id, new Cesium.Cartesian3());
-        }
-        track.pushSample(m.lat, m.lon, sampleAt);
-      } else {
-        // Cache as a fresh Cartesian3 we can mutate in place each frame —
-        // the preRender loop re-projects at the terrain surface in 3D.
-        cache.set(m.id, Cesium.Cartesian3.fromDegrees(m.lon, m.lat));
-        cartographics.set(m.id, { lat: m.lat, lon: m.lon });
+      if (!m.kinematic) continue;
+      liveKinematicIds.add(m.id);
+      let track = motionTracksRef.current.get(m.id);
+      if (!track) {
+        track = createMotionTrack();
+        motionTracksRef.current.set(m.id, track);
+        kinematicCartesianScratchRef.current.set(m.id, new Cesium.Cartesian3());
       }
+      track.pushSample(m.lat, m.lon, sampleAt, { mode: 'live' });
     }
 
-    // Drop tracks + scratch Cartesians for ids that vanished or that are
-    // no longer kinematic (e.g. a drone going offline mid-session).
     for (const id of motionTracksRef.current.keys()) {
       if (!liveKinematicIds.has(id)) {
         motionTracksRef.current.delete(id);
         kinematicCartesianScratchRef.current.delete(id);
       }
     }
-
-    // Force a render so positions update immediately even without user
-    // interaction (Cesium uses request-render mode by default).
-    // Coalesced so the htmlMarkers + htmlGeometryEntities + polylines
-    // effects (all driven by the same React commit) share one paint.
     scheduleRender();
-  }, [htmlMarkers, scheduleRender]);
+  }, [htmlMarkers, motionRegistry, scheduleRender]);
+
+  useEffect(() => {
+    if (!motionRegistry || !htmlMarkers) {
+      kinematicCartesianScratchRef.current.clear();
+      return;
+    }
+    const scratch = kinematicCartesianScratchRef.current;
+    for (const m of htmlMarkers) {
+      if (!m.kinematic) continue;
+      if (!scratch.has(m.id)) {
+        scratch.set(m.id, new Cesium.Cartesian3());
+      }
+    }
+    for (const id of scratch.keys()) {
+      const stillKinematic = htmlMarkers.some((m) => m.id === id && m.kinematic);
+      if (!stillKinematic) scratch.delete(id);
+    }
+    scheduleRender();
+  }, [htmlMarkers, motionRegistry, scheduleRender]);
 
   // ── Token (live update) ────────────────────────────────────────────────────
   useEffect(() => {
@@ -1058,13 +1031,14 @@ export function CesiumMap({
   useEffect(() => {
     const layer = imageryLayerRef.current;
     if (!layer) return;
-    const DARK_DEFAULTS = { brightness: 1.9, gamma: 0.7 } as const;
-    const ION_DEFAULTS = { brightness: 1.0, gamma: 1.0 } as const;
-    const defaults = darkMonochromeMap ? DARK_DEFAULTS : ION_DEFAULTS;
+    const defaults =
+      mapViewMode === 'monochromeTerrain'
+        ? IMAGERY_DEFAULTS.monochromeTerrain
+        : IMAGERY_DEFAULTS.current;
     layer.brightness = mapBrightness ?? defaults.brightness;
     layer.gamma = mapGamma ?? defaults.gamma;
     scheduleRender();
-  }, [mapBrightness, mapGamma, darkMonochromeMap, scheduleRender]);
+  }, [mapBrightness, mapGamma, mapViewMode, scheduleRender]);
 
   // ── Scene mode ─────────────────────────────────────────────────────────────
   // In SCENE2D, the camera "height" is interpreted as the orthographic frustum
@@ -1264,59 +1238,86 @@ export function CesiumMap({
 
   // ── FOV + coverage entities for HTML markers ──────────────────────────────
   // The DOM overlay renders the icon + tooltip; Cesium renders the geometry
-  // (terrain-clamped sector polygon for FOV, ellipse for coverage). These
-  // are kept in a separate ref so the `markers[]` effect above doesn't tear
-  // them down on every change.
+  // (terrain-clamped sector polygon for FOV, ellipse for coverage). Per-id
+  // reconcile keyed by fingerprint — `htmlMarkers` re-mints on every
+  // playback frame (because a moving target's trail forces a new array),
+  // so a teardown + re-add loop would flicker the lit FOV cones to black
+  // for one frame each tick.
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer) return;
 
-    for (const entity of htmlGeometryEntitiesRef.current) viewer.entities.remove(entity);
-    htmlGeometryEntitiesRef.current = [];
+    const cache = htmlGeometryEntitiesRef.current;
+    const desired = new Set<string>();
+    let dirty = false;
 
-    if (!htmlMarkers) return;
+    if (htmlMarkers) {
+      for (const m of htmlMarkers) {
+        if (m.fov) {
+          const id = `${m.id}__fov`;
+          desired.add(id);
+          const color = m.fov.color ?? '#22b8cf';
+          const opacity = m.fov.opacity ?? 0.18;
+          const fingerprint = `${m.lat.toFixed(6)}|${m.lon.toFixed(6)}|${m.fov.rangeM}|${m.fov.bearingDeg}|${m.fov.widthDeg}|${color}|${opacity}`;
+          const cached = cache.get(id);
+          if (cached && cached.fingerprint === fingerprint) continue;
+          if (cached) viewer.entities.remove(cached.entity);
+          const fovColor = Cesium.Color.fromCssColorString(color);
+          const entity = viewer.entities.add({
+            id,
+            polygon: {
+              hierarchy: new Cesium.PolygonHierarchy(
+                buildSectorPositions(m.lat, m.lon, m.fov.rangeM, m.fov.bearingDeg, m.fov.widthDeg),
+              ),
+              material: fovColor.withAlpha(opacity),
+              outline: true,
+              outlineColor: fovColor.withAlpha(Math.min(1, opacity * 3)),
+              heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            },
+          });
+          cache.set(id, { entity, fingerprint });
+          dirty = true;
+        }
 
-    for (const m of htmlMarkers) {
-      if (m.fov) {
-        const fovColor = Cesium.Color.fromCssColorString(m.fov.color ?? '#22b8cf');
-        const fovOpacity = m.fov.opacity ?? 0.18;
-        const fovEntity = viewer.entities.add({
-          id: `${m.id}__fov`,
-          polygon: {
-            hierarchy: new Cesium.PolygonHierarchy(
-              buildSectorPositions(m.lat, m.lon, m.fov.rangeM, m.fov.bearingDeg, m.fov.widthDeg),
-            ),
-            material: fovColor.withAlpha(fovOpacity),
-            outline: true,
-            outlineColor: fovColor.withAlpha(Math.min(1, fovOpacity * 3)),
-            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-          },
-        });
-        htmlGeometryEntitiesRef.current.push(fovEntity);
-      }
-
-      if (m.coverageRadiusM != null) {
-        const coverageColor = Cesium.Color.fromCssColorString(m.coverageColor ?? '#22b8cf');
-        // Fill / outline opacities tuned to read clearly over satellite
-        // imagery without burying the markers underneath. Roughly mirrors
-        // the FOV cone's solidity (0.40 fill); the outline is fully opaque
-        // so the ring boundary is unambiguous even at larger zoom-outs.
-        const coverageEntity = viewer.entities.add({
-          id: `${m.id}__coverage`,
-          position: Cesium.Cartesian3.fromDegrees(m.lon, m.lat),
-          ellipse: {
-            semiMajorAxis: m.coverageRadiusM,
-            semiMinorAxis: m.coverageRadiusM,
-            material: coverageColor.withAlpha(0.25),
-            outline: true,
-            outlineColor: coverageColor.withAlpha(0.95),
-            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-          },
-        });
-        htmlGeometryEntitiesRef.current.push(coverageEntity);
+        if (m.coverageRadiusM != null) {
+          const id = `${m.id}__coverage`;
+          desired.add(id);
+          const color = m.coverageColor ?? '#22b8cf';
+          const fingerprint = `${m.lat.toFixed(6)}|${m.lon.toFixed(6)}|${m.coverageRadiusM}|${color}`;
+          const cached = cache.get(id);
+          if (cached && cached.fingerprint === fingerprint) continue;
+          if (cached) viewer.entities.remove(cached.entity);
+          const coverageColor = Cesium.Color.fromCssColorString(color);
+          // Fill / outline opacities tuned to read clearly over satellite
+          // imagery without burying the markers underneath. Roughly mirrors
+          // the FOV cone's solidity (0.40 fill); the outline is fully opaque
+          // so the ring boundary is unambiguous even at larger zoom-outs.
+          const entity = viewer.entities.add({
+            id,
+            position: Cesium.Cartesian3.fromDegrees(m.lon, m.lat),
+            ellipse: {
+              semiMajorAxis: m.coverageRadiusM,
+              semiMinorAxis: m.coverageRadiusM,
+              material: coverageColor.withAlpha(0.25),
+              outline: true,
+              outlineColor: coverageColor.withAlpha(0.95),
+              heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            },
+          });
+          cache.set(id, { entity, fingerprint });
+          dirty = true;
+        }
       }
     }
-    scheduleRender();
+
+    for (const [id, entry] of cache) {
+      if (desired.has(id)) continue;
+      viewer.entities.remove(entry.entity);
+      cache.delete(id);
+      dirty = true;
+    }
+
+    if (dirty) scheduleRender();
   }, [htmlMarkers, scheduleRender]);
 
   // ── Polylines (trails, engagement lines, mission routes) ──────────────────

@@ -3,37 +3,31 @@ import type { ComponentSpec } from '@/specs/types';
 export const spec: ComponentSpec = {
   name: 'TelemetryRow',
   filePath: 'src/primitives/TelemetryRow.tsx',
-  purpose: 'Simple key-value row for displaying telemetry data — label on top, monospaced value below, with optional leading icon.',
+  purpose: 'Simple key-value row for displaying telemetry data — label on top, monospaced value below. Optional click-to-copy on the value swaps the displayed string to the full-precision payload for ~1.2s on success.',
   location: 'Primitives',
   status: 'prototype',
 
   props: [
     { name: 'label', type: 'string', required: true, description: 'Row label text (Hebrew), displayed in smaller muted style' },
     { name: 'value', type: 'string', required: true, description: 'Telemetry value displayed in monospaced font below the label' },
-    { name: 'icon', type: 'React.ElementType', required: false, description: 'Optional lucide icon component rendered next to the label' },
+    { name: 'copyValue', type: 'string', required: false, description: 'Optional full-precision payload copied to the clipboard on click. When set, the value becomes a button — display stays as `value` (compact form), clipboard receives `copyValue`.' },
+    { name: 'copyLabel', type: 'string', required: false, description: 'aria-label / tooltip for the copy button when `copyValue` is set.' },
   ],
 
   states: [
     {
       name: 'default',
       trigger: 'label and value provided',
-      description: 'Label with optional icon above, monospaced value below',
+      description: 'Label above, monospaced value below',
       implementedInPrototype: true,
       storyProps: { label: 'מיקום', value: '32.0853° N, 34.7818° E' },
     },
     {
-      name: 'with icon',
-      trigger: 'icon prop provided',
-      description: 'Icon rendered at 12px next to the label in zinc-400',
+      name: 'copy-on-click',
+      trigger: 'copyValue provided, operator clicks the value',
+      description: 'Value is a button; hover wash on `state-hover-strong`; on click the displayed value swaps to `copyValue` for 1.2s before reverting.',
       implementedInPrototype: true,
-      storyProps: { label: 'מרחק', value: '2.4 ק״מ' },
-    },
-    {
-      name: 'without icon',
-      trigger: 'icon prop omitted',
-      description: 'Label rendered without icon — no empty space',
-      implementedInPrototype: true,
-      storyProps: { label: 'סטטוס', value: 'פעיל' },
+      storyProps: { label: 'מיקום', value: '687985 / 3594214 · 50 m', copyValue: '32.085345, 34.781789' },
     },
     {
       name: 'long value overflow',
@@ -59,32 +53,33 @@ export const spec: ComponentSpec = {
 
   interactions: [
     {
-      trigger: 'none',
-      element: 'TelemetryRow',
-      result: 'Purely presentational — no direct user interaction',
-      keyboard: 'N/A (not focusable)',
+      trigger: 'click',
+      element: 'value button (only when copyValue is set)',
+      result: 'Writes copyValue to the clipboard; displayed value briefly swaps to copyValue for 1.2s as the operator-visible confirmation.',
+      keyboard: 'Enter / Space activate when focused.',
     },
   ],
 
   tokens: {
     colors: [
-      { name: 'label-text', value: 'zinc-400', usage: 'Label and icon color' },
+      { name: 'label-text', value: 'zinc-400', usage: 'Label color' },
       { name: 'value-text', value: 'zinc-200', usage: 'Value text color' },
+      { name: 'value-hover-bg', value: 'state-hover-strong', usage: 'Wash painted under the value when the row is hoverable (copyValue set).' },
     ],
     typography: [
-      { name: 'label', fontFamily: 'Heebo', fontSize: '11px', fontWeight: '400', lineHeight: '1.4', usage: 'Label text (text-[11px] text-zinc-400)' },
-      { name: 'value', fontFamily: 'mono', fontSize: '13px', fontWeight: '400', lineHeight: '1.4', usage: 'Value text (text-[13px] font-mono tabular-nums)' },
+      { name: 'label', fontFamily: 'Heebo', fontSize: '11px', fontWeight: '400', lineHeight: '1.4', usage: 'Label text (text-[11px] text-slate-10)' },
+      { name: 'value-mono', fontFamily: 'IBM Plex Mono', fontSize: '12px', fontWeight: '400', lineHeight: '1.4', usage: 'Numeric/Latin values (font-mono tabular-nums)' },
+      { name: 'value-locale', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '400', lineHeight: '1.4', usage: 'Hebrew locale values such as classification labels (sans stack)' },
     ],
     spacing: [
       { name: 'row-py', value: '4px', usage: 'Vertical padding (py-1)' },
       { name: 'row-gap', value: '4px', usage: 'Gap between label row and value (gap-1)' },
-      { name: 'label-gap', value: '6px', usage: 'Gap between icon and label text (gap-1.5)' },
     ],
   },
 
   accessibility: {
     ariaAttributes: [
-      'aria-hidden="true" on icon (decorative)',
+      'aria-label on the copy button when copyValue is set (consumer-supplied via copyLabel).',
     ],
     screenReaderNotes: 'No semantic grouping between label and value — screen reader reads them as separate text nodes. Consider adding a dl/dt/dd structure.',
   },
@@ -130,8 +125,7 @@ export const spec: ComponentSpec = {
   ],
 
   notes: [
-    'dir="rtl" is set on the root div for Hebrew layout.',
-    'Value uses text-left which may conflict with RTL direction — likely intentional for numeric/coordinate data.',
-    'Icon renders at 12px — smaller than most lucide defaults.',
+    'Value is wrapped in <Bdi> so embedded Latin tokens (callsigns, lat/lon, MGRS) keep their natural LTR reading order inside a Hebrew/RTL context.',
+    'Copy feedback is purely textual — the value swap reads the freshly-copied payload back to the operator. No icon affordances.',
   ],
 };

@@ -50,7 +50,7 @@ export const spec: ComponentSpec = {
       trigger: 'step.status === "active"',
       description: 'Full: white text with red dot indicator and blinking cursor. Compact: larger pulsing white dot.',
       implementedInPrototype: true,
-      visualNotes: 'Full mode has animate-blink cursor span (w-1 h-3 bg-white/60)',
+      visualNotes: 'Full mode has animate-blink cursor span (w-1 h-3 bg-slate-12/60)',
     },
     {
       name: 'complete step',

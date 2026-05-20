@@ -101,15 +101,15 @@ export function CardMedia({
           <>
             <div className="absolute top-2 end-2 flex items-center gap-1.5">
               <div className="flex items-center gap-1 bg-black/80 px-1.5 py-0.5 rounded-sm">
-                <div className="size-1.5 rounded-full bg-red-500 animate-pulse motion-reduce:animate-none" />
-                <span className="text-[9px] font-medium text-white/90 uppercase tracking-wide">
+                <div className="size-1.5 rounded-full bg-accent-danger animate-pulse motion-reduce:animate-none" />
+                <span className="text-[9px] font-medium text-slate-12/90 uppercase tracking-wide">
                   Live
                 </span>
               </div>
             </div>
             <div className="absolute top-2 start-2 flex items-center gap-1 bg-black/80 px-1.5 py-0.5 rounded-sm">
-              <Camera size={10} className="text-white/70" aria-hidden="true" />
-              <span className="text-[9px] text-white/70 font-mono">PTZ</span>
+              <Camera size={10} className="text-slate-12/70" aria-hidden="true" />
+              <span className="text-[9px] text-slate-12/70 font-mono">PTZ</span>
             </div>
           </>
         )}
@@ -117,26 +117,26 @@ export function CardMedia({
         {isVideo && showControls && (
           <>
             <div className="absolute top-2 end-2 flex items-center gap-1 bg-black/80 px-1.5 py-0.5 rounded-sm">
-              <Camera size={10} className="text-white/70" aria-hidden="true" />
-              <span className="text-[9px] text-white/70 font-mono">Playback</span>
+              <Camera size={10} className="text-slate-12/70" aria-hidden="true" />
+              <span className="text-[9px] text-slate-12/70 font-mono">Playback</span>
             </div>
             <button
               onClick={handleExpand}
               className="absolute inset-0 z-10 flex items-center justify-center opacity-0 group-hover/media:opacity-100 transition-opacity duration-200 cursor-pointer"
               aria-label="Expand recording"
             >
-              <div className="flex items-center gap-1.5 bg-black/70 backdrop-blur-sm px-3 py-1.5 rounded-md shadow-[0_0_0_1px_rgba(255,255,255,0.15)]">
-                <Maximize2 size={13} className="text-white/90" aria-hidden="true" />
-                <span className="text-[11px] font-medium text-white/90">Expand</span>
+              <div className="flex items-center gap-1.5 bg-black/70 backdrop-blur-sm px-3 py-1.5 rounded-md shadow-[0_0_0_1px_var(--border-default)]">
+                <Maximize2 size={13} className="text-slate-12/90" aria-hidden="true" />
+                <span className="text-[11px] font-medium text-slate-12/90">Expand</span>
               </div>
             </button>
           </>
         )}
 
         {trackingLabel && (
-          <div className="absolute bottom-2 start-2 flex items-center gap-1 bg-cyan-900/80 shadow-[0_0_0_1px_rgba(34,211,238,0.3)] px-2 py-0.5 rounded">
-            <Camera size={10} className="text-cyan-300" aria-hidden="true" />
-            <span className="text-[9px] font-semibold text-cyan-200">{trackingLabel}</span>
+          <div className="absolute bottom-2 start-2 flex items-center gap-1 bg-accent-tracking-soft/80 shadow-[0_0_0_1px_color-mix(in_oklch,var(--accent-tracking)_30%,transparent)] px-2 py-0.5 rounded">
+            <Camera size={10} className="text-accent-tracking" aria-hidden="true" />
+            <span className="text-[9px] font-semibold text-accent-tracking">{trackingLabel}</span>
           </div>
         )}
 
@@ -149,8 +149,8 @@ export function CardMedia({
         <Dialog open={expanded} onOpenChange={setExpanded}>
           <DialogContent
             className={cn(
-              'w-[90vw] max-w-[800px] gap-0 border-0 bg-black p-0 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_25px_60px_rgba(0,0,0,0.6)] sm:max-w-[800px]',
-              '[&>button]:text-white/80 [&>button]:hover:bg-black/80 [&>button]:hover:text-white [&>button]:bg-black/60',
+              'w-[90vw] max-w-[800px] gap-0 border-0 bg-black p-0 text-slate-12 shadow-[0_0_0_1px_var(--border-default),0_25px_60px_rgba(0,0,0,0.6)] sm:max-w-[800px]',
+              '[&>button]:text-slate-12/80 [&>button]:hover:bg-black/80 [&>button]:hover:text-slate-12 [&>button]:bg-black/60',
             )}
           >
             <DialogTitle className="sr-only">Expanded recording</DialogTitle>
@@ -237,9 +237,9 @@ function LightboxVideo({ src, initialTime }: { src: string; initialTime: number 
         convention), the scrub bar uses pixel-space math, and the
         ArrowLeft/ArrowRight keys map to "back/forward in time".
       */}
-      <DirIsland direction="ltr" className="bg-zinc-950 px-4 py-3">
+      <DirIsland direction="ltr" className="bg-surface-1 px-4 py-3">
         <div
-          className="relative mb-3 h-1.5 w-full cursor-pointer rounded-full bg-white/15 group/scrub focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+          className="relative mb-3 h-1.5 w-full cursor-pointer rounded-full bg-state-selected group/scrub focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong"
           role="slider"
           tabIndex={0}
           aria-label="Video position"
@@ -257,27 +257,27 @@ function LightboxVideo({ src, initialTime }: { src: string; initialTime: number 
         >
           <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-full">
             <div
-              className="h-full w-full origin-left rounded-full bg-cyan-400 transition-transform duration-100"
+              className="h-full w-full origin-left rounded-full bg-accent-tracking transition-transform duration-100"
               style={{ transform: `scaleX(${scale})` }}
             />
           </div>
           <div
-            className="pointer-events-none absolute top-1/2 z-[1] h-3 w-3 rounded-full bg-white opacity-0 shadow transition-opacity group-hover/scrub:opacity-100"
+            className="pointer-events-none absolute top-1/2 z-[1] h-3 w-3 rounded-full bg-slate-12 opacity-0 shadow transition-opacity group-hover/scrub:opacity-100"
             style={{ left: `${pct}%`, transform: 'translate(-50%, -50%)' }}
           />
         </div>
 
         <div className="flex items-center justify-center gap-4">
-          <button onClick={skip(-5)} className="text-white/60 hover:text-white transition-colors cursor-pointer" aria-label="Skip back 5 seconds">
+          <button onClick={skip(-5)} className="text-slate-12/60 hover:text-slate-12 transition-colors cursor-pointer" aria-label="Skip back 5 seconds">
             <SkipBack size={14} aria-hidden="true" />
           </button>
-          <button onClick={togglePlay} className="text-white hover:text-cyan-400 transition-colors cursor-pointer" aria-label={playing ? 'Pause' : 'Play'}>
+          <button onClick={togglePlay} className="text-slate-12 hover:text-accent-tracking transition-colors cursor-pointer" aria-label={playing ? 'Pause' : 'Play'}>
             {playing ? <Pause size={20} aria-hidden="true" /> : <Play size={20} aria-hidden="true" />}
           </button>
-          <button onClick={skip(5)} className="text-white/60 hover:text-white transition-colors cursor-pointer" aria-label="Skip forward 5 seconds">
+          <button onClick={skip(5)} className="text-slate-12/60 hover:text-slate-12 transition-colors cursor-pointer" aria-label="Skip forward 5 seconds">
             <SkipForward size={14} aria-hidden="true" />
           </button>
-          <span className="text-[11px] text-zinc-400 font-mono tabular-nums ms-2">
+          <span className="text-[11px] text-slate-10 font-mono tabular-nums ms-2">
             {formatTime(progress)} / {formatTime(duration)}
           </span>
         </div>
@@ -357,7 +357,7 @@ const VideoWithControls = React.forwardRef<HTMLVideoElement, { src: string }>(
         {/* Same LTR-island convention as LightboxVideo above. */}
         <DirIsland direction="ltr" className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent pt-6 pb-1.5 px-2">
           <div
-            className="relative mb-1.5 h-1 w-full cursor-pointer rounded-full bg-white/15 group/scrub focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+            className="relative mb-1.5 h-1 w-full cursor-pointer rounded-full bg-state-selected group/scrub focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong"
             role="slider"
             tabIndex={0}
             aria-label="Video position"
@@ -374,28 +374,28 @@ const VideoWithControls = React.forwardRef<HTMLVideoElement, { src: string }>(
             }}
           >
             <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-full">
-              <div
-                className="h-full w-full origin-left rounded-full bg-cyan-400 transition-transform duration-100"
-                style={{ transform: `scaleX(${scale})` }}
-              />
-            </div>
             <div
-              className="pointer-events-none absolute top-1/2 z-[1] h-2.5 w-2.5 rounded-full bg-white opacity-0 shadow transition-opacity group-hover/scrub:opacity-100"
-              style={{ left: `${pct}%`, transform: 'translate(-50%, -50%)' }}
+              className="h-full w-full origin-left rounded-full bg-accent-tracking transition-transform duration-100"
+              style={{ transform: `scaleX(${scale})` }}
             />
           </div>
+          <div
+            className="pointer-events-none absolute top-1/2 z-[1] h-2.5 w-2.5 rounded-full bg-slate-12 opacity-0 shadow transition-opacity group-hover/scrub:opacity-100"
+            style={{ left: `${pct}%`, transform: 'translate(-50%, -50%)' }}
+          />
+        </div>
 
-          <div className="flex items-center justify-center gap-3">
-            <button onClick={skip(-5)} className="text-white/60 hover:text-white transition-colors" aria-label="Skip back 5 seconds">
-              <SkipBack size={12} aria-hidden="true" />
-            </button>
-            <button onClick={togglePlay} className="text-white hover:text-cyan-400 transition-colors" aria-label={playing ? 'Pause' : 'Play'}>
-              {playing ? <Pause size={16} aria-hidden="true" /> : <Play size={16} aria-hidden="true" />}
-            </button>
-            <button onClick={skip(5)} className="text-white/60 hover:text-white transition-colors" aria-label="Skip forward 5 seconds">
-              <SkipForward size={12} aria-hidden="true" />
-            </button>
-            <span className="text-[9px] text-zinc-400 font-mono tabular-nums ms-2">
+        <div className="flex items-center justify-center gap-3">
+          <button onClick={skip(-5)} className="text-slate-12/60 hover:text-slate-12 transition-colors" aria-label="Skip back 5 seconds">
+            <SkipBack size={12} aria-hidden="true" />
+          </button>
+          <button onClick={togglePlay} className="text-slate-12 hover:text-accent-tracking transition-colors" aria-label={playing ? 'Pause' : 'Play'}>
+            {playing ? <Pause size={16} aria-hidden="true" /> : <Play size={16} aria-hidden="true" />}
+          </button>
+          <button onClick={skip(5)} className="text-slate-12/60 hover:text-slate-12 transition-colors" aria-label="Skip forward 5 seconds">
+            <SkipForward size={12} aria-hidden="true" />
+          </button>
+          <span className="text-[9px] text-slate-10 font-mono tabular-nums ms-2">
               {formatTime(progress)} / {formatTime(duration)}
             </span>
           </div>

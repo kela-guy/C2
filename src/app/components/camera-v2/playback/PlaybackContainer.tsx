@@ -107,7 +107,7 @@ export function PlaybackContainer({ src, state, onPatch }: PlaybackContainerProp
   }, [onPatch]);
 
   return (
-    <div className="absolute inset-x-0 bottom-0 top-1/2 z-30 border-t-2 border-red-500/80 bg-black overflow-hidden">
+    <div className="absolute inset-x-0 bottom-0 top-1/2 z-30 bg-black overflow-hidden">
       <video
         ref={videoRef}
         key={`${state.sourceId ?? 'pb'}-${src}`}
@@ -154,19 +154,24 @@ export function PlaybackContainer({ src, state, onPatch }: PlaybackContainerProp
         <track kind="captions" />
       </video>
 
+      <div
+        aria-hidden
+        className="absolute inset-0 z-30 pointer-events-none shadow-[inset_0_0_0_2px_var(--accent-historical-soft)]"
+      />
+
       {/* PLAYBACK header strip — always present so the operator never
           mistakes this surface for the live feed. */}
       <div
         className="absolute inset-x-0 top-0 h-9 z-10 bg-gradient-to-b from-black/75 to-transparent pointer-events-none"
         aria-hidden="true"
       />
-      <div className="absolute top-2 start-2 z-20 flex items-center gap-2">
-        <div className="flex items-center gap-1.5 bg-red-600/90 px-1.5 py-0.5">
+      <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-center pointer-events-none">
+        <div className="flex items-center gap-1.5 bg-[color-mix(in_oklch,var(--accent-historical-soft)_90%,transparent)] px-1.5 py-0.5 pointer-events-auto">
           <span
-            className="size-1.5 rounded-full bg-white animate-pulse motion-reduce:animate-none"
+            className="size-1.5 rounded-full bg-slate-12 animate-pulse motion-reduce:animate-none"
             aria-hidden="true"
           />
-          <span className="font-mono text-[9px] font-semibold text-white uppercase tracking-wider">
+          <span className="font-mono text-[9px] font-semibold text-slate-12 uppercase tracking-wider">
             Playback
           </span>
         </div>
@@ -251,8 +256,8 @@ function PlaybackStatusChrome({
         aria-label={strings.loading}
         className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-black/60 pointer-events-none"
       >
-        <Loader2 size={20} className="text-white/85 animate-spin motion-reduce:animate-none" />
-        <span className="text-[11px] text-white/85 font-mono tracking-wider uppercase">
+        <Loader2 size={20} className="text-slate-12/85 animate-spin motion-reduce:animate-none" />
+        <span className="text-[11px] text-slate-12/85 font-mono tracking-wider uppercase">
           {strings.loadingEllipsis}
         </span>
       </div>
@@ -265,7 +270,7 @@ function PlaybackStatusChrome({
         aria-label={strings.buffering}
         className="absolute inset-0 z-20 flex items-center justify-center bg-black/35 pointer-events-none"
       >
-        <Loader2 size={20} className="text-white/85 animate-spin motion-reduce:animate-none" />
+        <Loader2 size={20} className="text-slate-12/85 animate-spin motion-reduce:animate-none" />
       </div>
     );
   }
@@ -280,12 +285,12 @@ function PlaybackStatusChrome({
           type="button"
           onClick={onReplay}
           aria-label={strings.replayFromStart}
-          className="inline-flex items-center gap-1.5 px-3 py-2 bg-red-500 text-white text-[11px] uppercase tracking-wider font-semibold hover:bg-red-400 active:scale-[0.97] transition focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+          className="inline-flex items-center gap-1.5 px-3 py-2 bg-accent-danger text-slate-12 text-[11px] uppercase tracking-wider font-semibold hover:bg-accent-danger/90 active:scale-[0.97] transition focus-visible:ring-2 focus-visible:ring-border-strong focus-visible:outline-none"
         >
           <Play size={12} />
           {strings.playAgain}
         </button>
-        <span className="text-[10px] text-white/55 uppercase tracking-wider">
+        <span className="text-[10px] text-slate-9 uppercase tracking-wider">
           {strings.ended}
         </span>
       </div>
@@ -297,14 +302,14 @@ function PlaybackStatusChrome({
         role="alert"
         className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-black/70 px-3 text-center"
       >
-        <AlertTriangle size={20} className="text-red-300" aria-hidden="true" />
-        <span className="text-[11px] text-white max-w-[220px]">
+        <AlertTriangle size={20} className="text-accent-danger" aria-hidden="true" />
+        <span className="text-[11px] text-slate-12 max-w-[220px]">
           {errorMessage ?? strings.errorUnknown}
         </span>
         <button
           type="button"
           onClick={onRetry}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-white/10 ring-1 ring-inset ring-white/15 text-[10px] text-white uppercase tracking-wider hover:bg-white/15 active:scale-[0.97] transition focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-state-hover-strong ring-1 ring-inset ring-border-default text-[10px] text-slate-12 uppercase tracking-wider hover:bg-state-selected active:scale-[0.97] transition focus-visible:ring-2 focus-visible:ring-border-strong focus-visible:outline-none"
         >
           <RotateCcw size={11} />
           {strings.tryAgain}

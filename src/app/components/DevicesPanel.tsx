@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useDrag } from 'react-dnd';
-import { X, Camera, AlertTriangle, MapPin, BellOff, Wrench, Check, Loader2, Pin, PinFilled, PinOff } from '@/lib/icons/central';
+import { createPortal } from 'react-dom';
+import { useDrag, useDragLayer } from 'react-dnd';
+import { getEmptyImage } from 'react-dnd-html5-backend';
+import { X, Camera, Plane, MapPin, BellOff, Wrench, Check, Loader2, Pin, PinFilled, PinOff } from '@/lib/icons/central';
 import { GridblockPanel } from './gridblock';
 import { Square, ChevronsUpDown } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 import { Switch } from './ui/switch';
-import { Toggle } from './ui/toggle';
 import { Collapsible, CollapsibleContent } from './ui/collapsible';
 import { Popover, PopoverTrigger, PopoverContent } from './ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from './ui/command';
@@ -14,12 +15,13 @@ import { Button } from './ui/button';
 import { StatusChip } from '@/primitives/StatusChip';
 import { JamIcon, BatteryIcon } from '@/primitives/ProductIcons';
 import { FilterBar, type FilterDef } from '@/primitives';
-import { accentHex } from '@/primitives/accentHex';
+import { accentHex, slateHex } from '@/primitives/accentHex';
 
 export const DEVICE_CAMERA_DRAG_TYPE = 'DEVICE_CAMERA';
 export interface DeviceCameraDragItem {
   cameraId: string;
   label: string;
+  deviceType: 'camera' | 'drone';
 }
 
 export function DevicesIcon({ size = 20, className = '' }: { size?: number; className?: string }) {
@@ -237,10 +239,10 @@ export const DEFAULT_DEVICE_PANEL_STRINGS: DevicesPanelStrings = {
 };
 
 const CONNECTION_STATE_COLORS: Record<ConnectionState, string> = {
-  online: 'bg-emerald-400',
-  offline: 'bg-zinc-500',
-  error: 'bg-red-400',
-  warning: 'bg-amber-400',
+  online: 'bg-accent-success',
+  offline: 'bg-slate-9',
+  error: 'bg-accent-danger',
+  warning: 'bg-accent-warning',
 };
 
 const CONNECTION_STATE_CHIP_COLORS: Record<ConnectionState, 'green' | 'gray' | 'red' | 'orange'> = {
@@ -268,6 +270,74 @@ function MuteCountdown({ expiry }: { expiry: number }) {
     <>
       {String(mins).padStart(2, '0')}:{String(secs).padStart(2, '0')}
     </>
+  );
+}
+
+function DeviceRowHoverButton({
+  icon: Icon,
+  label,
+  onClick,
+  disabled,
+  pressed,
+}: {
+  icon: typeof MapPin;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  pressed?: boolean;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick();
+          }}
+          disabled={disabled}
+          aria-label={label}
+          aria-pressed={pressed}
+          className="inline-flex size-6 items-center justify-center rounded-xs text-slate-9 hover:text-slate-12 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <Icon size={16} strokeWidth={1.75} />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent
+        side="top"
+        sideOffset={6}
+        showArrow={false}
+        className="px-2 py-1 text-[10px] text-slate-11 bg-surface-3 shadow-[0_0_0_1px_var(--border-default)] whitespace-nowrap"
+      >
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+function DeviceDragPreviewLayer() {
+  const { item, itemType, isDragging, offset } = useDragLayer((monitor) => ({
+    item: monitor.getItem<DeviceCameraDragItem | null>(),
+    itemType: monitor.getItemType(),
+    isDragging: monitor.isDragging(),
+    offset: monitor.getClientOffset() ?? monitor.getSourceClientOffset(),
+  }));
+
+  if (!isDragging || itemType !== DEVICE_CAMERA_DRAG_TYPE || !item || !offset) {
+    return null;
+  }
+
+  const Icon = item.deviceType === 'drone' ? Plane : Camera;
+
+  return createPortal(
+    <div
+      className="pointer-events-none fixed z-[100] flex max-w-[120px] min-w-0 -translate-x-1/2 -translate-y-1/2 items-center gap-1 bg-surface-3 px-1.5 py-1 text-[11px] font-medium leading-none text-slate-12 shadow-[0_0_0_1px_var(--border-default),0_2px_8px_rgba(0,0,0,0.35)]"
+      style={{ left: offset.x, top: offset.y }}
+    >
+      <Icon size={11} className="shrink-0 text-slate-10" aria-hidden="true" />
+      <span className="min-w-0 flex-1 truncate">{item.label}</span>
+    </div>,
+    document.body,
   );
 }
 
@@ -323,6 +393,7 @@ export function DeviceRow({
 
   const isMalfunctioning = device.operationalStatus === 'malfunctioning';
   const isCamera = device.type === 'camera';
+  const canDragToVideo = isCamera || device.type === 'drone';
   const isFloodlight = device.type === 'floodlight';
   const isSpeaker = device.type === 'speaker';
   const [speakerTrack, setSpeakerTrack] = useState<string>(speakerTracks[0]?.id ?? '');
@@ -346,12 +417,21 @@ export function DeviceRow({
     return () => clearTimeout(t);
   }, [calibState]);
 
-  const [{ isDragging }, dragRef] = useDrag(() => ({
+  const [{ isDragging }, dragRef, previewRef] = useDrag(() => ({
     type: DEVICE_CAMERA_DRAG_TYPE,
-    item: { cameraId: device.id, label: device.name } satisfies DeviceCameraDragItem,
-    canDrag: isCamera,
+    item: {
+      cameraId: device.id,
+      label: device.name,
+      deviceType: device.type === 'drone' ? 'drone' : 'camera',
+    } satisfies DeviceCameraDragItem,
+    canDrag: canDragToVideo,
     collect: (monitor) => ({ isDragging: monitor.isDragging() }),
-  }), [device.id, device.name, isCamera]);
+  }), [device.id, device.name, device.type, canDragToVideo]);
+
+  useEffect(() => {
+    if (!canDragToVideo) return;
+    previewRef(getEmptyImage(), { captureDraggingState: true });
+  }, [canDragToVideo, previewRef]);
 
   const statRows: { label: string; value: string; color?: string }[] = [
     { label: strings.location, value: `${device.lat.toFixed(4)}, ${device.lon.toFixed(4)}` },
@@ -363,44 +443,47 @@ export function DeviceRow({
   statRows.push({
     label: strings.health,
     value: isMalfunctioning ? strings.healthMalfunction : strings.healthOk,
-    color: isMalfunctioning ? 'text-orange-400' : 'text-emerald-400',
+    color: isMalfunctioning ? 'text-accent-warning' : 'text-accent-success',
   });
   if (device.batteryPct != null) {
     statRows.push({
       label: strings.battery,
       value: `${device.batteryPct}%`,
-      color: device.batteryPct <= 20 ? 'text-red-400' : device.batteryPct <= 40 ? 'text-amber-400' : 'text-emerald-400',
+      color: device.batteryPct <= 20 ? 'text-accent-danger' : device.batteryPct <= 40 ? 'text-accent-warning' : 'text-accent-success',
     });
   }
 
   const showStatusDot = device.connectionState !== 'online';
   const isOffline = device.connectionState === 'offline';
+  const canPinToFeed =
+    (device.type === 'camera' || device.type === 'drone') &&
+    !!(onPinToFeed || onUnpinFromFeed);
 
   return (
     <Collapsible open={isExpanded} style={isDragging ? { opacity: 0.4 } : undefined}>
       <div
-        ref={isCamera ? dragRef : undefined}
+        ref={canDragToVideo ? dragRef : undefined}
         role="button"
         tabIndex={0}
         onClick={onToggle}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(); } }}
-        className={`flex items-center justify-center gap-2.5 px-4 py-2.5 transition-[background-color,border-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25 border-b border-white/[0.06] ${
-          isExpanded ? 'bg-white/[0.04]' : 'hover:bg-white/[0.04] active:bg-white/[0.06]'
+        className={`group relative flex items-center justify-center gap-2.5 px-4 py-2.5 transition-[background-color,border-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong border-b border-border-default ${
+          isExpanded ? 'bg-state-hover' : 'hover:bg-state-hover active:bg-state-hover-strong'
         } cursor-pointer`}
         onMouseEnter={() => onHover(device.id)}
         onMouseLeave={() => onHover(null)}
       >
-        <div className={`relative w-8 h-8 rounded flex items-center justify-center shrink-0 ${isMalfunctioning ? 'bg-orange-900/40' : 'bg-white/10'}`}>
+        <div className={`relative w-8 h-8 rounded flex items-center justify-center shrink-0 ${isMalfunctioning ? 'bg-accent-warning-soft/40' : 'bg-state-hover-strong'}`}>
           <device.Icon
             size={20}
-            fill={isMalfunctioning ? accentHex('warning') : 'white'}
+            fill={isMalfunctioning ? accentHex('warning') : slateHex(12)}
             active={(isFloodlight && !!isFloodlightOn) || (isSpeaker && !!isSpeakerPlaying)}
           />
           {showStatusDot && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <span
-                  className={`absolute -bottom-0.5 -end-0.5 size-2 rounded-full ring-2 ring-zinc-950 ${CONNECTION_STATE_COLORS[device.connectionState]}`}
+                  className={`absolute -bottom-0.5 -end-0.5 size-2 rounded-full ring-2 ring-surface-1 ${CONNECTION_STATE_COLORS[device.connectionState]}`}
                   aria-label={connectionStateLabels[device.connectionState]}
                 />
               </TooltipTrigger>
@@ -408,7 +491,7 @@ export function DeviceRow({
                 side="top"
                 sideOffset={6}
                 showArrow={false}
-                className="px-2 py-1 text-[10px] text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
+                className="px-2 py-1 text-[10px] text-slate-11 bg-surface-3 shadow-[0_0_0_1px_var(--border-default)] whitespace-nowrap"
               >
                 {connectionStateLabels[device.connectionState]}
               </TooltipContent>
@@ -418,8 +501,7 @@ export function DeviceRow({
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className={`text-[13px] font-medium truncate ${isMalfunctioning ? 'text-orange-300' : 'text-zinc-300'}`}>{device.name}</span>
-              {isMalfunctioning && <AlertTriangle size={11} className="text-orange-400 shrink-0" />}
+              <span className={`text-[13px] font-medium truncate ${isMalfunctioning ? 'text-accent-warning' : 'text-slate-11'}`}>{device.name}</span>
               {device.connectionState !== 'online' && (
                 <StatusChip
                   label={connectionStateLabels[device.connectionState]}
@@ -430,49 +512,13 @@ export function DeviceRow({
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
               {isMuted && muteExpiry != null && (
-                <span className="flex items-center gap-1 text-xs font-mono tabular-nums text-white">
-                  <BellOff size={12} className="text-white" />
+                <span className="flex items-center gap-1 text-xs font-mono tabular-nums text-slate-12">
+                  <BellOff size={12} className="text-slate-12" />
                   <MuteCountdown expiry={muteExpiry} />
                 </span>
               )}
-              {(onPinToFeed || onUnpinFromFeed) && (device.type === 'camera' || device.type === 'drone') && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Toggle
-                      pressed={!!isPinnedToFeed}
-                      disabled={isOffline || (isPinnedToFeed ? !onUnpinFromFeed : !onPinToFeed)}
-                      onPressedChange={(next) => {
-                        if (next) onPinToFeed?.(device.id);
-                        else onUnpinFromFeed?.(device.id);
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                      aria-label={isPinnedToFeed ? strings.pinnedToFeedTooltip : strings.pinToFeedTooltip}
-                      // Override the default Toggle sizing (h-9/min-w-9) to fit inline
-                      // with the other badges in the row, and strip the accent
-                      // background normally applied in the on state — we want a clean
-                      // white pin glyph (line off, filled on), not a filled chip.
-                      className="size-6 min-w-0 p-0 rounded text-white/70 hover:bg-white/10 hover:text-white data-[state=on]:bg-transparent data-[state=on]:text-white [&_svg]:size-3"
-                    >
-                      {/*
-                        On = Central's filled Pin (separate package variant).
-                        Off = Central's outlined Pin. Both ship as native variant
-                        components so we no longer need the fill/strokeWidth hack.
-                      */}
-                      {isPinnedToFeed ? <PinFilled /> : <Pin />}
-                    </Toggle>
-                  </TooltipTrigger>
-                  <TooltipContent
-                    side="top"
-                    sideOffset={6}
-                    showArrow={false}
-                    className="px-2 py-1 text-[10px] text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
-                  >
-                    {isPinnedToFeed ? strings.pinnedToFeedTooltip : strings.pinToFeedTooltip}
-                  </TooltipContent>
-                </Tooltip>
-              )}
               {device.batteryPct != null && (
-                <span className="flex items-center gap-1.5 text-[11px] font-['Heebo'] tabular-nums text-white/50 align-middle">
+                <span className="flex items-center gap-1.5 text-[11px] font-['Heebo'] tabular-nums text-slate-9 align-middle">
                   <BatteryIcon pct={device.batteryPct} />
                   {device.batteryPct}%
                 </span>
@@ -480,7 +526,7 @@ export function DeviceRow({
             </div>
           </div>
           {metricParts.length > 0 && (
-            <div className="text-[11px] font-mono tabular-nums text-white/50 truncate">
+            <div className="text-[11px] font-mono tabular-nums text-slate-9 truncate">
               {metricParts.join(' · ')}
             </div>
           )}
@@ -499,7 +545,7 @@ export function DeviceRow({
               type="button"
               onClick={(e) => { e.stopPropagation(); onJamActivate?.(device.id); }}
               disabled={isDisabled}
-              className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium transition-[background-color,transform] duration-150 ease-out disabled:opacity-40 disabled:cursor-not-allowed bg-[oklch(0.348_0.111_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)] hover:bg-[oklch(0.445_0.151_17)] active:scale-[0.98] active:bg-[oklch(0.295_0.082_17)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+              className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium transition-[background-color,transform] duration-150 ease-out disabled:opacity-40 disabled:cursor-not-allowed bg-accent-danger-soft text-slate-12 ring-1 ring-inset ring-accent-danger-soft/40 hover:bg-accent-danger active:scale-[0.98] focus-visible:outline-none focus-visible:ring-border-strong"
             >
               <JamIcon size={12} />
               {device.status === 'active' ? strings.jamActive : strings.jam}
@@ -519,7 +565,7 @@ export function DeviceRow({
                 side="top"
                 sideOffset={6}
                 showArrow={false}
-                className="px-2 py-1 text-[10px] text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
+                className="px-2 py-1 text-[10px] text-slate-11 bg-surface-3 shadow-[0_0_0_1px_var(--border-default)] whitespace-nowrap"
               >
                 {disabledReason}
               </TooltipContent>
@@ -537,7 +583,7 @@ export function DeviceRow({
                   onClick={(e) => e.stopPropagation()}
                   disabled={isOffline}
                   aria-label={isFloodlightOn ? strings.floodlightTurnOff : strings.floodlightTurnOn}
-                  className="h-[18px] w-8 data-[state=checked]:bg-white data-[state=unchecked]:bg-white/10 [&_[data-slot=switch-thumb]]:data-[state=checked]:bg-zinc-900"
+                  className="h-[18px] w-8 data-[state=checked]:bg-slate-12 data-[state=unchecked]:bg-state-hover-strong [&_[data-slot=switch-thumb]]:data-[state=checked]:bg-surface-2"
                 />
               </span>
             </TooltipTrigger>
@@ -545,7 +591,7 @@ export function DeviceRow({
               side="top"
               sideOffset={6}
               showArrow={false}
-              className="px-2 py-1 text-[10px] text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
+              className="px-2 py-1 text-[10px] text-slate-11 bg-surface-3 shadow-[0_0_0_1px_var(--border-default)] whitespace-nowrap"
             >
               {isFloodlightOn ? strings.floodlightTurnOff : strings.floodlightTurnOn}
             </TooltipContent>
@@ -581,17 +627,45 @@ export function DeviceRow({
                 side="top"
                 sideOffset={6}
                 showArrow={false}
-                className="px-2 py-1 text-[10px] text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
+                className="px-2 py-1 text-[10px] text-slate-11 bg-surface-3 shadow-[0_0_0_1px_var(--border-default)] whitespace-nowrap"
               >
                 {strings.speakerDisabledOffline}
               </TooltipContent>
             </Tooltip>
           );
         })()}
+
+        <div
+          className="absolute end-2 top-1/2 z-10 flex h-full w-20 -translate-y-1/2 items-center justify-end gap-0 bg-gradient-to-r from-[color-mix(in_oklch,var(--slate-12)_4%,var(--surface-2))] via-[color-mix(in_oklch,var(--slate-12)_4%,var(--surface-2))] via-50% to-transparent ps-2 opacity-0 transition-opacity pointer-events-none group-hover:opacity-100 group-focus-within:opacity-100 group-hover:pointer-events-auto group-focus-within:pointer-events-auto"
+        >
+          <DeviceRowHoverButton
+            icon={MapPin}
+            label={strings.centerOnMap}
+            onClick={() => onFlyTo(device.lat, device.lon)}
+          />
+          {canPinToFeed ? (
+            <DeviceRowHoverButton
+              icon={isPinnedToFeed ? PinFilled : Pin}
+              label={
+                isPinnedToFeed
+                  ? strings.pinnedToFeedTooltip
+                  : strings.pinToFeedTooltip
+              }
+              pressed={!!isPinnedToFeed}
+              disabled={
+                isOffline || (isPinnedToFeed ? !onUnpinFromFeed : !onPinToFeed)
+              }
+              onClick={() => {
+                if (isPinnedToFeed) onUnpinFromFeed?.(device.id);
+                else onPinToFeed?.(device.id);
+              }}
+            />
+          ) : null}
+        </div>
       </div>
 
       <CollapsibleContent className="overflow-hidden animate-in fade-in-0 duration-200">
-        <div className="flex flex-col bg-white/[0.03]">
+        <div className="flex flex-col bg-state-hover">
           {isCamera && presets && (
             <Tabs value={activePreset} onValueChange={setActivePreset} onClick={(e) => e.stopPropagation()}>
               <TabsList variant="line" className="justify-end items-end px-3" aria-label={strings.cameraModeAriaLabel}>
@@ -605,14 +679,14 @@ export function DeviceRow({
           )}
 
           {isCamera && (
-            <div className="relative w-full h-[200px] overflow-hidden bg-black shadow-[0_0_0_1px_rgba(255,255,255,0.1)]">
+            <div className="relative w-full h-[200px] overflow-hidden bg-black shadow-[0_0_0_1px_var(--border-default)]">
               <div className="absolute inset-0 flex items-center justify-center">
-                <Camera size={24} className="text-white/20" />
+                <Camera size={24} className="text-slate-12/20" />
               </div>
               <div className="absolute inset-0 bg-black/20 pointer-events-none" />
               <div className="absolute top-1.5 end-1.5 flex items-center gap-1 bg-black/80 px-1.5 py-0.5 rounded-sm">
-                <div className="size-1.5 rounded-full bg-red-500 animate-pulse motion-reduce:animate-none" />
-                <span className="text-[9px] font-medium text-white/90 uppercase tracking-wide">Live</span>
+                <div className="size-1.5 rounded-full bg-accent-danger animate-pulse motion-reduce:animate-none" />
+                <span className="text-[9px] font-medium text-slate-12/90 uppercase tracking-wide">Live</span>
               </div>
             </div>
           )}
@@ -623,7 +697,7 @@ export function DeviceRow({
             ))}
           </div>
 
-          <div className="flex items-center gap-2 px-2 py-1.5 border-t border-white/[0.06]">
+          <div className="flex items-center gap-2 px-2 py-1.5 border-t border-border-default">
             {isSpeaker && speakerTracks.length > 0 && (
               <>
                 <Popover open={speakerTrackOpen} onOpenChange={setSpeakerTrackOpen}>
@@ -635,7 +709,7 @@ export function DeviceRow({
                       aria-label={strings.audioTrackAriaLabel}
                       onClick={(e) => e.stopPropagation()}
                       onKeyDown={(e) => e.stopPropagation()}
-                      className="flex h-7 min-w-0 max-w-[180px] items-center justify-between gap-1.5 px-2 rounded text-[11px] font-medium text-white/[0.64] hover:text-white bg-white/[0.05] hover:bg-white/[0.10] transition-[background-color,color,transform] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20"
+                      className="flex h-7 min-w-0 max-w-[180px] items-center justify-between gap-1.5 px-2 rounded text-[11px] font-medium text-slate-12/[0.64] hover:text-slate-12 bg-state-hover hover:bg-state-hover-strong transition-[background-color,color,transform] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong"
                     >
                       <span className="truncate">
                         {selectedSpeakerTrack?.label ?? strings.audioTrack}
@@ -656,7 +730,7 @@ export function DeviceRow({
                         className="h-8 text-[11px]"
                       />
                       <CommandList>
-                        <CommandEmpty className="py-3 text-center text-[11px] text-white/50">
+                        <CommandEmpty className="py-3 text-center text-[11px] text-slate-9">
                           {strings.audioTrackNoMatches}
                         </CommandEmpty>
                         <CommandGroup>
@@ -668,11 +742,11 @@ export function DeviceRow({
                                 setSpeakerTrack(track.id);
                                 setSpeakerTrackOpen(false);
                               }}
-                              className="text-[11px] data-[selected=true]:bg-white/10 data-[selected=true]:text-white"
+                              className="text-[11px] data-[selected=true]:bg-state-hover-strong data-[selected=true]:text-slate-12"
                             >
                               <span className="flex-1 truncate">{track.label}</span>
                               {track.id === speakerTrack && (
-                                <Check size={12} className="shrink-0 text-white/80" />
+                                <Check size={12} className="shrink-0 text-slate-12/80" />
                               )}
                             </CommandItem>
                           ))}
@@ -681,14 +755,14 @@ export function DeviceRow({
                     </Command>
                   </PopoverContent>
                 </Popover>
-                <div className="w-px h-5 bg-white/[0.08] mx-0.5" />
+                <div className="w-px h-5 bg-state-pressed mx-0.5" />
               </>
             )}
 
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onFlyTo(device.lat, device.lon); }}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90 active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out cursor-pointer focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-slate-12/70 bg-state-hover-strong hover:bg-state-selected hover:text-slate-12/90 active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out cursor-pointer focus-visible:ring-2 focus-visible:ring-border-strong focus-visible:outline-none"
               aria-label={strings.centerOnMap}
             >
               <MapPin size={12} />
@@ -706,10 +780,10 @@ export function DeviceRow({
                 disabled={isOffline || (isPinnedToFeed ? !onUnpinFromFeed : !onPinToFeed)}
                 aria-pressed={!!isPinnedToFeed}
                 aria-label={isPinnedToFeed ? strings.unpinFromFeedAriaLabel : strings.pinToFeedAriaLabel}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none ${
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-border-strong focus-visible:outline-none ${
                   isPinnedToFeed
-                    ? 'text-sky-100 bg-sky-500/30 ring-1 ring-inset ring-sky-300/45 hover:bg-sky-500/40'
-                    : 'text-sky-200 bg-sky-500/15 hover:bg-sky-500/25'
+                    ? 'text-accent-info bg-accent-info/30 ring-1 ring-inset ring-accent-info/45 hover:bg-accent-info/40'
+                    : 'text-accent-info bg-accent-info/15 hover:bg-accent-info/25'
                 }`}
               >
                 {isPinnedToFeed ? <PinOff size={12} /> : <Pin size={12} />}
@@ -722,10 +796,10 @@ export function DeviceRow({
               onClick={(e) => { e.stopPropagation(); onToggleMute(device.id); }}
               aria-pressed={isMuted}
               disabled={isOffline}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium transition-[background-color,color,transform] duration-150 ease-out cursor-pointer active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none ${
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium transition-[background-color,color,transform] duration-150 ease-out cursor-pointer active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-border-strong focus-visible:outline-none ${
                 isMuted
-                  ? 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/25'
-                  : 'text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90'
+                  ? 'bg-accent-warning/15 text-accent-warning hover:bg-accent-warning/25'
+                  : 'text-slate-12/70 bg-state-hover-strong hover:bg-state-selected hover:text-slate-12/90'
               } ${isOffline ? 'disabled:opacity-50 disabled:cursor-not-allowed' : ''}`}
               aria-label={isMuted ? strings.unmute : strings.mute}
             >
@@ -735,16 +809,16 @@ export function DeviceRow({
 
             {device.type === 'drone' && (
               <>
-                <div className="w-px h-5 bg-white/[0.08] mx-0.5" />
+                <div className="w-px h-5 bg-state-pressed mx-0.5" />
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-white/60">{strings.wipers}</span>
+                  <span className="text-[11px] text-slate-12/60">{strings.wipers}</span>
                   <Switch
                     checked={wipersOn}
                     onCheckedChange={setWipersOn}
                     onClick={(e) => e.stopPropagation()}
                     disabled={isOffline}
                     aria-label={strings.wipersAriaLabel}
-                    className="h-[18px] w-8 data-[state=checked]:bg-sky-500/80 data-[state=unchecked]:bg-white/10"
+                    className="h-[18px] w-8 data-[state=checked]:bg-accent-info/80 data-[state=unchecked]:bg-state-hover-strong"
                   />
                 </div>
                 <button
@@ -752,13 +826,13 @@ export function DeviceRow({
                   disabled={isOffline || calibState !== 'idle'}
                   aria-busy={calibState === 'running'}
                   onClick={(e) => { e.stopPropagation(); setCalibState('running'); }}
-                  className="ms-auto flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90 active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
+                  className="ms-auto flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-slate-12/70 bg-state-hover-strong hover:bg-state-selected hover:text-slate-12/90 active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-border-strong focus-visible:outline-none"
                   aria-label={strings.calibrateAriaLabel}
                 >
                   {calibState === 'running' ? (
                     <Loader2 size={12} className="animate-spin motion-reduce:animate-none" />
                   ) : calibState === 'done' ? (
-                    <Check size={12} className="text-emerald-400" />
+                    <Check size={12} className="text-accent-success" />
                   ) : (
                     <Wrench size={12} />
                   )}
@@ -776,8 +850,8 @@ export function DeviceRow({
 function DetailRow({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
     <div className="w-full flex flex-col justify-center items-start gap-1 text-xs">
-      <span className="text-white/60 text-[10px]">{label}</span>
-      <span className={`font-sans tabular-nums text-xs ${color ?? 'text-white'}`}>{value}</span>
+      <span className="text-slate-12/60 text-[10px]">{label}</span>
+      <span className={`font-sans tabular-nums text-xs ${color ?? 'text-slate-12'}`}>{value}</span>
     </div>
   );
 }
@@ -1012,13 +1086,15 @@ export function DevicesPanel({
   );
 
   return (
-    // The Dashboard mounts this panel inside its own CSS Grid cell that
-    // owns the slide-in animation, so the panel itself just fills the
-    // cell and lets the GridblockPanel chrome drive header + scroll.
-    // The panel is also conditionally mounted by the parent — `open` is
-    // effectively always true here, but we keep the prop for back-compat
-    // callers.
-    <GridblockPanel
+    <>
+      <DeviceDragPreviewLayer />
+      {/* The Dashboard mounts this panel inside its own CSS Grid cell that
+      owns the slide-in animation, so the panel itself just fills the
+      cell and lets the GridblockPanel chrome drive header + scroll.
+      The panel is also conditionally mounted by the parent — `open` is
+      effectively always true here, but we keep the prop for back-compat
+      callers. */}
+      <GridblockPanel
       title={headerTitle}
       onClose={onClose}
       closeAriaLabel={closeAriaLabel}
@@ -1043,22 +1119,14 @@ export function DevicesPanel({
           {strings.noMatches}
         </div>
       ) : (
-        grouped.map((group, index) => (
+        grouped.map((group) => (
           <div key={group.type}>
             {/*
-             * Category strip. Every header carries the same bottom
-             * hairline that visually closes off its row list, and
-             * every header except the first also paints a top hairline
-             * so adjacent groups read as discrete bands. The first
-             * group omits the top border because its panel toolbar
-             * already supplies the seam above it — doubling up here
-             * would land two parallel hairlines on the same physical
-             * line and read as a thicker, off-key chrome stroke.
+             * Category strip. Each header carries a bottom hairline that
+             * closes off its row list below.
              */}
             <div
-              className={`px-4 py-1.5 text-xs font-normal uppercase tracking-wider text-[var(--gridblock-text-primary)] border-b border-[var(--gridblock-border)] bg-[var(--gridblock-bar)]${
-                index > 0 ? ' border-t' : ''
-              }`}
+              className="px-4 py-1.5 text-xs font-normal uppercase tracking-wider text-[var(--gridblock-text-primary)] border-b border-[var(--gridblock-border)] bg-[var(--gridblock-bar)]"
             >
               {group.label} ({group.devices.length})
             </div>
@@ -1092,5 +1160,6 @@ export function DevicesPanel({
         ))
       )}
     </GridblockPanel>
+    </>
   );
 }

@@ -70,17 +70,8 @@ export function useLocale(): Locale {
 }
 
 /**
- * Radix popper-based primitives (`Popover`, `DropdownMenu`, `HoverCard`,
- * `Menubar`, `Tooltip`) accept an `align` prop with values `start | center |
- * end`. Floating-UI auto-detects RTL from `getComputedStyle(reference).
- * direction`, so these are **already logical**: `align="end"` anchors to
- * the trigger's inline-end edge — right in LTR, left in RTL — without any
- * manual flip at the call site.
- *
- * One caveat: Radix's transform-origin middleware is *not* RTL-aware (it
- * hard-codes `start → 0%`, `end → 100%`), so the zoom-in animation can
- * appear to grow from the wrong corner in RTL. The `rtl-popover-origin`
- * CSS rule in `src/styles/theme.css` handles that override globally; no
- * per-component code is needed.
+ * Popper `align` at call sites — logical (`start` = inline-start,
+ * `end` = inline-end). Floating UI reads `direction` from the trigger
+ * and resolves these correctly in both LTR and RTL.
  */
 export type LogicalAlign = 'start' | 'center' | 'end';
