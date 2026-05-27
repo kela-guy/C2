@@ -97,7 +97,7 @@ export function FilterBar({
   const colCount = filters.length + 1;
 
   return (
-    <div className="border-b border-white/5 px-2 py-1.5">
+    <div className="border-b border-white/5 px-2 py-1.5" data-handoff-component="filter-bar">
       <div className="flex items-center gap-1.5">
         <div className="relative flex-1">
           <Search size={12} className="absolute start-2.5 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" aria-hidden="true" />
@@ -170,7 +170,6 @@ export function FilterBar({
 function FilterPopoverButton({
   open,
   onOpenChange,
-  icon: Icon,
   label,
   value,
   active,
@@ -178,6 +177,11 @@ function FilterPopoverButton({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /**
+   * Accepted for backward compatibility with existing `FilterDef.icon`
+   * configurations but intentionally not rendered — the trigger reads
+   * cleaner with just `label / value / chevron`.
+   */
   icon?: React.ElementType;
   label: string;
   value: string;
@@ -198,7 +202,6 @@ function FilterPopoverButton({
           aria-expanded={open}
           aria-label={label}
         >
-          {Icon && <Icon size={11} className="shrink-0 opacity-80" aria-hidden="true" />}
           <span className="shrink-0">{label}</span>
           <span className="flex-1 truncate text-end text-zinc-400 tabular-nums">{value}</span>
           <ChevronDown

@@ -1817,7 +1817,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
           <div className="flex items-center px-4 h-9 border-b border-white/10">
             <h2 className="text-[11px] font-medium text-white/70 uppercase tracking-wider">{t.dashboard.activeSystemsHeading(targets.length)}</h2>
           </div>
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto" data-handoff-component="target-card">
             <PerfProfiled id="ListOfSystems">
             <ListOfSystems
               className="flex flex-col gap-0"

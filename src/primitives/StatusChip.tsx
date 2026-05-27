@@ -35,6 +35,7 @@ export function StatusChip({ label, color = "green", className }: { label: strin
   return (
     <span
       role="status"
+      data-handoff-component="status-chip"
       className={cn(
         'inline-flex items-center justify-center rounded border border-transparent px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 gap-1',
         c.bg, c.text,

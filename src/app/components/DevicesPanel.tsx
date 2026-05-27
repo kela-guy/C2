@@ -980,6 +980,7 @@ export function DevicesPanel({
     // directions (`-translate-x-full` for LTR, `rtl:translate-x-full` for
     // RTL). Border-end is the divider that faces the map.
     <aside
+      data-handoff-component="devices-panel"
       className={`absolute top-0 bottom-0 start-0 border-e border-white/10 flex flex-col z-10 font-sans ${noTransition ? '' : 'transition-transform duration-300 ease-out'} ${open ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full pointer-events-none'}`}
       style={{ width: width ?? LAYOUT_TOKENS.sidebarWidthPx, backgroundColor: SURFACE.level1 }}
     >

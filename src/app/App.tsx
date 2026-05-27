@@ -32,6 +32,15 @@ const PerfHud = import.meta.env.DEV
   ? lazy(() => import("./components/perf/PerfHud").then((m) => ({ default: m.PerfHud })))
   : null;
 
+// Dev-only Handoff Inspector. Same pattern as `PerfHud`: lazy import
+// behind the `import.meta.env.DEV` constant so the entire chunk
+// (hover/click listeners, capture pipeline, popover) is
+// dead-code-eliminated from production bundles. See
+// `src/app/components/handoff/HandoffInspector.tsx`.
+const HandoffInspector = import.meta.env.DEV
+  ? lazy(() => import("./components/handoff/HandoffInspector"))
+  : null;
+
 /**
  * Renders {@link PerfHud} on every route *except* `/demo`. The
  * marketing demo is recording-focused — the perf overlay is a dev
@@ -47,6 +56,23 @@ function ScopedPerfHud() {
   return (
     <Suspense fallback={null}>
       <PerfHud />
+    </Suspense>
+  );
+}
+
+/**
+ * Renders {@link HandoffInspector} on every route *except* `/demo`,
+ * mirroring {@link ScopedPerfHud}. Same dev-only / DCE story — the
+ * inspector ships with the dev experience and never with production
+ * or marketing recordings.
+ */
+function ScopedHandoffInspector() {
+  const { pathname } = useLocation();
+  if (!HandoffInspector) return null;
+  if (pathname.startsWith('/demo')) return null;
+  return (
+    <Suspense fallback={null}>
+      <HandoffInspector />
     </Suspense>
   );
 }
@@ -98,6 +124,7 @@ export default function App() {
               />
             </Routes>
             <ScopedPerfHud />
+            <ScopedHandoffInspector />
           </BrowserRouter>
           <DialRoot position="bottom-right" />
         </TooltipProvider>

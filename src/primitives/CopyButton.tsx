@@ -134,6 +134,7 @@ export function CopyButton({
   return (
     <button
       type="button"
+      data-handoff-component="copy-button"
       onClick={handleCopy}
       disabled={!value}
       aria-label={copied ? copiedLabel : copyLabel}

@@ -78,6 +78,7 @@ export function ActionButton({
   const btn = (
     <button
       type="button"
+      data-handoff-component="action-button"
       onClick={isDisabled ? undefined : onClick}
       disabled={isDisabled}
       className={cn(
