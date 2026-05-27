@@ -1,5 +1,5 @@
 /**
- * Shared geodesy helpers for Mapbox overlays.
+ * Shared geodesy helpers for map overlays (Cesium, hooks, sensor math).
  * Single source of truth — import from here, don't reinline.
  */
 

@@ -10,7 +10,7 @@
  *   1. palette.css     — OKLCH token primaries
  *   2. tailwind.css    — @theme bindings (publishes utilities + legacy aliases)
  *   3. theme.css       — shadcn semantic token mapping
- *   4. accentHex.ts    — JS-side hex mirror for SVG / Mapbox / Cesium
+ *   4. accentHex.ts    — JS-side hex mirror for SVG / Cesium
  *
  * Keep this file for historical source display only until the
  * styleguide content is migrated to the runtime file.
@@ -129,11 +129,6 @@ body {
   background-color: var(--state-hover-strong) !important;
   box-shadow: 0 0 0 1px var(--border-strong) !important;
   color: var(--slate-12) !important;
-}
-
-/* Ensure map markers render above the FOV SVG overlay (z-index: 0) */
-.mapboxgl-marker {
-  z-index: 2 !important;
 }
 
 /* ── Subtle pulse for locked-on indicators ── */

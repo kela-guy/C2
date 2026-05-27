@@ -178,10 +178,10 @@ export const CARD_TOKENS = {
 export type ThreatAccent = keyof typeof CARD_TOKENS.spine.colors;
 
 /**
- * Legacy hex helper for SVG / Canvas / Mapbox paths that can't
- * read CSS vars. Prefer accentHex() / slateHex() for tactical
- * accents; this stays for one-off hex-string conversions
- * (markerStyles, MapMarker badge fills, etc.).
+ * Legacy hex helper for SVG / Canvas paths that can't read CSS
+ * vars. Prefer accentHex() / slateHex() for tactical accents;
+ * this stays for one-off hex-string conversions (markerStyles,
+ * MapMarker badge fills, etc.).
  */
 export function hexToRgba(hex: string, opacity: number): string {
   const cleaned = hex.replace('#', '');

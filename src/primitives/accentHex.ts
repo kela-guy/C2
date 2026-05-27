@@ -5,7 +5,6 @@
  *
  * Some consumers can't read CSS vars cheaply at the place they paint:
  *
- *   - Mapbox GL fill / line / circle paint expressions
  *   - Cesium Color.fromCssColorString primitives + scene materials
  *   - SVG fill="" / stroke="" attributes inside icon components
  *   - Canvas 2D ctx.fillStyle
@@ -30,7 +29,7 @@
  * ─────────────
  * Prefer CSS vars (var(--accent-danger)) in className / inline style.
  * Use this module only when the consumer literally needs a hex
- * string (Mapbox, Cesium, SVG attrs, Canvas). Each call should be
+ * string (Cesium, SVG attrs, Canvas). Each call should be
  * documented inline with the reason it can't read CSS.
  */
 

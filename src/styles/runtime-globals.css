@@ -90,10 +90,6 @@
   color: var(--slate-12) !important;
 }
 
-.mapboxgl-marker {
-  z-index: 2 !important;
-}
-
 @keyframes subtle-pulse {
   0%,
   100% {

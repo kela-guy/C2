@@ -1,5 +1,11 @@
 # Cesium parity matrix
 
+> **Status: archived.** Phases 0 → 9 complete. Mapbox backend, `?map=mapbox`
+> rollback, `mapbox-gl` dependency, and `src/lib/mapBackend.ts` are all
+> removed. Cesium (`CesiumTacticalMap`) is the only map backend. This doc
+> is preserved as historical context for how the migration was scoped and
+> verified — do not treat any rollback / parity language below as live.
+
 Goal: replace the Mapbox-based `TacticalMap` with `CesiumTacticalMap` and validate every existing capability lands intact. The two components share the same public API (`TacticalMapProps` from `src/app/components/TacticalMap.tsx`); the active backend is chosen at runtime via the `?map=cesium` URL parameter.
 
 **Toggle:** Cesium is the default after the Phase 8 cutover. Append `?map=mapbox` to any dashboard URL to load the legacy Mapbox backend (rollback path). Read once on page load — switching requires a refresh.
@@ -138,7 +144,7 @@ Fixed by:
 | `pathFinderConnectedId` Starling drone connect state | ✓ | 🚫 | Dropped from Cesium scope — not pursuing pathfinder/Starling parity. |
 | FPS within 10% of Mapbox | ✓ | ⚠ | Cannot benchmark headlessly — preview tab is background-throttled and `rAF` drops to ~0.1 Hz, swamping any real frame-rate signal. **Run manually:** open `?map=mapbox` and `?map=cesium` side-by-side with focused windows, watch Chrome DevTools FPS meter while panning + interacting. |
 | No memory leaks across 5 min of interaction | ✓ | ⚠ | Baseline at idle: 111.9 MB used / 163.9 MB total JS heap (`performance.memory`). 5-minute interaction-and-compare needs a focused tab + scripted scenario; manual run pending. |
-| Bundle size impact | n/a | ⚠ | Main JS chunk: **1,354 kB / 394 kB gzip** (Cesium runtime is the bulk). Mapbox still co-bundled at 988 kB / 276 kB gzip — removed in Phase 9 cutover, which roughly halves that. |
+| Bundle size impact | n/a | ⚠ | Main JS chunk: **1,354 kB / 394 kB gzip** (Cesium runtime is the bulk). Mapbox no longer co-bundled — Phase 9 complete. |
 
 ## Phase 8 — Cutover  *(complete)*
 
@@ -150,8 +156,8 @@ Fixed by:
 
 | Capability | Status |
 |---|---|
-| Delete `TacticalMap.tsx` | ✗ |
-| Drop `mapbox-gl` dependency | ✗ |
+| Delete `TacticalMap.tsx` | ✓ |
+| Drop `mapbox-gl` dependency | ✓ |
 | Remove `VITE_MAPBOX_TOKEN` from `.env.example` | ✓ |
 
 ---
