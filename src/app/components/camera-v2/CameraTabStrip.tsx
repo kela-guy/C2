@@ -12,9 +12,10 @@
  *   - A trailing `+` button opens a new tab via the pin popover.
  */
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
-import { Camera, Plane, Plus, X } from '@/lib/icons/central';
+import { Plus, X } from '@/lib/icons/central';
+import { DroneCardIcon } from '@/primitives/MapIcons';
 import { useIsRtl } from '@/lib/direction';
 import { useStrings } from '@/lib/intl';
 import {
@@ -25,6 +26,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/components/ui/dropdown-menu';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/shared/components/ui/tooltip';
 import {
   DEVICE_CAMERA_DRAG_TYPE,
   type DeviceCameraDragItem,
@@ -71,6 +77,7 @@ export interface CameraTabStripProps {
   activeTabIndex: number;
   onActivate: (index: number) => void;
   onClose: (index: number) => void;
+  onFocusTabFeed: (tabIndex: number, feedIndex: number) => void;
   onAddToTab: (tabIndex: number, deviceId: string) => void;
   onMergeTab: (sourceTabIndex: number, targetTabIndex: number) => void;
   onUnpinFeed: (deviceId: string) => void;
@@ -95,11 +102,64 @@ function StreamIcon({
   type: 'camera' | 'drone' | undefined;
   active: boolean;
 }) {
-  const className = active ? 'text-accent-info' : 'text-slate-10';
+  const colorClass = active
+    ? 'text-slate-12'
+    : 'text-slate-9 transition-colors duration-150 ease-out group-hover/pill:text-slate-11';
   if (type === 'drone') {
-    return <Plane size={11} className={className} aria-hidden="true" />;
+    return (
+      <span className={`inline-flex size-4 shrink-0 items-center justify-center ${colorClass}`}>
+        <DroneCardIcon size={16} />
+      </span>
+    );
   }
-  return <Camera size={11} className={className} aria-hidden="true" />;
+  return (
+    <svg
+      className={colorClass}
+      aria-hidden="true"
+      width={11}
+      height={11}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M6.96482 6L8.96482 3H15.0352L17.0352 6H22V21H2V6H6.96482ZM12 9C10.067 9 8.5 10.567 8.5 12.5C8.5 14.433 10.067 16 12 16C13.933 16 15.5 14.433 15.5 12.5C15.5 10.567 13.933 9 12 9Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function TruncatedTabLabel({ label }: { label: string }) {
+  const labelRef = useRef<HTMLSpanElement | null>(null);
+  const [isTruncated, setIsTruncated] = useState(false);
+
+  const updateTruncation = useCallback(() => {
+    const node = labelRef.current;
+    setIsTruncated(Boolean(node && node.scrollWidth > node.clientWidth));
+  }, []);
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          ref={labelRef}
+          onPointerEnter={updateTruncation}
+          onFocus={updateTruncation}
+          className="mx-1 min-w-0 flex-1 truncate"
+        >
+          {label}
+        </span>
+      </TooltipTrigger>
+      {isTruncated ? (
+        <TooltipContent side="bottom" sideOffset={6} className="rounded-none text-[10px]">
+          {label}
+        </TooltipContent>
+      ) : null}
+    </Tooltip>
+  );
 }
 
 interface CameraTabItemProps {
@@ -114,6 +174,7 @@ interface CameraTabItemProps {
   emptySlotLabel: string;
   onActivate: (index: number) => void;
   onClose: (index: number) => void;
+  onFocusTabFeed: (tabIndex: number, feedIndex: number) => void;
   onAddToTab: (tabIndex: number, deviceId: string) => void;
   onMergeTab: (sourceTabIndex: number, targetTabIndex: number) => void;
   onUnpinFeed: (deviceId: string) => void;
@@ -133,6 +194,7 @@ function CameraTabItem({
   emptySlotLabel,
   onActivate,
   onClose,
+  onFocusTabFeed,
   onAddToTab,
   onMergeTab,
   onUnpinFeed,
@@ -188,6 +250,8 @@ function CameraTabItem({
   const tabDragClass = canDragTab ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer';
 
   if (isSplit) {
+    const focusedFeedIndex = tab.feeds[tab.activeFeedIndex] ? tab.activeFeedIndex : 0;
+
     return (
       <div
         ref={mergeRef}
@@ -197,9 +261,9 @@ function CameraTabItem({
         onClick={() => onActivate(tabIndex)}
         onKeyDown={(e) => onKeyDown(e, tabIndex)}
         style={isDragging ? { opacity: 0.45 } : undefined}
-        className={`group relative flex h-full min-w-0 shrink-0 items-center gap-1 border-e border-[var(--gridblock-border)] px-1.5 transition-colors duration-150 ease-out outline-none focus-visible:bg-state-hover-strong ${tabDragClass} ${
+        className={`group relative flex h-full min-w-0 shrink-0 items-center gap-1 border-e border-[var(--gridblock-border)] px-0.5 transition-colors duration-150 ease-out outline-none focus-visible:bg-state-hover-strong ${tabDragClass} ${
           isActive
-            ? 'bg-state-selected text-slate-12'
+            ? 'bg-surface-6 text-slate-12'
             : 'text-slate-10 hover:bg-state-hover hover:text-slate-12'
         } ${showDropAccent ? 'shadow-[inset_0_0_0_2px_color-mix(in_oklch,var(--accent-info)_55%,transparent)]' : ''}`}
         data-active={isActive ? 'true' : undefined}
@@ -209,16 +273,23 @@ function CameraTabItem({
             ? cameraLabelById[feed.cameraId] ?? feed.cameraId
             : emptySlotLabel;
           const deviceType = assetTypeById(availableAssets, feed.cameraId);
+          const isFocusedFeed = isActive && feedIndex === focusedFeedIndex;
 
           return (
             <div
               key={feed.cameraId || feedIndex}
-              className={`flex max-w-[120px] min-w-0 items-center gap-1 border border-border-default px-1.5 py-1 text-[11px] font-medium leading-none text-slate-12 ${
-                isActive ? 'bg-surface-8' : 'bg-surface-7'
+              onClick={(e) => {
+                e.stopPropagation();
+                onFocusTabFeed(tabIndex, feedIndex);
+              }}
+              className={`group/pill flex h-7 max-w-[144px] min-w-0 cursor-pointer items-center gap-1 border py-0 ps-2 pe-0 text-xs font-medium leading-none transition-colors duration-150 ease-out ${
+                isFocusedFeed
+                  ? 'border-[color-mix(in_oklch,var(--slate-12)_40%,transparent)] bg-surface-5 text-slate-12 hover:bg-surface-6'
+                  : 'border-[color-mix(in_oklch,var(--slate-12)_22%,transparent)] bg-surface-4 text-slate-9 hover:bg-surface-5 hover:text-slate-11'
               }`}
             >
-              <StreamIcon type={deviceType} active={false} />
-              <span className="min-w-0 flex-1 truncate">{label}</span>
+              <StreamIcon type={deviceType} active={isFocusedFeed} />
+              <TruncatedTabLabel label={label} />
               <button
                 type="button"
                 tabIndex={-1}
@@ -227,9 +298,9 @@ function CameraTabItem({
                   e.stopPropagation();
                   if (feed.cameraId) onUnpinFeed(feed.cameraId);
                 }}
-                className="flex h-3.5 w-3.5 shrink-0 cursor-pointer items-center justify-center text-slate-10 transition-colors duration-150 ease-out hover:bg-state-hover-strong hover:text-slate-12"
+                className="flex h-full w-7 shrink-0 cursor-pointer items-center justify-center border-s text-slate-10 transition-colors duration-150 ease-out hover:bg-state-hover-strong hover:text-slate-12"
               >
-                <X size={9} />
+                <X size={12} />
               </button>
             </div>
           );
@@ -286,6 +357,7 @@ export function CameraTabStrip({
   activeTabIndex,
   onActivate,
   onClose,
+  onFocusTabFeed,
   onAddToTab,
   onMergeTab,
   onUnpinFeed,
@@ -355,7 +427,7 @@ export function CameraTabStrip({
       role="tablist"
       aria-label={t.tablistAriaLabel}
       aria-orientation="horizontal"
-      className="flex h-full min-w-0 flex-1 items-stretch overflow-x-auto"
+      className="scrollbar-none flex h-full min-w-0 flex-1 select-none items-stretch overflow-x-auto overscroll-x-contain"
     >
       {tabs.map((tab, i) => (
         <CameraTabItem
@@ -371,6 +443,7 @@ export function CameraTabStrip({
           emptySlotLabel={t.emptySlot}
           onActivate={onActivate}
           onClose={onClose}
+          onFocusTabFeed={onFocusTabFeed}
           onAddToTab={onAddToTab}
           onMergeTab={onMergeTab}
           onUnpinFeed={onUnpinFeed}

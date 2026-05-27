@@ -41,21 +41,8 @@ function TooltipContent({
   className,
   sideOffset = 0,
   children,
-  showArrow = true,
-  arrowClassName,
   ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Content> & {
-  showArrow?: boolean;
-  arrowClassName?: string;
-}) {
-  // Substrate: tooltips lift +3 above the surrounding context.
-  // The Radix Arrow can't easily reach var(--surface) without a
-  // ref-based read (it's a portaled SVG), so we paint the arrow
-  // from --slate-7 — close enough to the substrate-3/4 popovers
-  // most tooltips sit above. Inside dialogs the tooltip surface
-  // pops to substrate 8, so the arrow disagreement is slight but
-  // visible — TODO: bind the arrow fill to var(--surface) via a
-  // ref or wrap Arrow in <Elevated asChild>.
+}: React.ComponentProps<typeof TooltipPrimitive.Content>) {
   return (
     <TooltipPrimitive.Portal>
       <TooltipSurface asChild>
@@ -69,11 +56,6 @@ function TooltipContent({
           {...props}
         >
           {children}
-          {showArrow && (
-            <TooltipPrimitive.Arrow
-              className={cn("fill-[var(--surface)] z-50", arrowClassName)}
-            />
-          )}
         </TooltipPrimitive.Content>
       </TooltipSurface>
     </TooltipPrimitive.Portal>

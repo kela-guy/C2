@@ -362,11 +362,8 @@ export function CameraControlBar({
           <CameraSettingsMenu
             open={settingsOpen}
             onOpenChange={onSettingsOpenChange}
-            status={status}
-            mode={mode}
             detectionsOn={detectionsOn}
             playbackEnabled={playbackEnabled}
-            onModeToggle={onModeToggle}
             onDetectionsToggle={onDetectionsToggle}
             onPlaybackToggle={onPlaybackToggle}
           />

@@ -5,7 +5,6 @@ import { getEmptyImage } from 'react-dnd-html5-backend';
 import { X, Camera, Plane, MapPin, BellOff, Wrench, Check, Loader2, Pin, PinFilled, PinOff, Square, ChevronsUpDown } from '@/lib/icons/central';
 import { GridblockPanel } from './gridblock';
 import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
-import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 import { Switch } from './ui/switch';
 import { Collapsible, CollapsibleContent } from './ui/collapsible';
 import { Popover, PopoverTrigger, PopoverContent } from './ui/popover';
@@ -148,8 +147,6 @@ export interface DevicesPanelStrings {
   jamDisabledOffline: string;
   jamDisabledMalfunction: string;
   jamDisabledAlreadyActive: string;
-  /** Camera controls. */
-  cameraModeAriaLabel: string;
   centerOnMap: string;
   mute: string;
   unmute: string;
@@ -206,7 +203,6 @@ export const DEFAULT_DEVICE_PANEL_STRINGS: DevicesPanelStrings = {
   jamDisabledOffline: 'Device offline',
   jamDisabledMalfunction: 'Device malfunction',
   jamDisabledAlreadyActive: 'Already jamming',
-  cameraModeAriaLabel: 'Camera mode',
   centerOnMap: 'Center on map',
   mute: 'Mute',
   unmute: 'Unmute',
@@ -305,7 +301,6 @@ function DeviceRowHoverButton({
       <TooltipContent
         side="top"
         sideOffset={6}
-        showArrow={false}
         className="px-2 py-1 text-[10px] text-slate-11 bg-surface-3 shadow-[0_0_0_1px_var(--border-default)] whitespace-nowrap"
       >
         {label}
@@ -359,7 +354,6 @@ export function DeviceRow({
   onUnpinFromFeed,
   isPinnedToFeed,
   connectionStateLabels = DEFAULT_CONNECTION_STATE_LABELS,
-  cameraPresets,
   strings = DEFAULT_DEVICE_PANEL_STRINGS,
 }: {
   device: Device;
@@ -384,7 +378,6 @@ export function DeviceRow({
   /** Whether this device is currently pinned to a feed. Drives the toggle visual + label. */
   isPinnedToFeed?: boolean;
   connectionStateLabels?: Record<ConnectionState, string>;
-  cameraPresets?: Record<string, string[]>;
   strings?: DevicesPanelStrings;
 }) {
   const metricParts: string[] = [];
@@ -398,9 +391,7 @@ export function DeviceRow({
   const [speakerTrack, setSpeakerTrack] = useState<string>(speakerTracks[0]?.id ?? '');
   const [speakerTrackOpen, setSpeakerTrackOpen] = useState(false);
   const selectedSpeakerTrack = speakerTracks.find((t) => t.id === speakerTrack) ?? speakerTracks[0];
-  const presets = cameraPresets?.[device.id];
 
-  const [activePreset, setActivePreset] = useState(presets?.[0] ?? '');
   const [wipersOn, setWipersOn] = useState(false);
   const [calibState, setCalibState] = useState<'idle' | 'running' | 'done'>('idle');
 
@@ -489,7 +480,6 @@ export function DeviceRow({
               <TooltipContent
                 side="top"
                 sideOffset={6}
-                showArrow={false}
                 className="px-2 py-1 text-[10px] text-slate-11 bg-surface-3 shadow-[0_0_0_1px_var(--border-default)] whitespace-nowrap"
               >
                 {connectionStateLabels[device.connectionState]}
@@ -563,7 +553,6 @@ export function DeviceRow({
               <TooltipContent
                 side="top"
                 sideOffset={6}
-                showArrow={false}
                 className="px-2 py-1 text-[10px] text-slate-11 bg-surface-3 shadow-[0_0_0_1px_var(--border-default)] whitespace-nowrap"
               >
                 {disabledReason}
@@ -589,7 +578,6 @@ export function DeviceRow({
             <TooltipContent
               side="top"
               sideOffset={6}
-              showArrow={false}
               className="px-2 py-1 text-[10px] text-slate-11 bg-surface-3 shadow-[0_0_0_1px_var(--border-default)] whitespace-nowrap"
             >
               {isFloodlightOn ? strings.floodlightTurnOff : strings.floodlightTurnOn}
@@ -625,7 +613,6 @@ export function DeviceRow({
               <TooltipContent
                 side="top"
                 sideOffset={6}
-                showArrow={false}
                 className="px-2 py-1 text-[10px] text-slate-11 bg-surface-3 shadow-[0_0_0_1px_var(--border-default)] whitespace-nowrap"
               >
                 {strings.speakerDisabledOffline}
@@ -665,31 +652,6 @@ export function DeviceRow({
 
       <CollapsibleContent className="overflow-hidden animate-in fade-in-0 duration-200">
         <div className="flex flex-col bg-state-hover">
-          {isCamera && presets && (
-            <Tabs value={activePreset} onValueChange={setActivePreset} onClick={(e) => e.stopPropagation()}>
-              <TabsList variant="line" className="justify-end items-end px-3" aria-label={strings.cameraModeAriaLabel}>
-                {presets.map((preset) => (
-                  <TabsTrigger key={preset} value={preset}>
-                    {preset}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
-          )}
-
-          {isCamera && (
-            <div className="relative w-full h-[200px] overflow-hidden bg-black shadow-[0_0_0_1px_var(--border-default)]">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Camera size={24} className="text-slate-12/20" />
-              </div>
-              <div className="absolute inset-0 bg-black/20 pointer-events-none" />
-              <div className="absolute top-1.5 end-1.5 flex items-center gap-1 bg-black/80 px-1.5 py-0.5 rounded-sm">
-                <div className="size-1.5 rounded-full bg-accent-danger animate-pulse motion-reduce:animate-none" />
-                <span className="text-[9px] font-medium text-slate-12/90 uppercase tracking-wide">Live</span>
-              </div>
-            </div>
-          )}
-
           <div className="grid grid-cols-3 gap-x-4 gap-y-5 px-4 py-3">
             {statRows.map(row => (
               <DetailRow key={row.label} label={row.label} value={row.value} color={row.color} />
@@ -896,8 +858,6 @@ export interface DevicesPanelProps {
   typeLabels?: Partial<Record<DeviceType, string>>;
   /** Override per-state connection labels. Falls back to `DEFAULT_CONNECTION_STATE_LABELS` (English). */
   connectionStateLabels?: Partial<Record<ConnectionState, string>>;
-  /** Optional camera-preset map keyed by `device.id`. When omitted, no preset chip strip is rendered. */
-  cameraPresets?: Record<string, string[]>;
   /** Header title above the device list. Defaults to 'Devices'. */
   title?: string;
   /** Close-button aria-label. Defaults to 'Close'. */
@@ -925,7 +885,6 @@ export function DevicesPanel({
   focusedDeviceId,
   typeLabels: typeLabelsProp,
   connectionStateLabels: connectionStateLabelsProp,
-  cameraPresets,
   title = 'Devices',
   closeAriaLabel = 'Close',
   strings: stringsProp,
@@ -1150,7 +1109,6 @@ export function DevicesPanel({
                   onUnpinFromFeed={onUnpinFromFeed}
                   isPinnedToFeed={pinnedSet.has(device.id)}
                   connectionStateLabels={connectionStateLabels}
-                  cameraPresets={cameraPresets}
                   strings={strings}
                 />
               </div>

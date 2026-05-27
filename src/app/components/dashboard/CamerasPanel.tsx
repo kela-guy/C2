@@ -44,6 +44,7 @@ interface CamerasPanelProps {
   activeTabIndex: number;
   onActivateTab: (index: number) => void;
   onCloseTab: (index: number) => void;
+  onFocusTabFeed: (tabIndex: number, feedIndex: number) => void;
 
   feeds: CameraFeed[];
   onFeedsChange: (feeds: CameraFeed[]) => void;
@@ -91,6 +92,7 @@ function CamerasPanelImpl({
   activeTabIndex,
   onActivateTab,
   onCloseTab,
+  onFocusTabFeed,
   feeds,
   onFeedsChange,
   layout,
@@ -214,6 +216,7 @@ function CamerasPanelImpl({
           activeTabIndex={activeTabIndex}
           onActivate={onActivateTab}
           onClose={onCloseTab}
+          onFocusTabFeed={onFocusTabFeed}
           onAddToTab={onAddToTab}
           onMergeTab={onMergeTab}
           onUnpinFeed={onUnpinFeed}

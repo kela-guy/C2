@@ -1,18 +1,27 @@
 import { DirIsland } from '@/lib/direction';
-import type { CameraStatus } from '@/app/components/camera-v2/types';
+import type { CameraStatus, FeedDeviceType } from '@/app/components/camera-v2/types';
 
 export type PassiveComposition = 'D' | 'A' | 'B' | 'C' | 'E' | 'F';
 
 export interface SandboxPassiveTelemetryProps {
   status: CameraStatus;
   composition: PassiveComposition;
+  deviceType?: FeedDeviceType;
 }
 
-export function SandboxPassiveTelemetry({ status, composition }: SandboxPassiveTelemetryProps) {
+export function SandboxPassiveTelemetry({
+  status,
+  composition,
+  deviceType = 'drone',
+}: SandboxPassiveTelemetryProps) {
   const battery = Math.round(status.batteryPct ?? 0);
   const altitude = Math.round(status.altitudeM ?? 0);
   const home = Math.round(status.distanceFromHomeM ?? 0);
   const rel = bearingDelta(status.bearingDeg, 0);
+
+  if (deviceType === 'camera') {
+    return <MinimalCorners battery={battery} rel={rel} />;
+  }
 
   switch (composition) {
     case 'D':

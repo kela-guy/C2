@@ -3,24 +3,20 @@
  *
  * Sections:
  *   1. Playback investigation - toggle Live <-> Playback inside this tile.
- *   2. Display - AI detection, day/night.
+ *   2. Display - AI detection.
  */
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover';
 import { Switch } from '@/shared/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
-import { Eye, History, Moon, Settings, Sun } from '@/lib/icons/central';
+import { Eye, History, Settings } from '@/lib/icons/central';
 import { useStrings } from '@/lib/intl';
-import type { CameraStatus, DayNightMode } from './types';
 
 interface CameraSettingsMenuProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  status: CameraStatus;
-  mode: DayNightMode;
   detectionsOn: boolean;
   playbackEnabled: boolean;
-  onModeToggle: () => void;
   onDetectionsToggle: () => void;
   onPlaybackToggle: () => void;
 }
@@ -28,16 +24,12 @@ interface CameraSettingsMenuProps {
 export function CameraSettingsMenu({
   open,
   onOpenChange,
-  status,
-  mode,
   detectionsOn,
   playbackEnabled,
-  onModeToggle,
   onDetectionsToggle,
   onPlaybackToggle,
 }: CameraSettingsMenuProps) {
   const t = useStrings().camera.settingsMenu;
-  const writeDisabled = status.controlOwner === 'other';
   const playbackLabel = playbackEnabled ? t.playbackSplitLabel : t.liveLabel;
   const playbackDescription = playbackEnabled
     ? t.playbackSplitDescription
@@ -101,21 +93,6 @@ export function CameraSettingsMenu({
               onCheckedChange={onDetectionsToggle}
               aria-label={t.aiDetectionsAriaLabel}
             />
-          </Row>
-          <Row
-            label={mode === 'day' ? t.currentDay : t.currentNight}
-            description={t.modeDescription}
-            disabled={writeDisabled}
-          >
-            <button
-              type="button"
-              onClick={onModeToggle}
-              disabled={writeDisabled}
-              aria-label={mode === 'day' ? t.switchToNightAriaLabel : t.switchToDayAriaLabel}
-              className="p-1.5 text-slate-12/85 hover:text-slate-12 hover:bg-state-hover-strong transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-border-strong focus-visible:outline-none"
-            >
-              {mode === 'day' ? <Moon size={13} /> : <Sun size={13} />}
-            </button>
           </Row>
         </Section>
       </PopoverContent>

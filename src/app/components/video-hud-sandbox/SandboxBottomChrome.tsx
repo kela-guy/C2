@@ -1,17 +1,18 @@
 import { useCallback, useEffect, useId, useRef, useState, type FocusEvent } from 'react';
 import {
-  DesignateTarget,
   TakeControl,
+  LockOpen,
   Maximize2,
+  Minimize2,
   Moon,
-  Play,
   Zoom,
-  Settings,
   Sun,
 } from '@/lib/icons/central';
-import type { DayNightMode } from '@/app/components/camera-v2/types';
+import type { CameraStatus, DayNightMode, FeedDeviceType } from '@/app/components/camera-v2/types';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import { DirIsland } from '@/lib/direction';
+import { useStrings } from '@/lib/intl';
+import { CameraSettingsMenu } from '@/app/components/camera-v2/CameraSettingsMenu';
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 30;
@@ -35,6 +36,21 @@ interface SandboxBottomChromeProps {
   onModeToggle: () => void;
   zoomLevel: number;
   onZoomChange: (next: number) => void;
+  deviceType: FeedDeviceType;
+  controlOwner: CameraStatus['controlOwner'];
+  onTakeRelease: () => void;
+  detectionsOn: boolean;
+  playbackOn: boolean;
+  onDetectionsToggle: () => void;
+  onPlaybackToggle: () => void;
+  settingsOpen: boolean;
+  onSettingsOpenChange: (open: boolean) => void;
+  isFullscreen: boolean;
+  onFullscreenToggle: () => void;
+  dockArmed: boolean;
+  stopArmed: boolean;
+  onDockToggle: () => void;
+  onStopToggle: () => void;
 }
 
 export function SandboxBottomChrome({
@@ -42,7 +58,32 @@ export function SandboxBottomChrome({
   onModeToggle,
   zoomLevel,
   onZoomChange,
+  deviceType,
+  controlOwner,
+  onTakeRelease,
+  detectionsOn,
+  playbackOn,
+  onDetectionsToggle,
+  onPlaybackToggle,
+  settingsOpen,
+  onSettingsOpenChange,
+  isFullscreen,
+  onFullscreenToggle,
+  dockArmed,
+  stopArmed,
+  onDockToggle,
+  onStopToggle,
 }: SandboxBottomChromeProps) {
+  const t = useStrings();
+  const isDrone = deviceType === 'drone';
+  const owned = controlOwner === 'self';
+  const takeReleaseLabel = owned
+    ? t.camera.controlBar.releaseControl
+    : t.camera.controlBar.takeControl;
+  const TakeReleaseIcon = owned ? LockOpen : TakeControl;
+  const fullscreenLabel = isFullscreen ? 'Exit fullscreen' : 'Fullscreen';
+  const FullscreenIcon = isFullscreen ? Minimize2 : Maximize2;
+
   return (
     <div className="absolute inset-x-0 bottom-0 z-30 pointer-events-none">
       <DirIsland direction="ltr" className="relative h-[96px]">
@@ -51,41 +92,52 @@ export function SandboxBottomChrome({
           <div className="absolute left-[18%] top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent-info" />
         </div>
 
-        <div className="absolute left-1/2 top-0 flex -translate-x-1/2 items-center gap-1.5">
-          <button
-            type="button"
-            className="pointer-events-auto rounded-sm border border-accent-danger/45 bg-surface-1/75 px-3 py-1 text-[10px] text-slate-11 backdrop-blur-sm"
-          >
-            חזרה לעגינה
-          </button>
-          <button
-            type="button"
-            className="pointer-events-auto rounded-sm border border-accent-danger/55 bg-accent-danger-tint px-3 py-1 text-[10px] text-accent-danger backdrop-blur-sm"
-          >
-            עצור
-          </button>
-        </div>
+        {isDrone && (
+          <div className="absolute left-1/2 top-0 flex -translate-x-1/2 items-center gap-1.5">
+            <button
+              type="button"
+              aria-pressed={dockArmed}
+              onClick={onDockToggle}
+              className={`pointer-events-auto rounded-sm border px-3 py-1 text-[10px] backdrop-blur-sm transition-colors duration-150 ${
+                dockArmed
+                  ? 'border-accent-warning/70 bg-accent-warning-tint text-accent-warning'
+                  : 'border-accent-danger/45 bg-surface-1/75 text-slate-11 hover:bg-state-hover-strong'
+              }`}
+            >
+              חזרה לעגינה
+            </button>
+            <button
+              type="button"
+              aria-pressed={stopArmed}
+              onClick={onStopToggle}
+              className={`pointer-events-auto rounded-sm border px-3 py-1 text-[10px] backdrop-blur-sm transition-colors duration-150 ${
+                stopArmed
+                  ? 'border-accent-danger bg-accent-danger text-slate-12'
+                  : 'border-accent-danger/55 bg-accent-danger-tint text-accent-danger hover:bg-accent-danger/30'
+              }`}
+            >
+              עצור
+            </button>
+          </div>
+        )}
 
         <div className="absolute inset-x-3 bottom-4 flex h-11 items-center justify-between gap-3">
           <div className="pointer-events-auto flex items-center gap-2 text-slate-12/80">
-            <ControlGroup className="gap-0 pl-0.5 pr-1.5">
-              <IconButton label="Play">
-                <Play size={BOTTOM_ICON_SIZE} />
-              </IconButton>
-              <span className="px-2 font-mono text-[11px] tabular-nums text-slate-12/85">
-                0:06 / 4:00:05
-              </span>
-            </ControlGroup>
-
             <ControlGroup className="px-0.5">
-              <ChromeTooltip label="Take control">
+              <ChromeTooltip label={takeReleaseLabel}>
                 <button
                   type="button"
-                  aria-label="Take control"
-                  className="flex h-8 items-center gap-1.5 rounded-full border border-transparent px-2 text-[11px] text-slate-12/85 transition-colors duration-150 hover:bg-state-hover-overlay hover:text-slate-12 focus-visible:border-border-strong focus-visible:outline-none"
+                  aria-label={takeReleaseLabel}
+                  aria-pressed={owned}
+                  onClick={onTakeRelease}
+                  className={`flex h-8 items-center gap-1.5 rounded-full border border-transparent px-2 text-[11px] transition-colors duration-150 focus-visible:border-border-strong focus-visible:outline-none ${
+                    owned
+                      ? 'bg-state-selected text-slate-12'
+                      : 'text-slate-12/85 hover:bg-state-hover-overlay hover:text-slate-12'
+                  }`}
                 >
-                  <TakeControl size={BOTTOM_ICON_SIZE} />
-                  <span>Take control</span>
+                  <TakeReleaseIcon size={BOTTOM_ICON_SIZE} />
+                  <span>{takeReleaseLabel}</span>
                 </button>
               </ChromeTooltip>
             </ControlGroup>
@@ -93,16 +145,22 @@ export function SandboxBottomChrome({
             <SandboxZoomControl zoom={zoomLevel} onChange={onZoomChange} />
           </div>
 
-          <ControlGroup className="pointer-events-auto gap-1 px-0.5 text-slate-12/80">
+          <ControlGroup className="pointer-events-auto shrink-0 gap-1 px-0.5 text-slate-12/80">
             <DayNightToggle mode={mode} onToggle={onModeToggle} />
-            <IconButton label="Designate">
-              <DesignateTarget size={BOTTOM_ICON_SIZE} />
-            </IconButton>
-            <IconButton label="Settings">
-              <Settings size={BOTTOM_ICON_SIZE} />
-            </IconButton>
-            <IconButton label="Fullscreen">
-              <Maximize2 size={BOTTOM_ICON_SIZE} />
+            <CameraSettingsMenu
+              open={settingsOpen}
+              onOpenChange={onSettingsOpenChange}
+              detectionsOn={detectionsOn}
+              playbackEnabled={playbackOn}
+              onDetectionsToggle={onDetectionsToggle}
+              onPlaybackToggle={onPlaybackToggle}
+            />
+            <IconButton
+              label={fullscreenLabel}
+              onClick={onFullscreenToggle}
+              pressed={isFullscreen}
+            >
+              <FullscreenIcon size={BOTTOM_ICON_SIZE} />
             </IconButton>
           </ControlGroup>
         </div>
@@ -316,13 +374,29 @@ function DayNightToggle({
   );
 }
 
-function IconButton({ label, children }: { label: string; children: React.ReactNode }) {
+function IconButton({
+  label,
+  onClick,
+  pressed,
+  children,
+}: {
+  label: string;
+  onClick?: () => void;
+  pressed?: boolean;
+  children: React.ReactNode;
+}) {
   return (
     <ChromeTooltip label={label}>
       <button
         type="button"
         aria-label={label}
-        className="flex size-8 items-center justify-center rounded-full border border-transparent text-slate-12/80 transition-colors duration-150 hover:bg-state-hover-overlay hover:text-slate-12 focus-visible:border-border-strong focus-visible:outline-none"
+        aria-pressed={pressed}
+        onClick={onClick}
+        className={`flex size-8 items-center justify-center rounded-full border border-transparent transition-colors duration-150 focus-visible:border-border-strong focus-visible:outline-none ${
+          pressed
+            ? 'bg-state-selected text-slate-12'
+            : 'text-slate-12/80 hover:bg-state-hover-overlay hover:text-slate-12'
+        }`}
       >
         {children}
       </button>

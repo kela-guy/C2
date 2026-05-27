@@ -68,7 +68,6 @@ const STRINGS_HE = {
       jamDisabledOffline: 'המכשיר לא מקוון',
       jamDisabledMalfunction: 'המכשיר בתקלה',
       jamDisabledAlreadyActive: 'שיבוש כבר פעיל',
-      cameraModeAriaLabel: 'מצב מצלמה',
       centerOnMap: 'מרכז במפה',
       mute: 'השתק',
       unmute: 'בטל השתקה',
@@ -130,6 +129,13 @@ const STRINGS_HE = {
    */
   gridblock: {
     settings: 'הגדרות',
+    account: 'חשבון',
+    accountAndSecurity: 'חשבון ואבטחה',
+    signOut: 'התנתק',
+    direction: 'כיוון כתיבה',
+    directionAriaLabel: 'בחר כיוון כתיבה',
+    directionRtlLabel: 'עברית',
+    directionLtrLabel: 'English',
     timezone: 'אזור זמן',
     timezoneAriaLabel: 'בחר אזור זמן',
     live: 'שידור חי',
@@ -463,19 +469,10 @@ const STRINGS_HE = {
       splitScreen: 'פצל מסך',
     },
     contextMenu: {
-      releaseControl: 'שחרר שליטה',
-      lockedByOperator: (name: string) => `נעול ע״י ${name}`,
-      lockedByOtherOperator: 'מפעיל אחר',
-      takeControl: 'קח שליטה',
-      switchToNight: 'מצב לילה (IR)',
-      switchToDay: 'מצב יום',
-      hideAiDetections: 'הסתר זיהוי AI',
-      showAiDetections: 'הצג זיהוי AI',
-      cancelDesignate: 'בטל סימון יעד',
-      designateTarget: 'סמן יעד',
-      resetView: 'אפס תצוגה',
-      settings: 'הגדרות',
-      pinToGrid: 'נעץ לגריד',
+      coordinatesCopyAriaLabel: 'העתק קואורדינטות',
+      tracker: 'מעקב',
+      lookAt: 'הסתכל',
+      createTarget: 'צור יעד',
     },
     controlBar: {
       requestingControlCountdown: (countdown: number) => `מבקש שליטה… ${countdown}s (T)`,
@@ -505,13 +502,6 @@ const STRINGS_HE = {
       aiDetectionsLabel: 'זיהוי AI',
       aiDetectionsDescription: 'סמן ברירת זיהויים על הפיד.',
       aiDetectionsAriaLabel: 'זיהוי AI',
-      modeDescription: 'עבור בין מצלמת יום לאינפרא-אדום.',
-      // Mode row shows current state: day / night (with IR suffix).
-      currentDay: 'מצב יום',
-      currentNight: 'מצב לילה (IR)',
-      // Toggle aria-label describes the *target* mode the click will switch to.
-      switchToDayAriaLabel: 'מצב יום',
-      switchToNightAriaLabel: 'מצב לילה',
     },
     feedTile: {
       defaultEmptySlotHint: 'גרור או נעץ מכשיר לכאן',
@@ -830,14 +820,6 @@ const STRINGS_HE = {
     deviceNames: {
       missileLauncher: 'משגר טילים',
     },
-    /**
-     * Camera preset chips rendered inside the DevicesPanel device
-     * card. Keyed by camera asset id.
-     */
-    cameraPresets: {
-      ptzNorth: ['זום', 'לילה', 'רגיל'],
-      pixelsight: ['רגיל', 'תרמי'],
-    },
   },
 
   /**
@@ -919,7 +901,6 @@ const STRINGS_EN: Strings = {
       jamDisabledOffline: 'Device offline',
       jamDisabledMalfunction: 'Device malfunction',
       jamDisabledAlreadyActive: 'Jamming already active',
-      cameraModeAriaLabel: 'Camera mode',
       centerOnMap: 'Center on map',
       mute: 'Mute',
       unmute: 'Unmute',
@@ -973,6 +954,10 @@ const STRINGS_EN: Strings = {
     account: 'Account',
     accountAndSecurity: 'Account & Security',
     signOut: 'Sign Out',
+    direction: 'Writing direction',
+    directionAriaLabel: 'Choose writing direction',
+    directionRtlLabel: 'עברית',
+    directionLtrLabel: 'English',
     timezone: 'Timezone',
     timezoneAriaLabel: 'Choose timezone',
     live: 'Live',
@@ -1283,19 +1268,10 @@ const STRINGS_EN: Strings = {
       splitScreen: 'Split screen',
     },
     contextMenu: {
-      releaseControl: 'Release control',
-      lockedByOperator: (name: string) => `Locked by ${name}`,
-      lockedByOtherOperator: 'another operator',
-      takeControl: 'Take control',
-      switchToNight: 'Night mode (IR)',
-      switchToDay: 'Day mode',
-      hideAiDetections: 'Hide AI detections',
-      showAiDetections: 'Show AI detections',
-      cancelDesignate: 'Cancel target designation',
-      designateTarget: 'Designate target',
-      resetView: 'Reset view',
-      settings: 'Settings',
-      pinToGrid: 'Pin to grid',
+      coordinatesCopyAriaLabel: 'Copy coordinates',
+      tracker: 'Tracker',
+      lookAt: 'Look at',
+      createTarget: 'Create target',
     },
     controlBar: {
       requestingControlCountdown: (countdown: number) => `Requesting control… ${countdown}s (T)`,
@@ -1325,11 +1301,6 @@ const STRINGS_EN: Strings = {
       aiDetectionsLabel: 'AI detections',
       aiDetectionsDescription: 'Show default detection markers on the feed.',
       aiDetectionsAriaLabel: 'AI detections',
-      modeDescription: 'Switch between day camera and infrared.',
-      currentDay: 'Day mode',
-      currentNight: 'Night mode (IR)',
-      switchToDayAriaLabel: 'Day mode',
-      switchToNightAriaLabel: 'Night mode',
     },
     feedTile: {
       defaultEmptySlotHint: 'Drag or pin a device here',
@@ -1602,10 +1573,6 @@ const STRINGS_EN: Strings = {
     },
     deviceNames: {
       missileLauncher: 'Missile launcher',
-    },
-    cameraPresets: {
-      ptzNorth: ['Zoom', 'Night', 'Normal'],
-      pixelsight: ['Normal', 'Thermal'],
     },
   },
 

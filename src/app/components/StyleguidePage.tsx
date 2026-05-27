@@ -4452,7 +4452,7 @@ export function OperationsPage() {
             )}
 
             {activeItem === 'devices-panel' && (
-            <ComponentSection id="devices-panel" name="DevicesPanel" description="Right-hand sidebar listing all connected field devices grouped by type. Supports search, type-filter isolation, device expansion with stats grid, camera preview with presets, ECM jam activation, mute with 30-min countdown, drone wipers/calibration, and drag-to-camera-viewer for camera rows.">
+            <ComponentSection id="devices-panel" name="DevicesPanel" description="Right-hand sidebar listing all connected field devices grouped by type. Supports search, type-filter isolation, device expansion with stats grid, ECM jam activation, mute with 30-min countdown, drone wipers/calibration, and drag-to-camera-viewer for camera rows.">
               <CodePreviewBlock name="DevicesPanel" description="Full interactive panel — try searching, filtering by type, expanding rows, toggling the floodlight Switch, and pressing Play on a speaker." tight code={devicesPanelSrc} relatedFiles={DEVICES_PANEL_FILES}>
                 <div
                   className="gridblock-root mx-auto bg-[var(--gridblock-floor)] p-[var(--gridblock-map-inset)] text-[var(--gridblock-text-primary)]"
@@ -4524,7 +4524,6 @@ export function OperationsPage() {
                 { name: 'focusedDeviceId', type: 'string | null', default: 'undefined', description: 'Auto-expand this device, ensure its type filter is active, clear search, and scroll it into view.' },
                 { name: 'typeLabels', type: 'Partial<Record<DeviceType, string>>', default: 'DEFAULT_TYPE_LABELS', description: 'Override per-type group labels (Cameras, Radars, Floodlights, Speakers, …).' },
                 { name: 'connectionStateLabels', type: 'Partial<Record<ConnectionState, string>>', default: 'DEFAULT_CONNECTION_STATE_LABELS', description: 'Override the connection-state labels used in tooltips and chips.' },
-                { name: 'cameraPresets', type: 'Record<string, string[]>', description: 'Optional per-camera preset map keyed by `device.id`. When omitted, no preset chip strip is rendered.' },
                 { name: 'title', type: 'string', default: '"Devices"', description: 'Header title above the device list.' },
                 { name: 'closeAriaLabel', type: 'string', default: '"Close"', description: 'aria-label for the header close button.' },
                 { name: 'strings', type: 'Partial<DevicesPanelStrings>', default: 'DEFAULT_DEVICE_PANEL_STRINGS', description: 'Override any internal label. See the DevicesPanelStrings table below.' },
@@ -4555,7 +4554,6 @@ export function OperationsPage() {
                 { name: 'jamDisabledOffline', type: 'string', default: '"Device offline"', description: 'Tooltip when the jam button is disabled because the device is offline.' },
                 { name: 'jamDisabledMalfunction', type: 'string', default: '"Device malfunction"', description: 'Tooltip when the jam button is disabled because of a malfunction.' },
                 { name: 'jamDisabledAlreadyActive', type: 'string', default: '"Already jamming"', description: 'Tooltip when the jam button is disabled because another jammer is already active.' },
-                { name: 'cameraModeAriaLabel', type: 'string', default: '"Camera mode"', description: 'aria-label for the camera-preset Tabs strip inside an expanded camera card.' },
                 { name: 'centerOnMap', type: 'string', default: '"Center on map"', description: 'Footer button that calls `onFlyTo` for the current device.' },
                 { name: 'mute', type: 'string', default: '"Mute"', description: 'Idle label on the per-device mute action.' },
                 { name: 'unmute', type: 'string', default: '"Unmute"', description: 'Label on the mute action while the device is silenced.' },
@@ -4793,22 +4791,6 @@ export function OperationsPage() {
                     </div>
                   </div>
                   <div className="flex flex-col bg-state-hover">
-                    <div className="flex items-center gap-0 px-3 border-b border-border-default">
-                      {['רגיל', 'לילה', 'זום'].map((tab, i) => (
-                        <button key={tab} className={`px-3 py-2 text-[12px] font-medium border-b-2 ${i === 0 ? 'text-slate-12 border-border-strong' : 'text-n-120 border-transparent hover:text-n-10'}`}>
-                          {tab}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="relative w-full h-[200px] overflow-hidden bg-black shadow-[0_0_0_1px_var(--border-default)]">
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <Camera size={24} className="text-slate-12/20" />
-                      </div>
-                      <div className="absolute top-1.5 right-1.5 flex items-center gap-1 bg-black/80 px-1.5 py-0.5 rounded-sm">
-                        <div className="size-1.5 rounded-full bg-accent-danger animate-pulse" />
-                        <span className="text-[9px] font-medium text-slate-12/90 uppercase tracking-wide">Live</span>
-                      </div>
-                    </div>
                     <div className="grid grid-cols-3 gap-x-4 gap-y-5 px-4 py-3">
                       {[
                         { l: 'מיקום', v: '32.4700, 35.0050' },

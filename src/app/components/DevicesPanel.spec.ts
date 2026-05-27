@@ -219,11 +219,6 @@ export const spec: ComponentSpec = {
     },
     {
       trigger: 'click',
-      element: 'Camera preset tabs',
-      result: 'Switches active camera mode (רגיל/לילה/זום/תרמי)',
-    },
-    {
-      trigger: 'click',
       element: 'Wipers toggle (drone)',
       result: 'Toggles wipers switch on/off',
       animation: { property: 'transform', from: 'translateX(0)', to: 'translateX(14px)', duration: '200ms', easing: 'ease-out' },
@@ -388,7 +383,6 @@ export const spec: ComponentSpec = {
     { current: 'CAMERA_CAPS lookup map', replaceWith: 'Device capabilities API field', location: 'DevicesPanel.tsx lines 108-111' },
     { current: 'DEVICE_HEALTH lookup map', replaceWith: 'Device health API field', location: 'DevicesPanel.tsx lines 113-116' },
     { current: 'DEVICE_CONNECTION lookup map', replaceWith: 'Device connection state API field', location: 'DevicesPanel.tsx lines 118-123' },
-    { current: 'CAMERA_PRESETS lookup map', replaceWith: 'Camera configuration API', location: 'DevicesPanel.tsx lines 125-128' },
     { current: 'Hebrew string literals (TYPE_LABELS, button labels)', replaceWith: 'i18n translation keys', location: 'DevicesPanel.tsx throughout' },
   ],
 

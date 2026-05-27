@@ -21,6 +21,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/app/components/ui/tooltip";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/app/components/ui/popover";
+import { useDirection, type Direction } from "@/lib/direction";
 import { useStrings } from "@/lib/intl";
 
 import {
@@ -70,10 +76,11 @@ function GridblockHeaderImpl({
     timezoneOptions ?? defaultTimezoneOptions(),
   );
   const now = useGridblockClock();
+  const { direction, setDirection } = useDirection();
 
   return (
     <header
-      className="gridblock-edge-bottom flex items-center justify-between bg-[var(--gridblock-bar)] pr-2"
+      className="gridblock-edge-bottom flex items-center justify-between bg-[var(--gridblock-bar)] ps-2"
       style={{ height: "var(--gridblock-header-height)" }}
     >
       <nav className="flex items-center gap-2">
@@ -86,22 +93,85 @@ function GridblockHeaderImpl({
           {formatGridblockClock(now, tz)}
         </div>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              className="gridblock-iconbtn"
-              aria-label={settingsLabel}
+        <Popover>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="gridblock-iconbtn"
+                  aria-label={settingsLabel}
+                >
+                  <SettingsGear4 size={18} />
+                </button>
+              </PopoverTrigger>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" sideOffset={6}>
+              {settingsLabel}
+            </TooltipContent>
+          </Tooltip>
+          <PopoverContent side="bottom" align="end" sideOffset={6} className="w-56 p-2">
+            <div className="px-1 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-9">
+              {t.gridblock.direction}
+            </div>
+            <div
+              role="group"
+              aria-label={t.gridblock.directionAriaLabel}
+              className="flex items-stretch rounded-sm border border-border-default bg-state-hover p-0.5 text-[12px]"
             >
-              <SettingsGear4 size={18} />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" sideOffset={6}>
-            {settingsLabel}
-          </TooltipContent>
-        </Tooltip>
+              <DirectionOption
+                value="rtl"
+                label="עב"
+                title={t.gridblock.directionRtlLabel}
+                direction={direction}
+                onSelect={setDirection}
+              />
+              <DirectionOption
+                value="ltr"
+                label="EN"
+                title={t.gridblock.directionLtrLabel}
+                direction={direction}
+                onSelect={setDirection}
+              />
+            </div>
+          </PopoverContent>
+        </Popover>
       </nav>
     </header>
+  );
+}
+
+interface DirectionOptionProps {
+  value: Direction;
+  label: string;
+  title: string;
+  direction: Direction;
+  onSelect: (next: Direction) => void;
+}
+
+function DirectionOption({
+  value,
+  label,
+  title,
+  direction,
+  onSelect,
+}: DirectionOptionProps) {
+  const active = direction === value;
+
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      title={title}
+      onClick={() => onSelect(value)}
+      className={`rounded-sm px-2 py-1 transition-[background-color,color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-[2px] focus-visible:ring-border-strong ${
+        active
+          ? "bg-state-selected text-slate-12"
+          : "text-slate-11 hover:bg-state-hover-strong hover:text-slate-12"
+      }`}
+    >
+      {label}
+    </button>
   );
 }
 

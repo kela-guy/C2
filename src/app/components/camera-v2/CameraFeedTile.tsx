@@ -319,18 +319,7 @@ export function CameraFeedTile({
   );
 
   return (
-    <CameraContextMenu
-      mode={feed.mode}
-      status={status}
-      detectionsOn={detectionsOn}
-      designateMode={designateMode}
-      onTakeRelease={handleTakeRelease}
-      onModeToggle={onModeToggle}
-      onDetectionsToggle={onDetectionsToggle}
-      onDesignateModeToggle={onDesignateModeToggle}
-      onResetView={() => onResetView?.()}
-      onOpenSettings={() => setSettingsOpen(true)}
-    >
+    <CameraContextMenu>
       <div
         ref={dropRef}
         tabIndex={0}

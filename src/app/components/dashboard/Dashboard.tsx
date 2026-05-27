@@ -660,6 +660,7 @@ function renderRightPanel(tab: DashboardRightTabId, deps: RightPanelDeps) {
           activeTabIndex={deps.video.activeTabIndex}
           onActivateTab={deps.video.setActiveTabIndex}
           onCloseTab={deps.video.closeTab}
+          onFocusTabFeed={deps.video.focusTabFeed}
           feeds={deps.video.feeds}
           onFeedsChange={deps.video.setFeeds}
           layout={deps.video.layout}

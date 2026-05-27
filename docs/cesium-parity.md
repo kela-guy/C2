@@ -152,7 +152,7 @@ Fixed by:
 |---|---|
 | Delete `TacticalMap.tsx` | ✗ |
 | Drop `mapbox-gl` dependency | ✗ |
-| Remove `VITE_MAPBOX_TOKEN` from `.env.example` | ✗ |
+| Remove `VITE_MAPBOX_TOKEN` from `.env.example` | ✓ |
 
 ---
 

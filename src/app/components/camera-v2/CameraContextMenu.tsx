@@ -1,137 +1,101 @@
 /**
  * Right-click menu for a camera feed tile. Wraps the live <video> + overlays.
  *
- * Items disable when the camera is locked by another operator. The "Pin to
- * grid" item is a stub on the playground - we'll wire it to the future
- * dashboard grid when promoting.
+ * UI phase: four operator actions in RTL-friendly reading order.
+ *   1. Coordinates (read-only) with inline copy button
+ *   2. Tracker
+ *   3. Look at
+ *   4. Create target
+ *
+ * Tracker / Look at / Create target are intended as single-use modes —
+ * the next click on the feed consumes the action and the tile returns
+ * to its default state. That wiring is not yet implemented; for now
+ * the handlers are stubs.
  */
 
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuShortcut,
   ContextMenuTrigger,
 } from '@/shared/components/ui/context-menu';
 import {
+  Copy,
+  Crosshair,
   DesignateTarget,
-  Lock,
-  LockOpen,
-  Moon,
-  Pin,
-  RotateCcw,
-  ScanSearch,
-  Settings,
-  Sun,
+  Eye,
+  MapPin,
 } from '@/lib/icons/central';
+import { Bdi, useDirection } from '@/lib/direction';
 import { useStrings } from '@/lib/intl';
-import type { CameraStatus, DayNightMode } from './types';
 
 interface CameraContextMenuProps {
   children: React.ReactNode;
-  mode: DayNightMode;
-  status: CameraStatus;
-  detectionsOn: boolean;
-  designateMode: boolean;
-  onTakeRelease: () => void;
-  onModeToggle: () => void;
-  onDetectionsToggle: () => void;
-  onDesignateModeToggle: () => void;
-  onResetView: () => void;
-  onOpenSettings: () => void;
-  onPinToGrid?: () => void;
+  /** Mock until right-click → world raycast lands. */
+  coordinates?: string;
+  onCopyCoordinates?: () => void;
+  onTracker?: () => void;
+  onLookAt?: () => void;
+  onCreateTarget?: () => void;
 }
+
+const FALLBACK_COORDINATES = '32.4700, 35.0050';
 
 export function CameraContextMenu({
   children,
-  mode,
-  status,
-  detectionsOn,
-  designateMode,
-  onTakeRelease,
-  onModeToggle,
-  onDetectionsToggle,
-  onDesignateModeToggle,
-  onResetView,
-  onOpenSettings,
-  onPinToGrid,
+  coordinates = FALLBACK_COORDINATES,
+  onCopyCoordinates,
+  onTracker,
+  onLookAt,
+  onCreateTarget,
 }: CameraContextMenuProps) {
   const t = useStrings().camera.contextMenu;
-  const ownsControl = status.controlOwner === 'self';
-  const lockedByOther = status.controlOwner === 'other';
-  const writeDisabled = lockedByOther;
+  const { direction } = useDirection();
 
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
       <ContextMenuContent
-        // Surface + shadow + border come from <MenuSurface> in
-        // ui/context-menu.tsx. Just keep the camera-specific
-        // overrides (square corners, frosted glass).
+        dir={direction}
         className="min-w-[220px] rounded-none backdrop-blur-xl border-none"
       >
         <ContextMenuItem
-          onClick={onTakeRelease}
-          disabled={lockedByOther || status.controlRequestPending}
-          className="rounded-none gap-2.5 text-xs"
+          onSelect={(e) => e.preventDefault()}
+          className="rounded-none gap-2.5 text-xs justify-between"
         >
-          {ownsControl ? (
-            <LockOpen size={14} className="text-accent-success" />
-          ) : (
-            <Lock size={14} className={lockedByOther ? 'text-slate-10' : 'text-slate-12/80'} />
-          )}
-          <span className="flex-1">
-            {ownsControl
-              ? t.releaseControl
-              : lockedByOther
-                ? t.lockedByOperator(status.controlOwnerName ?? t.lockedByOtherOperator)
-                : t.takeControl}
+          <span className="flex items-center gap-2.5 min-w-0">
+            <MapPin size={14} className="text-slate-12/80" />
+            <Bdi as="span" direction="ltr" className="font-mono text-[11px] tabular-nums text-slate-12 truncate">
+              {coordinates}
+            </Bdi>
           </span>
-          <ContextMenuShortcut>T</ContextMenuShortcut>
+          <button
+            type="button"
+            aria-label={t.coordinatesCopyAriaLabel}
+            onClick={(e) => {
+              e.stopPropagation();
+              onCopyCoordinates?.();
+            }}
+            className="-mx-1 -my-1 ms-1 p-1 rounded text-slate-12/70 hover:text-slate-12 hover:bg-state-hover-strong transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong"
+          >
+            <Copy size={12} />
+          </button>
         </ContextMenuItem>
 
-        <ContextMenuSeparator />
-
-        <ContextMenuItem onClick={onModeToggle} disabled={writeDisabled} className="rounded-none gap-2.5 text-xs">
-          {mode === 'day' ? <Moon size={14} className="text-accent-info" /> : <Sun size={14} className="text-accent-warning" />}
-          <span className="flex-1">{mode === 'day' ? t.switchToNight : t.switchToDay}</span>
-          <ContextMenuShortcut>D</ContextMenuShortcut>
+        <ContextMenuItem onClick={onTracker} className="rounded-none gap-2.5 text-xs">
+          <Eye size={14} className="text-slate-12/80" />
+          <span className="flex-1">{t.tracker}</span>
         </ContextMenuItem>
 
-        <ContextMenuItem onClick={onDetectionsToggle} className="rounded-none gap-2.5 text-xs">
-          <ScanSearch size={14} className={detectionsOn ? 'text-accent-success' : 'text-slate-12/80'} />
-          <span className="flex-1">{detectionsOn ? t.hideAiDetections : t.showAiDetections}</span>
+        <ContextMenuItem onClick={onLookAt} className="rounded-none gap-2.5 text-xs">
+          <Crosshair size={14} className="text-slate-12/80" />
+          <span className="flex-1">{t.lookAt}</span>
         </ContextMenuItem>
 
-        <ContextMenuItem onClick={onDesignateModeToggle} className="rounded-none gap-2.5 text-xs">
-          <DesignateTarget size={14} className={designateMode ? 'text-accent-warning' : 'text-slate-12/80'} />
-          <span className="flex-1">{designateMode ? t.cancelDesignate : t.designateTarget}</span>
-          <ContextMenuShortcut>X</ContextMenuShortcut>
+        <ContextMenuItem onClick={onCreateTarget} className="rounded-none gap-2.5 text-xs">
+          <DesignateTarget size={14} className="text-slate-12/80" />
+          <span className="flex-1">{t.createTarget}</span>
         </ContextMenuItem>
-
-        <ContextMenuSeparator />
-
-        <ContextMenuItem onClick={onResetView} className="rounded-none gap-2.5 text-xs">
-          <RotateCcw size={14} className="text-slate-12/80" />
-          <span className="flex-1">{t.resetView}</span>
-        </ContextMenuItem>
-
-        <ContextMenuItem onClick={onOpenSettings} className="rounded-none gap-2.5 text-xs">
-          <Settings size={14} className="text-slate-12/80" />
-          <span className="flex-1">{t.settings}</span>
-          <ContextMenuShortcut>S</ContextMenuShortcut>
-        </ContextMenuItem>
-
-        {onPinToGrid && (
-          <>
-            <ContextMenuSeparator />
-            <ContextMenuItem onClick={onPinToGrid} className="rounded-none gap-2.5 text-xs">
-              <Pin size={14} className="text-slate-12/80" />
-              <span className="flex-1">{t.pinToGrid}</span>
-            </ContextMenuItem>
-          </>
-        )}
       </ContextMenuContent>
     </ContextMenu>
   );

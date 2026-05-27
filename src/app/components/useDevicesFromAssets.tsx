@@ -29,7 +29,7 @@ import {
   FloodlightIcon,
   SpeakerIcon,
 } from './tacticalIcons';
-import { useStrings, getStrings } from '@/lib/intl';
+import { useStrings } from '@/lib/intl';
 import type { Device } from './DevicesPanel';
 
 const DEVICE_HEALTH: Record<string, 'operational' | 'malfunctioning'> = {
@@ -48,29 +48,6 @@ const CAMERA_CAPS: Record<string, ('video' | 'photo')[]> = {
   'CAM-NVT-PTZ-N': ['video', 'photo'],
   'CAM-NVT-PIXELSIGHT': ['video'],
 };
-
-/**
- * @deprecated Prefer `useCameraPresets()` inside React. Kept exported
- * because `<DevicesPanel cameraPresets={CAMERA_PRESETS} />` callers
- * outside the Dashboard still reach for this constant.
- *
- * Backed by the Hebrew catalog so the legacy default matches the old
- * behaviour (Hebrew labels) — switch to `useCameraPresets()` to get
- * the active locale.
- */
-export const CAMERA_PRESETS: Record<string, string[]> = {
-  'CAM-NVT-PTZ-N': [...getStrings('he').simulation.cameraPresets.ptzNorth],
-  'CAM-NVT-PIXELSIGHT': [...getStrings('he').simulation.cameraPresets.pixelsight],
-};
-
-/** Locale-aware camera-preset label map for `<DevicesPanel cameraPresets>`. */
-export function useCameraPresets(): Record<string, string[]> {
-  const presets = useStrings().simulation.cameraPresets;
-  return useMemo<Record<string, string[]>>(() => ({
-    'CAM-NVT-PTZ-N': [...presets.ptzNorth],
-    'CAM-NVT-PIXELSIGHT': [...presets.pixelsight],
-  }), [presets]);
-}
 
 const DroneDeviceIcon = ({ size = 28, fill = 'white' }: { size?: number; fill?: string }) => (
   // The near-black stroke is icon-art (gives the geometry crisp

@@ -6,6 +6,7 @@ import { DialRoot } from "dialkit";
 import "dialkit/styles.css";
 import { Dashboard } from "./components/dashboard/Dashboard";
 import { NotificationSystem } from "./components/NotificationSystem";
+import { StagingBadge } from "./components/StagingBadge";
 import { TooltipProvider } from "./components/ui/tooltip";
 import { DirectionProvider } from "@/lib/direction";
 
@@ -20,6 +21,14 @@ const VideoHudSandbox = import.meta.env.DEV
   ? lazy(() => import("./components/video-hud-sandbox/VideoHudSandbox"))
   : null;
 
+const ThemeSandbox = import.meta.env.DEV
+  ? lazy(() => import("./components/theme-sandbox/ThemeSandbox"))
+  : null;
+
+const OrbSandbox = import.meta.env.DEV
+  ? lazy(() => import("./components/orb-sandbox/OrbSandbox"))
+  : null;
+
 const PerfHud = import.meta.env.DEV
   ? lazy(() => import("./components/perf/PerfHud").then((m) => ({ default: m.PerfHud })))
   : null;
@@ -28,6 +37,7 @@ function ScopedPerfHud() {
   const { pathname } = useLocation();
   if (!PerfHud) return null;
   if (pathname.startsWith('/demo')) return null;
+  if (pathname.startsWith('/theme-sandbox')) return null;
   return (
     <Suspense fallback={null}>
       <PerfHud />
@@ -80,11 +90,32 @@ export default function App() {
                   }
                 />
               )}
+              {ThemeSandbox && (
+                <Route
+                  path="/theme-sandbox"
+                  element={
+                    <Suspense fallback={null}>
+                      <ThemeSandbox />
+                    </Suspense>
+                  }
+                />
+              )}
+              {OrbSandbox && (
+                <Route
+                  path="/orb-sandbox"
+                  element={
+                    <Suspense fallback={null}>
+                      <OrbSandbox />
+                    </Suspense>
+                  }
+                />
+              )}
             </Routes>
             <ScopedPerfHud />
           </BrowserRouter>
           <NotificationSystem />
           <DialRoot position="bottom-right" />
+          <StagingBadge />
         </TooltipProvider>
       </DndProvider>
     </DirectionProvider>

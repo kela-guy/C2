@@ -181,7 +181,6 @@ function buildConfidenceBadge(confidence: number | undefined, classifiedType: st
     React.createElement(TooltipContent, {
       side: 'top',
       sideOffset: 6,
-      showArrow: false,
       className: 'px-2 py-1 text-[9px] font-normal font-sans text-slate-12 bg-surface-5 shadow-[0_0_0_1px_var(--border-default),0_10px_15px_-3px_rgba(0,0,0,0.3)] whitespace-nowrap',
     }, t.cards.classifiedTypeLabel(typeLabel)),
   );

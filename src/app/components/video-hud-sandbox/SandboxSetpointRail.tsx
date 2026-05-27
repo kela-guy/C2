@@ -36,6 +36,7 @@ export interface SandboxSetpointRailProps {
   targetAltitudeM: number;
   targetVelocityMps: number;
   disabled: boolean;
+  forceExpanded?: boolean;
   onTargetAltitudeChange: (next: number) => void;
   onTargetVelocityChange: (next: number) => void;
 }
@@ -46,13 +47,14 @@ export function SandboxSetpointRail({
   targetAltitudeM,
   targetVelocityMps,
   disabled,
+  forceExpanded = false,
   onTargetAltitudeChange,
   onTargetVelocityChange,
 }: SandboxSetpointRailProps) {
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const [scrubbing, setScrubbing] = useState(false);
-  const expanded = !disabled && (hovered || focused || scrubbing);
+  const expanded = !disabled && (forceExpanded || hovered || focused || scrubbing);
 
   const handleScrubStart = useCallback(() => setScrubbing(true), []);
   const handleScrubEnd = useCallback(() => setScrubbing(false), []);

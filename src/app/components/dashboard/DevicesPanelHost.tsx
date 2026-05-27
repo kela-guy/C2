@@ -18,7 +18,6 @@
  */
 import { memo } from "react";
 import { DevicesPanel } from "@/app/components/DevicesPanel";
-import { useCameraPresets } from "@/app/components/useDevicesFromAssets";
 import type { Device } from "@/app/components/DevicesPanel";
 import { useStrings } from "@/lib/intl";
 
@@ -52,7 +51,6 @@ function DevicesPanelHostImpl({
   pinnedDeviceIds,
 }: DevicesPanelHostProps) {
   const t = useStrings();
-  const cameraPresets = useCameraPresets();
 
   return (
     <DevicesPanel
@@ -65,7 +63,6 @@ function DevicesPanelHostImpl({
       focusedDeviceId={focusedDeviceId}
       title={t.dashboard.devicesPanelTitle}
       closeAriaLabel={t.dashboard.devicesPanelClose}
-      cameraPresets={cameraPresets}
       typeLabels={t.devices.typeLabels}
       connectionStateLabels={t.devices.connectionLabels}
       strings={t.devices.strings}
