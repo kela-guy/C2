@@ -38,7 +38,7 @@ export const spec: ComponentSpec = {
       { name: 'flash', value: '#fcd34d', usage: 'Designation ping ring + center dot' },
     ],
     typography: [
-      { name: 'hint', fontFamily: 'Heebo', fontSize: '10px', fontWeight: '600', lineHeight: '1', usage: '"לחץ כדי לסמן יעד · Esc לביטול" hint banner' },
+      { name: 'hint', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '600', lineHeight: '1', usage: '"לחץ כדי לסמן יעד · Esc לביטול" hint banner' },
     ],
     spacing: [
       { name: 'reticle-size', value: '56px', usage: 'Total bounding box of the follow-cursor reticle SVG' },

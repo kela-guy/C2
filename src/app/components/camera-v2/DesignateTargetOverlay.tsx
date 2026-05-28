@@ -89,7 +89,7 @@ export function DesignateTargetOverlay({ active, onDesignate }: DesignateTargetO
             className="absolute inset-x-0 top-12 flex justify-center pointer-events-none"
             aria-hidden="true"
           >
-            <div className="px-2.5 py-1 bg-amber-400/95 text-black text-[10px] font-semibold uppercase tracking-[0.18em] shadow-[0_0_0_1px_rgba(0,0,0,0.45),0_6px_18px_rgba(0,0,0,0.5)]">
+            <div className="px-2.5 py-1 bg-amber-400/95 text-black text-xs font-semibold uppercase tracking-[0.18em] shadow-[0_0_0_1px_rgba(0,0,0,0.45),0_6px_18px_rgba(0,0,0,0.5)]">
               {t.bannerText}
             </div>
           </div>

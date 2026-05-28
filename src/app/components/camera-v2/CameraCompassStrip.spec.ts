@@ -37,7 +37,7 @@ export const spec: ComponentSpec = {
     ],
     typography: [
       { name: 'heading-number', fontFamily: 'IBM Plex Mono', fontSize: '20px', fontWeight: '500', lineHeight: '1', usage: 'Big yellow degrees number' },
-      { name: 'cardinal', fontFamily: 'system-ui', fontSize: '8.5-10px', fontWeight: '500-700', lineHeight: '1', usage: 'Cardinal/intercardinal labels' },
+      { name: 'cardinal', fontFamily: 'system-ui', fontSize: '12px', fontWeight: '500-700', lineHeight: '1', usage: 'Cardinal/intercardinal labels' },
     ],
     spacing: [
       { name: 'strip-width', value: '280px (default)', usage: 'Outer width of the strip' },

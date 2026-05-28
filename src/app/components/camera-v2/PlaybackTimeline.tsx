@@ -116,10 +116,10 @@ export function PlaybackTimeline({
           onCommit={handleSliderCommit}
         />
 
-        <span className="font-mono text-[10px] tabular-nums text-white/85 min-w-[40px] text-end">
+        <span className="font-mono text-xs tabular-nums text-white/85 min-w-[40px] text-end">
           {fmtClock(positionSec)}
         </span>
-        <span className="font-mono text-[10px] tabular-nums text-white/55 min-w-[44px] text-end">
+        <span className="font-mono text-xs tabular-nums text-white/55 min-w-[44px] text-end">
           -{fmtClock(remaining)}
         </span>
 
@@ -166,7 +166,7 @@ function TransportButton({
           {children}
         </button>
       </TooltipTrigger>
-      <TooltipContent side="top" sideOffset={6} className="rounded-none text-[10px]">
+      <TooltipContent side="top" sideOffset={6} className="rounded-none text-xs">
         {label}
       </TooltipContent>
     </Tooltip>

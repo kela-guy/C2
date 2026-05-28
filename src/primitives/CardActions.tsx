@@ -64,7 +64,7 @@ function StatusStrip({ strip }: StatusStripProps) {
   return (
     <div
       role="status"
-      className="w-full min-h-[30px] flex items-center justify-center gap-2 px-3 text-[10px] font-medium text-zinc-300 cursor-default select-none pointer-events-none"
+      className="w-full min-h-[30px] flex items-center justify-center gap-2 px-3 text-xs font-medium text-zinc-300 cursor-default select-none pointer-events-none"
     >
       {Icon && <Icon size={11} className={`shrink-0 ${STATUS_STRIP_ICON_TONE[strip.tone]}`} aria-hidden="true" />}
       <span>{strip.label}</span>
@@ -332,25 +332,25 @@ function renderConfirmDialog(
     >
       {confirmStep === 1 ? (
         <>
-          <div id="confirm-title" className="text-[11px] font-semibold text-zinc-200 mb-2">
+          <div id="confirm-title" className="text-xs font-semibold text-zinc-200 mb-2">
             {confirmingAction.confirm!.title}
           </div>
           {confirmingAction.confirm!.description && (
-            <div id="confirm-desc" className="text-[10px] text-zinc-400 mb-3 text-pretty">
+            <div id="confirm-desc" className="text-xs text-zinc-400 mb-3 text-pretty">
               {confirmingAction.confirm!.description}
             </div>
           )}
           <div className="flex gap-2">
             <button
               onClick={handleConfirm}
-              className="flex-1 h-8 rounded bg-[oklch(0.348_0.111_17)] hover:bg-[oklch(0.445_0.151_17)] active:bg-[oklch(0.295_0.082_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)] text-[11px] font-semibold transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+              className="flex-1 h-8 rounded bg-[oklch(0.348_0.111_17)] hover:bg-[oklch(0.445_0.151_17)] active:bg-[oklch(0.295_0.082_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)] text-xs font-semibold transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
               aria-label={primaryConfirm}
             >
               {primaryConfirm}
             </button>
             <button
               onClick={handleCancel}
-              className="flex-1 h-8 rounded bg-[oklch(0.302_0_0)] hover:bg-[oklch(0.388_0_0)] active:bg-[oklch(0.238_0_0)] text-white text-[11px] font-medium transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+              className="flex-1 h-8 rounded bg-[oklch(0.302_0_0)] hover:bg-[oklch(0.388_0_0)] active:bg-[oklch(0.238_0_0)] text-white text-xs font-medium transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
               aria-label={strings.cancelLabel}
             >
               {strings.cancelLabel}
@@ -359,18 +359,18 @@ function renderConfirmDialog(
         </>
       ) : (
         <>
-          <div id="confirm-title" className="text-[11px] font-bold text-[oklch(0.863_0.102_17)] mb-2">{strings.finalConfirmTitle}</div>
+          <div id="confirm-title" className="text-xs font-bold text-[oklch(0.863_0.102_17)] mb-2">{strings.finalConfirmTitle}</div>
           <div className="flex gap-2">
             <button
               onClick={handleConfirm}
-              className="flex-1 h-8 rounded bg-[oklch(0.348_0.111_17)] hover:bg-[oklch(0.445_0.151_17)] active:bg-[oklch(0.295_0.082_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)] text-[11px] font-bold transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+              className="flex-1 h-8 rounded bg-[oklch(0.348_0.111_17)] hover:bg-[oklch(0.445_0.151_17)] active:bg-[oklch(0.295_0.082_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)] text-xs font-bold transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
               aria-label={finalConfirm}
             >
               {finalConfirm}
             </button>
             <button
               onClick={handleCancel}
-              className="flex-1 h-8 rounded bg-[oklch(0.302_0_0)] hover:bg-[oklch(0.388_0_0)] active:bg-[oklch(0.238_0_0)] text-white text-[11px] font-medium transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+              className="flex-1 h-8 rounded bg-[oklch(0.302_0_0)] hover:bg-[oklch(0.388_0_0)] active:bg-[oklch(0.238_0_0)] text-white text-xs font-medium transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
               aria-label={strings.cancelLabel}
             >
               {strings.cancelLabel}

@@ -147,7 +147,7 @@ export const spec: ComponentSpec = {
       { name: 'map-token-key', value: 'Mapbox GL access token', usage: 'Required for map tile rendering' },
     ],
     typography: [
-      { name: 'marker-label', fontFamily: 'Heebo', fontSize: '11px', fontWeight: '500', lineHeight: '1', usage: 'Target marker popup text' },
+      { name: 'marker-label', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '500', lineHeight: '1', usage: 'Target marker popup text' },
     ],
     spacing: [
       { name: 'marker-size', value: '28px', usage: 'Default marker icon size' },

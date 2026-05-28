@@ -125,8 +125,8 @@ export const spec: ComponentSpec = {
       { name: 'dnd-highlight', value: 'rgba(255,255,255,0.25)', usage: 'Drop target inset shadow on drag-over' },
     ],
     typography: [
-      { name: 'camera-label', fontFamily: 'Heebo', fontSize: '10px', fontWeight: '500', lineHeight: '1', usage: 'Camera name in picker button' },
-      { name: 'live-badge', fontFamily: 'Heebo', fontSize: '9px', fontWeight: '500', lineHeight: '1', usage: 'LIVE badge text (uppercase, tracked)' },
+      { name: 'camera-label', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '500', lineHeight: '1', usage: 'Camera name in picker button' },
+      { name: 'live-badge', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '500', lineHeight: '1', usage: 'LIVE badge text (uppercase, tracked)' },
       { name: 'picker-item', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '400', lineHeight: '1.5', usage: 'Dropdown menu item text' },
       { name: 'split-label', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '400', lineHeight: '1.5', usage: 'Split-screen button text' },
     ],

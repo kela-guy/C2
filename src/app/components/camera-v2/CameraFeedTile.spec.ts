@@ -68,7 +68,7 @@ export const spec: ComponentSpec = {
       { name: 'drop-accent', value: 'rgba(56,189,248,0.6)', usage: 'Inset ring during a valid drop' },
     ],
     typography: [
-      { name: 'live-badge', fontFamily: 'Heebo', fontSize: '9px', fontWeight: '600', lineHeight: '1', usage: 'LIVE / PLAYBACK badge inside the playback split' },
+      { name: 'live-badge', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '600', lineHeight: '1', usage: 'LIVE / PLAYBACK badge inside the playback split' },
     ],
     spacing: [],
   },

@@ -136,7 +136,7 @@ export function CameraCompassStrip({
       </svg>
 
       <div
-        className="text-center font-mono text-[20px] leading-none tracking-tight tabular-nums mt-0.5"
+        className="text-center font-mono text-xl leading-none tracking-tight tabular-nums mt-0.5"
         style={{ color: '#fde047', textShadow: '0 1px 2px rgba(0,0,0,0.85)' }}
         aria-live="polite"
       >

@@ -135,10 +135,10 @@ export const spec: ComponentSpec = {
     ],
     typography: [
       { name: 'panel-title', fontFamily: 'Heebo', fontSize: '14px', fontWeight: '700', lineHeight: '1.5', usage: 'Panel header "מרכז התראות"' },
-      { name: 'notification-title', fontFamily: 'Heebo', fontSize: '13px', fontWeight: '500', lineHeight: '20px', usage: 'Notification item title' },
+      { name: 'notification-title', fontFamily: 'Heebo', fontSize: '14px', fontWeight: '500', lineHeight: '20px', usage: 'Notification item title' },
       { name: 'notification-body', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '300', lineHeight: '20px', usage: 'Notification description text' },
-      { name: 'sender', fontFamily: 'Heebo', fontSize: '11px', fontWeight: '500', lineHeight: '20px', usage: 'Sender name (uppercase, tracked)' },
-      { name: 'time', fontFamily: 'monospace', fontSize: '10px', fontWeight: '500', lineHeight: '1', usage: 'Timestamp text' },
+      { name: 'sender', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '500', lineHeight: '20px', usage: 'Sender name (uppercase, tracked)' },
+      { name: 'time', fontFamily: 'monospace', fontSize: '12px', fontWeight: '500', lineHeight: '1', usage: 'Timestamp text' },
     ],
     spacing: [
       { name: 'panel-width', value: '380px', usage: 'Fixed dropdown width' },

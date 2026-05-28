@@ -144,10 +144,10 @@ export const spec: ComponentSpec = {
       { name: 'effector-success', value: '#34d399 (emerald-400)', usage: 'Status strip success icon color' },
     ],
     typography: [
-      { name: 'confirm-title', fontFamily: 'Heebo', fontSize: '11px', fontWeight: '600', lineHeight: '1.4', usage: 'Confirm dialog title' },
-      { name: 'confirm-desc', fontFamily: 'Heebo', fontSize: '10px', fontWeight: '400', lineHeight: '1.4', usage: 'Confirm dialog description' },
-      { name: 'confirm-btn', fontFamily: 'Heebo', fontSize: '11px', fontWeight: '600', lineHeight: '1', usage: 'Confirm/cancel button labels' },
-      { name: 'status-strip', fontFamily: 'Heebo', fontSize: '10px', fontWeight: '500', lineHeight: '1', usage: 'Effector status strip text' },
+      { name: 'confirm-title', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '600', lineHeight: '1.4', usage: 'Confirm dialog title' },
+      { name: 'confirm-desc', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '400', lineHeight: '1.4', usage: 'Confirm dialog description' },
+      { name: 'confirm-btn', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '600', lineHeight: '1', usage: 'Confirm/cancel button labels' },
+      { name: 'status-strip', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '500', lineHeight: '1', usage: 'Effector status strip text' },
     ],
     spacing: [
       { name: 'actions-px', value: '8px', usage: 'Outer horizontal padding (px-2)' },

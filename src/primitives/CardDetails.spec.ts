@@ -82,7 +82,7 @@ export const spec: ComponentSpec = {
   tokens: {
     colors: [],
     typography: [
-      { name: 'section-title', fontFamily: 'Heebo', fontSize: '11px', fontWeight: '600', lineHeight: '1.4', usage: 'Accordion section title (via AccordionSection)' },
+      { name: 'section-title', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '600', lineHeight: '1.4', usage: 'Accordion section title (via AccordionSection)' },
     ],
     spacing: [
       { name: 'content-py', value: '4px', usage: 'Inner content vertical padding (py-1)' },

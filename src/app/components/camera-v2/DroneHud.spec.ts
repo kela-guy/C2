@@ -35,7 +35,7 @@ export const spec: ComponentSpec = {
       { name: 'value-bad', value: '#fca5a5', usage: 'Battery <=20%, signal <=25%' },
     ],
     typography: [
-      { name: 'stat-label', fontFamily: 'system-ui', fontSize: '8.5px', fontWeight: '500', lineHeight: '1', usage: 'BAT / SIG / HOME / REL labels' },
+      { name: 'stat-label', fontFamily: 'system-ui', fontSize: '12px', fontWeight: '500', lineHeight: '1', usage: 'BAT / SIG / HOME / REL labels' },
       { name: 'stat-value', fontFamily: 'IBM Plex Mono', fontSize: '12px', fontWeight: '500', lineHeight: '1', usage: 'Numeric values (tabular-nums)' },
     ],
     spacing: [

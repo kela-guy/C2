@@ -234,21 +234,21 @@ function CesiumFlyToDemo() {
           <button
             type="button"
             onClick={() => flyTo(32.4776, 34.9913, 4000)}
-            className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.04] shadow-[0_0_0_1px_rgba(255,255,255,0.06)] px-3 py-1.5 text-[13px] font-medium text-n-11 hover:bg-white/[0.08] hover:text-white transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.04] shadow-[0_0_0_1px_rgba(255,255,255,0.06)] px-3 py-1.5 text-sm font-medium text-n-11 hover:bg-white/[0.08] hover:text-white transition-colors"
           >
             Fly to Camera North
           </button>
           <button
             type="button"
             onClick={() => flyTo(32.4646, 35.0213, 4000)}
-            className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.04] shadow-[0_0_0_1px_rgba(255,255,255,0.06)] px-3 py-1.5 text-[13px] font-medium text-n-11 hover:bg-white/[0.08] hover:text-white transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.04] shadow-[0_0_0_1px_rgba(255,255,255,0.06)] px-3 py-1.5 text-sm font-medium text-n-11 hover:bg-white/[0.08] hover:text-white transition-colors"
           >
             Fly to Regulus East
           </button>
           <button
             type="button"
             onClick={() => flyTo(32.466, 35.005, 12000)}
-            className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.04] shadow-[0_0_0_1px_rgba(255,255,255,0.06)] px-3 py-1.5 text-[13px] font-medium text-n-11 hover:bg-white/[0.08] hover:text-white transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.04] shadow-[0_0_0_1px_rgba(255,255,255,0.06)] px-3 py-1.5 text-sm font-medium text-n-11 hover:bg-white/[0.08] hover:text-white transition-colors"
           >
             Zoom out
           </button>
@@ -276,7 +276,7 @@ function CesiumFlyToDemo() {
 function PlaybackLayoutMockup() {
   return (
     <div className="space-y-2">
-      <div className="text-[11px] font-medium text-n-12">
+      <div className="text-xs font-medium text-n-12">
         50/50 split — live on top, playback on the bottom
       </div>
       <div className="relative aspect-video rounded-md overflow-hidden bg-black ring-1 ring-white/10">
@@ -285,7 +285,7 @@ function PlaybackLayoutMockup() {
         <div className="absolute top-0 inset-x-0 h-1/2 bg-[radial-gradient(circle_at_30%_40%,#1f2937,#0a0a0a_70%)]">
           <div className="absolute top-1.5 start-1.5 inline-flex items-center gap-1 bg-black/65 px-1.5 py-0.5">
             <span className="size-1.5 rounded-full bg-red-500" />
-            <span className="text-[8px] font-mono font-semibold text-white uppercase tracking-wider">
+            <span className="text-xs font-mono font-semibold text-white uppercase tracking-wider">
               Live
             </span>
           </div>
@@ -298,16 +298,16 @@ function PlaybackLayoutMockup() {
         {/* Playback frame (bottom half) */}
         <div className="absolute inset-x-0 bottom-0 h-1/2 bg-[radial-gradient(circle_at_50%_50%,#3f1d1d,#1a0a0a_70%)] border-t-2 border-red-500/80">
           <div className="absolute top-1 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 bg-red-600/90 px-1.5 py-0.5">
-            <span className="text-[7px] font-mono font-semibold text-white uppercase tracking-wider">
+            <span className="text-xs font-mono font-semibold text-white uppercase tracking-wider">
               Playback
             </span>
           </div>
           <div className="absolute inset-x-2 bottom-1.5 flex items-center gap-2">
-            <span className="text-[7px] font-mono text-white/85">▶</span>
+            <span className="text-xs font-mono text-white/85">▶</span>
             <div className="h-1 flex-1 rounded-full bg-white/15">
               <div className="h-full w-1/2 rounded-full bg-red-400" />
             </div>
-            <span className="text-[7px] font-mono text-white/55 tabular-nums">00:32</span>
+            <span className="text-xs font-mono text-white/55 tabular-nums">00:32</span>
           </div>
         </div>
       </div>
@@ -347,12 +347,12 @@ function PlaybackStatusMockup({ variant }: { variant: PlaybackStatusVariant }) {
 
   return (
     <div className="space-y-2">
-      <div className="text-[11px] font-medium text-n-12">{meta.title}</div>
+      <div className="text-xs font-medium text-n-12">{meta.title}</div>
       <div className="relative aspect-video rounded-md overflow-hidden bg-black ring-1 ring-white/10">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,#3f1d1d,#1a0a0a_70%)]" />
         <div className="absolute top-1.5 start-1.5 inline-flex items-center gap-1 bg-red-600/90 px-1.5 py-0.5">
           <span className="size-1 rounded-full bg-white" />
-          <span className="text-[8px] font-mono font-semibold text-white uppercase tracking-wider">
+          <span className="text-xs font-mono font-semibold text-white uppercase tracking-wider">
             Playback
           </span>
         </div>
@@ -360,7 +360,7 @@ function PlaybackStatusMockup({ variant }: { variant: PlaybackStatusVariant }) {
         {variant === 'loading' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/60">
             <Loader2 size={16} className="text-white/85 animate-spin motion-reduce:animate-none" />
-            <span className="text-[9px] text-white/85 font-mono uppercase tracking-wider">
+            <span className="text-xs text-white/85 font-mono uppercase tracking-wider">
               טוען הקלטה…
             </span>
           </div>
@@ -372,10 +372,10 @@ function PlaybackStatusMockup({ variant }: { variant: PlaybackStatusVariant }) {
         )}
         {variant === 'ended' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/60">
-            <div className="inline-flex items-center gap-1 px-2 py-1 bg-red-500 text-white text-[9px] uppercase tracking-wider font-semibold">
+            <div className="inline-flex items-center gap-1 px-2 py-1 bg-red-500 text-white text-xs uppercase tracking-wider font-semibold">
               ▶ נגן שוב
             </div>
-            <span className="text-[8px] text-white/55 uppercase tracking-wider">
+            <span className="text-xs text-white/55 uppercase tracking-wider">
               ההקלטה הסתיימה
             </span>
           </div>
@@ -383,20 +383,20 @@ function PlaybackStatusMockup({ variant }: { variant: PlaybackStatusVariant }) {
         {variant === 'error' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/70 px-3 text-center">
             <AlertTriangle size={16} className="text-red-300" />
-            <span className="text-[9px] text-white">הפיד אינו זמין כרגע</span>
-            <span className="text-[8px] text-white/55 uppercase tracking-wider">
+            <span className="text-xs text-white">הפיד אינו זמין כרגע</span>
+            <span className="text-xs text-white/55 uppercase tracking-wider">
               ↻ נסה שוב
             </span>
           </div>
         )}
         {(variant === 'paused' || variant === 'playing') && (
-          <div className="absolute bottom-1 inset-x-1.5 flex items-center justify-between text-[8px] font-mono text-white/85">
+          <div className="absolute bottom-1 inset-x-1.5 flex items-center justify-between text-xs font-mono text-white/85">
             <span className="tabular-nums">00:32</span>
             <span className="text-white/55 tabular-nums">-00:28</span>
           </div>
         )}
       </div>
-      <p className="text-[11px] leading-snug text-n-10">{meta.copy}</p>
+      <p className="text-xs leading-snug text-n-10">{meta.copy}</p>
     </div>
   );
 }
@@ -531,9 +531,9 @@ function ComponentSection({
   return (
     <section id={id} className="scroll-mt-16 space-y-8">
       <div className="flex flex-col gap-2">
-        <h2 className="text-[30px] font-bold tracking-tight text-n-12" style={{ textWrap: 'balance' }}>{name}</h2>
+        <h2 className="text-3xl font-bold tracking-tight text-n-12" style={{ textWrap: 'balance' }}>{name}</h2>
         {description && (
-          <p className="text-[16px] font-normal leading-7 text-n-9" style={{ textWrap: 'pretty' }}>{description}</p>
+          <p className="text-base font-normal leading-7 text-n-9" style={{ textWrap: 'pretty' }}>{description}</p>
         )}
       </div>
       {children}
@@ -589,7 +589,7 @@ function ExampleBlock({
 }) {
   return (
     <div id={id} className={`space-y-4 mt-10 first:mt-0 ${id ? 'scroll-mt-20' : ''}`}>
-      <h3 className="text-[14px] font-medium text-n-10">{title}</h3>
+      <h3 className="text-sm font-medium text-n-10">{title}</h3>
       <PreviewPanel tight={tight}>{children}</PreviewPanel>
     </div>
   );
@@ -641,7 +641,7 @@ function IconCatalogTile({ name, icon }: { name: string; icon: React.ReactNode }
 function StyleguideDeviceTile({ label, children, width = 380 }: { label: string; children: React.ReactNode; width?: number }) {
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-[11px] font-medium text-n-9">{label}</span>
+      <span className="text-xs font-medium text-n-9">{label}</span>
       <div className="bg-n-1 border border-white/10 rounded-lg overflow-hidden" style={{ width }}>
         {children}
       </div>
@@ -690,7 +690,7 @@ function PropsTable({ items }: { items: PropDef[] }) {
   return (
     <div className="space-y-4 mt-6 mb-4">
       <div className="overflow-x-auto rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)]" dir="ltr">
-        <table className="w-full text-[13px]" dir="ltr">
+        <table className="w-full text-sm" dir="ltr">
           <thead>
             <tr className="border-b border-white/5" style={{ backgroundColor: SURFACE.level1 }}>
               <th className="py-2.5 px-4 text-left font-medium text-n-10">Prop</th>
@@ -702,7 +702,7 @@ function PropsTable({ items }: { items: PropDef[] }) {
           <tbody>
             {items.map((p) => (
               <tr key={p.name} className="border-b border-white/[0.03] last:border-0">
-                <td className="py-3 px-4 font-mono text-[13px] text-sky-300/90 font-medium">{p.name}</td>
+                <td className="py-3 px-4 font-mono text-sm text-sky-300/90 font-medium">{p.name}</td>
                 <td className="py-3 px-4 font-mono text-n-9">{p.type}</td>
                 <td className="py-3 px-4 font-mono text-n-9">{p.default ?? '—'}</td>
                 <td className="py-3 px-4 text-n-9">{p.description}</td>
@@ -719,7 +719,7 @@ function PropsTable({ items }: { items: PropDef[] }) {
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="text-[20px] font-semibold text-n-12 tracking-tight mt-12 first:mt-0 mb-3">
+    <h3 className="text-xl font-semibold text-n-12 tracking-tight mt-12 first:mt-0 mb-3">
       {children}
     </h3>
   );
@@ -755,8 +755,8 @@ function InteractionFlowBlock({
   return (
     <div id={id} className="scroll-mt-20 space-y-2.5">
       <div className="space-y-1">
-        <h4 className="text-[15px] font-semibold text-n-12 tracking-tight">{title}</h4>
-        <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide">{description}</p>
+        <h4 className="text-base font-semibold text-n-12 tracking-tight">{title}</h4>
+        <p className="text-base font-normal leading-relaxed text-white/50 tracking-wide">{description}</p>
       </div>
 
       <div
@@ -772,7 +772,7 @@ function InteractionFlowBlock({
         <div className="relative flex min-h-[200px]">
           {/* "Interactive" hint */}
           <span
-            className="absolute bottom-2.5 left-3 z-10 text-[10px] font-medium text-n-120 uppercase tracking-[0.06em] transition-opacity duration-150 ease-out pointer-events-none"
+            className="absolute bottom-2.5 left-3 z-10 text-xs font-medium text-n-120 uppercase tracking-[0.06em] transition-opacity duration-150 ease-out pointer-events-none"
             style={{ opacity: hovered ? 1 : 0 }}
           >
             Interactive
@@ -783,7 +783,7 @@ function InteractionFlowBlock({
             className="flex-1 flex flex-col min-w-0"
             style={{ background: `radial-gradient(circle at 50% 50%, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0.4) 100%), ${SURFACE.level0}` }}
           >
-            <span className="block text-[10px] font-semibold text-n-120 uppercase tracking-[0.08em] px-4 pt-3 pb-1.5">Map</span>
+            <span className="block text-xs font-semibold text-n-120 uppercase tracking-[0.08em] px-4 pt-3 pb-1.5">Map</span>
             <div
               className={`flex-1 relative px-4 pb-4 flex items-center justify-center${mapInteractive ? '' : ' pointer-events-none'}`}
             >
@@ -799,7 +799,7 @@ function InteractionFlowBlock({
               ? { onMouseEnter: () => setHovered(true), onMouseLeave: () => setHovered(false) }
               : {})}
           >
-            <span className="block text-[10px] font-semibold text-n-120 uppercase tracking-[0.08em] px-4 pt-3 pb-1.5">Card</span>
+            <span className="block text-xs font-semibold text-n-120 uppercase tracking-[0.08em] px-4 pt-3 pb-1.5">Card</span>
             <div dir="rtl" className="flex-1 px-4 pb-4 flex flex-col justify-center">{cardZone}</div>
           </div>
         </div>
@@ -809,11 +809,11 @@ function InteractionFlowBlock({
           <div className="space-y-3">
             {steps.map((step, i) => (
               <div key={i} className="flex gap-3">
-                <span className="text-[11px] font-bold text-sky-400 tabular-nums font-mono leading-[1.6] shrink-0 w-4 text-right">{i + 1}</span>
+                <span className="text-xs font-bold text-sky-400 tabular-nums font-mono leading-[1.6] shrink-0 w-4 text-right">{i + 1}</span>
                 <div className="flex flex-col gap-0.5 min-w-0">
-                  <span className="text-[13px] font-medium text-n-11">{step.label}</span>
+                  <span className="text-sm font-medium text-n-11">{step.label}</span>
                   {step.detail && (
-                    <span className="text-[12px] text-n-9 leading-relaxed font-mono font-medium" style={{ fontVariantNumeric: 'slashed-zero' }}>
+                    <span className="text-xs text-n-9 leading-relaxed font-mono font-medium" style={{ fontVariantNumeric: 'slashed-zero' }}>
                       {step.detail}
                     </span>
                   )}
@@ -967,7 +967,7 @@ function TargetCardFlows() {
                   className="overflow-hidden"
                 >
                   <div
-                    className="px-3 py-3 text-[11px] text-n-9"
+                    className="px-3 py-3 text-xs text-n-9"
                     style={{ backgroundColor: CARD_TOKENS.content.bgColor, boxShadow: `inset 0 1px 0 0 ${CARD_TOKENS.content.borderColor}` }}
                   >
                     Card content expanded
@@ -986,7 +986,7 @@ function TargetCardFlows() {
               ringSize={34}
               pulse={flow2Hovered || flow2Open}
             />
-            <span className="text-[10px] font-medium text-n-120 tabular-nums">
+            <span className="text-xs font-medium text-n-120 tabular-nums">
               {flow2Open ? 'Active (open)' : flow2Hovered ? 'Pulsing (hover)' : 'Idle'}
             </span>
           </div>
@@ -1040,7 +1040,7 @@ function TargetCardFlows() {
                   className="overflow-hidden"
                 >
                   <div
-                    className="px-3 py-3 text-[11px] text-n-9"
+                    className="px-3 py-3 text-xs text-n-9"
                     style={{ backgroundColor: CARD_TOKENS.content.bgColor, boxShadow: `inset 0 1px 0 0 ${CARD_TOKENS.content.borderColor}` }}
                   >
                     Card opens from map click
@@ -1064,7 +1064,7 @@ function TargetCardFlows() {
                 ringSize={34}
                 pulse={flow3Open}
               />
-              <span className="text-[10px] font-medium text-n-9">Click me</span>
+              <span className="text-xs font-medium text-n-9">Click me</span>
             </div>
             <div className="flex flex-col items-center gap-2 opacity-40" aria-label="כלי נוסף">
               <MapMarker
@@ -1115,7 +1115,7 @@ function TargetCardFlows() {
                 showLabel={flow5HoveredSensor === 'rf-01'}
                 label="RF Scanner"
               />
-              <span className="text-[10px] font-medium text-n-120">rf-01</span>
+              <span className="text-xs font-medium text-n-120">rf-01</span>
             </div>
             <div className="flex flex-col items-center gap-2">
               <MapMarker
@@ -1127,7 +1127,7 @@ function TargetCardFlows() {
                 showLabel={flow5HoveredSensor === 'radar-01'}
                 label="Radar X-Band"
               />
-              <span className="text-[10px] font-medium text-n-120">radar-01</span>
+              <span className="text-xs font-medium text-n-120">radar-01</span>
             </div>
           </div>
         }
@@ -1311,7 +1311,7 @@ function DeviceCardFlows() {
                 ringSize={30}
                 pulse={flowHoverDeviceId === hoverDeviceCam1.id}
               />
-              <span className="text-[10px] font-medium text-n-120">PTZ-N</span>
+              <span className="text-xs font-medium text-n-120">PTZ-N</span>
             </div>
             <div className="flex flex-col items-center gap-2">
               <MapMarker
@@ -1321,7 +1321,7 @@ function DeviceCardFlows() {
                 ringSize={30}
                 pulse={flowHoverDeviceId === hoverDeviceCam2.id}
               />
-              <span className="text-[10px] font-medium text-n-120">Pixelsight</span>
+              <span className="text-xs font-medium text-n-120">Pixelsight</span>
             </div>
           </div>
         }
@@ -1379,7 +1379,7 @@ function DeviceCardFlows() {
                 ringSize={30}
                 pulse={flow4Selected || flow4HoveredRow === flow4DeviceCam1.id}
               />
-              <span className="text-[10px] font-medium text-n-9">PTZ-N</span>
+              <span className="text-xs font-medium text-n-9">PTZ-N</span>
             </div>
             <div className="flex flex-col items-center gap-2">
               <MapMarker
@@ -1389,7 +1389,7 @@ function DeviceCardFlows() {
                 ringSize={30}
                 pulse={flow4HoveredRow === flow4DeviceCam2.id}
               />
-              <span className="text-[10px] font-medium text-n-120">Pixelsight</span>
+              <span className="text-xs font-medium text-n-120">Pixelsight</span>
             </div>
           </div>
         }
@@ -1418,8 +1418,8 @@ function DeviceCardFlows() {
                 <CameraIcon size={20} fill="white" />
               </div>
               <div className="flex-1 min-w-0">
-                <span className="text-[13px] font-medium text-n-10 block truncate">מצלמה PTZ-N</span>
-                <div className="text-[11px] font-mono tabular-nums text-white/50 truncate">
+                <span className="text-sm font-medium text-n-10 block truncate">מצלמה PTZ-N</span>
+                <div className="text-xs font-mono tabular-nums text-white/50 truncate">
                   כיוון {Math.round((flow7Angle * 180) / Math.PI + 90)}° · שדה ראייה 60°
                 </div>
               </div>
@@ -1435,7 +1435,7 @@ function DeviceCardFlows() {
                 disabled={flow7OnTarget || flow7Animating}
                 loading={flow7Animating}
               />
-              <span className="text-[11px] text-n-120">
+              <span className="text-xs text-n-120">
                 {flow7Animating ? 'מסתובבת...' : flow7OnTarget ? 'מכוון לעבר המטרה' : 'גרור את הקונוס או לחץ'}
               </span>
             </div>
@@ -1507,7 +1507,7 @@ function DeviceCardFlows() {
                 ringSize={30}
               />
             </div>
-            <span className="absolute text-[10px] font-medium text-n-120" style={{ left: flow7CamPos.x, top: flow7CamPos.y + 28, transform: 'translateX(-50%)' }}>Camera</span>
+            <span className="absolute text-xs font-medium text-n-120" style={{ left: flow7CamPos.x, top: flow7CamPos.y + 28, transform: 'translateX(-50%)' }}>Camera</span>
 
             {/* Target marker — fixed */}
             <div className="absolute" style={{ left: flow7TargetPos.x, top: flow7TargetPos.y, transform: 'translate(-50%, -50%)' }}>
@@ -1519,7 +1519,7 @@ function DeviceCardFlows() {
                 pulse={flow7OnTarget}
               />
             </div>
-            <span className="absolute text-[10px] font-medium text-n-120" style={{ left: flow7TargetPos.x, top: flow7TargetPos.y + 28, transform: 'translateX(-50%)' }}>Target</span>
+            <span className="absolute text-xs font-medium text-n-120" style={{ left: flow7TargetPos.x, top: flow7TargetPos.y + 28, transform: 'translateX(-50%)' }}>Target</span>
           </div>
         }
         steps={[
@@ -1757,8 +1757,8 @@ function EngagementLineAnimatedPreview({ color }: { color: string }) {
         </div>
       </div>
 
-      <div className="absolute text-[10px] text-n-120 font-medium" style={{ left: leftX - 12, top: lineY + 30 }}>Effector</div>
-      <div className="absolute text-[10px] text-n-120 font-medium text-right" style={{ left: rightX - 12, top: lineY + 30 }}>Target</div>
+      <div className="absolute text-xs text-n-120 font-medium" style={{ left: leftX - 12, top: lineY + 30 }}>Effector</div>
+      <div className="absolute text-xs text-n-120 font-medium text-right" style={{ left: rightX - 12, top: lineY + 30 }}>Target</div>
     </div>
   );
 }
@@ -1771,20 +1771,20 @@ function EngagementLineFlows() {
       <div id="engagement-anatomy" className="scroll-mt-12 space-y-6">
         <div className="space-y-2">
           <h3 className="text-lg font-semibold text-n-12">Line Anatomy</h3>
-          <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide">
+          <p className="text-base font-normal leading-relaxed text-white/50 tracking-wide">
             Dashed engagement line with spring-eased traveling particles and a midpoint distance badge. Connects the selected effector to the active target via Mapbox GL layers.
           </p>
         </div>
         <div className="space-y-3">
-          <span className="text-[11px] font-semibold text-n-9 uppercase tracking-[0.06em]">Standby (selected)</span>
+          <span className="text-xs font-semibold text-n-9 uppercase tracking-[0.06em]">Standby (selected)</span>
           <EngagementLineAnimatedPreview color="#ffffff" />
         </div>
         <div className="space-y-3">
-          <span className="text-[11px] font-semibold text-n-9 uppercase tracking-[0.06em]">Weapon Pointing (aiming)</span>
+          <span className="text-xs font-semibold text-n-9 uppercase tracking-[0.06em]">Weapon Pointing (aiming)</span>
           <EngagementLineAnimatedPreview color="#f59e0b" />
         </div>
         <div className="space-y-3">
-          <span className="text-[11px] font-semibold text-n-9 uppercase tracking-[0.06em]">Mitigating / Locked</span>
+          <span className="text-xs font-semibold text-n-9 uppercase tracking-[0.06em]">Mitigating / Locked</span>
           <EngagementLineAnimatedPreview color="#ef4444" />
         </div>
       </div>
@@ -1797,9 +1797,9 @@ function EngagementLineFlows() {
           code={ENGAGEMENT_LINE_SOURCE}
         >
           <div className="space-y-6" dir="ltr">
-            <div className="grid grid-cols-2 gap-4 text-[12px]">
+            <div className="grid grid-cols-2 gap-4 text-xs">
               <div className="space-y-1.5">
-                <span className="text-[11px] font-semibold text-n-9 uppercase tracking-[0.06em]">Dashed line</span>
+                <span className="text-xs font-semibold text-n-9 uppercase tracking-[0.06em]">Dashed line</span>
                 <div className="space-y-1 font-mono text-n-10">
                   <div>dash: <span className="text-sky-300/80">[4, 4]</span> period: <span className="text-sky-300/80">8</span></div>
                   <div>cycle: <span className="text-sky-300/80">32</span> steps, <span className="text-sky-300/80">~20ms</span> throttle</div>
@@ -1807,7 +1807,7 @@ function EngagementLineFlows() {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <span className="text-[11px] font-semibold text-n-9 uppercase tracking-[0.06em]">Particles</span>
+                <span className="text-xs font-semibold text-n-9 uppercase tracking-[0.06em]">Particles</span>
                 <div className="space-y-1 font-mono text-n-10">
                   <div>count: <span className="text-sky-300/80">3</span> speed: <span className="text-sky-300/80">0.25</span>/s</div>
                   <div>spring: <span className="text-sky-300/80">160</span> / <span className="text-sky-300/80">70</span> / <span className="text-sky-300/80">1</span></div>
@@ -1815,9 +1815,9 @@ function EngagementLineFlows() {
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4 text-[12px]">
+            <div className="grid grid-cols-2 gap-4 text-xs">
               <div className="space-y-1.5">
-                <span className="text-[11px] font-semibold text-n-9 uppercase tracking-[0.06em]">Colors</span>
+                <span className="text-xs font-semibold text-n-9 uppercase tracking-[0.06em]">Colors</span>
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2 font-mono text-n-10">
                     <span className="inline-block w-3 h-3 rounded-full bg-white border border-white/20" />
@@ -1834,7 +1834,7 @@ function EngagementLineFlows() {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <span className="text-[11px] font-semibold text-n-9 uppercase tracking-[0.06em]">Badge</span>
+                <span className="text-xs font-semibold text-n-9 uppercase tracking-[0.06em]">Badge</span>
                 <div className="space-y-1 font-mono text-n-10">
                   <div>pos: <span className="text-n-9">midpoint</span></div>
                   <div>shadow: <span className="text-sky-300/80">0 2px 8px</span> rgba(0,0,0,0.4)</div>
@@ -1842,7 +1842,7 @@ function EngagementLineFlows() {
                 </div>
               </div>
             </div>
-            <div className="text-[12px] text-white/50">
+            <div className="text-xs text-white/50">
               Both animations respect <code className="text-white/60 font-mono">prefers-reduced-motion: reduce</code> — line and particles render statically.
             </div>
           </div>
@@ -1894,7 +1894,7 @@ function ChangelogLine({ text }: { text: string }) {
     <>
       {parts.map((part, i) =>
         part.startsWith('`') && part.endsWith('`') ? (
-          <code key={i} className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">
+          <code key={i} className="text-sm font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">
             {part.slice(1, -1)}
           </code>
         ) : (
@@ -1999,7 +1999,7 @@ function HighlightedCode({ code }: { code: string }) {
 
   if (!html) {
     return (
-      <pre className="text-[12px] leading-[1.7] font-mono text-n-10 whitespace-pre">
+      <pre className="text-xs leading-[1.7] font-mono text-n-10 whitespace-pre">
         {code}
       </pre>
     );
@@ -2007,7 +2007,7 @@ function HighlightedCode({ code }: { code: string }) {
 
   return (
     <div
-      className="[&_pre]:!bg-transparent [&_pre]:text-[12px] [&_pre]:leading-[1.7] [&_pre]:font-mono [&_pre]:font-medium [&_code]:font-mono [&_code]:font-medium"
+      className="[&_pre]:!bg-transparent [&_pre]:text-xs [&_pre]:leading-[1.7] [&_pre]:font-mono [&_pre]:font-medium [&_code]:font-mono [&_code]:font-medium"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
@@ -2117,7 +2117,7 @@ function CopyIconButton({ text }: { text: string }) {
             transition={iconTransition}
           >
             <Check size={13} className="text-emerald-400" />
-            <span className="text-[11px] font-medium text-emerald-400">Copied</span>
+            <span className="text-xs font-medium text-emerald-400">Copied</span>
           </motion.span>
         ) : (
           <motion.span
@@ -2129,7 +2129,7 @@ function CopyIconButton({ text }: { text: string }) {
             transition={iconTransition}
           >
             <Copy size={13} />
-            <span className="text-[11px] font-medium">Copy .md</span>
+            <span className="text-xs font-medium">Copy .md</span>
           </motion.span>
         )}
       </AnimatePresence>
@@ -2179,7 +2179,7 @@ function CodePreviewBlock({
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`px-3 py-2.5 text-[13px] font-medium cursor-pointer transition-[color,border-color] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/25 ${
+            className={`px-3 py-2.5 text-sm font-medium cursor-pointer transition-[color,border-color] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/25 ${
               tab === t.id
                 ? 'text-n-12 border-b-2 border-n-12'
                 : 'text-n-9 hover:text-n-11 border-b-2 border-transparent'
@@ -2205,7 +2205,7 @@ function CodePreviewBlock({
         </div>
       )}
       {tab === 'source' && (
-        <div className="relative p-4 overflow-x-auto max-h-[600px] overflow-y-auto rounded-b-xl text-[13px]">
+        <div className="relative p-4 overflow-x-auto max-h-[600px] overflow-y-auto rounded-b-xl text-sm">
           <div className="absolute top-2 right-2 z-10">
             <InlineCopyButton text={code} />
           </div>
@@ -2219,7 +2219,7 @@ function CodePreviewBlock({
               <button
                 key={f.file}
                 onClick={() => setActiveFile(i)}
-                className={`block w-full text-left px-4 py-2 text-[13px] font-mono cursor-pointer transition-colors duration-100 ${
+                className={`block w-full text-left px-4 py-2 text-sm font-mono cursor-pointer transition-colors duration-100 ${
                   activeFile === i
                     ? 'text-sky-300/90 bg-white/[0.06]'
                     : 'text-white/40 hover:text-white/70 hover:bg-white/[0.02]'
@@ -2271,8 +2271,8 @@ function VariantGrid({ entries, renderSample }: {
       {entries.map(({ key, usage }) => (
         <div key={key} className="flex flex-col items-center gap-2 rounded-lg p-3" style={{ backgroundColor: SURFACE.level1 }}>
           {renderSample(key)}
-          <span className="text-[11px] font-mono text-n-10">{key}</span>
-          {usage && <span className="text-[10px] text-n-120 text-center leading-tight">{usage}</span>}
+          <span className="text-xs font-mono text-n-10">{key}</span>
+          {usage && <span className="text-xs text-n-120 text-center leading-tight">{usage}</span>}
         </div>
       ))}
     </div>
@@ -2321,9 +2321,9 @@ function ElevationRamp() {
       <div className="flex">
         {levels.map(({ key, opacity, hex }) => (
           <div key={key} className="flex-1 flex flex-col items-center gap-1 min-w-0">
-            <span className="text-[11px] font-medium text-n-10 tabular-nums">{key}</span>
-            <span className="text-[10px] font-mono text-n-9 tabular-nums">α {opacity}</span>
-            <span className="text-[10px] font-mono text-n-9">{hex}</span>
+            <span className="text-xs font-medium text-n-10 tabular-nums">{key}</span>
+            <span className="text-xs font-mono text-n-9 tabular-nums">α {opacity}</span>
+            <span className="text-xs font-mono text-n-9">{hex}</span>
           </div>
         ))}
       </div>
@@ -2336,8 +2336,8 @@ function ElevationRamp() {
             style={{ backgroundColor: ELEVATION.baseSurface }}
           />
           <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] font-medium text-n-10">Base surface</span>
-            <span className="text-[11px] font-mono text-n-10">{ELEVATION.baseSurface}</span>
+            <span className="text-xs font-medium text-n-10">Base surface</span>
+            <span className="text-xs font-mono text-n-10">{ELEVATION.baseSurface}</span>
           </div>
         </div>
 
@@ -2347,8 +2347,8 @@ function ElevationRamp() {
             style={{ backgroundColor: SURFACE.level2, boxShadow: ELEVATION.shadow }}
           />
           <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] font-medium text-n-10">Shadow</span>
-            <code className="text-[10px] font-mono text-n-9 max-w-[220px] truncate" title={ELEVATION.shadow}>{ELEVATION.shadow}</code>
+            <span className="text-xs font-medium text-n-10">Shadow</span>
+            <code className="text-xs font-mono text-n-9 max-w-[220px] truncate" title={ELEVATION.shadow}>{ELEVATION.shadow}</code>
           </div>
         </div>
       </div>
@@ -2430,12 +2430,12 @@ function StyleguideUnifiedCard({ detection, defaultOpen = true }: { detection: D
       {slots.closureType && (
         <div className="px-2 pt-1.5 flex items-center gap-1">
           {slots.closureType === 'manual' ? (
-            <div className="flex items-center gap-1 text-[9px] text-n-120">
+            <div className="flex items-center gap-1 text-xs text-n-120">
               <Hand size={10} className="text-n-120" aria-hidden="true" />
               <span>סגירה ידנית</span>
             </div>
           ) : (
-            <div className="flex items-center gap-1 text-[9px] text-n-120">
+            <div className="flex items-center gap-1 text-xs text-n-120">
               <Zap size={10} className="text-n-120" aria-hidden="true" />
               <span>סגירה אוטומטית</span>
             </div>
@@ -2547,7 +2547,7 @@ function CardStatePlayground() {
       <div className="space-y-3">
         {STATE_GROUPS.map((group) => (
           <div key={group.label}>
-            <span className="block text-[10px] font-semibold uppercase tracking-widest text-n-9 mb-1.5">
+            <span className="block text-xs font-semibold uppercase tracking-widest text-n-9 mb-1.5">
               {group.label}
             </span>
             <div className="flex flex-wrap gap-1.5">
@@ -2558,7 +2558,7 @@ function CardStatePlayground() {
                   <button
                     key={e.id}
                     onClick={() => setActiveId(e.id)}
-                    className={`flex items-center gap-1.5 h-7 px-2.5 rounded-md text-[11px] font-medium cursor-pointer transition-[color,background-color,box-shadow] duration-150 ease-out active:scale-[0.98] ${
+                    className={`flex items-center gap-1.5 h-7 px-2.5 rounded-md text-xs font-medium cursor-pointer transition-[color,background-color,box-shadow] duration-150 ease-out active:scale-[0.98] ${
                       isActive
                         ? 'bg-white/[0.1] text-n-12 shadow-[0_0_0_1px_rgba(255,255,255,0.15)]'
                         : 'text-n-120 hover:text-n-10 hover:bg-white/[0.04]'
@@ -2586,9 +2586,9 @@ function CardStatePlayground() {
 
       {/* Visual properties annotation */}
       <div className="space-y-2.5">
-        <h3 className="text-[13px] font-medium text-n-10">Computed Visual Properties</h3>
+        <h3 className="text-sm font-medium text-n-10">Computed Visual Properties</h3>
         <div className="overflow-x-auto rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)]" dir="ltr">
-          <table className="w-full text-[12px]" dir="ltr">
+          <table className="w-full text-xs" dir="ltr">
             <thead>
               <tr className="border-b border-white/5" style={{ backgroundColor: SURFACE.level1 }}>
                 <th className="py-2 px-3 text-left font-medium text-n-9">Property</th>
@@ -2606,7 +2606,7 @@ function CardStatePlayground() {
                       className="w-4 h-4 rounded shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
                       style={{ backgroundColor: CARD_TOKENS.spine.colors[slots.accent] }}
                     />
-                    <span className="font-mono text-n-9 text-[11px]">{CARD_TOKENS.spine.colors[slots.accent]}</span>
+                    <span className="font-mono text-n-9 text-xs">{CARD_TOKENS.spine.colors[slots.accent]}</span>
                   </div>
                 </td>
               </tr>
@@ -2649,7 +2649,7 @@ function CardStatePlayground() {
                         className="w-4 h-4 rounded shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
                         style={{ backgroundColor: slots.header.iconColor }}
                       />
-                      <span className="font-mono text-n-9 text-[11px]">{slots.header.iconColor}</span>
+                      <span className="font-mono text-n-9 text-xs">{slots.header.iconColor}</span>
                     </div>
                   )}
                 </td>
@@ -2908,7 +2908,7 @@ export default function StyleguidePage() {
             >
               <Suspense
                 fallback={
-                  <div className="flex items-center justify-center min-h-[240px] rounded-xl bg-white/[0.02] shadow-[0_0_0_1px_rgba(255,255,255,0.06)] text-[13px] text-n-9">
+                  <div className="flex items-center justify-center min-h-[240px] rounded-xl bg-white/[0.02] shadow-[0_0_0_1px_rgba(255,255,255,0.06)] text-sm text-n-9">
                     Loading icon library…
                   </div>
                 }
@@ -2924,16 +2924,16 @@ export default function StyleguidePage() {
 
                 <div className="space-y-3">
                   <SectionHeading>Install</SectionHeading>
-                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide">
+                  <p className="text-base font-normal leading-relaxed text-white/50 tracking-wide">
                     Install every component, token, and icon in one command:
                   </p>
                   <QuickStartCodeBlock code="npx shadcn@latest add @c2/all" />
-                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide mt-2">
+                  <p className="text-base font-normal leading-relaxed text-white/50 tracking-wide mt-2">
                     Or pick only what you need:
                   </p>
                   <QuickStartCodeBlock code="npx shadcn@latest add @c2/button @c2/target-card @c2/status-chip" />
-                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide mt-2">
-                    Dependencies are resolved automatically — installing <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">target-card</code> pulls in <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">tokens</code>, <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">utils</code>, and any other internal dependencies.
+                  <p className="text-base font-normal leading-relaxed text-white/50 tracking-wide mt-2">
+                    Dependencies are resolved automatically — installing <code className="text-sm font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">target-card</code> pulls in <code className="text-sm font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">tokens</code>, <code className="text-sm font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">utils</code>, and any other internal dependencies.
                   </p>
                 </div>
 
@@ -2954,21 +2954,21 @@ export function DetectionRow() {
 
                 <div className="space-y-3">
                   <SectionHeading>Project setup</SectionHeading>
-                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide mb-3">
+                  <p className="text-base font-normal leading-relaxed text-white/50 tracking-wide mb-3">
                     First time? Complete these steps before installing components.
                   </p>
 
-                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide">
-                    <span className="text-n-11 font-medium">1.</span>{' '}Requires <span className="text-n-11 font-medium">Vite + React + TypeScript + Tailwind CSS v4</span> with <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">@/*</code> path aliases configured.
+                  <p className="text-base font-normal leading-relaxed text-white/50 tracking-wide">
+                    <span className="text-n-11 font-medium">1.</span>{' '}Requires <span className="text-n-11 font-medium">Vite + React + TypeScript + Tailwind CSS v4</span> with <code className="text-sm font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">@/*</code> path aliases configured.
                   </p>
 
-                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide mt-4">
-                    <span className="text-n-11 font-medium">2.</span>{' '}Initialize shadcn if you don't have a <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">components.json</code> yet:
+                  <p className="text-base font-normal leading-relaxed text-white/50 tracking-wide mt-4">
+                    <span className="text-n-11 font-medium">2.</span>{' '}Initialize shadcn if you don't have a <code className="text-sm font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">components.json</code> yet:
                   </p>
                   <QuickStartCodeBlock code="npx shadcn@latest init" />
 
-                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide mt-4">
-                    <span className="text-n-11 font-medium">3.</span>{' '}Add the C2 registry to your <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">components.json</code>:
+                  <p className="text-base font-normal leading-relaxed text-white/50 tracking-wide mt-4">
+                    <span className="text-n-11 font-medium">3.</span>{' '}Add the C2 registry to your <code className="text-sm font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">components.json</code>:
                   </p>
                   <QuickStartCodeBlock code={`// components.json
 {
@@ -2977,25 +2977,25 @@ export function DetectionRow() {
   }
 }`} />
 
-                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide mt-4">
+                  <p className="text-base font-normal leading-relaxed text-white/50 tracking-wide mt-4">
                     <span className="text-n-11 font-medium">4.</span>{' '}Import the C2 theme in your CSS entry point:
                   </p>
                   <QuickStartCodeBlock code={`/* src/styles/index.css */
 @import "tailwindcss";
 @import "./theme.css";
 @import "./fonts.css";`} />
-                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide mt-1.5">
-                    Copy <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">theme.css</code> and <code className="text-[13px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">fonts.css</code> from the C2 Hub repo into your project's styles directory.
+                  <p className="text-base font-normal leading-relaxed text-white/50 tracking-wide mt-1.5">
+                    Copy <code className="text-sm font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">theme.css</code> and <code className="text-sm font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">fonts.css</code> from the C2 Hub repo into your project's styles directory.
                   </p>
                 </div>
 
                 <div className="space-y-3">
                   <SectionHeading>Updating</SectionHeading>
-                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide">
+                  <p className="text-base font-normal leading-relaxed text-white/50 tracking-wide">
                     Preview changes before updating:
                   </p>
                   <QuickStartCodeBlock code="npx shadcn@latest diff @c2/button" />
-                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide mt-3">
+                  <p className="text-base font-normal leading-relaxed text-white/50 tracking-wide mt-3">
                     Apply the update:
                   </p>
                   <QuickStartCodeBlock code="npx shadcn@latest add @c2/button --overwrite" />
@@ -3010,22 +3010,22 @@ export function DetectionRow() {
               <div className="space-y-0 divide-y divide-white/[0.04]">
                 {CHANGELOG.map((entry, i) => (
                   <div key={entry.version} className={`space-y-3 ${i === 0 ? 'pb-8' : 'py-8'}`}>
-                    <span className="block text-[13px] font-mono text-n-120" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                    <span className="block text-sm font-mono text-n-120" style={{ fontVariantNumeric: 'tabular-nums' }}>
                       {entry.date}
                     </span>
                     <div className="flex items-center gap-2.5">
-                      <h3 className="text-[20px] font-semibold text-n-12 tracking-tight" style={{ fontVariantNumeric: 'tabular-nums', textWrap: 'balance' }}>
+                      <h3 className="text-xl font-semibold text-n-12 tracking-tight" style={{ fontVariantNumeric: 'tabular-nums', textWrap: 'balance' }}>
                         v{entry.version}
                       </h3>
                       {i === 0 && (
-                        <span className="text-[11px] font-medium bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full select-none">
+                        <span className="text-xs font-medium bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full select-none">
                           Latest
                         </span>
                       )}
                     </div>
                     <ul className="space-y-1.5 pl-4">
                       {entry.highlights.map((item) => (
-                        <li key={item} className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide list-disc marker:text-white/30" style={{ textWrap: 'pretty' }}>
+                        <li key={item} className="text-base font-normal leading-relaxed text-white/50 tracking-wide list-disc marker:text-white/30" style={{ textWrap: 'pretty' }}>
                           <ChangelogLine text={item} />
                         </li>
                       ))}
@@ -3039,8 +3039,8 @@ export function DetectionRow() {
             {activeItem === 'styling' && (
             <ComponentSection id="styling" name="Styling" description="Color tokens, elevation surfaces, and typography setup. Paste the theme CSS into your project to get the full design language.">
               <SectionHeading>Theme CSS</SectionHeading>
-              <p className="text-[16px] font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
-                The design system uses two CSS files: <code className="text-[13px] font-mono text-n-10">theme.css</code> for semantic color tokens (light/dark) and Tailwind bindings, and <code className="text-[13px] font-mono text-n-10">index.css</code> for the neutral scale, tactical red palette, and global resets. Copy each into your project.
+              <p className="text-base font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
+                The design system uses two CSS files: <code className="text-sm font-mono text-n-10">theme.css</code> for semantic color tokens (light/dark) and Tailwind bindings, and <code className="text-sm font-mono text-n-10">index.css</code> for the neutral scale, tactical red palette, and global resets. Copy each into your project.
               </p>
               <div className="space-y-6">
                 <CodePreviewBlock name="theme.css" description="Semantic color tokens, Tailwind @theme bindings, and base typography." code={themeCssSrc} />
@@ -3048,8 +3048,8 @@ export function DetectionRow() {
               </div>
 
               <SectionHeading>Neutral Scale</SectionHeading>
-              <p className="text-[16px] font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
-                12-step achromatic OKLCH ramp. Use <code className="text-[13px] font-mono text-n-10">text-n-8</code>, <code className="text-[13px] font-mono text-n-10">bg-n-3</code>, etc.
+              <p className="text-base font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
+                12-step achromatic OKLCH ramp. Use <code className="text-sm font-mono text-n-10">text-n-8</code>, <code className="text-sm font-mono text-n-10">bg-n-3</code>, etc.
               </p>
               <PreviewPanel align="stretch">
                 <div className="space-y-3" dir="ltr">
@@ -3061,7 +3061,7 @@ export function DetectionRow() {
                   <div className="flex">
                     {NEUTRAL_STEPS.map(({ step }) => (
                       <div key={step} className="flex-1 flex flex-col items-center gap-0.5 min-w-0">
-                        <span className="text-[10px] font-mono text-n-9 tabular-nums">n-{step}</span>
+                        <span className="text-xs font-mono text-n-9 tabular-nums">n-{step}</span>
                       </div>
                     ))}
                   </div>
@@ -3069,7 +3069,7 @@ export function DetectionRow() {
               </PreviewPanel>
 
               <SectionHeading>Elevation</SectionHeading>
-              <p className="text-[16px] font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
+              <p className="text-base font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
                 Surfaces rise from a dark base ({ELEVATION.baseSurface}) by mixing white overlays at increasing opacity. Click any level to copy its hex.
               </p>
               <PreviewPanel align="stretch">
@@ -3080,35 +3080,35 @@ export function DetectionRow() {
               <PreviewPanel align="stretch">
                 <div className="space-y-3">
                   <div>
-                    <span className="text-[10px] font-semibold uppercase tracking-widest text-n-9 mb-1 block">Sans — Heebo</span>
+                    <span className="text-xs font-semibold uppercase tracking-widest text-n-9 mb-1 block">Sans — Heebo</span>
                     <p className="font-sans text-base text-n-11">אבגדהו The quick brown fox jumps over the lazy dog — 0123456789</p>
                   </div>
                   <div className="border-t border-white/5 pt-3">
-                    <span className="text-[10px] font-semibold uppercase tracking-widest text-n-9 mb-1 block">Mono — IBM Plex Mono</span>
+                    <span className="text-xs font-semibold uppercase tracking-widest text-n-9 mb-1 block">Mono — IBM Plex Mono</span>
                     <p className="font-mono text-base text-n-11">const x = 42; // 0123456789 → tabular-nums</p>
                   </div>
                 </div>
               </PreviewPanel>
 
               <SectionHeading>Press feedback</SectionHeading>
-              <p className="text-[16px] font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
-                Every interactive surface (buttons, list rows, icon affordances, filter triggers, combobox triggers) responds to <code className="text-[13px] font-mono text-n-10">:active</code> with a subtle <code className="text-[13px] font-mono text-n-10">scale(0.98)</code>. The scale is intentionally tiny so the feedback registers without feeling bouncy or toy-like. Pair it with a 150ms transform transition.
+              <p className="text-base font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
+                Every interactive surface (buttons, list rows, icon affordances, filter triggers, combobox triggers) responds to <code className="text-sm font-mono text-n-10">:active</code> with a subtle <code className="text-sm font-mono text-n-10">scale(0.98)</code>. The scale is intentionally tiny so the feedback registers without feeling bouncy or toy-like. Pair it with a 150ms transform transition.
               </p>
               <PreviewPanel align="stretch" className="flex">
                 <div className="flex flex-wrap items-center gap-3" dir="ltr">
-                  <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-[12px] font-medium text-white/80 bg-white/[0.06] hover:bg-white/[0.1] active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out">
+                  <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium text-white/80 bg-white/[0.06] hover:bg-white/[0.1] active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out">
                     Press me
                   </button>
                   <Button variant="secondary" size="sm" className="active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out">
                     Secondary
                   </Button>
-                  <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-[12px] font-medium bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out">
+                  <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out">
                     Stateful
                   </button>
                 </div>
               </PreviewPanel>
-              <p className="text-[13px] text-n-9 mt-3 leading-relaxed">
-                Drop-in classes: <code className="text-[12px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">active:scale-[0.98]</code> + <code className="text-[12px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">transition-[background-color,color,transform] duration-150 ease-out</code>. If a button only animates on hover (no transform), it's safe to use the shorter <code className="text-[12px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">transition-colors</code> instead — but keep the scale value at <code className="text-[12px] font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">0.98</code> for consistency with the rest of the app.
+              <p className="text-sm text-n-9 mt-3 leading-relaxed">
+                Drop-in classes: <code className="text-xs font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">active:scale-[0.98]</code> + <code className="text-xs font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">transition-[background-color,color,transform] duration-150 ease-out</code>. If a button only animates on hover (no transform), it's safe to use the shorter <code className="text-xs font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">transition-colors</code> instead — but keep the scale value at <code className="text-xs font-mono text-sky-300/80 bg-white/[0.04] px-1.5 py-0.5 rounded">0.98</code> for consistency with the rest of the app.
               </p>
             </ComponentSection>
             )}
@@ -3550,7 +3550,7 @@ export function DetectionRow() {
               <ExampleBlock title="Always visible (no group/copy parent)" tight>
                 <div className="max-w-sm rounded-lg p-3 flex items-center gap-2" style={{ backgroundColor: SURFACE.level1 }}>
                   <span
-                    className="flex-1 min-w-0 text-[13px] text-zinc-200 font-mono tabular-nums"
+                    className="flex-1 min-w-0 text-sm text-zinc-200 font-mono tabular-nums"
                     style={{ fontVariantNumeric: 'tabular-nums slashed-zero' }}
                   >
                     f7k3c251f00cx623
@@ -3561,7 +3561,7 @@ export function DetectionRow() {
 
               <ExampleBlock title="Disabled (empty value)" tight>
                 <div className="max-w-sm rounded-lg p-3 flex items-center gap-2" style={{ backgroundColor: SURFACE.level1 }}>
-                  <span className="flex-1 min-w-0 text-[13px] text-zinc-500 italic">no value</span>
+                  <span className="flex-1 min-w-0 text-sm text-zinc-500 italic">no value</span>
                   <CopyButton value="" copyLabel="Copy" copiedLabel="Copied" alwaysVisible />
                 </div>
               </ExampleBlock>
@@ -3569,7 +3569,7 @@ export function DetectionRow() {
               <ExampleBlock title="Size: md" tight>
                 <div className="max-w-sm rounded-lg p-3 flex items-center gap-2" style={{ backgroundColor: SURFACE.level1 }}>
                   <span
-                    className="flex-1 min-w-0 text-[13px] text-zinc-200 font-mono tabular-nums"
+                    className="flex-1 min-w-0 text-sm text-zinc-200 font-mono tabular-nums"
                     style={{ fontVariantNumeric: 'tabular-nums slashed-zero' }}
                   >
                     TGT-0042
@@ -4023,8 +4023,8 @@ export function DetectionRow() {
               ]} />
 
               <SectionHeading>DevicesPanelStrings</SectionHeading>
-              <p className="text-[16px] font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
-                Every user-facing label inside the panel is keyed off a single <code className="text-[13px] font-mono text-n-10">DevicesPanelStrings</code> object so consumers can localise without forking the component. Pass overrides via the <code className="text-[13px] font-mono text-n-10">strings</code> prop; missing keys fall back to the English defaults shown here.
+              <p className="text-base font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
+                Every user-facing label inside the panel is keyed off a single <code className="text-sm font-mono text-n-10">DevicesPanelStrings</code> object so consumers can localise without forking the component. Pass overrides via the <code className="text-sm font-mono text-n-10">strings</code> prop; missing keys fall back to the English defaults shown here.
               </p>
               <PropsTable items={[
                 { name: 'searchPlaceholder', type: 'string', default: '"Search…"', description: 'Placeholder text inside the FilterBar search input.' },
@@ -4093,7 +4093,7 @@ export function DetectionRow() {
                       resetLabel="ניקוי"
                       resetAriaLabel="ניקוי מסננים"
                     />
-                    <div className="px-3 py-8 text-center text-[12px] text-n-7">אין מכשירים תואמים</div>
+                    <div className="px-3 py-8 text-center text-xs text-n-7">אין מכשירים תואמים</div>
                   </div>
                 </StyleguideDeviceTile>
               </ExampleBlock>
@@ -4168,8 +4168,8 @@ export function DetectionRow() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[13px] font-medium text-n-10">PTZ Camera (North)</span>
-                          <span className="flex items-center gap-1.5 text-[11px] font-['Heebo'] tabular-nums text-white/50">
+                          <span className="text-sm font-medium text-n-10">PTZ Camera (North)</span>
+                          <span className="flex items-center gap-1.5 text-xs font-['Heebo'] tabular-nums text-white/50">
                             <StyleguideBatteryIcon pct={18} />
                             18%
                           </span>
@@ -4186,7 +4186,7 @@ export function DetectionRow() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[13px] font-medium text-orange-300">Magos (South)</span>
+                          <span className="text-sm font-medium text-orange-300">Magos (South)</span>
                           <AlertTriangle size={11} className="text-orange-400 shrink-0" />
                         </div>
                       </div>
@@ -4200,7 +4200,7 @@ export function DetectionRow() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[13px] font-medium text-n-10">RADA ieMHR</span>
+                          <span className="text-sm font-medium text-n-10">RADA ieMHR</span>
                           <span className="flex items-center gap-1 text-xs font-mono tabular-nums text-white">
                             <BellOff size={12} className="text-white" />
                             28:42
@@ -4216,10 +4216,10 @@ export function DetectionRow() {
                         <SensorIcon size={20} fill="white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <span className="text-[13px] font-medium text-n-10">Regulus North</span>
-                        <div className="text-[11px] font-mono tabular-nums text-white/50">1.5km</div>
+                        <span className="text-sm font-medium text-n-10">Regulus North</span>
+                        <div className="text-xs font-mono tabular-nums text-white/50">1.5km</div>
                       </div>
-                      <button className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium bg-[oklch(0.348_0.111_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)]">
+                      <button className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium bg-[oklch(0.348_0.111_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)]">
                         <StyleguideJamIcon size={12} />
                         הפעל
                       </button>
@@ -4241,7 +4241,7 @@ export function DetectionRow() {
                         <SensorIcon size={20} fill="white" />
                         <span className={`absolute -bottom-0.5 -right-0.5 size-2 rounded-full ring-2 ring-n-1 ${color}`} />
                       </div>
-                      <span className="text-[10px] font-mono text-n-9">{label}</span>
+                      <span className="text-xs font-mono text-n-9">{label}</span>
                     </div>
                   ))}
                 </div>
@@ -4257,11 +4257,11 @@ export function DetectionRow() {
                     { pct: 91, label: 'Good' },
                   ] as const).map(({ pct, label }) => (
                     <div key={pct} className="flex flex-col items-center gap-2 rounded-lg border border-white/[0.06] bg-black/20 p-4">
-                      <span className="flex items-center gap-1.5 text-[11px] font-['Heebo'] tabular-nums text-white/50">
+                      <span className="flex items-center gap-1.5 text-xs font-['Heebo'] tabular-nums text-white/50">
                         <StyleguideBatteryIcon pct={pct} />
                         {pct}%
                       </span>
-                      <span className="text-[10px] font-mono text-n-9">{label}</span>
+                      <span className="text-xs font-mono text-n-9">{label}</span>
                     </div>
                   ))}
                 </div>
@@ -4276,8 +4276,8 @@ export function DetectionRow() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-[13px] font-medium text-n-10">PTZ Camera (North)</span>
-                        <span className="flex items-center gap-1.5 text-[11px] font-['Heebo'] tabular-nums text-white/50">
+                        <span className="text-sm font-medium text-n-10">PTZ Camera (North)</span>
+                        <span className="flex items-center gap-1.5 text-xs font-['Heebo'] tabular-nums text-white/50">
                           <StyleguideBatteryIcon pct={18} />
                           18%
                         </span>
@@ -4287,7 +4287,7 @@ export function DetectionRow() {
                   <div className="flex flex-col bg-white/[0.03]">
                     <div className="flex items-center gap-0 px-3 border-b border-white/[0.06]">
                       {['רגיל', 'לילה', 'זום'].map((tab, i) => (
-                        <button key={tab} className={`px-3 py-2 text-[12px] font-medium border-b-2 ${i === 0 ? 'text-white border-white' : 'text-n-120 border-transparent hover:text-n-10'}`}>
+                        <button key={tab} className={`px-3 py-2 text-xs font-medium border-b-2 ${i === 0 ? 'text-white border-white' : 'text-n-120 border-transparent hover:text-n-10'}`}>
                           {tab}
                         </button>
                       ))}
@@ -4298,7 +4298,7 @@ export function DetectionRow() {
                       </div>
                       <div className="absolute top-1.5 right-1.5 flex items-center gap-1 bg-black/80 px-1.5 py-0.5 rounded-sm">
                         <div className="size-1.5 rounded-full bg-red-500 animate-pulse" />
-                        <span className="text-[9px] font-medium text-white/90 uppercase tracking-wide">Live</span>
+                        <span className="text-xs font-medium text-white/90 uppercase tracking-wide">Live</span>
                       </div>
                     </div>
                     <div className="grid grid-cols-3 gap-x-4 gap-y-5 px-4 py-3">
@@ -4310,17 +4310,17 @@ export function DetectionRow() {
                         { l: 'סוללה', v: '18%', c: 'text-red-400' },
                       ].map(r => (
                         <div key={r.l} className="flex flex-col gap-1 text-xs">
-                          <span className="text-white/60 text-[10px]">{r.l}</span>
+                          <span className="text-white/60 text-xs">{r.l}</span>
                           <span className={`font-sans tabular-nums text-xs ${r.c ?? 'text-white'}`}>{r.v}</span>
                         </div>
                       ))}
                     </div>
                     <div className="flex items-center gap-2 px-2 py-1.5 border-t border-white/[0.06]">
-                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06] hover:bg-white/10">
+                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium text-white/70 bg-white/[0.06] hover:bg-white/10">
                         <MapPin size={12} />
                         מרכז במפה
                       </button>
-                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06] hover:bg-white/10">
+                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium text-white/70 bg-white/[0.06] hover:bg-white/10">
                         <BellOff size={12} />
                         השתק
                       </button>
@@ -4338,10 +4338,10 @@ export function DetectionRow() {
                         <SensorIcon size={20} fill="white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <span className="text-[13px] font-medium text-n-10">Regulus North</span>
-                        <div className="text-[11px] font-mono tabular-nums text-white/50">1.5km</div>
+                        <span className="text-sm font-medium text-n-10">Regulus North</span>
+                        <div className="text-xs font-mono tabular-nums text-white/50">1.5km</div>
                       </div>
-                      <button className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium bg-[oklch(0.348_0.111_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)]">
+                      <button className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium bg-[oklch(0.348_0.111_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)]">
                         <StyleguideJamIcon size={12} />
                         הפעל
                       </button>
@@ -4354,17 +4354,17 @@ export function DetectionRow() {
                           { l: 'תקינות', v: 'תקין', c: 'text-emerald-400' },
                         ].map(r => (
                           <div key={r.l} className="flex flex-col gap-1 text-xs">
-                            <span className="text-white/60 text-[10px]">{r.l}</span>
+                            <span className="text-white/60 text-xs">{r.l}</span>
                             <span className={`font-sans tabular-nums text-xs ${r.c ?? 'text-white'}`}>{r.v}</span>
                           </div>
                         ))}
                       </div>
                       <div className="flex items-center gap-2 px-2 py-1.5 border-t border-white/[0.06]">
-                        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06]">
+                        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium text-white/70 bg-white/[0.06]">
                           <MapPin size={12} />
                           מרכז במפה
                         </button>
-                        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06]">
+                        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium text-white/70 bg-white/[0.06]">
                           <BellOff size={12} />
                           השתק
                         </button>
@@ -4378,9 +4378,9 @@ export function DetectionRow() {
                         <SensorIcon size={20} fill="white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <span className="text-[13px] font-medium text-n-10">Regulus East</span>
+                        <span className="text-sm font-medium text-n-10">Regulus East</span>
                       </div>
-                      <button disabled className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium opacity-40 cursor-not-allowed bg-[oklch(0.348_0.111_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)]">
+                      <button disabled className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium opacity-40 cursor-not-allowed bg-[oklch(0.348_0.111_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)]">
                         <StyleguideJamIcon size={12} />
                         שיבוש פעיל
                       </button>
@@ -4395,11 +4395,11 @@ export function DetectionRow() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[13px] font-medium text-orange-300">Regulus South</span>
+                          <span className="text-sm font-medium text-orange-300">Regulus South</span>
                           <AlertTriangle size={11} className="text-orange-400 shrink-0" />
                         </div>
                       </div>
-                      <button disabled className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium opacity-40 cursor-not-allowed bg-[oklch(0.348_0.111_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)]">
+                      <button disabled className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium opacity-40 cursor-not-allowed bg-[oklch(0.348_0.111_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)]">
                         <StyleguideJamIcon size={12} />
                         הפעל
                       </button>
@@ -4416,7 +4416,7 @@ export function DetectionRow() {
                       <svg width={20} height={20} viewBox="0 0 28 32" fill="none"><path d="M23.334 15.7502L9.33696 0.583495L5.86139 4.0835L10.5007 11.0835L9.32456 15.7502L10.5007 20.4168L5.86139 27.4168L9.32456 30.6801L23.334 15.7502Z" fill="white" stroke="#0a0a0a" strokeWidth="1"/></svg>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <span className="text-[13px] font-medium text-n-10">סיור-3</span>
+                      <span className="text-sm font-medium text-n-10">סיור-3</span>
                     </div>
                   </div>
                   <div className="flex flex-col bg-white/[0.03]">
@@ -4427,28 +4427,28 @@ export function DetectionRow() {
                         { l: 'תקינות', v: 'תקין', c: 'text-emerald-400' },
                       ].map(r => (
                         <div key={r.l} className="flex flex-col gap-1 text-xs">
-                          <span className="text-white/60 text-[10px]">{r.l}</span>
+                          <span className="text-white/60 text-xs">{r.l}</span>
                           <span className={`font-sans tabular-nums text-xs ${r.c ?? 'text-white'}`}>{r.v}</span>
                         </div>
                       ))}
                     </div>
                     <div className="flex items-center gap-2 px-2 py-1.5 border-t border-white/[0.06]">
-                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06]">
+                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium text-white/70 bg-white/[0.06]">
                         <MapPin size={12} />
                         מרכז במפה
                       </button>
-                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06]">
+                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium text-white/70 bg-white/[0.06]">
                         <BellOff size={12} />
                         השתק
                       </button>
                       <div className="w-px h-5 bg-white/[0.08] mx-0.5" />
                       <div className="flex items-center gap-2">
-                        <span className="text-[11px] text-white/60">מגבים</span>
+                        <span className="text-xs text-white/60">מגבים</span>
                         <div className="h-[18px] w-8 rounded-full bg-white/10 relative">
                           <div className="absolute left-[2px] top-[2px] size-[14px] rounded-full bg-white/60 transition-transform" />
                         </div>
                       </div>
-                      <button className="ml-auto flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06]">
+                      <button className="ml-auto flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium text-white/70 bg-white/[0.06]">
                         <Wrench size={12} />
                         כיול
                       </button>
@@ -4463,11 +4463,11 @@ export function DetectionRow() {
                     { label: 'Done', icon: <Check size={12} className="text-emerald-400" />, text: 'הושלם' },
                   ] as const).map(({ label, icon, text }) => (
                     <div key={label} className="flex flex-col items-center gap-2 rounded-lg border border-white/[0.06] bg-black/20 p-4">
-                      <button disabled={label !== 'Idle'} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06] disabled:opacity-50 disabled:cursor-not-allowed">
+                      <button disabled={label !== 'Idle'} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium text-white/70 bg-white/[0.06] disabled:opacity-50 disabled:cursor-not-allowed">
                         {icon}
                         {text}
                       </button>
-                      <span className="text-[10px] font-mono text-n-9">{label}</span>
+                      <span className="text-xs font-mono text-n-9">{label}</span>
                     </div>
                   ))}
                 </div>
@@ -4482,9 +4482,9 @@ export function DetectionRow() {
                         <SpeakerIcon size={20} fill="white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <span className="text-[13px] font-medium text-n-10">PA Speaker (Gate)</span>
+                        <span className="text-sm font-medium text-n-10">PA Speaker (Gate)</span>
                       </div>
-                      <Button variant="secondary" size="sm" className="shrink-0 h-7 gap-1.5 px-2 rounded text-[11px] font-medium" aria-pressed={false}>
+                      <Button variant="secondary" size="sm" className="shrink-0 h-7 gap-1.5 px-2 rounded text-xs font-medium" aria-pressed={false}>
                         <StyleguidePlayFilledIcon size={12} />
                         נגן
                       </Button>
@@ -4498,11 +4498,11 @@ export function DetectionRow() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <span className="text-[13px] font-medium text-n-10 truncate">PA Speaker (Tower)</span>
-                          <StatusChip label="משדר" color="green" className="h-5 px-1.5 text-[10px] leading-none" />
+                          <span className="text-sm font-medium text-n-10 truncate">PA Speaker (Tower)</span>
+                          <StatusChip label="משדר" color="green" className="h-5 px-1.5 text-xs leading-none" />
                         </div>
                       </div>
-                      <Button variant="secondary" size="sm" className="shrink-0 h-7 gap-1.5 px-2 rounded text-[11px] font-medium" aria-pressed>
+                      <Button variant="secondary" size="sm" className="shrink-0 h-7 gap-1.5 px-2 rounded text-xs font-medium" aria-pressed>
                         <Square size={12} />
                         עצור
                       </Button>
@@ -4515,9 +4515,9 @@ export function DetectionRow() {
                         <SpeakerIcon size={20} fill="white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <span className="text-[13px] font-medium text-n-10">PA Speaker (Gate)</span>
+                        <span className="text-sm font-medium text-n-10">PA Speaker (Gate)</span>
                       </div>
-                      <Button variant="secondary" size="sm" className="shrink-0 h-7 gap-1.5 px-2 rounded text-[11px] font-medium" aria-pressed={false}>
+                      <Button variant="secondary" size="sm" className="shrink-0 h-7 gap-1.5 px-2 rounded text-xs font-medium" aria-pressed={false}>
                         <StyleguidePlayFilledIcon size={12} />
                         נגן
                       </Button>
@@ -4527,18 +4527,18 @@ export function DetectionRow() {
                         <div className="flex items-center gap-2 min-w-0 h-7 rounded bg-white/[0.05] text-white/[0.64]">
                           <button
                             type="button"
-                            className="inline-flex items-center justify-between gap-2 h-7 min-w-0 max-w-[160px] px-2 rounded text-[11px] font-medium text-white/[0.64] bg-transparent transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25"
+                            className="inline-flex items-center justify-between gap-2 h-7 min-w-0 max-w-[160px] px-2 rounded text-xs font-medium text-white/[0.64] bg-transparent transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25"
                           >
                             <span className="truncate">אזעקת אש</span>
                             <ChevronsUpDown size={12} className="shrink-0 opacity-60" />
                           </button>
                         </div>
                         <div className="w-px h-5 bg-white/[0.08] mx-0.5" />
-                        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06]">
+                        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium text-white/70 bg-white/[0.06]">
                           <MapPin size={12} />
                           מרכז במפה
                         </button>
-                        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06]">
+                        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium text-white/70 bg-white/[0.06]">
                           <BellOff size={12} />
                           השתק
                         </button>
@@ -4557,9 +4557,9 @@ export function DetectionRow() {
                         <FloodlightIcon size={20} fill="white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <span className="text-[13px] font-medium text-n-10">Floodlight (North)</span>
+                        <span className="text-sm font-medium text-n-10">Floodlight (North)</span>
                       </div>
-                      <span className="text-[11px] text-white/60 shrink-0">כבוי</span>
+                      <span className="text-xs text-white/60 shrink-0">כבוי</span>
                       <Switch checked={false} aria-label="הפעל זרקור" className="shrink-0" />
                     </div>
                   </StyleguideDeviceTile>
@@ -4570,9 +4570,9 @@ export function DetectionRow() {
                         <FloodlightIcon size={20} fill="white" active />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <span className="text-[13px] font-medium text-n-10">Floodlight (South)</span>
+                        <span className="text-sm font-medium text-n-10">Floodlight (South)</span>
                       </div>
-                      <span className="text-[11px] text-amber-300 shrink-0">דלוק</span>
+                      <span className="text-xs text-amber-300 shrink-0">דלוק</span>
                       <Switch checked aria-label="כבה זרקור" className="shrink-0" />
                     </div>
                   </StyleguideDeviceTile>
@@ -4583,9 +4583,9 @@ export function DetectionRow() {
                         <FloodlightIcon size={20} fill="white" active />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <span className="text-[13px] font-medium text-n-10">Floodlight (South)</span>
+                        <span className="text-sm font-medium text-n-10">Floodlight (South)</span>
                       </div>
-                      <span className="text-[11px] text-amber-300 shrink-0">דלוק</span>
+                      <span className="text-xs text-amber-300 shrink-0">דלוק</span>
                       <Switch checked aria-label="כבה זרקור" className="shrink-0" />
                     </div>
                     <div className="flex flex-col bg-white/[0.03]">
@@ -4595,23 +4595,23 @@ export function DetectionRow() {
                           { l: 'תקינות', v: 'תקין', c: 'text-emerald-400' },
                         ].map(r => (
                           <div key={r.l} className="flex flex-col gap-1 text-xs">
-                            <span className="text-white/60 text-[10px]">{r.l}</span>
+                            <span className="text-white/60 text-xs">{r.l}</span>
                             <span className={`font-sans tabular-nums text-xs ${r.c ?? 'text-white'}`}>{r.v}</span>
                           </div>
                         ))}
                       </div>
                       <div className="flex items-center gap-2 px-2 py-1.5 border-t border-white/[0.06]">
-                        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06]">
+                        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium text-white/70 bg-white/[0.06]">
                           <MapPin size={12} />
                           מרכז במפה
                         </button>
-                        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06]">
+                        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium text-white/70 bg-white/[0.06]">
                           <BellOff size={12} />
                           השתק
                         </button>
                         <div className="w-px h-5 bg-white/[0.08] mx-0.5" />
                         <div className="flex items-center gap-2">
-                          <span className="text-[11px] text-white/60">זרקור</span>
+                          <span className="text-xs text-white/60">זרקור</span>
                           <Switch checked aria-label="כבה זרקור" />
                         </div>
                       </div>
@@ -4625,11 +4625,11 @@ export function DetectionRow() {
                 <div className="space-y-4">
                   <StyleguideDeviceTile label="Default state — fly-to and mute buttons.">
                     <div className="flex items-center gap-2 px-2 py-1.5">
-                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90">
+                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90">
                         <MapPin size={12} />
                         מרכז במפה
                       </button>
-                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90">
+                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90">
                         <BellOff size={12} />
                         השתק
                       </button>
@@ -4638,11 +4638,11 @@ export function DetectionRow() {
 
                   <StyleguideDeviceTile label="Muted state — amber highlight on the mute button.">
                     <div className="flex items-center gap-2 px-2 py-1.5">
-                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90">
+                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90">
                         <MapPin size={12} />
                         מרכז במפה
                       </button>
-                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium bg-amber-500/15 text-amber-400 hover:bg-amber-500/25">
+                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium bg-amber-500/15 text-amber-400 hover:bg-amber-500/25">
                         <BellOff size={12} />
                         בטל השתקה
                       </button>
@@ -4654,18 +4654,18 @@ export function DetectionRow() {
               {/* ── Track combobox pattern ──────────────────────── */}
               <ExampleBlock id="devices-track-combobox" title="Audio-track combobox" tight>
                 <div className="space-y-3">
-                  <p className="text-[13px] text-n-9 leading-relaxed">
-                    The speaker audio-track picker is the canonical "combobox with search" pattern in the app. It composes <code className="text-[12px] font-mono text-sky-300/80 bg-white/[0.04] px-1 py-0.5 rounded">Popover</code> for the open/close affordance with <code className="text-[12px] font-mono text-sky-300/80 bg-white/[0.04] px-1 py-0.5 rounded">cmdk</code>'s <code className="text-[12px] font-mono text-sky-300/80 bg-white/[0.04] px-1 py-0.5 rounded">Command</code> for the search input + filtered list. Use it whenever a Select would otherwise need an in-list search.
+                  <p className="text-sm text-n-9 leading-relaxed">
+                    The speaker audio-track picker is the canonical "combobox with search" pattern in the app. It composes <code className="text-xs font-mono text-sky-300/80 bg-white/[0.04] px-1 py-0.5 rounded">Popover</code> for the open/close affordance with <code className="text-xs font-mono text-sky-300/80 bg-white/[0.04] px-1 py-0.5 rounded">cmdk</code>'s <code className="text-xs font-mono text-sky-300/80 bg-white/[0.04] px-1 py-0.5 rounded">Command</code> for the search input + filtered list. Use it whenever a Select would otherwise need an in-list search.
                   </p>
-                  <p className="text-[13px] text-n-9 leading-relaxed">
-                    Direction-aware notes: trigger uses <code className="text-[12px] font-mono text-sky-300/80 bg-white/[0.04] px-1 py-0.5 rounded">align="start"</code> so the popover anchors to the start edge in both LTR and RTL; the content overrides Radix's dynamic <code className="text-[12px] font-mono text-sky-300/80 bg-white/[0.04] px-1 py-0.5 rounded">--radix-popover-content-transform-origin</code> with <code className="text-[12px] font-mono text-sky-300/80 bg-white/[0.04] px-1 py-0.5 rounded">origin-top-left rtl:origin-top-right</code> so the open-animation scales out from the visually-correct corner.
+                  <p className="text-sm text-n-9 leading-relaxed">
+                    Direction-aware notes: trigger uses <code className="text-xs font-mono text-sky-300/80 bg-white/[0.04] px-1 py-0.5 rounded">align="start"</code> so the popover anchors to the start edge in both LTR and RTL; the content overrides Radix's dynamic <code className="text-xs font-mono text-sky-300/80 bg-white/[0.04] px-1 py-0.5 rounded">--radix-popover-content-transform-origin</code> with <code className="text-xs font-mono text-sky-300/80 bg-white/[0.04] px-1 py-0.5 rounded">origin-top-left rtl:origin-top-right</code> so the open-animation scales out from the visually-correct corner.
                   </p>
                   <div dir="rtl" className="rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)] p-6 flex justify-center" style={{ backgroundColor: SURFACE.level0 }}>
                     <Popover open={comboboxDemoOpen} onOpenChange={setComboboxDemoOpen}>
                       <PopoverTrigger asChild>
                         <button
                           type="button"
-                          className="inline-flex items-center justify-between gap-2 h-7 min-w-[160px] max-w-[220px] px-2 rounded text-[11px] font-medium text-white/[0.64] bg-white/[0.05] transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25"
+                          className="inline-flex items-center justify-between gap-2 h-7 min-w-[160px] max-w-[220px] px-2 rounded text-xs font-medium text-white/[0.64] bg-white/[0.05] transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25"
                         >
                           <span className="truncate">
                             {DEFAULT_SPEAKER_TRACKS.find((t) => t.id === comboboxDemoTrack)?.label ?? 'Track'}
@@ -4679,7 +4679,7 @@ export function DetectionRow() {
                         className="w-[220px] p-0 origin-top-left rtl:origin-top-right"
                       >
                         <Command className="bg-transparent">
-                          <CommandInput placeholder="חיפוש מסלול..." className="text-[12px]" />
+                          <CommandInput placeholder="חיפוש מסלול..." className="text-xs" />
                           <CommandList>
                             <CommandEmpty>אין תוצאות תואמות</CommandEmpty>
                             <CommandGroup>
@@ -4691,7 +4691,7 @@ export function DetectionRow() {
                                     setComboboxDemoTrack(track.id);
                                     setComboboxDemoOpen(false);
                                   }}
-                                  className="text-[12px]"
+                                  className="text-xs"
                                 >
                                   <span className="flex-1 truncate">{track.label}</span>
                                   {track.id === comboboxDemoTrack && (
@@ -4705,8 +4705,8 @@ export function DetectionRow() {
                       </PopoverContent>
                     </Popover>
                   </div>
-                  <p className="text-[12px] text-n-7 leading-relaxed">
-                    Keyboard: <code className="text-[11px] font-mono text-n-9 bg-white/[0.04] px-1 py-0.5 rounded">Enter</code> / <code className="text-[11px] font-mono text-n-9 bg-white/[0.04] px-1 py-0.5 rounded">Space</code> opens the popover, <code className="text-[11px] font-mono text-n-9 bg-white/[0.04] px-1 py-0.5 rounded">↑</code>/<code className="text-[11px] font-mono text-n-9 bg-white/[0.04] px-1 py-0.5 rounded">↓</code> moves through filtered items, <code className="text-[11px] font-mono text-n-9 bg-white/[0.04] px-1 py-0.5 rounded">Enter</code> commits, <code className="text-[11px] font-mono text-n-9 bg-white/[0.04] px-1 py-0.5 rounded">Esc</code> dismisses.
+                  <p className="text-xs text-n-7 leading-relaxed">
+                    Keyboard: <code className="text-xs font-mono text-n-9 bg-white/[0.04] px-1 py-0.5 rounded">Enter</code> / <code className="text-xs font-mono text-n-9 bg-white/[0.04] px-1 py-0.5 rounded">Space</code> opens the popover, <code className="text-xs font-mono text-n-9 bg-white/[0.04] px-1 py-0.5 rounded">↑</code>/<code className="text-xs font-mono text-n-9 bg-white/[0.04] px-1 py-0.5 rounded">↓</code> moves through filtered items, <code className="text-xs font-mono text-n-9 bg-white/[0.04] px-1 py-0.5 rounded">Enter</code> commits, <code className="text-xs font-mono text-n-9 bg-white/[0.04] px-1 py-0.5 rounded">Esc</code> dismisses.
                   </p>
                 </div>
               </ExampleBlock>
@@ -4760,7 +4760,7 @@ export function DetectionRow() {
               <div id="layer-anatomy" className="scroll-mt-12 space-y-6 pt-10">
                 <div className="space-y-2">
                   <h3 className="text-lg font-semibold text-n-12">Layer Anatomy</h3>
-                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide">
+                  <p className="text-base font-normal leading-relaxed text-white/50 tracking-wide">
                     Each marker composites 4 concentric layers plus optional overlays. Hover a layer card to spotlight it on the preview.
                   </p>
                 </div>
@@ -4824,7 +4824,7 @@ export function DetectionRow() {
               <div id="state-matrix" className="scroll-mt-12 space-y-6 pt-10">
                 <div className="space-y-2">
                   <h3 className="text-lg font-semibold text-n-12">Interaction State Matrix</h3>
-                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide">
+                  <p className="text-base font-normal leading-relaxed text-white/50 tracking-wide">
                     {INTERACTION_STATES.length} interaction states &times; {AFFILIATIONS.length} affiliations = {INTERACTION_STATES.length * AFFILIATIONS.length} visual combinations. Hover a state card to preview it. Click an affiliation dot to change the hero.
                   </p>
                 </div>
@@ -4895,7 +4895,7 @@ export function DetectionRow() {
                     <div className="text-center space-y-1">
                       <span className="block text-sm font-semibold text-n-12">{INTERACTION_STATE_LABELS[explorerState]}</span>
                     </div>
-                    <span className="text-[10px] text-n-120">{AFFILIATION_LABELS[hoveredAff ?? explorerAff]}</span>
+                    <span className="text-xs text-n-120">{AFFILIATION_LABELS[hoveredAff ?? explorerAff]}</span>
                   </div>
 
                 </div>
@@ -4905,7 +4905,7 @@ export function DetectionRow() {
               <div id="icon-catalog" className="scroll-mt-12 space-y-6 pt-10">
                 <div className="space-y-2">
                   <h3 className="text-lg font-semibold text-n-12">Icon Catalog</h3>
-                  <p className="text-[16px] font-normal leading-relaxed text-white/50 tracking-wide">
+                  <p className="text-base font-normal leading-relaxed text-white/50 tracking-wide">
                     Tactical SVG icons used inside map markers on the Mapbox canvas. Each icon accepts a <code className="text-n-10">fill</code> prop.
                   </p>
                   <a
@@ -4914,7 +4914,7 @@ export function DetectionRow() {
                       e.preventDefault();
                       setActiveItem('icon-library');
                     }}
-                    className="inline-flex items-center gap-1 text-[13px] text-sky-300/90 hover:text-sky-200 transition-colors duration-150"
+                    className="inline-flex items-center gap-1 text-sm text-sky-300/90 hover:text-sky-200 transition-colors duration-150"
                   >
                     → See the full Icon Library
                   </a>
@@ -4950,21 +4950,21 @@ export function DetectionRow() {
               description="A CesiumJS-based map primitive — sandbox for replacing the Mapbox-based TacticalMap. Step 1: feature parity with our current map (basemap, markers, FOV, ECM coverage, fly-to). Step 2: Cesium-only capabilities (terrain, time-aware data, true 3D)."
             >
               <SectionHeading>Basics — Bing Aerial via Cesium Ion (2D)</SectionHeading>
-              <p className="text-[14px] leading-6 text-n-10">
-                Imagery: Cesium Ion asset id <code className="text-[13px] font-mono bg-white/[0.06] px-1 py-0.5 rounded">2</code>{' '}
+              <p className="text-sm leading-6 text-n-10">
+                Imagery: Cesium Ion asset id <code className="text-sm font-mono bg-white/[0.06] px-1 py-0.5 rounded">2</code>{' '}
                 (Bing Maps Aerial). Token comes from the{' '}
-                <code className="text-[13px] font-mono bg-white/[0.06] px-1 py-0.5 rounded">VITE_CESIUM_ION_TOKEN</code>{' '}
-                env var (see <code className="text-[13px] font-mono bg-white/[0.06] px-1 py-0.5 rounded">.env.example</code>).
-                Scene mode is <code className="text-[13px] font-mono bg-white/[0.06] px-1 py-0.5 rounded">'2D'</code> for parity with the top-down Mapbox view.
+                <code className="text-sm font-mono bg-white/[0.06] px-1 py-0.5 rounded">VITE_CESIUM_ION_TOKEN</code>{' '}
+                env var (see <code className="text-sm font-mono bg-white/[0.06] px-1 py-0.5 rounded">.env.example</code>).
+                Scene mode is <code className="text-sm font-mono bg-white/[0.06] px-1 py-0.5 rounded">'2D'</code> for parity with the top-down Mapbox view.
               </p>
 
               {!CESIUM_ION_TOKEN ? (
-                <div className="rounded-md p-4 text-[13px] text-amber-300 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] bg-amber-500/[0.06]">
+                <div className="rounded-md p-4 text-sm text-amber-300 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] bg-amber-500/[0.06]">
                   <strong>Token missing.</strong> Set <code className="font-mono">VITE_CESIUM_ION_TOKEN</code> in <code className="font-mono">.env.local</code> and restart the dev server.
                 </div>
               ) : (
                 <div id="cesium-basics" className="scroll-mt-20 space-y-4 mt-10 first:mt-0">
-                  <h3 className="text-[14px] font-medium text-n-10">3 markers, no FOV / coverage</h3>
+                  <h3 className="text-sm font-medium text-n-10">3 markers, no FOV / coverage</h3>
                   <PreviewPanel align="stretch">
                     <div className="h-[420px] rounded-lg overflow-hidden">
                       <CesiumMap
@@ -4982,7 +4982,7 @@ export function DetectionRow() {
                 <>
                   <SectionHeading>FOV + Coverage</SectionHeading>
                   <div id="cesium-fov" className="scroll-mt-20 space-y-4 mt-10 first:mt-0">
-                    <h3 className="text-[14px] font-medium text-n-10">Sensor FOV cone (sector polygon) and ECM coverage ring (ellipse)</h3>
+                    <h3 className="text-sm font-medium text-n-10">Sensor FOV cone (sector polygon) and ECM coverage ring (ellipse)</h3>
                     <PreviewPanel align="stretch">
                       <div className="h-[420px] rounded-lg overflow-hidden">
                         <CesiumMap
@@ -4997,7 +4997,7 @@ export function DetectionRow() {
 
                   <SectionHeading>Fly-To</SectionHeading>
                   <div id="cesium-fly-to" className="scroll-mt-20 space-y-4 mt-10 first:mt-0">
-                    <h3 className="text-[14px] font-medium text-n-10">Imperative camera control. Pass a new flyTo prop to trigger an animation.</h3>
+                    <h3 className="text-sm font-medium text-n-10">Imperative camera control. Pass a new flyTo prop to trigger an animation.</h3>
                     <CesiumFlyToDemo />
                   </div>
                 </>
@@ -5026,21 +5026,21 @@ export function DetectionRow() {
 
               <SectionHeading>Step 2 — Cesium-only opportunities</SectionHeading>
               <div id="cesium-step-2" className="scroll-mt-20 space-y-4 mt-10 first:mt-0">
-                <p className="text-[14px] leading-6 text-n-10">
+                <p className="text-sm leading-6 text-n-10">
                   Once parity lands, these are the capabilities Cesium gives us that Mapbox GL JS does not (or that Cesium does much better). They are deliberately documented here, not implemented yet — so we choose deliberately what to ship next.
                 </p>
-                <ul className="space-y-3 text-[14px] leading-6 text-n-10 list-disc ps-6 marker:text-n-9">
+                <ul className="space-y-3 text-sm leading-6 text-n-10 list-disc ps-6 marker:text-n-9">
                   <li>
                     <strong className="text-n-12">True 3D globe + terrain.</strong> Cesium World Terrain (Ion asset 1) renders real elevation. Sensor lines-of-sight, drone altitude, missile trajectories all become visually correct in 3D, not faked with flat overlays.
                   </li>
                   <li>
-                    <strong className="text-n-12">Time-dynamic data (CZML).</strong> Replay engagements with a built-in clock + scrub bar. Drone, missile, jam, target tracks all driven by timestamped properties — not hand-rolled <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">requestAnimationFrame</code> loops.
+                    <strong className="text-n-12">Time-dynamic data (CZML).</strong> Replay engagements with a built-in clock + scrub bar. Drone, missile, jam, target tracks all driven by timestamped properties — not hand-rolled <code className="font-mono text-sm bg-white/[0.06] px-1 rounded">requestAnimationFrame</code> loops.
                   </li>
                   <li>
                     <strong className="text-n-12">3D Tiles for assets.</strong> Buildings, photogrammetry, ground stations as 3D-Tiles models. Camera collision, occlusion, and identification become possible.
                   </li>
                   <li>
-                    <strong className="text-n-12">Real line-of-sight visualization.</strong> Cesium has <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">Cesium.SensorVolume</code>-style primitives + the <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">cesium-sensor-volumes</code> add-on that draw conic / rectangular / spherical sensor volumes intersected with terrain.
+                    <strong className="text-n-12">Real line-of-sight visualization.</strong> Cesium has <code className="font-mono text-sm bg-white/[0.06] px-1 rounded">Cesium.SensorVolume</code>-style primitives + the <code className="font-mono text-sm bg-white/[0.06] px-1 rounded">cesium-sensor-volumes</code> add-on that draw conic / rectangular / spherical sensor volumes intersected with terrain.
                   </li>
                   <li>
                     <strong className="text-n-12">Atmospheric + sun lighting.</strong> Day/night terminator, cast shadows, atmospheric scattering — useful for surveillance scenarios that depend on sun angle.
@@ -5056,14 +5056,14 @@ export function DetectionRow() {
                   </li>
                 </ul>
 
-                <p className="text-[14px] leading-6 text-n-10">
+                <p className="text-sm leading-6 text-n-10">
                   <strong className="text-n-12">Suggested next milestones</strong> (after parity):
                 </p>
-                <ol className="space-y-2 text-[14px] leading-6 text-n-10 list-decimal ps-6 marker:text-n-9">
+                <ol className="space-y-2 text-sm leading-6 text-n-10 list-decimal ps-6 marker:text-n-9">
                   <li>Switch this primitive to 3D mode behind a toggle, layer in Cesium World Terrain.</li>
                   <li>Move drone / missile / engagement-line animations to CZML so the clock / scrub UI works.</li>
-                  <li>Replace the flat FOV polygon with a real <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">SensorVolume</code> (terrain-clipped 3D cone).</li>
-                  <li>Wire <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">CesiumMap</code> into <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">Dashboard</code> behind a feature flag, then deprecate <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">TacticalMap</code> when parity is full.</li>
+                  <li>Replace the flat FOV polygon with a real <code className="font-mono text-sm bg-white/[0.06] px-1 rounded">SensorVolume</code> (terrain-clipped 3D cone).</li>
+                  <li>Wire <code className="font-mono text-sm bg-white/[0.06] px-1 rounded">CesiumMap</code> into <code className="font-mono text-sm bg-white/[0.06] px-1 rounded">Dashboard</code> behind a feature flag, then deprecate <code className="font-mono text-sm bg-white/[0.06] px-1 rounded">TacticalMap</code> when parity is full.</li>
                 </ol>
               </div>
             </ComponentSection>
@@ -5076,7 +5076,7 @@ export function DetectionRow() {
               description="Camera-v2 playback surface lives only on /playground. One layout — a 50/50 split where live keeps the top half and playback takes the bottom — and a focused transport (play/pause + scrubber + clocks + exit). The live experience is interactive on /playground."
             >
               <SectionHeading>Layout</SectionHeading>
-              <p className="text-[14px] leading-6 text-n-10">
+              <p className="text-sm leading-6 text-n-10">
                 Live shrinks to the top half; the playback container takes the bottom half with a 2px red top border so the operator never confuses the two frames. The live HUD (drone overlay, telemetry, control bar) renders inside the live frame so its bottom edge tracks the live half — the operator can still hover the top half to surface the live control bar above the divider while the playback transport stays anchored at the very bottom of the tile.
               </p>
               <PreviewPanel align="stretch">
@@ -5086,7 +5086,7 @@ export function DetectionRow() {
               </PreviewPanel>
 
               <SectionHeading>Status states</SectionHeading>
-              <p className="text-[14px] leading-6 text-n-10">
+              <p className="text-sm leading-6 text-n-10">
                 Every media condition is surfaced inside the playback frame as an actionable, localised state. Browser autoplay rejection and `onError` events both route through the error card. Buffering has a 600ms grace timer so a momentary stall does not flash a spinner.
               </p>
               <PreviewPanel align="stretch">
@@ -5101,18 +5101,18 @@ export function DetectionRow() {
               </PreviewPanel>
 
               <SectionHeading>Notes</SectionHeading>
-              <ul className="space-y-3 text-[14px] leading-6 text-n-10 list-disc ps-6 marker:text-n-9">
+              <ul className="space-y-3 text-sm leading-6 text-n-10 list-disc ps-6 marker:text-n-9">
                 <li>
-                  <strong className="text-n-12">Time always flows L→R.</strong> The transport sits inside <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">&lt;DirIsland direction=&quot;ltr&quot;&gt;</code>. Hebrew tooltip labels still render correctly because the island only repositions chrome, not text.
+                  <strong className="text-n-12">Time always flows L→R.</strong> The transport sits inside <code className="font-mono text-sm bg-white/[0.06] px-1 rounded">&lt;DirIsland direction=&quot;ltr&quot;&gt;</code>. Hebrew tooltip labels still render correctly because the island only repositions chrome, not text.
                 </li>
                 <li>
                   <strong className="text-n-12">Foreign-locked tiles stay fully usable.</strong> Playback is read-only investigation, not a control op. Only mutating actions (mode swap, zoom slider) are disabled on a foreign-locked tile.
                 </li>
                 <li>
-                  <strong className="text-n-12">No persistence.</strong> Every open starts fresh — there are no preferences, no bookmarks, and no position carry-over. Camera swaps reset playback to <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">undefined</code> at the panel level so a stale position can&apos;t leak across cameras in a 4-up grid.
+                  <strong className="text-n-12">No persistence.</strong> Every open starts fresh — there are no preferences, no bookmarks, and no position carry-over. Camera swaps reset playback to <code className="font-mono text-sm bg-white/[0.06] px-1 rounded">undefined</code> at the panel level so a stale position can&apos;t leak across cameras in a 4-up grid.
                 </li>
                 <li>
-                  <strong className="text-n-12">Settings toggle.</strong> The Switch primitive is retuned for our dark popover (white/15 off-state with an inset hairline ring, emerald on-state, 200ms color and thumb transitions). Off and on both read clearly against <code className="font-mono text-[13px] bg-white/[0.06] px-1 rounded">bg-[#1a1a1a]/95</code>.
+                  <strong className="text-n-12">Settings toggle.</strong> The Switch primitive is retuned for our dark popover (white/15 off-state with an inset hairline ring, emerald on-state, 200ms color and thumb transitions). Off and on both read clearly against <code className="font-mono text-sm bg-white/[0.06] px-1 rounded">bg-[#1a1a1a]/95</code>.
                 </li>
               </ul>
             </ComponentSection>

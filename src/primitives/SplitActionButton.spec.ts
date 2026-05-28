@@ -132,7 +132,7 @@ export const spec: ComponentSpec = {
     typography: [
       { name: 'sm-label', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '500', lineHeight: '1', usage: 'Small size label text' },
       { name: 'md-label', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '500', lineHeight: '1', usage: 'Medium size label text' },
-      { name: 'lg-label', fontFamily: 'Heebo', fontSize: '13px', fontWeight: '600', lineHeight: '1', usage: 'Large size label text' },
+      { name: 'lg-label', fontFamily: 'Heebo', fontSize: '14px', fontWeight: '600', lineHeight: '1', usage: 'Large size label text' },
       { name: 'dropdown-item', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '400', lineHeight: '1.4', usage: 'Dropdown menu item text' },
     ],
     spacing: [

@@ -117,11 +117,11 @@ export const spec: ComponentSpec = {
       { name: 'vignette-suspect', value: '#f59e0b', usage: 'Suspect alert vignette color' },
     ],
     typography: [
-      { name: 'toast-title', fontFamily: 'Heebo', fontSize: '13px', fontWeight: '500', lineHeight: '1.5', usage: 'Toast notification title' },
+      { name: 'toast-title', fontFamily: 'Heebo', fontSize: '14px', fontWeight: '500', lineHeight: '1.5', usage: 'Toast notification title' },
       { name: 'toast-message', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '400', lineHeight: '1.6', usage: 'Toast notification message body' },
-      { name: 'batch-count', fontFamily: 'Heebo', fontSize: '13px', fontWeight: '500', lineHeight: '1.5', usage: 'Batched toast count header' },
-      { name: 'item-title', fontFamily: 'Heebo', fontSize: '11px', fontWeight: '500', lineHeight: '1.5', usage: 'Expanded batch item title' },
-      { name: 'item-time', fontFamily: 'monospace', fontSize: '9px', fontWeight: '400', lineHeight: '1', usage: 'Item timestamp' },
+      { name: 'batch-count', fontFamily: 'Heebo', fontSize: '14px', fontWeight: '500', lineHeight: '1.5', usage: 'Batched toast count header' },
+      { name: 'item-title', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '500', lineHeight: '1.5', usage: 'Expanded batch item title' },
+      { name: 'item-time', fontFamily: 'monospace', fontSize: '12px', fontWeight: '400', lineHeight: '1', usage: 'Item timestamp' },
     ],
     spacing: [
       { name: 'toast-width', value: '356px', usage: 'Fixed toast width' },

@@ -196,7 +196,7 @@ function FeedSlot({
           {/* Always-visible: LIVE badge */}
           <div className="flex items-center gap-1 bg-black/70 px-1.5 py-0.5 rounded-sm">
             <div className="size-1.5 rounded-full bg-red-500 animate-pulse motion-reduce:animate-none" />
-            <span className="text-[9px] font-medium text-white/80 uppercase tracking-wide">Live</span>
+            <span className="text-xs font-medium text-white/80 uppercase tracking-wide">Live</span>
           </div>
 
           <div className="flex-1" />
@@ -214,7 +214,7 @@ function FeedSlot({
                     type="button"
                     className="flex items-center gap-1 px-2.5 py-1.5 rounded bg-white/10 hover:bg-white/20 transition-colors duration-150 ease-out active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
                   >
-                    <span className="text-[10px] font-medium text-white/90 truncate max-w-[100px]">{label}</span>
+                    <span className="text-xs font-medium text-white/90 truncate max-w-[100px]">{label}</span>
                     <ChevronDown size={10} className="text-white/60 shrink-0" />
                   </button>
                 </DropdownMenuTrigger>

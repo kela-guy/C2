@@ -197,7 +197,9 @@ export function PickPopover({ pin, anchorRect, onClose, onCopied }: PickPopoverP
     flexDirection: 'column',
     gap: 8,
     direction: 'ltr',
-    font: '500 12px/1.3 ui-sans-serif, system-ui, sans-serif',
+    fontWeight: 500,
+    lineHeight: 1.3,
+    fontFamily: 'ui-sans-serif, system-ui, sans-serif',
     backdropFilter: 'blur(8px)',
     WebkitBackdropFilter: 'blur(8px)',
     // Hidden until measured + placed to avoid a one-frame jump.
@@ -215,6 +217,7 @@ export function PickPopover({ pin, anchorRect, onClose, onCopied }: PickPopoverP
       role="dialog"
       aria-label="Element handoff"
       dir="ltr"
+      className="text-xs"
       style={containerStyle}
       onKeyDown={onRootKeyDown}
     >
@@ -243,10 +246,10 @@ function Header({ title, classCount }: { title: string; classCount: number }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
       <span
+        className="text-xs"
         style={{
           color: INSPECTOR_TEXT.primary,
           fontWeight: 600,
-          fontSize: 12,
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
@@ -256,8 +259,8 @@ function Header({ title, classCount }: { title: string; classCount: number }) {
       >
         {title}
       </span>
-      <span style={{ color: INSPECTOR_TEXT.faint, fontSize: 11 }}>·</span>
-      <span style={{ color: INSPECTOR_TEXT.muted, fontSize: 11, flex: '0 0 auto', ...TABULAR }}>
+      <span className="text-xs" style={{ color: INSPECTOR_TEXT.faint }}>·</span>
+      <span className="text-xs" style={{ color: INSPECTOR_TEXT.muted, flex: '0 0 auto', ...TABULAR }}>
         {classCount} cls
       </span>
     </div>
@@ -306,6 +309,7 @@ const CopyButton = forwardRef<HTMLButtonElement, CopyButtonProps>(function CopyB
       data-handoff-inspector="true"
       onClick={onClick}
       {...hoverHandlers}
+      className="text-xs"
       style={{
         appearance: 'none',
         cursor: 'pointer',
@@ -315,7 +319,9 @@ const CopyButton = forwardRef<HTMLButtonElement, CopyButtonProps>(function CopyB
         border: `1px solid ${border}`,
         background: bg,
         color: fg,
-        font: '500 12px/1 ui-sans-serif, system-ui, sans-serif',
+        fontWeight: 500,
+        lineHeight: 1,
+        fontFamily: 'ui-sans-serif, system-ui, sans-serif',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -351,6 +357,7 @@ const StyleguideButton = forwardRef<HTMLAnchorElement, StyleguideButtonProps>(
         data-handoff-inspector="true"
         onClick={onClick}
         {...hoverHandlers}
+        className="text-xs"
         style={{
           appearance: 'none',
           cursor: 'pointer',
@@ -361,7 +368,9 @@ const StyleguideButton = forwardRef<HTMLAnchorElement, StyleguideButtonProps>(
           border: `1px solid ${INSPECTOR_BORDER.default}`,
           background: hover ? 'rgba(255, 255, 255, 0.10)' : 'rgba(255, 255, 255, 0.06)',
           color: INSPECTOR_TEXT.primary,
-          font: '500 12px/1.2 ui-sans-serif, system-ui, sans-serif',
+          fontWeight: 500,
+          lineHeight: 1.2,
+          fontFamily: 'ui-sans-serif, system-ui, sans-serif',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'flex-start',
@@ -375,7 +384,7 @@ const StyleguideButton = forwardRef<HTMLAnchorElement, StyleguideButtonProps>(
           {section ? 'Open in styleguide' : 'Browse styleguide'}
         </span>
         {section && (
-          <span style={{ color: INSPECTOR_TEXT.faint, fontSize: 11, ...TABULAR }}>
+          <span className="text-xs" style={{ color: INSPECTOR_TEXT.faint, ...TABULAR }}>
             → {section}
           </span>
         )}

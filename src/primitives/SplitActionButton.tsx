@@ -60,7 +60,7 @@ export type SplitButtonVariant = keyof typeof SPLIT_BUTTON_VARIANTS;
 export const SPLIT_BUTTON_SIZES = {
   sm: { height: 'min-h-[30px] h-[30px]', text: 'text-xs', icon: 11, chevronMin: 'min-w-[30px] w-[30px]', font: 'font-medium' },
   md: { height: 'min-h-8 h-8', text: 'text-xs', icon: 14, chevronMin: 'min-w-8 w-8', font: 'font-medium' },
-  lg: { height: 'min-h-9 h-9', text: 'text-[13px]', icon: 16, chevronMin: 'min-w-9 w-9', font: 'font-semibold' },
+  lg: { height: 'min-h-9 h-9', text: 'text-sm', icon: 16, chevronMin: 'min-w-9 w-9', font: 'font-semibold' },
 } as const;
 
 export type SplitButtonSize = keyof typeof SPLIT_BUTTON_SIZES;
@@ -203,13 +203,13 @@ export function SplitActionButton({
                 {hasSubtitle ? (
                   <span className="flex flex-col items-start leading-tight">
                     <span>{label}</span>
-                    <span className="text-[10px] opacity-60 font-normal">{subtitle}</span>
+                    <span className="text-xs opacity-60 font-normal">{subtitle}</span>
                   </span>
                 ) : (
                   <span>{label}</span>
                 )}
                 {hasBadge && (
-                  <span className="text-[10px] font-medium bg-white/[0.12] px-1.5 py-0.5 rounded leading-none whitespace-nowrap">
+                  <span className="text-xs font-medium bg-white/[0.12] px-1.5 py-0.5 rounded leading-none whitespace-nowrap">
                     {badge}
                   </span>
                 )}
@@ -265,7 +265,7 @@ export function SplitActionButton({
                 {gi > 0 && <DropdownMenuSeparator className="my-1 bg-white/10" />}
                 <DropdownMenuGroup>
                   {group.label && (
-                    <DropdownMenuLabel className="px-2.5 py-1.5 text-[10px] font-medium text-zinc-500 uppercase tracking-wider">
+                    <DropdownMenuLabel className="px-2.5 py-1.5 text-xs font-medium text-zinc-500 uppercase tracking-wider">
                       {group.label}
                     </DropdownMenuLabel>
                   )}
@@ -291,7 +291,7 @@ export function SplitActionButton({
                         )} />
                         {ItemIcon && <ItemIcon size={14} className="shrink-0" aria-hidden="true" />}
                         <span className="min-w-0 flex-1 text-start">{item.label}</span>
-                        <span className="text-[10px] text-white/40 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                        <span className="text-xs text-white/40 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                           {placeholder}
                         </span>
                       </DropdownMenuItem>

@@ -140,7 +140,7 @@ export const spec: ComponentSpec = {
     ],
     typography: [
       { name: 'tab-label', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '600', lineHeight: '1.5', usage: 'Tab button text' },
-      { name: 'tab-count', fontFamily: 'monospace', fontSize: '10px', fontWeight: '400', lineHeight: '1', usage: 'Active count badge in tab' },
+      { name: 'tab-count', fontFamily: 'monospace', fontSize: '12px', fontWeight: '400', lineHeight: '1', usage: 'Active count badge in tab' },
       { name: 'empty-message', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '400', lineHeight: '1.5', usage: 'Empty state text' },
     ],
     spacing: [

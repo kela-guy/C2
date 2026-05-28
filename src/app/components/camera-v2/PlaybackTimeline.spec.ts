@@ -43,7 +43,7 @@ export const spec: ComponentSpec = {
       { name: 'scrub-thumb', value: '#fca5a5 / ring #ef4444', usage: 'Scrubber thumb (red, for playback context)' },
     ],
     typography: [
-      { name: 'time-code', fontFamily: 'IBM Plex Mono', fontSize: '10px', fontWeight: '400', lineHeight: '1', usage: 'mm:ss timecodes' },
+      { name: 'time-code', fontFamily: 'IBM Plex Mono', fontSize: '12px', fontWeight: '400', lineHeight: '1', usage: 'mm:ss timecodes' },
     ],
     spacing: [
       { name: 'transport-padding', value: '6px 8px', usage: 'Outer padding' },

@@ -16,8 +16,8 @@ export function StyleguideSidebar({
   return (
     <nav className="sticky top-0 h-screen w-[260px] shrink-0 overflow-y-auto py-6 pl-8 pr-6 scrollbar-none">
       <a href="#top" className="flex items-center gap-1.5 mb-8">
-        <span className="text-[14px] font-semibold text-white tracking-tight">C2 Hub</span>
-        <span className="text-[14px] font-normal text-n-8 tracking-tight">docs</span>
+        <span className="text-sm font-semibold text-white tracking-tight">C2 Hub</span>
+        <span className="text-sm font-normal text-n-8 tracking-tight">docs</span>
       </a>
 
       {NAV.map((group) => (

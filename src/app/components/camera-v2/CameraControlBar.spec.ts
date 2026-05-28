@@ -71,7 +71,7 @@ export const spec: ComponentSpec = {
       { name: 'zoom-slider-accent', value: '#fcd34d', usage: 'Zoom slider thumb (amber)' },
     ],
     typography: [
-      { name: 'zoom-readout', fontFamily: 'IBM Plex Mono', fontSize: '10px', fontWeight: '500', lineHeight: '1', usage: 'Zoom value - shown both inline next to the trigger icon AND below the vertical slider' },
+      { name: 'zoom-readout', fontFamily: 'IBM Plex Mono', fontSize: '12px', fontWeight: '500', lineHeight: '1', usage: 'Zoom value - shown both inline next to the trigger icon AND below the vertical slider' },
     ],
     spacing: [
       { name: 'bar-padding', value: '4px 8px 8px', usage: 'Padding inside the bar' },

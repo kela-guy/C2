@@ -42,19 +42,19 @@ export class CesiumErrorBoundary extends React.Component<
       return (
         <div className="absolute inset-0 flex items-center justify-center bg-zinc-950 text-zinc-100">
           <div className="max-w-md rounded-md bg-red-500/10 px-4 py-3 text-sm shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
-            <div className="mb-1 text-[13px] font-semibold text-red-300">
+            <div className="mb-1 text-sm font-semibold text-red-300">
               Cesium failed to mount
             </div>
-            <div className="mb-3 text-[12px] text-zinc-300">
+            <div className="mb-3 text-xs text-zinc-300">
               The Cesium parity backend hit a runtime error. The Mapbox dashboard
               still works — switch back via the link below.
             </div>
-            <pre className="mb-3 max-h-40 overflow-auto rounded bg-black/40 p-2 text-[11px] leading-snug text-red-200">
+            <pre className="mb-3 max-h-40 overflow-auto rounded bg-black/40 p-2 text-xs leading-snug text-red-200">
               {message}
             </pre>
             <a
               href="?map=mapbox"
-              className="inline-flex items-center rounded-md bg-white/[0.08] px-3 py-1.5 text-[12px] font-medium text-white hover:bg-white/[0.14]"
+              className="inline-flex items-center rounded-md bg-white/[0.08] px-3 py-1.5 text-xs font-medium text-white hover:bg-white/[0.14]"
             >
               Reload with Mapbox
             </a>

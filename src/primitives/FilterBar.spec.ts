@@ -135,11 +135,11 @@ export const spec: ComponentSpec = {
       { name: 'badge-text', value: 'text-sky-300', usage: 'Filter count badge text' },
     ],
     typography: [
-      { name: 'search-input', fontFamily: 'inherit', fontSize: '11px', fontWeight: '400', lineHeight: '28px (h-7)', usage: 'Search input text' },
+      { name: 'search-input', fontFamily: 'inherit', fontSize: '12px', fontWeight: '400', lineHeight: '28px (h-7)', usage: 'Search input text' },
       { name: 'button-label', fontFamily: 'inherit', fontSize: '12px (text-xs)', fontWeight: '500 (font-medium)', lineHeight: '28px (h-7)', usage: 'Filter button labels' },
-      { name: 'badge', fontFamily: 'mono', fontSize: '9px', fontWeight: '400', lineHeight: '14px', usage: 'Active filter count badge' },
+      { name: 'badge', fontFamily: 'mono', fontSize: '12px', fontWeight: '400', lineHeight: '14px', usage: 'Active filter count badge' },
       { name: 'popover-item', fontFamily: 'inherit', fontSize: '12px (text-xs)', fontWeight: '400', lineHeight: '28px (h-7)', usage: 'Popover list item text' },
-      { name: 'empty-label', fontFamily: 'inherit', fontSize: '10px', fontWeight: '400', lineHeight: 'auto', usage: 'Empty state text in popover' },
+      { name: 'empty-label', fontFamily: 'inherit', fontSize: '12px', fontWeight: '400', lineHeight: 'auto', usage: 'Empty state text in popover' },
     ],
     spacing: [
       { name: 'bar-px', value: '8px (px-2)', usage: 'Filter bar horizontal padding' },

@@ -42,7 +42,7 @@ export const spec: ComponentSpec = {
       { name: 'assignment-pill-bg', value: 'rgba(245,158,11,0.15)', usage: 'Target assignment pill' },
     ],
     typography: [
-      { name: 'pill-label', fontFamily: 'Heebo', fontSize: '9-10px', fontWeight: '500', lineHeight: '1', usage: 'Pill labels (LIVE, DAY, IR, camera name, linked-from)' },
+      { name: 'pill-label', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '500', lineHeight: '1', usage: 'Pill labels (LIVE, DAY, IR, camera name, linked-from)' },
     ],
     spacing: [
       { name: 'hud-padding', value: '10px 12px', usage: 'Padding from the tile edges' },

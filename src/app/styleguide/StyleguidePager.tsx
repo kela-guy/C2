@@ -37,7 +37,7 @@ export function StyleguidePager({ activeItem, onNavigate }: StyleguidePagerProps
           <button
             type="button"
             onClick={() => onNavigate(prev.id)}
-            className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.03] shadow-[0_0_0_1px_rgba(255,255,255,0.06)] px-3 py-2 text-[13px] font-medium text-n-11 hover:bg-white/[0.06] hover:text-white transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+            className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.03] shadow-[0_0_0_1px_rgba(255,255,255,0.06)] px-3 py-2 text-sm font-medium text-n-11 hover:bg-white/[0.06] hover:text-white transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
           >
             <ChevronLeft size={14} className="shrink-0" />
             <span>{prev.label}</span>
@@ -49,7 +49,7 @@ export function StyleguidePager({ activeItem, onNavigate }: StyleguidePagerProps
           <button
             type="button"
             onClick={() => onNavigate(next.id)}
-            className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.03] shadow-[0_0_0_1px_rgba(255,255,255,0.06)] px-3 py-2 text-[13px] font-medium text-n-11 hover:bg-white/[0.06] hover:text-white transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+            className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.03] shadow-[0_0_0_1px_rgba(255,255,255,0.06)] px-3 py-2 text-sm font-medium text-n-11 hover:bg-white/[0.06] hover:text-white transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
           >
             <span>{next.label}</span>
             <ChevronRight size={14} className="shrink-0" />

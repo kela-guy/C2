@@ -127,8 +127,8 @@ export const spec: ComponentSpec = {
       { name: 'chevron', value: 'text-zinc-500', usage: 'Chevron icon color' },
     ],
     typography: [
-      { name: 'title', fontFamily: 'Heebo', fontSize: '13px', fontWeight: '600', lineHeight: 'tight', usage: 'Primary heading (h2) via CARD_TOKENS.title' },
-      { name: 'subtitle', fontFamily: 'monospace', fontSize: '10px', fontWeight: '400', lineHeight: 'normal', usage: 'Target ID label via CARD_TOKENS.subtitle' },
+      { name: 'title', fontFamily: 'Heebo', fontSize: '14px', fontWeight: '600', lineHeight: 'tight', usage: 'Primary heading (h2) via CARD_TOKENS.title' },
+      { name: 'subtitle', fontFamily: 'monospace', fontSize: '12px', fontWeight: '400', lineHeight: 'normal', usage: 'Target ID label via CARD_TOKENS.subtitle' },
     ],
     spacing: [
       { name: 'header-gap', value: '6px', usage: 'Gap between left and right sections (CARD_TOKENS.header.gap)' },

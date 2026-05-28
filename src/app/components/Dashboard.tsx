@@ -193,7 +193,7 @@ function SplitDropZone({
       >
         <SplitLeftIcon className={`transition-colors duration-150 ease-out
           ${isOver ? 'text-white/60' : 'text-white/25'}`} />
-        <span className={`text-[11px] transition-colors duration-150 ease-out
+        <span className={`text-xs transition-colors duration-150 ease-out
           ${isOver ? 'text-white/60' : 'text-white/30'}`}>
           {isOver ? t.dashboard.dropZoneRelease : t.dashboard.dropZoneHint}
         </span>
@@ -1582,7 +1582,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
               sideOffset={8}
               className="w-52 rounded bg-[#202020] border-0 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)]"
             >
-              <DropdownMenuLabel className="text-[11px] text-white/70 uppercase tracking-wider">CUAS</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-xs text-white/70 uppercase tracking-wider">CUAS</DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-white/10" />
               <DropdownMenuItem onSelect={handleCUASSingle} className="gap-2.5 text-xs text-zinc-300 focus:bg-white/10 focus:text-white">
                 <Target size={14} className="shrink-0 text-zinc-400" />
@@ -1642,7 +1642,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
                 type="button"
                 onClick={toggleDirection}
                 aria-label={isRtl ? t.dashboard.switchToEnglish : t.dashboard.switchToHebrew}
-                className="size-6 rounded flex items-center justify-center text-[10px] font-mono font-semibold text-gray-400 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                className="size-6 rounded flex items-center justify-center text-xs font-mono font-semibold text-gray-400 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
               >
                 {isRtl ? 'EN' : 'עב'}
               </button>
@@ -1766,7 +1766,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
             />
           )}
           <div className="flex items-center px-4 h-9 border-b border-white/10">
-            <h2 className="text-[11px] font-medium text-white/70 uppercase tracking-wider">{t.dashboard.activeSystemsHeading(targets.length)}</h2>
+            <h2 className="text-xs font-medium text-white/70 uppercase tracking-wider">{t.dashboard.activeSystemsHeading(targets.length)}</h2>
           </div>
           <div className="flex-1 overflow-y-auto" data-handoff-component="target-card">
             <PerfProfiled id="ListOfSystems">

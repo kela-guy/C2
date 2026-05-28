@@ -193,10 +193,10 @@ export const spec: ComponentSpec = {
       { name: 'controls-bg', value: '#111111', usage: 'Lightbox control bar background' },
     ],
     typography: [
-      { name: 'live-label', fontFamily: 'system', fontSize: '9px', fontWeight: '500', lineHeight: '1', usage: 'LIVE badge text (uppercase tracking-wide)' },
-      { name: 'camera-label', fontFamily: 'monospace', fontSize: '9px', fontWeight: '400', lineHeight: '1', usage: 'PTZ / Playback camera label' },
-      { name: 'tracking-label', fontFamily: 'system', fontSize: '9px', fontWeight: '600', lineHeight: '1', usage: 'Tracking sensor label pill text' },
-      { name: 'timestamp', fontFamily: 'monospace', fontSize: '9px-11px', fontWeight: '400', lineHeight: '1', usage: 'Playback time display (tabular-nums)' },
+      { name: 'live-label', fontFamily: 'system', fontSize: '12px', fontWeight: '500', lineHeight: '1', usage: 'LIVE badge text (uppercase tracking-wide)' },
+      { name: 'camera-label', fontFamily: 'monospace', fontSize: '12px', fontWeight: '400', lineHeight: '1', usage: 'PTZ / Playback camera label' },
+      { name: 'tracking-label', fontFamily: 'system', fontSize: '12px', fontWeight: '600', lineHeight: '1', usage: 'Tracking sensor label pill text' },
+      { name: 'timestamp', fontFamily: 'monospace', fontSize: '12px', fontWeight: '400', lineHeight: '1', usage: 'Playback time display (tabular-nums)' },
     ],
     spacing: [
       { name: 'image-height', value: '100px', usage: 'Fixed height for image type (h-[100px])' },

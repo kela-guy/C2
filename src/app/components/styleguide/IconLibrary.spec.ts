@@ -98,7 +98,7 @@ export const spec: ComponentSpec = {
       { name: 'toggle-active', value: 'rgba(255,255,255,0.10)', usage: 'Active state on Size and Style toggles' },
     ],
     typography: [
-      { name: 'tile-name', fontFamily: 'mono', fontSize: '10px', fontWeight: '400', lineHeight: 'auto', usage: 'Icon name caption' },
+      { name: 'tile-name', fontFamily: 'mono', fontSize: '12px', fontWeight: '400', lineHeight: 'auto', usage: 'Icon name caption' },
       { name: 'toggle-label', fontFamily: 'inherit', fontSize: '12px', fontWeight: '400', lineHeight: 'auto', usage: 'Size and Style toggle buttons' },
     ],
     spacing: [

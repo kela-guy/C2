@@ -100,7 +100,7 @@ export const spec: ComponentSpec = {
     ],
     typography: [
       { name: 'title', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '700', lineHeight: '1.5', usage: 'Section title (text-xs font-bold)' },
-      { name: 'button-label', fontFamily: 'Heebo', fontSize: '11px', fontWeight: '500', lineHeight: '1.5', usage: 'Outcome button text (text-[11px] font-medium)' },
+      { name: 'button-label', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '500', lineHeight: '1.5', usage: 'Outcome button text (text-xs font-medium)' },
     ],
     spacing: [
       { name: 'container-padding', value: '12px', usage: 'Outer padding (p-3)' },
@@ -186,7 +186,7 @@ export const spec: ComponentSpec = {
 
   hardcodedData: [
     {
-      current: "text-[11px] — arbitrary Tailwind value for button font size",
+      current: 'text-xs — Tailwind default text-xs (12px) for button font size',
       replaceWith: 'Design token or Tailwind config extension (e.g. text-2xs)',
       location: 'CardClosure.tsx line 40',
     },

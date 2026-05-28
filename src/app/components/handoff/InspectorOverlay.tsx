@@ -179,6 +179,7 @@ function HoverTag({ hover }: { hover: HoverTarget }) {
 
   return (
     <div
+      className="text-xs"
       style={{
         position: 'fixed',
         top,
@@ -190,7 +191,9 @@ function HoverTag({ hover }: { hover: HoverTarget }) {
         border: `1px solid ${INSPECTOR_BORDER.subtle}`,
         borderRadius: INSPECTOR_RADIUS.control,
         padding: showCrumb ? '3px 8px 4px' : '3px 8px',
-        font: '500 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace',
+        fontWeight: 500,
+        lineHeight: 1.4,
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
         whiteSpace: 'nowrap',
         boxShadow: INSPECTOR_SHADOW.dock,
         direction: 'ltr',
@@ -229,9 +232,12 @@ function Breadcrumb({ chain, atBoundary }: { chain: string[]; atBoundary: boolea
   const last = chain.length - 1;
   return (
     <div
+      className="text-xs"
       style={{
         marginTop: 2,
-        font: '500 10px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace',
+        fontWeight: 500,
+        lineHeight: 1.3,
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
         color: INSPECTOR_TEXT.faint,
         display: 'flex',
         alignItems: 'baseline',
@@ -281,6 +287,7 @@ export function InspectorHintChip({ visible }: { visible: boolean }) {
       data-handoff-inspector="true"
       aria-hidden
       dir="ltr"
+      className="text-xs"
       style={{
         position: 'fixed',
         bottom: 16,
@@ -296,7 +303,9 @@ export function InspectorHintChip({ visible }: { visible: boolean }) {
         border: `1px solid ${INSPECTOR_BORDER.subtle}`,
         borderRadius: INSPECTOR_RADIUS.dock,
         padding: '6px 10px',
-        font: '500 11px/1 ui-sans-serif, system-ui, sans-serif',
+        fontWeight: 500,
+        lineHeight: 1,
+        fontFamily: 'ui-sans-serif, system-ui, sans-serif',
         whiteSpace: 'nowrap',
         boxShadow: INSPECTOR_SHADOW.dock,
         backdropFilter: 'blur(8px)',
@@ -355,6 +364,7 @@ export function InspectorToast({ notice }: { notice: InspectorNotice | null }) {
       role="status"
       aria-live="polite"
       dir="ltr"
+      className="text-xs"
       style={{
         position: 'fixed',
         top: 16,
@@ -370,7 +380,9 @@ export function InspectorToast({ notice }: { notice: InspectorNotice | null }) {
         border: `1px solid ${INSPECTOR_BORDER.subtle}`,
         borderRadius: INSPECTOR_RADIUS.dock,
         padding: '7px 12px 7px 10px',
-        font: '500 12px/1 ui-sans-serif, system-ui, sans-serif',
+        fontWeight: 500,
+        lineHeight: 1,
+        fontFamily: 'ui-sans-serif, system-ui, sans-serif',
         whiteSpace: 'nowrap',
         boxShadow: INSPECTOR_SHADOW.dock,
         backdropFilter: 'blur(8px)',
@@ -398,6 +410,7 @@ const KBD_HEIGHT = 18;
 function Kbd({ children, wide = false }: KbdProps) {
   return (
     <kbd
+      className="text-xs"
       style={{
         display: 'inline-flex',
         alignItems: 'center',
@@ -412,9 +425,10 @@ function Kbd({ children, wide = false }: KbdProps) {
         borderRadius: 4,
         background: 'rgba(255, 255, 255, 0.07)',
         color: INSPECTOR_TEXT.primary,
-        font: '500 10px/1 ui-sans-serif, system-ui, sans-serif',
-        flex: '0 0 auto',
+        fontWeight: 500,
+        lineHeight: 1,
         fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+        flex: '0 0 auto',
       }}
     >
       {children}

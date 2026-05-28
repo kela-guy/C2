@@ -243,8 +243,8 @@ export const spec: ComponentSpec = {
     ],
     typography: [
       { name: 'panel-title', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '500', lineHeight: '1.5', usage: 'Panel header "מכשירים"' },
-      { name: 'device-name', fontFamily: 'Heebo', fontSize: '13px', fontWeight: '500', lineHeight: '1.5', usage: 'Device row name text' },
-      { name: 'device-metric', fontFamily: 'monospace', fontSize: '11px', fontWeight: '400', lineHeight: '1.5', usage: 'Coverage/metric text' },
+      { name: 'device-name', fontFamily: 'Heebo', fontSize: '14px', fontWeight: '500', lineHeight: '1.5', usage: 'Device row name text' },
+      { name: 'device-metric', fontFamily: 'monospace', fontSize: '12px', fontWeight: '400', lineHeight: '1.5', usage: 'Coverage/metric text' },
       { name: 'group-label', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '400', lineHeight: '1.5', usage: 'Device type group header' },
     ],
     spacing: [

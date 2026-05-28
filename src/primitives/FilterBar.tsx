@@ -107,7 +107,7 @@ export function FilterBar({
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder={searchPlaceholder}
             aria-label={searchAriaLabel}
-            className="h-7 w-full rounded bg-white/[0.04] ps-7 pe-7 text-[11px] text-zinc-100 shadow-[0_0_0_1px_rgba(255,255,255,0.07)] placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sky-400/40 focus-visible:shadow-[0_0_0_1px_rgba(56,189,248,0.35)]"
+            className="h-7 w-full rounded bg-white/[0.04] ps-7 pe-7 text-xs text-zinc-100 shadow-[0_0_0_1px_rgba(255,255,255,0.07)] placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sky-400/40 focus-visible:shadow-[0_0_0_1px_rgba(56,189,248,0.35)]"
           />
           {query && (
             <button
@@ -247,7 +247,7 @@ function MultiSelectList({
 
   if (items.length === 0) {
     return (
-      <div className="px-3 py-4 text-center text-[10px] text-zinc-500">
+      <div className="px-3 py-4 text-center text-xs text-zinc-500">
         {emptyLabel}
       </div>
     );

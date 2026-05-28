@@ -211,7 +211,7 @@ export function MapMarker({
               transition: 'opacity 300ms ease',
             }}
           >
-            <span className="text-[9px] font-bold leading-none text-white">
+            <span className="text-xs font-bold leading-none text-white">
               {statusBadgeText}
             </span>
           </div>

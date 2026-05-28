@@ -124,6 +124,7 @@ export function PerfScenarios(): React.JSX.Element {
             type="button"
             disabled={disabled}
             onClick={() => void start(def)}
+            className="text-xs"
             style={{
               ...rowBtnStyle,
               opacity: disabled && !isRunning ? 0.45 : 1,
@@ -133,7 +134,7 @@ export function PerfScenarios(): React.JSX.Element {
           >
             <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', minWidth: 0 }}>
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{def.label}</span>
-              <span style={{ opacity: 0.6, fontSize: 9 }}>
+              <span className="text-xs" style={{ opacity: 0.6 }}>
                 {(def.durationMs / 1000).toFixed(0)}s{def.kind === 'manual' ? ' · manual' : ''}
               </span>
             </span>
@@ -153,13 +154,13 @@ export function PerfScenarios(): React.JSX.Element {
 function ManualOverlay({ hint, remainingMs }: { hint: string; remainingMs: number }): React.JSX.Element {
   return (
     <div style={overlayBackdropStyle} data-perf-scenario-overlay="">
-      <div style={overlayCardStyle}>
-        <div style={{ fontSize: 11, opacity: 0.7, letterSpacing: 1, textTransform: 'uppercase' }}>Manual scenario</div>
-        <div style={{ fontSize: 18, fontWeight: 600, marginTop: 8, lineHeight: 1.3 }}>{hint}</div>
-        <div style={{ fontSize: 56, fontWeight: 700, marginTop: 16, fontVariantNumeric: 'tabular-nums' }}>
+      <div className="text-sm" style={overlayCardStyle}>
+        <div className="text-xs" style={{ opacity: 0.7, letterSpacing: 1, textTransform: 'uppercase' }}>Manual scenario</div>
+        <div className="text-lg" style={{ fontWeight: 600, marginTop: 8, lineHeight: 1.3 }}>{hint}</div>
+        <div className="text-6xl" style={{ fontWeight: 700, marginTop: 16, fontVariantNumeric: 'tabular-nums' }}>
           {(remainingMs / 1000).toFixed(1)}s
         </div>
-        <div style={{ fontSize: 11, opacity: 0.6, marginTop: 12 }}>
+        <div className="text-xs" style={{ opacity: 0.6, marginTop: 12 }}>
           Trace download starts automatically when the timer hits zero.
         </div>
       </div>
@@ -338,7 +339,8 @@ const rowBtnStyle: CSSProperties = {
   alignItems: 'center',
   justifyContent: 'space-between',
   gap: 8,
-  font: '10px/1.3 ui-monospace, monospace',
+  fontFamily: 'ui-monospace, monospace',
+  lineHeight: 1.3,
   color: '#e6edf3',
   background: 'rgba(255,255,255,0.06)',
   border: '1px solid rgba(255,255,255,0.12)',
@@ -375,6 +377,7 @@ const overlayCardStyle: CSSProperties = {
   borderRadius: 10,
   padding: '24px 28px',
   boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
-  font: '13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace',
+  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+  lineHeight: 1.4,
   textAlign: 'center',
 };

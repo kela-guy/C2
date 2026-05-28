@@ -76,8 +76,8 @@ export function IconDetailPanel({ entry, previewSize, renderMode, onClose }: Ico
     >
       <header className="flex items-start justify-between gap-3">
         <div className="space-y-1 min-w-0">
-          <h3 className="text-[15px] font-semibold text-n-12 truncate">{entry.name}</h3>
-          <p className="text-[12px] text-n-9">
+          <h3 className="text-base font-semibold text-n-12 truncate">{entry.name}</h3>
+          <p className="text-xs text-n-9">
             <span className="uppercase tracking-wider text-n-120">{entry.source}</span>
             <span className="mx-1.5 text-n-120">·</span>
             <span>{entry.category}</span>
@@ -116,7 +116,7 @@ export function IconDetailPanel({ entry, previewSize, renderMode, onClose }: Ico
       </div>
 
       {renderMode === 'fill' && entry.fillable !== true && (
-        <p className="text-[11px] text-n-120 leading-snug">
+        <p className="text-xs text-n-120 leading-snug">
           {entry.source === 'lucide'
             ? 'This lucide icon is line-only — its paths don\'t enclose a region, so the Fill toggle is a no-op here.'
             : entry.source === 'asset'
@@ -130,7 +130,7 @@ export function IconDetailPanel({ entry, previewSize, renderMode, onClose }: Ico
           {entry.keywords.map((kw) => (
             <span
               key={kw}
-              className="text-[11px] px-1.5 py-0.5 rounded bg-white/[0.04] text-n-10"
+              className="text-xs px-1.5 py-0.5 rounded bg-white/[0.04] text-n-10"
             >
               {kw}
             </span>
@@ -139,17 +139,17 @@ export function IconDetailPanel({ entry, previewSize, renderMode, onClose }: Ico
       )}
 
       <div className="space-y-2">
-        <h4 className="text-[11px] uppercase tracking-wider text-n-120">Import</h4>
-        <pre className="text-[12px] leading-[1.65] font-mono text-sky-200/90 whitespace-pre-wrap break-all bg-black/30 rounded-md px-3 py-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
+        <h4 className="text-xs uppercase tracking-wider text-n-120">Import</h4>
+        <pre className="text-xs leading-[1.65] font-mono text-sky-200/90 whitespace-pre-wrap break-all bg-black/30 rounded-md px-3 py-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
           {importSnippet}
         </pre>
-        <pre className="text-[12px] leading-[1.65] font-mono text-emerald-200/90 whitespace-pre-wrap break-all bg-black/30 rounded-md px-3 py-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
+        <pre className="text-xs leading-[1.65] font-mono text-emerald-200/90 whitespace-pre-wrap break-all bg-black/30 rounded-md px-3 py-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
           {usageSnippet}
         </pre>
       </div>
 
       <div className="space-y-3">
-        <h4 className="text-[11px] uppercase tracking-wider text-n-120">Export</h4>
+        <h4 className="text-xs uppercase tracking-wider text-n-120">Export</h4>
         <div className="grid grid-cols-3 gap-2">
           <ActionButton
             label="SVG"
@@ -175,7 +175,7 @@ export function IconDetailPanel({ entry, previewSize, renderMode, onClose }: Ico
         </div>
 
         <div>
-          <span className="text-[11px] uppercase tracking-wider text-n-120 block mb-1.5">
+          <span className="text-xs uppercase tracking-wider text-n-120 block mb-1.5">
             PNG size
           </span>
           <div role="radiogroup" aria-label="PNG export size" className="flex gap-1">
@@ -188,7 +188,7 @@ export function IconDetailPanel({ entry, previewSize, renderMode, onClose }: Ico
                   role="radio"
                   aria-checked={active}
                   onClick={() => setPngSize(s)}
-                  className={`flex-1 px-2 py-1.5 text-[11px] font-mono rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25
+                  className={`flex-1 px-2 py-1.5 text-xs font-mono rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25
                     ${active
                       ? 'bg-white/[0.10] text-n-12 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]'
                       : 'bg-white/[0.02] text-n-10 hover:bg-white/[0.06]'}`}
@@ -223,7 +223,7 @@ function ActionButton({ label, tooltip, icon, onClick, busy }: ActionButtonProps
           onClick={onClick}
           disabled={busy}
           aria-label={tooltip}
-          className="flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-md text-[12px] font-medium text-n-11 bg-white/[0.04] hover:bg-white/[0.08] active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 transition-[color,background-color,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 cursor-pointer"
+          className="flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-md text-xs font-medium text-n-11 bg-white/[0.04] hover:bg-white/[0.08] active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 transition-[color,background-color,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 cursor-pointer"
         >
           {icon}
           <span>{label}</span>

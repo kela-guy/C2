@@ -164,7 +164,7 @@ export function PlaybackContainer({ src, state, onPatch, onExit }: PlaybackConta
             className="size-1.5 rounded-full bg-white animate-pulse motion-reduce:animate-none"
             aria-hidden="true"
           />
-          <span className="font-mono text-[9px] font-semibold text-white uppercase tracking-wider">
+          <span className="font-mono text-xs font-semibold text-white uppercase tracking-wider">
             Playback
           </span>
         </div>
@@ -179,7 +179,7 @@ export function PlaybackContainer({ src, state, onPatch, onExit }: PlaybackConta
               <X size={12} />
             </button>
           </TooltipTrigger>
-          <TooltipContent side="bottom" sideOffset={6} className="rounded-none text-[10px]">
+          <TooltipContent side="bottom" sideOffset={6} className="rounded-none text-xs">
             {t.exitPlayback}
           </TooltipContent>
         </Tooltip>
@@ -266,7 +266,7 @@ function PlaybackStatusChrome({
         className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-black/60 pointer-events-none"
       >
         <Loader2 size={20} className="text-white/85 animate-spin motion-reduce:animate-none" />
-        <span className="text-[11px] text-white/85 font-mono tracking-wider uppercase">
+        <span className="text-xs text-white/85 font-mono tracking-wider uppercase">
           {strings.loadingEllipsis}
         </span>
       </div>
@@ -294,12 +294,12 @@ function PlaybackStatusChrome({
           type="button"
           onClick={onReplay}
           aria-label={strings.replayFromStart}
-          className="inline-flex items-center gap-1.5 px-3 py-2 bg-red-500 text-white text-[11px] uppercase tracking-wider font-semibold hover:bg-red-400 active:scale-[0.97] transition focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+          className="inline-flex items-center gap-1.5 px-3 py-2 bg-red-500 text-white text-xs uppercase tracking-wider font-semibold hover:bg-red-400 active:scale-[0.97] transition focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
         >
           <Play size={12} />
           {strings.playAgain}
         </button>
-        <span className="text-[10px] text-white/55 uppercase tracking-wider">
+        <span className="text-xs text-white/55 uppercase tracking-wider">
           {strings.ended}
         </span>
       </div>
@@ -312,13 +312,13 @@ function PlaybackStatusChrome({
         className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-black/70 px-3 text-center"
       >
         <AlertTriangle size={20} className="text-red-300" aria-hidden="true" />
-        <span className="text-[11px] text-white max-w-[220px]">
+        <span className="text-xs text-white max-w-[220px]">
           {errorMessage ?? strings.errorUnknown}
         </span>
         <button
           type="button"
           onClick={onRetry}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-white/10 ring-1 ring-inset ring-white/15 text-[10px] text-white uppercase tracking-wider hover:bg-white/15 active:scale-[0.97] transition focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-white/10 ring-1 ring-inset ring-white/15 text-xs text-white uppercase tracking-wider hover:bg-white/15 active:scale-[0.97] transition focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
         >
           <RotateCcw size={11} />
           {strings.tryAgain}

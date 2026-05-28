@@ -143,7 +143,7 @@ export default function IconLibrary() {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleSearchKey}
             placeholder="Search icons by name, keyword, or source… (press /)"
-            className="w-full pl-9 pr-9 py-2 text-[13px] bg-white/[0.03] rounded-md text-n-12 placeholder:text-n-120 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] focus-visible:outline-none focus-visible:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.18)] transition-shadow duration-150"
+            className="w-full pl-9 pr-9 py-2 text-sm bg-white/[0.03] rounded-md text-n-12 placeholder:text-n-120 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] focus-visible:outline-none focus-visible:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.18)] transition-shadow duration-150"
           />
           {query.length > 0 && (
             <button
@@ -159,7 +159,7 @@ export default function IconLibrary() {
 
         <div className="flex items-center gap-4">
           <div role="radiogroup" aria-label="Preview size" className="flex items-center gap-1">
-            <span className="text-[11px] uppercase tracking-wider text-n-120 mr-1">Size</span>
+            <span className="text-xs uppercase tracking-wider text-n-120 mr-1">Size</span>
             {ICON_PREVIEW_SIZES.map((size) => {
               const active = size === previewSize;
               return (
@@ -169,7 +169,7 @@ export default function IconLibrary() {
                   role="radio"
                   aria-checked={active}
                   onClick={() => setPreviewSize(size)}
-                  className={`px-2.5 py-1 text-[12px] font-mono rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25
+                  className={`px-2.5 py-1 text-xs font-mono rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25
                     ${active
                       ? 'bg-white/[0.10] text-n-12 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]'
                       : 'bg-white/[0.02] text-n-10 hover:bg-white/[0.06]'}`}
@@ -181,7 +181,7 @@ export default function IconLibrary() {
           </div>
 
           <div role="radiogroup" aria-label="Render style" className="flex items-center gap-1">
-            <span className="text-[11px] uppercase tracking-wider text-n-120 mr-1">Style</span>
+            <span className="text-xs uppercase tracking-wider text-n-120 mr-1">Style</span>
             {RENDER_MODES.map(({ value, label }) => {
               const active = value === renderMode;
               return (
@@ -191,7 +191,7 @@ export default function IconLibrary() {
                   role="radio"
                   aria-checked={active}
                   onClick={() => setRenderMode(value)}
-                  className={`px-2.5 py-1 text-[12px] rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25
+                  className={`px-2.5 py-1 text-xs rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25
                     ${active
                       ? 'bg-white/[0.10] text-n-12 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]'
                       : 'bg-white/[0.02] text-n-10 hover:bg-white/[0.06]'}`}
@@ -213,13 +213,13 @@ export default function IconLibrary() {
               type="button"
               onClick={() => setFilter(f)}
               aria-pressed={active}
-              className={`px-2.5 py-1 text-[12px] rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25
+              className={`px-2.5 py-1 text-xs rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25
                 ${active
                   ? 'bg-white/[0.10] text-n-12 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]'
                   : 'bg-white/[0.02] text-n-10 hover:bg-white/[0.06]'}`}
             >
               {FILTER_LABELS[f]}
-              <span className="ml-1.5 text-[11px] text-n-120">{counts[f]}</span>
+              <span className="ml-1.5 text-xs text-n-120">{counts[f]}</span>
             </button>
           );
         })}
@@ -324,7 +324,7 @@ function IconTile({ entry, size, renderMode, selected, onSelect }: IconTileProps
               />
             ) : null}
           </div>
-          <span className="block w-full text-[10px] font-mono text-center truncate">
+          <span className="block w-full text-xs font-mono text-center truncate">
             {entry.name}
           </span>
         </button>
@@ -356,11 +356,11 @@ interface EmptyStateProps {
 function EmptyState({ onReset }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center gap-3 min-h-[240px] rounded-lg bg-white/[0.02] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)] text-center px-6">
-      <p className="text-[13px] text-n-9">No icons match — try clearing the category.</p>
+      <p className="text-sm text-n-9">No icons match — try clearing the category.</p>
       <button
         type="button"
         onClick={onReset}
-        className="px-3 py-1.5 text-[12px] font-medium text-n-12 bg-white/[0.06] hover:bg-white/[0.10] rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+        className="px-3 py-1.5 text-xs font-medium text-n-12 bg-white/[0.06] hover:bg-white/[0.10] rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
       >
         Reset filters
       </button>

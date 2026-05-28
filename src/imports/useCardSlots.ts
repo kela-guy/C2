@@ -176,7 +176,7 @@ function buildConfidenceBadge(confidence: number | undefined, classifiedType: st
       side: 'top',
       sideOffset: 6,
       showArrow: false,
-      className: 'px-2 py-1 text-[9px] font-normal font-sans text-white bg-zinc-700 shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_10px_15px_-3px_rgba(0,0,0,0.3)] whitespace-nowrap',
+      className: 'px-2 py-1 text-xs font-normal font-sans text-white bg-zinc-700 shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_10px_15px_-3px_rgba(0,0,0,0.3)] whitespace-nowrap',
     }, t.cards.classifiedTypeLabel(typeLabel)),
   );
 }

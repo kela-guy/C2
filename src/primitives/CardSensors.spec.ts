@@ -133,10 +133,10 @@ export const spec: ComponentSpec = {
       { name: 'top-border', value: 'CARD_TOKENS.surface.level2', usage: 'Inset top border via box-shadow' },
     ],
     typography: [
-      { name: 'row-text', fontFamily: 'system', fontSize: '11px', fontWeight: '400', lineHeight: '1.4', usage: 'Base row text size (text-[11px])' },
+      { name: 'row-text', fontFamily: 'system', fontSize: '12px', fontWeight: '400', lineHeight: '1.4', usage: 'Base row text size (text-xs)' },
       { name: 'type-label', fontFamily: 'system', fontSize: '12px', fontWeight: '400', lineHeight: '1.4', usage: 'Sensor type label (text-xs)' },
       { name: 'detected-at', fontFamily: 'monospace', fontSize: '12px', fontWeight: '400', lineHeight: '1.4', usage: 'Detection timestamp (font-mono tabular-nums)' },
-      { name: 'distance', fontFamily: 'monospace', fontSize: '10px', fontWeight: '400', lineHeight: '1.4', usage: 'Distance label (text-[10px] font-mono tabular-nums)' },
+      { name: 'distance', fontFamily: 'monospace', fontSize: '12px', fontWeight: '400', lineHeight: '1.4', usage: 'Distance label (text-xs font-mono tabular-nums)' },
     ],
     spacing: [
       { name: 'row-px', value: '8px', usage: 'Row horizontal padding (px-2)' },

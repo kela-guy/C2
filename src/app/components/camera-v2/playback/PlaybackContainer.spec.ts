@@ -71,8 +71,8 @@ export const spec: ComponentSpec = {
       { name: 'overlay-bg', value: 'rgba(0,0,0,0.6)', usage: 'Loading / replay / error overlay background' },
     ],
     typography: [
-      { name: 'badge', fontFamily: 'IBM Plex Mono', fontSize: '9px', fontWeight: '600', lineHeight: '1', usage: 'PLAYBACK chrome badge' },
-      { name: 'overlay-message', fontFamily: 'Heebo', fontSize: '11px', fontWeight: '400', lineHeight: '1.3', usage: 'Loading / error overlay copy' },
+      { name: 'badge', fontFamily: 'IBM Plex Mono', fontSize: '12px', fontWeight: '600', lineHeight: '1', usage: 'PLAYBACK chrome badge' },
+      { name: 'overlay-message', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '400', lineHeight: '1.3', usage: 'Loading / error overlay copy' },
     ],
     spacing: [
       { name: 'split-height', value: '50%', usage: 'Bottom half of the tile' },

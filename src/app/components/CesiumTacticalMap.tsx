@@ -1028,7 +1028,7 @@ export function CesiumTacticalMap({
       zIndex: 70,
       content: (
         <div
-          className="rounded px-2 py-1 font-mono text-[11px] tabular-nums whitespace-nowrap pointer-events-none select-none shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
+          className="rounded px-2 py-1 font-mono text-xs tabular-nums whitespace-nowrap pointer-events-none select-none shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
           style={{
             backgroundColor: engagementPair.lineColor,
             color: engagementPair.badgeTextColor,
@@ -1336,7 +1336,7 @@ export function CesiumTacticalMap({
         onClick={() => setSceneMode((prev) => (prev === '3D' ? '2D' : '3D'))}
         aria-label={sceneMode === '3D' ? 'Switch to 2D map' : 'Switch to 3D map'}
         aria-pressed={sceneMode === '3D'}
-        className="absolute bottom-3 left-3 z-20 pointer-events-auto w-7 h-7 bg-zinc-900/80 backdrop-blur-md text-[11px] font-mono font-semibold tabular-nums text-zinc-100 shadow-[0_4px_12px_rgba(0,0,0,0.45)] hover:bg-zinc-800/90 active:bg-zinc-950/85 transition-colors flex items-center justify-center select-none"
+        className="absolute bottom-3 left-3 z-20 pointer-events-auto w-7 h-7 bg-zinc-900/80 backdrop-blur-md text-xs font-mono font-semibold tabular-nums text-zinc-100 shadow-[0_4px_12px_rgba(0,0,0,0.45)] hover:bg-zinc-800/90 active:bg-zinc-950/85 transition-colors flex items-center justify-center select-none"
       >
         {sceneMode === '3D' ? '2D' : '3D'}
       </button>
@@ -1421,7 +1421,7 @@ function CesiumContextMenu({
             type="button"
             role="menuitem"
             onClick={() => onAction(item.id)}
-            className="block w-full px-3 py-1.5 text-end text-[12px] hover:bg-white/[0.08] focus-visible:bg-white/[0.08] focus-visible:outline-none cursor-pointer"
+            className="block w-full px-3 py-1.5 text-end text-xs hover:bg-white/[0.08] focus-visible:bg-white/[0.08] focus-visible:outline-none cursor-pointer"
           >
             {item.label}
           </button>

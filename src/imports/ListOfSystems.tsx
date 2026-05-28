@@ -290,12 +290,12 @@ function UnifiedCard({
       {slots.closureType && (
         <div className="px-2 pt-1.5 flex items-center gap-1">
           {slots.closureType === 'manual' ? (
-            <div className="flex items-center gap-1 text-[9px] text-zinc-500">
+            <div className="flex items-center gap-1 text-xs text-zinc-500">
               <Hand size={10} className="text-zinc-500" aria-hidden="true" />
               <span>{los.closeManual}</span>
             </div>
           ) : (
-            <div className="flex items-center gap-1 text-[9px] text-zinc-500">
+            <div className="flex items-center gap-1 text-xs text-zinc-500">
               <Zap size={10} className="text-zinc-500" aria-hidden="true" />
               <span>{los.closeAuto}</span>
             </div>
@@ -813,7 +813,7 @@ export default function ListOfSystems({
           >
             {los.tabActive}
             {activeCount > 0 && (
-              <span className="text-[10px] font-mono bg-white/10 rounded px-1.5 py-0.5 tabular-nums">{activeCount}</span>
+              <span className="text-xs font-mono bg-white/10 rounded px-1.5 py-0.5 tabular-nums">{activeCount}</span>
             )}
           </button>
           <button

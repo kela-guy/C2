@@ -42,7 +42,7 @@ export type ActionButtonVariant = keyof typeof ACTION_BUTTON_VARIANTS;
 export const ACTION_BUTTON_SIZES = {
   sm: { height: 'min-h-[30px] h-[30px]', text: 'text-xs', icon: 11, font: 'font-medium' },
   md: { height: 'min-h-8 h-8', text: 'text-xs', icon: 14, font: 'font-medium' },
-  lg: { height: 'min-h-9 h-9', text: 'text-[13px]', icon: 16, font: 'font-semibold' },
+  lg: { height: 'min-h-9 h-9', text: 'text-sm', icon: 16, font: 'font-semibold' },
 } as const;
 
 export type ActionButtonSize = keyof typeof ACTION_BUTTON_SIZES;

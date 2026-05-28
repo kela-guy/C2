@@ -46,8 +46,8 @@ export function CameraTelemetryStrip({ visible, status }: CameraTelemetryStripPr
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center gap-1.5">
-      <span className="text-[9px] font-medium text-white/55 uppercase tracking-wider">{label}</span>
-      <span className="font-mono text-[11px] tabular-nums text-white/95">{value}</span>
+      <span className="text-xs font-medium text-white/55 uppercase tracking-wider">{label}</span>
+      <span className="font-mono text-xs tabular-nums text-white/95">{value}</span>
     </div>
   );
 }

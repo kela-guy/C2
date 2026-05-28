@@ -176,6 +176,7 @@ export function PerfHud(): React.JSX.Element | null {
       <button
         type="button"
         onClick={() => setVisible(true)}
+        className="text-base"
         style={dotStyle}
         title="Show perf HUD (Ctrl+Shift+P)"
       >
@@ -186,6 +187,7 @@ export function PerfHud(): React.JSX.Element | null {
 
   return (
     <div
+      className="text-xs"
       style={{ ...rootStyle, left: pos.x, top: pos.y }}
       data-perf-hud="root"
     >
@@ -201,7 +203,7 @@ export function PerfHud(): React.JSX.Element | null {
         }}
       >
         <span style={{ fontWeight: 600, letterSpacing: 0.4 }}>C2 Perf</span>
-        <button type="button" onClick={() => setVisible(false)} style={closeBtnStyle} title="Hide (Ctrl+Shift+P)">
+        <button type="button" onClick={() => setVisible(false)} className="text-base" style={closeBtnStyle} title="Hide (Ctrl+Shift+P)">
           ×
         </button>
       </div>
@@ -252,7 +254,7 @@ function FrameStats(): React.JSX.Element {
   const args = (last?.args ?? {}) as { p50?: number; p95?: number; p99?: number; dropped?: number };
   const fpsColor = fps >= 55 ? '#7ee787' : fps >= 30 ? '#f0c674' : '#ff7b72';
   return (
-    <div style={statRowStyle}>
+    <div className="text-xs" style={statRowStyle}>
       <span>
         FPS <strong style={{ color: fpsColor }}>{fps.toFixed(0)}</strong>
       </span>
@@ -299,7 +301,7 @@ function StatsGlPanel(): React.JSX.Element {
   }, [viewer]);
 
   return (
-    <div ref={hostRef} style={{ marginTop: 6, minHeight: viewer ? 48 : 16, fontSize: 10, opacity: viewer ? 1 : 0.6 }}>
+    <div ref={hostRef} className="text-xs" style={{ marginTop: 6, minHeight: viewer ? 48 : 16, opacity: viewer ? 1 : 0.6 }}>
       {!viewer && <span>Cesium viewer not attached yet…</span>}
     </div>
   );
@@ -307,7 +309,7 @@ function StatsGlPanel(): React.JSX.Element {
 
 function SectionDivider({ label }: { label: string }): React.JSX.Element {
   return (
-    <div style={{ marginTop: 10, marginBottom: 4, fontSize: 10, opacity: 0.7, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+    <div className="text-xs" style={{ marginTop: 10, marginBottom: 4, opacity: 0.7, letterSpacing: 0.5, textTransform: 'uppercase' }}>
       {label}
     </div>
   );
@@ -324,7 +326,7 @@ function CesiumCounters(): React.JSX.Element {
   const html = lastBy('cesium.htmlMarkers')?.value ?? 0;
   const tiles = lastBy('cesium.tilesQueued')?.value ?? 0;
   return (
-    <div style={statRowStyle}>
+    <div className="text-xs" style={statRowStyle}>
       <span>entities <strong>{entities.toFixed(0)}</strong></span>
       <span>html <strong>{html.toFixed(0)}</strong></span>
       <span>tiles <strong>{tiles.toFixed(0)}</strong></span>
@@ -380,6 +382,7 @@ function CesiumDebugToggles(): React.JSX.Element {
           type="button"
           disabled={!viewer}
           onClick={() => toggle(it.key)}
+          className="text-xs"
           style={{
             ...toggleBtnStyle,
             background: flags[it.key] ? '#1f6feb' : 'rgba(255,255,255,0.06)',
@@ -399,10 +402,10 @@ function RenderCounters(): React.JSX.Element {
   const counts = getRenderCounts();
   const entries = Object.entries(counts).sort((a, b) => b[1].count - a[1].count);
   if (entries.length === 0) {
-    return <div style={{ fontSize: 10, opacity: 0.6 }}>No &lt;Profiler&gt; wraps mounted.</div>;
+    return <div className="text-xs" style={{ opacity: 0.6 }}>No &lt;Profiler&gt; wraps mounted.</div>;
   }
   return (
-    <div style={{ fontSize: 10, lineHeight: 1.6 }}>
+    <div className="text-xs" style={{ lineHeight: 1.6 }}>
       {entries.slice(0, 8).map(([id, v]) => (
         <div key={id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{id}</span>
@@ -424,7 +427,7 @@ function InpLoAFFeed(): React.JSX.Element {
   const inps = recent.filter((e) => e.name === 'INP').slice(-3);
   const loafs = recent.filter((e) => e.name === 'LoAF').slice(-5);
   return (
-    <div style={{ fontSize: 10, lineHeight: 1.5 }}>
+    <div className="text-xs" style={{ lineHeight: 1.5 }}>
       <div style={{ opacity: 0.7 }}>INP (last 3):</div>
       {inps.length === 0 && <div style={{ opacity: 0.5 }}>none yet</div>}
       {inps.map((e, i) => {
@@ -475,10 +478,10 @@ function TraceControls(): React.JSX.Element {
   const total = useTotalCount();
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-      <button type="button" onClick={() => downloadTrace()} style={primaryBtnStyle}>
+      <button type="button" onClick={() => downloadTrace()} className="text-xs" style={primaryBtnStyle}>
         Download trace JSON
       </button>
-      <span style={{ fontSize: 10, opacity: 0.6 }}>{total.toLocaleString()} events</span>
+      <span className="text-xs" style={{ opacity: 0.6 }}>{total.toLocaleString()} events</span>
     </div>
   );
 }
@@ -504,7 +507,8 @@ const rootStyle: CSSProperties = {
   width: 320,
   background: 'rgba(13, 17, 23, 0.92)',
   color: '#e6edf3',
-  font: '11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace',
+  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+  lineHeight: 1.4,
   border: '1px solid rgba(255,255,255,0.08)',
   borderRadius: 8,
   boxShadow: '0 12px 32px rgba(0,0,0,0.4)',
@@ -527,7 +531,6 @@ const closeBtnStyle: CSSProperties = {
   border: 'none',
   color: '#e6edf3',
   cursor: 'pointer',
-  fontSize: 16,
   lineHeight: 1,
   padding: '0 4px',
 };
@@ -542,7 +545,6 @@ const statRowStyle: CSSProperties = {
   display: 'flex',
   flexWrap: 'wrap',
   gap: 8,
-  fontSize: 11,
 };
 
 const dotStyle: CSSProperties = {
@@ -557,13 +559,13 @@ const dotStyle: CSSProperties = {
   color: '#e6edf3',
   border: '1px solid rgba(255,255,255,0.12)',
   cursor: 'pointer',
-  fontSize: 16,
   lineHeight: 1,
   boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
 };
 
 const toggleBtnStyle: CSSProperties = {
-  font: '10px/1 ui-monospace, monospace',
+  fontFamily: 'ui-monospace, monospace',
+  lineHeight: 1,
   color: '#e6edf3',
   border: '1px solid rgba(255,255,255,0.12)',
   borderRadius: 4,
@@ -572,7 +574,8 @@ const toggleBtnStyle: CSSProperties = {
 };
 
 const primaryBtnStyle: CSSProperties = {
-  font: '10px/1 ui-monospace, monospace',
+  fontFamily: 'ui-monospace, monospace',
+  lineHeight: 1,
   color: '#e6edf3',
   background: '#1f6feb',
   border: '1px solid #1f6feb',

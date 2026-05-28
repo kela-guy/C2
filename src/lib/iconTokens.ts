@@ -4,7 +4,7 @@
  * sizing stays consistent and re-tunable from one place.
  *
  * Keep these aligned with Tailwind's text size scale — 14/16/20 give us a
- * comfortable optical match against `text-[12px]`/`text-sm`/`text-base`.
+ * comfortable optical match against `text-xs`/`text-sm`/`text-base`.
  */
 
 export const ICON_SIZE = {

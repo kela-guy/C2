@@ -108,7 +108,7 @@ function ControlButton({
           {children}
         </button>
       </TooltipTrigger>
-      <TooltipContent side="top" sideOffset={6} className="rounded-none text-[10px]">
+      <TooltipContent side="top" sideOffset={6} className="rounded-none text-xs">
         {shortcut ? `${label} (${shortcut})` : label}
       </TooltipContent>
     </Tooltip>
@@ -201,7 +201,7 @@ function ZoomControl({ zoom, disabled, onChange }: ZoomControlProps) {
         <Search size={14} aria-hidden="true" />
         <span
           aria-hidden="true"
-          className="font-mono text-[10px] tabular-nums text-amber-100/95 leading-none min-w-[26px] text-start"
+          className="font-mono text-xs tabular-nums text-amber-100/95 leading-none min-w-[26px] text-start"
         >
           {fmtZoom(zoom)}
         </span>
@@ -248,7 +248,7 @@ function ZoomControl({ zoom, disabled, onChange }: ZoomControlProps) {
             style={{ writingMode: 'vertical-lr', direction: 'rtl' }}
             className="w-7 h-28 accent-amber-300 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
           />
-          <span className="font-mono text-[10px] tabular-nums text-amber-100 min-w-[28px] text-center">
+          <span className="font-mono text-xs tabular-nums text-amber-100 min-w-[28px] text-center">
             {fmtZoom(zoom)}
           </span>
         </div>
@@ -303,7 +303,7 @@ function LockButton({ status, onClick }: { status: CameraStatus; onClick: () => 
           {icon}
         </button>
       </TooltipTrigger>
-      <TooltipContent side="top" sideOffset={6} className="rounded-none text-[10px]">
+      <TooltipContent side="top" sideOffset={6} className="rounded-none text-xs">
         {label}
       </TooltipContent>
     </Tooltip>

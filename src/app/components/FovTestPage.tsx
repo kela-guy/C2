@@ -61,7 +61,7 @@ export default function FovTestPage() {
 
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#111' }}>
-      <div style={{ position: 'absolute', top: 16, left: 16, zIndex: 20, color: '#fff', fontFamily: 'sans-serif', fontSize: 14, background: 'rgba(0,0,0,0.7)', padding: '12px 16px', borderRadius: 8 }}>
+      <div className="text-sm" style={{ position: 'absolute', top: 16, left: 16, zIndex: 20, color: '#fff', fontFamily: 'sans-serif', background: 'rgba(0,0,0,0.7)', padding: '12px 16px', borderRadius: 8 }}>
         <strong>FOV Test</strong> — Hover the camera icon. FOV should appear.
         <br />
         <span style={{ color: hovered ? '#22d3ee' : '#888' }}>

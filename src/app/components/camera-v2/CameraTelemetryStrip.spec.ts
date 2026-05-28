@@ -30,8 +30,8 @@ export const spec: ComponentSpec = {
       { name: 'strip-bg', value: 'rgba(0,0,0,0.55)', usage: 'Strip background' },
     ],
     typography: [
-      { name: 'stat-label', fontFamily: 'system-ui', fontSize: '9px', fontWeight: '500', lineHeight: '1', usage: 'ALT / VEL labels' },
-      { name: 'stat-value', fontFamily: 'IBM Plex Mono', fontSize: '11px', fontWeight: '500', lineHeight: '1', usage: 'Numeric values (tabular-nums)' },
+      { name: 'stat-label', fontFamily: 'system-ui', fontSize: '12px', fontWeight: '500', lineHeight: '1', usage: 'ALT / VEL labels' },
+      { name: 'stat-value', fontFamily: 'IBM Plex Mono', fontSize: '12px', fontWeight: '500', lineHeight: '1', usage: 'Numeric values (tabular-nums)' },
     ],
     spacing: [
       { name: 'strip-padding', value: '6px 10px', usage: 'Inner padding' },

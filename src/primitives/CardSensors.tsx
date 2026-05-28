@@ -51,12 +51,12 @@ export function CardSensors({
             <span className="text-xs">{sensor.typeLabel}</span>
             <span className="flex-1 min-w-0 block" aria-hidden="true" />
             {sensor.detectedAt && (
-              <span className="text-[11px] text-white font-mono tabular-nums">
+              <span className="text-xs text-white font-mono tabular-nums">
                 {sensor.detectedAt}
               </span>
             )}
             {sensor.distanceLabel && (
-              <span className="text-[10px] text-zinc-400 font-mono tabular-nums">
+              <span className="text-xs text-zinc-400 font-mono tabular-nums">
                 {sensor.distanceLabel}
               </span>
             )}

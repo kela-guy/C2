@@ -63,7 +63,7 @@ export function CameraSettingsMenu({
             </button>
           </PopoverTrigger>
         </TooltipTrigger>
-        <TooltipContent side="top" sideOffset={6} className="rounded-none text-[10px]">
+        <TooltipContent side="top" sideOffset={6} className="rounded-none text-xs">
           {t.settingsHeading}
         </TooltipContent>
       </Tooltip>
@@ -122,7 +122,7 @@ export function CameraSettingsMenu({
 function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="px-3 py-2.5">
-      <div className="flex items-center gap-1.5 mb-2 text-[10px] font-semibold text-white/55 uppercase tracking-[0.18em]">
+      <div className="flex items-center gap-1.5 mb-2 text-xs font-semibold text-white/55 uppercase tracking-[0.18em]">
         {icon}
         <span>{title}</span>
       </div>
@@ -158,14 +158,14 @@ function Row({
           {shortcutHint && (
             <kbd
               aria-hidden="true"
-              className="font-mono text-[9px] text-white/55 px-1 py-px ring-1 ring-inset ring-white/15 rounded"
+              className="font-mono text-xs text-white/55 px-1 py-px ring-1 ring-inset ring-white/15 rounded"
             >
               {shortcutHint}
             </kbd>
           )}
         </span>
         {description && (
-          <span className="text-[10px] text-white/55 leading-snug">{description}</span>
+          <span className="text-xs text-white/55 leading-snug">{description}</span>
         )}
       </div>
       {children}

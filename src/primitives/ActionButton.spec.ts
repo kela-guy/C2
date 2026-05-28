@@ -128,7 +128,7 @@ export const spec: ComponentSpec = {
     ],
     typography: [
       { name: 'label-sm', fontFamily: 'inherit', fontSize: '12px (text-xs)', fontWeight: '500 (font-medium)', lineHeight: '16px', usage: 'Button label at sm/md size' },
-      { name: 'label-lg', fontFamily: 'inherit', fontSize: '13px', fontWeight: '600 (font-semibold)', lineHeight: '18px', usage: 'Button label at lg size' },
+      { name: 'label-lg', fontFamily: 'inherit', fontSize: '14px (text-sm)', fontWeight: '600 (font-semibold)', lineHeight: '18px', usage: 'Button label at lg size' },
     ],
     spacing: [
       { name: 'height-sm', value: '30px', usage: 'Small button height' },

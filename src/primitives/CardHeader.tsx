@@ -130,9 +130,8 @@ export function CardHeader({
 
         <div className="flex flex-col min-w-0">
           <h2
-            className="font-semibold text-balance leading-tight truncate"
+            className="text-sm font-semibold text-balance leading-tight truncate"
             style={{
-              fontSize: `${d.title.fontSize}px`,
               color: d.title.color,
               fontWeight: d.title.fontWeight,
             }}
@@ -141,8 +140,8 @@ export function CardHeader({
           </h2>
           {subtitle && (
             <span
-              className="font-mono truncate"
-              style={{ fontSize: `${d.subtitle.fontSize}px`, color: d.subtitle.color }}
+              className="text-xs font-mono truncate"
+              style={{ color: d.subtitle.color }}
             >
               {subtitle}
             </span>

@@ -116,9 +116,9 @@ export const spec: ComponentSpec = {
       { name: 'show-more-hover', value: 'text-zinc-300', usage: '"Show more" button hover color' },
     ],
     typography: [
-      { name: 'entry-label', fontFamily: 'Heebo', fontSize: '11px', fontWeight: '400', lineHeight: '1.5', usage: 'Log entry text (text-[11px])' },
-      { name: 'time', fontFamily: 'monospace', fontSize: '9px', fontWeight: '400', lineHeight: '24px', usage: 'Timestamp (text-[9px] font-mono tabular-nums)' },
-      { name: 'show-more', fontFamily: 'Heebo', fontSize: '9px', fontWeight: '400', lineHeight: '1.5', usage: '"Show more" button text (text-[9px])' },
+      { name: 'entry-label', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '400', lineHeight: '1.5', usage: 'Log entry text (text-xs)' },
+      { name: 'time', fontFamily: 'monospace', fontSize: '12px', fontWeight: '400', lineHeight: '24px', usage: 'Timestamp (text-xs font-mono tabular-nums)' },
+      { name: 'show-more', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '400', lineHeight: '1.5', usage: '"Show more" button text (text-xs)' },
     ],
     spacing: [
       { name: 'content-py', value: '8px', usage: 'Timeline content vertical padding (py-2)' },
@@ -233,13 +233,13 @@ export const spec: ComponentSpec = {
 
   hardcodedData: [
     {
-      current: "text-[11px] — arbitrary Tailwind value for entry label font size",
-      replaceWith: 'Design token or Tailwind config extension (e.g. text-2xs)',
+      current: 'text-xs — Tailwind default text-xs (12px) for entry label font size',
+      replaceWith: 'Design token if a tighter scale is needed',
       location: 'CardLog.tsx line 45',
     },
     {
-      current: "text-[9px] — arbitrary Tailwind value for timestamp and show-more font size",
-      replaceWith: 'Design token or Tailwind config extension',
+      current: 'text-xs — Tailwind default text-xs (12px) for timestamp and show-more font size',
+      replaceWith: 'Design token if a tighter scale is needed',
       location: 'CardLog.tsx lines 47, 60',
     },
     {

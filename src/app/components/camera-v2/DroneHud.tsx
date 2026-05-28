@@ -95,9 +95,9 @@ function Tile({
     <div className="flex flex-col gap-0.5 min-w-[64px]">
       <div className="flex items-center gap-1.5">
         {icon}
-        <span className="text-[8.5px] font-medium text-white/55 uppercase tracking-[0.18em]">{label}</span>
+        <span className="text-xs font-medium text-white/55 uppercase tracking-[0.18em]">{label}</span>
       </div>
-      <span className={`font-mono text-[12px] leading-none tabular-nums ${accent ?? 'text-white/95'}`}>
+      <span className={`font-mono text-xs leading-none tabular-nums ${accent ?? 'text-white/95'}`}>
         {value}
       </span>
       {typeof bar === 'number' && (

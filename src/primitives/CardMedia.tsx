@@ -102,14 +102,14 @@ export function CardMedia({
             <div className="absolute top-2 end-2 flex items-center gap-1.5">
               <div className="flex items-center gap-1 bg-black/80 px-1.5 py-0.5 rounded-sm">
                 <div className="size-1.5 rounded-full bg-red-500 animate-pulse motion-reduce:animate-none" />
-                <span className="text-[9px] font-medium text-white/90 uppercase tracking-wide">
+                <span className="text-xs font-medium text-white/90 uppercase tracking-wide">
                   Live
                 </span>
               </div>
             </div>
             <div className="absolute top-2 start-2 flex items-center gap-1 bg-black/80 px-1.5 py-0.5 rounded-sm">
               <Camera size={10} className="text-white/70" aria-hidden="true" />
-              <span className="text-[9px] text-white/70 font-mono">PTZ</span>
+              <span className="text-xs text-white/70 font-mono">PTZ</span>
             </div>
           </>
         )}
@@ -118,7 +118,7 @@ export function CardMedia({
           <>
             <div className="absolute top-2 end-2 flex items-center gap-1 bg-black/80 px-1.5 py-0.5 rounded-sm">
               <Camera size={10} className="text-white/70" aria-hidden="true" />
-              <span className="text-[9px] text-white/70 font-mono">Playback</span>
+              <span className="text-xs text-white/70 font-mono">Playback</span>
             </div>
             <button
               onClick={handleExpand}
@@ -127,7 +127,7 @@ export function CardMedia({
             >
               <div className="flex items-center gap-1.5 bg-black/70 backdrop-blur-sm px-3 py-1.5 rounded-md shadow-[0_0_0_1px_rgba(255,255,255,0.15)]">
                 <Maximize2 size={13} className="text-white/90" aria-hidden="true" />
-                <span className="text-[11px] font-medium text-white/90">Expand</span>
+                <span className="text-xs font-medium text-white/90">Expand</span>
               </div>
             </button>
           </>
@@ -136,7 +136,7 @@ export function CardMedia({
         {trackingLabel && (
           <div className="absolute bottom-2 start-2 flex items-center gap-1 bg-cyan-900/80 shadow-[0_0_0_1px_rgba(34,211,238,0.3)] px-2 py-0.5 rounded">
             <Camera size={10} className="text-cyan-300" aria-hidden="true" />
-            <span className="text-[9px] font-semibold text-cyan-200">{trackingLabel}</span>
+            <span className="text-xs font-semibold text-cyan-200">{trackingLabel}</span>
           </div>
         )}
 
@@ -277,7 +277,7 @@ function LightboxVideo({ src, initialTime }: { src: string; initialTime: number 
           <button onClick={skip(5)} className="text-white/60 hover:text-white transition-colors cursor-pointer" aria-label="Skip forward 5 seconds">
             <SkipForward size={14} aria-hidden="true" />
           </button>
-          <span className="text-[11px] text-zinc-400 font-mono tabular-nums ms-2">
+          <span className="text-xs text-zinc-400 font-mono tabular-nums ms-2">
             {formatTime(progress)} / {formatTime(duration)}
           </span>
         </div>
@@ -395,7 +395,7 @@ const VideoWithControls = React.forwardRef<HTMLVideoElement, { src: string }>(
             <button onClick={skip(5)} className="text-white/60 hover:text-white transition-colors" aria-label="Skip forward 5 seconds">
               <SkipForward size={12} aria-hidden="true" />
             </button>
-            <span className="text-[9px] text-zinc-400 font-mono tabular-nums ms-2">
+            <span className="text-xs text-zinc-400 font-mono tabular-nums ms-2">
               {formatTime(progress)} / {formatTime(duration)}
             </span>
           </div>

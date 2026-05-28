@@ -58,7 +58,7 @@ export function CameraDetectionsOverlay({ detections, visible }: CameraDetection
         return (
           <div
             key={`${d.id}-label`}
-            className="absolute font-mono text-[9px] tracking-wide whitespace-nowrap"
+            className="absolute font-mono text-xs tracking-wide whitespace-nowrap"
             style={{
               left: leftPct,
               top: topPct,

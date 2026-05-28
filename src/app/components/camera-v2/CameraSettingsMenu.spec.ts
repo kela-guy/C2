@@ -50,10 +50,10 @@ export const spec: ComponentSpec = {
       { name: 'switch-track-on', value: 'rgba(16,185,129,0.8)', usage: 'Emerald Switch on-state track' },
     ],
     typography: [
-      { name: 'section-title', fontFamily: 'Heebo', fontSize: '10px', fontWeight: '600', lineHeight: '1', usage: 'Uppercase tracked-out section title' },
+      { name: 'section-title', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '600', lineHeight: '1', usage: 'Uppercase tracked-out section title' },
       { name: 'row-label', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '400', lineHeight: '1.2', usage: 'Row main text' },
-      { name: 'row-description', fontFamily: 'Heebo', fontSize: '10px', fontWeight: '400', lineHeight: '1.3', usage: 'Row helper text' },
-      { name: 'detail-mono', fontFamily: 'IBM Plex Mono', fontSize: '11px', fontWeight: '400', lineHeight: '1', usage: 'Detail values (id, FOV, bearing)' },
+      { name: 'row-description', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '400', lineHeight: '1.3', usage: 'Row helper text' },
+      { name: 'detail-mono', fontFamily: 'IBM Plex Mono', fontSize: '12px', fontWeight: '400', lineHeight: '1', usage: 'Detail values (id, FOV, bearing)' },
     ],
     spacing: [
       { name: 'popover-width', value: '280px', usage: 'Fixed width of the popover' },

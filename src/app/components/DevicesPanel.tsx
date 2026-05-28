@@ -385,7 +385,7 @@ export function DeviceRow({
                 side="top"
                 sideOffset={6}
                 showArrow={false}
-                className="px-2 py-1 text-[10px] text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
+                className="px-2 py-1 text-xs text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
               >
                 {connectionStateLabels[device.connectionState]}
               </TooltipContent>
@@ -395,13 +395,13 @@ export function DeviceRow({
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className={`text-[13px] font-medium truncate ${isMalfunctioning ? 'text-orange-300' : 'text-zinc-300'}`}>{device.name}</span>
+              <span className={`text-sm font-medium truncate ${isMalfunctioning ? 'text-orange-300' : 'text-zinc-300'}`}>{device.name}</span>
               {isMalfunctioning && <AlertTriangle size={11} className="text-orange-400 shrink-0" />}
               {device.connectionState !== 'online' && (
                 <StatusChip
                   label={connectionStateLabels[device.connectionState]}
                   color={CONNECTION_STATE_CHIP_COLORS[device.connectionState]}
-                  className="h-5 px-1.5 text-[10px] leading-none"
+                  className="h-5 px-1.5 text-xs leading-none"
                 />
               )}
             </div>
@@ -442,14 +442,14 @@ export function DeviceRow({
                     side="top"
                     sideOffset={6}
                     showArrow={false}
-                    className="px-2 py-1 text-[10px] text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
+                    className="px-2 py-1 text-xs text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
                   >
                     {isPinnedToFeed ? strings.pinnedToFeedTooltip : strings.pinToFeedTooltip}
                   </TooltipContent>
                 </Tooltip>
               )}
               {device.batteryPct != null && (
-                <span className="flex items-center gap-1.5 text-[11px] font-['Heebo'] tabular-nums text-white/50 align-middle">
+                <span className="flex items-center gap-1.5 text-xs font-['Heebo'] tabular-nums text-white/50 align-middle">
                   <BatteryIcon pct={device.batteryPct} />
                   {device.batteryPct}%
                 </span>
@@ -457,7 +457,7 @@ export function DeviceRow({
             </div>
           </div>
           {metricParts.length > 0 && (
-            <div className="text-[11px] font-mono tabular-nums text-white/50 truncate">
+            <div className="text-xs font-mono tabular-nums text-white/50 truncate">
               {metricParts.join(' · ')}
             </div>
           )}
@@ -476,7 +476,7 @@ export function DeviceRow({
               type="button"
               onClick={(e) => { e.stopPropagation(); onJamActivate?.(device.id); }}
               disabled={isDisabled}
-              className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium transition-[background-color,transform] duration-150 ease-out disabled:opacity-40 disabled:cursor-not-allowed bg-[oklch(0.348_0.111_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)] hover:bg-[oklch(0.445_0.151_17)] active:scale-[0.98] active:bg-[oklch(0.295_0.082_17)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+              className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-[background-color,transform] duration-150 ease-out disabled:opacity-40 disabled:cursor-not-allowed bg-[oklch(0.348_0.111_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)] hover:bg-[oklch(0.445_0.151_17)] active:scale-[0.98] active:bg-[oklch(0.295_0.082_17)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
             >
               <JamIcon size={12} />
               {device.status === 'active' ? strings.jamActive : strings.jam}
@@ -496,7 +496,7 @@ export function DeviceRow({
                 side="top"
                 sideOffset={6}
                 showArrow={false}
-                className="px-2 py-1 text-[10px] text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
+                className="px-2 py-1 text-xs text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
               >
                 {disabledReason}
               </TooltipContent>
@@ -522,7 +522,7 @@ export function DeviceRow({
               side="top"
               sideOffset={6}
               showArrow={false}
-              className="px-2 py-1 text-[10px] text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
+              className="px-2 py-1 text-xs text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
             >
               {isFloodlightOn ? strings.floodlightTurnOff : strings.floodlightTurnOn}
             </TooltipContent>
@@ -540,7 +540,7 @@ export function DeviceRow({
               onClick={(e) => { e.stopPropagation(); onSpeakerToggle?.(device.id, !playing); }}
               disabled={disabled}
               aria-pressed={playing}
-              className="shrink-0 h-7 gap-1.5 px-2 rounded text-[11px] font-medium"
+              className="shrink-0 h-7 gap-1.5 px-2 rounded text-xs font-medium"
             >
               {playing ? <Square size={12} /> : <PlayFilledIcon size={12} />}
               {playing ? strings.speakerStop : strings.speakerPlay}
@@ -558,7 +558,7 @@ export function DeviceRow({
                 side="top"
                 sideOffset={6}
                 showArrow={false}
-                className="px-2 py-1 text-[10px] text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
+                className="px-2 py-1 text-xs text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
               >
                 {strings.speakerDisabledOffline}
               </TooltipContent>
@@ -589,7 +589,7 @@ export function DeviceRow({
               <div className="absolute inset-0 bg-black/20 pointer-events-none" />
               <div className="absolute top-1.5 end-1.5 flex items-center gap-1 bg-black/80 px-1.5 py-0.5 rounded-sm">
                 <div className="size-1.5 rounded-full bg-red-500 animate-pulse motion-reduce:animate-none" />
-                <span className="text-[9px] font-medium text-white/90 uppercase tracking-wide">Live</span>
+                <span className="text-xs font-medium text-white/90 uppercase tracking-wide">Live</span>
               </div>
             </div>
           )}
@@ -612,7 +612,7 @@ export function DeviceRow({
                       aria-label={strings.audioTrackAriaLabel}
                       onClick={(e) => e.stopPropagation()}
                       onKeyDown={(e) => e.stopPropagation()}
-                      className="flex h-7 min-w-0 max-w-[180px] items-center justify-between gap-1.5 px-2 rounded text-[11px] font-medium text-white/[0.64] hover:text-white bg-white/[0.05] hover:bg-white/[0.10] transition-[background-color,color,transform] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20"
+                      className="flex h-7 min-w-0 max-w-[180px] items-center justify-between gap-1.5 px-2 rounded text-xs font-medium text-white/[0.64] hover:text-white bg-white/[0.05] hover:bg-white/[0.10] transition-[background-color,color,transform] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20"
                     >
                       <span className="truncate">
                         {selectedSpeakerTrack?.label ?? strings.audioTrack}
@@ -630,10 +630,10 @@ export function DeviceRow({
                     <Command className="bg-transparent">
                       <CommandInput
                         placeholder={strings.audioTrackSearchPlaceholder}
-                        className="h-8 text-[11px]"
+                        className="h-8 text-xs"
                       />
                       <CommandList>
-                        <CommandEmpty className="py-3 text-center text-[11px] text-white/50">
+                        <CommandEmpty className="py-3 text-center text-xs text-white/50">
                           {strings.audioTrackNoMatches}
                         </CommandEmpty>
                         <CommandGroup>
@@ -645,7 +645,7 @@ export function DeviceRow({
                                 setSpeakerTrack(track.id);
                                 setSpeakerTrackOpen(false);
                               }}
-                              className="text-[11px] data-[selected=true]:bg-white/10 data-[selected=true]:text-white"
+                              className="text-xs data-[selected=true]:bg-white/10 data-[selected=true]:text-white"
                             >
                               <span className="flex-1 truncate">{track.label}</span>
                               {track.id === speakerTrack && (
@@ -665,7 +665,7 @@ export function DeviceRow({
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onFlyTo(device.lat, device.lon); }}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90 active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out cursor-pointer focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90 active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out cursor-pointer focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
               aria-label={strings.centerOnMap}
             >
               <MapPin size={12} />
@@ -683,7 +683,7 @@ export function DeviceRow({
                 disabled={isOffline || (isPinnedToFeed ? !onUnpinFromFeed : !onPinToFeed)}
                 aria-pressed={!!isPinnedToFeed}
                 aria-label={isPinnedToFeed ? strings.unpinFromFeedAriaLabel : strings.pinToFeedAriaLabel}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none ${
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none ${
                   isPinnedToFeed
                     ? 'text-sky-100 bg-sky-500/30 ring-1 ring-inset ring-sky-300/45 hover:bg-sky-500/40'
                     : 'text-sky-200 bg-sky-500/15 hover:bg-sky-500/25'
@@ -699,7 +699,7 @@ export function DeviceRow({
               onClick={(e) => { e.stopPropagation(); onToggleMute(device.id); }}
               aria-pressed={isMuted}
               disabled={isOffline}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium transition-[background-color,color,transform] duration-150 ease-out cursor-pointer active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none ${
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium transition-[background-color,color,transform] duration-150 ease-out cursor-pointer active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none ${
                 isMuted
                   ? 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/25'
                   : 'text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90'
@@ -714,7 +714,7 @@ export function DeviceRow({
               <>
                 <div className="w-px h-5 bg-white/[0.08] mx-0.5" />
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-white/60">{strings.wipers}</span>
+                  <span className="text-xs text-white/60">{strings.wipers}</span>
                   <Switch
                     checked={wipersOn}
                     onCheckedChange={setWipersOn}
@@ -729,7 +729,7 @@ export function DeviceRow({
                   disabled={isOffline || calibState !== 'idle'}
                   aria-busy={calibState === 'running'}
                   onClick={(e) => { e.stopPropagation(); setCalibState('running'); }}
-                  className="ms-auto flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90 active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
+                  className="ms-auto flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90 active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
                   aria-label={strings.calibrateAriaLabel}
                 >
                   {calibState === 'running' ? (
@@ -753,7 +753,7 @@ export function DeviceRow({
 function DetailRow({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
     <div className="w-full flex flex-col justify-center items-start gap-1 text-xs">
-      <span className="text-white/60 text-[10px]">{label}</span>
+      <span className="text-white/60 text-xs">{label}</span>
       <span className={`font-sans tabular-nums text-xs ${color ?? 'text-white'}`}>{value}</span>
     </div>
   );
@@ -1014,7 +1014,7 @@ export function DevicesPanel({
 
       <div className="flex-1 overflow-y-auto">
         {grouped.length === 0 ? (
-          <div className="px-3 py-8 text-center text-[12px] text-zinc-600">
+          <div className="px-3 py-8 text-center text-xs text-zinc-600">
             {strings.noMatches}
           </div>
         ) : (
