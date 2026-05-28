@@ -16,7 +16,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { Separator } from '@/shared/components/ui/separator';
 import { DevicesPanel, DevicesIcon, DEVICE_CAMERA_DRAG_TYPE } from './DevicesPanel';
 import type { DeviceCameraDragItem } from './DevicesPanel';
-import { useDevicesFromAssets, useCameraPresets } from './useDevicesFromAssets';
+import { useDevicesFromAssets } from './useDevicesFromAssets';
 import { CameraViewerPanel } from './CameraViewerPanel';
 import type { CameraFeed } from './CameraViewerPanel';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/shared/components/ui/resizable';
@@ -227,7 +227,6 @@ interface DashboardProps {
 
 export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
   const allDevices = useDevicesFromAssets();
-  const cameraPresets = useCameraPresets();
   // Active i18n catalog. Locale is driven by the direction system
   // (`'rtl'` ⇒ Hebrew, `'ltr'` ⇒ English), so the marketing
   // `/demo` route — which forces direction to `'ltr'` via the
@@ -1870,7 +1869,6 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
             focusedDeviceId={focusedDeviceId}
             title={t.dashboard.devicesPanelTitle}
             closeAriaLabel={t.dashboard.devicesPanelClose}
-            cameraPresets={cameraPresets}
             typeLabels={t.devices.typeLabels}
             connectionStateLabels={t.devices.connectionLabels}
             strings={t.devices.strings}

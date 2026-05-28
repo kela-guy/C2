@@ -3,7 +3,6 @@ import { useDrag } from 'react-dnd';
 import { X, Camera, AlertTriangle, MapPin, BellOff, Wrench, Check, Loader2, Pin, PinFilled, PinOff } from '@/lib/icons/central';
 import { Square, ChevronsUpDown } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
-import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 import { Switch } from './ui/switch';
 import { Toggle } from './ui/toggle';
 import { Collapsible, CollapsibleContent } from './ui/collapsible';
@@ -147,7 +146,6 @@ export interface DevicesPanelStrings {
   jamDisabledMalfunction: string;
   jamDisabledAlreadyActive: string;
   /** Camera controls. */
-  cameraModeAriaLabel: string;
   centerOnMap: string;
   mute: string;
   unmute: string;
@@ -204,7 +202,6 @@ export const DEFAULT_DEVICE_PANEL_STRINGS: DevicesPanelStrings = {
   jamDisabledOffline: 'Device offline',
   jamDisabledMalfunction: 'Device malfunction',
   jamDisabledAlreadyActive: 'Already jamming',
-  cameraModeAriaLabel: 'Camera mode',
   centerOnMap: 'Center on map',
   mute: 'Mute',
   unmute: 'Unmute',
@@ -268,7 +265,6 @@ export function DeviceRow({
   onUnpinFromFeed,
   isPinnedToFeed,
   connectionStateLabels = DEFAULT_CONNECTION_STATE_LABELS,
-  cameraPresets,
   strings = DEFAULT_DEVICE_PANEL_STRINGS,
 }: {
   device: Device;
@@ -292,7 +288,6 @@ export function DeviceRow({
   /** Whether this device is currently pinned to a feed. Drives the toggle visual + label. */
   isPinnedToFeed?: boolean;
   connectionStateLabels?: Record<ConnectionState, string>;
-  cameraPresets?: Record<string, string[]>;
   strings?: DevicesPanelStrings;
 }) {
   const metricParts: string[] = [];
@@ -305,9 +300,7 @@ export function DeviceRow({
   const [speakerTrack, setSpeakerTrack] = useState<string>(speakerTracks[0]?.id ?? '');
   const [speakerTrackOpen, setSpeakerTrackOpen] = useState(false);
   const selectedSpeakerTrack = speakerTracks.find((t) => t.id === speakerTrack) ?? speakerTracks[0];
-  const presets = cameraPresets?.[device.id];
 
-  const [activePreset, setActivePreset] = useState(presets?.[0] ?? '');
   const [wipersOn, setWipersOn] = useState(false);
   const [calibState, setCalibState] = useState<'idle' | 'running' | 'done'>('idle');
 
@@ -569,18 +562,6 @@ export function DeviceRow({
 
       <CollapsibleContent className="overflow-hidden animate-in fade-in-0 duration-200">
         <div className="flex flex-col bg-white/[0.03]">
-          {isCamera && presets && (
-            <Tabs value={activePreset} onValueChange={setActivePreset} onClick={(e) => e.stopPropagation()}>
-              <TabsList variant="line" className="justify-end items-end px-3" aria-label={strings.cameraModeAriaLabel}>
-                {presets.map((preset) => (
-                  <TabsTrigger key={preset} value={preset}>
-                    {preset}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
-          )}
-
           {isCamera && (
             <div className="relative w-full h-[200px] overflow-hidden bg-black shadow-[0_0_0_1px_rgba(255,255,255,0.1)]">
               <div className="absolute inset-0 flex items-center justify-center">
@@ -791,8 +772,6 @@ export interface DevicesPanelProps {
   typeLabels?: Partial<Record<DeviceType, string>>;
   /** Override per-state connection labels. Falls back to `DEFAULT_CONNECTION_STATE_LABELS` (English). */
   connectionStateLabels?: Partial<Record<ConnectionState, string>>;
-  /** Optional camera-preset map keyed by `device.id`. When omitted, no preset chip strip is rendered. */
-  cameraPresets?: Record<string, string[]>;
   /** Header title above the device list. Defaults to 'Devices'. */
   title?: string;
   /** Close-button aria-label. Defaults to 'Close'. */
@@ -822,7 +801,6 @@ export function DevicesPanel({
   focusedDeviceId,
   typeLabels: typeLabelsProp,
   connectionStateLabels: connectionStateLabelsProp,
-  cameraPresets,
   title = 'Devices',
   closeAriaLabel = 'Close',
   strings: stringsProp,
@@ -1044,7 +1022,6 @@ export function DevicesPanel({
                     onUnpinFromFeed={onUnpinFromFeed}
                     isPinnedToFeed={pinnedSet.has(device.id)}
                     connectionStateLabels={connectionStateLabels}
-                    cameraPresets={cameraPresets}
                     strings={strings}
                   />
                 </div>

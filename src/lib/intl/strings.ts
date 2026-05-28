@@ -68,7 +68,6 @@ const STRINGS_HE = {
       jamDisabledOffline: 'המכשיר לא מקוון',
       jamDisabledMalfunction: 'המכשיר בתקלה',
       jamDisabledAlreadyActive: 'שיבוש כבר פעיל',
-      cameraModeAriaLabel: 'מצב מצלמה',
       centerOnMap: 'מרכז במפה',
       mute: 'השתק',
       unmute: 'בטל השתקה',
@@ -655,14 +654,6 @@ const STRINGS_HE = {
     deviceNames: {
       missileLauncher: 'משגר טילים',
     },
-    /**
-     * Camera preset chips rendered inside the DevicesPanel device
-     * card. Keyed by camera asset id.
-     */
-    cameraPresets: {
-      ptzNorth: ['זום', 'לילה', 'רגיל'],
-      pixelsight: ['רגיל', 'תרמי'],
-    },
   },
 
   /**
@@ -733,7 +724,6 @@ const STRINGS_EN: Strings = {
       jamDisabledOffline: 'Device offline',
       jamDisabledMalfunction: 'Device malfunction',
       jamDisabledAlreadyActive: 'Jamming already active',
-      cameraModeAriaLabel: 'Camera mode',
       centerOnMap: 'Center on map',
       mute: 'Mute',
       unmute: 'Unmute',
@@ -1250,10 +1240,6 @@ const STRINGS_EN: Strings = {
     },
     deviceNames: {
       missileLauncher: 'Missile launcher',
-    },
-    cameraPresets: {
-      ptzNorth: ['Zoom', 'Night', 'Normal'],
-      pixelsight: ['Normal', 'Thermal'],
     },
   },
 
