@@ -29,10 +29,21 @@ export interface CapturedElement {
 }
 
 /** Read `dataset.handoffComponent` first, then `dataset.slot`. */
-function hintFor(el: Element): string | null {
+export function hintFor(el: Element): string | null {
   if (!(el instanceof HTMLElement) && !(el instanceof SVGElement)) return null;
   const ds = (el as HTMLElement).dataset;
   return ds?.handoffComponent ?? ds?.slot ?? null;
+}
+
+/**
+ * An element is a component boundary if it carries an explicit
+ * `data-handoff-component` stamp or a shadcn `data-slot`. The picker's
+ * ancestor-walk uses this to soft-cap `Arrow Up`, so the developer
+ * doesn't accidentally bubble from FilterBar all the way out to
+ * DevicesPanel.
+ */
+export function isComponentBoundary(el: Element): boolean {
+  return hintFor(el) !== null;
 }
 
 function deriveComponentHint(el: Element): string | null {

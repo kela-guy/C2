@@ -64,6 +64,12 @@ export const INSPECTOR_SEMANTIC = {
  * Picking-mode overlay. White marquee + dark inner shadow so the
  * outline stays legible on both light (map controls) and dark (device
  * panel) app surfaces, without introducing a second brand colour.
+ *
+ * The `boundary*` tokens are the one allowed exception: when the
+ * developer hits the ancestor-walk cap, the outline pulses red for
+ * ~360 ms to signal "blocked". The hue is a brightened sibling of the
+ * project's `--destructive` (#d4183d) — keeps the alert inside the
+ * tactical-red family while staying legible against any surface.
  */
 export const INSPECTOR_OVERLAY = {
   hoverOutline: 'rgba(255, 255, 255, 0.95)',
@@ -72,6 +78,10 @@ export const INSPECTOR_OVERLAY = {
   hoverContrast: 'inset 0 0 0 1px rgba(0, 0, 0, 0.55)',
   pinOutline: 'rgba(255, 255, 255, 0.55)',
   pinFill: 'rgba(255, 255, 255, 0.04)',
+  /** Solid stroke colour during the boundary refusal pulse. */
+  boundaryStroke: '#ff3b3b',
+  /** Soft outer halo that composes with `hoverContrast` during the pulse. */
+  boundaryGlow: '0 0 0 4px rgba(255, 59, 59, 0.18)',
 } as const;
 
 /** Layered shadow — inset highlight + ambient drop, single light source. */

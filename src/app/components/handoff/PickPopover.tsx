@@ -51,6 +51,13 @@ interface PickPopoverProps {
   pin: CapturedElement;
   anchorRect: PopoverAnchor;
   onClose: () => void;
+  /**
+   * Surface a system-level confirmation toast on successful copy.
+   * The popover still flips its own button to a "copied" state — this
+   * is the Paper-style global confirmation that reads at a glance from
+   * anywhere on the page.
+   */
+  onCopied?: (message: string) => void;
 }
 
 const POPOVER_Z = 2147483050;
@@ -69,7 +76,7 @@ interface Placement {
 
 type CopyState = 'idle' | 'ok' | 'err';
 
-export function PickPopover({ pin, anchorRect, onClose }: PickPopoverProps) {
+export function PickPopover({ pin, anchorRect, onClose, onCopied }: PickPopoverProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const copyButtonRef = useRef<HTMLButtonElement>(null);
   const linkRef = useRef<HTMLAnchorElement>(null);
@@ -147,7 +154,8 @@ export function PickPopover({ pin, anchorRect, onClose }: PickPopoverProps) {
   const onCopy = useCallback(async () => {
     const ok = await writeToClipboard(pin.className);
     setCopyState(ok ? 'ok' : 'err');
-  }, [pin.className]);
+    if (ok) onCopied?.('Copied to clipboard.');
+  }, [pin.className, onCopied]);
 
   const onLink = useCallback(
     (e: ReactMouseEvent<HTMLAnchorElement>) => {

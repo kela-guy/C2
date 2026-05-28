@@ -1,6 +1,6 @@
 /**
  * Top-level Handoff Inspector. Owns the picker glyph, the hover
- * overlay, and the click-anchored popover.
+ * overlay, the click-anchored popover, and the keyboard quick-draw.
  *
  * The picker has two homes:
  *   1. If the host page declares a slot (`[data-handoff-picker-slot]`)
@@ -10,15 +10,20 @@
  *      glyph rendered inside the body portal — used on routes that
  *      don't expose a rail (`/styleguide`, `/fov-test`, `/playground`).
  *
- * Overlay + popover always live in the body portal so they can sit
- * above any stacking context.
+ * Overlay + popover + hint chip always live in the body portal so they
+ * can sit above any stacking context.
+ *
+ * `Cmd/Ctrl + Shift + P` toggles picker mode from anywhere — the same
+ * chord is the off-switch so it acts as a quick-draw. We gate it on
+ * focus so it doesn't fire while the user is typing into a form
+ * control.
  */
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { useInspector } from './useInspector';
-import { InspectorOverlay } from './InspectorOverlay';
+import { InspectorHintChip, InspectorOverlay, InspectorToast } from './InspectorOverlay';
 import { PickerGlyph } from './PickerGlyph';
 import { PickPopover } from './PickPopover';
 
@@ -28,6 +33,7 @@ export default function HandoffInspector() {
   const inspector = useInspector();
   const bodyPortal = useBodyPortalNode();
   const railSlot = useRailSlot();
+  useGlobalToggleHotkey(inspector.mode, inspector.enterPicking, inspector.exit);
 
   if (!bodyPortal) return null;
 
@@ -48,8 +54,11 @@ export default function HandoffInspector() {
             <InspectorOverlay
               hover={inspector.mode === 'picking' ? inspector.hover : null}
               pinRect={overlayPinRect}
+              boundaryPulseKey={inspector.boundaryPulseKey}
             />
           )}
+          <InspectorHintChip visible={inspector.mode === 'picking'} />
+          <InspectorToast notice={inspector.notice} />
           {!railSlot && (
             <PickerGlyph variant="floating" mode={inspector.mode} onTogglePicker={togglePicker} />
           )}
@@ -58,6 +67,7 @@ export default function HandoffInspector() {
               pin={inspector.pin}
               anchorRect={inspector.popoverAnchor}
               onClose={inspector.closePopover}
+              onCopied={inspector.showNotice}
             />
           )}
         </>,
@@ -123,4 +133,34 @@ function useRailSlot(): HTMLElement | null {
     };
   }, [pathname]);
   return slot;
+}
+
+/**
+ * `Cmd/Ctrl + Shift + P` toggles picker mode from anywhere. We bypass
+ * it when focus lives in an input/textarea/select or a
+ * `contenteditable` region so the developer isn't yanked out of a
+ * text field mid-edit.
+ */
+function useGlobalToggleHotkey(
+  mode: 'idle' | 'picking' | 'pinned',
+  enterPicking: () => void,
+  exit: () => void,
+) {
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    function onKey(e: KeyboardEvent) {
+      if (!e.shiftKey || !(e.metaKey || e.ctrlKey)) return;
+      if (e.key.toLowerCase() !== 'p') return;
+      const t = e.target as (HTMLElement & { isContentEditable?: boolean }) | null;
+      if (t) {
+        if (t.isContentEditable) return;
+        if (/^(input|textarea|select)$/i.test(t.tagName)) return;
+      }
+      e.preventDefault();
+      if (mode === 'picking') exit();
+      else enterPicking();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [mode, enterPicking, exit]);
 }
