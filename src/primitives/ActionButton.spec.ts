@@ -17,7 +17,6 @@ export const spec: ComponentSpec = {
     { name: 'disabled', type: 'boolean', required: false, defaultValue: 'false', description: 'Disables button interaction and applies dimmed styling' },
     { name: 'loading', type: 'boolean', required: false, defaultValue: 'false', description: 'Shows spinning Loader2 icon, prevents interaction, keeps full opacity' },
     { name: 'title', type: 'string', required: false, description: 'When set, wraps button in a Tooltip with this text' },
-    { name: 'dataTour', type: 'string', required: false, description: 'Sets data-tour attribute for onboarding tour targeting' },
   ],
 
   states: [

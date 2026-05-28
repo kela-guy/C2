@@ -158,7 +158,7 @@ const LUCIDE_ICONS: LucideSpec[] = [
   { name: 'Gauge', category: 'Telemetry', keywords: ['speed', 'meter', 'velocity'], fillable: false },
   { name: 'GripVerticalIcon', category: 'Layout', keywords: ['drag', 'handle', 'resize'], fillable: true },
   { name: 'Hand', category: 'Actions', keywords: ['manual', 'stop', 'wait'], fillable: true },
-  { name: 'HelpCircle', category: 'Documentation', keywords: ['help', 'question', 'tour'], fillable: true },
+  { name: 'HelpCircle', category: 'Documentation', keywords: ['help', 'question'], fillable: true },
   { name: 'History', category: 'Actions', keywords: ['log', 'timeline', 'past'], fillable: true },
   { name: 'Home', category: 'Navigation', keywords: ['rtb', 'return', 'base'], fillable: true },
   { name: 'Info', category: 'Status', keywords: ['details', 'about', 'tip'], fillable: true },

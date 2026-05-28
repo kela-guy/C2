@@ -81,7 +81,6 @@ export interface SplitActionButtonProps {
   dropdownItems: SplitDropdownItem[];
   dropdownGroups?: SplitDropdownGroup[];
   className?: string;
-  dataTour?: string;
   /** aria-label for the dropdown trigger chevron. Defaults to 'More actions'. */
   moreActionsLabel?: string;
   /** Placeholder shown for grouped dropdowns when no item is selected. Defaults to 'Select'. */
@@ -103,7 +102,6 @@ export function SplitActionButton({
   dropdownItems,
   dropdownGroups,
   className = '',
-  dataTour,
   moreActionsLabel = 'More actions',
   placeholder = 'Select',
 }: SplitActionButtonProps) {
@@ -172,7 +170,6 @@ export function SplitActionButton({
             disabledCls,
             className,
           )}
-          {...(dataTour ? { 'data-tour': dataTour } : {})}
           {...(loading ? { 'aria-busy': true as const } : {})}
         >
           <button

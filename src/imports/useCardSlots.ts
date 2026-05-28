@@ -371,7 +371,6 @@ function buildFlowActions(
     variant: phaseUI.buttonVariant,
     size: 'sm',
     group: 'primary',
-    dataTour: `cuas-cta-${flow.id}`,
     loading: phaseUI.loading,
     disabled: phaseUI.disabled,
     onClick: (e) => {
@@ -479,7 +478,6 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
         variant: 'fill' as const,
         size: 'sm' as const,
         group: 'secondary' as const,
-        dataTour: 'cuas-cta-bda',
         onClick: (e: React.MouseEvent) => { e.stopPropagation(); callbacks.onBdaCamera?.(); },
       });
     }
@@ -487,7 +485,6 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
     actions.push(
       { id: 'complete-mission', label: c.completeMission, icon: Check, variant: 'fill', size: 'sm',
         group: 'secondary',
-        dataTour: 'cuas-cta-complete',
         onClick: (e) => { e.stopPropagation(); callbacks.onCompleteMission?.(); },
       },
     );

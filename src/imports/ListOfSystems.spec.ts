@@ -170,7 +170,7 @@ export const spec: ComponentSpec = {
   accessibility: {
     role: 'tabpanel',
     ariaAttributes: ['role="tablist" on tab bar', 'role="tab" with aria-selected on tab buttons', 'role="tabpanel" with aria-labelledby on content areas'],
-    keyboardNav: ['Tab to switch between tab buttons', 'Tab into target cards', 'data-tour attributes for onboarding'],
+    keyboardNav: ['Tab to switch between tab buttons', 'Tab into target cards'],
     focusManagement: 'Tab panel content scrollable, no focus trap. Sticky header stays visible.',
     screenReaderNotes: 'Tab buttons announce selected state. Target cards should announce status and available actions.',
   },

@@ -18,7 +18,6 @@ export const spec: ComponentSpec = {
     { name: 'onClick', type: '(e: React.MouseEvent) => void', required: true, description: 'Callback for primary button click' },
     { name: 'dropdownItems', type: 'SplitDropdownItem[]', required: true, description: 'Array of dropdown menu items with id, label, icon, disabled, and onClick' },
     { name: 'className', type: 'string', required: false, defaultValue: "''", description: 'Additional CSS classes on outer wrapper' },
-    { name: 'dataTour', type: 'string', required: false, description: 'data-tour attribute for onboarding tour targeting' },
   ],
 
   states: [

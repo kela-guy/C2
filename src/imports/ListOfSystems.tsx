@@ -774,7 +774,6 @@ export default function ListOfSystems({
               transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
               className="cursor-pointer"
               id={`detection-card-${target.id}`}
-              {...(idx === 0 ? { 'data-tour': 'first-card' } : {})}
               onMouseEnter={() => onTargetHover?.(target.id)}
               onMouseLeave={() => onTargetHover?.(null)}
             >
@@ -801,7 +800,7 @@ export default function ListOfSystems({
     <div className={`w-full flex flex-col ${className}`}>
       <div className="sticky top-0 z-10 bg-[#141414]">
         {/* Tab bar */}
-        <div data-tour="detection-tabs" className="flex border-b border-white/10 px-1" role="tablist">
+        <div className="flex border-b border-white/10 px-1" role="tablist">
           <button
             id="tab-active"
             onClick={() => setActiveTab('active')}
@@ -819,7 +818,6 @@ export default function ListOfSystems({
           </button>
           <button
             id="tab-completed"
-            data-tour="cuas-completed-tab"
             onClick={() => setActiveTab('completed')}
             role="tab"
             aria-selected={activeTab === 'completed'}

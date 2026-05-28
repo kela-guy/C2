@@ -100,7 +100,6 @@ const STRINGS_HE = {
     devices: 'מכשירים',
     cameras: 'מצלמות',
     cuasScenarios: 'תרחישי CUAS',
-    helpTour: 'סיור הדרכה',
     styleGuide: 'Style Guide',
     switchToHebrew: 'החלף לעברית (RTL)',
     switchToEnglish: 'Switch to English (LTR)',
@@ -119,7 +118,6 @@ const STRINGS_HE = {
     activeSystemsHeading: (count: number) => `Dashboard — מערכות פעילות (${count})`,
     notificationsAriaLabel: 'התראות',
     cuasScenariosAriaLabel: 'תרחישי CUAS',
-    helpTourAriaLabel: 'סיור הדרכה',
   },
 
   /**
@@ -762,7 +760,6 @@ const STRINGS_EN: Strings = {
     devices: 'Devices',
     cameras: 'Cameras',
     cuasScenarios: 'CUAS scenarios',
-    helpTour: 'Help tour',
     styleGuide: 'Style Guide',
     switchToHebrew: 'Switch to Hebrew (RTL)',
     switchToEnglish: 'Switch to English (LTR)',
@@ -781,7 +778,6 @@ const STRINGS_EN: Strings = {
     activeSystemsHeading: (count: number) => `Dashboard — Active systems (${count})`,
     notificationsAriaLabel: 'Notifications',
     cuasScenariosAriaLabel: 'CUAS scenarios',
-    helpTourAriaLabel: 'Help tour',
   },
 
   listOfSystems: {

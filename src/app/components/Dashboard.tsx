@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useDrop } from 'react-dnd';
 import { CAMERA_ASSETS, REGULUS_EFFECTORS } from './tacticalAssets';
@@ -9,7 +9,7 @@ import { NotificationSystem, showTacticalNotification } from './NotificationSyst
 import { NotificationCenter } from './NotificationCenter';
 import ListOfSystems from '@/imports/ListOfSystems';
 import type { Detection, RegulusEffector, LauncherEffector } from '@/imports/ListOfSystems';
-import { List, Bell, Radar, HelpCircle, Palette, Target, Video } from '@/lib/icons/central';
+import { List, Bell, Radar, Palette, Target, Video } from '@/lib/icons/central';
 import { Toggle } from '@/shared/components/ui/toggle';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/shared/components/ui/tooltip';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/shared/components/ui/dropdown-menu';
@@ -22,10 +22,6 @@ import type { CameraFeed } from './CameraViewerPanel';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/shared/components/ui/resizable';
 import { LAYOUT_TOKENS, SURFACE } from '@/primitives/tokens';
 import { toast } from 'sonner';
-// Joyride is only used when the user opens the in-app tour. Lazy-loading it
-// keeps the ~80 KB tour package out of the dashboard's initial bundle.
-const Joyride = lazy(() => import('react-joyride'));
-import { useCuasTour } from '../hooks/useCuasTour';
 import { getPriorityBaseline } from '@/imports/useActivityStatus';
 import { useDirection, useIsRtl, useLocale } from '@/lib/direction';
 import { useStrings, getStrings, type Strings } from '@/lib/intl';
@@ -369,7 +365,6 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
   // Tracks bare `setTimeout` calls scheduled outside the main timer refs so we
   // can clear them on unmount (CUAS spawn, mitigation cascades, focus resets).
   const pendingTimeoutsRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
-  const [tourTargetId, setTourTargetId] = useState<string | null>(null);
 
   // Master unmount cleanup for every long-lived timer the dashboard owns.
   // Component unmount only happens on full route changes today, but it's the
@@ -399,32 +394,6 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
     };
   }, []);
 
-  const tour = useCuasTour(
-    useCallback((nextStepIndex: number) => {
-      if (nextStepIndex >= 3) {
-        setDevicesPanelOpen(false);
-        setSelectedAssetId(null);
-        setSidebarOpen(true);
-      }
-      if (nextStepIndex >= 4 && nextStepIndex <= 12 && tourTargetId) {
-        setActiveTargetId(tourTargetId);
-      }
-    }, [tourTargetId]),
-  );
-
-  // Defer the (large) react-joyride mount until the user actually starts the
-  // tour at least once. Once mounted we keep it alive — toggling between
-  // mount + unmount on every tour open would re-fetch the chunk each time.
-  const [tourEverStarted, setTourEverStarted] = useState(false);
-  useEffect(() => {
-    if (tour.run) setTourEverStarted(true);
-  }, [tour.run]);
-
-  const tourTarget = useMemo(
-    () => tourTargetId ? targets.find(t => t.id === tourTargetId) ?? null : null,
-    [targets, tourTargetId],
-  );
-
   // True iff any target has an active weapon-pointing flow. Hoisted out of the
   // CameraViewerPanel JSX so the .some() runs once per `targets` change instead
   // of on every Dashboard render.
@@ -445,18 +414,6 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
     });
     return match?.id ?? null;
   }, [targets, cameraLookAtRequest]);
-
-  useEffect(() => {
-    tour.updateTargetState(tourTarget);
-  }, [tourTarget, tour.updateTargetState]);
-
-  useEffect(() => {
-    if (!tour.run) return;
-    const handler = () => tour.notifyCompletedTabClicked();
-    const el = document.querySelector('[data-tour="cuas-completed-tab"]');
-    el?.addEventListener('click', handler);
-    return () => el?.removeEventListener('click', handler);
-  }, [tour.run, tour.stepIndex, tour.notifyCompletedTabClicked]);
 
   useEffect(() => {
     const handleToastClick = (e: any) => {
@@ -957,7 +914,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
     if (cuasIntervalRef.current) clearInterval(cuasIntervalRef.current);
 
     const isCar = Math.random() < 0.3;
-    const id = spawnCuasTarget({
+    spawnCuasTarget({
       startLat: 32.4916, startLon: 35.0313,
       endLat: isCar ? 32.4836 : 32.4666,
       endLon: isCar ? 35.0233 : 35.0013,
@@ -965,12 +922,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
       intervalRef: cuasIntervalRef,
       isCar,
     });
-
-    if (tour.run) {
-      setTourTargetId(id);
-      tour.notifyTargetSpawned();
-    }
-  }, [devicesPanelOpen, spawnCuasTarget, tour.run, tour.notifyTargetSpawned]);
+  }, [devicesPanelOpen, spawnCuasTarget]);
 
   const handleCUASMassDetection = useCallback(() => {
     setSimulationMenuOpen(false);
@@ -1235,12 +1187,11 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
       setCameraLookAtRequest({ cameraId: freeCamera.cam.id, targetLat: latS, targetLon: lonS, fovOverrideDeg: 135 });
       setAllCamerasBusyForTarget(null);
       toast.success(t.toasts.cameraPointingForJamVerify);
-      tour.notifyBdaClicked();
     } else {
       setAllCamerasBusyForTarget(targetId);
       toast(t.toasts.allCamerasBusy, { icon: '⚠️' });
     }
-  }, [targets, cameraLookAtRequest, tour.notifyBdaClicked, t]);
+  }, [targets, cameraLookAtRequest, t]);
 
   const handleRequestCameraControl = useCallback((targetId: string) => {
     setCameraControlRequest({ targetId, countdown: 10 });
@@ -1610,7 +1561,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
             </TooltipContent>
           </Tooltip>
 
-          <DropdownMenu onOpenChange={(open) => { if (open) tour.notifySimMenuOpened(); }}>
+          <DropdownMenu>
             <Tooltip>
               <TooltipTrigger asChild>
                 <DropdownMenuTrigger asChild>
@@ -1633,7 +1584,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
             >
               <DropdownMenuLabel className="text-[11px] text-white/70 uppercase tracking-wider">CUAS</DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-white/10" />
-              <DropdownMenuItem data-tour="cuas-single-sim" onSelect={handleCUASSingle} className="gap-2.5 text-xs text-zinc-300 focus:bg-white/10 focus:text-white">
+              <DropdownMenuItem onSelect={handleCUASSingle} className="gap-2.5 text-xs text-zinc-300 focus:bg-white/10 focus:text-white">
                 <Target size={14} className="shrink-0 text-zinc-400" />
                 <span>{t.dashboard.scenarioSingle}</span>
               </DropdownMenuItem>
@@ -1651,18 +1602,18 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
 
         <Separator className="bg-white/10" />
         <div className="flex flex-col items-center gap-0.5 py-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={tour.startTour}
-                className="size-6 rounded flex items-center justify-center text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
-                aria-label={t.dashboard.helpTourAriaLabel}
-              >
-                <HelpCircle size={20} strokeWidth={1.5} />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side={railTooltipSide} sideOffset={8}>{t.dashboard.helpTour}</TooltipContent>
-          </Tooltip>
+          {/*
+            Mount point for the Handoff Inspector picker. The inspector
+            module (see `src/app/components/handoff/HandoffInspector.tsx`)
+            queries for this slot and portals a 24x24 picker glyph into
+            it whenever the dashboard is on screen. Routes without a
+            rail get a floating fallback glyph instead.
+          */}
+          <div
+            data-handoff-picker-slot="true"
+            data-handoff-inspector="true"
+            className="size-6"
+          />
           <Tooltip>
             <TooltipTrigger asChild>
               <a
@@ -1722,7 +1673,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
       </TooltipProvider>
 
       {/* Map + Camera Viewer Split */}
-      <div className="relative z-0 flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden" data-tour="cuas-map">
+      <div className="relative z-0 flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
         <SplitDropZone
           visible={canDropOnMap}
           onDrop={handleCameraDrop}
@@ -1929,26 +1880,6 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
       </div>
 
       <NotificationSystem />
-
-      {tourEverStarted && (
-        <Suspense fallback={null}>
-          <Joyride
-            steps={tour.steps}
-            run={tour.run}
-            stepIndex={tour.stepIndex}
-            continuous
-            showSkipButton
-            scrollToFirstStep
-            disableScrollParentFix
-            disableOverlayClose
-            disableCloseOnEsc
-            callback={tour.handleCallback}
-            styles={tour.styles}
-            locale={tour.locale}
-            floaterProps={{ disableAnimation: true }}
-          />
-        </Suspense>
-      )}
     </div>
   );
 };

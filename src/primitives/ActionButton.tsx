@@ -57,7 +57,6 @@ export function ActionButton({
   disabled = false,
   loading = false,
   title,
-  dataTour,
 }: {
   label: string;
   icon?: React.ElementType;
@@ -68,7 +67,6 @@ export function ActionButton({
   disabled?: boolean;
   loading?: boolean;
   title?: string;
-  dataTour?: string;
 }) {
   const prefersReducedMotion = useReducedMotion();
   const isDisabled = disabled || loading;
@@ -92,7 +90,6 @@ export function ActionButton({
         loading && 'cursor-wait',
         className,
       )}
-      {...(dataTour ? { "data-tour": dataTour } : {})}
       {...(loading ? { "aria-live": "polite" as const } : {})}
     >
       <AnimatePresence mode="popLayout" initial={false}>

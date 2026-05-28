@@ -34,7 +34,6 @@ export interface CardAction {
   loading?: boolean;
   className?: string;
   title?: string;
-  dataTour?: string;
   dropdownActions?: CardAction[];
   dropdownGroups?: SplitDropdownGroup[];
   /** Layout group identifier. Conventional values are `'primary'` (renders split buttons + optional status strip) and `'secondary'` (plain buttons in a row). Free-form for forward compatibility. */
@@ -51,7 +50,6 @@ export interface CardAction {
 
 type StatusStripProps = {
   strip: NonNullable<CardAction['statusStrip']>;
-  dataTour?: string;
 };
 
 const STATUS_STRIP_ICON_TONE: Record<CardActionStatusStripTone, string> = {
@@ -61,13 +59,12 @@ const STATUS_STRIP_ICON_TONE: Record<CardActionStatusStripTone, string> = {
   danger: 'text-red-400',
 };
 
-function StatusStrip({ strip, dataTour }: StatusStripProps) {
+function StatusStrip({ strip }: StatusStripProps) {
   const Icon = strip.icon;
   return (
     <div
       role="status"
       className="w-full min-h-[30px] flex items-center justify-center gap-2 px-3 text-[10px] font-medium text-zinc-300 cursor-default select-none pointer-events-none"
-      {...(dataTour ? { 'data-tour': dataTour } : {})}
     >
       {Icon && <Icon size={11} className={`shrink-0 ${STATUS_STRIP_ICON_TONE[strip.tone]}`} aria-hidden="true" />}
       <span>{strip.label}</span>
@@ -169,7 +166,7 @@ export function CardActions({
                       exit={prefersReducedMotion ? undefined : { opacity: 0, y: 20 }}
                     >
                       {action.statusStrip ? (
-                        <StatusStrip strip={action.statusStrip} dataTour={action.dataTour} />
+                        <StatusStrip strip={action.statusStrip} />
                       ) : action.dropdownActions || action.dropdownGroups ? (
                         <SplitActionButton
                           label={action.label}
@@ -184,7 +181,6 @@ export function CardActions({
                           onClick={(e) => handleClick(action, e)}
                           onHover={action.onHover}
                           className={action.className ?? ''}
-                          dataTour={action.dataTour}
                           dropdownItems={(action.dropdownActions ?? []).map(da => ({
                             id: da.id,
                             label: da.label,
@@ -205,7 +201,6 @@ export function CardActions({
                           loading={action.loading}
                           title={action.title}
                           className={`w-full ${action.className ?? ''}`}
-                          dataTour={action.dataTour}
                         />
                       )}
                     </motion.div>
@@ -230,7 +225,6 @@ export function CardActions({
                   loading={action.loading}
                   title={action.title}
                   className={`w-full ${action.className ?? ''}`}
-                  dataTour={action.dataTour}
                 />
               ))}
             </div>
@@ -251,7 +245,6 @@ export function CardActions({
                   loading={action.loading}
                   title={action.title}
                   className={`w-full ${action.className ?? ''}`}
-                  dataTour={action.dataTour}
                 />
               ))}
             </div>
@@ -286,7 +279,6 @@ export function CardActions({
               loading={action.loading}
               title={action.title}
               className={`w-full ${action.className ?? ''}`}
-              dataTour={action.dataTour}
             />
           </div>
         ))}
@@ -303,7 +295,6 @@ export function CardActions({
             loading={action.loading}
             title={action.title}
             className={`w-full ${action.className ?? ''}`}
-            dataTour={action.dataTour}
           />
         ))}
       </div>

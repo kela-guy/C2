@@ -1,16 +1,26 @@
 /**
- * Floating picker glyph — the inspector's sole always-on UI.
+ * Picker glyph — the inspector's entry-point button.
  *
- * Renders a single 34x34 reticle button docked at the bottom-left of
- * the viewport. Idle and armed are the only visual states; the armed
- * state lifts the surface, border, icon colour, and shadow together
- * so it reads as clearly "on" from across the screen.
+ * Two visual variants:
+ *   - `rail`     — 24x24 ghost button that fits inside the dashboard's
+ *                  right-rail icon stack. Adopts the rail's existing
+ *                  language (gray → cyan hover, focus ring, scale on
+ *                  press) so it sits next to the other tools without
+ *                  visual disruption.
+ *   - `floating` — 34x34 docked reticle at the bottom-left. Used as a
+ *                  fallback on routes that don't render the rail
+ *                  (`/styleguide`, `/fov-test`, `/playground`). The
+ *                  floating variant carries its own surface, border,
+ *                  and shadow because it lands on top of arbitrary
+ *                  content.
  *
- * Chrome palette comes from `theme.ts` — neutral `SURFACE` levels with
- * white overlay alphas, mirroring `PerfHud`'s look.
+ * The armed state ("picking" mode) brightens the icon and persists a
+ * subtle inset glow so the affordance reads as clearly "on" while the
+ * cursor is hunting for an element to capture.
  */
 
 import { useState, type CSSProperties } from 'react';
+import { cn } from '@/shared/components/ui/utils';
 import type { InspectorMode } from './useInspector';
 import {
   INSPECTOR_BORDER,
@@ -21,9 +31,43 @@ import {
   prefersReducedMotion,
 } from './theme';
 
+export type PickerGlyphVariant = 'rail' | 'floating';
+
 interface PickerGlyphProps {
   mode: InspectorMode;
   onTogglePicker: () => void;
+  variant: PickerGlyphVariant;
+}
+
+export function PickerGlyph({ mode, onTogglePicker, variant }: PickerGlyphProps) {
+  const active = mode === 'picking';
+  const title = active ? 'Exit handoff inspector (Esc)' : 'Pick element to hand off';
+
+  if (variant === 'rail') {
+    return (
+      <button
+        type="button"
+        title={title}
+        aria-label={title}
+        aria-pressed={active}
+        onClick={onTogglePicker}
+        data-handoff-inspector="true"
+        className={cn(
+          'size-6 rounded flex items-center justify-center',
+          'transition-[color,background-color,box-shadow] duration-150 ease-out',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20',
+          'active:scale-[0.97]',
+          active
+            ? 'text-white bg-cyan-500/15 shadow-[inset_0_0_0_1px_rgba(34,184,207,0.35)]'
+            : 'text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10',
+        )}
+      >
+        <ReticleIcon size={16} />
+      </button>
+    );
+  }
+
+  return <FloatingGlyph active={active} title={title} onTogglePicker={onTogglePicker} />;
 }
 
 const DOCK_Z = 2147483000;
@@ -41,15 +85,16 @@ const ACTIVE_SHADOW = [
   '0 6px 18px rgba(0, 0, 0, 0.45)',
 ].join(', ');
 
-export function PickerGlyph({ mode, onTogglePicker }: PickerGlyphProps) {
-  const active = mode === 'picking';
+interface FloatingGlyphProps {
+  active: boolean;
+  title: string;
+  onTogglePicker: () => void;
+}
+
+function FloatingGlyph({ active, title, onTogglePicker }: FloatingGlyphProps) {
   const [hover, setHover] = useState(false);
   const [pressed, setPressed] = useState(false);
-  const title = active ? 'Exit handoff inspector (Esc)' : 'Pick element to hand off';
 
-  // Background: layer a white wash on top of the base surface so the
-  // active state visibly brightens — bumps again on hover so re-hovering
-  // an armed glyph still gives feedback.
   let background: string;
   if (active) {
     background = `${whiteWash(hover ? 0.16 : 0.12)}, ${INSPECTOR_SURFACE.activeBg}`;
@@ -64,14 +109,11 @@ export function PickerGlyph({ mode, onTogglePicker }: PickerGlyphProps) {
     : hover
       ? INSPECTOR_BORDER.default
       : INSPECTOR_BORDER.subtle;
-  // Pure white icon when armed reads as fully "on"; idle stays at the
-  // shared primary tone so the glyph doesn't shout when not engaged.
   const color = active ? '#ffffff' : INSPECTOR_TEXT.primary;
   const scale = pressed && !prefersReducedMotion() ? 'scale(0.96)' : 'scale(1)';
 
   const style: CSSProperties = {
     position: 'fixed',
-    // Bottom-left slot keeps us clear of the dialkit dial (bottom-right).
     left: 16,
     bottom: 16,
     zIndex: DOCK_Z,
@@ -112,14 +154,14 @@ export function PickerGlyph({ mode, onTogglePicker }: PickerGlyphProps) {
       data-handoff-inspector="true"
       style={style}
     >
-      <ReticleIcon />
+      <ReticleIcon size={18} />
     </button>
   );
 }
 
-function ReticleIcon() {
+function ReticleIcon({ size }: { size: number }) {
   return (
-    <svg width={18} height={18} viewBox="0 0 24 24" fill="none" aria-hidden>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
       <circle cx={12} cy={12} r={5} stroke="currentColor" strokeWidth={1.5} />
       <path
         d="M12 2v3M12 19v3M2 12h3M19 12h3"

@@ -140,8 +140,7 @@ interface ZoomControlProps {
 function ZoomControl({ zoom, disabled, onChange }: ZoomControlProps) {
   const [open, setOpen] = useState(false);
   // Tracked across mouse + focus events; cleared on unmount so a delayed
-  // setState can't fire on a dead component (mirrors the pattern in
-  // useCuasTour's notifyTimeoutsRef).
+  // setState can't fire on a dead component.
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const popoverId = useId();
 
