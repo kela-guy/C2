@@ -67,11 +67,11 @@ export const DroneIcon = ({ rotationDeg = 0, disabled = false, color }: { rotati
 
 export const DroneHiveIcon = ({ size = 28, fill = 'white' }: { size?: number; fill?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M11.8942 8.95117L14.0635 10.3684H20.3069V15.2105H21.1742H22V5.63158L19.9894 3H11.8942V8.95117Z" fill={fill}/>
-    <path d="M6 14H18V18H6V14Z" fill={fill}/>
-    <path fillRule="evenodd" clipRule="evenodd" d="M3.5873 10.3684V15H2.79365V21H21.1742V15.2105H20.3069V10.3684H14.0635L11.8942 8.95117L9.83069 10.3684H3.5873ZM18 14H6V18H6V14Z" fill={fill}/>
-    <path d="M3.79894 3L2 5.52632V15H2.79365H3.5873V10.3684H9.83069L11.8942 8.95117V3H3.79894Z" fill={fill}/>
-    <path d="M11.8942 8.95117L9.83069 10.3684H3.5873V15H2.79365M11.8942 8.95117L14.0635 10.3684H20.3069V15.2105H21.1742M11.8942 8.95117V3M11.8942 3H19.9894L22 5.63158V15.2105H21.1742M11.8942 3H3.79894L2 5.52632V15H2.79365M21.1742 15.2105V21H2.79365V15M6 14H18V18H6V14Z" stroke="black"/>
+    <path d="M3 10.5V19.5H21V10.5H19.5H3Z" fill={fill} />
+    <path d="M16.5 6.75H8.25L3 10.5V19.5H21V10.5H19.5M3 10.5H19.5M19.5 10.5V4.5" stroke="black" strokeWidth="1.5" />
+    <path d="M4.5 22.5H9" stroke="black" strokeWidth="1.5" />
+    <path d="M15 22.5H19.5" stroke="black" strokeWidth="1.5" />
+    <rect x="18" y="1.5" width="3" height="3" fill="black" />
   </svg>
 );
 
