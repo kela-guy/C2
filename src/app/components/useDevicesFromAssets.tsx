@@ -16,6 +16,8 @@ import {
   LAUNCHER_ASSETS,
   LIDAR_ASSETS,
   WEAPON_SYSTEM_ASSETS,
+  FLOODLIGHT_ASSETS,
+  SPEAKER_ASSETS,
 } from './tacticalAssets';
 import {
   SensorIcon,
@@ -24,6 +26,8 @@ import {
   DroneHiveIcon,
   LauncherIcon,
   LidarIcon,
+  FloodlightIcon,
+  SpeakerIcon,
 } from './tacticalIcons';
 import { useStrings } from '@/lib/intl';
 import type { Device } from './DevicesPanel';
@@ -148,6 +152,28 @@ export function useDevicesFromAssets(): Device[] {
       operationalStatus: 'operational' as const,
       connectionState: 'online' as const,
       Icon: LauncherIcon,
+    })),
+    ...FLOODLIGHT_ASSETS.map((a) => ({
+      id: a.id,
+      name: a.typeLabel,
+      type: 'floodlight' as const,
+      lat: a.latitude,
+      lon: a.longitude,
+      status: 'available' as const,
+      operationalStatus: (DEVICE_HEALTH[a.id] ?? 'operational') as Device['operationalStatus'],
+      connectionState: (DEVICE_CONNECTION[a.id] ?? 'online') as Device['connectionState'],
+      Icon: FloodlightIcon,
+    })),
+    ...SPEAKER_ASSETS.map((a) => ({
+      id: a.id,
+      name: a.typeLabel,
+      type: 'speaker' as const,
+      lat: a.latitude,
+      lon: a.longitude,
+      status: 'available' as const,
+      operationalStatus: (DEVICE_HEALTH[a.id] ?? 'operational') as Device['operationalStatus'],
+      connectionState: (DEVICE_CONNECTION[a.id] ?? 'online') as Device['connectionState'],
+      Icon: SpeakerIcon,
     })),
     {
       id: 'FRIENDLY-01',

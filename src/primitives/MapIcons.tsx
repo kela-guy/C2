@@ -59,7 +59,7 @@ export const MissileCardIcon = ({ size = 15 }: { size?: number }) => (
 export const CAR_PATH =
   'M19.5 17H21C21.5523 17 22 16.5523 22 16V10.8198C22 10.3431 21.6635 9.93271 21.1961 9.83922L17.3746 9.07493C17.1334 9.02668 16.9184 8.89118 16.7708 8.69435L14.3 5.4C14.1111 5.14819 13.8148 5 13.5 5H3C2.44771 5 2 5.44772 2 6V16C2 16.5523 2.44772 17 3 17H4.5';
 
-export const CarIcon = ({ color = '#ff3d40', size = 22 }: { color?: string; size?: number }) => (
+export const CarIcon = ({ color = '#ff3d40', size = 32 }: { color?: string; size?: number }) => (
   <svg
     width={size}
     height={size}
@@ -109,7 +109,7 @@ const TANK_WHEELS = (
   </>
 );
 
-export const TankIcon = ({ color = '#ffffff', size = 22 }: { color?: string; size?: number }) => (
+export const TankIcon = ({ color = '#ffffff', size = 32 }: { color?: string; size?: number }) => (
   <svg
     width={size}
     height={size}
@@ -148,7 +148,7 @@ const TRUCK_TRAILER_PATH =
   'M22 16.5569H21.0483C20.715 16.4783 20.7355 16.1387 20.6651 15.866C20.1246 13.7704 17.146 13.5481 16.2401 15.4669C16.118 15.7043 16.0811 15.9666 16.0236 16.2241C15.9181 16.6948 15.037 16.619 15.037 16.619C15.0504 13.583 15.037 7.46114 15.037 7.46114C16.1443 7.45177 18.3878 7.47988 18.3878 7.47988C19.4839 8.7717 22 11.9337 22 11.9337V16.5569Z';
 const TRUCK_WINDOW_PATH = 'M17.914 8.3074L20.3289 11.1239H15.5886V8.29184L17.914 8.3074Z';
 
-export const TruckIcon = ({ color = '#ffffff', size = 22 }: { color?: string; size?: number }) => (
+export const TruckIcon = ({ color = '#ffffff', size = 32 }: { color?: string; size?: number }) => (
   <svg
     width={size}
     height={size}

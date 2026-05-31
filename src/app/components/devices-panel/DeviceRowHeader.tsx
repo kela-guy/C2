@@ -29,7 +29,6 @@ import type {
   DevicesPanelStrings,
 } from './types';
 import { JamButton } from './controls/JamButton';
-import { FloodlightSwitch } from './controls/FloodlightSwitch';
 import { SpeakerPlayButton } from './controls/SpeakerPlayButton';
 import { PinToFeedToggle } from './controls/PinToFeedToggle';
 
@@ -44,7 +43,6 @@ interface DeviceRowHeaderProps {
   strings: DevicesPanelStrings;
   connectionStateLabels: Record<ConnectionState, string>;
   onJamActivate?: (jammerId: string) => void;
-  onFloodlightToggle?: (floodlightId: string, next: boolean) => void;
   onSpeakerToggle?: (speakerId: string, next: boolean) => void;
   onPinToFeed?: (deviceId: string) => void;
   onUnpinFromFeed?: (deviceId: string) => void;
@@ -61,7 +59,6 @@ export function DeviceRowHeader({
   strings,
   connectionStateLabels,
   onJamActivate,
-  onFloodlightToggle,
   onSpeakerToggle,
   onPinToFeed,
   onUnpinFromFeed,
@@ -156,7 +153,7 @@ export function DeviceRowHeader({
           </div>
         </div>
         {metricLine && (
-          <div className="text-xs font-mono tabular-nums text-white/50 truncate">
+          <div className="text-start text-xs font-mono tabular-nums text-white/50 truncate">
             {metricLine}
           </div>
         )}
@@ -167,14 +164,6 @@ export function DeviceRowHeader({
           device={device}
           strings={strings}
           onJamActivate={onJamActivate}
-        />
-      )}
-      {isFloodlight && (
-        <FloodlightSwitch
-          device={device}
-          isOn={isFloodlightOn}
-          strings={strings}
-          onToggle={onFloodlightToggle}
         />
       )}
       {isSpeaker && (

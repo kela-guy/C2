@@ -238,6 +238,21 @@ export const cuas_classified: Detection = {
   ],
 };
 
+// Classified but ambiguous IFF — a confirmed track whose affiliation is
+// still "possible threat". Resolves to MEDIUM severity, and because it
+// carries a `classifiedType` it is NOT treated as an unclassified gray
+// blip, so card icon-box and marker both read the MEDIUM orange.
+export const cuas_possible_threat: Detection = {
+  ...cuas_classified,
+  id: 'cuas-007',
+  name: 'מטרה — חשד עוין',
+  affiliation: 'possibleThreat',
+  actionLog: [
+    { time: '00:14:10', label: 'זיהוי ראשוני' },
+    { time: '00:14:18', label: 'סיווג: רחפן — חשד עוין — ביטחון 94%' },
+  ],
+};
+
 export const cuas_classified_bird: Detection = {
   ...cuas_raw,
   id: 'cuas-003',

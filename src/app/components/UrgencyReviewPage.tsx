@@ -28,8 +28,9 @@ import {
   StatusChip,
   TargetCard,
   resolveTargetMarkerStyle,
+  hexToRgba,
   SEVERITY_COLOR,
-  SEVERITY_LABEL,
+  SEVERITY_SURFACE_OPACITY,
   SEVERITY_PULSE,
   DroneCardIcon,
   CarCardIcon,
@@ -52,13 +53,22 @@ import { DroneIcon } from './TacticalMap';
 import { useCardSlots, type CardCallbacks } from '@/imports/useCardSlots';
 import { getActivityStatus } from '@/imports/useActivityStatus';
 import {
-  cuas_raw,
+  cuas_possible_threat,
   cuas_classified,
   cuas_mitigating,
   cuas_bda_complete,
 } from '@/test-utils/mockDetections';
 
 const REVIEW_NOOP_CALLBACKS: CardCallbacks = {};
+
+// Hebrew copy for this RTL review surface. Kept local so the shared
+// English tokens (SEVERITY_LABEL, etc.) stay untouched for other views.
+const SEVERITY_LABEL_HE: Record<Severity, string> = {
+  LOW: 'נמוך',
+  MEDIUM: 'בינוני',
+  HIGH: 'גבוה',
+  CRITICAL: 'קריטי',
+};
 
 // ── Severity fixtures ──────────────────────────────────────────────────
 //
@@ -77,7 +87,7 @@ interface SeverityFixture {
 const SEVERITY_FIXTURES: SeverityFixture[] = [
   { key: 'critical', severity: 'CRITICAL', target: cuas_mitigating },
   { key: 'high', severity: 'HIGH', target: cuas_classified },
-  { key: 'medium', severity: 'MEDIUM', target: cuas_raw },
+  { key: 'medium', severity: 'MEDIUM', target: cuas_possible_threat },
   { key: 'low', severity: 'LOW', target: cuas_bda_complete },
 ];
 
@@ -103,31 +113,31 @@ interface EntityOption {
 const ENTITY_OPTIONS: Record<EntityKey, EntityOption> = {
   drone: {
     key: 'drone',
-    label: 'Drone',
+    label: 'רחפן',
     cardIcon: DroneCardIcon,
     renderMarker: (color) => <DroneIcon color={color} rotationDeg={0} />,
-    cardName: 'Drone',
+    cardName: 'רחפן',
   },
   car: {
     key: 'car',
-    label: 'Car',
+    label: 'רכב',
     cardIcon: CarCardIcon,
     renderMarker: (color) => <CarIcon color={color} />,
-    cardName: 'Car',
+    cardName: 'רכב',
   },
   tank: {
     key: 'tank',
-    label: 'Tank',
+    label: 'טנק',
     cardIcon: TankCardIcon,
     renderMarker: (color) => <TankIcon color={color} />,
-    cardName: 'Tank',
+    cardName: 'טנק',
   },
   truck: {
     key: 'truck',
-    label: 'Truck',
+    label: 'משאית',
     cardIcon: TruckCardIcon,
     renderMarker: (color) => <TruckIcon color={color} />,
-    cardName: 'Truck',
+    cardName: 'משאית',
   },
 };
 
@@ -140,7 +150,7 @@ function SeverityBadge({ severity }: { severity: Severity }) {
   const pulses = SEVERITY_PULSE[severity];
   return (
     <span
-      className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/90 tabular-nums"
+      className="inline-flex items-center gap-1.5 font-['Heebo'] text-[12px] font-semibold tracking-normal text-white/90"
       data-handoff-component="severity-badge"
     >
       <span
@@ -148,7 +158,7 @@ function SeverityBadge({ severity }: { severity: Severity }) {
         style={{ backgroundColor: color }}
         aria-hidden="true"
       />
-      {SEVERITY_LABEL[severity]}
+      {SEVERITY_LABEL_HE[severity]}
     </span>
   );
 }
@@ -170,11 +180,11 @@ const ACTIVITY_STATUS_CHIP_COLOR: Record<ActivityStatus, 'green' | 'red' | 'oran
 };
 
 const ACTIVITY_STATUS_LABEL: Record<ActivityStatus, string> = {
-  active: 'Active',
-  recently_active: 'Recently active',
-  timeout: 'Timed out',
-  dismissed: 'Dismissed',
-  mitigated: 'Handled',
+  active: 'פעיל',
+  recently_active: 'פעיל לאחרונה',
+  timeout: 'פג תוקף',
+  dismissed: 'נדחה',
+  mitigated: 'טופל',
 };
 
 function buildStatusChip(target: Detection) {
@@ -213,36 +223,43 @@ function HandshakeRow({
 
   return (
     <div
-      className="grid grid-cols-[160px_minmax(0,1fr)_120px] items-center gap-6 rounded-[10px] border border-white/[0.06] bg-white/[0.015] p-4"
+      className="grid grid-cols-[minmax(0,1fr)_120px] items-center gap-6 rounded-[10px] border border-white/[0.06] bg-white/[0.015] p-4"
       data-handoff-component="urgency-handshake-row"
     >
-      <div className="flex flex-col gap-1">
-        <SeverityBadge severity={severity} />
-        {severity !== fixture.severity && (
-          <div className="font-mono text-[10px] text-amber-400/90">
-            ⚠ resolves to {severity}
-          </div>
-        )}
-      </div>
+      <div className="flex flex-col items-start justify-start gap-2">
+        <div className="flex flex-col gap-1">
+          <SeverityBadge severity={severity} />
+          {severity !== fixture.severity && (
+            <div className="font-['Heebo'] text-[11px] text-amber-400/90">
+              ⚠ מסתכם ל־{SEVERITY_LABEL_HE[severity]}
+            </div>
+          )}
+        </div>
 
-      <div className="w-full max-w-[360px]">
-        <TargetCard
-          severity={severity}
-          completed={slots.completed}
-          open={false}
-          onToggle={() => {
-            /* review surface — open state intentionally inert */
-          }}
-          header={
-            <CardHeader
-              {...slots.header}
-              icon={entity.cardIcon}
-              title={entity.cardName}
-              status={buildStatusChip(target)}
-              open={false}
-            />
-          }
-        />
+        <div className="w-full max-w-[360px]">
+          <TargetCard
+            severity={severity}
+            completed={slots.completed}
+            open={false}
+            onToggle={() => {
+              /* review surface — open state intentionally inert */
+            }}
+            header={
+              <CardHeader
+                {...slots.header}
+                icon={entity.cardIcon}
+                iconColor={SEVERITY_COLOR[severity]}
+                iconBgColor={hexToRgba(
+                  SEVERITY_COLOR[severity],
+                  SEVERITY_SURFACE_OPACITY[severity],
+                )}
+                title={entity.cardName}
+                status={buildStatusChip(target)}
+                open={false}
+              />
+            }
+          />
+        </div>
       </div>
 
       <div className="flex items-center justify-center">
@@ -265,28 +282,29 @@ export default function UrgencyReviewPage() {
   const headingId = useId();
 
   return (
-    // Force LTR so the review page reads consistently regardless of the
-    // app's persisted direction. Components inside still render their
-    // own internal direction (Hebrew labels stay in their native order).
+    // RTL Hebrew review surface. Components inside still render their
+    // own internal direction; the page chrome reads right-to-left.
     <main
-      dir="ltr"
-      className="min-h-screen bg-[#0a0a0a] text-white"
+      dir="rtl"
+      lang="he"
+      className="min-h-screen bg-[#0a0a0a] text-white font-['Heebo']"
       aria-labelledby={headingId}
     >
       <header className="border-b border-white/[0.06] px-6 py-5">
         <div className="mx-auto flex max-w-[1280px] items-center justify-between gap-4">
           <h1
             id={headingId}
-            className="font-mono text-xs uppercase tracking-[0.18em] text-white/80"
+            className="font-['Heebo'] text-sm font-semibold text-white/80"
           >
-            Urgency review
+            סקירת דחיפות
           </h1>
 
           <div className="flex items-center gap-2">
-            <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">
-              Entity
+            <span className="font-['Heebo'] text-xs font-medium text-white/40">
+              ישות
             </span>
             <Select
+              dir="rtl"
               value={entityKey}
               onValueChange={(v) => setEntityKey(v as EntityKey)}
             >
@@ -294,7 +312,7 @@ export default function UrgencyReviewPage() {
                 size="sm"
                 className="w-[140px] border-white/10 bg-white/[0.03] text-xs text-white hover:bg-white/[0.06] focus-visible:ring-white/20"
               >
-                <SelectValue placeholder="Entity" />
+                <SelectValue placeholder="ישות" />
               </SelectTrigger>
               <SelectContent className="border-white/10 bg-zinc-900 text-white">
                 {ENTITY_ORDER.map((key) => (

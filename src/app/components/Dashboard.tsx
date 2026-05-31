@@ -46,6 +46,13 @@ function CuasIcon({ size = 20, strokeWidth = 2, className = '' }: { size?: numbe
   );
 }
 
+// Threat kinds the CUAS simulator can spawn. Drones are the air threat;
+// cars, tanks and trucks are ground vehicles engaged on the kinetic path.
+type ThreatEntity = 'drone' | 'car' | 'tank' | 'truck' | 'bird';
+const GROUND_THREATS: readonly ThreatEntity[] = ['car', 'tank', 'truck'];
+const pickGroundThreat = (): ThreatEntity =>
+  GROUND_THREATS[Math.floor(Math.random() * GROUND_THREATS.length)];
+
 // Cached Hebrew locale time formatter. Reused across all hot paths so we
 // don't allocate a fresh `Intl.DateTimeFormat` (a heavy ICU lookup) on
 // every 250 ms simulation tick. Internally we also memoise the formatted
@@ -298,6 +305,10 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
   // player's camera-point op reads a moving target's live coordinates).
   const targetsRef = useRef<Detection[]>([]);
   targetsRef.current = targets;
+  // On/off state for floodlight + PA speaker devices (parent-owned; the
+  // devices panel is presentational and reads these sets).
+  const [floodlightOnIds, setFloodlightOnIds] = useState<Set<string>>(new Set());
+  const [speakerPlayingIds, setSpeakerPlayingIds] = useState<Set<string>>(new Set());
   const [hoveredSensorIdFromCard, setHoveredSensorIdFromCard] = useState<string | null>(null);
   const [hoveredTargetIdFromCard, setHoveredTargetIdFromCard] = useState<string | null>(null);
   const [sensorFocusId, setSensorFocusId] = useState<string | null>(null);
@@ -697,6 +708,8 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
   const spawnCuasTarget = useCallback((opts: {
     startLat: number; startLon: number; endLat: number; endLon: number;
     nameSuffix: string; intervalRef: React.MutableRefObject<NodeJS.Timeout | null>;
+    /** Precise threat kind. Falls back to the legacy isCar/isBird flags. */
+    entity?: 'drone' | 'car' | 'tank' | 'truck' | 'bird';
     isBird?: boolean;
     isCar?: boolean;
     silent?: boolean;
@@ -704,8 +717,14 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
     const targetId = `CUAS-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const now = nowLocaleTime;
 
-    const isCar = !!opts.isCar;
-    const isBird = !!opts.isBird;
+    // Resolve the threat kind. `entity` is the precise selector; the
+    // legacy isCar/isBird flags are kept so existing callers stay valid.
+    const entity = opts.entity ?? (opts.isCar ? 'car' : opts.isBird ? 'bird' : 'drone');
+    const isBird = entity === 'bird';
+    const isDrone = entity === 'drone';
+    // Tanks and trucks join cars as ground vehicles — same kinematics,
+    // laser ranging and kinetic (weapon) response path.
+    const isGround = entity === 'car' || entity === 'tank' || entity === 'truck';
     // Read the current strings catalog inside the callback so a
     // mid-session locale flip applies to subsequently-spawned
     // targets. (Existing targets keep whatever language was active
@@ -713,11 +732,28 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
     const sim = t.simulation;
     const log = t.actionLog;
     const notif = t.notifications;
-    const targetName = isCar
-      ? sim.targetNameCar(opts.nameSuffix)
-      : isBird
-        ? sim.targetNameBird(opts.nameSuffix)
-        : sim.targetNameDrone(opts.nameSuffix);
+
+    // Per-entity copy + numbers, indexed once so the spawn and the
+    // later classify step stay in lockstep.
+    const nameByEntity = {
+      drone: sim.targetNameDrone, car: sim.targetNameCar, tank: sim.targetNameTank,
+      truck: sim.targetNameTruck, bird: sim.targetNameBird,
+    } as const;
+    const classifiedNameByEntity = {
+      drone: sim.targetClassifiedDrone, car: sim.targetClassifiedCar, tank: sim.targetClassifiedTank,
+      truck: sim.targetClassifiedTruck, bird: sim.targetClassifiedBird,
+    } as const;
+    const initialLogByEntity = {
+      drone: log.initialDetectionDrone, car: log.initialDetectionCar, tank: log.initialDetectionTank,
+      truck: log.initialDetectionTruck, bird: log.initialDetectionBird,
+    } as const;
+    const classifiedLogByEntity = {
+      drone: log.classifiedAsDrone, car: log.classifiedAsCar, tank: log.classifiedAsTank,
+      truck: log.classifiedAsTruck, bird: log.classifiedAsBird,
+    } as const;
+    const confidenceByEntity = { drone: 92, car: 88, tank: 90, truck: 89, bird: 85 } as const;
+
+    const targetName = nameByEntity[entity](opts.nameSuffix);
 
     // Drone identity (IFF + model + serial). Birds carry no identity. Cars are
     // ground vehicles, treated as `possibleThreat` here. Drones spawned by the
@@ -730,7 +766,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
       { model: 'DJI Avata 2', sn: 'f6w8b248g0020h44' },
       { model: 'DJI Mavic 3 Pro', sn: 'd45b9174a02e7c10' },
     ];
-    const droneIdentity = !isCar && !isBird
+    const droneIdentity = isDrone
       ? DRONE_MODELS[Math.floor(Math.random() * DRONE_MODELS.length)]
       : null;
 
@@ -738,9 +774,11 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
       id: targetId,
       name: targetName,
       droneName: droneIdentity ? sim.droneIdentityName(opts.nameSuffix) : undefined,
-      type: isCar ? 'ground_vehicle' : isBird ? 'unknown' : 'uav',
-      classifiedType: isCar ? 'car' : isBird ? 'bird' : 'drone',
-      affiliation: isBird ? 'unknown' : isCar ? 'possibleThreat' : 'hostile',
+      type: isBird ? 'unknown' : isGround ? 'ground_vehicle' : 'uav',
+      classifiedType: entity,
+      // Cars stay a softer `possibleThreat`; tanks/trucks (and drones)
+      // are unambiguous inbound hostiles. Birds remain unknown.
+      affiliation: isBird ? 'unknown' : entity === 'car' ? 'possibleThreat' : 'hostile',
       model: droneIdentity?.model,
       serialNumber: droneIdentity?.sn,
       status: 'detection',
@@ -750,7 +788,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
       distance: sim.distanceKm('3.2'),
       entityStage: 'classified',
       priority: getPriorityBaseline({ status: 'detection', entityStage: 'classified', flowType: 5 }),
-      confidence: isCar ? 88 : isBird ? 85 : 92,
+      confidence: confidenceByEntity[entity],
       contributingSensors: [{
         sensorId: 'RAD-NVT-RADA',
         sensorType: 'Radar',
@@ -760,16 +798,12 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
       trail: [{ lat: opts.startLat, lon: opts.startLon, timestamp: now() }],
       actionLog: [{
         time: now(),
-        label: isCar
-          ? log.initialDetectionCar
-          : isBird
-            ? log.initialDetectionBird
-            : log.initialDetectionDrone,
+        label: initialLogByEntity[entity],
       }],
       flowType: 5,
       mitigationStatus: 'idle',
-      weaponPointingStatus: isCar ? 'idle' : undefined,
-      altitude: isCar ? undefined : sim.altitudeM(120),
+      weaponPointingStatus: isGround ? 'idle' : undefined,
+      altitude: isGround ? undefined : sim.altitudeM(120),
       laserDistance: sim.laserDistanceM(2840),
       laserAzimuth: '253.44°',
       laserElevation: '2.39°',
@@ -782,7 +816,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
     if (!opts.silent) {
       showTacticalNotification({
         title: notif.newDetectionTitle(rawDetection.name ?? ''),
-        message: isCar
+        message: isGround
           ? notif.classifiedGroundThreat(rawDetection.confidence ?? 0)
           : isBird
             ? notif.classifiedAsBird(rawDetection.confidence ?? 0)
@@ -847,35 +881,27 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
 
         if (step === 5 && tgt.entityStage === 'raw_detection') {
           updated.entityStage = 'classified';
-          if (opts.isBird) {
-            updated.classifiedType = 'bird';
-            updated.type = 'unknown';
-            updated.name = sim.targetClassifiedBird(tgt.name ?? '');
-            updated.confidence = 85;
-          } else if (opts.isCar) {
-            updated.classifiedType = 'car';
-            updated.type = 'ground_vehicle';
-            updated.name = sim.targetClassifiedCar(tgt.name ?? '');
-            updated.confidence = 88;
+          updated.classifiedType = entity;
+          updated.type = isBird ? 'unknown' : isGround ? 'ground_vehicle' : 'uav';
+          updated.name = classifiedNameByEntity[entity](tgt.name ?? '');
+          updated.confidence = confidenceByEntity[entity];
+          if (isGround) {
             updated.altitude = undefined;
             updated.weaponPointingStatus = 'idle';
-          } else {
-            updated.classifiedType = 'drone';
-            updated.type = 'uav';
-            updated.name = sim.targetClassifiedDrone(tgt.name ?? '');
-            updated.confidence = 92;
           }
           updated.status = 'detection';
           updated.priority = getPriorityBaseline(updated);
-          updated.actionLog = [...(updated.actionLog || []), { time: tnow, label: opts.isBird ? log.classifiedAsBird : log.classifiedAsDrone }];
+          updated.actionLog = [...(updated.actionLog || []), { time: tnow, label: classifiedLogByEntity[entity] }];
           setTimeout(() => {
             showTacticalNotification({
               title: notif.newDetectionTitle(updated.name ?? ''),
-              message: opts.isBird
+              message: isBird
                 ? notif.awaitingApproval(updated.confidence ?? 0)
-                : notif.classifiedDroneAwait(updated.confidence ?? 0),
+                : isGround
+                  ? notif.classifiedGroundThreat(updated.confidence ?? 0)
+                  : notif.classifiedDroneAwait(updated.confidence ?? 0),
               code: targetId,
-              level: opts.isBird ? 'suspect' : 'critical',
+              level: isBird ? 'suspect' : 'critical',
             });
           }, 200);
         }
@@ -914,23 +940,24 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
       { startLat: 32.4416, startLon: 35.0313, droneEnd: { lat: 32.4596, lon: 35.0063 }, carEnd: { lat: 32.4446, lon: 35.0273 }, ref: cuasIntervalRef4, delay: 25000 },
     ];
 
-    // Randomly assign types: ensure at least 1 car, rest are drones with 30% car chance
-    const types: Array<'drone' | 'car'> = ['drone', 'drone', 'drone', 'drone'];
-    const carIdx = Math.floor(Math.random() * routes.length);
-    types[carIdx] = 'car';
+    // Randomly assign types: ensure at least 1 ground vehicle, rest are
+    // drones with a 30% chance of becoming a ground threat (car/tank/truck).
+    const types: Array<ThreatEntity> = ['drone', 'drone', 'drone', 'drone'];
+    const groundIdx = Math.floor(Math.random() * routes.length);
+    types[groundIdx] = pickGroundThreat();
     for (let i = 0; i < types.length; i++) {
-      if (types[i] === 'drone' && Math.random() < 0.3) types[i] = 'car';
+      if (types[i] === 'drone' && Math.random() < 0.3) types[i] = pickGroundThreat();
     }
 
     routes.forEach((route, i) => {
-      const isCar = types[i] === 'car';
-      const end = isCar ? route.carEnd : route.droneEnd;
+      const entity = types[i];
+      const end = entity === 'drone' ? route.droneEnd : route.carEnd;
       const spawn = () => spawnCuasTarget({
         startLat: route.startLat, startLon: route.startLon,
         endLat: end.lat, endLon: end.lon,
         nameSuffix: String(Math.floor(Math.random() * 900) + 100),
         intervalRef: route.ref,
-        isCar,
+        entity,
       });
       if (route.delay === 0) spawn();
       else setTimeout(spawn, route.delay);
@@ -945,14 +972,15 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
 
     if (cuasIntervalRef.current) clearInterval(cuasIntervalRef.current);
 
-    const isCar = Math.random() < 0.3;
+    const entity: ThreatEntity = Math.random() < 0.3 ? pickGroundThreat() : 'drone';
+    const isGround = entity !== 'drone';
     spawnCuasTarget({
       startLat: 32.4916, startLon: 35.0313,
-      endLat: isCar ? 32.4836 : 32.4666,
-      endLon: isCar ? 35.0233 : 35.0013,
+      endLat: isGround ? 32.4836 : 32.4666,
+      endLon: isGround ? 35.0233 : 35.0013,
       nameSuffix: String(Math.floor(Math.random() * 900) + 100),
       intervalRef: cuasIntervalRef,
-      isCar,
+      entity,
     });
   }, [devicesPanelOpen, spawnCuasTarget]);
 
@@ -975,12 +1003,13 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
       const radius = 0.025 + Math.random() * 0.015;
       const startLat = baseLat + Math.cos(angle) * radius;
       const startLon = baseLon + Math.sin(angle) * radius;
-      const isCar = Math.random() < 0.3;
-      const endOffset = isCar ? 0.015 : 0.008;
-      const endLat = isCar
+      const entity: ThreatEntity = Math.random() < 0.3 ? pickGroundThreat() : 'drone';
+      const isGround = entity !== 'drone';
+      const endOffset = isGround ? 0.015 : 0.008;
+      const endLat = isGround
         ? startLat + (baseLat - startLat) * 0.3
         : baseLat + (Math.random() - 0.5) * endOffset;
-      const endLon = isCar
+      const endLon = isGround
         ? startLon + (baseLon - startLon) * 0.3
         : baseLon + (Math.random() - 0.5) * endOffset;
 
@@ -990,7 +1019,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
           startLat, startLon, endLat, endLon,
           nameSuffix: String(100 + i),
           intervalRef: ref,
-          isCar,
+          entity,
           silent: true,
         });
         if (ref.current) cuasMassRefs.current.push(ref.current);
@@ -1993,6 +2022,8 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
                   hoveredTargetIdFromCard={hoveredTargetIdFromCard}
                   onAssetClick={handleAssetClick}
                   offlineAssetIds={offlineAssetIds}
+                  floodlightOnIds={floodlightOnIds}
+                  speakerPlayingIds={speakerPlayingIds}
                   selectedEffectorIds={selectedEffectorIds}
                   launcherEffectors={launcherEffectors}
                   selectedLauncherIds={selectedLauncherIds}
@@ -2173,6 +2204,22 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
             onDeviceSelect={setSelectedAssetId}
             onJamActivate={(jammerId) => {
               toast.success(t.toasts.jamActivated(jammerId), { duration: 3000 });
+            }}
+            floodlightOnIds={floodlightOnIds}
+            speakerPlayingIds={speakerPlayingIds}
+            onFloodlightToggle={(id, next) => {
+              setFloodlightOnIds((prev) => {
+                const s = new Set(prev);
+                if (next) s.add(id); else s.delete(id);
+                return s;
+              });
+            }}
+            onSpeakerToggle={(id, next) => {
+              setSpeakerPlayingIds((prev) => {
+                const s = new Set(prev);
+                if (next) s.add(id); else s.delete(id);
+                return s;
+              });
             }}
             noTransition={panelSwitching}
             width={sidebarWidth}

@@ -100,7 +100,6 @@ export function DeviceRow({
           strings={strings}
           connectionStateLabels={connectionStateLabels}
           onJamActivate={onJamActivate}
-          onFloodlightToggle={onFloodlightToggle}
           onSpeakerToggle={onSpeakerToggle}
           onPinToFeed={onPinToFeed}
           onUnpinFromFeed={onUnpinFromFeed}
@@ -117,10 +116,12 @@ export function DeviceRow({
             device={device}
             isMuted={isMuted}
             isPinnedToFeed={!!isPinnedToFeed}
+            isFloodlightOn={!!isFloodlightOn}
             speakerTracks={speakerTracks}
             strings={strings}
             onFlyTo={onFlyTo}
             onToggleMute={onToggleMute}
+            onFloodlightToggle={onFloodlightToggle}
             onPinToFeed={onPinToFeed}
             onUnpinFromFeed={onUnpinFromFeed}
           />

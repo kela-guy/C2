@@ -51,6 +51,22 @@ export const WEAPON_SYSTEM_ASSETS: MapAsset[] = [
   { id: 'WPN-NVT-01', latitude: 32.4586, longitude: 34.9923, typeLabel: 'Iron Dome', fovDeg: 0, bearingDeg: 0 },
 ];
 
+// Floodlights + PA speakers. Deliberately pushed out toward the site
+// perimeter (wider lat/lon spread than the sensor cluster) so the map
+// markers don't pile up in the center.
+// `bearingDeg` aims each floodlight's beam inward toward SITE_CENTER;
+// `fovDeg` is the full cone (beam spread). Rendered as an always-on
+// orange wedge on the map.
+export const FLOODLIGHT_ASSETS: MapAsset[] = [
+  { id: 'FL-NVT-N', latitude: 32.4802, longitude: 35.0148, typeLabel: 'Floodlight (North)', fovDeg: 70, bearingDeg: 220 },
+  { id: 'FL-NVT-S', latitude: 32.4512, longitude: 34.9902, typeLabel: 'Floodlight (South)', fovDeg: 70, bearingDeg: 31 },
+];
+
+export const SPEAKER_ASSETS: MapAsset[] = [
+  { id: 'SPK-NVT-W', latitude: 32.4628, longitude: 34.9712, typeLabel: 'PA Speaker (West Gate)', fovDeg: 0, bearingDeg: 0 },
+  { id: 'SPK-NVT-E', latitude: 32.4738, longitude: 35.0262, typeLabel: 'PA Speaker (East Tower)', fovDeg: 0, bearingDeg: 0 },
+];
+
 export const LAUNCHER_ASSETS = [
   { id: 'LCHR-NVT-ALPHA', latitude: 32.4626, longitude: 34.9963 },
   { id: 'LCHR-NVT-BRAVO', latitude: 32.4756, longitude: 35.0113 },

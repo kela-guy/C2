@@ -83,13 +83,13 @@ export const spec: ComponentSpec = {
     {
       name: 'floodlight off (idle)',
       trigger: 'Floodlight device with id NOT in floodlightOnIds',
-      description: 'White icon variant on map + row; header-row Switch shows "Off" label and is unchecked; footer Switch (when expanded) also unchecked.',
+      description: 'White icon variant on map + row; expanded footer holds a shadcn Toggle (unpressed) reading "Off".',
       implementedInPrototype: true,
     },
     {
       name: 'floodlight on (lit)',
       trigger: 'Floodlight device with id in floodlightOnIds',
-      description: 'Amber lamp fill + drop-shadow on the icon (map + row); marker uses jammer InteractionState (green ring + pulse); both header and footer Switches show "On" with amber thumb track.',
+      description: 'Amber lamp fill + drop-shadow on the icon (map + row); marker uses jammer InteractionState (green ring + pulse); expanded footer Toggle is pressed (amber) and reads "On".',
       implementedInPrototype: true,
     },
     {
@@ -190,9 +190,8 @@ export const spec: ComponentSpec = {
     },
     {
       trigger: 'click',
-      element: 'Floodlight Switch (header row + footer row)',
-      result: 'Calls onFloodlightToggle(id, next). Header Switch is visible while collapsed; both stay in sync via floodlightOnIds.',
-      animation: { property: 'transform', from: 'translateX(0)', to: 'translateX(14px)', duration: '200ms', easing: 'ease-out' },
+      element: 'Floodlight Toggle (expanded footer action bar)',
+      result: 'Calls onFloodlightToggle(id, next). shadcn Toggle reflects lit state via floodlightOnIds (pressed = amber).',
     },
     {
       trigger: 'click',

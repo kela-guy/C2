@@ -41,6 +41,8 @@ import {
   WEAPON_SYSTEM_ASSETS,
   LAUNCHER_ASSETS,
   REGULUS_EFFECTORS,
+  FLOODLIGHT_ASSETS,
+  SPEAKER_ASSETS,
 } from './tacticalAssets';
 import type { MapAsset } from './tacticalAssets';
 import {
@@ -52,6 +54,8 @@ import {
   SensorIcon,
   DroneIcon,
   MissileIcon,
+  FloodlightIcon,
+  SpeakerIcon,
 } from './tacticalIcons';
 import { CarIcon, TankIcon, TruckIcon } from '@/primitives/MapIcons';
 import { SEVERITY_COLOR, isUnclassifiedUnknown, UNKNOWN_GRAY, type Severity } from '@/primitives/urgency';
@@ -159,6 +163,10 @@ export interface CesiumTacticalMapProps {
   onAssetClick?: (assetId: string) => void;
   /** Asset IDs that are offline — show a gray badge on the map */
   offlineAssetIds?: string[];
+  /** Floodlight IDs currently lit — keeps their beam cone visible even at rest. */
+  floodlightOnIds?: Set<string>;
+  /** Speaker IDs currently broadcasting — energizes their marker (white ring + pulse). */
+  speakerPlayingIds?: Set<string>;
   /** User-overridden effector selection per target (targetId -> effectorId) */
   selectedEffectorIds?: Map<string, string>;
   /** Launcher effectors for weapon pointing flow */
@@ -217,6 +225,9 @@ const TARGET_SURFACE = 32;
 const TARGET_RING = 26;
 /** Default LauncherIcon glyph size on Mapbox (`LauncherIcon` defaults to 24). */
 const LAUNCHER_GLYPH = 24;
+/** Floodlight beam: a short, always-on amber wedge showing aim direction. */
+const FLOODLIGHT_BEAM_M = 550;
+const FLOODLIGHT_BEAM_COLOR = '#f59e0b';
 
 /**
  * `DroneIcon` draws its nose pointing east at `rotationDeg = 0`, but our
@@ -455,6 +466,8 @@ export function CesiumTacticalMap({
   flowPreview,
   selectedAssetId,
   offlineAssetIds,
+  floodlightOnIds,
+  speakerPlayingIds,
   regulusEffectors,
   friendlyDrones,
   launcherEffectors,
@@ -478,6 +491,8 @@ export function CesiumTacticalMap({
 }: CesiumTacticalMapProps) {
   const t = useStrings().map;
   const offlineSet = useMemo(() => new Set(offlineAssetIds ?? []), [offlineAssetIds]);
+  const litFloodlightSet = useMemo(() => floodlightOnIds ?? new Set<string>(), [floodlightOnIds]);
+  const playingSpeakerSet = useMemo(() => speakerPlayingIds ?? new Set<string>(), [speakerPlayingIds]);
   // The draft preview only shows while no real flow geometry exists; once
   // a flow spawns (`sensorDetectionLinks` populated) the live geometry
   // takes over and the preview bails.
@@ -713,6 +728,10 @@ export function CesiumTacticalMap({
       surfaceSize: number = SENSOR_SURFACE,
       fov?: { rangeM: number; bearingDeg: number; widthDeg: number },
       ringSize: number = SENSOR_RING,
+      fovOptions?: { color?: string; alwaysOn?: boolean },
+      // `active` marks the asset as engaged/energized (e.g. a lit
+      // floodlight): white ring + pulse, like a selected marker.
+      active: boolean = false,
     ): CesiumHtmlMarker => {
       const isOffline = offlineSet.has(id);
       const isSelected = selectedAssetId === id;
@@ -720,6 +739,7 @@ export function CesiumTacticalMap({
       const isHoveredOnMap = hoveredMarkerId === id;
       const isHighlighted = highlightedSensorSet.has(id);
       const isHovered = isHoveredFromCard || isHoveredOnMap;
+      const isActive = active && !isOffline;
       const affiliation: Affiliation = 'friendly';
       const state: InteractionState = isOffline
         ? 'disabled'
@@ -727,7 +747,9 @@ export function CesiumTacticalMap({
           ? 'hovered'
           : isSelected
             ? 'selected'
-            : 'default';
+            : isActive
+              ? 'active'
+              : 'default';
       const style = resolveMarkerStyle(state, affiliation);
 
       // FOV cone appears only when the user is engaging with this sensor —
@@ -738,15 +760,22 @@ export function CesiumTacticalMap({
       // Fill opacity matches Mapbox's `FRIENDLY_FOV_FILL_PAINT` (0.40) so the
       // wedge reads at a glance over satellite imagery; highlighted sensors
       // bump up further to call out the active target's contributors.
-      const showFov = !isOffline && (isHovered || isSelected || isHighlighted);
-      const fovOpacity = isHighlighted ? 0.55 : 0.4;
-      const fovColor = '#22b8cf';
+      // Most asset cones are hover/selection affordances. Floodlights opt in
+      // to `alwaysOn` so their beam reads as a persistent directional wedge.
+      const alwaysOn = fovOptions?.alwaysOn ?? false;
+      const showFov = !isOffline && (alwaysOn || isHovered || isSelected || isHighlighted);
+      const fovOpacity = isHighlighted
+        ? 0.55
+        : alwaysOn && !isHovered && !isSelected
+          ? 0.26
+          : 0.4;
+      const fovColor = fovOptions?.color ?? '#22b8cf';
 
       return {
         id,
         lat,
         lon,
-        zIndex: isHovered ? 40 : isSelected ? 30 : 10,
+        zIndex: isHovered ? 40 : isSelected || isActive ? 30 : 10,
         content: (
           <MapMarker
             icon={icon}
@@ -754,8 +783,8 @@ export function CesiumTacticalMap({
             surfaceSize={surfaceSize}
             ringSize={ringSize}
             label={label}
-            showLabel={isHovered || isSelected}
-            pulse={isHovered || isSelected}
+            showLabel={isHovered || isSelected || isActive}
+            pulse={isHovered || isSelected || isActive}
           />
         ),
         fov: fov && showFov
@@ -821,8 +850,44 @@ export function CesiumTacticalMap({
     for (const l of LAUNCHER_ASSETS) {
       push(buildFriendlyAsset(l.id, l.latitude, l.longitude, <LauncherIcon size={LAUNCHER_GLYPH} />, l.id));
     }
+    for (const a of FLOODLIGHT_ASSETS) {
+      push(
+        buildFriendlyAsset(
+          a.id,
+          a.latitude,
+          a.longitude,
+          <FloodlightIcon size={20} />,
+          a.typeLabel,
+          SENSOR_SURFACE,
+          { rangeM: FLOODLIGHT_BEAM_M, bearingDeg: a.bearingDeg, widthDeg: a.fovDeg },
+          SENSOR_RING,
+          // Beam reads like a sensor FOV: shown on hover/select, plus
+          // pinned on whenever the floodlight is lit.
+          { color: FLOODLIGHT_BEAM_COLOR, alwaysOn: litFloodlightSet.has(a.id) },
+          // Lit floodlight also energizes the marker itself: white ring + pulse.
+          litFloodlightSet.has(a.id),
+        ),
+      );
+    }
+    for (const a of SPEAKER_ASSETS) {
+      push(
+        buildFriendlyAsset(
+          a.id,
+          a.latitude,
+          a.longitude,
+          <SpeakerIcon size={20} />,
+          a.typeLabel,
+          SENSOR_SURFACE,
+          undefined,
+          SENSOR_RING,
+          undefined,
+          // Broadcasting speaker energizes the marker: white ring + pulse.
+          playingSpeakerSet.has(a.id),
+        ),
+      );
+    }
     return out;
-  }, [buildFriendlyAsset, sensorFov]);
+  }, [buildFriendlyAsset, sensorFov, litFloodlightSet, playingSpeakerSet]);
 
   /**
    * Slice 2 — Regulus effectors. Friendly assets but with their own

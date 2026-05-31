@@ -13,15 +13,18 @@ import type { Device, DevicesPanelStrings, SpeakerTrack } from './types';
 import { SpeakerTrackSelect } from './controls/SpeakerTrackSelect';
 import { PinToFeedButton } from './controls/PinToFeedButton';
 import { DroneControls } from './controls/DroneControls';
+import { FloodlightToggle } from './controls/FloodlightToggle';
 
 interface DeviceRowActionsProps {
   device: Device;
   isMuted: boolean;
   isPinnedToFeed: boolean;
+  isFloodlightOn: boolean;
   speakerTracks: SpeakerTrack[];
   strings: DevicesPanelStrings;
   onFlyTo: (lat: number, lon: number) => void;
   onToggleMute: (deviceId: string) => void;
+  onFloodlightToggle?: (floodlightId: string, next: boolean) => void;
   onPinToFeed?: (deviceId: string) => void;
   onUnpinFromFeed?: (deviceId: string) => void;
 }
@@ -30,15 +33,18 @@ export function DeviceRowActions({
   device,
   isMuted,
   isPinnedToFeed,
+  isFloodlightOn,
   speakerTracks,
   strings,
   onFlyTo,
   onToggleMute,
+  onFloodlightToggle,
   onPinToFeed,
   onUnpinFromFeed,
 }: DeviceRowActionsProps) {
   const isOffline = device.connectionState === 'offline';
   const isSpeaker = device.type === 'speaker';
+  const isFloodlight = device.type === 'floodlight';
   const isDrone = device.type === 'drone';
   const showPinButton = (onPinToFeed || onUnpinFromFeed) && isPinnableType(device.type);
 
@@ -52,6 +58,16 @@ export function DeviceRowActions({
           <SpeakerTrackSelect tracks={speakerTracks} strings={strings} />
           <div className="w-px h-5 bg-white/[0.08] mx-0.5" />
         </>
+      )}
+
+      {isFloodlight && (
+        <FloodlightToggle
+          device={device}
+          isOn={isFloodlightOn}
+          isOffline={isOffline}
+          strings={strings}
+          onToggle={onFloodlightToggle}
+        />
       )}
 
       <CenterOnMapButton device={device} strings={strings} onFlyTo={onFlyTo} />

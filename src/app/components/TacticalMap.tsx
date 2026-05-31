@@ -112,10 +112,10 @@ export const MissileIcon = ({ rotationDeg = 0, fill = '#15FFF6' }: { rotationDeg
 );
 
 /** rotationDeg: 0 = nose to right (east). disabled = jammed state (greyed out). */
-export const DroneIcon = ({ rotationDeg = 0, disabled = false, color }: { rotationDeg?: number; disabled?: boolean; color?: string }) => (
+export const DroneIcon = ({ rotationDeg = 0, disabled = false, color, size = 32 }: { rotationDeg?: number; disabled?: boolean; color?: string; size?: number }) => (
   <svg
-    width="28"
-    height="28"
+    width={size}
+    height={size}
     viewBox="0 0 28 32"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
