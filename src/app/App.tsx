@@ -17,6 +17,13 @@ import { DirectionProvider } from "@/lib/direction";
 // VideoPanel/CameraFeedTile/HUD overlays until someone opens `/playground`.
 const PlaygroundPage = lazy(() => import("./components/PlaygroundPage"));
 
+// Devices Lab — sandbox for the rebuilt, registry-driven device panel
+// (`devices-panel-next/`). Lives on its own route while the design is
+// validated; once approved it replaces the panel inside Dashboard.
+// Code-split so the mock fixtures + next-gen tree never enter the
+// production bundle.
+const DevicesLabPage = lazy(() => import("./components/DevicesLabPage"));
+
 function PlaygroundFallback() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#09090b] text-sm text-neutral-400">
@@ -127,6 +134,19 @@ export default function App() {
                 element={
                   <Suspense fallback={<PlaygroundFallback />}>
                     <PlaygroundPage />
+                  </Suspense>
+                }
+              />
+              {/*
+                Devices Lab — sandbox route for the registry-driven
+                device panel rebuild. Not linked from the main UI;
+                reviewers open it directly. Removed at promotion.
+              */}
+              <Route
+                path="/devices-lab"
+                element={
+                  <Suspense fallback={<PlaygroundFallback />}>
+                    <DevicesLabPage />
                   </Suspense>
                 }
               />
