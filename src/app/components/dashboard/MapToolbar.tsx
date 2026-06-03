@@ -113,6 +113,12 @@ export function MapToolbar({
               >
                 {labels.mapViewMonochromeTerrain}
               </DropdownMenuRadioItem>
+              <DropdownMenuRadioItem
+                value="monochromeLight"
+                className="rounded-sm py-1.5 text-start text-[12px] text-slate-12 focus:bg-state-hover-strong focus:text-slate-12"
+              >
+                {labels.mapViewMonochromeLight}
+              </DropdownMenuRadioItem>
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -7,6 +7,7 @@ import {
   Radio,
   ScanLine,
   Eye,
+  Send,
 } from '@/lib/icons/central';
 import { JamWaveIcon } from '@/primitives/MapIcons';
 import type { Strings } from '@/lib/intl';
@@ -100,6 +101,12 @@ export interface FlowPhaseUI {
   buttonLabel: string;
   buttonIcon: React.ElementType;
   buttonVariant: 'fill' | 'ghost' | 'danger' | 'warning';
+  /**
+   * Overrides the primary button's badge (defaults to the resolved
+   * asset name). Used by the Gotcha flow to surface a "Recommended"
+   * cue after a jam attempt fails.
+   */
+  badge?: string;
   loading?: boolean;
   disabled?: boolean;
   showDropdown?: boolean;
@@ -173,7 +180,10 @@ export function getJamFlow(t: Strings): EngagementFlowDef {
   return {
     id: 'jam',
     matchTarget: (target) =>
-      target.classifiedType !== 'bird' && target.classifiedType !== 'car',
+      target.classifiedType !== 'bird' &&
+      target.classifiedType !== 'car' &&
+      target.missionType !== 'net_capture' &&
+      target.mitigationStatus !== 'failed',
 
     assetContextKey: 'regulusEffectors',
     selectedIdContextKey: 'selectedEffectorId',
@@ -226,6 +236,76 @@ export function getJamFlow(t: Strings): EngagementFlowDef {
 
     showCamera: true,
     accentPhases: { mitigating: ['mitigating'], active: ['mitigated'] },
+  };
+}
+
+// ─── GOTCHA FLOW (net capture — demo) ──────────────────────────────────────
+
+/**
+ * Gotcha net-throw flow. Unlike jam/weapon this flow only *claims* a
+ * target once a jam attempt has failed (`mitigationStatus === 'failed'`)
+ * or a net throw is already in flight (`missionType === 'net_capture'`),
+ * so in the normal path the jam flow owns the card and Gotcha only
+ * surfaces as the recommended fallback. Registered ahead of jam in
+ * `getEngagementFlows` so it wins the match in those two states.
+ */
+export function getGotchaFlow(t: Strings): EngagementFlowDef {
+  const g = t.engagementFlows.gotcha;
+  return {
+    id: 'gotcha',
+    matchTarget: (target) =>
+      target.classifiedType !== 'bird' &&
+      target.classifiedType !== 'car' &&
+      (target.missionType === 'net_capture' || target.mitigationStatus === 'failed'),
+
+    assetContextKey: 'gotchaEffectors',
+    selectedIdContextKey: 'selectedGotchaId',
+    availableFilter: (a) => a.status === 'available',
+
+    getPhase: (target) => {
+      if (target.missionType === 'net_capture') {
+        return target.mitigationStatus === 'mitigated' ? 'captured' : 'throwing';
+      }
+      return 'idle';
+    },
+
+    phases: {
+      idle: {
+        buttonLabel: g.idleButton,
+        buttonIcon: Send,
+        buttonVariant: 'warning',
+        badge: g.recommendedBadge,
+        showDropdown: true,
+      },
+      throwing: {
+        buttonLabel: g.throwingButton,
+        buttonIcon: Send,
+        buttonVariant: 'warning',
+        loading: true,
+        disabled: true,
+      },
+      captured: {
+        buttonLabel: g.capturedButton,
+        buttonIcon: Check,
+        buttonVariant: 'ghost',
+        isTerminal: true,
+        stripLabel: g.capturedStrip,
+        stripIcon: Check,
+        stripTone: 'success',
+      },
+    },
+
+    lineColor: (phase) => (phase === 'throwing' ? FLOW_WARNING : FLOW_LINE_DEFAULT),
+    badgeTextColor: () => FLOW_BADGE_INK,
+    coverageColor: FLOW_WARNING,
+
+    dropdownGroupLabel: '',
+
+    primaryCallbackKey: 'onThrowNet',
+    selectCallbackKey: 'onGotchaSelect',
+
+    showCamera: false,
+    accentPhases: { mitigating: ['throwing'], active: ['captured'] },
   };
 }
 
@@ -324,7 +404,7 @@ export function getWeaponFlow(t: Strings): EngagementFlowDef {
  * constants.
  */
 export function getEngagementFlows(t: Strings): EngagementFlowDef[] {
-  return [getJamFlow(t), getWeaponFlow(t)];
+  return [getGotchaFlow(t), getJamFlow(t), getWeaponFlow(t)];
 }
 
 export function findFlowForTarget(target: Detection, t: Strings): EngagementFlowDef | null {
@@ -342,4 +422,5 @@ export function findFlowForTarget(target: Detection, t: Strings): EngagementFlow
 const FALLBACK_STRINGS = getStrings('en');
 export const JAM_FLOW: EngagementFlowDef = getJamFlow(FALLBACK_STRINGS);
 export const WEAPON_FLOW: EngagementFlowDef = getWeaponFlow(FALLBACK_STRINGS);
+export const GOTCHA_FLOW: EngagementFlowDef = getGotchaFlow(FALLBACK_STRINGS);
 export const ENGAGEMENT_FLOWS: EngagementFlowDef[] = [JAM_FLOW, WEAPON_FLOW];

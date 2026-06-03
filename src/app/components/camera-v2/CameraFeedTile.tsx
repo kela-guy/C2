@@ -19,7 +19,7 @@ import { CenterCrosshair } from './CenterCrosshair';
 import { DesignateTargetOverlay } from './DesignateTargetOverlay';
 import { CameraTelemetryStrip } from './CameraTelemetryStrip';
 import { DroneHud } from './DroneHud';
-import { CameraContextMenu } from './CameraContextMenu';
+import { CameraContextMenu, type CameraContextMenuProps } from './CameraContextMenu';
 import { PlaybackContainer } from './playback/PlaybackContainer';
 import { TileDetectionAlert } from './TileDetectionAlert';
 import {
@@ -106,9 +106,14 @@ interface CameraFeedTileProps {
   suppressTelemetryStrip?: boolean;
   /** Suppress the bottom control bar (sandbox preview). */
   suppressControlBar?: boolean;
+  /** Suppress the built-in center crosshair so a host can render its
+   *  own (e.g. the sandbox slew cue moves the reticle off-center). */
+  suppressCenterCrosshair?: boolean;
   /** 0..1 reticle bloom. Defaults to 0 (static). Callers wire this to
    *  whatever "camera is moving" signal they have. */
   crosshairBloom?: number;
+  /** Override the right-click context menu presentation (sandbox). */
+  contextMenu?: Omit<CameraContextMenuProps, 'children'>;
 }
 
 export function CameraFeedTile({
@@ -145,7 +150,9 @@ export function CameraFeedTile({
   suppressDroneHud = false,
   suppressTelemetryStrip = false,
   suppressControlBar = false,
+  suppressCenterCrosshair = false,
   crosshairBloom = 0,
+  contextMenu,
 }: CameraFeedTileProps) {
   const tile = useStrings().camera.feedTile;
   const [hovered, setHovered] = useState(false);
@@ -323,7 +330,7 @@ export function CameraFeedTile({
   );
 
   return (
-    <CameraContextMenu>
+    <CameraContextMenu {...contextMenu}>
       <div
         ref={dropRef}
         tabIndex={0}
@@ -387,7 +394,9 @@ export function CameraFeedTile({
               useful) and while designate-target is armed (the
               designate overlay supplies its own follow-cursor reticle —
               two crosses would compete). */}
-          {!isThumb && !designateMode && <CenterCrosshair bloom={crosshairBloom} />}
+          {!isThumb && !designateMode && !suppressCenterCrosshair && (
+            <CenterCrosshair bloom={crosshairBloom} />
+          )}
           <CameraDetectionsOverlay detections={detections} visible={detectionsOn} />
           {!playbackEnabled && !isThumb && (
             <DesignateTargetOverlay active={designateMode} onDesignate={handleDesignate} />

@@ -39,6 +39,7 @@ import type {
   Detection,
   RegulusEffector,
   LauncherEffector,
+  GotchaEffector,
   IncidentOutcome,
 } from './ListOfSystems';
 import { getIncidentOutcomes } from './ListOfSystems';
@@ -103,6 +104,7 @@ export interface CardCallbacks {
   onLockWeapon?: () => void;
   onDismissLock?: () => void;
   onLauncherSelect?: (launcherId: string) => void;
+  onThrowNet?: (gotchaId: string) => void;
 }
 
 export interface CardContext {
@@ -115,6 +117,7 @@ export interface CardContext {
   selectedEffectorId?: string;
   launcherEffectors?: LauncherEffector[];
   selectedLauncherId?: string;
+  gotchaEffectors?: GotchaEffector[];
   nearbyCameras?: { id: string; typeLabel: string; distanceM: number }[];
   nearbyHives?: { id: string; latitude: number; longitude: number; distanceM: number; battery: number; status: string }[];
 }
@@ -214,6 +217,19 @@ function buildHeader(target: Detection, t: Strings): CardHeaderProps {
 }
 
 function buildMedia(target: Detection, ctx: CardContext, t: Strings): CardMediaProps | null {
+  // Gotcha net-capture: the effector's own feed plays in the card the
+  // moment the operator throws the net, and stays (with controls) once
+  // the target is captured.
+  if (target.missionType === 'net_capture') {
+    return {
+      src: '/videos/gotcha-net.mp4',
+      type: 'video',
+      badge: 'threat',
+      showControls: target.mitigationStatus === 'mitigated',
+      trackingLabel: target.mitigationStatus === 'mitigated' ? undefined : t.cards.trackingPtz,
+    };
+  }
+
   const isCuas = !!target.entityStage;
   const isActive = target.status === 'detection' || target.status === 'event';
   const isSuspicion = target.status === 'suspicion';
@@ -362,7 +378,7 @@ function buildFlowActions(
   actions.push({
     id: `${flow.id}-primary`,
     label: phaseUI.buttonLabel,
-    badge: active ? active.asset.name : undefined,
+    badge: phaseUI.badge ?? (active ? active.asset.name : undefined),
     icon: phaseUI.buttonIcon,
     variant: phaseUI.buttonVariant,
     size: 'sm',

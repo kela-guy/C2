@@ -128,6 +128,17 @@ export const SpeakerIcon = ({ size = 24, fill = 'white' }: { size?: number; fill
   </svg>
 );
 
+/**
+ * Gotcha net-throw effector glyph. `fill` is themed via `glyphColor`
+ * like the sibling asset icons; the black stroke is the documented
+ * icon-art outline exception (see `.cursor/rules/no-inline-hex-colors.mdc`).
+ */
+export const GotchaIcon = ({ size = 28, fill = 'white' }: { size?: number; fill?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M20.6669 2C20.8437 2 21.0131 2.07031 21.1382 2.19531C21.2633 2.32033 21.3335 2.48985 21.3335 2.66667V13.332C21.3335 13.7003 21.035 13.9987 20.6669 13.9987H17.9338V17.5872L27.1838 28.9115C27.3463 29.1107 27.3797 29.3861 27.2697 29.6185C27.1594 29.8512 26.9243 30 26.6669 30H24.0002C23.8097 30 23.6281 29.9185 23.5015 29.776L17.9338 23.4935V29.3229C17.9338 29.6911 17.6353 29.9896 17.2671 29.9896H14.6005C14.2345 29.9895 13.9367 29.6941 13.9338 29.3281L13.8857 23.5169L8.50542 29.7683C8.37877 29.9153 8.19433 30 8.00021 30H5.33354C5.07682 30 4.84276 29.8527 4.73198 29.6211C4.62126 29.3893 4.65393 29.1139 4.81532 28.914L13.9338 17.6251V13.9987L11.3335 14C11.1568 14 10.9872 13.9297 10.8622 13.8047C10.7372 13.6796 10.6669 13.5101 10.6669 13.3333V2.66797C10.6669 2.2998 10.9654 2.00133 11.3335 2.00131L20.6669 2Z" fill={fill} stroke="black" strokeWidth="1.33333" strokeLinejoin="round"/>
+  </svg>
+);
+
 export const RegulusIcon = () => (
   <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
     <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.5" fill="none" />

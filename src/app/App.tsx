@@ -29,6 +29,10 @@ const OrbSandbox = import.meta.env.DEV
   ? lazy(() => import("./components/orb-sandbox/OrbSandbox"))
   : null;
 
+const MapSandbox = import.meta.env.DEV
+  ? lazy(() => import("./components/map-sandbox/MapSandbox"))
+  : null;
+
 const PerfHud = import.meta.env.DEV
   ? lazy(() => import("./components/perf/PerfHud").then((m) => ({ default: m.PerfHud })))
   : null;
@@ -38,6 +42,7 @@ function ScopedPerfHud() {
   if (!PerfHud) return null;
   if (pathname.startsWith('/demo')) return null;
   if (pathname.startsWith('/theme-sandbox')) return null;
+  if (pathname.startsWith('/map-sandbox')) return null;
   return (
     <Suspense fallback={null}>
       <PerfHud />
@@ -106,6 +111,16 @@ export default function App() {
                   element={
                     <Suspense fallback={null}>
                       <OrbSandbox />
+                    </Suspense>
+                  }
+                />
+              )}
+              {MapSandbox && (
+                <Route
+                  path="/map-sandbox"
+                  element={
+                    <Suspense fallback={null}>
+                      <MapSandbox />
                     </Suspense>
                   }
                 />

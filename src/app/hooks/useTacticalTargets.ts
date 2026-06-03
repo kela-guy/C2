@@ -67,6 +67,13 @@ interface SpawnOptions {
   isBird?: boolean;
   isCar?: boolean;
   silent?: boolean;
+  /**
+   * Total approach duration in ms. Defaults to the production cadence
+   * (`APPROACH_TOTAL_MS`); the demo passes a larger value for a slower,
+   * more presentable drone. The tick rate is unchanged so motion stays
+   * smooth — only the step count (and milestone offsets) scale.
+   */
+  approachTotalMs?: number;
 }
 
 export interface TacticalTargetsApi {
@@ -93,6 +100,17 @@ export interface TacticalTargetsApi {
    * Tracks ids that are still on their initial approach path.
    */
   approachingTargetIds: MutableRefObject<Set<string>>;
+  /**
+   * Demo post-neutralization — jam outcome. Cancels the target's
+   * approach motion and drifts it back out along the reverse heading,
+   * then times the track out.
+   */
+  flyTargetAway: (targetId: string) => void;
+  /**
+   * Demo post-neutralization — net outcome. Cancels motion, relabels
+   * the marker "CAPTURED", and moves the track to neutralized.
+   */
+  markCaptured: (targetId: string) => void;
 }
 
 // ─── Constants ───────────────────────────────────────────────────────
@@ -108,11 +126,7 @@ const TRAIL_MAX_POINTS = 40;
 
 const APPROACH_TOTAL_MS = 24000;
 const APPROACH_TICK_MS = TELEMETRY_TICK_MS;
-const APPROACH_STEPS = APPROACH_TOTAL_MS / APPROACH_TICK_MS;
 const APPROACH_REACT_COMMIT_EVERY_TICKS = 3;
-const APPROACH_MILESTONE_MAGOS = Math.round(APPROACH_STEPS * (2 / 12));
-const APPROACH_MILESTONE_ELTA = Math.round(APPROACH_STEPS * (3 / 12));
-const APPROACH_MILESTONE_CLASSIFY = Math.round(APPROACH_STEPS * (5 / 12));
 
 interface SimTimer {
   cancel: () => void;
@@ -339,6 +353,19 @@ export function useTacticalTargets(): TacticalTargetsApi {
   const pendingTimeoutsRef = useRef<Set<ReturnType<typeof setTimeout>>>(
     new Set(),
   );
+  // Per-target approach timers, keyed by id, so demo post-neutralize
+  // helpers can stop a specific target's motion without reaching into
+  // the scenario refs.
+  const targetIntervalsRef = useRef<Map<string, SimTimer>>(new Map());
+  // Demo-only drift/RTH animation timers.
+  const demoAnimRefs = useRef<Set<SimTimer>>(new Set());
+
+  // Fresh-targets ref so demo helpers can read current coordinates
+  // without re-binding through useCallback deps each render.
+  const targetsRef = useRef(targets);
+  useEffect(() => {
+    targetsRef.current = targets;
+  }, [targets]);
 
   // Patrol tick refs.
   const patrolProgressRef = useRef<number[]>(
@@ -455,6 +482,8 @@ export function useTacticalTargets(): TacticalTargetsApi {
     ];
     const massRefs = cuasMassRefs;
     const pending = pendingTimeoutsRef;
+    const perTarget = targetIntervalsRef;
+    const demoAnims = demoAnimRefs;
     return () => {
       for (const ref of cuasRefs) {
         ref.current?.cancel();
@@ -464,6 +493,10 @@ export function useTacticalTargets(): TacticalTargetsApi {
       massRefs.current = [];
       for (const id of pending.current) clearTimeout(id);
       pending.current.clear();
+      for (const timer of perTarget.current.values()) timer.cancel();
+      perTarget.current.clear();
+      for (const timer of demoAnims.current) timer.cancel();
+      demoAnims.current.clear();
     };
   }, []);
 
@@ -479,6 +512,13 @@ export function useTacticalTargets(): TacticalTargetsApi {
       const now = nowLocaleTime;
       const isCar = !!opts.isCar;
       const isBird = !!opts.isBird;
+      const approachSteps = Math.max(
+        1,
+        Math.round((opts.approachTotalMs ?? APPROACH_TOTAL_MS) / APPROACH_TICK_MS),
+      );
+      const milestoneMagos = Math.round(approachSteps * (2 / 12));
+      const milestoneElta = Math.round(approachSteps * (3 / 12));
+      const milestoneClassify = Math.round(approachSteps * (5 / 12));
       // Re-read strings inside the callback so a mid-session locale
       // flip applies to subsequently-spawned targets. (Existing
       // targets keep whatever language was active when they spawned.)
@@ -556,15 +596,15 @@ export function useTacticalTargets(): TacticalTargetsApi {
       opts.intervalRef.current = startVisibilityAwareInterval(() => {
         step++;
         const tnow = now();
-        const progress = smoothstep01(Math.min(step / APPROACH_STEPS, 1));
+        const progress = smoothstep01(Math.min(step / approachSteps, 1));
         const curLat = opts.startLat + (opts.endLat - opts.startLat) * progress;
         const curLon = opts.startLon + (opts.endLon - opts.startLon) * progress;
         const distKm = (3.2 - progress * 2.5).toFixed(1);
         const isMilestone =
-          step === APPROACH_MILESTONE_MAGOS ||
-          step === APPROACH_MILESTONE_ELTA ||
-          step === APPROACH_MILESTONE_CLASSIFY ||
-          step >= APPROACH_STEPS;
+          step === milestoneMagos ||
+          step === milestoneElta ||
+          step === milestoneClassify ||
+          step >= approachSteps;
 
         if (step !== 1 && !isMilestone && step % APPROACH_REACT_COMMIT_EVERY_TICKS !== 0) {
           return;
@@ -584,7 +624,7 @@ export function useTacticalTargets(): TacticalTargetsApi {
             const approachSampleTrail =
               step === 1 ||
               step % 10 === 0 ||
-              step === APPROACH_STEPS;
+              step === approachSteps;
             updated.trail = approachSampleTrail
               ? [
                   ...(tgt.trail ?? []),
@@ -599,7 +639,7 @@ export function useTacticalTargets(): TacticalTargetsApi {
             updated.laserElevation = `${(2.39 + progress * 3.5).toFixed(2)}°`;
             updated.laserRange = `${currentRange.toFixed(2)} m`;
 
-            if (step === APPROACH_MILESTONE_MAGOS && tgt.entityStage === "raw_detection") {
+            if (step === milestoneMagos && tgt.entityStage === "raw_detection") {
               updated.confidence = 45;
               updated.contributingSensors = [
                 ...(tgt.contributingSensors ?? []),
@@ -625,7 +665,7 @@ export function useTacticalTargets(): TacticalTargetsApi {
               });
             }
 
-            if (step === APPROACH_MILESTONE_ELTA && tgt.entityStage === "raw_detection") {
+            if (step === milestoneElta && tgt.entityStage === "raw_detection") {
               updated.contributingSensors = [
                 ...(updated.contributingSensors ?? []),
                 {
@@ -651,7 +691,7 @@ export function useTacticalTargets(): TacticalTargetsApi {
               });
             }
 
-            if (step === APPROACH_MILESTONE_CLASSIFY && tgt.entityStage === "raw_detection") {
+            if (step === milestoneClassify && tgt.entityStage === "raw_detection") {
               updated.entityStage = "classified";
               if (opts.isBird) {
                 updated.classifiedType = "bird";
@@ -704,12 +744,17 @@ export function useTacticalTargets(): TacticalTargetsApi {
           }),
         );
 
-        if (step >= APPROACH_STEPS) {
+        if (step >= approachSteps) {
           opts.intervalRef.current?.cancel();
           opts.intervalRef.current = null;
           approachingTargetIds.current.delete(targetId);
+          targetIntervalsRef.current.delete(targetId);
         }
       }, APPROACH_TICK_MS);
+
+      if (opts.intervalRef.current) {
+        targetIntervalsRef.current.set(targetId, opts.intervalRef.current);
+      }
 
       return targetId;
     },
@@ -868,6 +913,102 @@ export function useTacticalTargets(): TacticalTargetsApi {
     pendingTimeoutsRef.current.add(swarmToast);
   }, [spawnCuasTarget, t]);
 
+  const stopTargetMotion = useCallback((targetId: string) => {
+    const timer = targetIntervalsRef.current.get(targetId);
+    if (timer) {
+      timer.cancel();
+      targetIntervalsRef.current.delete(targetId);
+    }
+    approachingTargetIds.current.delete(targetId);
+  }, []);
+
+  const flyTargetAway = useCallback(
+    (targetId: string) => {
+      stopTargetMotion(targetId);
+      const target = targetsRef.current.find((tg) => tg.id === targetId);
+      if (!target) return;
+      const [startLat, startLon] = target.coordinates
+        .split(",")
+        .map((s) => parseFloat(s.trim()));
+      if (!Number.isFinite(startLat) || !Number.isFinite(startLon)) return;
+
+      // Outbound heading = straight away from the field center, so the
+      // jammed drone reads as breaking off and retreating.
+      const centerLat = 32.4666;
+      const centerLon = 35.0013;
+      const mag = Math.hypot(startLat - centerLat, startLon - centerLon) || 1;
+      const driftDist = 0.03;
+      const endLat = startLat + ((startLat - centerLat) / mag) * driftDist;
+      const endLon = startLon + ((startLon - centerLon) / mag) * driftDist;
+
+      const STEPS = 70;
+      let step = 0;
+      const timer = startVisibilityAwareInterval(() => {
+        step++;
+        const p = smoothstep01(Math.min(step / STEPS, 1));
+        const curLat = startLat + (endLat - startLat) * p;
+        const curLon = startLon + (endLon - startLon) * p;
+        const tnow = nowLocaleTime();
+        const sample = step % 8 === 0 || step >= STEPS;
+        setTargets((prev) =>
+          prev.map((tg) =>
+            tg.id !== targetId
+              ? tg
+              : {
+                  ...tg,
+                  coordinates: formatMovingCoord(curLat, curLon),
+                  timestamp: tnow,
+                  trail: sample
+                    ? [
+                        ...(tg.trail ?? []),
+                        { lat: curLat, lon: curLon, timestamp: tnow },
+                      ]
+                    : tg.trail,
+                },
+          ),
+        );
+        if (step >= STEPS) {
+          timer.cancel();
+          demoAnimRefs.current.delete(timer);
+          setTargets((prev) =>
+            prev.map((tg) =>
+              tg.id === targetId
+                ? {
+                    ...tg,
+                    status: "expired" as const,
+                    activityStatus: "timeout" as const,
+                  }
+                : tg,
+            ),
+          );
+        }
+      }, TELEMETRY_TICK_MS);
+      demoAnimRefs.current.add(timer);
+    },
+    [setTargets, stopTargetMotion],
+  );
+
+  const markCaptured = useCallback(
+    (targetId: string) => {
+      stopTargetMotion(targetId);
+      setTargets((prev) =>
+        appendLog(prev, targetId, t.actionLog.netEnd).map((tg) =>
+          tg.id === targetId
+            ? {
+                ...tg,
+                name: t.simulation.targetCaptured(tg.name ?? ""),
+                status: "event_neutralized" as const,
+                activityStatus: "mitigated" as const,
+                mitigationStatus: "mitigated" as const,
+                missionType: "net_capture" as const,
+              }
+            : tg,
+        ),
+      );
+    },
+    [setTargets, stopTargetMotion, t],
+  );
+
   return {
     targets,
     setTargets,
@@ -879,6 +1020,8 @@ export function useTacticalTargets(): TacticalTargetsApi {
     runSingleScenario,
     runSwarmScenario,
     approachingTargetIds,
+    flyTargetAway,
+    markCaptured,
   };
 }
 

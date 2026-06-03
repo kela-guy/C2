@@ -71,13 +71,31 @@ export interface LauncherEffector {
   bearingDeg?: number;
 }
 
+/**
+ * Gotcha net-throw effector. Fixed ground installation with an
+ * omnidirectional (360°) detect/act ring — the `coverageRadiusM`
+ * doubles as the FOV. Same runtime shape as {@link RegulusEffector}
+ * so the map marker + engagement plumbing can treat the two
+ * uniformly. Demo-only: seeded from `demoAssets.ts`, never present
+ * in the production asset registries.
+ */
+export interface GotchaEffector {
+  id: string;
+  name: string;
+  lat: number;
+  lon: number;
+  coverageRadiusM: number;
+  status: 'available' | 'active' | 'inactive';
+  activeTargetId?: string;
+}
+
 export interface Detection {
   id: string;
   name: string;
   type: DetectionType;
   status: 'detection' | 'tracking' | 'event' | 'event_neutralized' | 'suspicion' | 'expired' | 'event_resolved';
   missionStatus?: 'idle' | 'planning' | 'executing' | 'waiting_confirmation' | 'complete' | 'aborted';
-  missionType?: 'intercept' | 'surveillance' | 'attack' | 'jamming';
+  missionType?: 'intercept' | 'surveillance' | 'attack' | 'jamming' | 'net_capture';
   timestamp: string;
   createdAtMs?: number;
   coordinates: string;
@@ -476,6 +494,7 @@ export interface ListOfSystemsProps {
   onLauncherSelect?: (targetId: string, launcherId: string) => void;
   launcherEffectors?: LauncherEffector[];
   selectedLauncherIds?: Map<string, string>;
+  onThrowNet?: (targetId: string, gotchaId: string) => void;
   /** Generic flow assets keyed by flow ID — use for new flows without adding individual props */
   flowAssets?: Record<string, { id: string; name: string; lat: number; lon: number; status: string }[]>;
   /** Generic flow selected asset IDs keyed by flow ID */
@@ -538,6 +557,7 @@ export default function ListOfSystems({
   onLauncherSelect,
   launcherEffectors,
   selectedLauncherIds,
+  onThrowNet,
   flowAssets,
   flowSelectedIds,
   onBdaOutcome,
@@ -704,6 +724,7 @@ export default function ListOfSystems({
     onLockWeapon: () => onLockWeapon?.(target.id),
     onDismissLock: () => onDismissLock?.(target.id),
     onLauncherSelect: (launcherId) => onLauncherSelect?.(target.id, launcherId),
+    onThrowNet: (gotchaId) => onThrowNet?.(target.id, gotchaId),
     onBdaOutcome: (outcome) => onBdaOutcome?.(target.id, outcome),
     onBdaCamera: () => onBdaCamera?.(target.id),
     onRequestCameraControl: () => onRequestCameraControl?.(target.id),
@@ -720,6 +741,7 @@ export default function ListOfSystems({
     selectedEffectorId: selectedEffectorIds?.get(target.id) ?? flowSelectedIds?.['regulusEffectors']?.get(target.id),
     launcherEffectors: launcherEffectors ?? flowAssets?.['launcherEffectors'] as LauncherEffector[] | undefined,
     selectedLauncherId: selectedLauncherIds?.get(target.id) ?? flowSelectedIds?.['launcherEffectors']?.get(target.id),
+    gotchaEffectors: flowAssets?.['gotchaEffectors'] as GotchaEffector[] | undefined,
     nearbyCameras: (target.flowType === 1 || target.flowType === 2) ? nearbyCameras : undefined,
     nearbyHives: target.flowType === 3 ? nearbyHives : undefined,
   });

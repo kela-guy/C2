@@ -31,6 +31,7 @@ import type {
   Detection,
   RegulusEffector,
   LauncherEffector,
+  GotchaEffector,
 } from "@/imports/ListOfSystems";
 import { useLocale } from "@/lib/direction";
 import { getStrings, useStrings } from "@/lib/intl";
@@ -63,6 +64,14 @@ interface UseEffectorWorkflowProps {
    * handlers always read fresh state.
    */
   targets: Detection[];
+  /**
+   * Seed the Regulus list. Defaults to the production registry; the
+   * demo passes its trimmed set so the map + card jam options match
+   * the cleaner demo layout.
+   */
+  initialRegulusEffectors?: RegulusEffector[];
+  /** Seed the Gotcha net effectors. Demo-only; empty in production. */
+  initialGotchaEffectors?: GotchaEffector[];
 }
 
 export interface EffectorWorkflowApi {
@@ -70,6 +79,8 @@ export interface EffectorWorkflowApi {
   setRegulusEffectors: Dispatch<SetStateAction<RegulusEffector[]>>;
   launcherEffectors: LauncherEffector[];
   setLauncherEffectors: Dispatch<SetStateAction<LauncherEffector[]>>;
+  gotchaEffectors: GotchaEffector[];
+  setGotchaEffectors: Dispatch<SetStateAction<GotchaEffector[]>>;
 
   /** Map of `targetId -> effectorId` for the currently picked Regulus. */
   selectedEffectorIds: Map<string, string>;
@@ -83,6 +94,14 @@ export interface EffectorWorkflowApi {
   handleMitigate: (targetId: string, effectorId: string) => void;
   /** "Jam all available regulus" handler. */
   handleMitigateAll: (targetId?: string) => void;
+  /**
+   * Jam-fails-on-attempt flow (demo): marks the target's
+   * `mitigationStatus` as `'failed'` and toasts the malfunction so
+   * the card surfaces the recommended Gotcha net fallback.
+   */
+  handleMitigateFail: (targetId: string, effectorId: string) => void;
+  /** Gotcha net-throw flow — captures the target after a short throw. */
+  handleThrowNet: (targetId: string, gotchaId: string) => void;
 
   /** Single-launcher point-weapon flow. */
   handlePointWeapon: (targetId: string, launcherId: string) => void;
@@ -102,12 +121,17 @@ export interface EffectorWorkflowApi {
 export function useEffectorWorkflow({
   setTargets,
   targets,
+  initialRegulusEffectors,
+  initialGotchaEffectors,
 }: UseEffectorWorkflowProps): EffectorWorkflowApi {
   const t = useStrings();
   const locale = useLocale();
 
   const [regulusEffectors, setRegulusEffectors] =
-    useState<RegulusEffector[]>(REGULUS_EFFECTORS);
+    useState<RegulusEffector[]>(initialRegulusEffectors ?? REGULUS_EFFECTORS);
+
+  const [gotchaEffectors, setGotchaEffectors] =
+    useState<GotchaEffector[]>(initialGotchaEffectors ?? []);
 
   const [launcherEffectors, setLauncherEffectors] = useState<
     LauncherEffector[]
@@ -451,6 +475,117 @@ export function useEffectorWorkflow({
     [setTargets, t],
   );
 
+  // ── Jam fails on attempt (demo) ───────────────────────────────────
+  // Runs the same "jamming…" spinner as a real jam, then fails: the
+  // effector drops offline and the target's `mitigationStatus` flips to
+  // `'failed'` (never `'mitigated'`, so the card stays in the active
+  // list and surfaces the recommended Gotcha net fallback).
+  const handleMitigateFail = useCallback(
+    (targetId: string, effectorId: string) => {
+      toast.success(t.toasts.jamStarted);
+      setRegulusEffectors((prev) =>
+        prev.map((r) =>
+          r.id === effectorId
+            ? { ...r, status: "active" as const, activeTargetId: targetId }
+            : r,
+        ),
+      );
+      setTargets((prev) =>
+        appendLog(prev, targetId, `${t.actionLog.jamStart} — ${effectorId}`).map(
+          (tg) =>
+            tg.id === targetId
+              ? {
+                  ...tg,
+                  mitigationStatus: "mitigating" as const,
+                  mitigatingEffectorId: effectorId,
+                }
+              : tg,
+        ),
+      );
+
+      const id = setTimeout(() => {
+        toast.error(t.toasts.jamFailed(effectorId));
+        setRegulusEffectors((prev) =>
+          prev.map((r) =>
+            r.id === effectorId
+              ? { ...r, status: "inactive" as const, activeTargetId: undefined }
+              : r,
+          ),
+        );
+        setTargets((prev) =>
+          appendLog(
+            prev,
+            targetId,
+            `${t.actionLog.jamFailed} — ${effectorId}`,
+          ).map((tg) =>
+            tg.id === targetId
+              ? { ...tg, mitigationStatus: "failed" as const }
+              : tg,
+          ),
+        );
+        pendingTimeoutsRef.current.delete(id);
+      }, 3000);
+      pendingTimeoutsRef.current.add(id);
+    },
+    [setTargets, t],
+  );
+
+  // ── Gotcha net throw (demo) ───────────────────────────────────────
+  // Bespoke (not via `createFlowActivateHandler`) so `missionType`
+  // flips to `'net_capture'` at the *start* — the gotcha engagement
+  // flow keys its phase off it, and the card video starts the moment
+  // the net is thrown rather than only at capture.
+  const handleThrowNet = useCallback(
+    (targetId: string, gotchaId: string) => {
+      toast.success(t.toasts.netStarted);
+      setGotchaEffectors((prev) =>
+        prev.map((g) =>
+          g.id === gotchaId
+            ? { ...g, status: "active" as const, activeTargetId: targetId }
+            : g,
+        ),
+      );
+      setTargets((prev) =>
+        appendLog(prev, targetId, `${t.actionLog.netStart} — ${gotchaId}`).map(
+          (tg) =>
+            tg.id === targetId
+              ? {
+                  ...tg,
+                  missionType: "net_capture" as const,
+                  mitigationStatus: "mitigating" as const,
+                  mitigatingEffectorId: gotchaId,
+                }
+              : tg,
+        ),
+      );
+
+      const id = setTimeout(() => {
+        setTargets((prev) =>
+          appendLog(prev, targetId, t.actionLog.netEnd).map((tg) =>
+            tg.id === targetId
+              ? {
+                  ...tg,
+                  mitigationStatus: "mitigated" as const,
+                  activityStatus: "mitigated" as const,
+                }
+              : tg,
+          ),
+        );
+        setGotchaEffectors((prev) =>
+          prev.map((g) =>
+            g.id === gotchaId
+              ? { ...g, status: "available" as const, activeTargetId: undefined }
+              : g,
+          ),
+        );
+        toast.success(t.toasts.netCaptured);
+        pendingTimeoutsRef.current.delete(id);
+      }, 3000);
+      pendingTimeoutsRef.current.add(id);
+    },
+    [setTargets, t],
+  );
+
   const handleCompleteMission = useCallback(
     (targetId: string) => {
       const target = targetsRef.current.find((tg) => tg.id === targetId);
@@ -493,12 +628,16 @@ export function useEffectorWorkflow({
     setRegulusEffectors,
     launcherEffectors,
     setLauncherEffectors,
+    gotchaEffectors,
+    setGotchaEffectors,
     selectedEffectorIds,
     selectedLauncherIds,
     handleEffectorSelect,
     handleLauncherSelect,
     handleMitigate,
     handleMitigateAll,
+    handleMitigateFail,
+    handleThrowNet,
     handlePointWeapon,
     handleLockWeapon,
     handleDismissLock,

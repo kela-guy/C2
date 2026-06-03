@@ -47,6 +47,7 @@ import { useStrings } from "@/lib/intl";
 
 import { useTacticalTargets } from "@/app/hooks/useTacticalTargets";
 import { useEffectorWorkflow } from "@/app/hooks/useEffectorWorkflow";
+import { useDemoDirector } from "@/app/hooks/useDemoDirector";
 import { useVideoFeeds } from "@/app/hooks/useVideoFeeds";
 import { useDevicesAndAssets } from "@/app/hooks/useDevicesAndAssets";
 import {
@@ -66,9 +67,21 @@ import { unionAtTime } from "@/app/components/track-history/timeMachine";
 import { TargetsPanel } from "./TargetsPanel";
 import { CamerasPanel } from "./CamerasPanel";
 import { DevicesPanelHost } from "./DevicesPanelHost";
+import { DemoLaunchPanel } from "./DemoLaunchPanel";
+import {
+  DEMO_CAMERA_ASSETS,
+  DEMO_RADAR_ASSETS,
+  DEMO_DRONE_HIVE_ASSETS,
+  DEMO_REGULUS_EFFECTORS,
+  GOTCHA_EFFECTORS,
+} from "@/app/components/demo/demoAssets";
 import { TrackHistoryPanel } from "@/app/components/track-history/TrackHistoryPanel";
 import { MapHost } from "./MapHost";
-import type { MapViewMode } from "./mapViewMode";
+import {
+  persistMapViewMode,
+  readPersistedMapViewMode,
+  type MapViewMode,
+} from "./mapViewMode";
 import {
   assertNeverDashboardTab,
   assertNeverDashboardRightTab,
@@ -127,15 +140,45 @@ function DashboardInner({ demoMode = false }: DashboardProps) {
   const [hoveredVideoTileId, setHoveredVideoTileId] = useState<string | null>(
     null,
   );
-  const [mapViewMode, setMapViewMode] = useState<MapViewMode>(() =>
-    demoMode ? "monochromeTerrain" : "current",
+  const [mapViewMode, setMapViewModeState] = useState<MapViewMode>(
+    () => readPersistedMapViewMode() ?? (demoMode ? "monochromeTerrain" : "current"),
   );
+  const setMapViewMode = useCallback((next: MapViewMode) => {
+    setMapViewModeState(next);
+    persistMapViewMode(next);
+  }, []);
 
   const tactical = useTacticalTargets();
   const effectors = useEffectorWorkflow({
     setTargets: tactical.setTargets,
     targets: tactical.targets,
+    initialRegulusEffectors: demoMode ? DEMO_REGULUS_EFFECTORS : undefined,
+    initialGotchaEffectors: demoMode ? GOTCHA_EFFECTORS : undefined,
   });
+  const demoDirector = useDemoDirector({
+    tactical,
+    effectors,
+    onActivateTarget: setActiveTargetId,
+    openTargetsPanel: () => setLeftTab("targets"),
+  });
+  // Trimmed asset layout for the demo map; production passes nothing
+  // and the map falls back to the full production registries.
+  const demoMapAssets = useMemo(
+    () =>
+      demoMode
+        ? {
+            cameraAssets: DEMO_CAMERA_ASSETS,
+            radarAssets: DEMO_RADAR_ASSETS,
+            lidarAssets: [],
+            hiveAssets: DEMO_DRONE_HIVE_ASSETS,
+            weaponAssets: [],
+            launcherAssets: [],
+            floodlightAssets: [],
+            speakerAssets: [],
+          }
+        : undefined,
+    [demoMode],
+  );
   const video = useVideoFeeds();
   const devices = useDevicesAndAssets(tactical.friendlyDrones);
   const offlineAssetIds = useMemo(
@@ -433,12 +476,16 @@ function DashboardInner({ demoMode = false }: DashboardProps) {
           onChange={setLeftTab}
           ariaLabel={t.gridblock.startRail}
           bottomSlot={
-            <HeaderActions
-              labels={t.gridblock}
-              onSingle={tactical.runSingleScenario}
-              onFull={tactical.runFullScenario}
-              onSwarm={tactical.runSwarmScenario}
-            />
+            demoMode ? (
+              <DemoLaunchPanel labels={t.gridblock.demo} director={demoDirector} />
+            ) : (
+              <HeaderActions
+                labels={t.gridblock}
+                onSingle={tactical.runSingleScenario}
+                onFull={tactical.runFullScenario}
+                onSwarm={tactical.runSwarmScenario}
+              />
+            )
           }
         />
       }
@@ -469,6 +516,12 @@ function DashboardInner({ demoMode = false }: DashboardProps) {
               viewedAt,
               video,
               onDeviceHover: handleDevicePanelHover,
+              onMitigate: demoMode
+                ? demoDirector.mitigate
+                : effectors.handleMitigate,
+              onThrowNet: demoMode
+                ? demoDirector.throwNet
+                : effectors.handleThrowNet,
             })
           : null
       }
@@ -494,7 +547,9 @@ function DashboardInner({ demoMode = false }: DashboardProps) {
           friendlyDrones={viewedAt.isLive ? tactical.friendlyDrones : []}
           offlineAssetIds={offlineAssetIds}
           regulusEffectors={effectors.regulusEffectors}
+          gotchaEffectors={effectors.gotchaEffectors}
           launcherEffectors={effectors.launcherEffectors}
+          {...demoMapAssets}
           selectedEffectorIds={effectors.selectedEffectorIds}
           selectedLauncherIds={effectors.selectedLauncherIds}
           selectedAssetId={devices.selectedAssetId}
@@ -542,6 +597,10 @@ interface LeftPanelDeps {
   viewedAt: ViewedAtApi;
   video: ReturnType<typeof useVideoFeeds>;
   onDeviceHover: (id: string | null) => void;
+  /** Demo routes the Jam click so rigged drones fail; plain effector handler otherwise. */
+  onMitigate: (targetId: string, effectorId: string) => void;
+  /** Demo-only Gotcha net throw (video + capture); plain effector handler otherwise. */
+  onThrowNet: (targetId: string, gotchaId: string) => void;
 }
 
 const noopStr = (_a: string) => {};
@@ -582,9 +641,10 @@ function renderLeftPanel(tab: DashboardLeftTabId, deps: LeftPanelDeps) {
             targets={deps.projectedTargets}
             regulusEffectors={deps.effectors.regulusEffectors}
             launcherEffectors={deps.effectors.launcherEffectors}
+            gotchaEffectors={deps.effectors.gotchaEffectors}
             selectedEffectorIds={deps.effectors.selectedEffectorIds}
             selectedLauncherIds={deps.effectors.selectedLauncherIds}
-            onMitigate={isLive ? deps.effectors.handleMitigate : noopStrStr}
+            onMitigate={isLive ? deps.onMitigate : noopStrStr}
             onMitigateAll={isLive ? deps.effectors.handleMitigateAll : () => {}}
             onEffectorSelect={
               isLive ? deps.effectors.handleEffectorSelect : noopStrStr
@@ -602,6 +662,7 @@ function renderLeftPanel(tab: DashboardLeftTabId, deps: LeftPanelDeps) {
             onLauncherSelect={
               isLive ? deps.effectors.handleLauncherSelect : noopStrStr
             }
+            onThrowNet={isLive ? deps.onThrowNet : noopStrStr}
             activeTargetId={deps.activeTargetId}
             onActiveTargetChange={deps.setActiveTargetId}
           />

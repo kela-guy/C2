@@ -24,15 +24,20 @@ import {
   Crosshair,
   DesignateTarget,
   Eye,
-  MapPin,
 } from '@/lib/icons/central';
 import { Bdi, useDirection } from '@/lib/direction';
 import { useStrings } from '@/lib/intl';
 
-interface CameraContextMenuProps {
+export interface CameraContextMenuProps {
   children: React.ReactNode;
   /** Mock until right-click → world raycast lands. */
   coordinates?: string;
+  /** Optional altitude readout shown after the coordinates (e.g. "45 m"). */
+  altitude?: string;
+  /** Show the Tracker action. Defaults to true. */
+  showTracker?: boolean;
+  /** Override the "Look at" action label. */
+  lookAtLabel?: string;
   onCopyCoordinates?: () => void;
   onTracker?: () => void;
   onLookAt?: () => void;
@@ -44,6 +49,9 @@ const FALLBACK_COORDINATES = '32.4700, 35.0050';
 export function CameraContextMenu({
   children,
   coordinates = FALLBACK_COORDINATES,
+  altitude,
+  showTracker = true,
+  lookAtLabel,
   onCopyCoordinates,
   onTracker,
   onLookAt,
@@ -60,36 +68,38 @@ export function CameraContextMenu({
         className="min-w-[220px] rounded-none backdrop-blur-xl border-none"
       >
         <ContextMenuItem
-          onSelect={(e) => e.preventDefault()}
-          className="rounded-none gap-2.5 text-xs justify-between"
+          onSelect={(e) => {
+            e.preventDefault();
+            onCopyCoordinates?.();
+          }}
+          className="rounded-none gap-2.5 text-xs"
         >
-          <span className="flex items-center gap-2.5 min-w-0">
-            <MapPin size={14} className="text-slate-12/80" />
-            <Bdi as="span" direction="ltr" className="font-mono text-[11px] tabular-nums text-slate-12 truncate">
-              {coordinates}
-            </Bdi>
-          </span>
-          <button
-            type="button"
-            aria-label={t.coordinatesCopyAriaLabel}
-            onClick={(e) => {
-              e.stopPropagation();
-              onCopyCoordinates?.();
-            }}
-            className="-mx-1 -my-1 ms-1 p-1 rounded text-slate-12/70 hover:text-slate-12 hover:bg-state-hover-strong transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong"
+          <Copy size={14} className="text-slate-12/80" />
+          <Bdi
+            as="span"
+            direction="ltr"
+            className="flex min-w-0 items-center gap-2 font-mono text-[11px] tabular-nums text-slate-12"
           >
-            <Copy size={12} />
-          </button>
+            <span className="truncate">{coordinates}</span>
+            {altitude && (
+              <>
+                <span className="text-slate-12/40">|</span>
+                <span className="shrink-0">{altitude}</span>
+              </>
+            )}
+          </Bdi>
         </ContextMenuItem>
 
-        <ContextMenuItem onClick={onTracker} className="rounded-none gap-2.5 text-xs">
-          <Eye size={14} className="text-slate-12/80" />
-          <span className="flex-1">{t.tracker}</span>
-        </ContextMenuItem>
+        {showTracker && (
+          <ContextMenuItem onClick={onTracker} className="rounded-none gap-2.5 text-xs">
+            <Eye size={14} className="text-slate-12/80" />
+            <span className="flex-1">{t.tracker}</span>
+          </ContextMenuItem>
+        )}
 
         <ContextMenuItem onClick={onLookAt} className="rounded-none gap-2.5 text-xs">
           <Crosshair size={14} className="text-slate-12/80" />
-          <span className="flex-1">{t.lookAt}</span>
+          <span className="flex-1">{lookAtLabel ?? t.lookAt}</span>
         </ContextMenuItem>
 
         <ContextMenuItem onClick={onCreateTarget} className="rounded-none gap-2.5 text-xs">

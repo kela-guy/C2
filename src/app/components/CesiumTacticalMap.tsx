@@ -19,7 +19,7 @@
  * Anything still pending is tracked in `docs/cesium-parity.md`.
  */
 
-import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type SetStateAction } from 'react';
 import { useViewedAt } from '@/app/state/ViewedAtContext';
 import {
   MotionRegistry,
@@ -49,7 +49,7 @@ import {
   SPEAKER_ASSETS,
   REGULUS_EFFECTORS,
 } from './tacticalAssets';
-import type { FloodlightAsset, MapAsset } from './tacticalAssets';
+import type { FloodlightAsset, MapAsset, SpeakerAsset } from './tacticalAssets';
 import {
   CameraIcon,
   RadarIcon,
@@ -61,6 +61,7 @@ import {
   SensorIcon,
   DroneIcon,
   MissileIcon,
+  GotchaIcon,
 } from './tacticalIcons';
 import { CarIcon, JamWaveIcon } from '@/primitives/MapIcons';
 import {
@@ -86,13 +87,18 @@ import {
   bearingDegrees,
   haversineDistanceM,
 } from '@/app/lib/mapGeo';
-import { JAM_FLOW, WEAPON_FLOW, resolveNearestAsset, type FlowAsset } from '@/imports/engagementFlows';
+import { JAM_FLOW, WEAPON_FLOW, GOTCHA_FLOW, resolveNearestAsset, type FlowAsset } from '@/imports/engagementFlows';
 import { useStrings } from '@/lib/intl';
 import {
   isMonochromeMapView,
+  persistCameraView,
+  persistSceneMode,
+  readPersistedCameraView,
+  readPersistedSceneMode,
   type MapViewMode,
 } from '@/app/components/dashboard/mapViewMode';
-import type { Detection, RegulusEffector, LauncherEffector } from '@/imports/ListOfSystems';
+import { presetForMapStyle } from '@/primitives/cesiumPresets';
+import type { Detection, RegulusEffector, LauncherEffector, GotchaEffector } from '@/imports/ListOfSystems';
 import { accentHex, slateHex } from '@/primitives/accentHex';
 
 /*
@@ -160,6 +166,21 @@ export interface CesiumTacticalMapProps {
   selectedAssetId?: string | null;
   /** Regulus effectors state for CUAS */
   regulusEffectors?: RegulusEffector[];
+  /** Gotcha net effectors (demo only). Each renders a 360° coverage ring. */
+  gotchaEffectors?: GotchaEffector[];
+  /**
+   * Optional static-asset overrides. Each defaults to the production
+   * registry constant when omitted, so the live dashboard renders
+   * identically — the demo passes a trimmed set for a cleaner map.
+   */
+  cameraAssets?: MapAsset[];
+  radarAssets?: MapAsset[];
+  lidarAssets?: MapAsset[];
+  hiveAssets?: MapAsset[];
+  weaponAssets?: MapAsset[];
+  launcherAssets?: { id: string; latitude: number; longitude: number }[];
+  floodlightAssets?: FloodlightAsset[];
+  speakerAssets?: SpeakerAsset[];
   /** Sensor ID to flyTo and flicker (from card click) */
   sensorFocusId?: string | null;
   /** Context menu action callbacks */
@@ -526,6 +547,15 @@ function CesiumTacticalMapImpl({
   selectedAssetId,
   offlineAssetIds,
   regulusEffectors,
+  gotchaEffectors,
+  cameraAssets,
+  radarAssets,
+  lidarAssets,
+  hiveAssets,
+  weaponAssets,
+  launcherAssets,
+  floodlightAssets,
+  speakerAssets,
   friendlyDrones,
   launcherEffectors,
   jammingTargetId,
@@ -550,6 +580,11 @@ function CesiumTacticalMapImpl({
   const t = useStrings().map;
   const viewedAt = useViewedAt();
   const offlineSet = useMemo(() => new Set(offlineAssetIds ?? []), [offlineAssetIds]);
+  // Resolve the curated Cesium snapshot for the operator's chosen
+  // basemap. Memo keeps prop identity stable across renders so
+  // CesiumMap's preset-live-update effect only runs when the operator
+  // actually picks a different style.
+  const mapPreset = useMemo(() => presetForMapStyle(mapViewMode), [mapViewMode]);
   const motionRegistryRef = useRef<MotionRegistry | null>(null);
   if (!motionRegistryRef.current) {
     motionRegistryRef.current = new MotionRegistry();
@@ -630,8 +665,43 @@ function CesiumTacticalMapImpl({
   // Scene mode (2D top-down vs 3D perspective). Default 2D so the post-cutover
   // map looks identical to what operators see today; the in-map toggle (rendered
   // bottom-left) flips to 3D on demand. The primitive layer handles the live
-  // mode switch and camera-height nudge.
-  const [sceneMode, setSceneMode] = useState<CesiumSceneMode>('2D');
+  // mode switch and camera-height nudge. Restored from localStorage so a
+  // refresh keeps the operator on the projection they were using.
+  const [sceneMode, setSceneModeState] = useState<CesiumSceneMode>(
+    () => readPersistedSceneMode() ?? '2D',
+  );
+  const setSceneMode = useCallback(
+    (updater: SetStateAction<CesiumSceneMode>) => {
+      setSceneModeState((prev) => {
+        const next =
+          typeof updater === 'function'
+            ? (updater as (p: CesiumSceneMode) => CesiumSceneMode)(prev)
+            : updater;
+        if (next !== prev) persistSceneMode(next);
+        return next;
+      });
+    },
+    [],
+  );
+  // Restored once on mount; Cesium owns the camera after that and
+  // streams updates back via `handleCameraChange` below.
+  const initialView = useMemo(
+    () => readPersistedCameraView() ?? DEFAULT_INITIAL_VIEW,
+    [],
+  );
+  const handleCameraChange = useCallback(
+    (view: {
+      lat: number;
+      lon: number;
+      heightM: number;
+      headingRad: number;
+      pitchRad: number;
+      rollRad: number;
+    }) => {
+      persistCameraView(view);
+    },
+    [],
+  );
   // Stable callbacks, used inside memoised marker arrays.
   const onMarkerClickRef = useRef(onMarkerClick);
   const onAssetClickRef = useRef(onAssetClick);
@@ -834,7 +904,7 @@ function CesiumTacticalMapImpl({
    * Returns `null` for targets the flow doesn't apply to (mitigated /
    * expired / actively-jamming target / mismatched classification).
    */
-  type EngagementFlowKind = 'jam' | 'weapon';
+  type EngagementFlowKind = 'jam' | 'weapon' | 'gotcha';
   type EngagementPair = {
     flow: EngagementFlowKind;
     targetLat: number;
@@ -865,7 +935,7 @@ function CesiumTacticalMapImpl({
       asset: FlowAsset,
       distanceM: number,
       phase: string,
-      flowDef: typeof JAM_FLOW | typeof WEAPON_FLOW,
+      flowDef: typeof JAM_FLOW | typeof WEAPON_FLOW | typeof GOTCHA_FLOW,
     ): EngagementPair => ({
       flow,
       targetLat: targetPos.lat,
@@ -878,6 +948,41 @@ function CesiumTacticalMapImpl({
       lineColor: flowDef.lineColor(phase),
       badgeTextColor: flowDef.badgeTextColor(phase),
     });
+
+    // ── GOTCHA flow (recommended / in-flight net capture) ───────────────
+    if (GOTCHA_FLOW.matchTarget(target)) {
+      if (
+        target.status === 'expired' ||
+        target.status === 'event_neutralized' ||
+        target.status === 'event_resolved'
+      ) {
+        return null;
+      }
+      const phase = GOTCHA_FLOW.getPhase(target);
+      if (phase === 'captured') return null;
+      const gotchas = (gotchaEffectors ?? []) as unknown as FlowAsset[];
+
+      // In-flight throw pins the line to the throwing site.
+      if (phase === 'throwing' && target.mitigatingEffectorId) {
+        const eff = gotchas.find((e) => e.id === target.mitigatingEffectorId);
+        if (eff) {
+          return buildPair('gotcha', eff, haversineDistanceM(targetPos.lat, targetPos.lon, eff.lat, eff.lon), phase, GOTCHA_FLOW);
+        }
+      }
+
+      if (hoveredSensorIdFromCard) {
+        const eff = gotchas.find((e) => e.id === hoveredSensorIdFromCard);
+        if (eff) {
+          return buildPair('gotcha', eff, haversineDistanceM(targetPos.lat, targetPos.lon, eff.lat, eff.lon), phase, GOTCHA_FLOW);
+        }
+      }
+
+      const resolved = resolveNearestAsset(targetPos.lat, targetPos.lon, gotchas, GOTCHA_FLOW.availableFilter);
+      if (resolved.active) {
+        return buildPair('gotcha', resolved.active.asset, resolved.active.km * 1000, phase, GOTCHA_FLOW);
+      }
+      return null;
+    }
 
     // ── JAM flow (drone targets) ────────────────────────────────────────
     if (JAM_FLOW.matchTarget(target)) {
@@ -963,6 +1068,7 @@ function CesiumTacticalMapImpl({
     targets,
     regulusEffectors,
     launcherEffectors,
+    gotchaEffectors,
     selectedEffectorIds,
     selectedLauncherIds,
     hoveredSensorIdFromCard,
@@ -1116,6 +1222,14 @@ function CesiumTacticalMapImpl({
    * tick. Dedup with `LAUNCHER_ASSETS` is local to this slice.
    */
   const staticAssetMarkers = useMemo<CesiumHtmlMarker[]>(() => {
+    const cameras = cameraAssets ?? CAMERA_ASSETS;
+    const radars = radarAssets ?? RADAR_ASSETS;
+    const lidars = lidarAssets ?? LIDAR_ASSETS;
+    const hives = hiveAssets ?? DRONE_HIVE_ASSETS;
+    const weapons = weaponAssets ?? WEAPON_SYSTEM_ASSETS;
+    const launchers = launcherAssets ?? LAUNCHER_ASSETS;
+    const floodlights = floodlightAssets ?? FLOODLIGHT_ASSETS;
+    const speakers = speakerAssets ?? SPEAKER_ASSETS;
     const out: CesiumHtmlMarker[] = [];
     const seen = new Set<string>();
     const push = (m: CesiumHtmlMarker) => {
@@ -1123,25 +1237,25 @@ function CesiumTacticalMapImpl({
       seen.add(m.id);
       out.push(m);
     };
-    for (const a of CAMERA_ASSETS) {
+    for (const a of cameras) {
       push(buildFriendlyAsset(a.id, a.latitude, a.longitude, <CameraIcon />, a.typeLabel, SENSOR_SURFACE, sensorFov(a)));
     }
-    for (const a of RADAR_ASSETS) {
+    for (const a of radars) {
       push(buildFriendlyAsset(a.id, a.latitude, a.longitude, <RadarIcon />, a.typeLabel, SENSOR_SURFACE, sensorFov(a)));
     }
-    for (const a of LIDAR_ASSETS) {
+    for (const a of lidars) {
       push(buildFriendlyAsset(a.id, a.latitude, a.longitude, <LidarIcon />, a.typeLabel, SENSOR_SURFACE, sensorFov(a)));
     }
-    for (const a of DRONE_HIVE_ASSETS) {
+    for (const a of hives) {
       push(buildFriendlyAsset(a.id, a.latitude, a.longitude, <DroneHiveIcon />, a.typeLabel));
     }
-    for (const a of WEAPON_SYSTEM_ASSETS) {
+    for (const a of weapons) {
       push(buildFriendlyAsset(a.id, a.latitude, a.longitude, <LauncherIcon size={LAUNCHER_GLYPH} />, a.typeLabel));
     }
-    for (const l of LAUNCHER_ASSETS) {
+    for (const l of launchers) {
       push(buildFriendlyAsset(l.id, l.latitude, l.longitude, <LauncherIcon size={LAUNCHER_GLYPH} />, l.id));
     }
-    for (const f of FLOODLIGHT_ASSETS) {
+    for (const f of floodlights) {
       push(
         buildFriendlyAsset(
           f.id,
@@ -1154,11 +1268,23 @@ function CesiumTacticalMapImpl({
         ),
       );
     }
-    for (const s of SPEAKER_ASSETS) {
+    for (const s of speakers) {
       push(buildFriendlyAsset(s.id, s.latitude, s.longitude, <SpeakerIcon />, s.typeLabel));
     }
     return out;
-  }, [buildFriendlyAsset, floodlightFov, sensorFov]);
+  }, [
+    buildFriendlyAsset,
+    floodlightFov,
+    sensorFov,
+    cameraAssets,
+    radarAssets,
+    lidarAssets,
+    hiveAssets,
+    weaponAssets,
+    launcherAssets,
+    floodlightAssets,
+    speakerAssets,
+  ]);
 
   /**
    * Slice 2 — Regulus effectors. Friendly assets with coverage-ring +
@@ -1238,6 +1364,89 @@ function CesiumTacticalMapImpl({
     hoveredMarkerId,
     engagementPair,
     openContextMenu,
+  ]);
+
+  /**
+   * Slice 2b — Gotcha net effectors (demo only). Friendly assets with a
+   * 360° coverage ring shown on hover / pin / while actively throwing a
+   * net. Empty (and thus free) in production where no gotcha effectors
+   * are passed.
+   */
+  const activeGotchaIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const tg of targets ?? []) {
+      if (tg.missionType === 'net_capture' && tg.mitigatingEffectorId) {
+        ids.add(tg.mitigatingEffectorId);
+      }
+    }
+    return ids;
+  }, [targets]);
+
+  const gotchaEffectorMarkers = useMemo<CesiumHtmlMarker[]>(() => {
+    const effectors = gotchaEffectors ?? [];
+    if (effectors.length === 0) return [];
+    const out: CesiumHtmlMarker[] = [];
+    const isEngagementGotcha = (id: string) =>
+      engagementPair?.flow === 'gotcha' && engagementPair.effId === id;
+    for (const e of effectors) {
+      const isHovered =
+        hoveredSensorIdFromCard === e.id || hoveredMarkerId === e.id;
+      // A recommended gotcha (engagement line pointing at it) lights up
+      // the same as one actively throwing: white ring, pulse, and FOV.
+      const isActive =
+        e.status === 'active' ||
+        activeGotchaIds.has(e.id) ||
+        isEngagementGotcha(e.id);
+      // Gotcha active uses a white ring + white pulse (the `active`
+      // state) rather than the green `jammer` look reserved for jamming.
+      const state: InteractionState = isHovered
+        ? 'hovered'
+        : isActive
+          ? 'active'
+          : 'default';
+      const showHoverEffect = isHovered || isActive;
+      const showCoverage =
+        showHoverEffect || coveragePinnedIds.has(e.id);
+      const style = resolveMarkerStyle(
+        state,
+        'friendly',
+        isActive ? { ringPulse: true } : undefined,
+      );
+      out.push({
+        id: e.id,
+        lat: e.lat,
+        lon: e.lon,
+        zIndex: showHoverEffect ? 40 : 15,
+        content: (
+          <MapMarker
+            icon={<GotchaIcon />}
+            style={style}
+            surfaceSize={SENSOR_SURFACE}
+            ringSize={SENSOR_RING}
+            label={e.name}
+            showLabel={showHoverEffect}
+            pulse={showHoverEffect}
+          />
+        ),
+        coverageRadiusM: showCoverage ? e.coverageRadiusM : undefined,
+        coverageColor: isActive ? CESIUM_FLOODLIGHT_FOV : CESIUM_FOV,
+        onClick: () => onAssetClickRef.current?.(e.id),
+        onContextMenu: (ev) => openContextMenu(ev, 'effector', e.id, e.name),
+        onMouseEnter: () => enterMarker(e.id),
+        onMouseLeave: () => leaveMarker(e.id),
+      });
+    }
+    return out;
+  }, [
+    gotchaEffectors,
+    activeGotchaIds,
+    coveragePinnedIds,
+    hoveredSensorIdFromCard,
+    hoveredMarkerId,
+    engagementPair,
+    openContextMenu,
+    enterMarker,
+    leaveMarker,
   ]);
 
   /**
@@ -1624,6 +1833,7 @@ function CesiumTacticalMapImpl({
     for (const m of launcherEffectorMarkers) append(m);
     for (const m of staticAssetMarkers) append(m);
     for (const m of regulusEffectorMarkers) append(m);
+    for (const m of gotchaEffectorMarkers) append(m);
     for (const m of targetMarkers) append(m);
     for (const m of friendlyDroneMarkers) append(m);
     for (const m of forceUnitMarkers) append(m);
@@ -1632,6 +1842,7 @@ function CesiumTacticalMapImpl({
   }, [
     staticAssetMarkers,
     regulusEffectorMarkers,
+    gotchaEffectorMarkers,
     targetMarkers,
     friendlyDroneMarkers,
     launcherEffectorMarkers,
@@ -1926,7 +2137,7 @@ function CesiumTacticalMapImpl({
       <div className="gridblock-canvas-overflow absolute top-0">
         <CesiumMap
           ionToken={CESIUM_ION_TOKEN}
-          initialView={DEFAULT_INITIAL_VIEW}
+          initialView={initialView}
           htmlMarkers={htmlMarkers}
           motionRegistry={motionRegistryRef.current ?? undefined}
           polylines={polylines}
@@ -1934,6 +2145,8 @@ function CesiumTacticalMapImpl({
           fitBounds={fitBounds}
           sceneMode={sceneMode}
           mapViewMode={mapViewMode}
+          preset={mapPreset}
+          onCameraChange={handleCameraChange}
           className="absolute inset-0"
         />
       </div>

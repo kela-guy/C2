@@ -16,6 +16,8 @@ import React, { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, 
 import * as Cesium from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import { MotionRegistry, createMotionTrack, type MotionTrack } from '@/lib/motion';
+import { applyCesiumSettings } from './applyCesiumSettings';
+import type { MapSettings } from './cesiumPresets';
 
 /**
  * Minimum container size (px) before we're willing to construct
@@ -154,8 +156,20 @@ export interface CesiumHtmlMarker {
 export interface CesiumMapProps {
   /** Cesium Ion access token. Required for Bing Aerial / Cesium Ion assets. */
   ionToken: string;
-  /** Initial camera target. Required so we don't open over the equator. */
-  initialView: { lat: number; lon: number; heightM?: number };
+  /**
+   * Initial camera target. Required so we don't open over the equator.
+   * Orientation fields (radians) are optional — when omitted, the
+   * camera lands with heading/roll = 0 and pitch = straight down,
+   * matching the historical default.
+   */
+  initialView: {
+    lat: number;
+    lon: number;
+    heightM?: number;
+    headingRad?: number;
+    pitchRad?: number;
+    rollRad?: number;
+  };
   /** Markers to render as Cesium points/entities (cheap, GPU). */
   markers?: CesiumMarker[];
   /** Markers rendered as DOM overlays positioned via scene transforms. */
@@ -210,6 +224,47 @@ export interface CesiumMapProps {
   onMarkerClick?: (id: string) => void;
   /** Called when a `markers[]` entity is hovered (point markers only). */
   onMarkerHover?: (id: string | null) => void;
+  /**
+   * Fires after the camera comes to rest (debounced). Receives the
+   * current `{lat, lon, heightM}` plus orientation (radians) so a
+   * consumer can fully restore the view. In 2D scene mode, `heightM`
+   * is the orthographic frustum extent, mirroring the convention of
+   * `initialView` and `flyTo`. Use this to persist the camera state
+   * between sessions; not intended for high-frequency consumers.
+   */
+  onCameraChange?: (view: {
+    lat: number;
+    lon: number;
+    heightM: number;
+    headingRad: number;
+    pitchRad: number;
+    rollRad: number;
+  }) => void;
+  /**
+   * Curated scene snapshot — when supplied, the primitive imperatively
+   * applies it via `applyCesiumSettings` at every Cesium-stomp checkpoint
+   * (bootstrap, scene-mode flip, terrain provider landing, imagery layer
+   * swap) so terrain exaggeration, atmosphere, fog, lighting, imagery
+   * tint, and space color stay in lock-step with the parent's choice.
+   *
+   * Production callers pass the `FACTORY_PRESETS` entry matching the
+   * operator's `mapViewMode`. The sandbox passes its live `MapSettings`.
+   * Leaving it undefined means "use the primitive's hard-coded bootstrap
+   * defaults" — `mapBrightness` / `mapGamma` then act as escape hatches.
+   */
+  preset?: MapSettings;
+  /**
+   * Sandbox / debugging hook. Fired after the bootstrap effect completes,
+   * after the scene-mode effect re-asserts atmosphere/fog defaults, and
+   * after the world-terrain provider lands. Lets a consumer re-apply
+   * imperative scene tweaks that Cesium-internal mutations would otherwise
+   * stomp. Production consumers leave this undefined — when it is, the
+   * call sites collapse to a no-op and behaviour is identical.
+   *
+   * Fires *after* `preset` is applied, so a consumer can layer custom
+   * tweaks on top of the curated snapshot.
+   */
+  onViewerReady?: (viewer: Cesium.Viewer) => void;
   /** Optional className for the wrapping `<div>`. Set width + height here or via parent. */
   className?: string;
 }
@@ -303,22 +358,88 @@ function easeSpring(t: number): number {
   return lut[lo] + (lut[hi] - lut[lo]) * (idx - lo);
 }
 
+/** Sample terrain height at a lon/lat — mirrors the html-marker path in 3D. */
+function groundAltAt(
+  globe: Cesium.Globe,
+  lon: number,
+  lat: number,
+  scratch: Cesium.Cartographic,
+): number {
+  Cesium.Cartographic.fromDegrees(lon, lat, 0, scratch);
+  const h = globe.getHeight(scratch);
+  return typeof h === 'number' ? h : 0;
+}
+
+/** Camera height above which black-sky presets enable atmosphere for globe view. */
+const ORBITAL_GLOBE_HEIGHT_M = 400_000;
+
+type ToggleableScene = { show?: boolean };
+
+function configure3DCamera(viewer: Cesium.Viewer): void {
+  viewer.scene.globe.show = true;
+  const ctrl = viewer.scene.screenSpaceCameraController;
+  ctrl.enableCollisionDetection = false;
+  ctrl.minimumZoomDistance = 1.0;
+  ctrl.maximumZoomDistance = 50_000_000;
+  ctrl.zoomFactor = 8;
+}
+
+/**
+ * Black-sky presets disable atmosphere for tactical ground views, but
+ * zooming out needs the atmospheric limb (or a transparent background)
+ * to resolve the planet as a globe. Aerial presets always show it.
+ */
+function syncOrbitalSky(viewer: Cesium.Viewer, preset: MapSettings | undefined): void {
+  if (viewer.isDestroyed()) return;
+  if (viewer.scene.mode !== Cesium.SceneMode.SCENE3D) return;
+
+  const sky = viewer.scene.skyAtmosphere as unknown as ToggleableScene | undefined;
+  if (!sky) return;
+
+  const height = viewer.camera.positionCartographic?.height ?? 0;
+  const orbital = height >= ORBITAL_GLOBE_HEIGHT_M;
+
+  if (preset && !preset.sky.atmosphere) {
+    sky.show = orbital;
+    try {
+      viewer.scene.backgroundColor = orbital
+        ? Cesium.Color.TRANSPARENT
+        : Cesium.Color.fromCssColorString(preset.space.backgroundColor);
+    } catch {
+      viewer.scene.backgroundColor = orbital ? Cesium.Color.TRANSPARENT : Cesium.Color.BLACK;
+    }
+  } else {
+    sky.show = true;
+    viewer.scene.backgroundColor = Cesium.Color.TRANSPARENT;
+  }
+}
+
 const SCENE_MODE_MAP: Record<CesiumSceneMode, Cesium.SceneMode> = {
   '2D': Cesium.SceneMode.SCENE2D,
   '2.5D': Cesium.SceneMode.COLUMBUS_VIEW,
   '3D': Cesium.SceneMode.SCENE3D,
 };
 
-export type CesiumMapViewMode = 'current' | 'monochromeTerrain';
+export type CesiumMapViewMode = 'current' | 'monochromeTerrain' | 'monochromeLight';
 
 const IMAGERY_DEFAULTS = {
   monochromeTerrain: { brightness: 1.9, gamma: 0.7 },
+  monochromeLight: { brightness: 1.0, gamma: 1.0 },
   current: { brightness: 1.0, gamma: 1.0 },
 } as const;
 
 function createMonochromeImageryProvider() {
   return new Cesium.UrlTemplateImageryProvider({
     url: 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png',
+    subdomains: ['a', 'b', 'c', 'd'],
+    maximumLevel: 19,
+    credit: '© OpenStreetMap contributors © CARTO',
+  });
+}
+
+function createLightMonochromeImageryProvider() {
+  return new Cesium.UrlTemplateImageryProvider({
+    url: 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png',
     subdomains: ['a', 'b', 'c', 'd'],
     maximumLevel: 19,
     credit: '© OpenStreetMap contributors © CARTO',
@@ -339,12 +460,41 @@ export function CesiumMap({
   mapViewMode = 'current',
   mapBrightness,
   mapGamma,
+  preset,
   onMarkerClick,
   onMarkerHover,
+  onCameraChange,
+  onViewerReady,
   className = 'w-full h-full',
 }: CesiumMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Cesium.Viewer | null>(null);
+  // Mirror the callback in a ref so the bootstrap effect's deps stay
+  // empty and the scene-mode effect doesn't churn on every parent render.
+  const onViewerReadyRef = useRef(onViewerReady);
+  useEffect(() => {
+    onViewerReadyRef.current = onViewerReady;
+  }, [onViewerReady]);
+  const onCameraChangeRef = useRef(onCameraChange);
+  useEffect(() => {
+    onCameraChangeRef.current = onCameraChange;
+  }, [onCameraChange]);
+  // Same trick for `preset`: kept in a ref so the stomp-checkpoint hooks
+  // (bootstrap / scene-mode / terrain-load / imagery-swap) can read the
+  // freshest snapshot without their dep arrays growing.
+  const presetRef = useRef(preset);
+  useEffect(() => {
+    presetRef.current = preset;
+  }, [preset]);
+  const applyPresetIfSet = useCallback((viewer: Cesium.Viewer) => {
+    const p = presetRef.current;
+    if (!p) return;
+    applyCesiumSettings(viewer, p);
+    if (viewer.scene.mode === Cesium.SceneMode.SCENE3D) {
+      configure3DCamera(viewer);
+      syncOrbitalSky(viewer, p);
+    }
+  }, []);
   /**
    * Coalesced `requestRender()` scheduler. Effect hooks that mutate
    * scene state (markers add/remove, polylines add/remove, brightness
@@ -425,6 +575,7 @@ export function CesiumMap({
   const polylineParticleEndpointsRef = useRef<
     Map<string, { fromLat: number; fromLon: number; toLat: number; toLon: number }>
   >(new Map());
+  const polylineGroundCartoRef = useRef(new Cesium.Cartographic());
 
   /**
    * Endpoint-interpolation cache for 2-point dashed lines (engagement
@@ -643,6 +794,7 @@ export function CesiumMap({
     cam.inertiaSpin = 0.5;
     cam.inertiaTranslate = 0.5;
     cam.inertiaZoom = 0.5;
+    cam.zoomFactor = 8;
 
     // Basemap imagery is applied by the `mapViewMode` effect below.
 
@@ -662,6 +814,43 @@ export function CesiumMap({
     // imperative `flyTo` prop afterwards.
     viewer.camera.setView({
       destination: toCartesian({ ...initialView, heightM: initialView.heightM ?? 50_000 }),
+      orientation: {
+        heading: initialView.headingRad ?? 0,
+        pitch: initialView.pitchRad ?? -Cesium.Math.PI_OVER_TWO,
+        roll: initialView.rollRad ?? 0,
+      },
+    });
+
+    applyPresetIfSet(viewer);
+    onViewerReadyRef.current?.(viewer);
+
+    // Debounce-fire `onCameraChange` ~400ms after the user stops
+    // panning/zooming or a `flyTo` settles, so consumers persisting
+    // the view don't thrash localStorage on every easing tick.
+    let cameraPersistTimer: number | null = null;
+    const removeCameraChanged = viewer.camera.changed.addEventListener(() => {
+      const v = viewerRef.current;
+      if (!v || v.isDestroyed()) return;
+      syncOrbitalSky(v, presetRef.current);
+      if (onCameraChangeRef.current) {
+        if (cameraPersistTimer != null) window.clearTimeout(cameraPersistTimer);
+        cameraPersistTimer = window.setTimeout(() => {
+          cameraPersistTimer = null;
+          const live = viewerRef.current;
+          if (!live || live.isDestroyed()) return;
+          const camera = live.camera;
+          const carto = camera.positionCartographic;
+          if (!carto) return;
+          onCameraChangeRef.current?.({
+            lat: Cesium.Math.toDegrees(carto.latitude),
+            lon: Cesium.Math.toDegrees(carto.longitude),
+            heightM: carto.height,
+            headingRad: camera.heading,
+            pitchRad: camera.pitch,
+            rollRad: camera.roll,
+          });
+        }, 400);
+      }
     });
 
     // The Cesium-entity pick handlers (LEFT_CLICK + MOUSE_MOVE on
@@ -775,7 +964,7 @@ export function CesiumMap({
         node.style.display = '';
         node.style.transform = `translate(-50%, -50%) translate(${screen.x}px, ${screen.y}px)`;
       }
-      if (kinematicActive) {
+      if (kinematicActive || polylineParticleEntitiesRef.current.size > 0) {
         const nowMs = Date.now();
         if (nowMs - lastKinematicRenderAt >= KINEMATIC_RENDER_INTERVAL_MS) {
           lastKinematicRenderAt = nowMs;
@@ -822,6 +1011,11 @@ export function CesiumMap({
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (cameraPersistTimer != null) {
+        window.clearTimeout(cameraPersistTimer);
+        cameraPersistTimer = null;
+      }
+      removeCameraChanged();
       removePreRender();
       viewer.destroy();
       viewerRef.current = null;
@@ -849,10 +1043,7 @@ export function CesiumMap({
     if (!viewer || viewer.isDestroyed()) return;
 
     const requestId = ++imageryRequestIdRef.current;
-    const monochrome = mapViewMode === 'monochromeTerrain';
-    const defaults = monochrome
-      ? IMAGERY_DEFAULTS.monochromeTerrain
-      : IMAGERY_DEFAULTS.current;
+    const defaults = IMAGERY_DEFAULTS[mapViewMode];
 
     const removeCurrentLayer = () => {
       const layer = imageryLayerRef.current;
@@ -863,13 +1054,16 @@ export function CesiumMap({
 
     removeCurrentLayer();
 
-    if (monochrome) {
-      const layer = viewer.imageryLayers.addImageryProvider(
-        createMonochromeImageryProvider(),
-      );
+    if (mapViewMode === 'monochromeTerrain' || mapViewMode === 'monochromeLight') {
+      const provider =
+        mapViewMode === 'monochromeLight'
+          ? createLightMonochromeImageryProvider()
+          : createMonochromeImageryProvider();
+      const layer = viewer.imageryLayers.addImageryProvider(provider);
       layer.brightness = mapBrightness ?? defaults.brightness;
       layer.gamma = mapGamma ?? defaults.gamma;
       imageryLayerRef.current = layer;
+      applyPresetIfSet(viewer);
       scheduleRender();
       return () => {
         imageryRequestIdRef.current++;
@@ -886,6 +1080,7 @@ export function CesiumMap({
         layer.brightness = mapBrightness ?? defaults.brightness;
         layer.gamma = mapGamma ?? defaults.gamma;
         imageryLayerRef.current = layer;
+        applyPresetIfSet(viewer);
         scheduleRender();
       })
       .catch((err) => {
@@ -1028,14 +1223,28 @@ export function CesiumMap({
   useEffect(() => {
     const layer = imageryLayerRef.current;
     if (!layer) return;
-    const defaults =
-      mapViewMode === 'monochromeTerrain'
-        ? IMAGERY_DEFAULTS.monochromeTerrain
-        : IMAGERY_DEFAULTS.current;
+    const defaults = IMAGERY_DEFAULTS[mapViewMode];
     layer.brightness = mapBrightness ?? defaults.brightness;
     layer.gamma = mapGamma ?? defaults.gamma;
     scheduleRender();
   }, [mapBrightness, mapGamma, mapViewMode, scheduleRender]);
+
+  // ── Preset (live update) ───────────────────────────────────────────────────
+  // Re-apply the curated snapshot whenever the parent swaps it. In
+  // production this happens when the operator picks a different map
+  // style (mapViewMode change → matching FACTORY_PRESET), but the effect
+  // is shape-agnostic so the sandbox's slider-driven settings also flow
+  // through here without a remount.
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || viewer.isDestroyed() || !preset) return;
+    applyCesiumSettings(viewer, preset);
+    if (viewer.scene.mode === Cesium.SceneMode.SCENE3D) {
+      configure3DCamera(viewer);
+      syncOrbitalSky(viewer, preset);
+    }
+    scheduleRender();
+  }, [preset, scheduleRender]);
 
   // ── Scene mode ─────────────────────────────────────────────────────────────
   // In SCENE2D, the camera "height" is interpreted as the orthographic frustum
@@ -1072,7 +1281,13 @@ export function CesiumMap({
     const fog = viewer.scene.fog as unknown as ToggleableLocal | undefined;
     if (fog) fog.enabled = inThreeD;
 
+    applyPresetIfSet(viewer);
+    onViewerReadyRef.current?.(viewer);
+
     if (sceneMode === '3D') {
+      configure3DCamera(viewer);
+      syncOrbitalSky(viewer, presetRef.current);
+
       // Kick off the world-terrain load lazily on first 3D entry. The
       // promise is cached on the ref so subsequent 2D ↔ 3D toggles
       // reuse the resolved provider without re-fetching tiles.
@@ -1088,6 +1303,8 @@ export function CesiumMap({
             // loop re-projects each marker against actual elevations.
             htmlMarkerStaticHeightSampledRef.current.clear();
             v.scene.requestRender();
+            applyPresetIfSet(v);
+            onViewerReadyRef.current?.(v);
           })
           .catch((err) => {
             console.error('[CesiumMap] failed to load world terrain:', err);
@@ -1478,16 +1695,26 @@ export function CesiumMap({
             const fromLon = ep.prev.fromLon + (ep.curr.fromLon - ep.prev.fromLon) * eased;
             const toLat = ep.prev.toLat + (ep.curr.toLat - ep.prev.toLat) * eased;
             const toLon = ep.prev.toLon + (ep.curr.toLon - ep.prev.toLon) * eased;
-            Cesium.Cartesian3.fromDegrees(fromLon, fromLat, 0, undefined, cachedArr[0]);
-            Cesium.Cartesian3.fromDegrees(toLon, toLat, 0, undefined, cachedArr[1]);
+            const v = viewerRef.current;
+            let fromAlt = 0;
+            let toAlt = 0;
+            if (v && !v.isDestroyed() && v.scene.mode === Cesium.SceneMode.SCENE3D) {
+              const scratch = polylineGroundCartoRef.current;
+              fromAlt = groundAltAt(v.scene.globe, fromLon, fromLat, scratch);
+              toAlt = groundAltAt(v.scene.globe, toLon, toLat, scratch);
+            }
+            Cesium.Cartesian3.fromDegrees(fromLon, fromLat, fromAlt, undefined, cachedArr[0]);
+            Cesium.Cartesian3.fromDegrees(toLon, toLat, toAlt, undefined, cachedArr[1]);
             return cachedArr;
           }, false);
+          const clampGround = sceneMode === '3D';
           const fresh = viewer.entities.add({
             id: `${lineId}__polyline`,
             polyline: {
               positions: positionsProp,
               width,
               material,
+              clampToGround: clampGround,
             },
           });
           existing.set(lineId, fresh);
@@ -1567,13 +1794,17 @@ export function CesiumMap({
               }
               const t = ((Date.now() / 1000) * speed + phaseOffset) % 1;
               const eased = easeSpring(t);
-              return Cesium.Cartesian3.fromDegrees(
-                fromLon + (toLon - fromLon) * eased,
-                fromLat + (toLat - fromLat) * eased,
-                0,
-                undefined,
-                result,
-              );
+              const lon = fromLon + (toLon - fromLon) * eased;
+              const lat = fromLat + (toLat - fromLat) * eased;
+              let alt = 0;
+              const v = viewerRef.current;
+              if (v && !v.isDestroyed() && v.scene.mode === Cesium.SceneMode.SCENE3D) {
+                const scratch = polylineGroundCartoRef.current;
+                const fromAlt = groundAltAt(v.scene.globe, fromLon, fromLat, scratch);
+                const toAlt = groundAltAt(v.scene.globe, toLon, toLat, scratch);
+                alt = fromAlt + (toAlt - fromAlt) * eased;
+              }
+              return Cesium.Cartesian3.fromDegrees(lon, lat, alt, undefined, result);
             }, false);
             const particleEntity = viewer.entities.add({
               id: `${lineId}__particle-${i}`,
@@ -1583,6 +1814,10 @@ export function CesiumMap({
                 color: dotColor,
                 outlineColor: dotColor.withAlpha(0.4),
                 outlineWidth: 4,
+                heightReference:
+                  sceneMode === '3D'
+                    ? Cesium.HeightReference.CLAMP_TO_GROUND
+                    : Cesium.HeightReference.NONE,
                 disableDepthTestDistance: Number.POSITIVE_INFINITY,
               },
             });
@@ -1613,8 +1848,35 @@ export function CesiumMap({
       }
     }
 
+    // Engagement lines are created once with a CallbackProperty; when the
+    // operator toggles 2D ↔ 3D we need to flip ground clamping on the
+    // existing entities without waiting for endpoint movement.
+    const clampGround = sceneMode === '3D';
+    if (polylines) {
+      for (const line of polylines) {
+        if (!desiredIds.has(line.id)) continue;
+        const isSmoothed = line.dashed && line.points.length === 2;
+        if (!isSmoothed) continue;
+        const entity = existing.get(line.id);
+        if (entity?.polyline) {
+          entity.polyline.clampToGround = new Cesium.ConstantProperty(clampGround);
+        }
+        const particles = particleEntities.get(line.id);
+        if (particles) {
+          const heightRef = clampGround
+            ? Cesium.HeightReference.CLAMP_TO_GROUND
+            : Cesium.HeightReference.NONE;
+          for (const p of particles) {
+            if (p.point) {
+              p.point.heightReference = new Cesium.ConstantProperty(heightRef);
+            }
+          }
+        }
+      }
+    }
+
     if (scheduledRender) scheduleRender();
-  }, [polylines, scheduleRender]);
+  }, [polylines, sceneMode, scheduleRender]);
 
   // ── Imperative fly-to ──────────────────────────────────────────────────────
   useEffect(() => {

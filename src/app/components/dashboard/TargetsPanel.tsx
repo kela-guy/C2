@@ -4,6 +4,7 @@ import type {
   Detection,
   RegulusEffector,
   LauncherEffector,
+  GotchaEffector,
 } from "@/imports/ListOfSystems";
 
 interface TargetsPanelProps {
@@ -11,6 +12,7 @@ interface TargetsPanelProps {
 
   regulusEffectors: RegulusEffector[];
   launcherEffectors: LauncherEffector[];
+  gotchaEffectors?: GotchaEffector[];
   selectedEffectorIds: Map<string, string>;
   selectedLauncherIds: Map<string, string>;
 
@@ -22,6 +24,7 @@ interface TargetsPanelProps {
   onDismissLock: (targetId: string) => void;
   onCompleteMission: (targetId: string) => void;
   onLauncherSelect: (targetId: string, launcherId: string) => void;
+  onThrowNet?: (targetId: string, gotchaId: string) => void;
 
   activeTargetId: string | null;
   onActiveTargetChange: (id: string | null) => void;
@@ -35,6 +38,7 @@ function TargetsPanelImpl({
   targets,
   regulusEffectors,
   launcherEffectors,
+  gotchaEffectors,
   selectedEffectorIds,
   selectedLauncherIds,
   onMitigate,
@@ -45,6 +49,7 @@ function TargetsPanelImpl({
   onDismissLock,
   onCompleteMission,
   onLauncherSelect,
+  onThrowNet,
   activeTargetId,
   onActiveTargetChange,
 }: TargetsPanelProps) {
@@ -124,7 +129,12 @@ function TargetsPanelImpl({
           onLauncherSelect={onLauncherSelect}
           launcherEffectors={launcherEffectors}
           selectedLauncherIds={selectedLauncherIds}
-          flowAssets={{ regulusEffectors, launcherEffectors }}
+          onThrowNet={onThrowNet}
+          flowAssets={{
+            regulusEffectors,
+            launcherEffectors,
+            ...(gotchaEffectors ? { gotchaEffectors } : {}),
+          }}
           flowSelectedIds={{
             regulusEffectors: selectedEffectorIds,
             launcherEffectors: selectedLauncherIds,

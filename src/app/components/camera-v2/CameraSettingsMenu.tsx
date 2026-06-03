@@ -27,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from '@/app/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
+import { Switch } from '@/app/components/ui/switch';
 import {
   ArrowUp,
   BellOff,
@@ -50,6 +51,12 @@ const CHECKBOX_INDICATOR_AT_END =
 // checkmark now occupying inline-end, the shortcut moves to inline-start.
 const SHORTCUT_AT_START = 'ms-0 me-auto';
 
+interface SettingsLabelOverrides {
+  playbackLabel?: string;
+  displaySection?: string;
+  aiDetectionsLabel?: string;
+}
+
 interface CameraSettingsMenuProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -63,6 +70,12 @@ interface CameraSettingsMenuProps {
   cameraAngle?: CameraAngle;
   onCameraAngleChange?: (angle: CameraAngle) => void;
   onAutoTrackStart?: () => void;
+  /** Copy overrides for individual rows (sandbox). */
+  labelOverrides?: SettingsLabelOverrides;
+  /** Render the alerts row as an inline switch instead of a checkbox. */
+  alertsAsSwitch?: boolean;
+  /** Show the pathfinder auto-track action. Defaults to true. */
+  showAutoTrackItem?: boolean;
 }
 
 const ANGLE_ICON_ROTATION: Record<CameraAngle, string> = {
@@ -84,11 +97,17 @@ export function CameraSettingsMenu({
   cameraAngle = 'straight',
   onCameraAngleChange,
   onAutoTrackStart,
+  labelOverrides,
+  alertsAsSwitch = false,
+  showAutoTrackItem = true,
 }: CameraSettingsMenuProps) {
   const t = useStrings().camera.settingsMenu;
   const dir = useIsRtl() ? 'rtl' : 'ltr';
   const isPathfinder = deviceKind === 'pathfinder';
   const showAlertsSection = onMutedAlertsToggle != null;
+  const playbackLabel = labelOverrides?.playbackLabel ?? t.playbackLabel;
+  const displaySection = labelOverrides?.displaySection ?? t.displaySection;
+  const aiDetectionsLabel = labelOverrides?.aiDetectionsLabel ?? t.aiDetectionsLabel;
 
   return (
     <DropdownMenu open={open} onOpenChange={onOpenChange} dir={dir}>
@@ -125,14 +144,14 @@ export function CameraSettingsMenu({
           onSelect={(e) => e.preventDefault()}
           className={CHECKBOX_INDICATOR_AT_END}
         >
-          {t.playbackLabel}
+          {playbackLabel}
           <DropdownMenuShortcut className={SHORTCUT_AT_START}>P</DropdownMenuShortcut>
         </DropdownMenuCheckboxItem>
 
         <DropdownMenuSeparator />
 
         <DropdownMenuLabel className="text-[10px] font-semibold text-slate-9 uppercase tracking-[0.18em]">
-          {t.displaySection}
+          {displaySection}
         </DropdownMenuLabel>
         <DropdownMenuCheckboxItem
           checked={detectionsOn}
@@ -140,7 +159,7 @@ export function CameraSettingsMenu({
           onSelect={(e) => e.preventDefault()}
           className={CHECKBOX_INDICATOR_AT_END}
         >
-          {t.aiDetectionsLabel}
+          {aiDetectionsLabel}
         </DropdownMenuCheckboxItem>
 
         {showAlertsSection && (
@@ -149,15 +168,36 @@ export function CameraSettingsMenu({
             <DropdownMenuLabel className="text-[10px] font-semibold text-slate-9 uppercase tracking-[0.18em]">
               {t.alertsSection}
             </DropdownMenuLabel>
-            <DropdownMenuCheckboxItem
-              checked={mutedAlerts ?? false}
-              onCheckedChange={onMutedAlertsToggle}
-              onSelect={(e) => e.preventDefault()}
-              className={CHECKBOX_INDICATOR_AT_END}
-            >
-              <BellOff size={14} className="me-2 text-slate-11" />
-              {t.muteAlertsLabel}
-            </DropdownMenuCheckboxItem>
+            {alertsAsSwitch ? (
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  onMutedAlertsToggle?.();
+                }}
+                className="ps-2 pe-2 justify-between gap-2"
+              >
+                <span className="flex items-center">
+                  <BellOff size={14} className="me-2 text-slate-11" />
+                  {t.muteAlertsLabel}
+                </span>
+                <Switch
+                  checked={mutedAlerts ?? false}
+                  tabIndex={-1}
+                  aria-hidden
+                  className="pointer-events-none"
+                />
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuCheckboxItem
+                checked={mutedAlerts ?? false}
+                onCheckedChange={onMutedAlertsToggle}
+                onSelect={(e) => e.preventDefault()}
+                className={CHECKBOX_INDICATOR_AT_END}
+              >
+                <BellOff size={14} className="me-2 text-slate-11" />
+                {t.muteAlertsLabel}
+              </DropdownMenuCheckboxItem>
+            )}
           </>
         )}
 
@@ -200,16 +240,18 @@ export function CameraSettingsMenu({
               </DropdownMenuSubContent>
             </DropdownMenuSub>
 
-            <DropdownMenuItem
-              className="ps-2 pe-2"
-              onSelect={() => {
-                onOpenChange(false);
-                onAutoTrackStart?.();
-              }}
-            >
-              <Crosshair size={14} className="me-2 text-accent-warning" />
-              {t.autoTrackLabel}
-            </DropdownMenuItem>
+            {showAutoTrackItem && (
+              <DropdownMenuItem
+                className="ps-2 pe-2"
+                onSelect={() => {
+                  onOpenChange(false);
+                  onAutoTrackStart?.();
+                }}
+              >
+                <Crosshair size={14} className="me-2 text-accent-warning" />
+                {t.autoTrackLabel}
+              </DropdownMenuItem>
+            )}
           </>
         )}
       </DropdownMenuContent>
