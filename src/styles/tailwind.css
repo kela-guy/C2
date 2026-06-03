@@ -2,3 +2,78 @@
 @source '../**/*.{js,ts,jsx,tsx}';
 
 @import 'tw-animate-css';
+
+/*
+ * OKLCH tactical palette -> Tailwind utilities. Mirrors the tokens in
+ * palette.css so classes like bg-surface-1, text-slate-12, bg-state-selected,
+ * text-accent-info, and border-border-strong resolve. Additive over the
+ * shadcn semantic theme in theme.css; colors only (fonts/radius unchanged).
+ */
+@theme {
+  /* Surfaces */
+  --color-surface-void: var(--surface-void);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-surface-4: var(--surface-4);
+  --color-surface-5: var(--surface-5);
+  --color-surface-6: var(--surface-6);
+  --color-surface-7: var(--surface-7);
+  --color-surface-8: var(--surface-8);
+
+  /* Slate ramp */
+  --color-slate-1:  var(--slate-1);
+  --color-slate-2:  var(--slate-2);
+  --color-slate-3:  var(--slate-3);
+  --color-slate-4:  var(--slate-4);
+  --color-slate-5:  var(--slate-5);
+  --color-slate-6:  var(--slate-6);
+  --color-slate-7:  var(--slate-7);
+  --color-slate-8:  var(--slate-8);
+  --color-slate-9:  var(--slate-9);
+  --color-slate-10: var(--slate-10);
+  --color-slate-11: var(--slate-11);
+  --color-slate-12: var(--slate-12);
+
+  /* Tactical accents (vivid) */
+  --color-accent-danger:     var(--accent-danger);
+  --color-accent-warning:    var(--accent-warning);
+  --color-accent-tracking:   var(--accent-tracking);
+  --color-accent-success:    var(--accent-success);
+  --color-accent-info:       var(--accent-info);
+  --color-accent-historical: var(--accent-historical);
+  --color-accent-cyan:       var(--accent-cyan);
+  --color-accent-magenta:    var(--accent-magenta);
+
+  /* Tactical accents (soft + tints) */
+  --color-accent-danger-soft:  var(--accent-danger-soft);
+  --color-accent-warning-soft: var(--accent-warning-soft);
+  --color-accent-success-soft: var(--accent-success-soft);
+  --color-accent-info-soft:    var(--accent-info-soft);
+  --color-accent-success-tint: var(--accent-success-tint);
+  --color-accent-danger-tint:  var(--accent-danger-tint);
+  --color-accent-warning-tint: var(--accent-warning-tint);
+  --color-accent-info-tint:    var(--accent-info-tint);
+
+  /* Dispositions */
+  --color-disposition-suspect:        var(--disposition-suspect);
+  --color-disposition-assumed-friend: var(--disposition-assumed-friend);
+  --color-disposition-neutral:        var(--disposition-neutral);
+
+  /* Borders */
+  --color-border-default: var(--border-default);
+  --color-border-strong:  var(--border-strong);
+  --color-border-subtle:  var(--border-subtle);
+
+  /* State overlays */
+  --color-state-hover:         var(--state-hover);
+  --color-state-hover-strong:  var(--state-hover-strong);
+  --color-state-hover-overlay: var(--state-hover-overlay);
+  --color-state-pressed:       var(--state-pressed);
+  --color-state-selected:      var(--state-selected);
+
+  /* Text tiers (aliases over the slate ramp) */
+  --color-ink:   var(--slate-12);
+  --color-muted: var(--slate-11);
+  --color-faint: var(--slate-9);
+}

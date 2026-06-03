@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ActivityStatus, Detection } from './ListOfSystems';
 
 const ACTIVE_WINDOW_MS = 10_000;
@@ -150,6 +150,10 @@ export function compareTargetsByPriority(a: Detection, b: Detection, nowMs = Dat
 
 export function useActivityStatus(targets: Detection[]) {
   const [nowMs, setNowMs] = useState(() => Date.now());
+  // Holds the last emitted map so we can return the same reference when the
+  // 5 s refresh tick produces identical statuses — otherwise every tick hands
+  // consumers a brand-new Map and forces the whole target list to re-render.
+  const prevRef = useRef<Map<string, ActivityStatus> | null>(null);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -160,10 +164,24 @@ export function useActivityStatus(targets: Detection[]) {
   }, []);
 
   return useMemo(() => {
-    const statuses = new Map<string, ActivityStatus>();
+    const next = new Map<string, ActivityStatus>();
     targets.forEach((target) => {
-      statuses.set(target.id, getActivityStatus(target, nowMs));
+      next.set(target.id, getActivityStatus(target, nowMs));
     });
-    return statuses;
+
+    const prev = prevRef.current;
+    if (prev && prev.size === next.size) {
+      let identical = true;
+      for (const [id, status] of next) {
+        if (prev.get(id) !== status) {
+          identical = false;
+          break;
+        }
+      }
+      if (identical) return prev;
+    }
+
+    prevRef.current = next;
+    return next;
   }, [nowMs, targets]);
 }

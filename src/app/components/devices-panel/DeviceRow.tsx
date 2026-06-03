@@ -1,21 +1,21 @@
 /**
  * Single device row.
  *
- * Composes three pure subviews:
- *   - `DeviceRowHeader` — collapsed header (icon, name, status,
- *     inline type-specific controls)
- *   - `DeviceRowDetails` — expanded stat grid + camera preview
- *   - `DeviceRowActions` — expanded footer action bar
+ * The container owns the `Collapsible` open state, the `react-dnd`
+ * source (gated by `capabilities.draggableToFeed`), the expand toggle /
+ * hover signal, and the per-row local state (timed notifications window,
+ * lifted speaker track selection). Everything type-specific is delegated
+ * to the registry + resolver via the three subviews:
+ *   - `DeviceRowHeader`  — collapsed: health tile, name, primary cluster
+ *   - `DeviceRowDetails` — expanded stat grid + optional camera preview
+ *   - `DeviceActionBar`  — expanded footer action bar + 3-dot overflow
  *
- * The row container itself owns:
- *   - the `Collapsible` open state (driven by the parent panel)
- *   - the `react-dnd` source for camera rows (drag into video tiles)
- *   - the click/keyboard expand toggle and hover signal
- *
- * Re-exported from `DevicesPanel.tsx` so the styleguide can render
- * a single row without mounting the whole panel.
+ * Props remain tolerant (optional with defaults) so the styleguide can
+ * render a single row without wiring the full panel. Re-exported from
+ * `DevicesPanel.tsx`.
  */
 
+import { useState } from 'react';
 import { useDrag } from 'react-dnd';
 import { Collapsible, CollapsibleContent } from '../ui/collapsible';
 import {
@@ -24,9 +24,12 @@ import {
   DEFAULT_SPEAKER_TRACKS,
   DEVICE_CAMERA_DRAG_TYPE,
 } from './constants';
+import { DEVICE_REGISTRY } from './deviceRegistry';
+import type { DeviceActionContext } from './deviceActions';
+import { useDeviceNotify } from './useDeviceNotify';
 import { DeviceRowHeader } from './DeviceRowHeader';
 import { DeviceRowDetails } from './DeviceRowDetails';
-import { DeviceRowActions } from './DeviceRowActions';
+import { DeviceActionBar } from './DeviceActionBar';
 import type { DeviceCameraDragItem, DeviceRowProps } from './types';
 
 export function DeviceRow({
@@ -47,19 +50,51 @@ export function DeviceRow({
   onPinToFeed,
   onUnpinFromFeed,
   isPinnedToFeed,
+  onOpenLogs,
+  onArmNotifications,
   connectionStateLabels = DEFAULT_CONNECTION_STATE_LABELS,
   strings = DEFAULT_DEVICE_PANEL_STRINGS,
 }: DeviceRowProps) {
-  const isCamera = device.type === 'camera';
+  const cfg = DEVICE_REGISTRY[device.type];
+  const draggable = !!cfg.capabilities.draggableToFeed;
+  const online = device.connectionState !== 'offline';
+
+  const [selectedTrackId, setSelectedTrackId] = useState<string>(speakerTracks[0]?.id ?? '');
+  const notify = useDeviceNotify(device.id, online, onArmNotifications);
+
+  const ctx: DeviceActionContext = {
+    device,
+    strings,
+    isMuted,
+    muteRemaining,
+    isFloodlightOn: !!isFloodlightOn,
+    isSpeakerPlaying: !!isSpeakerPlaying,
+    isPinnedToFeed: !!isPinnedToFeed,
+    speakerTracks,
+    selectedTrackId: selectedTrackId || (speakerTracks[0]?.id ?? ''),
+    onSelectTrack: setSelectedTrackId,
+    errorCount: device.errorCount ?? 0,
+    isNotifyOn: notify.armed,
+    notifyRemaining: notify.remaining,
+    onToggleNotify: notify.toggle,
+    onOpenLogs: () => onOpenLogs?.(device.id),
+    onFlyTo,
+    onToggleMute,
+    onFloodlightToggle,
+    onSpeakerToggle,
+    onJamActivate,
+    onPinToFeed,
+    onUnpinFromFeed,
+  };
 
   const [{ isDragging }, dragRef] = useDrag(
     () => ({
       type: DEVICE_CAMERA_DRAG_TYPE,
       item: { cameraId: device.id, label: device.name } satisfies DeviceCameraDragItem,
-      canDrag: isCamera,
+      canDrag: draggable,
       collect: (monitor) => ({ isDragging: monitor.isDragging() }),
     }),
-    [device.id, device.name, isCamera],
+    [device.id, device.name, draggable],
   );
 
   return (
@@ -71,7 +106,7 @@ export function DeviceRow({
       data-device-type={device.type}
     >
       <div
-        ref={isCamera ? dragRef : undefined}
+        ref={draggable ? dragRef : undefined}
         role="button"
         tabIndex={0}
         aria-expanded={isExpanded}
@@ -91,18 +126,9 @@ export function DeviceRow({
       >
         <DeviceRowHeader
           device={device}
-          isExpanded={isExpanded}
-          isMuted={isMuted}
-          muteRemaining={muteRemaining}
-          isFloodlightOn={!!isFloodlightOn}
-          isSpeakerPlaying={!!isSpeakerPlaying}
-          isPinnedToFeed={!!isPinnedToFeed}
-          strings={strings}
+          cfg={cfg}
+          ctx={ctx}
           connectionStateLabels={connectionStateLabels}
-          onJamActivate={onJamActivate}
-          onSpeakerToggle={onSpeakerToggle}
-          onPinToFeed={onPinToFeed}
-          onUnpinFromFeed={onUnpinFromFeed}
         />
       </div>
 
@@ -111,20 +137,8 @@ export function DeviceRow({
         data-handoff-component="device-row-details"
       >
         <div className="flex flex-col bg-white/[0.03]">
-          <DeviceRowDetails device={device} strings={strings} />
-          <DeviceRowActions
-            device={device}
-            isMuted={isMuted}
-            isPinnedToFeed={!!isPinnedToFeed}
-            isFloodlightOn={!!isFloodlightOn}
-            speakerTracks={speakerTracks}
-            strings={strings}
-            onFlyTo={onFlyTo}
-            onToggleMute={onToggleMute}
-            onFloodlightToggle={onFloodlightToggle}
-            onPinToFeed={onPinToFeed}
-            onUnpinFromFeed={onUnpinFromFeed}
-          />
+          <DeviceRowDetails device={device} cfg={cfg} strings={strings} />
+          <DeviceActionBar cfg={cfg} ctx={ctx} />
         </div>
       </CollapsibleContent>
     </Collapsible>

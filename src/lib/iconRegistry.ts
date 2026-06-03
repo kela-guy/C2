@@ -21,6 +21,7 @@
 
 import type { ComponentType } from 'react';
 import * as Lucide from 'lucide-react';
+import * as Central from '@/lib/icons/central';
 
 import {
   CuasIcon,
@@ -46,8 +47,8 @@ import {
   DroneHiveIcon,
   DroneIcon,
   MissileIcon,
-  RegulusIcon,
-} from '@/app/components/TacticalMap';
+} from '@/app/components/tacticalIcons';
+import { RegulusIcon } from '@/app/components/TacticalMap';
 import { DevicesIcon } from '@/app/components/DevicesPanel';
 import { STYLEGUIDE_ICON_ASSETS, iconPublicUrl } from '@/lib/styleguideIconAssets';
 
@@ -209,17 +210,29 @@ const LUCIDE_ICONS: LucideSpec[] = [
   { name: 'Zap', category: 'Tactical', keywords: ['ecm', 'jam', 'electric'], fillable: true },
 ];
 
-const lucideEntries: IconEntry[] = LUCIDE_ICONS.map((spec) => ({
-  id: `lucide:${spec.name}`,
-  name: spec.name,
-  source: 'lucide',
-  category: spec.category,
-  keywords: spec.keywords,
-  Component: Lucide[spec.name] as ComponentType<RegistryIconProps>,
-  importPath: 'lucide-react',
-  importName: spec.name,
-  fillable: spec.fillable,
-}));
+const lucideEntries: IconEntry[] = LUCIDE_ICONS.map((spec) => {
+  // Central Icons is the canonical source. When the wrapper re-exports this
+  // name, teach (and preview) the canonical `@/lib/icons/central` import.
+  // Names that only exist in lucide (shadcn `*Icon` aliases, ArrowLeft/Right)
+  // keep the lucide snippet so the copy-paste stays valid.
+  const inCentral = spec.name in Central;
+  const CentralComponent = (Central as Record<string, unknown>)[spec.name] as
+    | ComponentType<RegistryIconProps>
+    | undefined;
+  return {
+    id: `lucide:${spec.name}`,
+    name: spec.name,
+    source: 'lucide',
+    category: spec.category,
+    keywords: spec.keywords,
+    Component: (inCentral && CentralComponent
+      ? CentralComponent
+      : (Lucide[spec.name] as ComponentType<RegistryIconProps>)),
+    importPath: inCentral ? '@/lib/icons/central' : 'lucide-react',
+    importName: spec.name,
+    fillable: spec.fillable,
+  };
+});
 
 // ────────────────────────────────────────────────────────────────────────────
 // First-party React glyphs. `product` covers ProductIcons + DevicesIcon,
@@ -362,7 +375,7 @@ const tacticalEntries: IconEntry[] = [
     category: 'Map marker',
     keywords: ['camera', 'sensor', 'tactical', 'eo', 'ir'],
     Component: TacticalCameraIcon as ComponentType<RegistryIconProps>,
-    importPath: '@/app/components/TacticalMap',
+    importPath: '@/app/components/tacticalIcons',
     importName: 'CameraIcon',
   },
   {
@@ -372,7 +385,7 @@ const tacticalEntries: IconEntry[] = [
     category: 'Map marker',
     keywords: ['sensor', 'magos', 'detect'],
     Component: SensorIcon as ComponentType<RegistryIconProps>,
-    importPath: '@/app/components/TacticalMap',
+    importPath: '@/app/components/tacticalIcons',
     importName: 'SensorIcon',
   },
   {
@@ -382,7 +395,7 @@ const tacticalEntries: IconEntry[] = [
     category: 'Map marker',
     keywords: ['radar', 'sweep', 'detect'],
     Component: RadarIcon as ComponentType<RegistryIconProps>,
-    importPath: '@/app/components/TacticalMap',
+    importPath: '@/app/components/tacticalIcons',
     importName: 'RadarIcon',
   },
   {
@@ -392,7 +405,7 @@ const tacticalEntries: IconEntry[] = [
     category: 'Map marker',
     keywords: ['lidar', 'laser', 'sensor'],
     Component: LidarIcon as ComponentType<RegistryIconProps>,
-    importPath: '@/app/components/TacticalMap',
+    importPath: '@/app/components/tacticalIcons',
     importName: 'LidarIcon',
   },
   {
@@ -402,7 +415,7 @@ const tacticalEntries: IconEntry[] = [
     category: 'Map marker',
     keywords: ['launcher', 'effector', 'kinetic'],
     Component: LauncherIcon as ComponentType<RegistryIconProps>,
-    importPath: '@/app/components/TacticalMap',
+    importPath: '@/app/components/tacticalIcons',
     importName: 'LauncherIcon',
   },
   {
@@ -412,7 +425,7 @@ const tacticalEntries: IconEntry[] = [
     category: 'Map marker',
     keywords: ['drone', 'hive', 'dock', 'launch'],
     Component: DroneHiveIcon as ComponentType<RegistryIconProps>,
-    importPath: '@/app/components/TacticalMap',
+    importPath: '@/app/components/tacticalIcons',
     importName: 'DroneHiveIcon',
   },
   {
@@ -422,7 +435,7 @@ const tacticalEntries: IconEntry[] = [
     category: 'Map marker',
     keywords: ['drone', 'aircraft', 'rotated', 'tactical'],
     Component: DroneIcon as ComponentType<RegistryIconProps>,
-    importPath: '@/app/components/TacticalMap',
+    importPath: '@/app/components/tacticalIcons',
     importName: 'DroneIcon',
   },
   {
@@ -432,7 +445,7 @@ const tacticalEntries: IconEntry[] = [
     category: 'Map marker',
     keywords: ['missile', 'kinetic', 'tactical'],
     Component: MissileIcon as ComponentType<RegistryIconProps>,
-    importPath: '@/app/components/TacticalMap',
+    importPath: '@/app/components/tacticalIcons',
     importName: 'MissileIcon',
   },
   {

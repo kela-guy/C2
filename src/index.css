@@ -148,6 +148,15 @@ body {
   will-change: opacity;
 }
 
+/* ── ECM jam button: blink twice (bg opacity) when the confirm step arms ── */
+@keyframes jam-confirm-blink {
+  0%, 30%, 60%, 100% { opacity: 1; }
+  15%, 45% { opacity: 0.4; }
+}
+.animate-jam-confirm-blink {
+  animation: jam-confirm-blink 0.7s ease-in-out;
+}
+
 /* ── MapMarker hover pulse ripple ── */
 @keyframes markerHoverPulse {
   from {

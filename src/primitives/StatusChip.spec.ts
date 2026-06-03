@@ -74,8 +74,8 @@ export const spec: ComponentSpec = {
     {
       name: 'long text overflow',
       trigger: 'Very long label string',
-      description: 'Text truncates with ellipsis within min-w constraint',
-      implementedInPrototype: false,
+      description: 'Text truncates with ellipsis when a parent constrains the chip width (max-w-full + inner truncate); pair with a tooltip to reveal the full label.',
+      implementedInPrototype: true,
     },
   ],
 
@@ -168,6 +168,6 @@ export const spec: ComponentSpec = {
   notes: [
     'Currently uses if/else chain for color mapping — consider a lookup object for extensibility.',
     'The gray variant falls through to the default bg/text, which is rgba(255,255,255,0.15)/text-white.',
-    'whitespace-nowrap is applied but no max-width or truncation exists for very long labels.',
+    'The label is wrapped in a truncating inner span and the chip is max-w-full, so a narrow parent truncates with an ellipsis instead of overflowing; w-fit keeps unconstrained chips sized to content.',
   ],
 };

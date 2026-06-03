@@ -291,8 +291,16 @@ export function CesiumMap({
   const markerEntitiesRef = useRef<Map<string, Cesium.Entity>>(new Map());
   const fovEntitiesRef = useRef<Cesium.Entity[]>([]);
   const coverageEntitiesRef = useRef<Cesium.Entity[]>([]);
-  /** Geometry entities (FOV / coverage) attached to HTML markers. */
-  const htmlGeometryEntitiesRef = useRef<Cesium.Entity[]>([]);
+  /**
+   * Geometry entities (FOV / coverage) attached to HTML markers, keyed by
+   * marker id. Paired with a per-id content fingerprint so we only rebuild the
+   * sector polygon / ellipse whose params actually changed instead of tearing
+   * down and re-tessellating every geometry whenever the `htmlMarkers` array
+   * reference changes (which happens on hover/selection, not just on real
+   * geometry changes).
+   */
+  const htmlGeometryEntitiesRef = useRef<Map<string, { fov?: Cesium.Entity; coverage?: Cesium.Entity }>>(new Map());
+  const htmlGeometryFingerprintRef = useRef<Map<string, { fovKey: string | null; coverageKey: string | null }>>(new Map());
   /**
    * Polyline entities (trails, engagement lines, etc.) keyed by their
    * stable `CesiumPolyline.id`. Keyed (not array) so the polylines effect
@@ -619,7 +627,8 @@ export function CesiumMap({
       markerEntitiesRef.current.clear();
       fovEntitiesRef.current = [];
       coverageEntitiesRef.current = [];
-      htmlGeometryEntitiesRef.current = [];
+      htmlGeometryEntitiesRef.current.clear();
+      htmlGeometryFingerprintRef.current.clear();
       polylineEntitiesRef.current.clear();
       polylineFingerprintRef.current.clear();
       polylineParticleEntitiesRef.current.clear();
@@ -855,52 +864,91 @@ export function CesiumMap({
     const viewer = viewerRef.current;
     if (!viewer) return;
 
-    for (const entity of htmlGeometryEntitiesRef.current) viewer.entities.remove(entity);
-    htmlGeometryEntitiesRef.current = [];
+    const entities = htmlGeometryEntitiesRef.current;
+    const fingerprints = htmlGeometryFingerprintRef.current;
+    const desiredIds = new Set<string>();
+    let changed = false;
 
-    if (!htmlMarkers) return;
+    if (htmlMarkers) {
+      for (const m of htmlMarkers) {
+        const hasFov = !!m.fov;
+        const hasCoverage = m.coverageRadiusM != null;
+        if (!hasFov && !hasCoverage) continue;
+        desiredIds.add(m.id);
 
-    for (const m of htmlMarkers) {
-      if (m.fov) {
-        const fovColor = Cesium.Color.fromCssColorString(m.fov.color ?? '#22b8cf');
-        const fovOpacity = m.fov.opacity ?? 0.18;
-        const fovEntity = viewer.entities.add({
-          id: `${m.id}__fov`,
-          polygon: {
-            hierarchy: new Cesium.PolygonHierarchy(
-              buildSectorPositions(m.lat, m.lon, m.fov.rangeM, m.fov.bearingDeg, m.fov.widthDeg),
-            ),
-            material: fovColor.withAlpha(fovOpacity),
-            outline: true,
-            outlineColor: fovColor.withAlpha(Math.min(1, fovOpacity * 3)),
-            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-          },
-        });
-        htmlGeometryEntitiesRef.current.push(fovEntity);
-      }
+        const fovKey = hasFov
+          ? `${m.lat},${m.lon},${m.fov!.rangeM},${m.fov!.bearingDeg},${m.fov!.widthDeg},${m.fov!.color ?? '#22b8cf'},${m.fov!.opacity ?? 0.18}`
+          : null;
+        const coverageKey = hasCoverage
+          ? `${m.lat},${m.lon},${m.coverageRadiusM},${m.coverageColor ?? '#22b8cf'}`
+          : null;
 
-      if (m.coverageRadiusM != null) {
-        const coverageColor = Cesium.Color.fromCssColorString(m.coverageColor ?? '#22b8cf');
-        // Fill / outline opacities tuned to read clearly over satellite
-        // imagery without burying the markers underneath. Roughly mirrors
-        // the FOV cone's solidity (0.40 fill); the outline is fully opaque
-        // so the ring boundary is unambiguous even at larger zoom-outs.
-        const coverageEntity = viewer.entities.add({
-          id: `${m.id}__coverage`,
-          position: Cesium.Cartesian3.fromDegrees(m.lon, m.lat),
-          ellipse: {
-            semiMajorAxis: m.coverageRadiusM,
-            semiMinorAxis: m.coverageRadiusM,
-            material: coverageColor.withAlpha(0.25),
-            outline: true,
-            outlineColor: coverageColor.withAlpha(0.95),
-            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-          },
-        });
-        htmlGeometryEntitiesRef.current.push(coverageEntity);
+        const prev = fingerprints.get(m.id);
+        if (prev && prev.fovKey === fovKey && prev.coverageKey === coverageKey) {
+          // Identical FOV/coverage params — leave the existing geometry in
+          // place so Cesium doesn't re-tessellate it.
+          continue;
+        }
+
+        changed = true;
+        const slot = entities.get(m.id);
+        if (slot?.fov) viewer.entities.remove(slot.fov);
+        if (slot?.coverage) viewer.entities.remove(slot.coverage);
+        const nextSlot: { fov?: Cesium.Entity; coverage?: Cesium.Entity } = {};
+
+        if (hasFov) {
+          const fovColor = Cesium.Color.fromCssColorString(m.fov!.color ?? '#22b8cf');
+          const fovOpacity = m.fov!.opacity ?? 0.18;
+          nextSlot.fov = viewer.entities.add({
+            id: `${m.id}__fov`,
+            polygon: {
+              hierarchy: new Cesium.PolygonHierarchy(
+                buildSectorPositions(m.lat, m.lon, m.fov!.rangeM, m.fov!.bearingDeg, m.fov!.widthDeg),
+              ),
+              material: fovColor.withAlpha(fovOpacity),
+              outline: true,
+              outlineColor: fovColor.withAlpha(Math.min(1, fovOpacity * 3)),
+              heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            },
+          });
+        }
+
+        if (hasCoverage) {
+          const coverageColor = Cesium.Color.fromCssColorString(m.coverageColor ?? '#22b8cf');
+          // Fill / outline opacities tuned to read clearly over satellite
+          // imagery without burying the markers underneath. Roughly mirrors
+          // the FOV cone's solidity (0.40 fill); the outline is fully opaque
+          // so the ring boundary is unambiguous even at larger zoom-outs.
+          nextSlot.coverage = viewer.entities.add({
+            id: `${m.id}__coverage`,
+            position: Cesium.Cartesian3.fromDegrees(m.lon, m.lat),
+            ellipse: {
+              semiMajorAxis: m.coverageRadiusM!,
+              semiMinorAxis: m.coverageRadiusM!,
+              material: coverageColor.withAlpha(0.25),
+              outline: true,
+              outlineColor: coverageColor.withAlpha(0.95),
+              heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            },
+          });
+        }
+
+        entities.set(m.id, nextSlot);
+        fingerprints.set(m.id, { fovKey, coverageKey });
       }
     }
-    viewer.scene.requestRender();
+
+    // Drop geometry for markers that no longer have FOV/coverage or left the set.
+    for (const [id, slot] of entities) {
+      if (desiredIds.has(id)) continue;
+      if (slot.fov) viewer.entities.remove(slot.fov);
+      if (slot.coverage) viewer.entities.remove(slot.coverage);
+      entities.delete(id);
+      fingerprints.delete(id);
+      changed = true;
+    }
+
+    if (changed) viewer.scene.requestRender();
   }, [htmlMarkers]);
 
   // ── Polylines (trails, engagement lines, mission routes) ──────────────────

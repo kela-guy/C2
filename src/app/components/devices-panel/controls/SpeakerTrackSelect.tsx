@@ -1,16 +1,16 @@
 /**
  * Audio-track combobox shown inside an expanded speaker card.
  *
- * Local-only state today — the selected track does not flow to the
- * `onSpeakerToggle` callback yet (see `DevicesPanel.spec.ts`), so we
- * keep the selection here in a `useState` until the back-end is wired.
+ * Controllable: pass `value` + `onChange` to lift the selection (the
+ * card does this so the header now-playing readout can name the queued
+ * track). Falls back to internal `useState` when uncontrolled.
  *
  * Built on `Popover` + cmdk `Command` for type-to-filter behaviour
  * matching the rest of the dashboard.
  */
 
 import { useState } from 'react';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { Check, ChevronsUpDown } from '@/lib/icons/central';
 import {
   Command,
   CommandEmpty,
@@ -25,11 +25,19 @@ import type { DevicesPanelStrings, SpeakerTrack } from '../types';
 interface SpeakerTrackSelectProps {
   tracks: SpeakerTrack[];
   strings: DevicesPanelStrings;
+  /** Controlled selected track id. Omit for uncontrolled (internal state). */
+  value?: string;
+  onChange?: (trackId: string) => void;
 }
 
-export function SpeakerTrackSelect({ tracks, strings }: SpeakerTrackSelectProps) {
+export function SpeakerTrackSelect({ tracks, strings, value, onChange }: SpeakerTrackSelectProps) {
   const [open, setOpen] = useState(false);
-  const [trackId, setTrackId] = useState<string>(tracks[0]?.id ?? '');
+  const [internalId, setInternalId] = useState<string>(tracks[0]?.id ?? '');
+  const trackId = value ?? internalId;
+  const setTrackId = (id: string) => {
+    if (onChange) onChange(id);
+    else setInternalId(id);
+  };
   const selected = tracks.find((t) => t.id === trackId) ?? tracks[0];
 
   return (

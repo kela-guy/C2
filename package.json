@@ -9,11 +9,15 @@
     "build:analyze": "ANALYZE=1 vite build",
     "build:perf": "PERF_BUILD=1 vite build",
     "dev": "vite",
-    "registry:build": "shadcn build && node scripts/registry-postbuild.mjs"
+    "registry:build": "shadcn build && node scripts/registry-postbuild.mjs",
+    "styleguide:manifest": "node scripts/styleguide-manifest.mjs",
+    "styleguide:check": "node scripts/styleguide-manifest.mjs --check"
   },
   "dependencies": {
+    "@central-icons-react/round-filled-radius-0-stroke-2": "^1.1.255",
     "@central-icons-react/round-filled-radius-1-stroke-1.5": "^1.1.225",
     "@central-icons-react/round-outlined-radius-1-stroke-1.5": "^1.1.225",
+    "@central-icons-react/square-filled-radius-0-stroke-2": "^1.1.255",
     "@popperjs/core": "2.11.8",
     "@radix-ui/react-accordion": "1.2.3",
     "@radix-ui/react-alert-dialog": "1.1.6",
@@ -56,6 +60,7 @@
     "mapbox-gl": "^2.14.1",
     "motion": "12.23.24",
     "next-themes": "0.4.6",
+    "radix-ui": "^1.4.3",
     "react-day-picker": "8.10.1",
     "react-dnd": "16.0.1",
     "react-dnd-html5-backend": "16.0.1",

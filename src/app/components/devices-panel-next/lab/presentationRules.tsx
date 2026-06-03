@@ -30,25 +30,26 @@ import {
   type FC,
   type ReactNode,
 } from 'react';
-import { Power, Droplets } from 'lucide-react';
-import {
-  MapPin,
-  Video,
-  Bell,
-  Wrench,
-  Check,
-  List,
-  ChevronDown,
-  Radio,
-  Play,
-  Sun,
-} from '@/lib/icons/central';
+import { Check, List, ChevronDown, Power, Radio } from '@/lib/icons/central';
 import { JamIcon } from '@/primitives/ProductIcons';
-import { DotmSquare3 } from '@/app/components/ui/dotm-square-3';
+import {
+  CalibrationIcon,
+  MapPinIcon,
+  NotificationIcon,
+  NotificationMutedIcon,
+  PauseIcon,
+  PlayFilledIcon,
+  WatchStreamIcon,
+  WipeIcon,
+} from '../../devices-panel/icons';
+import { DotmSquare1 } from '@/app/components/ui/dotm-square-1';
 import { CameraIcon, SensorIcon, SpeakerIcon, FloodlightIcon } from '../../tacticalIcons';
 import { DroneDeviceIcon } from '@/primitives/ProductIcons';
-import { DeviceAction } from '../DeviceAction';
-import type { DeviceActionTone } from '../deviceActionTones';
+import { DeviceAction } from '../../devices-panel/DeviceAction';
+import type { DeviceActionTone } from '../../devices-panel/deviceActionTones';
+import { FloodlightSegmentedCompact } from '../../devices-panel/controls/FloodlightSegmentedToggle';
+import type { DeviceHealth } from '../../devices-panel/deviceHealth';
+import type { ConnectionState } from '../../devices-panel/types';
 
 // ---------------------------------------------------------------------------
 // Vocabulary
@@ -59,6 +60,7 @@ export type ActionId =
   | 'onOff'
   | 'watchVideo'
   | 'notifications'
+  | 'mute'
   | 'logs'
   | 'calibrations'
   | 'wipers'
@@ -89,7 +91,7 @@ const ICON = 12;
 export const ACTION_META: Record<ActionId, ActionMeta> = {
   showOnMap: {
     label: 'Show on map',
-    icon: <MapPin size={ICON} />,
+    icon: <MapPinIcon size={ICON} />,
     group: 'primary',
     pattern: 'iconButton',
     tone: 'neutral',
@@ -97,15 +99,15 @@ export const ACTION_META: Record<ActionId, ActionMeta> = {
   },
   onOff: {
     label: 'On / Off',
-    icon: <Power size={ICON} />,
+    icon: <Power size={ICON} className="[&_path]:stroke-2" />,
     group: 'primary',
     pattern: 'toggle',
-    tone: 'caution',
-    why: 'Power state must be unambiguous — labeled toggle, lit when on (not an iOS switch).',
+    tone: 'neutral',
+    why: 'Power state must be unambiguous — labeled toggle, lit bright white when on (not an iOS switch).',
   },
   watchVideo: {
     label: 'Watch video',
-    icon: <Video size={ICON} />,
+    icon: <WatchStreamIcon size={ICON} />,
     group: 'secondary',
     pattern: 'toggle',
     tone: 'neutral',
@@ -113,11 +115,19 @@ export const ACTION_META: Record<ActionId, ActionMeta> = {
   },
   notifications: {
     label: 'Notifications',
-    icon: <Bell size={ICON} />,
+    icon: <NotificationIcon size={ICON} />,
     group: 'secondary',
     pattern: 'navButton',
     tone: 'neutral',
-    why: 'Opens a panel (now also holds Mute). Salient enough to keep its label.',
+    why: 'Lives in the 3-dot overflow as a timed toggle: arm it for a 30s window (lit bell + countdown + radar sweep), press again to disarm. Low-signal enough to stay tucked away until needed.',
+  },
+  mute: {
+    label: 'Mute',
+    icon: <NotificationIcon size={ICON} />,
+    group: 'secondary',
+    pattern: 'toggle',
+    tone: 'neutral',
+    why: 'Silences the asset — labeled toggle, bell becomes a slashed bell when muted.',
   },
   logs: {
     label: 'Logs',
@@ -129,7 +139,7 @@ export const ACTION_META: Record<ActionId, ActionMeta> = {
   },
   calibrations: {
     label: 'Calibrate',
-    icon: <Wrench size={ICON} />,
+    icon: <CalibrationIcon size={ICON} />,
     group: 'secondary',
     pattern: 'progress',
     tone: 'neutral',
@@ -137,11 +147,11 @@ export const ACTION_META: Record<ActionId, ActionMeta> = {
   },
   wipers: {
     label: 'Wipers',
-    icon: <Droplets size={ICON} />,
+    icon: <WipeIcon size={ICON} />,
     group: 'secondary',
     pattern: 'toggle',
-    tone: 'caution',
-    why: 'Local altered state — labeled toggle, caution tone.',
+    tone: 'neutral',
+    why: 'Local altered state — labeled toggle, lit bright white when on.',
   },
   jam: {
     label: 'Jam',
@@ -191,7 +201,7 @@ export const DEVICE_ACTIONS: Record<LabDeviceKind, DeviceActionSet> = {
   jam: { primary: ['showOnMap'], secondary: ['notifications', 'logs', 'jam'] },
   weapon: { primary: ['showOnMap'], secondary: ['logs'] },
   lidar: { primary: ['showOnMap'], secondary: ['notifications', 'logs'] },
-  ramcall: { primary: ['showOnMap', 'onOff'], secondary: ['logs', 'audio'] },
+  ramcall: { primary: ['showOnMap', 'onOff'], secondary: ['mute', 'logs', 'audio'] },
   lightProjector: { primary: ['showOnMap', 'onOff'], secondary: ['logs'] },
   pathfinder: { primary: ['showOnMap'], secondary: ['watchVideo', 'calibrations'] },
 };
@@ -209,6 +219,18 @@ export interface LabDevice {
   cameraPreview?: boolean;
   /** Pre-seed an error count so the Logs control lights up red with a badge. */
   errorCount?: number;
+  /**
+   * Worst-wins severity for the icon tile (mirrors the real `deviceHealth`
+   * model). Defaults to `ok` when online, `offline` otherwise.
+   */
+  health?: DeviceHealth;
+  /**
+   * Connection state for the corner dot + tooltip chip. Defaults to
+   * `online` / `offline` from `online`.
+   */
+  connection?: ConnectionState;
+  /** Extra human-readable reason shown under the chip in the tile tooltip. */
+  healthReason?: string;
 }
 
 /**
@@ -217,6 +239,7 @@ export interface LabDevice {
  * and a second On/Off (Floodlight).
  */
 export const LAB_DEVICES: LabDevice[] = [
+  // ok — healthy, online, default-expanded
   {
     id: 'DRN-3',
     name: 'Patrol-3',
@@ -229,32 +252,9 @@ export const LAB_DEVICES: LabDevice[] = [
       { label: 'Battery', value: '64%', color: 'text-emerald-300' },
     ],
     online: true,
+    health: 'ok',
   },
-  {
-    id: 'ECM-1',
-    name: 'Regulus North',
-    kind: 'jam',
-    Icon: SensorIcon,
-    meta: '2.5 km coverage',
-    stats: [
-      { label: 'Location', value: '32.833, 35.041' },
-      { label: 'Coverage', value: '2,500 m' },
-      { label: 'Health', value: 'OK', color: 'text-emerald-300' },
-    ],
-    online: true,
-  },
-  {
-    id: 'SPK-1',
-    name: 'LRAD North',
-    kind: 'ramcall',
-    Icon: SpeakerIcon,
-    meta: 'Idle',
-    stats: [
-      { label: 'Location', value: '32.825, 35.055' },
-      { label: 'Health', value: 'OK', color: 'text-emerald-300' },
-    ],
-    online: true,
-  },
+  // critical — errored asset (red tile + ping, red errors chip, red Logs)
   {
     id: 'CAM-1',
     name: 'PTZ North',
@@ -269,7 +269,41 @@ export const LAB_DEVICES: LabDevice[] = [
     online: true,
     cameraPreview: true,
     errorCount: 2,
+    health: 'critical',
+    healthReason: 'Sensor fault',
   },
+  // warning — degraded connection (amber tile + dot + orange chip)
+  {
+    id: 'SPK-1',
+    name: 'LRAD North',
+    kind: 'ramcall',
+    Icon: SpeakerIcon,
+    meta: 'Idle',
+    stats: [
+      { label: 'Location', value: '32.825, 35.055' },
+      { label: 'Health', value: 'Degraded', color: 'text-amber-400' },
+    ],
+    online: true,
+    health: 'warning',
+    connection: 'warning',
+  },
+  // offline — disconnected (faint tile, gray dot/chip, actions disabled)
+  {
+    id: 'ECM-1',
+    name: 'Regulus North',
+    kind: 'jam',
+    Icon: SensorIcon,
+    meta: '2.5 km coverage',
+    stats: [
+      { label: 'Location', value: '32.833, 35.041' },
+      { label: 'Coverage', value: '2,500 m' },
+      { label: 'Health', value: 'Offline', color: 'text-white/50' },
+    ],
+    online: false,
+    health: 'offline',
+    connection: 'offline',
+  },
+  // ok — second On/Off device, lone-overflow footer
   {
     id: 'FLD-1',
     name: 'Perimeter Floodlight',
@@ -281,6 +315,7 @@ export const LAB_DEVICES: LabDevice[] = [
       { label: 'Health', value: 'OK', color: 'text-emerald-300' },
     ],
     online: true,
+    health: 'ok',
   },
 ];
 
@@ -296,25 +331,73 @@ export const AUDIO_TRACKS = ['Evacuate — EN', 'Warning — HE', 'Siren', 'Disp
  * track is shared per card. Lets the icon-only Play button name its track on
  * hover instead of leaving the operator guessing.
  */
-interface SelectedTrack {
+/** How long a single armed notifications window lasts before auto-disarming. */
+export const NOTIFY_WINDOW_S = 30;
+
+interface CardState {
   index: number;
   label: string;
   setIndex: (index: number) => void;
+  /** Speaker Play/Stop state — shared so the Play button + now-playing indicator agree. */
+  playing: boolean;
+  setPlaying: (value: boolean) => void;
+  /** Mute toggle state — drives the bell ↔ slashed-bell glyph. */
+  muted: boolean;
+  setMuted: (value: boolean) => void;
+  /**
+   * Notifications armed state + live countdown. Lifted to the card so the
+   * footer overflow toggle and the always-visible header indicator stay in
+   * sync — arming it from the menu keeps counting down even after the menu
+   * closes or the row collapses.
+   */
+  notifyOn: boolean;
+  notifyRemaining: number;
+  setNotifyOn: (value: boolean) => void;
 }
 
-const SelectedTrackContext = createContext<SelectedTrack | null>(null);
+const CardStateContext = createContext<CardState | null>(null);
 
 export function DeviceCardProvider({ children }: { children: ReactNode }) {
   const [index, setIndex] = useState(0);
-  const value = useMemo<SelectedTrack>(
-    () => ({ index, label: AUDIO_TRACKS[index], setIndex }),
-    [index],
+  const [playing, setPlaying] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [notifyOn, setNotifyOn] = useState(false);
+  const [notifyRemaining, setNotifyRemaining] = useState(NOTIFY_WINDOW_S);
+
+  // The countdown lives here (not in the menu row) so it survives the menu
+  // closing and the row collapsing; it auto-disarms when the window lapses.
+  useEffect(() => {
+    if (!notifyOn) return;
+    setNotifyRemaining(NOTIFY_WINDOW_S);
+    const startedAt = Date.now();
+    const tick = window.setInterval(() => {
+      const left = NOTIFY_WINDOW_S - Math.floor((Date.now() - startedAt) / 1000);
+      if (left <= 0) setNotifyOn(false);
+      else setNotifyRemaining(left);
+    }, 250);
+    return () => window.clearInterval(tick);
+  }, [notifyOn]);
+
+  const value = useMemo<CardState>(
+    () => ({
+      index,
+      label: AUDIO_TRACKS[index],
+      setIndex,
+      playing,
+      setPlaying,
+      muted,
+      setMuted,
+      notifyOn,
+      notifyRemaining,
+      setNotifyOn,
+    }),
+    [index, playing, muted, notifyOn, notifyRemaining],
   );
-  return <SelectedTrackContext.Provider value={value}>{children}</SelectedTrackContext.Provider>;
+  return <CardStateContext.Provider value={value}>{children}</CardStateContext.Provider>;
 }
 
-function useSelectedTrack() {
-  return useContext(SelectedTrackContext);
+export function useCardState() {
+  return useContext(CardStateContext);
 }
 
 // ---------------------------------------------------------------------------
@@ -385,46 +468,135 @@ function LogsAction({ device }: ControlProps) {
 const TOGGLE_LABELS: Partial<Record<ActionId, { on: string; off: string }>> = {
   onOff: { on: 'On', off: 'Off' },
   watchVideo: { on: 'Watching', off: 'Watch video' },
-  wipers: { on: 'Wipers on', off: 'Wipers' },
+  wipers: { on: 'Wiping…', off: 'Wipers' },
+  mute: { on: 'Muted', off: 'Mute' },
 };
+
+interface OnOffKind {
+  /** Static glyph used in both states (e.g. the light projector's sun). */
+  icon?: ReactNode;
+  /** Distinct on/off glyphs (e.g. the speaker's Pause/Play). */
+  onIcon?: ReactNode;
+  offIcon?: ReactNode;
+  on: string;
+  off: string;
+}
 
 /**
  * On/Off is one unified primary toggle, but it carries the device's own
- * glyph + verb so the header reads naturally: Ramcall plays audio, a Light
- * projector turns on.
+ * glyph + verb so the header reads naturally: Ramcall plays/pauses audio, a
+ * Light projector turns on.
  */
-const ON_OFF_BY_KIND: Partial<Record<LabDeviceKind, { icon: ReactNode; on: string; off: string }>> = {
-  ramcall: { icon: <Play size={ICON} />, on: 'Stop', off: 'Play' },
-  lightProjector: { icon: <Sun size={ICON} />, on: 'Turn off', off: 'Turn on' },
+const ON_OFF_BY_KIND: Partial<Record<LabDeviceKind, OnOffKind>> = {
+  ramcall: {
+    offIcon: <PlayFilledIcon size={ICON} />,
+    onIcon: <PauseIcon size={ICON} />,
+    on: 'Stop',
+    off: 'Play',
+  },
 };
 
 function ToggleAction({ id, device, iconOnly }: ControlProps) {
   const meta = ACTION_META[id];
-  const [on, setOn] = useState(false);
+  const card = useCardState();
+  // The speaker Play/Stop and the Mute toggle are shared per-card state so the
+  // header glyph, the now-playing indicator, and the footer agree. Everything
+  // else keeps a private toggle.
+  const isSpeakerPlay = id === 'onOff' && device.kind === 'ramcall';
+  const isFloodlight = id === 'onOff' && device.kind === 'lightProjector';
+  const isMute = id === 'mute';
+  const [localOn, setLocalOn] = useState(false);
+  const on = isSpeakerPlay ? card?.playing ?? false : isMute ? card?.muted ?? false : localOn;
+  const setOn = (next: boolean) => {
+    if (isSpeakerPlay && card) card.setPlaying(next);
+    else if (isMute && card) card.setMuted(next);
+    else setLocalOn(next);
+  };
+
+  if (isFloodlight) {
+    return (
+      <FloodlightSegmentedCompact
+        on={on}
+        onToggle={() => setOn(!on)}
+        disabled={!device.online}
+      />
+    );
+  }
+
   const onOff = id === 'onOff' ? ON_OFF_BY_KIND[device.kind] : undefined;
   // Wipers run continuously while on, so the lit state swaps the glyph for
   // the dot-matrix spinner. It stays a normal (non-`loading`) button so the
   // second click stops it.
   const runningSpinner = id === 'wipers' && on;
+  const ICON_SLOT = 20;
+  const stateIcon = onOff
+    ? (on ? onOff.onIcon : onOff.offIcon) ?? onOff.icon ?? meta.icon
+    : isMute
+      ? on
+        ? <NotificationMutedIcon size={ICON} />
+        : <NotificationIcon size={ICON} />
+      : meta.icon;
   const icon = runningSpinner ? (
-    <DotmSquare3 size={14} dotSize={2} ariaLabel="Wipers running" />
+    <DotmSquare1
+      size={ICON_SLOT}
+      dotSize={2}
+      speed={1.1}
+      pattern="full"
+      colorPreset="solid-theme"
+      animated
+      opacityBase={0.12}
+      opacityMid={0.42}
+      opacityPeak={1}
+      ariaLabel="Wipers running"
+    />
   ) : (
-    onOff?.icon ?? meta.icon
+    stateIcon
   );
   const labels = onOff ?? TOGGLE_LABELS[id] ?? { on: meta.label, off: meta.label };
   const label = on ? labels.on : labels.off;
 
   // Ramcall's Play toggle names the queued track so the icon-only header
   // button says what it will broadcast on hover.
-  const track = useSelectedTrack();
-  const namesTrack = id === 'onOff' && device.kind === 'ramcall' && track != null;
+  const track = card;
+  const namesTrack = isSpeakerPlay && track != null;
   const tooltipText = namesTrack ? `${label} · ${track!.label}` : label;
   const ariaText = namesTrack ? `${label} — ${track!.label}` : label;
 
+  // Reserve the widest state so flipping on/off never resizes the button
+  // (Fitts: a stable target that doesn't shift under the cursor). Both
+  // labels share one grid cell; the inactive one stays laid out but hidden,
+  // so the cell is always max(on, off) wide. The accessible name comes from
+  // `ariaLabel`, so the stacked text is decorative.
+  const labelNode = iconOnly ? undefined : (
+    <span className="grid">
+      <span
+        aria-hidden="true"
+        className={`col-start-1 row-start-1 whitespace-nowrap ${on ? '' : 'invisible'}`}
+      >
+        {labels.on}
+      </span>
+      <span
+        aria-hidden="true"
+        className={`col-start-1 row-start-1 whitespace-nowrap ${on ? 'invisible' : ''}`}
+      >
+        {labels.off}
+      </span>
+    </span>
+  );
+
+  // Footer toggles use a size-4 icon slot; `[&_svg]:size-4` scales the glyph to
+  // fill it and the wipers spinner is sized to match, so the icon column never
+  // shifts when the spinner swaps in.
+  const iconNode = iconOnly ? icon : (
+    <span className="inline-flex size-4 shrink-0 items-center justify-center [&_svg]:size-4">
+      {icon}
+    </span>
+  );
+
   return (
     <DeviceAction
-      icon={icon}
-      label={iconOnly ? undefined : label}
+      icon={iconNode}
+      label={labelNode}
       iconOnly={iconOnly}
       tone={meta.tone}
       pressed={on}
@@ -433,7 +605,7 @@ function ToggleAction({ id, device, iconOnly }: ControlProps) {
       ariaLabel={ariaText}
       disabled={!device.online}
       disabledReason={offlineReason(device.online)}
-      onClick={() => setOn((v) => !v)}
+      onClick={() => setOn(!on)}
     />
   );
 }
@@ -475,8 +647,15 @@ function CalibrateAction({ device, iconOnly }: ControlProps) {
   }, [state]);
 
   const label = state === 'running' ? 'Calibrating…' : state === 'done' ? 'Calibrated' : 'Calibrate';
-  const icon =
+  const glyph =
     state === 'done' ? <Check size={ICON} className="text-emerald-400" /> : meta.icon;
+  // Match the footer toggles' size-4 glyph; the header (icon-only) stays
+  // compact and lets DeviceAction clamp the svg.
+  const icon = iconOnly ? glyph : (
+    <span className="inline-flex size-4 shrink-0 items-center justify-center [&_svg]:size-4">
+      {glyph}
+    </span>
+  );
 
   return (
     <DeviceAction
@@ -647,15 +826,19 @@ function JamAction({ device, iconOnly }: ControlProps) {
 
 function AudioSelect({ device, iconOnly }: ControlProps) {
   const meta = ACTION_META.audio;
-  const track = useSelectedTrack();
+  const track = useCardState();
   const [localIndex, setLocalIndex] = useState(0);
+  const [open, setOpen] = useState(false);
   const index = track?.index ?? localIndex;
-  const cycle = () => {
-    const next = (index + 1) % AUDIO_TRACKS.length;
+
+  const select = (next: number) => {
     if (track) track.setIndex(next);
     else setLocalIndex(next);
+    setOpen(false);
   };
 
+  // icon-only fallback (e.g. a collapsed rail) keeps the lightweight cycle —
+  // there's no room for a chevron + popover there.
   if (iconOnly) {
     return (
       <DeviceAction
@@ -666,28 +849,75 @@ function AudioSelect({ device, iconOnly }: ControlProps) {
         tooltip={`Audio — ${AUDIO_TRACKS[index]}`}
         ariaLabel="Audio selection"
         disabled={!device.online}
-        onClick={cycle}
+        onClick={() => select((index + 1) % AUDIO_TRACKS.length)}
       />
     );
   }
 
   return (
-    <button
-      type="button"
-      role="combobox"
-      aria-expanded={false}
-      aria-label="Audio selection"
-      disabled={!device.online}
-      onClick={(e) => {
-        e.stopPropagation();
-        cycle();
-      }}
-      className="inline-flex h-7 min-w-0 max-w-[160px] items-center justify-between gap-1.5 rounded px-2 text-xs font-medium text-white/[0.64] hover:text-white bg-white/[0.05] hover:bg-white/[0.10] transition-[background-color,color,transform] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
-    >
-      <Radio size={ICON} className="shrink-0 opacity-70" />
-      <span className="truncate">{AUDIO_TRACKS[index]}</span>
-      <ChevronDown size={ICON} className="shrink-0 opacity-60" />
-    </button>
+    <div className="relative inline-flex">
+      <button
+        type="button"
+        role="combobox"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label="Audio selection"
+        disabled={!device.online}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((v) => !v);
+        }}
+        // Fixed width so picking a longer/shorter track name never resizes
+        // the control (same anti-jump rule as the toggles).
+        className={`inline-flex h-7 w-[150px] items-center justify-between gap-1.5 rounded px-2 text-xs font-medium transition-[background-color,color,transform] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 disabled:opacity-50 disabled:cursor-not-allowed ${
+          open
+            ? 'text-white bg-white/[0.10]'
+            : 'text-white/[0.64] hover:text-white bg-white/[0.05] hover:bg-white/[0.10]'
+        }`}
+      >
+        <Radio size={ICON} className="shrink-0 opacity-70" />
+        <span className="flex-1 truncate text-start">{AUDIO_TRACKS[index]}</span>
+        <ChevronDown
+          size={ICON}
+          className={`shrink-0 opacity-60 transition-transform duration-150 ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} aria-hidden="true" />
+          <div
+            role="listbox"
+            aria-label="Audio tracks"
+            className="absolute start-0 top-full z-20 mt-1 flex min-w-[180px] flex-col gap-0.5 rounded-md border border-white/10 bg-zinc-900 p-1 shadow-[0_8px_24px_rgba(0,0,0,0.4)] animate-in fade-in-0 zoom-in-95 duration-150 motion-reduce:animate-none"
+          >
+            {AUDIO_TRACKS.map((trackLabel, i) => {
+              const selected = i === index;
+              return (
+                <button
+                  key={trackLabel}
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    select(i);
+                  }}
+                  className={`flex items-center gap-2 rounded px-2 py-1.5 text-start text-xs [&_svg]:size-3 ${
+                    selected ? 'bg-white/[0.08] text-white' : 'text-white/80 hover:bg-white/10'
+                  }`}
+                >
+                  <span className="flex w-3 shrink-0 items-center justify-center">
+                    {selected && <Check className="text-white" />}
+                  </span>
+                  <span className="flex-1 truncate">{trackLabel}</span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 

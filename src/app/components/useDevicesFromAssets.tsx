@@ -44,6 +44,14 @@ const DEVICE_CONNECTION: Record<string, 'online' | 'offline' | 'error' | 'warnin
   'LIDAR-NVT-01': 'warning',
 };
 
+/** Open error counts — light the red Logs channel + tile count badge. */
+const DEVICE_ERRORS: Record<string, number> = {
+  'CAM-NVT-PTZ-N': 2,
+  'REG-NVT-SOUTH': 3,
+  'SENS-NVT-MAGOS-S': 1,
+  'LIDAR-NVT-01': 1,
+};
+
 const CAMERA_CAPS: Record<string, ('video' | 'photo')[]> = {
   'CAM-NVT-PTZ-N': ['video', 'photo'],
   'CAM-NVT-PIXELSIGHT': ['video'],
@@ -80,6 +88,7 @@ export function useDevicesFromAssets(): Device[] {
       Icon: CameraIcon,
       batteryPct: a.id === 'CAM-NVT-PTZ-N' ? 18 : undefined,
       capabilities: CAMERA_CAPS[a.id],
+      errorCount: DEVICE_ERRORS[a.id],
     })),
     ...RADAR_ASSETS.map((a) => ({
       id: a.id,
@@ -93,6 +102,7 @@ export function useDevicesFromAssets(): Device[] {
       fovDeg: a.fovDeg,
       bearingDeg: a.bearingDeg,
       Icon: RadarIcon,
+      errorCount: DEVICE_ERRORS[a.id],
     })),
     ...DRONE_HIVE_ASSETS.map((a) => ({
       id: a.id,
@@ -117,6 +127,7 @@ export function useDevicesFromAssets(): Device[] {
       connectionState: (DEVICE_CONNECTION[e.id] ?? 'online') as Device['connectionState'],
       coverageRadiusM: e.coverageRadiusM,
       Icon: SensorIcon,
+      errorCount: DEVICE_ERRORS[e.id],
     })),
     ...LAUNCHER_ASSETS.map((l) => ({
       id: l.id,
@@ -141,6 +152,7 @@ export function useDevicesFromAssets(): Device[] {
       fovDeg: a.fovDeg,
       bearingDeg: a.bearingDeg,
       Icon: LidarIcon,
+      errorCount: DEVICE_ERRORS[a.id],
     })),
     ...WEAPON_SYSTEM_ASSETS.map((a) => ({
       id: a.id,

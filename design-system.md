@@ -96,7 +96,7 @@ In-app docs at `/styleguide` are grouped by composition depth (sidebar matches s
 1. **Foundations** — design tokens  
 2. **Primitives** — `StatusChip`, `NewUpdatesPill`, `ActionButton`, `SplitActionButton`, `AccordionSection`, `TelemetryRow`  
 3. **Card building blocks** — `CardHeader`, `CardMedia`, `CardActions`, `CardDetails`, `CardSensors`, `CardLog`, `CardClosure`, `CardTimeline`, `CardFooterDock`  
-4. **Assemblies & list chrome** — `TargetCard` examples, `FilterBar`  
+4. **Assemblies & list chrome** — `TargetCard` examples, `FilterBar`, **Device Card**, `DevicesPanel`  
 5. **Tactical** — `MapMarker`, `markerStyles`, map icons
 
 ---
@@ -287,6 +287,27 @@ The core card shell. Always use `useCardSlots` hook to build slot data from a `D
 Import: `import { FilterBar } from '@/primitives'`
 
 Search, sort, and multi-select filter controls for the target list. Not included in `domain-primitives` / `map-kit` because it imports `@/imports/` types — install `@c2/filter-bar` only after providing compatible types. **Props:** [Live docs — FilterBar](https://c2-hub-three.vercel.app/styleguide#filter-bar)
+
+### Device Card
+
+Import: `import { DeviceRow, DeviceAction, DEVICE_REGISTRY, getDeviceHealth } from '@/shared/components/DevicesPanel'`
+
+One collapsible row per field asset, **registry-driven** — nothing branches on `device.type`. `DEVICE_REGISTRY[type]` declares capabilities (drag, pin, camera preview), ordered stat fields, and the three action slots (`headerActions` · `footerActions` · `overflowActions`); `resolveDeviceAction(kind, ctx, placement)` maps those into the unified `DeviceAction` primitive — icon-only ghost in the header, solid pill in the footer. The collapsed header carries a worst-wins **health tile** (`getDeviceHealth` + `DEVICE_HEALTH_VISUAL`) with a titled tooltip, the name, and an always-visible **primary cluster** (Show-on-map + per-type On/Off, speaker now-playing readout, armed-notifications countdown). Secondary controls live in the **expanded footer**, with Logs + Notifications tucked into a 3-dot **overflow**. **Full breakdown:** [Live docs — Device Card](https://c2-hub-three.vercel.app/styleguide#device-card)
+
+- **`DeviceAction`** — the one control primitive. Tones: `neutral` / `engaged` / `caution` / `danger`; `iconOnly`, `ghost`, `pressed`, `loading` (spinner, not dimmed), `disabled` + `disabledReason` tooltip. [#device-action](https://c2-hub-three.vercel.app/styleguide#device-action)
+- **Health tile** — `w-8 h-8` icon tile; `getDeviceHealth` rolls malfunction + connection + battery into `critical | warning | offline | ok` (worst wins). Titled tooltip adds a severity dot/label + clamped `errorCount` badge. [#device-health](https://c2-hub-three.vercel.app/styleguide#device-health)
+- **Detail grid** — `grid-cols-3 gap-x-4 gap-y-5 px-4 py-3`, rows built from `detailFields`. [#device-detail-grid](https://c2-hub-three.vercel.app/styleguide#device-detail-grid)
+- **Header cluster** — `headerActions` resolved icon-only; Show-on-map pinned to the outer edge, per-type On/Off inboard (speaker Play/Pause, `FloodlightSegmentedCompact`). [#device-header-cluster](https://c2-hub-three.vercel.app/styleguide#device-header-cluster)
+- **Action bar** — `footerActions` in order; `pushEnd` → inline-end, dividers between groups. [#device-row-actions](https://c2-hub-three.vercel.app/styleguide#device-row-actions)
+- **Overflow + notify** — `DeviceOverflowMenu` (3-dot): timed **Notifications** (`NOTIFY_WINDOW_S` countdown, `onArmNotifications`) + the red **Logs** error channel (`device.errorCount`, `onOpenLogs`). [#device-overflow](https://c2-hub-three.vercel.app/styleguide#device-overflow)
+
+Every part carries a `data-handoff-component` stamp, so the handoff picker (`⌘/Ctrl ⇧ P`) deep-links each sub-part to its exact styleguide section.
+
+### DevicesPanel
+
+Import: `import { DevicesPanel } from '@/shared/components/DevicesPanel'`
+
+The right-hand sidebar that hosts Device Cards — search + `FilterBar` type isolation, offline-first grouping by type, empty state, and camera drag-to-feed. **Props:** [Live docs — DevicesPanel](https://c2-hub-three.vercel.app/styleguide#devices-panel)
 
 ### AccordionSection
 

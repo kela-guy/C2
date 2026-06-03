@@ -99,20 +99,22 @@ interface DroneDeviceIconProps {
   /** Solid fill colour. Defaults to white to match the original device-row chip. */
   fill?: string;
   className?: string;
+  /** Adds a black stroke for map-marker legibility; device tiles stay clean. */
+  outlined?: boolean;
 }
 
 /**
  * Solid arrow-shaped drone glyph used in the device list rows. Distinct
  * from the tactical-map `DroneIcon` which is rotated by heading.
  */
-export function DroneDeviceIcon({ size = 28, fill = 'white', className = '' }: DroneDeviceIconProps) {
+export function DroneDeviceIcon({ size = 28, fill = 'white', className = '', outlined = false }: DroneDeviceIconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 28 32" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
       <path
         d="M23.334 15.7502L9.33696 0.583495L5.86139 4.0835L10.5007 11.0835L9.32456 15.7502L10.5007 20.4168L5.86139 27.4168L9.32456 30.6801L23.334 15.7502Z"
         fill={fill}
-        stroke="#0a0a0a"
-        strokeWidth="1"
+        stroke={outlined ? '#0a0a0a' : 'none'}
+        strokeWidth={outlined ? 1 : 0}
       />
     </svg>
   );

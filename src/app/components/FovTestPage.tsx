@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useRef } from 'react';
 import Map, { Marker, Source, Layer, type MapRef } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { Camera } from 'lucide-react';
+import { Camera } from '@/lib/icons/central';
 import { fovPolygon, FOV_RADIUS_M } from '@/app/lib/mapGeo';
 import { MAPBOX_TOKEN, getMapInstance, tryMapOp } from '@/app/lib/mapUtils';
 

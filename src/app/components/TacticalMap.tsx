@@ -3,7 +3,7 @@ import Map, { Marker, NavigationControl, Source, Layer, type MapRef } from 'reac
 import type mapboxgl from 'mapbox-gl';
 
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { Crosshair, AlertTriangle, ShieldAlert, Camera, CheckCircle2, Radio, Search, Eye, MapPin, X, Compass, Circle, Video, Info, Settings, BellOff, Wrench, ExternalLink, Maximize2, Plane } from 'lucide-react';
+import { Crosshair, AlertTriangle, ShieldAlert, Camera, CheckCircle2, Radio, Search, Eye, MapPin, X, Compass, Circle, Video, Info, Settings, BellOff, Wrench, ExternalLink, Maximize2, Plane } from '@/lib/icons/central';
 import { JamWaveIcon, DRONE_PATH, MISSILE_PATH, CarIcon, TankIcon, TruckIcon } from '@/primitives/MapIcons';
 import { MapMarker } from '@/primitives/MapMarker';
 import {

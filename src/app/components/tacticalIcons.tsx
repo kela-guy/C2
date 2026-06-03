@@ -8,29 +8,79 @@
 
 import { DRONE_PATH, MISSILE_PATH } from '@/primitives/MapIcons';
 
-export const SensorIcon = ({ size = 28, fill = 'white' }: { size?: number; fill?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M22.3164 1.68018L23.1152 2.52979C27.6277 7.33379 27.6281 14.8319 23.1162 19.6362L22.3174 20.4868L22.1465 20.6694L21.9639 20.4985L20.2627 18.9009L20.0811 18.73L20.252 18.5474L21.0508 17.6968C24.5387 13.9829 24.5382 8.18391 21.0498 4.47021L20.251 3.61963L20.0801 3.43799L20.2627 3.26611L21.9629 1.66846L22.1455 1.49756L22.3164 1.68018Z" fill={fill} stroke="black" strokeWidth="1"/>
-    <path d="M6.02637 1.67676L7.72949 3.27246L7.91113 3.44336L7.74023 3.62598L6.94238 4.47754C3.46137 8.19154 3.46372 13.985 6.94922 17.6963L7.74805 18.5469L7.91895 18.7295L7.7373 18.9004L6.03613 20.498L5.85352 20.6689L5.68262 20.4863L4.88379 19.6367C0.374552 14.8356 0.372449 7.34459 4.87598 2.54004L5.67383 1.68848L5.84473 1.50586L6.02637 1.67676Z" fill={fill} stroke="black" strokeWidth="1"/>
-    <path d="M9.05371 5.16504L10.8516 6.65137L11.0449 6.81055L10.8857 7.00391L10.1416 7.90234C8.61968 9.74292 8.61989 12.423 10.1416 14.2637L10.8857 15.1631L11.0449 15.3555L10.8516 15.5146L9.05371 17.002L8.86133 17.1611L8.70215 16.9688L7.95801 16.0693C5.56993 13.181 5.57 8.98603 7.95801 6.09766L8.70215 5.19824L8.86133 5.00586L9.05371 5.16504Z" fill={fill} stroke="black" strokeWidth="1"/>
-    <path d="M19.2988 5.19824L20.042 6.09766C22.4301 8.98606 22.4302 13.181 20.042 16.0693L19.2988 16.9688L19.1396 17.1611L18.9463 17.002L17.1484 15.5146L16.9561 15.3555L17.1152 15.1631L17.8584 14.2637C19.3802 12.423 19.3803 9.74295 17.8584 7.90234L17.1152 7.00391L16.9561 6.81055L17.1484 6.65137L18.9463 5.16504L19.1387 5.00586L19.2988 5.19824Z" fill={fill} stroke="black" strokeWidth="1"/>
-    <path d="M14 7.9165C15.7488 7.91655 17.167 9.33462 17.167 11.0835C17.1669 11.9135 16.8438 12.6665 16.3213 13.231L20.3838 25.147L20.4648 25.3833L20.2275 25.4644L18.0195 26.2173L17.7832 26.2974L17.7021 26.061L16.46 22.4165H11.54L10.2979 26.061L10.2168 26.2974L9.98047 26.2173L7.77148 25.4644L7.53516 25.3833L7.61621 25.147L11.6777 13.231C11.1555 12.6665 10.8331 11.9133 10.833 11.0835C10.833 9.3346 12.2511 7.9165 14 7.9165ZM12.5059 19.5835H15.4941L14 15.1997L12.5059 19.5835Z" fill={fill} stroke="black" strokeWidth="1"/>
-  </svg>
-);
+/**
+ * Sensor (ECM/jam) tactical icon. `outlined` adds a black stroke for
+ * map-marker legibility; the device-panel tiles use the clean fill-only
+ * version (default).
+ */
+export const SensorIcon = ({
+  size = 28,
+  fill = 'white',
+  outlined = false,
+}: {
+  size?: number;
+  fill?: string;
+  active?: boolean;
+  outlined?: boolean;
+}) => {
+  const stroke = outlined ? 'black' : 'none';
+  const strokeWidth = outlined ? 1 : 0;
+  return (
+    <svg width={size} height={size} viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M22.3164 1.68018L23.1152 2.52979C27.6277 7.33379 27.6281 14.8319 23.1162 19.6362L22.3174 20.4868L22.1465 20.6694L21.9639 20.4985L20.2627 18.9009L20.0811 18.73L20.252 18.5474L21.0508 17.6968C24.5387 13.9829 24.5382 8.18391 21.0498 4.47021L20.251 3.61963L20.0801 3.43799L20.2627 3.26611L21.9629 1.66846L22.1455 1.49756L22.3164 1.68018Z" fill={fill} stroke={stroke} strokeWidth={strokeWidth}/>
+      <path d="M6.02637 1.67676L7.72949 3.27246L7.91113 3.44336L7.74023 3.62598L6.94238 4.47754C3.46137 8.19154 3.46372 13.985 6.94922 17.6963L7.74805 18.5469L7.91895 18.7295L7.7373 18.9004L6.03613 20.498L5.85352 20.6689L5.68262 20.4863L4.88379 19.6367C0.374552 14.8356 0.372449 7.34459 4.87598 2.54004L5.67383 1.68848L5.84473 1.50586L6.02637 1.67676Z" fill={fill} stroke={stroke} strokeWidth={strokeWidth}/>
+      <path d="M9.05371 5.16504L10.8516 6.65137L11.0449 6.81055L10.8857 7.00391L10.1416 7.90234C8.61968 9.74292 8.61989 12.423 10.1416 14.2637L10.8857 15.1631L11.0449 15.3555L10.8516 15.5146L9.05371 17.002L8.86133 17.1611L8.70215 16.9688L7.95801 16.0693C5.56993 13.181 5.57 8.98603 7.95801 6.09766L8.70215 5.19824L8.86133 5.00586L9.05371 5.16504Z" fill={fill} stroke={stroke} strokeWidth={strokeWidth}/>
+      <path d="M19.2988 5.19824L20.042 6.09766C22.4301 8.98606 22.4302 13.181 20.042 16.0693L19.2988 16.9688L19.1396 17.1611L18.9463 17.002L17.1484 15.5146L16.9561 15.3555L17.1152 15.1631L17.8584 14.2637C19.3802 12.423 19.3803 9.74295 17.8584 7.90234L17.1152 7.00391L16.9561 6.81055L17.1484 6.65137L18.9463 5.16504L19.1387 5.00586L19.2988 5.19824Z" fill={fill} stroke={stroke} strokeWidth={strokeWidth}/>
+      <path d="M14 7.9165C15.7488 7.91655 17.167 9.33462 17.167 11.0835C17.1669 11.9135 16.8438 12.6665 16.3213 13.231L20.3838 25.147L20.4648 25.3833L20.2275 25.4644L18.0195 26.2173L17.7832 26.2974L17.7021 26.061L16.46 22.4165H11.54L10.2979 26.061L10.2168 26.2974L9.98047 26.2173L7.77148 25.4644L7.53516 25.3833L7.61621 25.147L11.6777 13.231C11.1555 12.6665 10.8331 11.9133 10.833 11.0835C10.833 9.3346 12.2511 7.9165 14 7.9165ZM12.5059 19.5835H15.4941L14 15.1997L12.5059 19.5835Z" fill={fill} stroke={stroke} strokeWidth={strokeWidth}/>
+    </svg>
+  );
+};
 
-export const CameraIcon = ({ size = 28, fill = 'white' }: { size?: number; fill?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M17.5 4.4165C18.2823 4.41668 18.916 5.05121 18.916 5.8335V9.37354L23.8662 6.89893C24.3052 6.67953 24.8266 6.70345 25.2441 6.96143C25.6618 7.21954 25.916 7.67549 25.916 8.1665V19.8335C25.9159 20.3244 25.6616 20.7804 25.2441 21.0386C24.8265 21.2965 24.3052 21.3196 23.8662 21.1001L18.916 18.6245V22.1665C18.916 22.9488 18.2823 23.5833 17.5 23.5835H3.5C2.71761 23.5835 2.08301 22.9489 2.08301 22.1665V5.8335C2.08301 5.0511 2.7176 4.4165 3.5 4.4165H17.5Z" fill={fill} stroke="black" strokeWidth="1"/>
-  </svg>
-);
+/**
+ * Camera asset glyph. `outlined` adds a black stroke for map-marker legibility
+ * (the device-panel tiles use the clean fill-only version). `active` is kept
+ * for API parity with other tile icons.
+ */
+export const CameraIcon = ({
+  size = 28,
+  fill = 'white',
+  outlined = false,
+}: {
+  size?: number;
+  fill?: string;
+  active?: boolean;
+  outlined?: boolean;
+}) => {
+  const stroke = outlined ? 'black' : 'none';
+  const strokeWidth = outlined ? 1.5 : 0;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M17 19.5H2V4.5H17V19.5Z" fill={fill} stroke={stroke} strokeWidth={strokeWidth} strokeLinejoin="round" />
+      <path d="M22.5 18.1182L18.5 16.1182V7.88184L22.5 5.88184V18.1182Z" fill={fill} stroke={stroke} strokeWidth={strokeWidth} strokeLinejoin="round" />
+    </svg>
+  );
+};
 
-export const RadarIcon = ({ size = 28, fill = 'white' }: { size?: number; fill?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M14 2.5835C20.305 2.58367 25.416 7.69534 25.416 14.0005V14.9165H23.583V14.0005C23.583 8.70787 19.2926 4.41668 14 4.4165H13.083V2.5835H14Z" fill={fill} stroke="black" strokeWidth="1"/>
-    <path d="M13.416 13.2871L13.5928 13.1104L15.166 11.5361L16.4619 12.833L14.8896 14.4062L14.7129 14.583L22.167 22.0371L21.4141 22.6816C16.9279 26.5207 10.1721 26.3184 5.92676 22.0732C1.68145 17.8279 1.4782 11.0712 5.31738 6.58496L5.96094 5.83203L13.416 13.2871Z" fill={fill} stroke="black" strokeWidth="1"/>
-    <path d="M14 6.0835C18.3721 6.08367 21.916 9.62835 21.916 14.0005V14.9165H20.083V14.0005C20.083 10.6409 17.3596 7.91668 14 7.9165H13.083V6.0835H14Z" fill={fill} stroke="black" strokeWidth="1"/>
-  </svg>
-);
+export const RadarIcon = ({
+  size = 28,
+  fill = 'white',
+  outlined = false,
+}: {
+  size?: number;
+  fill?: string;
+  active?: boolean;
+  outlined?: boolean;
+}) => {
+  const stroke = outlined ? 'black' : 'none';
+  const strokeWidth = outlined ? 1 : 0;
+  return (
+    <svg width={size} height={size} viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M14 2.5835C20.305 2.58367 25.416 7.69534 25.416 14.0005V14.9165H23.583V14.0005C23.583 8.70787 19.2926 4.41668 14 4.4165H13.083V2.5835H14Z" fill={fill} stroke={stroke} strokeWidth={strokeWidth}/>
+      <path d="M13.416 13.2871L13.5928 13.1104L15.166 11.5361L16.4619 12.833L14.8896 14.4062L14.7129 14.583L22.167 22.0371L21.4141 22.6816C16.9279 26.5207 10.1721 26.3184 5.92676 22.0732C1.68145 17.8279 1.4782 11.0712 5.31738 6.58496L5.96094 5.83203L13.416 13.2871Z" fill={fill} stroke={stroke} strokeWidth={strokeWidth}/>
+      <path d="M14 6.0835C18.3721 6.08367 21.916 9.62835 21.916 14.0005V14.9165H20.083V14.0005C20.083 10.6409 17.3596 7.91668 14 7.9165H13.083V6.0835H14Z" fill={fill} stroke={stroke} strokeWidth={strokeWidth}/>
+    </svg>
+  );
+};
 
 export const MissileIcon = ({ rotationDeg = 0, fill = '#15FFF6' }: { rotationDeg?: number; fill?: string }) => (
   <svg
@@ -65,27 +115,67 @@ export const DroneIcon = ({ rotationDeg = 0, disabled = false, color }: { rotati
   </svg>
 );
 
-export const DroneHiveIcon = ({ size = 28, fill = 'white' }: { size?: number; fill?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M3 10.5V19.5H21V10.5H19.5H3Z" fill={fill} />
-    <path d="M16.5 6.75H8.25L3 10.5V19.5H21V10.5H19.5M3 10.5H19.5M19.5 10.5V4.5" stroke="black" strokeWidth="1.5" />
-    <path d="M4.5 22.5H9" stroke="black" strokeWidth="1.5" />
-    <path d="M15 22.5H19.5" stroke="black" strokeWidth="1.5" />
-    <rect x="18" y="1.5" width="3" height="3" fill="black" />
-  </svg>
-);
+export const DroneHiveIcon = ({
+  size = 28,
+  fill = 'white',
+  outlined = false,
+}: {
+  size?: number;
+  fill?: string;
+  active?: boolean;
+  outlined?: boolean;
+}) => {
+  // The roof/mast/legs/antenna are drawn in black on the map for legibility;
+  // in-UI tiles render them in the glyph color so it reads as one clean shape.
+  const detail = outlined ? 'black' : fill;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M3 10.5V19.5H21V10.5H19.5H3Z" fill={fill} />
+      <path d="M16.5 6.75H8.25L3 10.5V19.5H21V10.5H19.5M3 10.5H19.5M19.5 10.5V4.5" stroke={detail} strokeWidth="1.5" />
+      <path d="M4.5 22.5H9" stroke={detail} strokeWidth="1.5" />
+      <path d="M15 22.5H19.5" stroke={detail} strokeWidth="1.5" />
+      <rect x="18" y="1.5" width="3" height="3" fill={detail} />
+    </svg>
+  );
+};
 
-export const LidarIcon = ({ size = 28, fill = 'white' }: { size?: number; fill?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M17 4.5C17.1326 4.5 17.2597 4.55273 17.3535 4.64648C17.4473 4.74025 17.5 4.86739 17.5 5V9.99902C17.5 10.2752 17.2761 10.499 17 10.499H13.4502V13.1904L20.3877 21.6836C20.5096 21.833 20.5346 22.0396 20.4521 22.2139C20.3694 22.3884 20.1931 22.5 20 22.5H18C17.8571 22.5 17.7209 22.4389 17.626 22.332L13.4502 17.6201V21.9922C13.4502 22.2683 13.2263 22.4922 12.9502 22.4922H10.9502C10.6757 22.4921 10.4524 22.2706 10.4502 21.9961L10.4141 17.6377L6.37891 22.3262C6.28392 22.4365 6.14559 22.5 6 22.5H4C3.80746 22.5 3.63191 22.3895 3.54883 22.2158C3.46579 22.042 3.49029 21.8354 3.61133 21.6855L10.4502 13.2188V10.499L7 10.5C6.86741 10.5 6.74025 10.4473 6.64648 10.3535C6.55272 10.2597 6.5 10.1326 6.5 10V5.00098C6.5 4.72485 6.72388 4.501 7 4.50098L17 4.5ZM22.7227 2.58398C22.8761 2.48171 23.0738 2.47259 23.2363 2.55957C23.3986 2.64666 23.5 2.81578 23.5 3V7.66602C23.5 7.82024 23.4284 7.96584 23.3066 8.06055L20.3066 10.3945C20.1559 10.5117 19.9518 10.5331 19.7803 10.4492C19.6087 10.3653 19.5 10.191 19.5 10V5.00098C19.5 4.83384 19.5836 4.6777 19.7227 4.58496L22.7227 2.58398ZM4.5 10C4.5 10.191 4.39126 10.3653 4.21973 10.4492C4.04823 10.5331 3.84407 10.5117 3.69336 10.3945L0.693359 8.06055C0.571632 7.96584 0.500033 7.82024 0.5 7.66602V3L0.504883 2.93164C0.526526 2.77469 0.621703 2.63575 0.763672 2.55957C0.926245 2.47259 1.12393 2.48171 1.27734 2.58398L4.27734 4.58496C4.41639 4.6777 4.5 4.83384 4.5 5.00098V10Z" fill={fill} stroke="black" strokeLinejoin="round"/>
-  </svg>
-);
+export const LidarIcon = ({
+  size = 28,
+  fill = 'white',
+  outlined = false,
+}: {
+  size?: number;
+  fill?: string;
+  active?: boolean;
+  outlined?: boolean;
+}) => {
+  const stroke = outlined ? 'black' : 'none';
+  const strokeWidth = outlined ? 1 : 0;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M17 4.5C17.1326 4.5 17.2597 4.55273 17.3535 4.64648C17.4473 4.74025 17.5 4.86739 17.5 5V9.99902C17.5 10.2752 17.2761 10.499 17 10.499H13.4502V13.1904L20.3877 21.6836C20.5096 21.833 20.5346 22.0396 20.4521 22.2139C20.3694 22.3884 20.1931 22.5 20 22.5H18C17.8571 22.5 17.7209 22.4389 17.626 22.332L13.4502 17.6201V21.9922C13.4502 22.2683 13.2263 22.4922 12.9502 22.4922H10.9502C10.6757 22.4921 10.4524 22.2706 10.4502 21.9961L10.4141 17.6377L6.37891 22.3262C6.28392 22.4365 6.14559 22.5 6 22.5H4C3.80746 22.5 3.63191 22.3895 3.54883 22.2158C3.46579 22.042 3.49029 21.8354 3.61133 21.6855L10.4502 13.2188V10.499L7 10.5C6.86741 10.5 6.74025 10.4473 6.64648 10.3535C6.55272 10.2597 6.5 10.1326 6.5 10V5.00098C6.5 4.72485 6.72388 4.501 7 4.50098L17 4.5ZM22.7227 2.58398C22.8761 2.48171 23.0738 2.47259 23.2363 2.55957C23.3986 2.64666 23.5 2.81578 23.5 3V7.66602C23.5 7.82024 23.4284 7.96584 23.3066 8.06055L20.3066 10.3945C20.1559 10.5117 19.9518 10.5331 19.7803 10.4492C19.6087 10.3653 19.5 10.191 19.5 10V5.00098C19.5 4.83384 19.5836 4.6777 19.7227 4.58496L22.7227 2.58398ZM4.5 10C4.5 10.191 4.39126 10.3653 4.21973 10.4492C4.04823 10.5331 3.84407 10.5117 3.69336 10.3945L0.693359 8.06055C0.571632 7.96584 0.500033 7.82024 0.5 7.66602V3L0.504883 2.93164C0.526526 2.77469 0.621703 2.63575 0.763672 2.55957C0.926245 2.47259 1.12393 2.48171 1.27734 2.58398L4.27734 4.58496C4.41639 4.6777 4.5 4.83384 4.5 5.00098V10Z" fill={fill} stroke={stroke} strokeWidth={strokeWidth} strokeLinejoin="round"/>
+    </svg>
+  );
+};
 
-export const LauncherIcon = ({ size = 24, fill = 'white' }: { size?: number; fill?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M23.042 8.75977C23.2375 8.77623 23.4049 8.90599 23.4707 9.09082C23.5365 9.27575 23.488 9.48191 23.3467 9.61816L22.2334 10.6924C22.1826 10.7413 22.122 10.7788 22.0557 10.8027L12.042 14.3994L12.6738 15.5977L15.1904 19.7402C15.2842 19.8946 15.2868 20.0877 15.1982 20.2451C15.1097 20.4024 14.9433 20.5 14.7627 20.5H4.31445C4.03831 20.5 3.81445 20.2761 3.81445 20V17.3555L3.37012 17.5156C3.2415 17.5618 3.09879 17.5533 2.97656 17.4922C2.85465 17.4311 2.7628 17.3227 2.72266 17.1924L2.35156 15.9834C2.27343 15.7286 2.4086 15.4569 2.65918 15.3662L21.2217 8.6543L21.3252 8.62793C21.3607 8.6232 21.3967 8.623 21.4326 8.62598L23.042 8.75977ZM22.0742 6.23145C22.2698 6.2478 22.4381 6.37757 22.5039 6.5625C22.5696 6.74731 22.521 6.95363 22.3799 7.08984L21.2656 8.16406C21.2148 8.213 21.1543 8.25055 21.0879 8.27441L2.40234 14.9873C2.27376 15.0335 2.13197 15.025 2.00977 14.9639C1.88761 14.9027 1.79505 14.7946 1.75488 14.6641L1.38379 13.4551C1.30573 13.2003 1.44176 12.9285 1.69238 12.8379L20.2539 6.12598L20.3584 6.10059C20.3938 6.09591 20.43 6.09467 20.4658 6.09766L22.0742 6.23145ZM21.2119 3.63574C21.4076 3.65207 21.5758 3.78185 21.6416 3.9668C21.7073 4.15168 21.6588 4.35792 21.5176 4.49414L20.4043 5.56836C20.3534 5.61741 20.2921 5.65482 20.2256 5.67871L1.54004 12.3916C1.41147 12.4377 1.26962 12.4293 1.14746 12.3682C1.02542 12.3071 0.933759 12.1988 0.893555 12.0684L0.522461 10.8594C0.444234 10.6045 0.579375 10.3329 0.830078 10.2422L1.33301 10.0596L1.02051 9.12598C0.933486 8.86551 1.07316 8.58317 1.33301 8.49414L3.68457 7.68848L3.75586 7.66992C3.82891 7.65652 3.90427 7.66014 3.97656 7.67969L6.22852 8.28906L19.3916 3.53027C19.4593 3.50579 19.5318 3.49597 19.6035 3.50195L21.2119 3.63574Z" fill={fill} stroke="black" strokeLinejoin="round"/>
-  </svg>
-);
+export const LauncherIcon = ({
+  size = 24,
+  fill = 'white',
+  outlined = false,
+}: {
+  size?: number;
+  fill?: string;
+  active?: boolean;
+  outlined?: boolean;
+}) => {
+  const stroke = outlined ? 'black' : 'none';
+  const strokeWidth = outlined ? 1 : 0;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M23.042 8.75977C23.2375 8.77623 23.4049 8.90599 23.4707 9.09082C23.5365 9.27575 23.488 9.48191 23.3467 9.61816L22.2334 10.6924C22.1826 10.7413 22.122 10.7788 22.0557 10.8027L12.042 14.3994L12.6738 15.5977L15.1904 19.7402C15.2842 19.8946 15.2868 20.0877 15.1982 20.2451C15.1097 20.4024 14.9433 20.5 14.7627 20.5H4.31445C4.03831 20.5 3.81445 20.2761 3.81445 20V17.3555L3.37012 17.5156C3.2415 17.5618 3.09879 17.5533 2.97656 17.4922C2.85465 17.4311 2.7628 17.3227 2.72266 17.1924L2.35156 15.9834C2.27343 15.7286 2.4086 15.4569 2.65918 15.3662L21.2217 8.6543L21.3252 8.62793C21.3607 8.6232 21.3967 8.623 21.4326 8.62598L23.042 8.75977ZM22.0742 6.23145C22.2698 6.2478 22.4381 6.37757 22.5039 6.5625C22.5696 6.74731 22.521 6.95363 22.3799 7.08984L21.2656 8.16406C21.2148 8.213 21.1543 8.25055 21.0879 8.27441L2.40234 14.9873C2.27376 15.0335 2.13197 15.025 2.00977 14.9639C1.88761 14.9027 1.79505 14.7946 1.75488 14.6641L1.38379 13.4551C1.30573 13.2003 1.44176 12.9285 1.69238 12.8379L20.2539 6.12598L20.3584 6.10059C20.3938 6.09591 20.43 6.09467 20.4658 6.09766L22.0742 6.23145ZM21.2119 3.63574C21.4076 3.65207 21.5758 3.78185 21.6416 3.9668C21.7073 4.15168 21.6588 4.35792 21.5176 4.49414L20.4043 5.56836C20.3534 5.61741 20.2921 5.65482 20.2256 5.67871L1.54004 12.3916C1.41147 12.4377 1.26962 12.4293 1.14746 12.3682C1.02542 12.3071 0.933759 12.1988 0.893555 12.0684L0.522461 10.8594C0.444234 10.6045 0.579375 10.3329 0.830078 10.2422L1.33301 10.0596L1.02051 9.12598C0.933486 8.86551 1.07316 8.58317 1.33301 8.49414L3.68457 7.68848L3.75586 7.66992C3.82891 7.65652 3.90427 7.66014 3.97656 7.67969L6.22852 8.28906L19.3916 3.53027C19.4593 3.50579 19.5318 3.49597 19.6035 3.50195L21.2119 3.63574Z" fill={fill} stroke={stroke} strokeWidth={strokeWidth} strokeLinejoin="round"/>
+    </svg>
+  );
+};
 
 /**
  * Floodlight tactical icon. `active` is accepted for API parity with
@@ -94,27 +184,51 @@ export const LauncherIcon = ({ size = 24, fill = 'white' }: { size?: number; fil
  * Cesium map + device list can use it without importing the legacy
  * Mapbox `TacticalMap` module.
  */
-export const FloodlightIcon = ({ size = 24, fill = 'white' }: { size?: number; fill?: string; active?: boolean }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path fillRule="evenodd" clipRule="evenodd" d="M19 13.291L17.2939 13.7506L14.551 3.45958L16.2571 3L19 13.291Z" fill={fill}/>
-    <path d="M10.3206 15.0163L11.2844 18.6324H6.65094V21H11.9154H13.3906H18.4263V18.6324H13.7225L12.5954 14.4035L16.0041 13.4853L13.5659 4.33769L6.25402 6.30731L5 8.78981L6.37146 13.9353L8.69216 15.4549L10.3206 15.0163Z" fill={fill}/>
-    <path d="M18.4258 18.6328H13.7217L12.5947 14.4033L16.0029 13.4854L13.5654 4.33789L6.25293 6.30762L4.99902 8.79004L6.37012 13.9355L8.69141 15.4551L10.3193 15.0166L11.2832 18.6328H6.65039V21H18.4258V18.6328ZM14.5498 3.45996L17.293 13.751L18.999 13.291L16.2559 3L14.5498 3.45996ZM19.9258 22.5H5.15039V17.1328H9.33105L9.25684 16.8555L9.08105 16.9033L8.43164 17.0781L5.06836 14.876L3.40234 8.62402L5.21582 5.0332L12.8672 2.97266L12.7148 2.40039L17.3184 1.16016L20.834 14.3506L16.2305 15.5898L16.0781 15.0176L14.4287 15.4619L14.874 17.1328H19.9258V22.5Z" fill="black"/>
-  </svg>
-);
+export const FloodlightIcon = ({
+  size = 24,
+  fill = 'white',
+  outlined = false,
+}: {
+  size?: number;
+  fill?: string;
+  active?: boolean;
+  outlined?: boolean;
+}) => {
+  // The map marker carries a black stroke for legibility; in-UI tiles drop the
+  // stroke so the lamp reads as one clean fill-only shape.
+  const stroke = outlined ? 'black' : 'none';
+  const strokeWidth = outlined ? 1.5 : 0;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M16.9814 2.80664L19.7246 13.0977L19.917 13.8203L19.1953 14.0156L17.4893 14.4746L16.7627 14.6699L16.6104 14.0986L16.1992 14.21L13.5127 14.9326L14.2988 17.8828H19.1768V21.75H5.90137V17.8828H10.3086L9.78906 15.9355L8.8877 16.1787L8.5625 16.2666L8.28125 16.082L5.96094 14.5625L5.7207 14.4053L5.64648 14.1289L4.27539 8.9834L4.20215 8.70703L4.33008 8.45117L5.58496 5.96875L5.73535 5.66992L6.05859 5.58301L13.3711 3.61328L13.7852 3.50098L13.6338 2.92969L14.3555 2.73535L16.0625 2.27539L16.7881 2.08008L16.9814 2.80664Z" fill={fill} stroke={stroke} strokeWidth={strokeWidth} strokeLinejoin="round" />
+    </svg>
+  );
+};
 
 /**
- * PA speaker tactical icon. `active` is accepted for API parity; the
- * on-air signal is carried by the map marker (ring + pulse), so the glyph
- * stays identical at rest and while broadcasting. Map-free twin of the
- * legacy `TacticalMap` glyph.
+ * PA speaker tactical icon. `outlined` adds a black stroke for map-marker
+ * legibility (the device-panel tiles use the clean fill-only version).
+ * `active` is accepted for API parity; the on-air signal is carried by the
+ * map marker (ring + pulse), so the glyph stays identical while broadcasting.
  */
-export const SpeakerIcon = ({ size = 24, fill = 'white' }: { size?: number; fill?: string; active?: boolean }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M13 20.9289V3.07104L5.74656 6.99999H1V17H5.74656L13 20.9289Z" fill={fill}/>
-    <path d="M13 20.9285L5.74609 16.9998H1V6.99975H5.74609L13 3.07104V20.9285ZM6.12695 8.49975H2.5V15.4998H6.12695L6.46094 15.6814L11.5 18.4099V5.58959L6.12695 8.49975Z" fill="black"/>
-    <path d="M18.3633 5.63687C19.9931 7.26664 20.9993 9.51527 20.9993 12.0008C20.9993 14.4864 19.9931 16.735 18.3633 18.3648L19.7775 19.779C21.767 17.7895 22.9993 15.0381 22.9993 12.0008C22.9993 8.96354 21.767 6.21217 19.7775 4.22266L18.3633 5.63687Z" fill={fill}/>
-    <path d="M20.999 12.001C20.999 9.51545 19.9931 7.26649 18.3633 5.63672L19.7773 4.22266C21.7668 6.21217 22.999 8.96372 22.999 12.001L22.9854 12.5664C22.8428 15.3788 21.6426 17.914 19.7773 19.7793L18.3633 18.3652C19.8912 16.8373 20.8708 14.765 20.9873 12.4639L20.999 12.001Z" fill="black"/>
-    <path d="M15.1836 8.81851C15.999 9.63394 16.5016 10.7576 16.5016 12.0005C16.5016 13.2434 15.999 14.367 15.1836 15.1825L16.5978 16.5967C17.773 15.4215 18.5016 13.7951 18.5016 12.0005C18.5016 10.2058 17.773 8.57947 16.5978 7.4043L15.1836 8.81851Z" fill={fill}/>
-    <path d="M16.502 12.001C16.502 10.7581 15.999 9.63379 15.1836 8.81836L16.5977 7.4043C17.7729 8.57947 18.502 10.2063 18.502 12.001L18.4932 12.335C18.4088 13.9966 17.6994 15.4949 16.5977 16.5967L15.1836 15.1826C15.948 14.4182 16.4378 13.3828 16.4961 12.2324L16.502 12.001Z" fill="black"/>
-  </svg>
-);
+export const SpeakerIcon = ({
+  size = 24,
+  fill = 'white',
+  outlined = false,
+}: {
+  size?: number;
+  fill?: string;
+  active?: boolean;
+  outlined?: boolean;
+}) => {
+  const stroke = outlined ? 'black' : 'none';
+  const strokeWidth = outlined ? 1.5 : 0;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12.5 17.6768V22H7.5V16.5H10.1455L12.5 17.6768Z" fill={fill} stroke={stroke} strokeWidth={strokeWidth} strokeLinejoin="round" />
+      <path d="M18.5 19L10.5 15V7L18.5 3V19Z" fill={fill} stroke={stroke} strokeWidth={strokeWidth} strokeLinejoin="round" />
+      <path d="M9.5 15H6C3.79086 15 2 13.2091 2 11C2 8.79086 3.79086 7 6 7H9.5V15Z" fill={fill} stroke={stroke} strokeWidth={strokeWidth} strokeLinejoin="round" />
+      <path d="M20 9C21.3807 9 22.5 10.1193 22.5 11.5C22.5 12.8807 21.3807 14 20 14V9Z" fill={fill} stroke={stroke} strokeWidth={strokeWidth} strokeLinejoin="round" />
+    </svg>
+  );
+};

@@ -91,14 +91,23 @@ export const DEFAULT_DEVICE_PANEL_STRINGS: DevicesPanelStrings = {
   healthOk: 'OK',
   healthMalfunction: 'Malfunction',
   battery: 'Battery',
-  jam: 'Activate',
+  jam: 'Jam',
   jamActive: 'Jam active',
   jamDisabledOffline: 'Device offline',
   jamDisabledMalfunction: 'Device malfunction',
   jamDisabledAlreadyActive: 'Already jamming',
+  jammingAll: 'JAMMING ALL',
+  jamThisJammer: 'Jam this jammer',
+  jamAllJammers: 'Jam all jammers',
+  jamPromptOne: 'Jam?',
+  jamPromptAll: 'Jam all?',
+  jamConfirm: 'Confirm',
+  jamCancel: 'Cancel',
+  jamMoreOptions: 'More jam options',
   centerOnMap: 'Center on map',
   mute: 'Mute',
   unmute: 'Unmute',
+  muted: 'Muted',
   wipers: 'Wipers',
   wipersAriaLabel: 'Wipers',
   calibrate: 'Calibrate',
@@ -124,6 +133,17 @@ export const DEFAULT_DEVICE_PANEL_STRINGS: DevicesPanelStrings = {
   unpinFromFeedAriaLabel: 'Stop watching this device feed',
   pinToFeedTooltip: 'Watch live',
   pinnedToFeedTooltip: 'Watching live',
+  showOnMap: 'Show on map',
+  logs: 'Logs',
+  errors: 'errors',
+  notifications: 'Notifications',
+  moreActions: 'More actions',
+  notificationsArmedAriaLabel: 'Notifications armed',
+  nowPlayingAriaLabel: 'Now playing',
+  healthCritical: 'Critical',
+  healthWarning: 'Warning',
+  healthOffline: 'Offline',
+  healthHealthy: 'Healthy',
 };
 
 /** Per-state dot colour used for the small status indicator in the row icon. */
@@ -147,3 +167,6 @@ export const CONNECTION_STATE_CHIP_COLORS: Record<
 
 /** Mute timer length — the same 30 minutes the prototype has shipped with. */
 export const MUTE_DURATION_MS = 30 * 60 * 1000;
+
+/** How long a single armed notifications window lasts before auto-disarming. */
+export const NOTIFY_WINDOW_S = 30;

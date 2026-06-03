@@ -4,3 +4,36 @@ Registry & conventions (markdown): https://raw.githubusercontent.com/kela-guy/C1
 Live styleguide (components / props): https://c2-hub-three.vercel.app/styleguide
 
 Key anchors: design-system.md sections "Component Registry", "Design Tokens", "Conventions". Styleguide URLs use fragment IDs matching nav, e.g. #status-chip, #target-card.
+
+<!-- GENERATED:components START -->
+
+## Components (generated from the design-system manifest)
+
+### Primitives
+
+- **StatusChip** (`@/primitives`) — Compact colored badge indicating the operational status of a target or system. Docs: https://c2-hub-three.vercel.app/design-system#status-chip · install: `npx shadcn@latest add @c2/status-chip`
+- **NewUpdatesPill** (`@/primitives`) — Floating pill that surfaces new incoming detections above the list. Docs: https://c2-hub-three.vercel.app/design-system#new-updates · install: `npx shadcn@latest add @c2/new-updates-pill`
+- **Button** (`@/primitives`) — The base button primitive — the father of the button family. Owns the variant + size token system and the full state set. ActionButton, SplitActionButton, and CameraToggleButton are presets/composites built on it. Docs: https://c2-hub-three.vercel.app/design-system#button
+- **ActionButton** (`@/primitives`) — A preset of Button with the legacy action-button handoff stamp. Kept for back-compat across card action rows and toolbars; prefer Button in new code. Docs: https://c2-hub-three.vercel.app/design-system#action-button · install: `npx shadcn@latest add @c2/action-button`
+- **SplitActionButton** (`@/primitives`) — Two-segment composite: a primary Button action plus a dropdown menu of sub-options. Shares the base Button's variant + size tokens. Used for effector controls. Docs: https://c2-hub-three.vercel.app/design-system#split-action · install: `npx shadcn@latest add @c2/split-action-button`
+- **CameraToggleButton** (`@/primitives`) — Single on/off camera control built on Button. Off invites "point the camera"; pressing slews (pending) and settles into a brighter pressed state. Docs: https://c2-hub-three.vercel.app/design-system#camera-toggle
+- **CopyButton** (`@/primitives`) — Quiet, hover-revealed icon button that copies a single value to the clipboard. Docs: https://c2-hub-three.vercel.app/design-system#copy-button
+- **AccordionSection** (`@/primitives`) — Collapsible section with animated expand/collapse. Used inside cards for details, logs, and sensors. Docs: https://c2-hub-three.vercel.app/design-system#accordion · install: `npx shadcn@latest add @c2/accordion-section`
+- **TelemetryRow** (`@/primitives`) — Single telemetry metric: icon, label, monospace value. Laid out in a 3-column grid that wraps by item count. Docs: https://c2-hub-three.vercel.app/design-system#telemetry · install: `npx shadcn@latest add @c2/telemetry-row`
+
+### Blocks
+
+- **CardHeader** (`@/primitives`) — Top row of a TargetCard — icon, title, subtitle, status chip, badge, and chevron. Docs: https://c2-hub-three.vercel.app/design-system#card-header · install: `npx shadcn@latest add @c2/card-header`
+- **CardActions** (`@/primitives`) — Action bar for a TargetCard. Composes ActionButton, SplitActionButton, and the confirm pattern. Docs: https://c2-hub-three.vercel.app/design-system#card-actions · install: `npx shadcn@latest add @c2/card-actions`
+- **CardDetails** (`@/primitives`) — Collapsible telemetry accordion. Composes AccordionSection and TelemetryRow in a fixed grid. Docs: https://c2-hub-three.vercel.app/design-system#card-details · install: `npx shadcn@latest add @c2/card-details`
+- **CardSensors** (`@/primitives`) — Lists detecting sensors for a target with type, distance, and timestamp. Docs: https://c2-hub-three.vercel.app/design-system#card-sensors · install: `npx shadcn@latest add @c2/card-sensors`
+- **CardMedia** (`@/primitives`) — Image or video slot for a target surveillance feed. Supports live badge, playback, and lightbox. Docs: https://c2-hub-three.vercel.app/design-system#card-media · install: `npx shadcn@latest add @c2/card-media`
+- **CardLog** (`@/primitives`) — Chronological event log accordion with newest-first ordering and expand-all. Docs: https://c2-hub-three.vercel.app/design-system#card-log · install: `npx shadcn@latest add @c2/card-log`
+- **CardClosure** (`@/primitives`) — Outcome selection grid for closing a detection event. Docs: https://c2-hub-three.vercel.app/design-system#card-closure · install: `npx shadcn@latest add @c2/card-closure`
+- **TargetCard** (`@/primitives`) — The core card shell. Composes CardHeader with slot children via the useCardSlots hook. The single most important block in the system. Docs: https://c2-hub-three.vercel.app/design-system#target-card · install: `npx shadcn@latest add @c2/target-card`
+- **FilterBar** (`@/primitives`) — Search input plus data-driven filter dropdowns. Pass any number of filter dimensions as a FilterDef[]. Docs: https://c2-hub-three.vercel.app/design-system#filter-bar · install: `npx shadcn@latest add @c2/filter-bar`
+- **Device Card** (`@/shared/components/DevicesPanel`) — One collapsible row per field asset, registry-driven. Health tile, primary cluster, footer actions, and overflow. Docs: https://c2-hub-three.vercel.app/design-system#device-card
+- **DevicesPanel** (`@/shared/components/DevicesPanel`) — Right-hand sidebar listing connected field devices grouped by type, with search and type-filter isolation. Docs: https://c2-hub-three.vercel.app/design-system#devices-panel
+- **MapMarker** (`@/primitives`) — Composable tactical marker: layered surface, ring, glyph, glow, and overlays, driven by resolveMarkerStyle(). Docs: https://c2-hub-three.vercel.app/design-system#map-markers · install: `npx shadcn@latest add @c2/map-marker`
+
+<!-- GENERATED:components END -->

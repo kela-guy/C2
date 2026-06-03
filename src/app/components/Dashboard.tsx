@@ -35,6 +35,16 @@ import { useStrings, getStrings, type Strings } from '@/lib/intl';
 import { measure } from '@/lib/perf/measure';
 import { PerfProfiled } from './perf/PerfProfiled';
 
+// Stable no-op handler identities and empty collections, shared across renders.
+// Defining these at module scope (instead of recreating them inside Dashboard
+// on every render) keeps their reference identity constant, which is what lets
+// React.memo(ListOfSystems) bail out on the 4 Hz friendly-patrol ticks that
+// never touch the target list.
+const noop = () => {};
+const noopStr = (_a?: string) => {};
+const noopStrStr = (_a?: string, _b?: string) => {};
+const EMPTY_ARRAY: never[] = [];
+
 function CuasIcon({ size = 20, strokeWidth = 2, className = '' }: { size?: number; strokeWidth?: number; className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
@@ -611,7 +621,13 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
       // (mitigated, expired, dismissed, or removed entirely). Otherwise the
       // ref grows unboundedly across a long session.
       const activeLoiterIds = new Set<string>();
-      setTargets(prev => prev.map(t => {
+      setTargets(prev => {
+        // Track whether any target actually moved this tick. With zero active
+        // drones (no targets, all mitigated/approaching/flow-driven) nothing
+        // changes, so we return the SAME array reference to skip a Dashboard
+        // re-render entirely instead of allocating a fresh no-op array at 4 Hz.
+        let loiterChanged = false;
+        const next = prev.map(t => {
         if (approachingTargetIds.current.has(t.id)) return t;
         // Flow Builder spawns drive their own movement loop in
         // `useFlowPlayer`; never let the loiter sim fight it for the
@@ -683,12 +699,15 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
           nextTrail = updatedTrail.length > 60 ? updatedTrail.slice(-60) : updatedTrail;
         }
 
+        loiterChanged = true;
         return {
           ...t,
           coordinates: `${clampedLat.toFixed(5)}, ${clampedLon.toFixed(5)}`,
           trail: nextTrail,
         };
-      }));
+        });
+        return loiterChanged ? next : prev;
+      });
 
       // Prune stale loiter state: any id that wasn't active this tick.
       const store = loiterStateRef.current;
@@ -1322,11 +1341,11 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
   }, [targets, t]);
 
   // --- Simple Handlers ---
-  const handleTargetClick = (target: Detection) => {
+  const handleTargetClick = useCallback((target: Detection) => {
     setActiveTargetId(prev => prev === target.id ? null : target.id);
-  };
+  }, []);
 
-  const handleStartMission = (targetId: string, action: 'intercept' | 'surveillance' | 'investigate') => {
+  const handleStartMission = useCallback((targetId: string, action: 'intercept' | 'surveillance' | 'investigate') => {
     if (action !== 'investigate') return;
     const target = targets.find(t => t.id === targetId);
     if (!target) return;
@@ -1355,7 +1374,23 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
         toast.success(t.toasts.cameraLockedOnTarget(camRef.typeLabel));
       }, 1500);
     }
-  };
+  }, [targets, t]);
+
+  // Stable references for ListOfSystems props that would otherwise be fresh
+  // object/array/closure literals every render and defeat its React.memo.
+  const handleSensorFocus = useCallback((sensorId: string) => {
+    setSensorFocusId(sensorId);
+    setTimeout(() => setSensorFocusId(null), 2000);
+  }, []);
+
+  const flowAssets = useMemo(
+    () => ({ regulusEffectors, launcherEffectors }),
+    [regulusEffectors, launcherEffectors],
+  );
+  const flowSelectedIds = useMemo(
+    () => ({ regulusEffectors: selectedEffectorIds, launcherEffectors: selectedLauncherIds }),
+    [selectedEffectorIds, selectedLauncherIds],
+  );
 
   const handleDismiss = useCallback((targetId: string, reason?: string) => {
     if (reason === 'escalate') {
@@ -1773,9 +1808,6 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
     target.addEventListener('lostpointercapture', onUp);
   }, [isRtl]);
 
-  const noopStr = () => {};
-  const noopStrStr = (_a: string, _b: string) => {};
-
   // Stable handlers for the map. CesiumTacticalMap stores callbacks in refs
   // internally, but useCallback keeps deps stable in case we wrap it in
   // React.memo later — and avoids handing a fresh closure to the marker
@@ -2102,9 +2134,9 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
               onTargetClick={handleTargetClick}
               onVerify={handleStartMission}
               onDismiss={handleDismiss}
-              onCancelMission={() => {}}
+              onCancelMission={noop}
               onCompleteMission={handleCompleteMission}
-              onEngage={() => {}}
+              onEngage={noop}
               onBdaCamera={handleBdaCamera}
               onSendDroneVerification={startBdaSequence}
               droneVerifyingTargetId={null}
@@ -2112,12 +2144,12 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
               onCameraLookAt={noopStrStr}
               onTakeControl={noopStr}
               onReleaseControl={noopStr}
-              onSensorModeChange={() => {}}
+              onSensorModeChange={noop}
               onPlaybookSelect={noopStrStr}
-              onClosureOutcome={() => {}}
+              onClosureOutcome={noop}
               onAdvanceFlowPhase={noopStr}
-              nearbyCameras={[]}
-              nearbyHives={[]}
+              nearbyCameras={EMPTY_ARRAY}
+              nearbyHives={EMPTY_ARRAY}
               onEscalateCreatePOI={noopStr}
               onEscalateSendDrone={noopStr}
               onDroneSelect={noopStrStr}
@@ -2130,15 +2162,15 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
               onMissionOverride={noopStr}
               onMissionCancel={noopStr}
               missionPlanningMode={null}
-              onPlanningRemoveWaypoint={() => {}}
+              onPlanningRemoveWaypoint={noop}
               onPlanningToggleLoop={noopStr}
               onPlanningFinalize={noopStr}
-              onPlanningUpdateWaypoint={() => {}}
-              onPlanningSetRepetitions={() => {}}
-              onPlanningSetDwellTime={() => {}}
-              onPlanningSetScanCenter={() => {}}
-              onPlanningSetScanWidth={() => {}}
-              onPlanningSetScanSteps={() => {}}
+              onPlanningUpdateWaypoint={noop}
+              onPlanningSetRepetitions={noop}
+              onPlanningSetDwellTime={noop}
+              onPlanningSetScanCenter={noop}
+              onPlanningSetScanWidth={noop}
+              onPlanningSetScanSteps={noop}
               onPlanningSelectCamera={noopStr}
               onPlanningZoomCameras={noopStr}
               onMitigate={handleMitigate}
@@ -2152,8 +2184,8 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
               onLauncherSelect={handleLauncherSelect}
               launcherEffectors={launcherEffectors}
               selectedLauncherIds={selectedLauncherIds}
-              flowAssets={{ regulusEffectors, launcherEffectors }}
-              flowSelectedIds={{ regulusEffectors: selectedEffectorIds, launcherEffectors: selectedLauncherIds }}
+              flowAssets={flowAssets}
+              flowSelectedIds={flowSelectedIds}
               onBdaOutcome={handleBdaOutcome}
               cameraActiveTargetId={cameraActiveTargetId}
               cameraPointingTargetId={cameraPointingTargetId}
@@ -2161,10 +2193,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
               controlRequestCountdown={cameraControlRequest?.countdown ?? null}
               controlRequestTargetId={cameraControlRequest?.targetId ?? null}
               onRequestCameraControl={handleRequestCameraControl}
-              onSensorFocus={(sensorId) => {
-                setSensorFocusId(sensorId);
-                setTimeout(() => setSensorFocusId(null), 2000);
-              }}
+              onSensorFocus={handleSensorFocus}
               onTargetFocus={handleTargetFocus}
               onTargetHover={setHoveredTargetIdFromCard}
               thinMode
@@ -2234,6 +2263,15 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
                 if (next) s.add(id); else s.delete(id);
                 return s;
               });
+            }}
+            onOpenLogs={(id) => {
+              toast.info(t.toasts.deviceLogsOpened(id), { duration: 3000 });
+            }}
+            onArmNotifications={(id, armed) => {
+              toast.success(
+                armed ? t.toasts.deviceNotificationsArmed(id) : t.toasts.deviceNotificationsDisarmed(id),
+                { duration: 3000 },
+              );
             }}
             noTransition={panelSwitching}
             width={sidebarWidth}

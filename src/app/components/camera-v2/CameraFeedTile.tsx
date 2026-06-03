@@ -12,7 +12,6 @@ import { useDrop } from 'react-dnd';
 import { Pin } from '@/lib/icons/central';
 import { useStrings } from '@/lib/intl';
 import { CameraTopHud } from './CameraTopHud';
-import { CameraControlBar } from './CameraControlBar';
 import { CameraDetectionsOverlay } from './CameraDetectionsOverlay';
 import { DesignateTargetOverlay } from './DesignateTargetOverlay';
 import { CameraTelemetryStrip } from './CameraTelemetryStrip';
@@ -40,6 +39,10 @@ interface CameraFeedTileProps {
   videoSrcPlayback?: string;
   isFullscreen: boolean;
   emptySlotHint?: string;
+  /** Hide the built-in drone HUD overlay (e.g. when a host supplies its own chrome). */
+  suppressDroneHud?: boolean;
+  /** Hide the built-in bottom telemetry strip (e.g. when a host supplies its own chrome). */
+  suppressTelemetryStrip?: boolean;
   onTakeControl: () => void;
   onReleaseControl: () => void;
   onModeToggle: () => void;
@@ -68,6 +71,8 @@ export function CameraFeedTile({
   videoSrcPlayback,
   isFullscreen,
   emptySlotHint,
+  suppressDroneHud = false,
+  suppressTelemetryStrip = false,
   onTakeControl,
   onReleaseControl,
   onModeToggle,
@@ -289,26 +294,10 @@ export function CameraFeedTile({
           {!playbackEnabled && (
             <DesignateTargetOverlay active={designateMode} onDesignate={handleDesignate} />
           )}
-          <DroneHud status={status} />
-          <CameraTelemetryStrip visible={controlsVisible} status={status} />
-          <CameraControlBar
-            visible={controlsVisible}
-            mode={feed.mode}
-            status={status}
-            detectionsOn={detectionsOn}
-            designateMode={designateMode}
-            isFullscreen={isFullscreen}
-            settingsOpen={settingsOpen}
-            playbackEnabled={playbackEnabled}
-            onSettingsOpenChange={setSettingsOpen}
-            onTakeRelease={handleTakeRelease}
-            onModeToggle={onModeToggle}
-            onDetectionsToggle={onDetectionsToggle}
-            onDesignateModeToggle={onDesignateModeToggle}
-            onFullscreenToggle={onFullscreenToggle}
-            onPlaybackToggle={onPlaybackToggle}
-            onZoomChange={onZoomChange}
-          />
+          {!suppressDroneHud && <DroneHud status={status} />}
+          {!suppressTelemetryStrip && (
+            <CameraTelemetryStrip visible={controlsVisible} status={status} />
+          )}
         </div>
 
         {/* Playback investigation surface — fills the bottom half of

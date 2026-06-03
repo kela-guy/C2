@@ -1,136 +1,30 @@
-import React from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { cn } from "@/shared/components/ui/utils";
-import { AppLoader } from "@/shared/components/ui/app-loader";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/shared/components/ui/tooltip";
+/**
+ * ActionButton — now a thin preset of the base {@link Button}.
+ *
+ * Historically this file *was* the base button. It has been promoted to
+ * `Button.tsx`; `ActionButton` is kept as a back-compat alias so the existing
+ * card action rows and toolbars keep working unchanged. It renders the base
+ * Button with the legacy `action-button` handoff stamp. Prefer importing
+ * `Button` directly in new code.
+ *
+ * @deprecated Use `Button` from `@/primitives` instead.
+ */
+import { Button, type ButtonProps } from './Button';
+import {
+  BUTTON_VARIANTS,
+  BUTTON_SIZES,
+  type ButtonVariant,
+  type ButtonSize,
+} from './buttonTokens';
 
-export const ACTION_BUTTON_VARIANTS = {
-  fill: {
-    base: 'bg-white/[0.08]',
-    hover: 'hover:bg-white/[0.14]',
-    active: 'active:bg-white/[0.06]',
-    text: 'text-zinc-200',
-  },
-  ghost: {
-    base: 'bg-zinc-800',
-    hover: 'hover:bg-zinc-700',
-    active: 'active:bg-zinc-900',
-    text: 'text-white',
-  },
-  outline: {
-    base: 'bg-white/[0.03] shadow-[0_0_0_1px_rgba(255,255,255,0.08)]',
-    hover: 'hover:bg-white/[0.06]',
-    active: 'active:bg-white/[0.02]',
-    text: 'text-zinc-400',
-  },
-  danger: {
-    base: 'bg-[oklch(0.435_0.151_25)]',
-    hover: 'hover:bg-[oklch(0.485_0.151_25)]',
-    active: 'active:bg-[oklch(0.385_0.151_25)]',
-    text: 'text-white',
-  },
-  warning: {
-    base: 'bg-[oklch(0.501_0.166_75)]',
-    hover: 'hover:bg-[oklch(0.551_0.166_75)]',
-    active: 'active:bg-[oklch(0.451_0.166_75)]',
-    text: 'text-white',
-  },
-} as const;
+// Back-compat token aliases — the button family now reads from `buttonTokens`.
+export const ACTION_BUTTON_VARIANTS = BUTTON_VARIANTS;
+export const ACTION_BUTTON_SIZES = BUTTON_SIZES;
+export type ActionButtonVariant = ButtonVariant;
+export type ActionButtonSize = ButtonSize;
 
-export type ActionButtonVariant = keyof typeof ACTION_BUTTON_VARIANTS;
+export type ActionButtonProps = Omit<ButtonProps, 'asChild' | 'children' | 'dataHandoff'>;
 
-export const ACTION_BUTTON_SIZES = {
-  sm: { height: 'min-h-[30px] h-[30px]', text: 'text-xs', icon: 11, font: 'font-medium' },
-  md: { height: 'min-h-8 h-8', text: 'text-xs', icon: 14, font: 'font-medium' },
-  lg: { height: 'min-h-9 h-9', text: 'text-sm', icon: 16, font: 'font-semibold' },
-} as const;
-
-export type ActionButtonSize = keyof typeof ACTION_BUTTON_SIZES;
-
-export function ActionButton({
-  label,
-  icon: Icon,
-  onClick,
-  variant = "fill",
-  size = "md",
-  className = "",
-  disabled = false,
-  loading = false,
-  pressed,
-  title,
-}: {
-  label: string;
-  icon?: React.ElementType;
-  onClick?: (e: React.MouseEvent) => void;
-  variant?: ActionButtonVariant;
-  size?: ActionButtonSize;
-  className?: string;
-  disabled?: boolean;
-  loading?: boolean;
-  /**
-   * Toggle "on" state. When defined, the button advertises `aria-pressed`
-   * and — when `true` — fills with a brighter white surface (inset ring +
-   * higher-opacity background) over the chosen variant. Leave undefined for
-   * plain (non-toggle) buttons.
-   */
-  pressed?: boolean;
-  title?: string;
-}) {
-  const prefersReducedMotion = useReducedMotion();
-  const isDisabled = disabled || loading;
-  const c = ACTION_BUTTON_VARIANTS[variant];
-  const sz = ACTION_BUTTON_SIZES[size];
-
-  const btn = (
-    <button
-      type="button"
-      data-handoff-component="action-button"
-      onClick={isDisabled ? undefined : onClick}
-      disabled={isDisabled}
-      aria-pressed={pressed}
-      className={cn(
-        'inline-flex items-center justify-center gap-2 px-3 rounded overflow-hidden',
-        sz.height, sz.text, sz.font, c.text,
-        c.base, c.hover, c.active,
-        'transition-[background-color,box-shadow,transform] duration-150 ease-out',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/30',
-        !loading && 'active:scale-[0.98] will-change-transform',
-        isDisabled && !loading && 'opacity-45 pointer-events-none',
-        loading && 'cursor-wait',
-        pressed &&
-          'bg-white/[0.20] hover:bg-white/[0.24] active:bg-white/[0.16] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.22)]',
-        className,
-      )}
-      {...(loading ? { "aria-live": "polite" as const } : {})}
-    >
-      <AnimatePresence mode="popLayout" initial={false}>
-        <motion.span
-          key={label}
-          className="flex items-center gap-2"
-          transition={prefersReducedMotion ? { duration: 0 } : { type: 'spring', duration: 0.3, bounce: 0 }}
-          initial={prefersReducedMotion ? false : { opacity: 0, y: -25 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={prefersReducedMotion ? undefined : { opacity: 0, y: 25 }}
-        >
-          {loading ? (
-            <AppLoader size={sz.icon} label={label} className="shrink-0 opacity-90" />
-          ) : (
-            Icon && <Icon size={sz.icon} className="shrink-0 opacity-95" aria-hidden="true" />
-          )}
-          <span className="whitespace-nowrap">{label}</span>
-        </motion.span>
-      </AnimatePresence>
-    </button>
-  );
-
-  if (!title) return btn;
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>{btn}</TooltipTrigger>
-      <TooltipContent side="top" sideOffset={6}>
-        {title}
-      </TooltipContent>
-    </Tooltip>
-  );
+export function ActionButton(props: ActionButtonProps) {
+  return <Button {...props} dataHandoff="action-button" />;
 }

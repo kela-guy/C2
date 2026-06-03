@@ -293,3 +293,15 @@
   outline: none;
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);
 }
+
+/*
+ * Shiki code blocks in the manifest-driven docs. The highlighter runs with
+ * `defaultColor: 'dark'`, so token colors are already the github-dark palette;
+ * we only neutralise shiki's inline `<pre>` background so the level-0 doc
+ * surface shows through instead of github-dark's own #24292e.
+ */
+.shiki,
+.shiki span {
+  background-color: transparent !important;
+}
+

@@ -53,6 +53,8 @@ export function DevicesPanel({
   onPinToFeed,
   onUnpinFromFeed,
   pinnedDeviceIds,
+  onOpenLogs,
+  onArmNotifications,
   noTransition,
   width,
   focusedDeviceId,
@@ -213,6 +215,8 @@ export function DevicesPanel({
                     onPinToFeed={onPinToFeed}
                     onUnpinFromFeed={onUnpinFromFeed}
                     isPinnedToFeed={pinnedSet.has(device.id)}
+                    onOpenLogs={onOpenLogs}
+                    onArmNotifications={onArmNotifications}
                     connectionStateLabels={connectionStateLabels}
                     strings={strings}
                   />

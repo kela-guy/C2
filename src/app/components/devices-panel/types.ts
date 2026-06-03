@@ -40,6 +40,12 @@ export interface Device {
   capabilities?: CameraCapability[];
   altitude?: string;
   /**
+   * Open error count for this device. Drives the Logs error channel (the
+   * Logs control turns red with a count badge) and the count badge in the
+   * health tile tooltip. Absent / 0 means no errors.
+   */
+  errorCount?: number;
+  /**
    * Icons may opt into an `active` prop to render their lit/playing
    * variant (floodlight, speaker). Other icons ignore it.
    */
@@ -89,10 +95,21 @@ export interface DevicesPanelStrings {
   jamDisabledOffline: string;
   jamDisabledMalfunction: string;
   jamDisabledAlreadyActive: string;
+  /** ECM jam destructive split-button: scope menu, confirm step, active state. */
+  jammingAll: string;
+  jamThisJammer: string;
+  jamAllJammers: string;
+  jamPromptOne: string;
+  jamPromptAll: string;
+  jamConfirm: string;
+  jamCancel: string;
+  jamMoreOptions: string;
   /** Camera controls. */
   centerOnMap: string;
   mute: string;
   unmute: string;
+  /** Pressed-state label for the mute toggle (mirrors the lab's state-label toggle). */
+  muted: string;
   wipers: string;
   wipersAriaLabel: string;
   calibrate: string;
@@ -123,6 +140,24 @@ export interface DevicesPanelStrings {
   pinToFeedTooltip: string;
   /** Tooltip on the small collapsed-row pin toggle, in its on (pinned) state. */
   pinnedToFeedTooltip: string;
+  /** Show-on-map header glyph (icon-only). */
+  showOnMap: string;
+  /** Overflow-menu inspect actions. */
+  logs: string;
+  /** Suffix appended after the error count in the Logs label/tooltip. */
+  errors: string;
+  notifications: string;
+  /** More-actions (3-dot) overflow trigger aria-label. */
+  moreActions: string;
+  /** Aria-label prefix for the armed-notifications header countdown. */
+  notificationsArmedAriaLabel: string;
+  /** Aria-label prefix for the speaker now-playing header readout. */
+  nowPlayingAriaLabel: string;
+  /** Worst-wins severity titles shown in the health-tile tooltip. */
+  healthCritical: string;
+  healthWarning: string;
+  healthOffline: string;
+  healthHealthy: string;
 }
 
 export interface DevicesPanelProps {
@@ -155,6 +190,13 @@ export interface DevicesPanelProps {
    * callers without state).
    */
   pinnedDeviceIds?: ReadonlySet<string> | readonly string[];
+  /** Open the device's log / event channel (the overflow "Logs" entry). */
+  onOpenLogs?: (deviceId: string) => void;
+  /**
+   * Arm / disarm the device's timed notifications window (the overflow
+   * "Notifications" toggle). `armed` is the next state.
+   */
+  onArmNotifications?: (deviceId: string, armed: boolean) => void;
   noTransition?: boolean;
   width?: number;
   focusedDeviceId?: string | null;
@@ -192,6 +234,10 @@ export interface DeviceRowProps {
   onUnpinFromFeed?: (deviceId: string) => void;
   /** Whether this device is currently pinned to a feed. Drives the toggle visual + label. */
   isPinnedToFeed?: boolean;
+  /** Open the device's log / event channel (overflow "Logs" entry). */
+  onOpenLogs?: (deviceId: string) => void;
+  /** Arm / disarm the timed notifications window (overflow "Notifications" toggle). */
+  onArmNotifications?: (deviceId: string, armed: boolean) => void;
   connectionStateLabels?: Record<ConnectionState, string>;
   strings?: DevicesPanelStrings;
 }

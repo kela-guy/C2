@@ -14,9 +14,18 @@
  * Section IDs come from the `<ComponentSection id="…">` calls in
  * [`StyleguidePage.tsx`](src/app/components/StyleguidePage.tsx). When new
  * sections land there, add the mapping here.
+ *
+ * Source of truth: the design-system manifest now generates a base map
+ * (`GENERATED_SECTION_BY_HINT`, emitted by `scripts/styleguide-manifest.mjs`).
+ * The manual map below is layered on top so legacy `/styleguide`
+ * granular sections (e.g. `device-row-actions`, `device-health`) keep their
+ * precise targets until those parts finish migrating. As components move into
+ * the manifest, entries can be deleted from the manual map and the generated
+ * base takes over — kept honest by the manifest drift guard.
  */
+import { GENERATED_SECTION_BY_HINT } from '@/app/styleguide/registry/styleguideSectionByHint.generated';
 
-const STYLEGUIDE_SECTION_BY_HINT: Record<string, string> = {
+const MANUAL_SECTION_BY_HINT: Record<string, string> = {
   // Project-specific opt-ins map 1:1.
   'status-chip': 'status-chip',
   'action-button': 'action-button',
@@ -35,8 +44,44 @@ const STYLEGUIDE_SECTION_BY_HINT: Record<string, string> = {
   'card-states': 'card-states',
   'target-card': 'target-card',
   'filter-bar': 'filter-bar',
-  'devices-panel': 'devices-panel',
   'new-updates': 'new-updates',
+
+  // Device panel chrome → the DevicesPanel section.
+  'devices-panel': 'devices-panel',
+  'devices-panel-header': 'devices-panel',
+  'device-type-group': 'devices-panel',
+
+  // Device card primitives → the granular Device Card sections. Picking
+  // any sub-part of a device row lands on its exact doc rather than the
+  // generic panel section.
+  'device-card': 'device-card',
+  'device-row': 'device-row',
+  'device-row-header': 'device-row',
+  'device-row-details': 'device-row',
+  'device-row-actions': 'device-row-actions',
+  'device-icon': 'device-health',
+  'device-detail-grid': 'device-detail-grid',
+  'device-detail-row': 'device-detail-grid',
+  'device-camera-preview': 'device-camera-preview',
+  // Always-visible header primary cluster (Show-on-map + per-type On/Off,
+  // now-playing readout, notify countdown echo).
+  'device-header-cluster': 'device-header-cluster',
+  'device-center-on-map': 'device-header-cluster',
+  'device-floodlight-toggle': 'device-header-cluster',
+  'device-speaker-play': 'device-header-cluster',
+  'device-now-playing': 'device-header-cluster',
+  'device-notify-indicator': 'device-overflow',
+  // Footer 3-dot overflow — Logs error channel + timed Notifications.
+  'device-overflow': 'device-overflow',
+  'device-notifications': 'device-overflow',
+  'device-logs': 'device-overflow',
+  // Every other footer control is the same DeviceAction primitive.
+  'device-action': 'device-action',
+  'device-mute': 'device-action',
+  'device-jam-button': 'device-action',
+  'device-pin-button': 'device-action',
+  'device-wipers': 'device-action',
+  'device-calibrate': 'device-action',
 
   // shadcn `data-slot` values → closest project analog. Conservative — only
   // map when a project section semantically owns the primitive; otherwise
@@ -48,6 +93,16 @@ const STYLEGUIDE_SECTION_BY_HINT: Record<string, string> = {
   'accordion-item': 'accordion',
   'accordion-trigger': 'accordion',
   'accordion-content': 'accordion',
+};
+
+/**
+ * Merged resolver map: manifest-generated base, with the manual legacy map
+ * winning on conflicts so granular `/styleguide` sections stay precise during
+ * migration.
+ */
+const STYLEGUIDE_SECTION_BY_HINT: Record<string, string> = {
+  ...GENERATED_SECTION_BY_HINT,
+  ...MANUAL_SECTION_BY_HINT,
 };
 
 export interface StyleguideLink {

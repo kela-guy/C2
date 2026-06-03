@@ -39,11 +39,6 @@
  */
 
 import type { ComponentProps, ComponentType } from 'react';
-// Sourced from lucide-react directly — `@/lib/icons/central` (the
-// Central Icons re-export shim used elsewhere in the stash) hasn't
-// landed yet on this branch, and these glyphs render identically
-// across the two icon sets. Swap to the central shim once the icon
-// migration arrives.
 import {
   ArrowUp,
   ChevronDown,
@@ -51,7 +46,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-} from 'lucide-react';
+} from '@/lib/icons/central';
 import { useIsRtl } from './context';
 
 /**

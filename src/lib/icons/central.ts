@@ -7,11 +7,36 @@
  * lucide-compatible names that consumers expect, so the migration was a
  * find-and-replace from `lucide-react` -> `@/lib/icons/central`.
  *
+ * ---------------------------------------------------------------------------
+ * Import policy (enforced by `no-restricted-imports` in eslint.config.js):
+ *
+ *   - Generic UI icon  -> import from `@/lib/icons/central` (this file).
+ *   - Brand / domain glyph (drone markers, C2 logo, jam waves, tactical
+ *     map symbols) -> the relevant first-party module: `@/primitives/
+ *     ProductIcons`, `@/primitives/MapIcons`, `@/app/components/TacticalMap`,
+ *     or `@/app/components/devices-panel/icons`.
+ *
+ * The ONLY modules allowed to import `lucide-react` directly are this wrapper,
+ * `src/lib/iconRegistry.ts` (styleguide catalogue), the styleguide tooling
+ * under `src/app/components/styleguide/*`, and the shadcn primitives under
+ * `src/app/components/ui/*`. Everything else must route through here.
+ *
+ * Missing in Central — candidates to request from the iconists
+ * (hello@iconists.co): a proper crosshair/reticle, a neutral overflow
+ * ellipsis, a plain line-scan, a drone/UAV `Bird`, and a `Mountain` /
+ * altitude glyph. Most former lucide pass-throughs now map to the closest
+ * Central glyph (bucket 3); only `Bird` and `Mountain` still fall back to
+ * lucide (bucket 4), because Central's nearest options (a laptop-bird and a
+ * bicycle) would mislead.
+ * ---------------------------------------------------------------------------
+ *
  * Variant choice (locked):
  *   - Outlined (line):  @central-icons-react/round-outlined-radius-1-stroke-1.5
  *   - Filled (paired):  @central-icons-react/round-filled-radius-1-stroke-1.5
+ *   - Bold filled (rare exception): @central-icons-react/round-filled-radius-0-stroke-2
+ *     (only `BellOffFilled`, for the notifications armed state)
  *
- * Three buckets live in this file:
+ * Four buckets live in this file:
  *
  *   1. Direct Central mappings - the bulk. Each Central icon is imported
  *      from its own subpath (`/IconName/`) so Vite/Rollup can tree-shake at
@@ -21,11 +46,13 @@
  *      should be the filled variant (currently just `Pin`/`PinFilled` for
  *      the DevicesPanel pinned-to-feed toggle).
  *
- *   3. lucide pass-throughs - a small set of icons where Central has no
- *      clean equivalent (Crosshair, Wrench, Copy, Download, etc.) or where
- *      the lucide rendering is meaningfully better (Loader2's spinner). Each
- *      of these is annotated with the reason. The hybrid is intentional;
- *      replacing them with weak Central matches would regress the UI.
+ *   3. Former lucide pass-throughs, now mapped to the closest Central glyph
+ *      (accepting minor visual/semantic drift). Each is annotated with the
+ *      chosen icon's aria label.
+ *
+ *   4. Remaining lucide hold-outs - only `Bird` and `Mountain`, where the
+ *      nearest Central glyph (laptop-bird / bicycle) would mislead. These
+ *      stay on lucide until an iconist request lands.
  *
  * Note for shadcn/ui primitives: the files under `src/app/components/ui/*`
  * keep their original `lucide-react` imports unchanged. Forking each shadcn
@@ -44,6 +71,7 @@
  * through their site of use.
  */
 
+import { createElement } from 'react';
 import type { ComponentType, SVGAttributes } from 'react';
 
 import IconCamera1Raw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconCamera1';
@@ -94,6 +122,7 @@ import IconFullscreen2Raw from '@central-icons-react/round-outlined-radius-1-str
 import IconSplitRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconSplit';
 import IconSunRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconSun';
 import IconMoonRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconMoon';
+import IconEscRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconEsc';
 import IconSettingsGear1Raw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconSettingsGear1';
 import IconColorPaletteRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconColorPalette';
 import IconSettingsSliderHorRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconSettingsSliderHor';
@@ -111,7 +140,19 @@ import IconShieldRaw from '@central-icons-react/round-outlined-radius-1-stroke-1
 import IconInfoSimpleRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconInfoSimple';
 import IconLightningBoltRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconLightningBolt';
 import IconSquareArrowOutTopLeftRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconSquareArrowOutTopLeft';
+import IconStopRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconStop';
+import IconDropRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconDrop';
+import IconChevronGrabberVerticalRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconChevronGrabberVertical';
+import IconCircleRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconCircle';
+import IconCircleQuestionmarkRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconCircleQuestionmark';
+import IconSquareBehindSquare1Raw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconSquareBehindSquare1';
+import IconChatBubble7Raw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconChatBubble7';
 import IconPinFilledRaw from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconPin';
+// Bolder filled variant (radius-0 / stroke-2) — used only for the
+// notifications "armed" state in the devices lab, where the heavier weight
+// reads as a lit/active bell against the row tint. Intentional second filled
+// variant; the rest of the app stays on the locked radius-1 / stroke-1.5 set.
+import IconBellOffFilledRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconBellOff';
 
 /**
  * Loose icon component shape that consumers can pass as `ElementType` to
@@ -160,6 +201,9 @@ export const ChevronLeft = asIcon(IconChevronLeftRaw);
 export const ChevronRight = asIcon(IconChevronRightRaw);
 export const ChevronsLeft = asIcon(IconChevronDoubleLeftRaw);
 export const ChevronsRight = asIcon(IconChevronDoubleRightRaw);
+// Vertical double-chevron used by combobox / select triggers (lucide's
+// `ChevronsUpDown`). Central's grabber-vertical glyph is the up/down pair.
+export const ChevronsUpDown = asIcon(IconChevronGrabberVerticalRaw);
 // SkipBack / SkipForward in lucide are double-chevron-with-bar glyphs. Closest
 // Central match is the plain double chevron; the visual difference is the
 // trailing vertical bar, which is acceptable in a playback strip.
@@ -190,6 +234,13 @@ export const Phone = asIcon(IconPhoneRaw);
 export const BookOpen = asIcon(IconBookSimpleRaw);
 export const Tag = asIcon(IconTagRaw);
 export const RotateCcw = asIcon(IconArrowRotateCCRaw);
+// Copy: Central's `IconSquareBehindSquare1` is the two-overlapping-squares
+// duplicate glyph (lucide's `Copy` equivalent).
+export const Copy = asIcon(IconSquareBehindSquare1Raw);
+// HelpCircle: Central ships a question-mark-in-circle glyph.
+export const HelpCircle = asIcon(IconCircleQuestionmarkRaw);
+// MessageSquare: chat bubble (lucide's `MessageSquare` equivalent).
+export const MessageSquare = asIcon(IconChatBubble7Raw);
 
 // --- Eyes / visibility ---
 export const Eye = asIcon(IconEyeOpenRaw);
@@ -198,6 +249,9 @@ export const EyeOff = asIcon(IconEyeClosedRaw);
 // --- Media playback ---
 export const Play = asIcon(IconPlayRaw);
 export const Pause = asIcon(IconPauseRaw);
+// `Square` is used as the STOP glyph on speaker/playback controls (lucide
+// exposes a bare square for this). Central ships a purpose-drawn stop icon.
+export const Square = asIcon(IconStopRaw);
 export const Maximize2 = asIcon(IconFullscreen1Raw);
 export const Minimize2 = asIcon(IconFullscreen2Raw);
 export const SplitSquareHorizontal = asIcon(IconSplitRaw);
@@ -205,6 +259,9 @@ export const SplitSquareHorizontal = asIcon(IconSplitRaw);
 // --- Theme / settings ---
 export const Sun = asIcon(IconSunRaw);
 export const Moon = asIcon(IconMoonRaw);
+// Power: Central's `IconEsc` is the universal power/standby glyph (a circle
+// broken by a top stroke; its aria-label is "esc, power").
+export const Power = asIcon(IconEscRaw);
 export const Settings = asIcon(IconSettingsGear1Raw);
 export const Palette = asIcon(IconColorPaletteRaw);
 export const SlidersHorizontal = asIcon(IconSettingsSliderHorRaw);
@@ -233,6 +290,13 @@ export const ShieldAlert = asIcon(IconShieldRaw);
 export const Info = asIcon(IconInfoSimpleRaw);
 export const Zap = asIcon(IconLightningBoltRaw);
 
+// --- Shapes ---
+export const Circle = asIcon(IconCircleRaw);
+
+// --- Devices / environment ---
+// `Droplets` drives the floodlight / water control on device cards.
+export const Droplets = asIcon(IconDropRaw);
+
 // --- Misc ---
 export const ExternalLink = asIcon(IconSquareArrowOutTopLeftRaw);
 
@@ -246,98 +310,133 @@ export const ExternalLink = asIcon(IconSquareArrowOutTopLeftRaw);
 // hacks needed.
 export const PinFilled = asIcon(IconPinFilledRaw);
 
+// `BellOff` (line) <-> `BellOffFilled` for the notifications armed toggle.
+// The filled twin comes from the bolder radius-0 / stroke-2 variant.
+export const BellOffFilled = asIcon(IconBellOffFilledRaw);
+
 // =====================================================================
-// 3. Lucide pass-throughs (no clean Central equivalent)
+// 3. Former lucide pass-throughs, now mapped to Central glyphs
 // =====================================================================
 
-// Each icon below is intentionally re-exported from lucide-react. The
-// trailing comment explains why we did not pick a Central icon. We re-cast
-// each through `asIcon` for the same reason as Central icons - to give
-// consumers a project-local React type and avoid the same cross-version
-// `ElementType` mismatch we get on lucide's `ForwardRefExoticComponent`.
-import {
-  Crosshair as CrosshairRaw,
-  Loader2 as Loader2Raw,
-  ScanLine as ScanLineRaw,
-  ScanSearch as ScanSearchRaw,
-  Wrench as WrenchRaw,
-  Copy as CopyRaw,
-  Download as DownloadRaw,
-  Navigation as NavigationRaw,
-  HelpCircle as HelpCircleRaw,
-  Activity as ActivityRaw,
-  Bird as BirdRaw,
-  PinOff as PinOffRaw,
-  MessageSquare as MessageSquareRaw,
-  Image as ImageRaw,
-  TimerReset as TimerResetRaw,
-  Scan as ScanRaw,
-  Mountain as MountainRaw,
-  Route as RouteRaw,
-} from 'lucide-react';
+// These previously fell back to lucide because no exact Central match
+// existed. Per the Central-only directive we now map each to the closest
+// glyph in the locked round-outlined / stroke-1.5 set, accepting minor
+// visual/semantic drift (the chosen Central icon's aria label is noted).
+import IconTarget1Raw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconTarget1';
+import IconLoadingCircleRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconLoadingCircle';
+import IconScanCodeRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconScanCode';
+import IconScanTextSparkleRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconScanTextSparkle';
+import IconArScanCube1Raw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconArScanCube1';
+import IconMaintenanceRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconMaintenance';
+import IconImportRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconImport';
+import IconLocationRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconLocation';
+import IconLiveActivityRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconLiveActivity';
+import IconUnpinRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconUnpin';
+import IconImages1Raw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconImages1';
+import IconClockSnoozeRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconClockSnooze';
+import IconMapEditFlatRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconMapEditFlat';
+import IconCircleDotsCenter1Raw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconCircleDotsCenter1';
 
-// Crosshair: Central has no aim/target-reticle glyph. IconTarget would be
-// too heavy and reads as "bullseye", not "crosshair".
-export const Crosshair = asIcon(CrosshairRaw);
+// Crosshair → IconTarget1 (aria: "target-1, zoom, crosshair").
+export const Crosshair = asIcon(IconTarget1Raw);
 
-// Loader2: lucide's circular spinner is purpose-drawn for `animate-spin`
-// (incomplete arc reads as motion). IconLoader is a full circle and looks
-// static when spun.
-export const Loader2 = asIcon(Loader2Raw);
+// Loader2 → IconLoadingCircle (aria: "loading-circle, quarter, spinner");
+// the quarter arc still reads as motion under `animate-spin`.
+export const Loader2 = asIcon(IconLoadingCircleRaw);
 
-// ScanLine, ScanSearch: Central has no scanning-overlay variants.
-export const ScanLine = asIcon(ScanLineRaw);
-export const ScanSearch = asIcon(ScanSearchRaw);
+// Scan family → nearest Central scan glyphs (Central has no plain line-scan):
+//   Scan       → IconArScanCube1   (survey/detect frame)
+//   ScanLine   → IconScanCode      (line/barcode-style scan)
+//   ScanSearch → IconScanTextSparkle (AI "smart detect", carries the sparkle)
+export const Scan = asIcon(IconArScanCube1Raw);
+export const ScanLine = asIcon(IconScanCodeRaw);
+export const ScanSearch = asIcon(IconScanTextSparkleRaw);
 
-// Wrench: Central only ships IconHammer / IconToolbox; neither matches
-// the maintenance-wrench visual we want for "device under service".
-export const Wrench = asIcon(WrenchRaw);
+// Wrench → IconMaintenance (aria: "maintenance, service, tweak").
+export const Wrench = asIcon(IconMaintenanceRaw);
 
-// Copy: Central has IconFiles (multi-file) but no two-overlapping-pages
-// copy glyph.
-export const Copy = asIcon(CopyRaw);
+// Download → IconImport (aria: "import, download, save").
+export const Download = asIcon(IconImportRaw);
 
-// Download: Central's only download-shaped icon is IconCloudDownload,
-// which adds an unwanted cloud connotation.
-export const Download = asIcon(DownloadRaw);
+// Navigation → IconLocation (aria: "location, explore, compass"); used on
+// heading / altitude telemetry rows.
+export const Navigation = asIcon(IconLocationRaw);
 
-// Navigation: lucide's paper-airplane Navigation icon has no Central
-// equivalent. IconLocationArrow does not exist.
-export const Navigation = asIcon(NavigationRaw);
+// Activity → IconLiveActivity (aria: "live-activity") — generic activity pulse.
+export const Activity = asIcon(IconLiveActivityRaw);
 
-// HelpCircle: Central has no question-mark-in-circle glyph.
-export const HelpCircle = asIcon(HelpCircleRaw);
+// PinOff → IconUnpin.
+export const PinOff = asIcon(IconUnpinRaw);
 
-// Activity: lucide draws a pulse line; Central's IconHeartBeat reads as
-// a literal heart, not a generic activity sparkline.
-export const Activity = asIcon(ActivityRaw);
+// Image → IconImages1 (aria: "images-1, photos, pictures").
+export const Image = asIcon(IconImages1Raw);
 
-// Bird: domain-specific glyph used for hostile UAV cards. No Central
-// equivalent.
+// TimerReset → IconClockSnooze (aria: "clock-snooze, timer"); used for the
+// clear/reset-filters affordance.
+export const TimerReset = asIcon(IconClockSnoozeRaw);
+
+// Route → IconMapEditFlat (aria: "map-edit-flat, route, plan").
+export const Route = asIcon(IconMapEditFlatRaw);
+
+// MoreVertical / MoreHorizontal → IconCircleDotsCenter1 (aria: "menu").
+// Central ships no plain three-dot ellipsis; the dots-in-circle is the
+// nearest overflow affordance.
+export const MoreVertical = asIcon(IconCircleDotsCenter1Raw);
+export const MoreHorizontal = asIcon(IconCircleDotsCenter1Raw);
+
+// =====================================================================
+// 4. Remaining lucide hold-outs (no acceptable Central glyph yet)
+// =====================================================================
+// Bird:     Central only ships `IconVibeCodingBird` — a bird with a laptop.
+// Mountain: Central only ships `IconMountainBike` — a bicycle.
+// Both would actively mislead in the tactical UI, so they stay on lucide
+// pending a product decision / an iconist request.
+import { Bird as BirdRaw, Mountain as MountainRaw } from 'lucide-react';
 export const Bird = asIcon(BirdRaw);
-
-// PinOff: Central has no PinOff variant. We use Pin / PinFilled for the
-// feed-pin toggle, but the legacy DevicesPanel context-menu "unpin"
-// action keeps using lucide's PinOff for now.
-export const PinOff = asIcon(PinOffRaw);
-
-// MessageSquare: chat bubble disambiguation between Central's many
-// bubble variants would be guesswork; keep lucide.
-export const MessageSquare = asIcon(MessageSquareRaw);
-
-// Image: lucide-react's `Image` icon (we alias as `ImageIcon` at the
-// call site). Central has IconImageAvatar etc. but nothing as neutral.
-export const Image = asIcon(ImageRaw);
-
-// TimerReset: Central has no timer-with-reset arrow combo glyph.
-export const TimerReset = asIcon(TimerResetRaw);
-
-// Scan: Central only ships IconScanCode / IconScanTextSparkle / etc.,
-// no plain "scan over content" line variant.
-export const Scan = asIcon(ScanRaw);
-
-// Mountain: Central ships IconMountainBike (with bike) only.
 export const Mountain = asIcon(MountainRaw);
 
-// Route: Central has no route/path-of-travel glyph.
-export const Route = asIcon(RouteRaw);
+// =====================================================================
+// Custom glyphs (no Central equivalent) — used by the video HUD sandbox.
+// =====================================================================
+
+const TAKE_CONTROL_PATH =
+  'M12 2C9.23858 2 7 4.23858 7 7V9H4V22H20V9H17V7C17 4.23858 14.7614 2 12 2ZM15 9V7C15 5.34315 13.6569 4 12 4C10.3431 4 9 5.34315 9 7V9H15ZM13 13V18H11V13H13Z';
+
+const IconTakeControlCustom = ({ size = 24, ...props }: SVGAttributes<SVGSVGElement> & { size?: number | string }) =>
+  createElement(
+    'svg',
+    { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', fill: 'none', width: size, height: size, ...props },
+    createElement('path', {
+      fillRule: 'evenodd',
+      clipRule: 'evenodd',
+      d: TAKE_CONTROL_PATH,
+      fill: 'currentColor',
+    }),
+  );
+
+const ZOOM_CIRCLE_PATH =
+  'M11 18C14.866 18 18 14.866 18 11C18 7.13401 14.866 4 11 4C7.13401 4 4 7.13401 4 11C4 14.866 7.13401 18 11 18Z';
+const ZOOM_HANDLE_PATH = 'M20 20L16.05 16.05';
+
+const IconZoomCustom = ({ size = 24, ...props }: SVGAttributes<SVGSVGElement> & { size?: number | string }) =>
+  createElement(
+    'svg',
+    { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', fill: 'none', width: size, height: size, ...props },
+    createElement('path', {
+      d: ZOOM_CIRCLE_PATH,
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: 2,
+      strokeLinecap: 'square',
+    }),
+    createElement('path', {
+      d: ZOOM_HANDLE_PATH,
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: 2,
+      strokeLinecap: 'square',
+    }),
+  );
+
+export const TakeControl = asIcon(IconTakeControlCustom);
+export const Zoom = asIcon(IconZoomCustom);

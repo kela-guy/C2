@@ -6,6 +6,29 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.4.0',
+    date: 'Jun 2, 2026',
+    highlights: [
+      '`DevicesPanel`: the collapsed row is no longer info-only. It now carries an always-visible **primary cluster** at the inline-end — Show-on-map pinned to the outer edge, the per-type On/Off inboard (speaker Play/Pause, floodlight `FloodlightSegmentedCompact`), the speaker **now-playing** readout (`DotmSquare18` + track name, grows in with no layout shift), and the armed-notifications countdown echo.',
+      '`DEVICE_REGISTRY`: actions split into three placement slots — `headerActions` (icon-only ghost), `footerActions` (solid pill), and `overflowActions` (3-dot). `resolveDeviceAction(kind, ctx, placement)` is now placement-aware. New kinds: `watchVideo` (reuses pin-to-feed), `audio`, `logs`, `notifications`.',
+      '`DeviceOverflowMenu`: new footer 3-dot overflow for the low-signal inspect actions — a timed **Notifications** toggle (`NOTIFY_WINDOW_S` 30s countdown + radar sweep, mirrored in the header) and the red **Logs** error channel that lights with `device.errorCount` and a count badge.',
+      'Health tile: replaced the plain status tooltip with a **titled** tooltip — a severity dot + label, a clamped `errorCount` badge, and a hairline-fenced reason / connection detail.',
+      'Real wiring: new `onArmNotifications(id, armed)` / `onOpenLogs(id)` panel callbacks + optional `Device.errorCount`, threaded through `DevicesPanelImpl`, `Dashboard`, and the Playground. New strings: `showOnMap`, `logs`, `errors`, `notifications`, `moreActions`, `nowPlayingAriaLabel`, the four `health*` severity titles.',
+      'Styleguide: Device Card page re-synced — new **Header cluster** and **Overflow + notify** galleries, the titled-tooltip + count-badge edge case, the registry table grew Header / Footer / Overflow columns, and the picker now deep-links `device-overflow` / `device-logs` / `device-notifications` / the header cluster controls to their exact sections.',
+    ],
+  },
+  {
+    version: '1.3.0',
+    date: 'Jun 2, 2026',
+    highlights: [
+      '`DevicesPanel`: promoted the registry-driven device card to production. The collapsed row is now purely informational — a single worst-wins **health tile** (`getDeviceHealth` + `DEVICE_HEALTH_VISUAL`) replaces the old malfunction icon + status dot + chip + inline controls. Every control (jam, floodlight, speaker, pin) now lives in the **expanded footer**.',
+      '`DeviceAction`: new single control primitive behind every footer action — one source of truth for sizing, focus rings, press feedback, loading-vs-disabled, and disabled-reason tooltips, with four semantic tones (`neutral` / `engaged` / `caution` / `danger`).',
+      '`DEVICE_REGISTRY`: the row no longer branches on `device.type`. Capabilities, ordered stat fields, and ordered footer actions are declared per type; `resolveDeviceAction` maps them into `DeviceAction`s. Retired the per-control files (`JamButton`, `SpeakerPlayButton`, `PinToFeed*`, `FloodlightToggle`, `DroneControls`, `DeviceRowActions`).',
+      'Styleguide: new **Device Card** page documenting the card primitive-by-primitive (DeviceAction, health tile, detail grid, camera preview, action bar) up to the full row, with exact spacing tokens, the registry table, and a MOCK_DEVICES-style edge-case gallery.',
+      'Handoff picker: every device `data-handoff-component` hint now deep-links to its exact section (e.g. the jam button → `#device-action`, the health tile → `#device-health`), so picking any sub-part of a card lands on the right doc instead of the generic panel section.',
+    ],
+  },
+  {
     version: '1.2.0',
     date: 'May 18, 2026',
     highlights: [

@@ -37,12 +37,12 @@ export function StatusChip({ label, color = "green", className }: { label: strin
       role="status"
       data-handoff-component="status-chip"
       className={cn(
-        'inline-flex items-center justify-center rounded border border-transparent px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 gap-1',
+        'inline-flex items-center justify-center rounded border border-transparent px-2 py-0.5 text-xs font-medium w-fit max-w-full whitespace-nowrap shrink-0 gap-1',
         c.bg, c.text,
         className,
       )}
     >
-      {label}
+      <span className="min-w-0 truncate">{label}</span>
     </span>
   );
 }

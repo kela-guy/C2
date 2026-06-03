@@ -1,176 +1,242 @@
 /**
- * Collapsed row header — the always-visible part of every device card.
+ * Collapsed header for the device row.
  *
- * Owns:
- *   - the icon tile + its connection-state status dot
- *   - the device name + malfunction warning + connection chip
- *   - inline meta (mute countdown, pin toggle)
- *   - the type-specific inline action: ECM jam, floodlight switch,
- *     or speaker play.
+ * The icon tile is the single fast-scan health signal: a unified
+ * worst-wins severity (`getDeviceHealth`) drives a faint tile tint (and a
+ * critical-only pulse). Hovering the tile reveals a "titled" tooltip — a
+ * severity dot + label, an optional error-count badge, and a hairline-
+ * fenced reason / connection detail.
  *
- * Pure presentational — all state and callbacks come from the parent
- * `DeviceRow`. The whole component is rendered inside a clickable row
- * container, so every interactive child stops click propagation to
- * keep expand/collapse independent from action presses.
+ * The row's inline-end carries the always-visible primary cluster: the
+ * speaker now-playing readout, the per-type On/Off (speaker Play/Pause,
+ * floodlight segmented), the armed-notifications countdown echo, and
+ * Show-on-map pinned to the outer edge.
  */
 
-import { AlertTriangle, BellOff } from '@/lib/icons/central';
-import { StatusChip } from '@/primitives/StatusChip';
+import { useEffect, useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { BellOff } from '@/lib/icons/central';
+import { DotmSquare18 } from '@/app/components/ui/dotm-square-18';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
-import {
-  CONNECTION_STATE_CHIP_COLORS,
-  CONNECTION_STATE_COLORS,
-} from './constants';
-import { buildCollapsedMetricLine, isPinnableType } from './utils';
-import type {
-  ConnectionState,
-  Device,
-  DevicesPanelStrings,
-} from './types';
-import { JamButton } from './controls/JamButton';
-import { SpeakerPlayButton } from './controls/SpeakerPlayButton';
-import { PinToFeedToggle } from './controls/PinToFeedToggle';
+import { buildCollapsedMetricLine } from './utils';
+import type { ConnectionState, Device } from './types';
+import { resolveDeviceAction, type DeviceActionContext } from './deviceActions';
+import type { DeviceTypeConfig } from './deviceRegistry';
+import { DEVICE_HEALTH_VISUAL, DEVICE_HEALTH_CRITICAL_PING, getDeviceHealth, getDeviceHealthReason, type DeviceHealth } from './deviceHealth';
+import { NotifyHeaderIndicator } from './controls/notify';
 
 interface DeviceRowHeaderProps {
   device: Device;
-  isExpanded: boolean;
-  isMuted: boolean;
-  muteRemaining: string | null;
-  isFloodlightOn: boolean;
-  isSpeakerPlaying: boolean;
-  isPinnedToFeed: boolean;
-  strings: DevicesPanelStrings;
+  cfg: DeviceTypeConfig;
+  ctx: DeviceActionContext;
   connectionStateLabels: Record<ConnectionState, string>;
-  onJamActivate?: (jammerId: string) => void;
-  onSpeakerToggle?: (speakerId: string, next: boolean) => void;
-  onPinToFeed?: (deviceId: string) => void;
-  onUnpinFromFeed?: (deviceId: string) => void;
 }
 
-export function DeviceRowHeader({
-  device,
-  isExpanded,
-  isMuted,
-  muteRemaining,
-  isFloodlightOn,
-  isSpeakerPlaying,
-  isPinnedToFeed,
-  strings,
-  connectionStateLabels,
-  onJamActivate,
-  onSpeakerToggle,
-  onPinToFeed,
-  onUnpinFromFeed,
-}: DeviceRowHeaderProps) {
-  const isMalfunctioning = device.operationalStatus === 'malfunctioning';
-  const isOffline = device.connectionState === 'offline';
-  const isFloodlight = device.type === 'floodlight';
-  const isSpeaker = device.type === 'speaker';
-  const isEcm = device.type === 'ecm';
-  const showStatusDot = device.connectionState !== 'online';
+/**
+ * Tile-tooltip tone — severity dot + label, an optional count badge for
+ * the trouble tones, and the worst-wins severity title. `offline` / `ok`
+ * never carry a badge.
+ */
+const HEALTH_TONE: Record<DeviceHealth, { dot: string; badge: string | null }> = {
+  critical: { dot: 'bg-red-400', badge: 'bg-red-500/20 text-red-300' },
+  warning: { dot: 'bg-amber-400', badge: 'bg-amber-500/20 text-amber-300' },
+  offline: { dot: 'bg-zinc-500', badge: null },
+  ok: { dot: 'bg-emerald-400', badge: null },
+};
+
+export function DeviceRowHeader({ device, cfg, ctx, connectionStateLabels }: DeviceRowHeaderProps) {
+  const { strings } = ctx;
+  const nonOnline = device.connectionState !== 'online';
   const metricLine = buildCollapsedMetricLine(device);
 
-  const showPinToggle = (onPinToFeed || onUnpinFromFeed) && isPinnableType(device.type);
+  const health = getDeviceHealth(device);
+  const healthVisual = DEVICE_HEALTH_VISUAL[health];
+  const healthReason = getDeviceHealthReason(device, strings, connectionStateLabels);
+  const connectionLabel = connectionStateLabels[device.connectionState];
+
+  const healthLabel = {
+    critical: strings.healthCritical,
+    warning: strings.healthWarning,
+    offline: strings.healthOffline,
+    ok: strings.healthHealthy,
+  }[health];
+
+  const tone = HEALTH_TONE[health];
+  const showBadge = tone.badge != null && ctx.errorCount > 0;
+  const badgeLabel = ctx.errorCount > 99 ? '99+' : ctx.errorCount;
+  // The header reason text only adds value when it says something the
+  // title doesn't (battery / malfunction / connection detail).
+  const reasonText = healthReason && healthReason !== connectionLabel ? healthReason : null;
+  const fenceConnection = nonOnline ? connectionLabel : null;
+  const hasFence = reasonText != null || fenceConnection != null;
+  const hasTooltip = nonOnline || healthReason != null || ctx.errorCount > 0;
+
+  const tile = (
+    <div
+      className={`relative w-8 h-8 rounded flex items-center justify-center shrink-0 transition-[background-color,box-shadow] duration-150 ease-out ${healthVisual.tile}`}
+      data-handoff-component="device-icon"
+      data-health={health}
+      {...(healthReason ? { role: 'status', 'aria-label': healthReason } : {})}
+    >
+      {health === 'critical' && (
+        <span
+          aria-hidden="true"
+          className={`absolute inset-0 rounded ${DEVICE_HEALTH_CRITICAL_PING} animate-ping motion-reduce:hidden pointer-events-none`}
+        />
+      )}
+      <device.Icon
+        size={20}
+        fill={healthVisual.iconFill}
+        active={ctx.isFloodlightOn || ctx.isSpeakerPlaying}
+      />
+    </div>
+  );
 
   return (
     <>
-      <div
-        className={`relative w-8 h-8 rounded flex items-center justify-center shrink-0 ${
-          isMalfunctioning ? 'bg-orange-900/40' : 'bg-white/10'
-        }`}
-        data-handoff-component="device-icon"
-      >
-        <device.Icon
-          size={20}
-          fill={isMalfunctioning ? '#f97316' : 'white'}
-          active={(isFloodlight && isFloodlightOn) || (isSpeaker && isSpeakerPlaying)}
-        />
-        {showStatusDot && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span
-                className={`absolute -bottom-0.5 -end-0.5 size-2 rounded-full ring-2 ring-zinc-950 ${CONNECTION_STATE_COLORS[device.connectionState]}`}
-                aria-label={connectionStateLabels[device.connectionState]}
-              />
-            </TooltipTrigger>
-            <TooltipContent
-              side="top"
-              sideOffset={6}
-              showArrow={false}
-              className="px-2 py-1 text-xs text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
-            >
-              {connectionStateLabels[device.connectionState]}
-            </TooltipContent>
-          </Tooltip>
-        )}
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <span
-              className={`text-sm font-medium truncate ${
-                isMalfunctioning ? 'text-orange-300' : 'text-zinc-300'
-              }`}
-            >
-              {device.name}
-            </span>
-            {isMalfunctioning && (
-              <AlertTriangle size={11} className="text-orange-400 shrink-0" />
-            )}
-            {device.connectionState !== 'online' && (
-              <StatusChip
-                label={connectionStateLabels[device.connectionState]}
-                color={CONNECTION_STATE_CHIP_COLORS[device.connectionState]}
-                className="h-5 px-1.5 text-xs leading-none"
-              />
-            )}
-          </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            {isMuted && muteRemaining && (
-              <span className="flex items-center gap-1 text-xs font-mono tabular-nums text-white">
-                <BellOff size={12} className="text-white" />
-                {muteRemaining}
+      {hasTooltip ? (
+        <Tooltip>
+          <TooltipTrigger asChild>{tile}</TooltipTrigger>
+          <TooltipContent
+            side="top"
+            sideOffset={6}
+            showArrow={false}
+            className="min-w-[184px] max-w-[260px] overflow-hidden rounded-none p-0 bg-zinc-800 text-xs text-zinc-300 shadow-[0_0_0_1px_rgba(255,255,255,0.1)]"
+          >
+            <div className="flex items-center justify-start gap-1.5 px-2.5 py-1.5">
+              <span className={`size-1.5 shrink-0 rounded-full ${tone.dot}`} />
+              <span className="w-full min-w-0 truncate text-xs font-semibold text-zinc-100">
+                {healthLabel}
               </span>
+              {showBadge && (
+                <span
+                  className={`h-4 shrink-0 rounded-[2px] px-1.5 align-middle text-[10px] font-medium leading-4 tabular-nums ${tone.badge}`}
+                >
+                  {badgeLabel}
+                </span>
+              )}
+            </div>
+            {hasFence && (
+              <div className="border-t border-white/10 px-2.5 py-1.5">
+                {reasonText != null && (
+                  <div className="max-w-[220px] text-xs text-zinc-200">{reasonText}</div>
+                )}
+                {fenceConnection != null && (
+                  <div className="mt-0.5 text-[10px] text-white/50">{fenceConnection}</div>
+                )}
+              </div>
             )}
-            {showPinToggle && (
-              <PinToFeedToggle
-                device={device}
-                isPinned={isPinnedToFeed}
-                isOffline={isOffline}
-                strings={strings}
-                onPinToFeed={onPinToFeed}
-                onUnpinFromFeed={onUnpinFromFeed}
-              />
-            )}
-          </div>
-        </div>
+          </TooltipContent>
+        </Tooltip>
+      ) : (
+        tile
+      )}
+
+      <div className="flex-1 min-w-0 text-start">
+        <span className="text-sm font-medium truncate text-zinc-300 block">{device.name}</span>
         {metricLine && (
-          <div className="text-start text-xs font-mono tabular-nums text-white/50 truncate">
-            {metricLine}
-          </div>
+          <div className="text-start text-xs font-mono tabular-nums text-white/50 truncate">{metricLine}</div>
         )}
       </div>
 
-      {isEcm && (
-        <JamButton
-          device={device}
-          strings={strings}
-          onJamActivate={onJamActivate}
-        />
+      {ctx.isMuted && ctx.muteRemaining && (
+        <span className="flex shrink-0 items-center gap-1 text-xs font-mono tabular-nums text-white">
+          <BellOff size={12} className="text-white" />
+          {ctx.muteRemaining}
+        </span>
       )}
-      {isSpeaker && (
-        <SpeakerPlayButton
-          device={device}
-          isPlaying={isSpeakerPlaying}
-          strings={strings}
-          onSpeakerToggle={onSpeakerToggle}
-        />
-      )}
-      {/* `isExpanded` is reserved for future use — e.g. swapping the
-          chevron glyph — but is not visually represented today. The
-          parent `Collapsible` reads expansion state directly. */}
-      {isExpanded ? null : null}
+
+      <PrimaryCluster cfg={cfg} ctx={ctx} />
     </>
+  );
+}
+
+/**
+ * Always-visible action cluster at the row's inline-end. Show-on-map sits
+ * at the outer edge; the device's other primary actions (speaker On/Off,
+ * floodlight segmented) sit inboard of it, with the speaker now-playing
+ * readout and the armed-notifications echo ahead of them.
+ */
+function PrimaryCluster({ cfg, ctx }: { cfg: DeviceTypeConfig; ctx: DeviceActionContext }) {
+  const inboard = cfg.headerActions.filter((id) => id !== 'center');
+  const center = cfg.headerActions.includes('center')
+    ? resolveDeviceAction('center', ctx, 'header')
+    : null;
+
+  return (
+    <div className="flex shrink-0 items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+      <SpeakerNowPlaying ctx={ctx} />
+      {inboard.map((id) => {
+        const resolved = resolveDeviceAction(id, ctx, 'header');
+        return resolved ? <span key={resolved.key}>{resolved.node}</span> : null;
+      })}
+      <NotifyHeaderIndicator
+        armed={ctx.isNotifyOn}
+        remaining={ctx.notifyRemaining}
+        ariaLabelPrefix={ctx.strings.notificationsArmedAriaLabel}
+      />
+      {center?.node}
+    </div>
+  );
+}
+
+/**
+ * Speaker now-playing readout — reveals to the inline-start of the Play
+ * control so the button never shifts. The track name grows in via a grid
+ * 0fr->1fr wipe + a spring-in chip (opacity/scale/blur, no slide); on
+ * exit it fades while the width track stays open until the chip unmounts,
+ * then collapses the empty space invisibly.
+ */
+function SpeakerNowPlaying({ ctx }: { ctx: DeviceActionContext }) {
+  const reduceMotion = useReducedMotion();
+  const isSpeaker = ctx.device.type === 'speaker';
+  const nowPlaying = isSpeaker && ctx.isSpeakerPlaying;
+  const track = ctx.speakerTracks.find((t) => t.id === ctx.selectedTrackId);
+  const [trackOpen, setTrackOpen] = useState(nowPlaying);
+
+  useEffect(() => {
+    if (nowPlaying) setTrackOpen(true);
+  }, [nowPlaying]);
+
+  if (!isSpeaker) return null;
+
+  return (
+    <span
+      className={`grid ease-[cubic-bezier(0.22,1,0.36,1)] transition-[grid-template-columns] motion-reduce:transition-none ${
+        trackOpen ? 'grid-cols-[1fr] duration-200' : 'grid-cols-[0fr] duration-150'
+      }`}
+    >
+      <span className="flex min-w-0 overflow-hidden">
+        <AnimatePresence initial={false} onExitComplete={() => setTrackOpen(false)}>
+          {nowPlaying && (
+            <motion.span
+              key="now-playing"
+              dir="ltr"
+              data-handoff-component="device-now-playing"
+              aria-label={track ? `${ctx.strings.nowPlayingAriaLabel} — ${track.label}` : undefined}
+              initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9, x: 6, filter: 'blur(4px)' }}
+              animate={reduceMotion ? { opacity: 1 } : { opacity: 1, scale: 1, x: 0, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, transition: { duration: reduceMotion ? 0 : 0.1, ease: 'easeOut' } }}
+              transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 500, damping: 32, mass: 0.7 }}
+              className="me-1 rtl:me-1 rtl:ms-1 inline-flex origin-right items-center gap-1.5 whitespace-nowrap text-xs font-medium text-white"
+            >
+              <DotmSquare18
+                size={16}
+                dotSize={2}
+                speed={0.8}
+                pattern="full"
+                colorPreset="solid-theme"
+                animated={nowPlaying}
+                opacityBase={0.12}
+                opacityMid={0.42}
+                opacityPeak={1}
+                ariaLabel="Broadcasting"
+              />
+              <span className="max-w-[120px] truncate">{track?.label}</span>
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </span>
+    </span>
   );
 }

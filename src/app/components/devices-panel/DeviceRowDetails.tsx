@@ -1,23 +1,24 @@
 /**
- * Expanded-card body: optional camera preview placeholder + the
- * stats grid built from `buildDeviceDetailRows`.
+ * Expanded-card body for the device row: optional camera preview hero
+ * (registry capability) + the stat grid built from the registry's
+ * `detailFields`.
  */
 
 import { Camera } from '@/lib/icons/central';
-import { buildDeviceDetailRows } from './utils';
 import type { Device, DevicesPanelStrings } from './types';
+import { buildDetailRows, type DeviceTypeConfig } from './deviceRegistry';
 
 interface DeviceRowDetailsProps {
   device: Device;
+  cfg: DeviceTypeConfig;
   strings: DevicesPanelStrings;
 }
 
-export function DeviceRowDetails({ device, strings }: DeviceRowDetailsProps) {
-  const rows = buildDeviceDetailRows(device, strings);
-  const isCamera = device.type === 'camera';
+export function DeviceRowDetails({ device, cfg, strings }: DeviceRowDetailsProps) {
+  const rows = buildDetailRows(device, strings, cfg.detailFields);
   return (
     <>
-      {isCamera && <CameraPreviewPlaceholder />}
+      {cfg.capabilities.cameraPreview && <CameraPreviewPlaceholder />}
       <div
         className="grid grid-cols-3 gap-x-4 gap-y-5 px-4 py-3"
         data-handoff-component="device-detail-grid"
@@ -30,15 +31,7 @@ export function DeviceRowDetails({ device, strings }: DeviceRowDetailsProps) {
   );
 }
 
-function DetailRow({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: string;
-  color?: string;
-}) {
+function DetailRow({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
     <div
       className="w-full flex flex-col justify-center items-start gap-1 text-xs"
@@ -51,9 +44,9 @@ function DetailRow({
 }
 
 /**
- * Empty camera-preview hero shown above the stats grid for camera
- * rows. Marked LIVE and intentionally non-interactive — the real
- * stream lives in the `VideoPanel` once the row is dragged in.
+ * Empty camera-preview hero shown above the stats grid for camera rows.
+ * Marked LIVE and intentionally non-interactive — the real stream lives
+ * in the `VideoPanel` once the row is dragged in.
  */
 function CameraPreviewPlaceholder() {
   return (

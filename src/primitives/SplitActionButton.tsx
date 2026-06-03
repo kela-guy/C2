@@ -13,6 +13,12 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '@/shared/components/ui/dropdown-menu';
+import {
+  BUTTON_VARIANTS,
+  BUTTON_SIZES,
+  type ButtonVariant,
+  type ButtonSize,
+} from './buttonTokens';
 
 export interface SplitDropdownItem {
   id: string;
@@ -30,42 +36,14 @@ export interface SplitDropdownGroup {
   items: SplitDropdownItem[];
 }
 
-export const SPLIT_BUTTON_VARIANTS = {
-  fill: {
-    base: 'bg-white/[0.08]',
-    hover: 'hover:bg-white/[0.14]',
-    active: 'active:bg-white/[0.06]',
-    text: 'text-zinc-200',
-  },
-  ghost: {
-    base: 'bg-zinc-800',
-    hover: 'hover:bg-zinc-700',
-    active: 'active:bg-zinc-900',
-    text: 'text-white',
-  },
-  danger: {
-    base: 'bg-[oklch(0.435_0.151_25)]',
-    hover: 'hover:bg-[oklch(0.485_0.151_25)]',
-    active: 'active:bg-[oklch(0.385_0.151_25)]',
-    text: 'text-white',
-  },
-  warning: {
-    base: 'bg-[oklch(0.501_0.166_75)]',
-    hover: 'hover:bg-[oklch(0.551_0.166_75)]',
-    active: 'active:bg-[oklch(0.451_0.166_75)]',
-    text: 'text-white',
-  },
-} as const;
+// SplitActionButton shares the base Button's variant + size tokens so the
+// two-segment shell stays visually unified with every other button. The
+// `SPLIT_BUTTON_*` names are kept as aliases for back-compat.
+export const SPLIT_BUTTON_VARIANTS = BUTTON_VARIANTS;
+export type SplitButtonVariant = ButtonVariant;
 
-export type SplitButtonVariant = keyof typeof SPLIT_BUTTON_VARIANTS;
-
-export const SPLIT_BUTTON_SIZES = {
-  sm: { height: 'min-h-[30px] h-[30px]', text: 'text-xs', icon: 11, chevronMin: 'min-w-[30px] w-[30px]', font: 'font-medium' },
-  md: { height: 'min-h-8 h-8', text: 'text-xs', icon: 14, chevronMin: 'min-w-8 w-8', font: 'font-medium' },
-  lg: { height: 'min-h-9 h-9', text: 'text-sm', icon: 16, chevronMin: 'min-w-9 w-9', font: 'font-semibold' },
-} as const;
-
-export type SplitButtonSize = keyof typeof SPLIT_BUTTON_SIZES;
+export const SPLIT_BUTTON_SIZES = BUTTON_SIZES;
+export type SplitButtonSize = ButtonSize;
 
 export interface SplitActionButtonProps {
   label: string;

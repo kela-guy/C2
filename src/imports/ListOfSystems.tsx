@@ -254,9 +254,28 @@ function buildStatusChip(target: Detection, labels: Record<ActivityStatus, strin
   );
 }
 
+// Shallow-equality for a CardContext. buildCtx always emits the same key set,
+// so comparing every field with === is sufficient to detect "nothing changed"
+// and reuse the previous object identity (keeps memoized cards from re-rendering).
+function shallowEqualCtx(a: CardContext, b: CardContext): boolean {
+  const keys = Object.keys(a) as (keyof CardContext)[];
+  for (const k of keys) {
+    if (a[k] !== b[k]) return false;
+  }
+  return true;
+}
+
+// Drop cache entries whose target id no longer exists in the live set, so the
+// per-card identity caches don't grow unbounded over a long session.
+function pruneById<T>(cache: Map<string, T>, live: Map<string, Detection>): void {
+  for (const id of cache.keys()) {
+    if (!live.has(id)) cache.delete(id);
+  }
+}
+
 // ─── Unified Card ───────────────────────────────────────────────────────────
 
-function UnifiedCard({
+function UnifiedCardImpl({
   target,
   isOpen,
   onToggle,
@@ -391,6 +410,12 @@ function UnifiedCard({
   );
 }
 
+// Memoized so that when one target moves (loiter tick changes only that
+// target's reference) or unrelated list state updates, only the affected
+// card re-renders. Depends on stable callbacks/ctx/onToggle identities from
+// the parent list (see the per-card identity caches in ListOfSystemsImpl).
+const UnifiedCard = React.memo(UnifiedCardImpl);
+
 // ─── Legacy exports (backward-compatible wrappers) ──────────────────────────
 
 /** @deprecated Use UnifiedCard with TargetCard + CardHeader instead */
@@ -518,7 +543,7 @@ export interface ListOfSystemsProps {
   thinMode?: boolean;
 }
 
-export default function ListOfSystems({
+function ListOfSystemsImpl({
   className = '',
   targets = MOCK_TARGETS,
   activeTargetId,
@@ -582,7 +607,6 @@ export default function ListOfSystems({
   const los = i18n.listOfSystems;
   const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
   const [newArrivalIds, setNewArrivalIds] = useState<string[]>([]);
-  const [isScrolledToTop, setIsScrolledToTop] = useState(true);
   const listScrollRef = useRef<HTMLDivElement>(null);
   const seenTargetIdsRef = useRef<Set<string>>(new Set());
   const hasHydratedTargetsRef = useRef(false);
@@ -627,8 +651,14 @@ export default function ListOfSystems({
     })
   ), [activityStatuses, uniqueTargets]);
 
-  const filteredActiveTargets = applyFilters(activeTargets);
-  const filteredCompletedTargets = applyFilters(completedTargets);
+  const filteredActiveTargets = useMemo(
+    () => applyFilters(activeTargets),
+    [applyFilters, activeTargets],
+  );
+  const filteredCompletedTargets = useMemo(
+    () => applyFilters(completedTargets),
+    [applyFilters, completedTargets],
+  );
 
   const activeTargetsById = useMemo(
     () => new Map(activeTargets.map((target) => [target.id, target])),
@@ -696,44 +726,108 @@ export default function ListOfSystems({
   const activeCount = activeTargets.length;
   const completedCount = completedTargets.length;
 
-  const buildCallbacks = (target: Detection): CardCallbacks => ({
-    onVerify: (action) => onVerify?.(target.id, action),
-    onEngage: (type) => onEngage?.(target.id, type),
-    onDismiss: (reason) => onDismiss?.(target.id, reason),
-    onCancelMission: () => onCancelMission?.(target.id),
-    onCompleteMission: () => onCompleteMission?.(target.id),
-    onSendDroneVerification: () => onSendDroneVerification?.(target.id),
-    onSensorHover,
-    onCameraLookAt: (camId) => onCameraLookAt?.(target.id, camId),
-    onTakeControl: () => onTakeControl?.(target.id),
-    onReleaseControl: () => onReleaseControl?.(target.id),
-    onSensorModeChange: (mode) => onSensorModeChange?.(target.id, mode),
-    onPlaybookSelect: (pbId) => onPlaybookSelect?.(target.id, pbId),
-    onClosureOutcome: (outcome) => onClosureOutcome?.(target.id, outcome),
-    onAdvanceFlowPhase: () => onAdvanceFlowPhase?.(target.id),
-    onEscalateCreatePOI: () => onEscalateCreatePOI?.(target.id),
-    onEscalateSendDrone: () => onEscalateSendDrone?.(target.id),
-    onDroneSelect: (hiveId) => onDroneSelect?.(target.id, hiveId),
-    onDroneOverride: () => onDroneOverride?.(target.id),
-    onDroneResume: () => onDroneResume?.(target.id),
-    onDroneRTB: () => onDroneRTB?.(target.id),
-    onMissionActivate: () => onMissionActivate?.(target.id),
-    onMissionPause: () => onMissionPause?.(target.id),
-    onMissionResume: () => onMissionResume?.(target.id),
-    onMissionOverride: () => onMissionOverride?.(target.id),
-    onMissionCancel: () => onMissionCancel?.(target.id),
-    onMitigate: (effectorId) => onMitigate?.(target.id, effectorId),
-    onMitigateAll: () => onMitigateAll?.(target.id),
-    onEffectorSelect: (effectorId) => onEffectorSelect?.(target.id, effectorId),
-    onPointWeapon: (launcherId) => onPointWeapon?.(target.id, launcherId),
-    onLockWeapon: () => onLockWeapon?.(target.id),
-    onDismissLock: () => onDismissLock?.(target.id),
-    onLauncherSelect: (launcherId) => onLauncherSelect?.(target.id, launcherId),
-    onBdaOutcome: (outcome) => onBdaOutcome?.(target.id, outcome),
-    onBdaCamera: () => onBdaCamera?.(target.id),
-    onRequestCameraControl: () => onRequestCameraControl?.(target.id),
-    onSensorFocus,
+  // Latest handler props live in a ref so the per-card callback closures below
+  // can stay reference-stable across renders (and even when the parent recreates
+  // a handler). The cached closures always read `handlersRef.current`.
+  const handlersRef = useRef({
+    onVerify, onEngage, onDismiss, onCancelMission, onCompleteMission,
+    onSendDroneVerification, onSensorHover, onCameraLookAt, onTakeControl,
+    onReleaseControl, onSensorModeChange, onPlaybookSelect, onClosureOutcome,
+    onAdvanceFlowPhase, onEscalateCreatePOI, onEscalateSendDrone, onDroneSelect,
+    onDroneOverride, onDroneResume, onDroneRTB, onMissionActivate, onMissionPause,
+    onMissionResume, onMissionOverride, onMissionCancel, onMitigate, onMitigateAll,
+    onEffectorSelect, onPointWeapon, onLockWeapon, onDismissLock, onLauncherSelect,
+    onBdaOutcome, onBdaCamera, onRequestCameraControl, onSensorFocus,
+    onTargetClick, onTargetFocus,
   });
+  handlersRef.current = {
+    onVerify, onEngage, onDismiss, onCancelMission, onCompleteMission,
+    onSendDroneVerification, onSensorHover, onCameraLookAt, onTakeControl,
+    onReleaseControl, onSensorModeChange, onPlaybookSelect, onClosureOutcome,
+    onAdvanceFlowPhase, onEscalateCreatePOI, onEscalateSendDrone, onDroneSelect,
+    onDroneOverride, onDroneResume, onDroneRTB, onMissionActivate, onMissionPause,
+    onMissionResume, onMissionOverride, onMissionCancel, onMitigate, onMitigateAll,
+    onEffectorSelect, onPointWeapon, onLockWeapon, onDismissLock, onLauncherSelect,
+    onBdaOutcome, onBdaCamera, onRequestCameraControl, onSensorFocus,
+    onTargetClick, onTargetFocus,
+  };
+
+  // Per-target identity caches keyed by target id. Built lazily; reused across
+  // renders so memoized UnifiedCards for unchanged targets bail out.
+  const targetsByIdRef = useRef(new Map<string, Detection>());
+  const callbacksCacheRef = useRef(new Map<string, CardCallbacks>());
+  const toggleCacheRef = useRef(new Map<string, () => void>());
+  const focusCacheRef = useRef(new Map<string, () => void>());
+  const ctxCacheRef = useRef(new Map<string, CardContext>());
+
+  targetsByIdRef.current.clear();
+  for (const tgt of targets) targetsByIdRef.current.set(tgt.id, tgt);
+
+  const getCallbacks = (id: string): CardCallbacks => {
+    const cached = callbacksCacheRef.current.get(id);
+    if (cached) return cached;
+    const h = handlersRef;
+    const cb: CardCallbacks = {
+      onVerify: (action) => h.current.onVerify?.(id, action),
+      onEngage: (type) => h.current.onEngage?.(id, type),
+      onDismiss: (reason) => h.current.onDismiss?.(id, reason),
+      onCancelMission: () => h.current.onCancelMission?.(id),
+      onCompleteMission: () => h.current.onCompleteMission?.(id),
+      onSendDroneVerification: () => h.current.onSendDroneVerification?.(id),
+      onSensorHover: (sensorId) => h.current.onSensorHover?.(sensorId),
+      onCameraLookAt: (camId) => h.current.onCameraLookAt?.(id, camId),
+      onTakeControl: () => h.current.onTakeControl?.(id),
+      onReleaseControl: () => h.current.onReleaseControl?.(id),
+      onSensorModeChange: (mode) => h.current.onSensorModeChange?.(id, mode),
+      onPlaybookSelect: (pbId) => h.current.onPlaybookSelect?.(id, pbId),
+      onClosureOutcome: (outcome) => h.current.onClosureOutcome?.(id, outcome),
+      onAdvanceFlowPhase: () => h.current.onAdvanceFlowPhase?.(id),
+      onEscalateCreatePOI: () => h.current.onEscalateCreatePOI?.(id),
+      onEscalateSendDrone: () => h.current.onEscalateSendDrone?.(id),
+      onDroneSelect: (hiveId) => h.current.onDroneSelect?.(id, hiveId),
+      onDroneOverride: () => h.current.onDroneOverride?.(id),
+      onDroneResume: () => h.current.onDroneResume?.(id),
+      onDroneRTB: () => h.current.onDroneRTB?.(id),
+      onMissionActivate: () => h.current.onMissionActivate?.(id),
+      onMissionPause: () => h.current.onMissionPause?.(id),
+      onMissionResume: () => h.current.onMissionResume?.(id),
+      onMissionOverride: () => h.current.onMissionOverride?.(id),
+      onMissionCancel: () => h.current.onMissionCancel?.(id),
+      onMitigate: (effectorId) => h.current.onMitigate?.(id, effectorId),
+      onMitigateAll: () => h.current.onMitigateAll?.(id),
+      onEffectorSelect: (effectorId) => h.current.onEffectorSelect?.(id, effectorId),
+      onPointWeapon: (launcherId) => h.current.onPointWeapon?.(id, launcherId),
+      onLockWeapon: () => h.current.onLockWeapon?.(id),
+      onDismissLock: () => h.current.onDismissLock?.(id),
+      onLauncherSelect: (launcherId) => h.current.onLauncherSelect?.(id, launcherId),
+      onBdaOutcome: (outcome) => h.current.onBdaOutcome?.(id, outcome),
+      onBdaCamera: () => h.current.onBdaCamera?.(id),
+      onRequestCameraControl: () => h.current.onRequestCameraControl?.(id),
+      onSensorFocus: (sensorId) => h.current.onSensorFocus?.(sensorId),
+    };
+    callbacksCacheRef.current.set(id, cb);
+    return cb;
+  };
+
+  const getToggle = (id: string): (() => void) => {
+    const cached = toggleCacheRef.current.get(id);
+    if (cached) return cached;
+    const toggle = () => {
+      setNewArrivalIds((prev) => prev.filter((x) => x !== id));
+      const cur = targetsByIdRef.current.get(id);
+      if (cur) handlersRef.current.onTargetClick?.(cur);
+    };
+    toggleCacheRef.current.set(id, toggle);
+    return toggle;
+  };
+
+  const getFocus = (id: string): (() => void) => {
+    const cached = focusCacheRef.current.get(id);
+    if (cached) return cached;
+    const focus = () => handlersRef.current.onTargetFocus?.(id);
+    focusCacheRef.current.set(id, focus);
+    return focus;
+  };
 
   const buildCtx = (target: Detection): CardContext => ({
     isDroneVerifying: droneVerifyingTargetId === target.id,
@@ -749,17 +843,21 @@ export default function ListOfSystems({
     nearbyHives: target.flowType === 3 ? nearbyHives : undefined,
   });
 
-  const handleTargetToggle = (target: Detection) => {
-    setNewArrivalIds((prev) => prev.filter((id) => id !== target.id));
-    onTargetClick?.(target);
+  // Reuse the previous ctx object identity when none of its derived values
+  // changed, so an idle card's `ctx` prop stays stable across renders.
+  const getCtx = (target: Detection): CardContext => {
+    const next = buildCtx(target);
+    const prev = ctxCacheRef.current.get(target.id);
+    if (prev && shallowEqualCtx(prev, next)) return prev;
+    ctxCacheRef.current.set(target.id, next);
+    return next;
   };
 
-  const handleListScroll = () => {
-    const top = listScrollRef.current?.scrollTop ?? 0;
-    setIsScrolledToTop(top <= 16);
-  };
-
-
+  // Prune caches for targets no longer present.
+  pruneById(callbacksCacheRef.current, targetsByIdRef.current);
+  pruneById(toggleCacheRef.current, targetsByIdRef.current);
+  pruneById(focusCacheRef.current, targetsByIdRef.current);
+  pruneById(ctxCacheRef.current, targetsByIdRef.current);
 
   const renderTargetList = (
     list: Detection[],
@@ -790,10 +888,10 @@ export default function ListOfSystems({
               <UnifiedCard
                 target={target}
                 isOpen={isActive}
-                onToggle={() => handleTargetToggle(target)}
-                callbacks={buildCallbacks(target)}
-                ctx={buildCtx(target)}
-                onFocus={onTargetFocus ? () => onTargetFocus(target.id) : undefined}
+                onToggle={getToggle(target.id)}
+                callbacks={getCallbacks(target.id)}
+                ctx={getCtx(target)}
+                onFocus={onTargetFocus ? getFocus(target.id) : undefined}
                 thinMode={thinMode}
               />
             </motion.div>
@@ -880,7 +978,6 @@ export default function ListOfSystems({
         <div
           ref={listScrollRef}
           className="flex h-full flex-col gap-3 overflow-y-auto px-2 py-2"
-          onScroll={handleListScroll}
         >
           {activeTab === 'active' && (
             <div id="tabpanel-active" role="tabpanel" aria-labelledby="tab-active" className="space-y-2">
@@ -898,3 +995,10 @@ export default function ListOfSystems({
     </div>
   );
 }
+
+// Memoized so the 4 Hz friendly-patrol tick (which never touches `targets`)
+// and unrelated Dashboard state changes (camera, panels) do not re-render the
+// entire card list. Relies on Dashboard passing stable prop identities.
+const ListOfSystems = React.memo(ListOfSystemsImpl);
+
+export default ListOfSystems;

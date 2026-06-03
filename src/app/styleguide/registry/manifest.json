@@ -1,0 +1,264 @@
+{
+  "$schema": "./manifest.schema.json",
+  "components": [
+    {
+      "id": "status-chip",
+      "name": "StatusChip",
+      "tier": "primitive",
+      "group": "Indicators",
+      "description": "Compact colored badge indicating the operational status of a target or system.",
+      "importPath": "@/primitives",
+      "registryName": "status-chip",
+      "handoffHints": ["status-chip", "badge"]
+    },
+    {
+      "id": "new-updates",
+      "name": "NewUpdatesPill",
+      "tier": "primitive",
+      "group": "Indicators",
+      "description": "Floating pill that surfaces new incoming detections above the list.",
+      "importPath": "@/primitives",
+      "registryName": "new-updates-pill",
+      "handoffHints": ["new-updates"]
+    },
+    {
+      "id": "button",
+      "name": "Button",
+      "tier": "primitive",
+      "group": "Actions",
+      "description": "The base button primitive — the father of the button family. Owns the variant + size token system and the full state set. ActionButton, SplitActionButton, and CameraToggleButton are presets/composites built on it.",
+      "importPath": "@/primitives",
+      "handoffHints": ["button"],
+      "states": [
+        { "id": "default", "label": "Default", "note": "Resting fill surface." },
+        { "id": "hover", "label": "Hover", "note": "Brighter white surface on pointer-over." },
+        { "id": "active", "label": "Active", "note": "Scale 0.98 press feedback." },
+        { "id": "focus", "label": "Focus-visible", "note": "Inset white ring for keyboard nav." },
+        { "id": "disabled", "label": "Disabled", "note": "45% opacity, pointer-events none." },
+        { "id": "loading", "label": "Loading", "note": "Spinner replaces icon, cursor-wait." },
+        { "id": "pressed", "label": "Pressed (toggle)", "note": "Brighter fill + inset ring when aria-pressed." }
+      ],
+      "props": [
+        { "name": "label", "type": "string", "description": "Button text. Animates on change." },
+        { "name": "icon", "type": "React.ElementType", "description": "Optional leading icon component." },
+        { "name": "onClick", "type": "(e: MouseEvent) => void", "description": "Click handler. Suppressed while disabled/loading." },
+        { "name": "variant", "type": "'fill' | 'ghost' | 'outline' | 'danger' | 'warning'", "default": "'fill'", "description": "Surface treatment. Danger/warning use oklch." },
+        { "name": "size", "type": "'sm' | 'md' | 'lg'", "default": "'md'", "description": "Height + type scale." },
+        { "name": "disabled", "type": "boolean", "default": "false", "description": "Non-interactive, dimmed." },
+        { "name": "loading", "type": "boolean", "default": "false", "description": "Shows spinner, sets aria-live polite." },
+        { "name": "pressed", "type": "boolean", "description": "Toggle state. When defined, advertises aria-pressed." },
+        { "name": "title", "type": "string", "description": "When set, wraps the button in a tooltip." },
+        { "name": "asChild", "type": "boolean", "default": "false", "description": "Render styling onto a child element (Radix Slot) for links/polymorphism." },
+        { "name": "dataHandoff", "type": "string", "default": "'button'", "description": "data-handoff-component stamp. Presets override it." },
+        { "name": "className", "type": "string", "description": "Class overrides merged via cn()." }
+      ]
+    },
+    {
+      "id": "action-button",
+      "name": "ActionButton",
+      "tier": "primitive",
+      "group": "Actions",
+      "parentId": "button",
+      "description": "A preset of Button with the legacy action-button handoff stamp. Kept for back-compat across card action rows and toolbars; prefer Button in new code.",
+      "importPath": "@/primitives",
+      "registryName": "action-button",
+      "handoffHints": ["action-button"]
+    },
+    {
+      "id": "split-action",
+      "name": "SplitActionButton",
+      "tier": "primitive",
+      "group": "Actions",
+      "parentId": "button",
+      "description": "Two-segment composite: a primary Button action plus a dropdown menu of sub-options. Shares the base Button's variant + size tokens. Used for effector controls.",
+      "importPath": "@/primitives",
+      "registryName": "split-action-button",
+      "handoffHints": ["split-action"]
+    },
+    {
+      "id": "camera-toggle",
+      "name": "CameraToggleButton",
+      "tier": "primitive",
+      "group": "Actions",
+      "parentId": "button",
+      "description": "Single on/off camera control built on Button. Off invites \"point the camera\"; pressing slews (pending) and settles into a brighter pressed state.",
+      "importPath": "@/primitives",
+      "handoffHints": ["camera-toggle"]
+    },
+    {
+      "id": "copy-button",
+      "name": "CopyButton",
+      "tier": "primitive",
+      "group": "Actions",
+      "parentId": "button",
+      "description": "Quiet, hover-revealed icon button that copies a single value to the clipboard.",
+      "importPath": "@/primitives",
+      "handoffHints": ["copy-button"]
+    },
+    {
+      "id": "accordion",
+      "name": "AccordionSection",
+      "tier": "primitive",
+      "group": "Layout",
+      "description": "Collapsible section with animated expand/collapse. Used inside cards for details, logs, and sensors.",
+      "importPath": "@/primitives",
+      "registryName": "accordion-section",
+      "handoffHints": ["accordion", "accordion-item", "accordion-trigger", "accordion-content"]
+    },
+    {
+      "id": "telemetry",
+      "name": "TelemetryRow",
+      "tier": "primitive",
+      "group": "Data",
+      "description": "Single telemetry metric: icon, label, monospace value. Laid out in a 3-column grid that wraps by item count.",
+      "importPath": "@/primitives",
+      "registryName": "telemetry-row",
+      "handoffHints": ["telemetry"]
+    },
+
+    {
+      "id": "card-header",
+      "name": "CardHeader",
+      "tier": "block",
+      "group": "Card slots",
+      "description": "Top row of a TargetCard — icon, title, subtitle, status chip, badge, and chevron.",
+      "importPath": "@/primitives",
+      "registryName": "card-header",
+      "anatomy": ["status-chip"],
+      "handoffHints": ["card-header"]
+    },
+    {
+      "id": "card-actions",
+      "name": "CardActions",
+      "tier": "block",
+      "group": "Card slots",
+      "description": "Action bar for a TargetCard. Composes ActionButton, SplitActionButton, and the confirm pattern.",
+      "importPath": "@/primitives",
+      "registryName": "card-actions",
+      "anatomy": ["action-button", "split-action"],
+      "handoffHints": ["card-actions"]
+    },
+    {
+      "id": "card-details",
+      "name": "CardDetails",
+      "tier": "block",
+      "group": "Card slots",
+      "description": "Collapsible telemetry accordion. Composes AccordionSection and TelemetryRow in a fixed grid.",
+      "importPath": "@/primitives",
+      "registryName": "card-details",
+      "anatomy": ["accordion", "telemetry"],
+      "handoffHints": ["card-details"]
+    },
+    {
+      "id": "card-sensors",
+      "name": "CardSensors",
+      "tier": "block",
+      "group": "Card slots",
+      "description": "Lists detecting sensors for a target with type, distance, and timestamp.",
+      "importPath": "@/primitives",
+      "registryName": "card-sensors",
+      "anatomy": ["telemetry"],
+      "handoffHints": ["card-sensors"]
+    },
+    {
+      "id": "card-media",
+      "name": "CardMedia",
+      "tier": "block",
+      "group": "Card slots",
+      "description": "Image or video slot for a target surveillance feed. Supports live badge, playback, and lightbox.",
+      "importPath": "@/primitives",
+      "registryName": "card-media",
+      "handoffHints": ["card-media"]
+    },
+    {
+      "id": "card-log",
+      "name": "CardLog",
+      "tier": "block",
+      "group": "Card slots",
+      "description": "Chronological event log accordion with newest-first ordering and expand-all.",
+      "importPath": "@/primitives",
+      "registryName": "card-log",
+      "anatomy": ["accordion"],
+      "handoffHints": ["card-log"]
+    },
+    {
+      "id": "card-closure",
+      "name": "CardClosure",
+      "tier": "block",
+      "group": "Card slots",
+      "description": "Outcome selection grid for closing a detection event.",
+      "importPath": "@/primitives",
+      "registryName": "card-closure",
+      "handoffHints": ["card-closure"]
+    },
+
+    {
+      "id": "target-card",
+      "name": "TargetCard",
+      "tier": "block",
+      "group": "Assemblies",
+      "description": "The core card shell. Composes CardHeader with slot children via the useCardSlots hook. The single most important block in the system.",
+      "importPath": "@/primitives",
+      "registryName": "target-card",
+      "anatomy": ["card-header", "card-media", "card-actions", "card-details", "card-sensors", "card-log", "card-closure", "status-chip"],
+      "states": [
+        { "id": "collapsed", "label": "Collapsed", "note": "Header only; chevron down." },
+        { "id": "open", "label": "Open", "note": "Header tinted, content expands with collapsible animation." },
+        { "id": "hover", "label": "Hover", "note": "Header surface lightens to white/8%." },
+        { "id": "focus", "label": "Focus-visible", "note": "White ring on the trigger for keyboard nav." },
+        { "id": "completed", "label": "Completed", "note": "Desaturated + dimmed when resolved/neutralized." }
+      ],
+      "props": [
+        { "name": "header", "type": "React.ReactNode", "description": "Header row — typically a CardHeader." },
+        { "name": "children", "type": "React.ReactNode", "description": "Slot content rendered inside the collapsible body." },
+        { "name": "footer", "type": "React.ReactNode", "description": "Optional footer rendered below the body." },
+        { "name": "open", "type": "boolean", "description": "Controlled expanded state." },
+        { "name": "onToggle", "type": "() => void", "description": "Fires when the header is toggled." },
+        { "name": "completed", "type": "boolean", "description": "Desaturates + dims a resolved card." },
+        { "name": "severity", "type": "Severity", "description": "Unified urgency tier (API compat; no spine rendered)." },
+        { "name": "onFocus", "type": "() => void", "description": "Fires on open transition for selection sync." },
+        { "name": "className", "type": "string", "description": "Class overrides." }
+      ]
+    },
+    {
+      "id": "filter-bar",
+      "name": "FilterBar",
+      "tier": "block",
+      "group": "Assemblies",
+      "description": "Search input plus data-driven filter dropdowns. Pass any number of filter dimensions as a FilterDef[].",
+      "importPath": "@/primitives",
+      "registryName": "filter-bar",
+      "handoffHints": ["filter-bar"]
+    },
+    {
+      "id": "device-card",
+      "name": "Device Card",
+      "tier": "block",
+      "group": "Assemblies",
+      "description": "One collapsible row per field asset, registry-driven. Health tile, primary cluster, footer actions, and overflow.",
+      "importPath": "@/shared/components/DevicesPanel",
+      "anatomy": ["status-chip", "telemetry"],
+      "handoffHints": ["device-card", "device-row", "device-row-header", "device-row-details"]
+    },
+    {
+      "id": "devices-panel",
+      "name": "DevicesPanel",
+      "tier": "block",
+      "group": "Assemblies",
+      "description": "Right-hand sidebar listing connected field devices grouped by type, with search and type-filter isolation.",
+      "importPath": "@/shared/components/DevicesPanel",
+      "anatomy": ["device-card", "filter-bar"],
+      "handoffHints": ["devices-panel", "devices-panel-header", "device-type-group"]
+    },
+    {
+      "id": "map-markers",
+      "name": "MapMarker",
+      "tier": "block",
+      "group": "Tactical",
+      "description": "Composable tactical marker: layered surface, ring, glyph, glow, and overlays, driven by resolveMarkerStyle().",
+      "importPath": "@/primitives",
+      "registryName": "map-marker",
+      "handoffHints": ["map-markers", "map-marker"]
+    }
+  ]
+}

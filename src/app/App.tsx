@@ -24,6 +24,19 @@ const PlaygroundPage = lazy(() => import("./components/PlaygroundPage"));
 // production bundle.
 const DevicesLabPage = lazy(() => import("./components/DevicesLabPage"));
 
+// Design System — the manifest-driven successor to `/styleguide`. Mounted on
+// its own route while the strangler migration runs; the legacy monolith stays
+// live at `/styleguide`. Code-split so its doc modules never enter other
+// bundles.
+const DesignSystemPage = lazy(() => import("./styleguide/registry/DesignSystem"));
+
+// Video HUD Sandbox — dev-only sandbox for the camera HUD chrome
+// (setpoint rail, bottom chrome, compass, connectivity, detections).
+// Guarded by `import.meta.env.DEV` so it tree-shakes out of production.
+const VideoHudSandbox = import.meta.env.DEV
+  ? lazy(() => import("./components/video-hud-sandbox/VideoHudSandbox"))
+  : null;
+
 function PlaygroundFallback() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#09090b] text-sm text-neutral-400">
@@ -107,6 +120,14 @@ export default function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/fov-test" element={<FovTestPage />} />
               <Route path="/styleguide" element={<StyleguidePage />} />
+              <Route
+                path="/design-system"
+                element={
+                  <Suspense fallback={<PlaygroundFallback />}>
+                    <DesignSystemPage />
+                  </Suspense>
+                }
+              />
               {/*
                 Urgency review — dedicated surface for inspecting every
                 TargetCard + MapMarker variant against the unified
@@ -150,6 +171,21 @@ export default function App() {
                   </Suspense>
                 }
               />
+              {/*
+                Video HUD Sandbox — dev-only sandbox for the camera HUD
+                chrome rebuild. Not linked from the main UI; reviewers open
+                it directly. Compiles to nothing in production.
+              */}
+              {VideoHudSandbox && (
+                <Route
+                  path="/video-hud-sandbox"
+                  element={
+                    <Suspense fallback={<PlaygroundFallback />}>
+                      <VideoHudSandbox />
+                    </Suspense>
+                  }
+                />
+              )}
             </Routes>
             <ScopedPerfHud />
             <ScopedHandoffInspector />

@@ -5,9 +5,9 @@ import {
   Trash2, Send, Compass, Gauge, Navigation, MapPin, CheckCircle2,
   Bird, Activity, History, Radar, Hand, Copy, Check, Download,
   BellOff, Camera, Wrench, Search, X, Lock,
-  SlidersHorizontal, Tag,
+  SlidersHorizontal, Tag, ChevronsUpDown, Square,
+  Sun, Video,
 } from '@/lib/icons/central';
-import { ChevronsUpDown, Square } from 'lucide-react';
 import { toast } from 'sonner';
 import { Toaster } from '@/shared/components/ui/sonner';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
@@ -40,7 +40,7 @@ import {
   CameraIcon, SensorIcon, RadarIcon, DroneIcon, DroneHiveIcon,
   LidarIcon, LauncherIcon, MissileIcon,
   FloodlightIcon, SpeakerIcon,
-} from '@/shared/components/TacticalMap';
+} from '@/app/components/tacticalIcons';
 import { DroneCardIcon, JamWaveIcon, MissileCardIcon, CarIcon } from '@/primitives/MapIcons';
 import { MapMarker } from '@/primitives/MapMarker';
 import winterTheme from './winter-is-coming-theme.json';
@@ -51,7 +51,14 @@ import {
   type Affiliation, type InteractionState,
 } from '@/primitives/markerStyles';
 import { iconPublicUrl } from '@/lib/styleguideIconAssets';
-import { DevicesPanel, DeviceRow, DEFAULT_SPEAKER_TRACKS, type Device } from '@/shared/components/DevicesPanel';
+import {
+  DevicesPanel, DeviceRow, DeviceAction,
+  DEVICE_HEALTH_VISUAL,
+  DEVICE_HEALTH_CRITICAL_PING,
+  DEFAULT_SPEAKER_TRACKS,
+  type Device, type DeviceHealth,
+} from '@/shared/components/DevicesPanel';
+import { JamIcon, DroneDeviceIcon } from '@/primitives/ProductIcons';
 import { Switch } from '@/shared/components/ui/switch';
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/components/ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/shared/components/ui/command';
@@ -86,6 +93,10 @@ import cardClosureSrc from '@/primitives/CardClosure.tsx?raw';
 import filterBarSrc from '@/primitives/FilterBar.tsx?raw';
 import newUpdatesPillSrc from '@/primitives/NewUpdatesPill.tsx?raw';
 import devicesPanelSrc from '@/shared/components/DevicesPanel.tsx?raw';
+import deviceRowSrc from '@/app/components/devices-panel/DeviceRow.tsx?raw';
+import deviceActionSrc from '@/app/components/devices-panel/DeviceAction.tsx?raw';
+import deviceRegistrySrc from '@/app/components/devices-panel/deviceRegistry.ts?raw';
+import deviceHealthSrc from '@/app/components/devices-panel/deviceHealth.ts?raw';
 import popoverSrc from '@/shared/components/ui/popover.tsx?raw';
 import commandSrc from '@/shared/components/ui/command.tsx?raw';
 import buttonSrc from '@/shared/components/ui/button.tsx?raw';
@@ -131,6 +142,14 @@ const DEVICES_PANEL_FILES: RelatedFile[] = [
   { file: 'ui/button.tsx', code: buttonSrc },
   { file: 'ui/switch.tsx', code: switchSrc },
   TOKENS_FILE, BARREL_FILE,
+];
+
+const DEVICE_CARD_FILES: RelatedFile[] = [
+  { file: 'DeviceRow.tsx', code: deviceRowSrc },
+  { file: 'DeviceAction.tsx', code: deviceActionSrc },
+  { file: 'deviceRegistry.ts', code: deviceRegistrySrc },
+  { file: 'deviceHealth.ts', code: deviceHealthSrc },
+  { file: 'DevicesPanel.tsx', code: devicesPanelSrc },
 ];
 
 const MARKER_FILES: RelatedFile[] = [
@@ -517,6 +536,91 @@ const devicesPanelDemoDevices: Device[] = [
   },
 ];
 
+// Permutations that exercise the worst-wins health model + the
+// disabled-action edge cases. Coordinates are non-zero so the Location
+// stat row reads like the field, not 0.0000.
+const deviceCardEdgeCases: Device[] = [
+  {
+    id: 'edge-cam-ok', name: 'PTZ Camera — nominal', type: 'camera',
+    lat: 32.0853, lon: 34.7818, status: 'available',
+    operationalStatus: 'operational', connectionState: 'online',
+    Icon: CameraIcon, capabilities: ['video', 'photo'],
+    fovDeg: 120, bearingDeg: 45, batteryPct: 78,
+  },
+  {
+    id: 'edge-radar-warn', name: 'X-Band Radar — warning', type: 'radar',
+    lat: 32.0901, lon: 34.7760, status: 'available',
+    operationalStatus: 'operational', connectionState: 'warning',
+    Icon: RadarIcon, fovDeg: 90, bearingDeg: 200,
+  },
+  {
+    id: 'edge-drone-critical', name: 'Interceptor — malfunction', type: 'drone',
+    lat: 32.0788, lon: 34.7900, status: 'active',
+    operationalStatus: 'malfunctioning', connectionState: 'error',
+    Icon: DroneDeviceIcon, altitude: '120m', batteryPct: 12, errorCount: 3,
+  },
+  {
+    id: 'edge-dock-low', name: 'Drone Dock — low battery', type: 'dock',
+    lat: 32.0820, lon: 34.7740, status: 'available',
+    operationalStatus: 'operational', connectionState: 'online',
+    Icon: DroneHiveIcon, batteryPct: 18,
+  },
+  {
+    id: 'edge-ecm-active', name: 'Regulus — jamming', type: 'ecm',
+    lat: 32.0870, lon: 34.7805, status: 'active',
+    operationalStatus: 'operational', connectionState: 'online',
+    Icon: SensorIcon, coverageRadiusM: 5000,
+  },
+  {
+    id: 'edge-cam-offline', name: 'PixelSight — offline', type: 'camera',
+    lat: 32.0840, lon: 34.7850, status: 'offline',
+    operationalStatus: 'operational', connectionState: 'offline',
+    Icon: CameraIcon, capabilities: ['video'],
+  },
+  {
+    id: 'edge-drone-ok', name: 'Interceptor — nominal', type: 'drone',
+    lat: 32.0795, lon: 34.7880, status: 'available',
+    operationalStatus: 'operational', connectionState: 'online',
+    Icon: DroneDeviceIcon, altitude: '95m', batteryPct: 64,
+  },
+  {
+    id: 'edge-speaker-ok', name: 'PA Speaker (Gate)', type: 'speaker',
+    lat: 32.0860, lon: 34.7790, status: 'available',
+    operationalStatus: 'operational', connectionState: 'online',
+    Icon: SpeakerIcon,
+  },
+  {
+    id: 'edge-flood-ok', name: 'Floodlight (North)', type: 'floodlight',
+    lat: 32.0880, lon: 34.7770, status: 'available',
+    operationalStatus: 'operational', connectionState: 'online',
+    Icon: FloodlightIcon,
+  },
+  {
+    id: 'edge-launcher-ok', name: 'Missile Launcher', type: 'launcher',
+    lat: 32.0844, lon: 34.7805, status: 'available',
+    operationalStatus: 'operational', connectionState: 'online',
+    Icon: LauncherIcon,
+  },
+  {
+    id: 'edge-lidar-warn', name: 'LIDAR East — warning', type: 'lidar',
+    lat: 32.0815, lon: 34.7871, status: 'available',
+    operationalStatus: 'operational', connectionState: 'warning',
+    Icon: LidarIcon, fovDeg: 360, bearingDeg: 0,
+  },
+  {
+    id: 'edge-weapon-ok', name: 'C-RAM Battery', type: 'weapon_system',
+    lat: 32.0851, lon: 34.7822, status: 'available',
+    operationalStatus: 'operational', connectionState: 'online',
+    Icon: MissileIcon,
+  },
+  {
+    id: 'edge-ecm-idle', name: 'Regulus — idle', type: 'ecm',
+    lat: 32.0872, lon: 34.7806, status: 'available',
+    operationalStatus: 'operational', connectionState: 'online',
+    Icon: SensorIcon, coverageRadiusM: 2500,
+  },
+];
+
 // ─── Layout primitives ───────────────────────────────────────────────────────
 
 function ComponentSection({
@@ -584,16 +688,18 @@ function ExampleBlock({
   title,
   children,
   tight = false,
+  previewClassName = '',
 }: {
   id?: string;
   title: string;
   children: React.ReactNode;
   tight?: boolean;
+  previewClassName?: string;
 }) {
   return (
     <div id={id} className={`space-y-4 mt-10 first:mt-0 ${id ? 'scroll-mt-20' : ''}`}>
       <h3 className="text-sm font-medium text-n-10">{title}</h3>
-      <PreviewPanel tight={tight}>{children}</PreviewPanel>
+      <PreviewPanel tight={tight} className={previewClassName}>{children}</PreviewPanel>
     </div>
   );
 }
@@ -641,16 +747,241 @@ function IconCatalogTile({ name, icon }: { name: string; icon: React.ReactNode }
   );
 }
 
-function StyleguideDeviceTile({ label, children, width = 380 }: { label: string; children: React.ReactNode; width?: number }) {
+/**
+ * Self-contained, interactive `DeviceRow` for the Device Card styleguide
+ * page. Owns its own expand + control state so each demo card behaves
+ * like the real thing (toggle open, mute, floodlight, speaker, pin)
+ * without wiring a parent panel. Defaults to expanded so the handoff
+ * doc shows the full card anatomy at a glance.
+ */
+function DeviceCardRowDemo({
+  device,
+  defaultExpanded = true,
+  initialMuted = false,
+  initialFloodOn = false,
+  initialSpeakerOn = false,
+  initialPinned = false,
+}: {
+  device: Device;
+  defaultExpanded?: boolean;
+  /** Pre-seed interactive states so the gallery shows them without a click. */
+  initialMuted?: boolean;
+  initialFloodOn?: boolean;
+  initialSpeakerOn?: boolean;
+  initialPinned?: boolean;
+}) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+  const [muted, setMuted] = useState(initialMuted);
+  const [floodOn, setFloodOn] = useState(initialFloodOn);
+  const [speakerOn, setSpeakerOn] = useState(initialSpeakerOn);
+  const [pinned, setPinned] = useState(initialPinned);
+  return (
+    <DeviceRow
+      device={device}
+      isExpanded={expanded}
+      onToggle={() => setExpanded((v) => !v)}
+      onHover={noop}
+      onFlyTo={noop}
+      isMuted={muted}
+      muteRemaining={muted ? '29:58' : null}
+      onToggleMute={() => setMuted((v) => !v)}
+      isFloodlightOn={floodOn}
+      onFloodlightToggle={() => setFloodOn((v) => !v)}
+      isSpeakerPlaying={speakerOn}
+      onSpeakerToggle={() => setSpeakerOn((v) => !v)}
+      onJamActivate={noop}
+      isPinnedToFeed={pinned}
+      onPinToFeed={() => setPinned(true)}
+      onUnpinFromFeed={() => setPinned(false)}
+      onOpenLogs={(id) => console.info('[styleguide] open logs', id)}
+      onArmNotifications={(id, armed) => console.info('[styleguide] notifications', id, armed)}
+    />
+  );
+}
+
+function StyleguideDeviceTile({ label, children, width = 380 }: { label?: string; children: React.ReactNode; width?: number }) {
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-xs font-medium text-n-9">{label}</span>
+      {label && <span className="text-xs font-medium text-n-9">{label}</span>}
       <div className="bg-n-1 border border-white/10 rounded-lg overflow-hidden" style={{ width }}>
         {children}
       </div>
     </div>
   );
 }
+
+/** Worst-wins tone palette, mirroring `DeviceRowHeader`'s `HEALTH_TONE`. */
+const STYLEGUIDE_HEALTH_TONE: Record<DeviceHealth, { dot: string; badge: string | null }> = {
+  critical: { dot: 'bg-red-400', badge: 'bg-red-500/20 text-red-300' },
+  warning: { dot: 'bg-amber-400', badge: 'bg-amber-500/20 text-amber-300' },
+  offline: { dot: 'bg-zinc-500', badge: null },
+  ok: { dot: 'bg-emerald-400', badge: null },
+};
+
+/**
+ * Static replica of the `DeviceRowHeader` health tooltip surface, rendered
+ * always-open so the styleguide gallery can stress every edge case at once.
+ * Markup tracks the real `TooltipContent`: a severity dot + truncating label +
+ * optional count badge over a hairline, with the reason and a connection chip
+ * fenced below. The fence collapses entirely when there is no reason or chip.
+ */
+function StyleguideHealthTooltip({
+  tone,
+  severity,
+  errorCount = 0,
+  reason,
+  connectionLabel,
+  dir = 'ltr',
+}: {
+  tone: DeviceHealth;
+  severity: string;
+  errorCount?: number;
+  reason?: string;
+  connectionLabel?: string;
+  connectionColor?: StatusChipColor;
+  dir?: 'ltr' | 'rtl';
+}) {
+  const t = STYLEGUIDE_HEALTH_TONE[tone];
+  const showBadge = t.badge != null && errorCount > 0;
+  const badgeLabel = errorCount > 99 ? '99+' : errorCount;
+  const hasFence = reason != null || connectionLabel != null;
+  return (
+    <div
+      dir={dir}
+      className="w-fit min-w-[184px] max-w-[260px] overflow-hidden rounded-none bg-zinc-800 text-xs text-zinc-300 shadow-[0_0_0_1px_rgba(255,255,255,0.1)]"
+    >
+      <div className="flex items-center justify-start gap-1.5 px-2.5 py-1.5">
+        <span className={`size-1.5 shrink-0 rounded-full ${t.dot}`} />
+        <span className="w-full min-w-0 truncate text-xs font-semibold text-zinc-100">{severity}</span>
+        {showBadge && (
+          <span className={`h-4 shrink-0 rounded-[2px] px-1.5 align-middle text-[10px] font-medium leading-4 tabular-nums ${t.badge}`}>
+            {badgeLabel}
+          </span>
+        )}
+      </div>
+      {hasFence && (
+        <div className="border-t border-white/10 px-2.5 py-1.5">
+          {reason != null && <div className="max-w-[220px] text-xs text-zinc-200">{reason}</div>}
+          {connectionLabel != null && (
+            <div className="mt-0.5 text-[10px] text-white/50">{connectionLabel}</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface HealthTipScenario {
+  /** Lab-style caption naming the edge case under test. */
+  label: string;
+  tone: DeviceHealth;
+  errorCount?: number;
+  connectionColor?: StatusChipColor;
+  en: { severity: string; reason?: string; connection?: string };
+  he: { severity: string; reason?: string; connection?: string };
+}
+
+/** The edge-case matrix the health tooltip must survive, EN + RTL. */
+const STYLEGUIDE_HEALTH_TIP_SCENARIOS: HealthTipScenario[] = [
+  {
+    label: 'Critical · 2 errors · reason + connection (canonical)',
+    tone: 'critical',
+    errorCount: 2,
+    connectionColor: 'orange',
+    en: { severity: 'Critical', reason: 'Sensor fault', connection: 'Warning' },
+    he: { severity: 'קריטי', reason: 'תקלת חיישן', connection: 'אזהרה' },
+  },
+  {
+    label: 'Critical · 99+ errors (count clamp)',
+    tone: 'critical',
+    errorCount: 248,
+    connectionColor: 'red',
+    en: { severity: 'Critical', reason: 'Repeated command timeouts', connection: 'Error' },
+    he: { severity: 'קריטי', reason: 'פסקי זמן חוזרים בפקודות', connection: 'שגיאה' },
+  },
+  {
+    label: 'Critical · 1 error (singular count)',
+    tone: 'critical',
+    errorCount: 1,
+    connectionColor: 'red',
+    en: { severity: 'Critical', reason: 'Motor stall', connection: 'Error' },
+    he: { severity: 'קריטי', reason: 'תקיעת מנוע', connection: 'שגיאה' },
+  },
+  {
+    label: 'Critical · 0 errors (badge hidden)',
+    tone: 'critical',
+    errorCount: 0,
+    en: { severity: 'Critical', reason: 'Malfunction' },
+    he: { severity: 'קריטי', reason: 'תקלה' },
+  },
+  {
+    label: 'Warning · battery reason + connection',
+    tone: 'warning',
+    errorCount: 1,
+    connectionColor: 'orange',
+    en: { severity: 'Warning', reason: 'Battery 34%', connection: 'Warning' },
+    he: { severity: 'אזהרה', reason: 'סוללה 34%', connection: 'אזהרה' },
+  },
+  {
+    label: 'Offline · disconnected (gray chip, no badge)',
+    tone: 'offline',
+    connectionColor: 'gray',
+    en: { severity: 'Offline', reason: 'Disconnected', connection: 'Offline' },
+    he: { severity: 'לא מקוון', reason: 'נותק החיבור', connection: 'לא מקוון' },
+  },
+  {
+    label: 'OK · no fence (header-only, minimal)',
+    tone: 'ok',
+    en: { severity: 'Healthy' },
+    he: { severity: 'תקין' },
+  },
+  {
+    label: 'Long reason (wrap test)',
+    tone: 'critical',
+    errorCount: 7,
+    connectionColor: 'red',
+    en: {
+      severity: 'Critical',
+      reason: 'GPS module unresponsive after firmware rollback; awaiting reconnection and operator acknowledgement',
+      connection: 'Error',
+    },
+    he: {
+      severity: 'קריטי',
+      reason: 'מודול ה-GPS אינו מגיב לאחר חזרת קושחה; ממתין לחיבור מחדש ולאישור מפעיל',
+      connection: 'שגיאה',
+    },
+  },
+  {
+    label: 'Missing reason + online (no fence, no divider)',
+    tone: 'warning',
+    errorCount: 3,
+    en: { severity: 'Warning' },
+    he: { severity: 'אזהרה' },
+  },
+  {
+    label: 'Long severity label vs badge (truncate test)',
+    tone: 'critical',
+    errorCount: 12,
+    connectionColor: 'red',
+    en: { severity: 'Communications subsystem malfunction', reason: 'Link degraded', connection: 'Error' },
+    he: { severity: 'תקלה במערכת התקשורת המשנית', reason: 'הקישור מתדרדר', connection: 'שגיאה' },
+  },
+  {
+    label: 'Connection-only fence (no reason)',
+    tone: 'warning',
+    errorCount: 1,
+    connectionColor: 'orange',
+    en: { severity: 'Warning', connection: 'Warning' },
+    he: { severity: 'אזהרה', connection: 'אזהרה' },
+  },
+  {
+    label: 'Reason-only fence (online, no chip)',
+    tone: 'critical',
+    errorCount: 2,
+    en: { severity: 'Critical', reason: 'Sensor fault' },
+    he: { severity: 'קריטי', reason: 'תקלת חיישן' },
+  },
+];
 
 function StyleguideBatteryIcon({ pct }: { pct: number }) {
   const colorClass = pct > 60 ? 'text-emerald-400' : pct > 30 ? 'text-amber-400' : pct >= 20 ? 'text-orange-400' : 'text-red-400';
@@ -1110,7 +1441,7 @@ function TargetCardFlows() {
           <div className="flex items-center gap-6">
             <div className="flex flex-col items-center gap-2">
               <MapMarker
-                icon={<RadarIcon size={24} fill={flow5HoveredSensor === 'rf-01' ? friendlyHovered.glyphColor : friendlyDefault.glyphColor} />}
+                icon={<RadarIcon size={24} outlined fill={flow5HoveredSensor === 'rf-01' ? friendlyHovered.glyphColor : friendlyDefault.glyphColor} />}
                 style={flow5HoveredSensor === 'rf-01' ? friendlyHovered : friendlyDefault}
                 surfaceSize={38}
                 ringSize={30}
@@ -1122,7 +1453,7 @@ function TargetCardFlows() {
             </div>
             <div className="flex flex-col items-center gap-2">
               <MapMarker
-                icon={<RadarIcon size={24} fill={flow5HoveredSensor === 'radar-01' ? friendlyHovered.glyphColor : friendlyDefault.glyphColor} />}
+                icon={<RadarIcon size={24} outlined fill={flow5HoveredSensor === 'radar-01' ? friendlyHovered.glyphColor : friendlyDefault.glyphColor} />}
                 style={flow5HoveredSensor === 'radar-01' ? friendlyHovered : friendlyDefault}
                 surfaceSize={38}
                 ringSize={30}
@@ -1308,7 +1639,7 @@ function DeviceCardFlows() {
           <div className="flex items-center gap-6">
             <div className="flex flex-col items-center gap-2">
               <MapMarker
-                icon={<CameraIcon size={24} fill={flowHoverDeviceId === hoverDeviceCam1.id ? friendlyHovered.glyphColor : friendlyDefault.glyphColor} />}
+                icon={<CameraIcon size={24} outlined fill={flowHoverDeviceId === hoverDeviceCam1.id ? friendlyHovered.glyphColor : friendlyDefault.glyphColor} />}
                 style={flowHoverDeviceId === hoverDeviceCam1.id ? friendlyHovered : friendlyDefault}
                 surfaceSize={38}
                 ringSize={30}
@@ -1318,7 +1649,7 @@ function DeviceCardFlows() {
             </div>
             <div className="flex flex-col items-center gap-2">
               <MapMarker
-                icon={<CameraIcon size={24} fill={flowHoverDeviceId === hoverDeviceCam2.id ? friendlyHovered.glyphColor : friendlyDefault.glyphColor} />}
+                icon={<CameraIcon size={24} outlined fill={flowHoverDeviceId === hoverDeviceCam2.id ? friendlyHovered.glyphColor : friendlyDefault.glyphColor} />}
                 style={flowHoverDeviceId === hoverDeviceCam2.id ? friendlyHovered : friendlyDefault}
                 surfaceSize={38}
                 ringSize={30}
@@ -1376,7 +1707,7 @@ function DeviceCardFlows() {
               onClick={() => setFlow4Selected(prev => !prev)}
             >
               <MapMarker
-                icon={<CameraIcon size={24} fill={flow4Selected || flow4HoveredRow === flow4DeviceCam1.id ? friendlySelected.glyphColor : friendlyDefault.glyphColor} />}
+                icon={<CameraIcon size={24} outlined fill={flow4Selected || flow4HoveredRow === flow4DeviceCam1.id ? friendlySelected.glyphColor : friendlyDefault.glyphColor} />}
                 style={flow4Selected || flow4HoveredRow === flow4DeviceCam1.id ? friendlySelected : friendlyDefault}
                 surfaceSize={38}
                 ringSize={30}
@@ -1386,7 +1717,7 @@ function DeviceCardFlows() {
             </div>
             <div className="flex flex-col items-center gap-2">
               <MapMarker
-                icon={<CameraIcon size={24} fill={flow4HoveredRow === flow4DeviceCam2.id ? friendlyHovered.glyphColor : friendlyDefault.glyphColor} />}
+                icon={<CameraIcon size={24} outlined fill={flow4HoveredRow === flow4DeviceCam2.id ? friendlyHovered.glyphColor : friendlyDefault.glyphColor} />}
                 style={flow4HoveredRow === flow4DeviceCam2.id ? friendlyHovered : friendlyDefault}
                 surfaceSize={38}
                 ringSize={30}
@@ -1504,7 +1835,7 @@ function DeviceCardFlows() {
             {/* Camera marker — fixed */}
             <div className="absolute" style={{ left: flow7CamPos.x, top: flow7CamPos.y, transform: 'translate(-50%, -50%)' }}>
               <MapMarker
-                icon={<CameraIcon size={24} fill={friendlyDefault.glyphColor} />}
+                icon={<CameraIcon size={24} outlined fill={friendlyDefault.glyphColor} />}
                 style={friendlyDefault}
                 surfaceSize={38}
                 ringSize={30}
@@ -1515,7 +1846,7 @@ function DeviceCardFlows() {
             {/* Target marker — fixed */}
             <div className="absolute" style={{ left: flow7TargetPos.x, top: flow7TargetPos.y, transform: 'translate(-50%, -50%)' }}>
               <MapMarker
-                icon={<SensorIcon size={24} fill={flow7OnTarget ? hoveredStyle.glyphColor : defaultStyle.glyphColor} />}
+                icon={<SensorIcon size={24} outlined fill={flow7OnTarget ? hoveredStyle.glyphColor : defaultStyle.glyphColor} />}
                 style={flow7OnTarget ? hoveredStyle : defaultStyle}
                 surfaceSize={36}
                 ringSize={28}
@@ -1735,7 +2066,7 @@ function EngagementLineAnimatedPreview({ color }: { color: string }) {
 
       <div className="absolute" style={{ left: leftX - markerR, top: lineY - markerR }}>
         <MapMarker
-          icon={<LauncherIcon size={20} fill={effectorStyle.glyphColor} />}
+          icon={<LauncherIcon size={20} outlined fill={effectorStyle.glyphColor} />}
           style={effectorStyle}
           surfaceSize={42}
           ringSize={34}
@@ -3996,6 +4327,215 @@ export function DetectionRow() {
             </ComponentSection>
             )}
 
+            {activeItem === 'device-card' && (
+            <ComponentSection id="device-card" name="Device Card">
+              <CodePreviewBlock name="DeviceRow" description="The whole card — a camera row expanded. The header carries the Show-on-map cluster; the footer holds Watch video plus the 3-dot overflow (Logs + Notifications). Toggle it closed/open." tight code={deviceRowSrc} relatedFiles={DEVICE_CARD_FILES}>
+                <StyleguideDeviceTile>
+                  <DeviceCardRowDemo device={deviceCardEdgeCases[0]} />
+                </StyleguideDeviceTile>
+              </CodePreviewBlock>
+
+              <SectionHeading>Examples</SectionHeading>
+
+              {/* ── Health tile ─────────────────────────────────── */}
+              <ExampleBlock id="device-health" title="Health — the icon tile (worst-wins severity)">
+                <div className="flex flex-col gap-6 w-full" dir="ltr">
+                  <div className="flex flex-wrap items-start gap-8">
+                    {[
+                      { key: 'ok', tile: DEVICE_HEALTH_VISUAL.ok.tile, iconFill: DEVICE_HEALTH_VISUAL.ok.iconFill, ping: false },
+                      { key: 'warning', tile: DEVICE_HEALTH_VISUAL.warning.tile, iconFill: DEVICE_HEALTH_VISUAL.warning.iconFill, ping: false },
+                      // error: same red as critical, but static (broken / already-known)
+                      { key: 'error', tile: DEVICE_HEALTH_VISUAL.critical.tile, iconFill: DEVICE_HEALTH_VISUAL.critical.iconFill, ping: false },
+                      { key: 'critical', tile: DEVICE_HEALTH_VISUAL.critical.tile, iconFill: DEVICE_HEALTH_VISUAL.critical.iconFill, ping: true },
+                      { key: 'offline', tile: DEVICE_HEALTH_VISUAL.offline.tile, iconFill: DEVICE_HEALTH_VISUAL.offline.iconFill, ping: false },
+                    ].map((s) => (
+                      <div key={s.key} className="flex flex-col items-center gap-2">
+                        <div
+                          className={`relative w-8 h-8 rounded flex items-center justify-center ${s.tile}`}
+                          data-handoff-component="device-icon"
+                          data-health={s.key}
+                        >
+                          {s.ping && (
+                            <span aria-hidden="true" className={`absolute inset-0 rounded ${DEVICE_HEALTH_CRITICAL_PING} animate-ping motion-reduce:hidden`} />
+                          )}
+                          <CameraIcon size={20} fill={s.iconFill} />
+                        </div>
+                        <span className="text-xs font-mono text-n-9">{s.key}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-n-9">
+                    <code className="font-mono text-n-10">error</code> and{' '}
+                    <code className="font-mono text-n-10">critical</code> share the red tint; only critical pulses
+                    (needs attention now) — error is static (known-broken).
+                  </p>
+                </div>
+              </ExampleBlock>
+
+              {/* ── Health tooltip edge cases ────────────────────── */}
+              <ExampleBlock id="device-health-tooltip" title="Health tooltip — edge cases (titled header + fence)">
+                <div className="w-full">
+                  <p className="mb-6 text-xs text-n-9">
+                    The titled health tooltip across everything it must carry — all four tones, error-count
+                    extremes (badge hidden at 0, “99+” clamp), short / long / missing reasons, partial or
+                    absent fences, and an over-long severity label — each in English (LTR) and Hebrew (RTL).
+                  </p>
+                  <div className="grid gap-x-10 gap-y-8 lg:grid-cols-2">
+                    {STYLEGUIDE_HEALTH_TIP_SCENARIOS.map((sc) => (
+                      <div key={sc.label} className="flex flex-col gap-3">
+                        <div className="text-[11px] leading-snug text-n-9">{sc.label}</div>
+                        <div className="flex flex-wrap items-start gap-8">
+                          <div className="flex flex-col gap-1.5">
+                            <span className="text-[10px] font-medium uppercase tracking-wide text-n-8">EN</span>
+                            <StyleguideHealthTooltip
+                              dir="ltr"
+                              tone={sc.tone}
+                              errorCount={sc.errorCount}
+                              connectionColor={sc.connectionColor}
+                              severity={sc.en.severity}
+                              reason={sc.en.reason}
+                              connectionLabel={sc.en.connection}
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1.5">
+                            <span className="text-[10px] font-medium uppercase tracking-wide text-n-8">עברית</span>
+                            <StyleguideHealthTooltip
+                              dir="rtl"
+                              tone={sc.tone}
+                              errorCount={sc.errorCount}
+                              connectionColor={sc.connectionColor}
+                              severity={sc.he.severity}
+                              reason={sc.he.reason}
+                              connectionLabel={sc.he.connection}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </ExampleBlock>
+
+              {/* ── Detail grid ─────────────────────────────────── */}
+              <ExampleBlock id="device-detail-grid" title="Detail grid — registry-driven stat rows">
+                <div className="flex flex-col gap-4">
+                  <StyleguideDeviceTile>
+                    <DeviceCardRowDemo device={deviceCardEdgeCases[1]} />
+                  </StyleguideDeviceTile>
+                  <StyleguideDeviceTile>
+                    <DeviceCardRowDemo device={deviceCardEdgeCases[2]} />
+                  </StyleguideDeviceTile>
+                </div>
+              </ExampleBlock>
+
+              {/* ── Camera preview ──────────────────────────────── */}
+              <ExampleBlock id="device-camera-preview" title="Camera preview hero (camera rows only)">
+                <StyleguideDeviceTile>
+                  <DeviceCardRowDemo device={deviceCardEdgeCases[0]} />
+                </StyleguideDeviceTile>
+              </ExampleBlock>
+
+              {/* ── Header primary cluster ──────────────────────── */}
+              <ExampleBlock id="device-header-cluster" title="Header primary cluster — always-visible controls">
+                <div className="flex flex-col gap-4">
+                  <StyleguideDeviceTile>
+                    <DeviceCardRowDemo device={deviceCardEdgeCases[0]} defaultExpanded={false} />
+                  </StyleguideDeviceTile>
+                  <StyleguideDeviceTile>
+                    <DeviceCardRowDemo device={deviceCardEdgeCases[7]} defaultExpanded={false} />
+                  </StyleguideDeviceTile>
+                  <StyleguideDeviceTile>
+                    <DeviceCardRowDemo device={deviceCardEdgeCases[8]} defaultExpanded={false} />
+                  </StyleguideDeviceTile>
+                </div>
+              </ExampleBlock>
+
+              {/* ── Action bar ──────────────────────────────────── */}
+              <ExampleBlock id="device-row-actions" title="Action bar — registry footerActions + overflow">
+                <div className="flex flex-col gap-4">
+                  <StyleguideDeviceTile>
+                    <DeviceCardRowDemo device={deviceCardEdgeCases[4]} />
+                  </StyleguideDeviceTile>
+                  <StyleguideDeviceTile>
+                    <DeviceCardRowDemo device={deviceCardEdgeCases[6]} />
+                  </StyleguideDeviceTile>
+                  <StyleguideDeviceTile>
+                    <DeviceCardRowDemo device={deviceCardEdgeCases[7]} />
+                  </StyleguideDeviceTile>
+                  <StyleguideDeviceTile>
+                    <DeviceCardRowDemo device={deviceCardEdgeCases[8]} />
+                  </StyleguideDeviceTile>
+                </div>
+              </ExampleBlock>
+
+              {/* ── Interaction states (pre-seeded) ─────────────── */}
+              <ExampleBlock id="device-interaction-states" title="Interaction states — controls in their active position">
+                <div className="w-full">
+                  <p className="mb-6 text-xs text-n-9">
+                    The footer/header controls pre-seeded into their engaged state so each one is visible
+                    without a click — muted speaker, speaker playing (now-playing strip), floodlight on,
+                    camera watching, and the ECM jam split in its idle (pre-confirm) state.
+                  </p>
+                  <div className="flex flex-col gap-4">
+                    <StyleguideDeviceTile label="Speaker — muted">
+                      <DeviceCardRowDemo device={deviceCardEdgeCases[7]} initialMuted />
+                    </StyleguideDeviceTile>
+                    <StyleguideDeviceTile label="Speaker — playing (now-playing strip)">
+                      <DeviceCardRowDemo device={deviceCardEdgeCases[7]} initialSpeakerOn />
+                    </StyleguideDeviceTile>
+                    <StyleguideDeviceTile label="Floodlight — on">
+                      <DeviceCardRowDemo device={deviceCardEdgeCases[8]} initialFloodOn />
+                    </StyleguideDeviceTile>
+                    <StyleguideDeviceTile label="Camera — watching (pinned to feed)">
+                      <DeviceCardRowDemo device={deviceCardEdgeCases[0]} initialPinned />
+                    </StyleguideDeviceTile>
+                    <StyleguideDeviceTile label="ECM — jam idle (open the split for scope + confirm)">
+                      <DeviceCardRowDemo device={deviceCardEdgeCases[12]} />
+                    </StyleguideDeviceTile>
+                  </div>
+                </div>
+              </ExampleBlock>
+
+              {/* ── Overflow + timed notifications ───────────────── */}
+              <ExampleBlock id="device-overflow" title="3-dot overflow — Logs error channel + timed Notifications">
+                <div className="flex flex-col gap-4">
+                  <StyleguideDeviceTile>
+                    <DeviceCardRowDemo device={deviceCardEdgeCases[0]} />
+                  </StyleguideDeviceTile>
+                  <StyleguideDeviceTile>
+                    <DeviceCardRowDemo device={deviceCardEdgeCases[2]} />
+                  </StyleguideDeviceTile>
+                </div>
+              </ExampleBlock>
+
+              {/* ── Whole row, collapsed vs expanded ────────────── */}
+              <ExampleBlock id="device-row" title="DeviceRow — collapsed vs expanded">
+                <div className="flex flex-col gap-4">
+                  <StyleguideDeviceTile>
+                    <DeviceCardRowDemo device={deviceCardEdgeCases[0]} defaultExpanded={false} />
+                  </StyleguideDeviceTile>
+                  <StyleguideDeviceTile>
+                    <DeviceCardRowDemo device={deviceCardEdgeCases[0]} />
+                  </StyleguideDeviceTile>
+                </div>
+              </ExampleBlock>
+
+              {/* ── Edge-case gallery ───────────────────────────── */}
+              <ExampleBlock id="device-card-states" title="Edge cases — health, offline, malfunction, low battery">
+                <div className="flex flex-col gap-4">
+                  {deviceCardEdgeCases.map((device) => (
+                    <StyleguideDeviceTile key={device.id}>
+                      <DeviceCardRowDemo device={device} />
+                    </StyleguideDeviceTile>
+                  ))}
+                </div>
+              </ExampleBlock>
+
+              <SectionHeading>Source</SectionHeading>
+              <UsageBlock code={deviceRowSrc} name="DeviceRow" />
+            </ComponentSection>
+            )}
+
             {activeItem === 'devices-panel' && (
             <ComponentSection id="devices-panel" name="DevicesPanel" description="Right-hand sidebar listing all connected field devices grouped by type. Supports search, type-filter isolation, device expansion with stats grid, camera preview with presets, ECM jam activation, mute with 30-min countdown, drone wipers/calibration, and drag-to-camera-viewer for camera rows.">
               <CodePreviewBlock name="DevicesPanel" description="Full interactive panel — try searching, filtering by type, expanding rows, toggling the floodlight Switch, and pressing Play on a speaker." tight code={devicesPanelSrc} relatedFiles={DEVICES_PANEL_FILES}>
@@ -4067,7 +4607,7 @@ export function DetectionRow() {
                 { name: 'healthOk', type: 'string', default: '"OK"', description: 'Health value when `operationalStatus === "operational"`.' },
                 { name: 'healthMalfunction', type: 'string', default: '"Malfunction"', description: 'Health value when `operationalStatus === "malfunctioning"`.' },
                 { name: 'battery', type: 'string', default: '"Battery"', description: 'Stat-row label for `device.batteryPct`.' },
-                { name: 'jam', type: 'string', default: '"Activate"', description: 'Idle label on the ECM jam button.' },
+                { name: 'jam', type: 'string', default: '"Jam"', description: 'Idle label on the ECM jam button — the shared target-card SplitActionButton (danger). Clicking the body or a scope dropdown item arms a Confirm/Cancel panel below the button (with a brief twice-blink); Confirm fires.' },
                 { name: 'jamActive', type: 'string', default: '"Jam active"', description: 'Label on the ECM button while a jammer is broadcasting.' },
                 { name: 'jamDisabledOffline', type: 'string', default: '"Device offline"', description: 'Tooltip when the jam button is disabled because the device is offline.' },
                 { name: 'jamDisabledMalfunction', type: 'string', default: '"Device malfunction"', description: 'Tooltip when the jam button is disabled because of a malfunction.' },
@@ -4765,7 +5305,7 @@ export function DetectionRow() {
                     const s = resolveMarkerStyle('default', aff);
                     return (
                       <div key={aff} className="flex flex-col items-center gap-2">
-                        <MapMarker icon={<SensorIcon size={34} fill={s.glyphColor} />} style={s} surfaceSize={48} ringSize={38} />
+                        <MapMarker icon={<SensorIcon size={34} outlined fill={s.glyphColor} />} style={s} surfaceSize={48} ringSize={38} />
                         <span className="text-xs font-mono font-normal text-white">{aff}</span>
                       </div>
                     );
@@ -4777,7 +5317,7 @@ export function DetectionRow() {
               <div className="space-y-2">
                 <ImportBlock path="@/primitives/MapMarker" names={['MapMarker']} />
                 <ImportBlock path="@/primitives/markerStyles" names={['resolveMarkerStyle', 'INTERACTION_STATES', 'AFFILIATIONS']} />
-                <ImportBlock path="@/shared/components/TacticalMap" names={['CameraIcon', 'RadarIcon', 'SensorIcon', 'DroneIcon', 'DroneHiveIcon', 'LidarIcon', 'LauncherIcon', 'MissileIcon', 'FloodlightIcon', 'SpeakerIcon']} />
+                <ImportBlock path="@/app/components/tacticalIcons" names={['CameraIcon', 'RadarIcon', 'SensorIcon', 'DroneIcon', 'DroneHiveIcon', 'LidarIcon', 'LauncherIcon', 'MissileIcon', 'FloodlightIcon', 'SpeakerIcon']} />
               </div>
 
               {/* ── Layer Anatomy ── */}
@@ -4827,7 +5367,7 @@ export function DetectionRow() {
                         const style = resolveMarkerStyle('default', 'friendly');
                         return (
                           <MapMarker
-                            icon={<SensorIcon size={48} fill="#ffffff" />}
+                            icon={<SensorIcon size={48} outlined fill="#ffffff" />}
                             style={style}
                             surfaceSize={72}
                             ringSize={56}
@@ -4885,7 +5425,7 @@ export function DetectionRow() {
                             onMouseLeave={handleStateLeave}
                           >
                             <MapMarker
-                              icon={<SensorIcon fill={s.glyphColor} />}
+                              icon={<SensorIcon outlined fill={s.glyphColor} />}
                               style={s}
                               surfaceSize={36}
                               ringSize={28}
@@ -4908,7 +5448,7 @@ export function DetectionRow() {
                       const heroStyle = resolveMarkerStyle(explorerState, hoveredAff ?? explorerAff);
                       return (
                         <MapMarker
-                          icon={<SensorIcon size={48} fill={heroStyle.glyphColor} />}
+                          icon={<SensorIcon size={48} outlined fill={heroStyle.glyphColor} />}
                           style={heroStyle}
                           surfaceSize={72}
                           ringSize={56}

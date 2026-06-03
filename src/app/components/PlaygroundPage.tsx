@@ -109,6 +109,7 @@ const DEVICE_PANEL_STRINGS = {
   centerOnMap: 'מרכז במפה',
   mute: 'השתק',
   unmute: 'בטל השתקה',
+  muted: 'מושתק',
   pinToFeed: 'נעץ',
   pinToFeedAriaLabel: 'נעץ מכשיר לפיד וידאו',
   unpinFromFeed: 'בטל נעיצה',
@@ -467,6 +468,8 @@ export default function PlaygroundPage() {
           onPinToFeed={handlePinDevice}
           onUnpinFromFeed={handleUnpinDevice}
           pinnedDeviceIds={pinnedDeviceIds}
+          onOpenLogs={(id) => console.info('[playground] open logs', id)}
+          onArmNotifications={(id, armed) => console.info('[playground] notifications', id, armed)}
           title="מכשירים"
           closeAriaLabel="סגור"
           typeLabels={DEVICE_TYPE_LABELS}

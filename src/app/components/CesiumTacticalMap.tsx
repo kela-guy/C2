@@ -19,7 +19,7 @@
  * Anything still pending is tracked in `docs/cesium-parity.md`.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   CesiumMap,
   type CesiumHtmlMarker,
@@ -456,7 +456,7 @@ type ContextMenuState = {
   elementId: string;
 };
 
-export function CesiumTacticalMap({
+function CesiumTacticalMapImpl({
   targets,
   activeTargetId,
   hoveredTargetIdFromCard,
@@ -833,22 +833,22 @@ export function CesiumTacticalMap({
       out.push(m);
     };
     for (const a of CAMERA_ASSETS) {
-      push(buildFriendlyAsset(a.id, a.latitude, a.longitude, <CameraIcon />, a.typeLabel, SENSOR_SURFACE, sensorFov(a)));
+      push(buildFriendlyAsset(a.id, a.latitude, a.longitude, <CameraIcon outlined />, a.typeLabel, SENSOR_SURFACE, sensorFov(a)));
     }
     for (const a of RADAR_ASSETS) {
-      push(buildFriendlyAsset(a.id, a.latitude, a.longitude, <RadarIcon />, a.typeLabel, SENSOR_SURFACE, sensorFov(a)));
+      push(buildFriendlyAsset(a.id, a.latitude, a.longitude, <RadarIcon outlined />, a.typeLabel, SENSOR_SURFACE, sensorFov(a)));
     }
     for (const a of LIDAR_ASSETS) {
-      push(buildFriendlyAsset(a.id, a.latitude, a.longitude, <LidarIcon />, a.typeLabel, SENSOR_SURFACE, sensorFov(a)));
+      push(buildFriendlyAsset(a.id, a.latitude, a.longitude, <LidarIcon outlined />, a.typeLabel, SENSOR_SURFACE, sensorFov(a)));
     }
     for (const a of DRONE_HIVE_ASSETS) {
-      push(buildFriendlyAsset(a.id, a.latitude, a.longitude, <DroneHiveIcon />, a.typeLabel));
+      push(buildFriendlyAsset(a.id, a.latitude, a.longitude, <DroneHiveIcon outlined />, a.typeLabel));
     }
     for (const a of WEAPON_SYSTEM_ASSETS) {
-      push(buildFriendlyAsset(a.id, a.latitude, a.longitude, <LauncherIcon size={LAUNCHER_GLYPH} />, a.typeLabel));
+      push(buildFriendlyAsset(a.id, a.latitude, a.longitude, <LauncherIcon size={LAUNCHER_GLYPH} outlined />, a.typeLabel));
     }
     for (const l of LAUNCHER_ASSETS) {
-      push(buildFriendlyAsset(l.id, l.latitude, l.longitude, <LauncherIcon size={LAUNCHER_GLYPH} />, l.id));
+      push(buildFriendlyAsset(l.id, l.latitude, l.longitude, <LauncherIcon size={LAUNCHER_GLYPH} outlined />, l.id));
     }
     for (const a of FLOODLIGHT_ASSETS) {
       push(
@@ -856,7 +856,7 @@ export function CesiumTacticalMap({
           a.id,
           a.latitude,
           a.longitude,
-          <FloodlightIcon size={20} />,
+          <FloodlightIcon size={20} outlined />,
           a.typeLabel,
           SENSOR_SURFACE,
           { rangeM: FLOODLIGHT_BEAM_M, bearingDeg: a.bearingDeg, widthDeg: a.fovDeg },
@@ -875,7 +875,7 @@ export function CesiumTacticalMap({
           a.id,
           a.latitude,
           a.longitude,
-          <SpeakerIcon size={20} />,
+          <SpeakerIcon size={20} outlined />,
           a.typeLabel,
           SENSOR_SURFACE,
           undefined,
@@ -921,7 +921,7 @@ export function CesiumTacticalMap({
         zIndex: showHoverEffect ? 40 : 15,
         content: (
           <MapMarker
-            icon={<SensorIcon />}
+            icon={<SensorIcon outlined />}
             style={style}
             surfaceSize={SENSOR_SURFACE}
             ringSize={SENSOR_RING}
@@ -1091,7 +1091,7 @@ export function CesiumTacticalMap({
         zIndex: showHoverEffect ? 40 : 15,
         content: (
           <MapMarker
-            icon={<LauncherIcon size={LAUNCHER_GLYPH} />}
+            icon={<LauncherIcon size={LAUNCHER_GLYPH} outlined />}
             style={style}
             surfaceSize={SENSOR_SURFACE}
             ringSize={SENSOR_RING}
@@ -1633,6 +1633,11 @@ export function CesiumTacticalMap({
     </div>
   );
 }
+
+// Memoized to skip re-renders triggered by Dashboard state changes that do not
+// affect any map prop (e.g. opening side panels or camera UI). Sim ticks still
+// re-render it since it consumes `friendlyDrones`/`targets`.
+export const CesiumTacticalMap = memo(CesiumTacticalMapImpl);
 
 /**
  * Right-click context menu shown over the Cesium canvas. Action ids match

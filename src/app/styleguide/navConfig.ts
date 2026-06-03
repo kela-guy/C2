@@ -61,6 +61,22 @@ export const NAV: NavGroup[] = [
       { id: 'target-card', label: 'TargetCard' },
       { id: 'filter-bar', label: 'FilterBar' },
       {
+        id: 'device-card',
+        label: 'Device Card',
+        children: [
+          { id: 'device-health', label: 'Health tile' },
+          { id: 'device-health-tooltip', label: 'Health tooltip' },
+          { id: 'device-detail-grid', label: 'Detail grid' },
+          { id: 'device-camera-preview', label: 'Camera preview' },
+          { id: 'device-header-cluster', label: 'Header cluster' },
+          { id: 'device-row-actions', label: 'Action bar' },
+          { id: 'device-interaction-states', label: 'Interaction states' },
+          { id: 'device-overflow', label: 'Overflow + notify' },
+          { id: 'device-row', label: 'DeviceRow' },
+          { id: 'device-card-states', label: 'Edge cases' },
+        ],
+      },
+      {
         id: 'devices-panel',
         label: 'DevicesPanel',
         children: [
