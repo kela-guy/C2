@@ -24,7 +24,7 @@ export function SandboxPassiveTelemetry({
   const rel = bearingDelta(status.bearingDeg, 0);
 
   if (deviceType === 'camera') {
-    return <MinimalCorners battery={battery} rel={rel} topRightOffset={topRightOffset} />;
+    return null;
   }
 
   switch (composition) {

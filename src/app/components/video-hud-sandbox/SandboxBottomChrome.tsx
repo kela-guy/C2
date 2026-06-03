@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState, type FocusEvent } from 'react';
 import {
-  AlertTriangle,
-  CircleX,
   TakeControl,
   LockOpen,
   Maximize2,
@@ -27,6 +25,44 @@ const DAY_NIGHT_ICON_SIZE = 12;
 
 const CHROME_PILL =
   'rounded-full border border-border-default/45 bg-black/25 backdrop-blur-sm';
+
+// Luminous white text-shadow from the Figma spec. No palette token exists
+// for a glow text-shadow, so the rgba literal is kept inline (sandbox only).
+const DOCK_STOP_TEXT_GLOW = '[text-shadow:0_4px_24px_rgba(255,255,255,0.55)]';
+
+function DockGlyph() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      aria-hidden
+      className="shrink-0"
+    >
+      <path
+        d="M13.6409 1.18815L13.7192 4.44135L14.4518 4.81672L14.6176 5.52909C14.8468 6.51427 14.2527 7.50847 13.272 7.76107L11.316 8.265L12.3906 10.2885L9.57159 11.034L6.65013 9.46293L3.29606 10.2543C2.65793 10.4048 1.99493 10.1482 1.6212 9.61013C1.1804 8.97567 1.25206 8.11473 1.79293 7.56273L2.86946 6.46402C3.1068 6.22183 3.404 6.04919 3.73413 5.9653C4.84413 5.68323 8.18313 4.83344 9.59077 4.46116C9.84308 4.39443 10.0532 4.21685 10.1629 3.97306L11.1158 1.85599L13.6409 1.18815Z"
+        fill="currentColor"
+      />
+      <path
+        d="M14.6666 12.3335V13.3335H1.33327V12.3335H14.6666Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function CornerBrackets() {
+  const corner = 'pointer-events-none absolute size-1.5 border-slate-12/80';
+  return (
+    <span aria-hidden>
+      <span className={`${corner} left-0 top-0 border-l border-t`} />
+      <span className={`${corner} right-0 top-0 border-r border-t`} />
+      <span className={`${corner} bottom-0 left-0 border-b border-l`} />
+      <span className={`${corner} bottom-0 right-0 border-b border-r`} />
+    </span>
+  );
+}
 
 function clampZoom(z: number): number {
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(z * 10) / 10));
@@ -63,6 +99,13 @@ interface SandboxBottomChromeProps {
   cameraAngle?: CameraAngle;
   onCameraAngleChange?: (angle: CameraAngle) => void;
   onAutoTrackStart?: () => void;
+  settingsLabelOverrides?: {
+    playbackLabel?: string;
+    displaySection?: string;
+    aiDetectionsLabel?: string;
+  };
+  alertsAsSwitch?: boolean;
+  showAutoTrackItem?: boolean;
 }
 
 export function SandboxBottomChrome({
@@ -92,14 +135,17 @@ export function SandboxBottomChrome({
   cameraAngle,
   onCameraAngleChange,
   onAutoTrackStart,
+  settingsLabelOverrides,
+  alertsAsSwitch,
+  showAutoTrackItem,
 }: SandboxBottomChromeProps) {
   const t = useStrings();
   const isDrone = deviceType === 'drone';
   const dockStopVisible = videoHovered || dockArmed || stopArmed;
   const owned = controlOwner === 'self';
-  const takeReleaseLabel = owned
-    ? t.camera.controlBar.releaseControl
-    : t.camera.controlBar.takeControl;
+  const takeReleaseLabel = (
+    owned ? t.camera.controlBar.releaseControl : t.camera.controlBar.takeControl
+  ).replace(/\s*\([^)]*\)\s*$/, '');
   const TakeReleaseIcon = owned ? LockOpen : TakeControl;
   const fullscreenLabel = isFullscreen ? 'Exit fullscreen' : 'Fullscreen';
   const FullscreenIcon = isFullscreen ? Minimize2 : Maximize2;
@@ -114,7 +160,7 @@ export function SandboxBottomChrome({
 
         {isDrone && (
           <div
-            className={`absolute left-1/2 top-0 flex -translate-x-1/2 items-center gap-1.5 transition-[opacity,transform] duration-150 ease-out motion-reduce:transition-none ${
+            className={`absolute left-1/2 top-0 flex -translate-x-1/2 items-center gap-3 transition-[opacity,transform] duration-150 ease-out motion-reduce:transition-none ${
               dockStopVisible
                 ? 'opacity-100 translate-y-0'
                 : 'opacity-0 -translate-y-1 pointer-events-none'
@@ -123,29 +169,34 @@ export function SandboxBottomChrome({
           >
             <button
               type="button"
-              aria-pressed={dockArmed}
-              onClick={onDockToggle}
-              className={`pointer-events-auto inline-flex items-center gap-1.5 rounded-sm border px-3 py-1 text-[10px] backdrop-blur-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong ${
-                dockArmed
-                  ? 'border-accent-warning bg-accent-warning text-slate-1'
-                  : 'border-accent-warning/55 bg-surface-1/85 text-accent-warning hover:bg-accent-warning-tint'
+              aria-pressed={stopArmed}
+              onClick={onStopToggle}
+              className={`pointer-events-auto relative inline-flex items-center justify-center gap-1.5 border border-slate-12/50 pl-2.5 pr-1.5 py-1 text-[12px] text-slate-12 backdrop-blur-sm transition-colors duration-150 focus-visible:border-slate-12 focus-visible:outline-none ${
+                stopArmed
+                  ? 'bg-accent-danger/30 motion-safe:animate-pulse'
+                  : 'bg-accent-danger-tint hover:bg-accent-danger/25'
               }`}
             >
-              <AlertTriangle size={11} aria-hidden />
-              <span>חזרה לעגינה</span>
+              <span className={DOCK_STOP_TEXT_GLOW}>עצור</span>
+              <span
+                className="size-3 shrink-0 rounded-[1px] bg-accent-danger"
+                aria-hidden
+              />
+              <CornerBrackets />
             </button>
             <button
               type="button"
-              aria-pressed={stopArmed}
-              onClick={onStopToggle}
-              className={`pointer-events-auto inline-flex items-center gap-1.5 rounded-sm border px-3 py-1 text-[10px] backdrop-blur-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong ${
-                stopArmed
-                  ? 'border-accent-danger bg-accent-danger text-slate-12 motion-safe:animate-pulse'
-                  : 'border-accent-danger/55 bg-accent-danger-tint text-accent-danger hover:bg-accent-danger/25'
+              aria-pressed={dockArmed}
+              onClick={onDockToggle}
+              className={`pointer-events-auto relative inline-flex items-center justify-center gap-1.5 border border-slate-12/50 px-1.5 py-1 text-[12px] text-slate-12 backdrop-blur-sm transition-colors duration-150 focus-visible:border-slate-12 focus-visible:outline-none ${
+                dockArmed
+                  ? 'bg-black/70'
+                  : 'bg-black/40 hover:bg-black/60'
               }`}
             >
-              <CircleX size={11} aria-hidden />
-              <span>עצור</span>
+              <span className={DOCK_STOP_TEXT_GLOW}>חזרה לעגינה</span>
+              <DockGlyph />
+              <CornerBrackets />
             </button>
           </div>
         )}
@@ -189,6 +240,9 @@ export function SandboxBottomChrome({
               cameraAngle={cameraAngle}
               onCameraAngleChange={onCameraAngleChange}
               onAutoTrackStart={onAutoTrackStart}
+              labelOverrides={settingsLabelOverrides}
+              alertsAsSwitch={alertsAsSwitch}
+              showAutoTrackItem={showAutoTrackItem}
             />
             <IconButton
               label={fullscreenLabel}

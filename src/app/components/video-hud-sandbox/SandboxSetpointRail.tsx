@@ -20,7 +20,7 @@ const SPD_MAX = 20;
 const IDLE_WIDTH = 'w-[64px]';
 const LANE_WIDTH = 'w-[64px]';
 const RAIL_MIN_W = 'min-w-[168px]';
-const RAIL_MIN_H = 'min-h-[320px]';
+const RAIL_HEIGHT = 'h-full';
 
 const TRACK_PX = 256;
 const THUMB_PX = 12;
@@ -41,8 +41,8 @@ const REVEAL_TRANSITION =
   'transition-[opacity,clip-path,transform] duration-200 ease-out motion-reduce:transition-none';
 
 const SETPOINT_LABELS = {
-  ALT: { short: 'ALT', long: 'Altitude' },
-  SPD: { short: 'SPD', long: 'Speed' },
+  ALT: 'Altitude',
+  SPD: 'Speed',
 } as const;
 
 export type RailDesign =
@@ -70,15 +70,21 @@ const SLIDER_BOLD =
   'h-full min-h-0 w-7 shrink-0 [&_[data-slot=slider-range]]:bg-accent-info [&_[data-slot=slider-thumb]]:size-3.5 [&_[data-slot=slider-thumb]]:border-2 [&_[data-slot=slider-thumb]]:border-surface-1 [&_[data-slot=slider-thumb]]:bg-slate-12 [&_[data-slot=slider-thumb]]:shadow-[0_0_0_1px_rgba(0,0,0,0.5)] [&_[data-slot=slider-thumb]]:focus-visible:ring-2 [&_[data-slot=slider-thumb]]:focus-visible:ring-border-strong [&_[data-slot=slider-track]]:h-full [&_[data-slot=slider-track]]:min-h-0 [&_[data-slot=slider-track]]:w-0.5 [&_[data-slot=slider-track]]:bg-slate-12/55';
 
 const SLIDER_TUBE =
-  'h-full min-h-0 w-7 shrink-0 [&_[data-slot=slider-range]]:bg-accent-info [&_[data-slot=slider-thumb]]:size-3 [&_[data-slot=slider-thumb]]:border [&_[data-slot=slider-thumb]]:border-border-default [&_[data-slot=slider-thumb]]:bg-slate-12 [&_[data-slot=slider-thumb]]:shadow-[0_1px_2px_rgba(0,0,0,0.5)] [&_[data-slot=slider-thumb]]:focus-visible:ring-2 [&_[data-slot=slider-thumb]]:focus-visible:ring-border-strong [&_[data-slot=slider-track]]:h-full [&_[data-slot=slider-track]]:min-h-0 [&_[data-slot=slider-track]]:w-1.5 [&_[data-slot=slider-track]]:rounded-full [&_[data-slot=slider-track]]:bg-surface-1/45 [&_[data-slot=slider-track]]:ring-1 [&_[data-slot=slider-track]]:ring-inset [&_[data-slot=slider-track]]:ring-border-default';
+  'h-full min-h-0 w-7 shrink-0 [&_[data-slot=slider-range]]:bg-accent-info [&_[data-slot=slider-thumb]]:size-4 [&_[data-slot=slider-thumb]]:rounded-[1px] [&_[data-slot=slider-thumb]]:border-2 [&_[data-slot=slider-thumb]]:border-slate-7 [&_[data-slot=slider-thumb]]:bg-slate-12 [&_[data-slot=slider-thumb]]:shadow-[0_1px_2px_rgba(0,0,0,0.5)] [&_[data-slot=slider-thumb]]:focus-visible:ring-2 [&_[data-slot=slider-thumb]]:focus-visible:ring-border-strong [&_[data-slot=slider-track]]:h-full [&_[data-slot=slider-track]]:min-h-0 [&_[data-slot=slider-track]]:w-1.5 [&_[data-slot=slider-track]]:rounded-[1px] [&_[data-slot=slider-track]]:bg-surface-1/45 [&_[data-slot=slider-track]]:ring-1 [&_[data-slot=slider-track]]:ring-inset [&_[data-slot=slider-track]]:ring-border-default';
+
+// Recessed "well": inset shadow + darker fill read as carved-in (input),
+// not raised (button/chip). rgba(0,0,0) inset darkens the substrate — an
+// allowed exception per no-inline-hex-colors.mdc.
+const FIELD_WELL =
+  'ring-1 ring-inset ring-border-default bg-surface-void/30 shadow-[inset_0_0_4px_0_rgba(0,0,0,0.2)] backdrop-blur-md hover:ring-border-strong';
+const FIELD_WELL_EDIT =
+  'ring-1 ring-inset ring-border-strong bg-surface-void/40 shadow-[inset_0_1px_2px_rgba(0,0,0,0.6)] backdrop-blur-md';
 
 interface DesignTokens {
   lane: string;
-  label: string;
   chevron: string;
   valueButton: string;
   valueInput: string;
-  chip: string;
   slider: string;
   liveDot: 'side-dot' | 'side-dot-bold' | 'tube-tick';
   liveDotClass: string;
@@ -88,12 +94,10 @@ interface DesignTokens {
 const DESIGN_TOKENS: Record<RailDesign, DesignTokens> = {
   shell: {
     lane: 'rounded-md bg-surface-2/85 backdrop-blur-md px-2 py-2 ring-1 ring-inset ring-border-default',
-    label: 'text-[10px] font-medium leading-none text-slate-9',
     chevron:
       'text-slate-11 hover:bg-state-hover hover:text-slate-12 rounded-sm',
-    valueButton: 'text-slate-12',
-    valueInput: 'text-slate-12 ring-1 ring-border-strong',
-    chip: 'text-slate-10 hover:text-slate-12 rounded-sm',
+    valueButton: `rounded-[3px] text-[12px] ${FIELD_WELL}`,
+    valueInput: `rounded-[3px] text-[12px] ${FIELD_WELL_EDIT}`,
     slider: SLIDER_HAIRLINE,
     liveDot: 'side-dot',
     liveDotClass: 'bg-slate-12/65',
@@ -101,11 +105,9 @@ const DESIGN_TOKENS: Record<RailDesign, DesignTokens> = {
   },
   'glass-pills': {
     lane: '',
-    label: `text-[10px] font-medium leading-none text-slate-9 ${TEXT_SHADOW}`,
     chevron: `bg-surface-1/55 backdrop-blur-md ring-1 ring-inset ring-border-default text-slate-11 hover:bg-surface-1/70 hover:text-slate-12`,
-    valueButton: `bg-surface-1/55 backdrop-blur-md ring-1 ring-inset ring-border-default px-2 py-0.5 text-slate-12`,
-    valueInput: `bg-surface-1/85 backdrop-blur-md px-2 py-0.5 text-slate-12 ring-1 ring-border-strong`,
-    chip: `bg-surface-1/55 backdrop-blur-md ring-1 ring-inset ring-border-default px-1.5 py-0.5 text-slate-10 hover:text-slate-12`,
+    valueButton: `rounded-full text-[12px] ${FIELD_WELL}`,
+    valueInput: `rounded-full text-[12px] ${FIELD_WELL_EDIT}`,
     slider: SLIDER_GLASS,
     liveDot: 'side-dot',
     liveDotClass: 'bg-slate-12/85',
@@ -113,11 +115,9 @@ const DESIGN_TOKENS: Record<RailDesign, DesignTokens> = {
   },
   'high-contrast': {
     lane: '',
-    label: `text-[10px] font-semibold leading-none text-slate-12 ${TEXT_SHADOW_STRONG}`,
     chevron: `rounded-sm text-slate-12 hover:bg-state-hover ${TEXT_SHADOW_STRONG}`,
-    valueButton: `font-medium text-[15px] text-slate-12 ${TEXT_SHADOW_STRONG}`,
-    valueInput: `font-medium text-[15px] text-slate-12 ring-1 ring-border-strong`,
-    chip: `text-slate-12 rounded-sm ${TEXT_SHADOW_STRONG}`,
+    valueButton: `rounded-[3px] text-[14px] font-medium ${FIELD_WELL}`,
+    valueInput: `rounded-[3px] text-[14px] font-medium ${FIELD_WELL_EDIT}`,
     slider: SLIDER_BOLD,
     liveDot: 'side-dot-bold',
     liveDotClass: `bg-slate-12 ${DOT_HALO_SHADOW}`,
@@ -125,11 +125,9 @@ const DESIGN_TOKENS: Record<RailDesign, DesignTokens> = {
   },
   'tube-chips': {
     lane: '',
-    label: `text-[10px] font-medium leading-none text-slate-9 ${TEXT_SHADOW}`,
-    chevron: `rounded-sm bg-surface-1/45 ring-1 ring-inset ring-border-default text-slate-11 hover:bg-surface-1/65 hover:text-slate-12`,
-    valueButton: `rounded-sm bg-surface-1/55 ring-1 ring-inset ring-border-default px-1.5 py-0.5 text-[13px] text-slate-12`,
-    valueInput: `rounded-sm bg-surface-1/85 px-1.5 py-0.5 text-[13px] text-slate-12 ring-1 ring-border-strong`,
-    chip: `rounded-sm bg-surface-1/55 ring-1 ring-inset ring-border-default px-1.5 py-0.5 text-slate-10 hover:text-slate-12`,
+    chevron: `rounded-[2px] bg-surface-1/45 ring-1 ring-inset ring-border-default text-slate-11 hover:bg-surface-1/65 hover:text-slate-12`,
+    valueButton: `rounded-[2px] text-[12px] ${FIELD_WELL}`,
+    valueInput: `rounded-[2px] text-[12px] ${FIELD_WELL_EDIT}`,
     slider: SLIDER_TUBE,
     liveDot: 'tube-tick',
     liveDotClass: 'bg-slate-12/85',
@@ -137,12 +135,10 @@ const DESIGN_TOKENS: Record<RailDesign, DesignTokens> = {
   },
   gutter: {
     lane: '',
-    label: 'text-[10px] font-medium leading-none text-slate-9',
     chevron:
       'text-slate-11 hover:bg-state-hover hover:text-slate-12 rounded-sm',
-    valueButton: 'text-slate-12',
-    valueInput: 'text-slate-12 ring-1 ring-border-strong',
-    chip: 'text-slate-10 hover:text-slate-12 rounded-sm',
+    valueButton: `rounded-[3px] text-[12px] ${FIELD_WELL}`,
+    valueInput: `rounded-[3px] text-[12px] ${FIELD_WELL_EDIT}`,
     slider: SLIDER_HAIRLINE,
     liveDot: 'side-dot',
     liveDotClass: 'bg-slate-12/65',
@@ -214,8 +210,7 @@ export function SandboxSetpointRail({
     <div className={`flex ${tokens.groupGap}`}>
       <SetpointLane
         design={design}
-        shortLabel={SETPOINT_LABELS.ALT.short}
-        longLabel={SETPOINT_LABELS.ALT.long}
+        longLabel={SETPOINT_LABELS.ALT}
         current={altitudeM}
         target={targetAltitudeM}
         min={ALT_MIN}
@@ -230,8 +225,7 @@ export function SandboxSetpointRail({
       />
       <SetpointLane
         design={design}
-        shortLabel={SETPOINT_LABELS.SPD.short}
-        longLabel={SETPOINT_LABELS.SPD.long}
+        longLabel={SETPOINT_LABELS.SPD}
         current={velocityMps}
         target={targetVelocityMps}
         min={SPD_MIN}
@@ -252,25 +246,25 @@ export function SandboxSetpointRail({
       role="group"
       aria-label="Altitude and speed setpoints"
       aria-disabled={disabled || undefined}
-      className={`pointer-events-none absolute z-20 left-0 top-1/2 -translate-y-1/2 transition-opacity duration-150
+      className={`pointer-events-none absolute z-20 inset-y-0 left-0 h-full transition-opacity duration-150
         ${disabled ? 'opacity-45' : ''}`}
       onFocusCapture={() => {
         if (!disabled) setFocused(true);
       }}
       onBlurCapture={handleBlurCapture}
     >
-      <DirIsland direction="ltr">
-        <div className="relative flex items-stretch">
+      <DirIsland direction="ltr" className="h-full">
+        <div className="relative flex h-full items-stretch">
           <div
             aria-hidden
-            className={`w-3 ${RAIL_MIN_H} ${disabled ? '' : 'pointer-events-auto'}`}
+            className={`w-3 ${RAIL_HEIGHT} ${disabled ? '' : 'pointer-events-auto'}`}
             onMouseEnter={handleHoverEnter}
             onMouseLeave={handleHoverLeave}
           />
 
-          <div className={`relative flex flex-col items-start justify-center ${RAIL_MIN_W} ${RAIL_MIN_H}`}>
+          <div className={`relative flex h-full flex-col items-start justify-center ${RAIL_MIN_W}`}>
             <div
-              className={`pointer-events-none flex flex-col justify-center gap-3 ${REVEAL_TRANSITION}
+              className={`pointer-events-none flex h-full flex-col justify-center gap-3 ${REVEAL_TRANSITION}
                 ${expanded
                   ? 'absolute inset-0 opacity-0 scale-[0.98]'
                   : 'opacity-100 scale-100'}`}
@@ -285,19 +279,19 @@ export function SandboxSetpointRail({
                 />
               )}
               <IdleRow
-                label={SETPOINT_LABELS.ALT.long}
+                label={SETPOINT_LABELS.ALT}
                 value={`${Math.round(altitudeM)}`}
                 unit="m"
               />
               <IdleRow
-                label={SETPOINT_LABELS.SPD.long}
+                label={SETPOINT_LABELS.SPD}
                 value={velocityMps.toFixed(1)}
                 unit="m/s"
               />
             </div>
 
             <div
-              className={`absolute inset-0 flex items-center justify-center ${REVEAL_TRANSITION}
+              className={`absolute inset-0 flex h-full items-center justify-center ${REVEAL_TRANSITION}
                 ${expanded
                   ? 'pointer-events-auto opacity-100 [clip-path:inset(0_0_0_0)] translate-x-0'
                   : 'pointer-events-none opacity-0 [clip-path:inset(0_10%_0_0)] -translate-x-0.5'}`}
@@ -359,7 +353,6 @@ function IdleRow({
 
 function SetpointLane({
   design,
-  shortLabel,
   longLabel,
   current,
   target,
@@ -374,7 +367,6 @@ function SetpointLane({
   onScrubEnd,
 }: {
   design: RailDesign;
-  shortLabel: string;
   longLabel: string;
   current: number;
   target: number;
@@ -432,11 +424,6 @@ function SetpointLane({
     [stepBy, step],
   );
 
-  const handleMatchLive = useCallback(() => {
-    if (disabled) return;
-    onChange(snapToStep(clamp(current, min, max), step, min));
-  }, [current, disabled, max, min, step, onChange]);
-
   const handleSliderKeyDownCapture = useCallback(
     (e: KeyboardEvent<HTMLSpanElement>) => {
       if (!e.shiftKey) return;
@@ -448,6 +435,29 @@ function SetpointLane({
     [stepBy, step],
   );
 
+  const handleLaneKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLDivElement>) => {
+      if (disabled) return;
+      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+
+      const targetNode = e.target;
+      if (!(targetNode instanceof HTMLElement)) return;
+      if (
+        targetNode instanceof HTMLInputElement ||
+        targetNode instanceof HTMLTextAreaElement ||
+        targetNode.isContentEditable ||
+        targetNode.closest('[data-slot="slider"]')
+      ) {
+        return;
+      }
+
+      e.preventDefault();
+      e.stopPropagation();
+      stepBy((e.key === 'ArrowUp' ? 1 : -1) * step * (e.shiftKey ? 10 : 1));
+    },
+    [disabled, stepBy, step],
+  );
+
   const liveDotPx =
     tokens.liveDot === 'side-dot-bold' ? LIVE_DOT_PX_BOLD : LIVE_DOT_PX;
 
@@ -456,19 +466,19 @@ function SetpointLane({
   return (
     <div
       className={`flex ${LANE_WIDTH} shrink-0 flex-col items-center gap-1 ${tokens.lane}`}
+      onKeyDown={handleLaneKeyDown}
     >
       {showHeadline && (
         <header
-          className={`font-mono text-[9px] uppercase tracking-[0.18em] leading-none text-slate-9 ${TEXT_SHADOW}`}
+          className={`mb-2 font-sans text-xs uppercase tracking-normal leading-none text-slate-12 ${TEXT_SHADOW}`}
           aria-hidden
         >
           {longLabel}
         </header>
       )}
-      <div id={labelId} className={tokens.label}>
-        <span aria-hidden>{shortLabel}</span>
-        <span className="sr-only">{longLabel}</span>
-      </div>
+      <span id={labelId} className="sr-only">
+        {longLabel}
+      </span>
 
       <ChevronStepButton
         direction="up"
@@ -548,22 +558,11 @@ function SetpointLane({
         unit={unit}
         disabled={disabled}
         ariaLabel={`${longLabel} target`}
-        displayText={targetText}
+        formattedValue={format(target)}
         onCommit={onChange}
         buttonClass={tokens.valueButton}
         inputClass={tokens.valueInput}
       />
-
-      {pending && !disabled && (
-        <button
-          type="button"
-          onClick={handleMatchLive}
-          aria-label={`Match live ${longLabel}, ${liveText}`}
-          className={`whitespace-nowrap px-1 py-0.5 font-mono text-[10px] leading-none tabular-nums transition-transform active:scale-[0.97] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong ${tokens.chip}`}
-        >
-          = {liveText}
-        </button>
-      )}
     </div>
   );
 }
@@ -617,7 +616,7 @@ function ChevronStepButton({
       onPointerCancel={handlePointerEnd}
       onPointerLeave={handlePointerEnd}
       onKeyDown={handleKeyDown}
-      className={`flex h-4 w-7 items-center justify-center transition-[color,background-color,transform] duration-150 ease-out active:scale-[0.97] disabled:opacity-30 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong ${className}`}
+      className={`flex h-5 w-7 items-center justify-center transition-[color,background-color,transform] duration-150 ease-out active:scale-[0.97] disabled:opacity-30 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong ${className}`}
     >
       <ChevronGlyph direction={direction} />
     </button>
@@ -655,7 +654,7 @@ function EditableValue({
   unit,
   disabled,
   ariaLabel,
-  displayText,
+  formattedValue,
   onCommit,
   buttonClass,
   inputClass,
@@ -669,7 +668,7 @@ function EditableValue({
   unit: string;
   disabled: boolean;
   ariaLabel: string;
-  displayText: string;
+  formattedValue: string;
   onCommit: (next: number) => void;
   buttonClass: string;
   inputClass: string;
@@ -732,20 +731,31 @@ function EditableValue({
 
   if (editing) {
     return (
-      <input
-        ref={inputRef}
-        id={id}
-        type="text"
-        inputMode="decimal"
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onKeyDown={handleKeyDown}
-        onBlur={handleBlur}
-        aria-label={`${ariaLabel}${unit ? ` in ${unit}` : ''}`}
-        className={`w-full text-center font-mono text-[14px] leading-tight tabular-nums outline-none ${inputClass}`}
-      />
+      <div
+        className={`inline-flex h-6 min-w-[60px] items-center justify-between gap-1 px-1.5 leading-none ${inputClass}`}
+      >
+        <input
+          ref={inputRef}
+          id={id}
+          type="text"
+          inputMode="decimal"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={handleBlur}
+          aria-label={`${ariaLabel}${unit ? ` in ${unit}` : ''}`}
+          className="w-full min-w-0 bg-transparent text-start font-mono leading-none tabular-nums text-slate-12 outline-none"
+        />
+        {unit && (
+          <span className="font-mono text-[0.8em] leading-none text-slate-10">
+            {unit}
+          </span>
+        )}
+      </div>
     );
   }
+
+  const valueText = unit ? `${formattedValue} ${unit}` : formattedValue;
 
   return (
     <button
@@ -753,12 +763,25 @@ function EditableValue({
       id={id}
       onClick={startEdit}
       disabled={disabled}
-      aria-label={`${ariaLabel}, ${displayText}. Click to edit.`}
+      aria-label={`${ariaLabel}, ${valueText}. Click to edit.`}
       aria-live="polite"
       aria-atomic="true"
-      className={`w-full cursor-text whitespace-nowrap text-center font-mono text-[14px] leading-tight tabular-nums transition-colors disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong ${buttonClass}`}
+      className={`group inline-flex h-6 min-w-[60px] cursor-text items-center justify-between gap-1 px-1.5 leading-none transition-[background-color,box-shadow,transform] duration-150 ease-out active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-border-strong motion-reduce:transition-none ${buttonClass}`}
     >
-      {displayText}
+      <span className="flex items-center gap-0.5">
+        <span className="font-mono leading-none tabular-nums text-slate-12">
+          {formattedValue}
+        </span>
+        <span
+          aria-hidden
+          className="h-3 w-px bg-slate-10 opacity-0 transition-opacity duration-150 ease-out group-hover:opacity-70 motion-reduce:transition-none"
+        />
+      </span>
+      {unit && (
+        <span className="font-mono text-[0.8em] leading-none text-slate-10">
+          {unit}
+        </span>
+      )}
     </button>
   );
 }

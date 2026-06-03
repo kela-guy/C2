@@ -9,17 +9,36 @@ import type {
   DayNightMode,
   FeedDeviceType,
 } from '@/app/components/camera-v2/types';
-import {
-  RAIL_DESIGN_OPTIONS,
-  SandboxSetpointRail,
-  type RailDesign,
-} from './SandboxSetpointRail';
+import { SandboxSetpointRail, type RailDesign } from './SandboxSetpointRail';
 import { SandboxPassiveTelemetry, type PassiveComposition } from './SandboxPassiveTelemetry';
 import { SandboxBottomChrome } from './SandboxBottomChrome';
 import { AiDetectionTriangles } from './AiDetectionTriangles';
 import { AutoTrackOverlay } from './AutoTrackOverlay';
 import { DeviceConnectivityBadge } from './DeviceConnectivityBadge';
 import { SandboxCompassControl } from './SandboxCompassControl';
+import { CameraSlewCue } from './CameraSlewCue';
+import { CameraDepressionBar } from './CameraDepressionBar';
+import {
+  useAnimatedAngle,
+  useAnimatedValue,
+  shortestDelta,
+} from './useAnimatedValue';
+
+const PITCH_MIN = -90;
+const PITCH_MAX = 15;
+
+const SETTINGS_LABEL_OVERRIDES = {
+  playbackLabel: 'חקירת וידאו',
+  displaySection: 'שכבות',
+  aiDetectionsLabel: 'אנליטיקות AI',
+} as const;
+
+const SANDBOX_CONTEXT_MENU = {
+  coordinates: '688180 / 3593940',
+  altitude: '45 m',
+  showTracker: false,
+  lookAtLabel: 'הסתכל לנקודה',
+} as const;
 
 const VIDEO_SRC_DAY = '/videos/target-feed.mov';
 const VIDEO_SRC_NIGHT = '/videos/weapon-feed.mp4';
@@ -37,14 +56,8 @@ function assetToDeviceType(asset: SandboxAssetType): FeedDeviceType {
   return asset === 'camera' ? 'camera' : 'drone';
 }
 
-const COMPOSITION_OPTIONS: { id: PassiveComposition; label: string }[] = [
-  { id: 'D', label: 'D · Top strip' },
-  { id: 'A', label: 'A · Bottom center' },
-  { id: 'B', label: 'B · Top right' },
-  { id: 'C', label: 'C · Rail only' },
-  { id: 'E', label: 'E · Corners' },
-  { id: 'F', label: 'F · Minimal corners' },
-];
+const RAIL_DESIGN: RailDesign = 'tube-chips';
+const PASSIVE_COMPOSITION: PassiveComposition = 'C';
 
 function baseStatus(
   controlOwner: CameraStatus['controlOwner'],
@@ -76,9 +89,6 @@ const noop = () => {};
 export default function VideoHudSandbox() {
   const [assetType, setAssetType] = useState<SandboxAssetType>('pathfinder');
   const [foreignLocked, setForeignLocked] = useState(false);
-  const [showBottomChrome, setShowBottomChrome] = useState(true);
-  const [composition, setComposition] = useState<PassiveComposition>('C');
-  const [railDesign, setRailDesign] = useState<RailDesign>('tube-chips');
   const [targetAltitudeM, setTargetAltitudeM] = useState(140);
   const [targetVelocityMps, setTargetVelocityMps] = useState(10);
   const [zoomLevel, setZoomLevel] = useState(2.4);
@@ -96,8 +106,16 @@ export default function VideoHudSandbox() {
   const [mutedAlerts, setMutedAlerts] = useState(false);
   const [cameraAngle, setCameraAngle] = useState<CameraAngle>('straight');
   const [autoTrackArmed, setAutoTrackArmed] = useState(false);
-  const [bearingDeg, setBearingDeg] = useState(245);
+  const [commandedBearingDeg, setCommandedBearingDeg] = useState(245);
+  const [commandedPitchDeg, setCommandedPitchDeg] = useState(-18);
+  const [selfControl, setSelfControl] = useState(true);
   const pulseTimerRef = useRef<number | null>(null);
+
+  // Deliberately slow bearing easing so the camera visibly trails the
+  // commanded heading — that lag is what the slew cue draws.
+  const currentBearingDeg = useAnimatedAngle(commandedBearingDeg, 0.6);
+  const currentPitchDeg = useAnimatedValue(commandedPitchDeg);
+  const slewDelta = shortestDelta(currentBearingDeg, commandedBearingDeg);
 
   useEffect(
     () => () => {
@@ -118,12 +136,17 @@ export default function VideoHudSandbox() {
   const crosshairBloom = useCrosshairBloom(holdMotion || pulsing);
 
   const isAirborne = assetType !== 'camera';
-  const controlOwner: CameraStatus['controlOwner'] = foreignLocked ? 'other' : 'self';
+  const controlOwner: CameraStatus['controlOwner'] = foreignLocked
+    ? 'other'
+    : selfControl
+      ? 'self'
+      : 'none';
   const writeDisabled = controlOwner === 'other';
+  const isManual = controlOwner === 'none';
 
   const status = useMemo<CameraStatus>(
-    () => baseStatus(controlOwner, assetToDeviceType(assetType), bearingDeg),
-    [controlOwner, assetType, bearingDeg],
+    () => baseStatus(controlOwner, assetToDeviceType(assetType), currentBearingDeg),
+    [controlOwner, assetType, currentBearingDeg],
   );
 
   const feed = useMemo<CameraFeed>(
@@ -150,6 +173,10 @@ export default function VideoHudSandbox() {
   const handleAutoTrackReleased = useCallback(() => setAutoTrackArmed(false), []);
   const handleVideoEnter = useCallback(() => setVideoHovered(true), []);
   const handleVideoLeave = useCallback(() => setVideoHovered(false), []);
+  const handleTakeRelease = useCallback(() => {
+    if (foreignLocked) return;
+    setSelfControl((v) => !v);
+  }, [foreignLocked]);
 
   useEffect(() => {
     if (assetType !== 'pathfinder') setAutoTrackArmed(false);
@@ -162,14 +189,6 @@ export default function VideoHudSandbox() {
   return (
     <div className="min-h-screen w-full bg-surface-1 text-slate-12 flex flex-col">
       <header className="flex flex-wrap items-center gap-3 border-b border-border-subtle px-4 py-2.5 text-[12px] shrink-0">
-        <span className="font-mono text-slate-9">/video-hud-sandbox</span>
-        <span className="text-slate-11">
-          {assetType === 'camera'
-            ? 'Camera HUD — minimal corners'
-            : assetType === 'pathfinder'
-              ? 'Pathfinder HUD — auto-track + angles'
-              : 'Drone HUD — hover ALT/SPD scrub'}
-        </span>
         <div className="ms-auto flex flex-wrap items-center gap-2">
           <label className="flex items-center gap-1.5 text-slate-10 cursor-pointer">
             <input
@@ -179,15 +198,6 @@ export default function VideoHudSandbox() {
               className="rounded border-border-default"
             />
             Foreign locked
-          </label>
-          <label className="flex items-center gap-1.5 text-slate-10 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showBottomChrome}
-              onChange={(e) => setShowBottomChrome(e.target.checked)}
-              className="rounded border-border-default"
-            />
-            Bottom chrome
           </label>
           {isAirborne && (
             <label className="flex items-center gap-1.5 text-slate-10 cursor-pointer">
@@ -228,46 +238,33 @@ export default function VideoHudSandbox() {
               </option>
             ))}
           </select>
-          {isAirborne && (
-            <select
-              value={composition}
-              onChange={(e) => setComposition(e.target.value as PassiveComposition)}
-              className="bg-surface-2 border border-border-default rounded px-2 py-1 text-[11px] text-slate-11"
-              aria-label="Passive telemetry composition"
-            >
-              {COMPOSITION_OPTIONS.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          )}
-          {isAirborne && (
-            <select
-              value={railDesign}
-              onChange={(e) => setRailDesign(e.target.value as RailDesign)}
-              className="bg-surface-2 border border-border-default rounded px-2 py-1 text-[11px] text-slate-11"
-              aria-label="Setpoint rail design"
-            >
-              {RAIL_DESIGN_OPTIONS.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          )}
           <SandboxCompassControl
-            bearingDeg={bearingDeg}
-            onBearingChange={setBearingDeg}
+            bearingDeg={commandedBearingDeg}
+            onBearingChange={setCommandedBearingDeg}
           />
+          <label className="flex items-center gap-2 rounded-md border border-border-default bg-surface-2 px-2 py-1">
+            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-9">
+              DEP
+            </span>
+            <input
+              type="range"
+              min={PITCH_MIN}
+              max={PITCH_MAX}
+              step={1}
+              value={Math.round(commandedPitchDeg)}
+              onChange={(e) => setCommandedPitchDeg(parseFloat(e.target.value))}
+              aria-label="Depression"
+              className="h-1 w-28 cursor-pointer appearance-none rounded-full bg-state-hover-strong accent-accent-info [&::-webkit-slider-thumb]:size-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-slate-12"
+            />
+            <span className="min-w-[4ch] text-end font-mono text-[11px] tabular-nums text-slate-12">
+              {Math.round(currentPitchDeg)}°
+            </span>
+          </label>
         </div>
       </header>
 
       <main className="flex-1 flex items-center justify-center p-6 min-h-0">
         <div className="w-full max-w-5xl">
-          <p className="text-[11px] text-slate-9 mb-3 text-center">
-            Paper baseline: ALT/SPD on the left, passive telemetry on the right, bottom chrome locked to 4SB.
-          </p>
           <div
             className={shellClass}
             onPointerEnter={handleVideoEnter}
@@ -291,8 +288,10 @@ export default function VideoHudSandbox() {
               suppressDroneHud
               suppressTelemetryStrip
               suppressControlBar
+              suppressCenterCrosshair
               showAssetPicker={false}
               crosshairBloom={crosshairBloom}
+              contextMenu={SANDBOX_CONTEXT_MENU}
               onTakeControl={noop}
               onReleaseControl={noop}
               onModeToggle={handleModeToggle}
@@ -303,6 +302,11 @@ export default function VideoHudSandbox() {
               onZoomChange={setZoomLevel}
               onFullscreenToggle={handleFullscreenToggle}
               onDropDevice={noop}
+            />
+            <CameraSlewCue deltaDeg={slewDelta} bloom={crosshairBloom} />
+            <CameraDepressionBar
+              pitchDeg={currentPitchDeg}
+              className="absolute right-3 top-1/2 z-20 -translate-y-1/2 pointer-events-none"
             />
             {detectionsOn && (
               <AiDetectionTriangles detections={SANDBOX_DETECTIONS} />
@@ -322,27 +326,28 @@ export default function VideoHudSandbox() {
                 targetVelocityMps={targetVelocityMps}
                 disabled={writeDisabled}
                 forceExpanded={railAlwaysOpen}
-                design={railDesign}
+                design={RAIL_DESIGN}
                 onTargetAltitudeChange={setTargetAltitudeM}
                 onTargetVelocityChange={setTargetVelocityMps}
               />
             )}
             <SandboxPassiveTelemetry
               status={status}
-              composition={composition}
+              composition={PASSIVE_COMPOSITION}
               deviceType={assetToDeviceType(assetType)}
               topRightOffset
             />
-            <DeviceConnectivityBadge />
-            {showBottomChrome && (
-              <SandboxBottomChrome
+            {assetType !== 'drone' && (
+              <DeviceConnectivityBadge manual={isManual} />
+            )}
+            <SandboxBottomChrome
                 mode={mode}
                 onModeToggle={handleModeToggle}
                 zoomLevel={zoomLevel}
                 onZoomChange={setZoomLevel}
                 deviceType={assetToDeviceType(assetType)}
                 controlOwner={controlOwner}
-                onTakeRelease={noop}
+                onTakeRelease={handleTakeRelease}
                 detectionsOn={detectionsOn}
                 playbackOn={playbackOn}
                 onDetectionsToggle={handleDetectionsToggle}
@@ -362,8 +367,10 @@ export default function VideoHudSandbox() {
                 cameraAngle={cameraAngle}
                 onCameraAngleChange={setCameraAngle}
                 onAutoTrackStart={handleAutoTrackStart}
+                settingsLabelOverrides={SETTINGS_LABEL_OVERRIDES}
+                alertsAsSwitch
+                showAutoTrackItem={false}
               />
-            )}
           </div>
         </div>
       </main>
