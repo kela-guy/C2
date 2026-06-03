@@ -28,7 +28,7 @@ import {
   Compass,
   ArrowUpDown,
 } from '@/lib/icons/central';
-import { DroneCardIcon, MissileCardIcon, CarCardIcon } from '@/primitives/MapIcons';
+import { DroneCardIcon, MissileCardIcon, CarCardIcon, UnknownCardIcon } from '@/primitives/MapIcons';
 import type { ThreatAccent } from '@/primitives/tokens';
 import { hexToRgba } from '@/primitives/tokens';
 import {
@@ -164,6 +164,12 @@ function buildAccent(target: Detection): ThreatAccent {
 function buildHeaderIcon(target: Detection): React.ElementType {
   if (target.flowType === 4) {
     return target.plannedMission?.missionType === 'ptz' ? ScanLine : Route;
+  }
+  // Sensor-only blip with no identity yet — show the question-mark glyph
+  // (stroke-free, currentColor) instead of a generic crosshair so the
+  // card reads "unidentified" in step with the map marker.
+  if (isUnclassifiedUnknown(target)) {
+    return UnknownCardIcon;
   }
   switch (target.type) {
     case 'uav': return DroneCardIcon;

@@ -57,7 +57,7 @@ import {
   FloodlightIcon,
   SpeakerIcon,
 } from './tacticalIcons';
-import { CarIcon, TankIcon, TruckIcon } from '@/primitives/MapIcons';
+import { CarIcon, TankIcon, TruckIcon, UnknownIcon } from '@/primitives/MapIcons';
 import { SEVERITY_COLOR, isUnclassifiedUnknown, UNKNOWN_GRAY, type Severity } from '@/primitives/urgency';
 import { Phone } from '@/lib/icons/central';
 import {
@@ -266,19 +266,11 @@ function buildThreatIcon(
     targetHeading != null ? droneRotationFromHeading(targetHeading) : 0;
 
   // Unclassified raw blip — a bare sensor track has no identity yet, so
-  // we render a plain gray dot instead of guessing a glyph. The dot flips
-  // to the real entity glyph once the classify reveal lands.
+  // we render a gray question-mark glyph instead of guessing an entity.
+  // The map version carries a black stroke for legibility; it flips to
+  // the real entity glyph once the classify reveal lands.
   if (isUnclassifiedUnknown(target)) {
-    return (
-      <div
-        style={{
-          width: 12,
-          height: 12,
-          borderRadius: '50%',
-          backgroundColor: UNKNOWN_GRAY,
-        }}
-      />
-    );
+    return <UnknownIcon color={UNKNOWN_GRAY} />;
   }
 
   const classified = target.classifiedType;

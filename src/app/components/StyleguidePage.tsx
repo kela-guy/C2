@@ -31,7 +31,8 @@ import {
   CardDetails, CardIdentity, CardSensors, CardMedia, MEDIA_BADGE_CONFIG, CardLog, CardClosure, CopyButton,
   FilterBar, NewUpdatesPill,
   CesiumMap, type CesiumMarker,
-  SEVERITY_COLOR,
+  SEVERITY_COLOR, SEVERITY_PULSE, SEVERITY_ORDER, SEVERITY_LABEL, UNKNOWN_GRAY,
+  type Severity,
   type CardAction, type CardSensor,
   type LogEntry, type ClosureOutcome, type DetailRow,
   type FilterDef,
@@ -41,7 +42,10 @@ import {
   LidarIcon, LauncherIcon, MissileIcon,
   FloodlightIcon, SpeakerIcon,
 } from '@/app/components/tacticalIcons';
-import { DroneCardIcon, JamWaveIcon, MissileCardIcon, CarIcon } from '@/primitives/MapIcons';
+import {
+  DroneCardIcon, JamWaveIcon, MissileCardIcon, CarIcon,
+  TankIcon, TruckIcon, UnknownIcon, HumanIcon,
+} from '@/primitives/MapIcons';
 import { MapMarker } from '@/primitives/MapMarker';
 import winterTheme from './winter-is-coming-theme.json';
 import {
@@ -5391,6 +5395,9 @@ export function DetectionRow() {
                   <p className="text-base font-normal leading-relaxed text-white/50 tracking-wide">
                     {INTERACTION_STATES.length} interaction states &times; {AFFILIATIONS.length} affiliations = {INTERACTION_STATES.length * AFFILIATIONS.length} visual combinations. Hover a state card to preview it. Click an affiliation dot to change the hero.
                   </p>
+                  <p className="text-sm leading-relaxed text-white/40">
+                    Note: <code className="text-n-10">alert</code>, <code className="text-n-10">weaponPointing</code>, and <code className="text-n-10">weaponLocked</code> are legacy states wired only in the Mapbox <code className="text-n-10">TacticalMap</code>. The production Cesium map does not drive them today — they are shown here to document the full design intent.
+                  </p>
                 </div>
                 <div className="flex gap-6">
 
@@ -5465,6 +5472,103 @@ export function DetectionRow() {
                 </div>
               </div>
 
+              {/* ── Severity & Urgency ── */}
+              <div id="severity-matrix" className="scroll-mt-12 space-y-6 pt-10">
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold text-n-12">Severity &amp; Urgency</h3>
+                  <p className="text-base font-normal leading-relaxed text-white/50 tracking-wide">
+                    The State Matrix above covers interaction &times; affiliation. On the live map, <strong className="text-white/70">target</strong> markers are driven by a separate <em>severity</em> model: <code className="text-n-10">resolveTargetMarkerStyle</code> overrides the ring + glyph color (and pulse) from <code className="text-n-10">SEVERITY_COLOR</code> rather than affiliation. Unclassified raw blips drop the ring entirely and render in neutral gray.
+                  </p>
+                  <a
+                    href="/urgency-review"
+                    className="inline-flex items-center gap-1 text-sm text-sky-300/90 hover:text-sky-200 transition-colors duration-150"
+                  >
+                    → Open the full Urgency Review
+                  </a>
+                </div>
+
+                {/* Severity tiers */}
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+                  {SEVERITY_ORDER.map((sev) => {
+                    const color = SEVERITY_COLOR[sev as Severity];
+                    const base = resolveMarkerStyle('default', 'hostile');
+                    const style = {
+                      ...base,
+                      ringColor: color,
+                      ringPulse: SEVERITY_PULSE[sev as Severity],
+                      ringOpacity: 1,
+                      ringWidth: sev === 'CRITICAL' ? 3 : 2,
+                      glyphColor: color,
+                      innerGlowColor: color,
+                    };
+                    return (
+                      <div
+                        key={sev}
+                        className="flex flex-col items-center gap-3 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-4"
+                      >
+                        <MapMarker icon={<CarIcon color={color} />} style={style} surfaceSize={42} ringSize={34} />
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span className="text-sm font-semibold text-n-11">{SEVERITY_LABEL[sev as Severity]}</span>
+                          <span className="font-mono text-[11px] text-n-9">{color}</span>
+                          {SEVERITY_PULSE[sev as Severity] && (
+                            <span className="text-[10px] uppercase tracking-wide text-n-9">pulses</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {/* Unclassified unknown — ringless neutral gray */}
+                  {(() => {
+                    const base = resolveMarkerStyle('default', 'unknown');
+                    const style = {
+                      ...base,
+                      ringColor: UNKNOWN_GRAY,
+                      ringWidth: 0,
+                      ringOpacity: 0,
+                      ringPulse: false,
+                      glyphColor: UNKNOWN_GRAY,
+                      innerGlowColor: UNKNOWN_GRAY,
+                    };
+                    return (
+                      <div className="flex flex-col items-center gap-3 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-4">
+                        <MapMarker icon={<UnknownIcon color={UNKNOWN_GRAY} />} style={style} surfaceSize={42} ringSize={34} />
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span className="text-sm font-semibold text-n-11">Unclassified</span>
+                          <span className="font-mono text-[11px] text-n-9">{UNKNOWN_GRAY}</span>
+                          <span className="text-[10px] uppercase tracking-wide text-n-9">no ring</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Entity glyph routing — mirrors buildThreatIcon */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-n-10">Entity glyph routing</h4>
+                  <p className="text-sm leading-6 text-n-9">
+                    Which glyph a target renders is chosen by its classified/raw type (see <code className="text-n-10">buildThreatIcon</code>). All inherit the severity color above.
+                  </p>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">
+                    {([
+                      { label: 'car · ground_vehicle', el: <CarIcon color="white" size={32} /> },
+                      { label: 'tank', el: <TankIcon color="white" size={32} /> },
+                      { label: 'truck', el: <TruckIcon color="white" size={32} /> },
+                      { label: 'drone · aircraft · bird · uav · naval', el: <DroneIcon color="white" /> },
+                      { label: 'missile', el: <MissileIcon fill="white" /> },
+                      { label: 'unclassified unknown', el: <UnknownIcon color="white" size={32} /> },
+                    ] as { label: string; el: React.ReactNode }[]).map(({ label, el }) => (
+                      <div
+                        key={label}
+                        className="flex flex-col items-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-4 text-center"
+                      >
+                        <div className="flex h-10 items-center justify-center">{el}</div>
+                        <span className="text-[11px] leading-tight text-n-9">{label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
               {/* ── Icon Catalog ── */}
               <div id="icon-catalog" className="scroll-mt-12 space-y-6 pt-10">
                 <div className="space-y-2">
@@ -5495,6 +5599,10 @@ export function DetectionRow() {
                     { name: 'DroneIcon', el: <DroneIcon color="white" /> },
                     { name: 'MissileIcon', el: <MissileIcon fill="white" /> },
                     { name: 'CarIcon', el: <CarIcon color="white" size={32} /> },
+                    { name: 'TankIcon', el: <TankIcon color="white" size={32} /> },
+                    { name: 'TruckIcon', el: <TruckIcon color="white" size={32} /> },
+                    { name: 'UnknownIcon', el: <UnknownIcon color="white" size={32} /> },
+                    { name: 'HumanIcon', el: <HumanIcon color="white" size={32} /> },
                     { name: 'FloodlightIcon', el: <FloodlightIcon size={32} fill="white" /> },
                     { name: 'SpeakerIcon', el: <SpeakerIcon size={32} fill="white" /> },
                   ] as { name: string; el: React.ReactNode }[]).map(({ name, el }) => (

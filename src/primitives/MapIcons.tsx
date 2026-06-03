@@ -56,6 +56,79 @@ export const MissileCardIcon = ({ size = 15 }: { size?: number }) => (
   </svg>
 );
 
+// Question-mark glyph for an unidentified, sensor-only track — a blip a
+// sensor has localized but no camera/classifier has identified yet.
+export const UNKNOWN_PATH =
+  'M14.7402 19.1443V22.1443H8.99023V19.1443H14.7402ZM21.4902 3.14429V10.3191L15.0371 13.1873L14.7402 13.3191V16.1443H8.99023V11.9685L15.4434 9.10132L15.7402 8.96948V6.14429H7.99023V8.14429H4.49023V3.14429H21.4902Z';
+
+// Map marker: carries a black stroke for legibility over imagery, with
+// the fill driven by `color` (gray while unidentified — see UNKNOWN_GRAY).
+export const UnknownIcon = ({ color = '#9ca3af', size = 32 }: { color?: string; size?: number }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className="drop-shadow-lg"
+    aria-hidden="true"
+  >
+    <path d={UNKNOWN_PATH} fill={color} stroke="#0a0a0a" strokeWidth="1" strokeLinejoin="round" />
+  </svg>
+);
+
+// Card / in-UI tile: drops the stroke and rides `currentColor` so it
+// reads as one clean fill-only shape (mirrors the Car/Tank/Truck split).
+export const UnknownCardIcon = ({ size = 15 }: { size?: number }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    aria-hidden="true"
+  >
+    <path d={UNKNOWN_PATH} fill="currentColor" />
+  </svg>
+);
+
+// Human / dismounted personnel glyph — head + torso silhouette.
+export const HUMAN_HEAD_PATH =
+  'M12 2.5C14.7615 2.5 17 4.73857 17 7.5C17 10.2615 14.7615 12.5 12 12.5C9.23857 12.5 7 10.2615 7 7.5C7 4.73857 9.23857 2.5 12 2.5Z';
+export const HUMAN_BODY_PATH =
+  'M8 14.5H16C18.4853 14.5 20.5 16.5147 20.5 19V20.5H3.5V19C3.5 16.5147 5.51472 14.5 8 14.5Z';
+
+// Map marker: black stroke for legibility over imagery, fill driven by `color`.
+export const HumanIcon = ({ color = '#ffffff', size = 32 }: { color?: string; size?: number }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className="drop-shadow-lg"
+    aria-hidden="true"
+  >
+    <path d={HUMAN_HEAD_PATH} fill={color} stroke="#0a0a0a" strokeWidth="1" strokeLinejoin="round" />
+    <path d={HUMAN_BODY_PATH} fill={color} stroke="#0a0a0a" strokeWidth="1" strokeLinejoin="round" />
+  </svg>
+);
+
+// Card / in-UI tile: stroke-free, rides `currentColor`.
+export const HumanCardIcon = ({ size = 15 }: { size?: number }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    aria-hidden="true"
+  >
+    <path d={HUMAN_HEAD_PATH} fill="currentColor" />
+    <path d={HUMAN_BODY_PATH} fill="currentColor" />
+  </svg>
+);
+
 export const CAR_PATH =
   'M19.5 17H21C21.5523 17 22 16.5523 22 16V10.8198C22 10.3431 21.6635 9.93271 21.1961 9.83922L17.3746 9.07493C17.1334 9.02668 16.9184 8.89118 16.7708 8.69435L14.3 5.4C14.1111 5.14819 13.8148 5 13.5 5H3C2.44771 5 2 5.44772 2 6V16C2 16.5523 2.44772 17 3 17H4.5';
 

@@ -136,6 +136,7 @@ export const NAV: NavGroup[] = [
         children: [
           { id: 'layer-anatomy', label: 'Layer Anatomy' },
           { id: 'state-matrix', label: 'State Matrix' },
+          { id: 'severity-matrix', label: 'Severity & Urgency' },
           { id: 'icon-catalog', label: 'Icon Catalog' },
         ],
       },

@@ -39,6 +39,10 @@ import {
   CarIcon,
   TankIcon,
   TruckIcon,
+  UnknownIcon,
+  HumanIcon,
+  HumanCardIcon,
+  UNKNOWN_GRAY,
   type Severity,
 } from '@/primitives';
 import {
@@ -57,6 +61,7 @@ import {
   cuas_classified,
   cuas_mitigating,
   cuas_bda_complete,
+  cuas_raw,
 } from '@/test-utils/mockDetections';
 
 const REVIEW_NOOP_CALLBACKS: CardCallbacks = {};
@@ -103,7 +108,7 @@ const SEVERITY_FIXTURES: SeverityFixture[] = [
 // any entity can sit at any tier. The selector therefore swaps ONLY
 // the rendered glyph and the card title, never the underlying fixture.
 
-type EntityKey = 'drone' | 'car' | 'tank' | 'truck';
+type EntityKey = 'drone' | 'car' | 'tank' | 'truck' | 'human';
 
 interface EntityOption {
   key: EntityKey;
@@ -145,9 +150,16 @@ const ENTITY_OPTIONS: Record<EntityKey, EntityOption> = {
     renderMarker: (color) => <TruckIcon color={color} />,
     cardName: 'משאית',
   },
+  human: {
+    key: 'human',
+    label: 'אדם',
+    cardIcon: HumanCardIcon,
+    renderMarker: (color) => <HumanIcon color={color} />,
+    cardName: 'אדם',
+  },
 };
 
-const ENTITY_ORDER: EntityKey[] = ['drone', 'car', 'tank', 'truck'];
+const ENTITY_ORDER: EntityKey[] = ['drone', 'car', 'tank', 'truck', 'human'];
 
 // ── Visual atoms ───────────────────────────────────────────────────────
 
@@ -189,6 +201,29 @@ function FriendlyBadge() {
         aria-hidden="true"
       />
       ידידותי
+    </span>
+  );
+}
+
+// ── Unidentified (sensor-only) ─────────────────────────────────────────
+//
+// A bare sensor blip a radar/EO sensor has localized but no camera has
+// classified yet. It carries no identity and no urgency color — both card
+// and marker render gray with the question-mark glyph until classification
+// lands. This is the affiliation-axis "unknown" tier.
+
+function UnknownBadge() {
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 font-['Heebo'] text-[12px] font-semibold tracking-normal text-white/90"
+      data-handoff-component="affiliation-badge"
+    >
+      <span
+        className="inline-block h-1.5 w-1.5 rounded-full"
+        style={{ backgroundColor: UNKNOWN_GRAY }}
+        aria-hidden="true"
+      />
+      לא מזוהה
     </span>
   );
 }
@@ -371,6 +406,65 @@ function FriendlyRow({ entity }: { entity: EntityOption }) {
   );
 }
 
+// ── Unidentified row ───────────────────────────────────────────────────
+//
+// The sensor-only blip (`cuas_raw`: raw_detection, no classifiedType).
+// Renders through the same production paths as every other row, so the
+// gray question-mark glyph shows up identically in the card header
+// (`UnknownCardIcon`, stroke-free) and the map marker (`UnknownIcon`,
+// black stroke for legibility). Entity-independent — an unidentified
+// track has no shape yet — so it ignores the entity selector.
+
+function UnknownRow() {
+  const slots = useCardSlots(cuas_raw, REVIEW_NOOP_CALLBACKS);
+
+  const markerStyle = useMemo(
+    () => resolveTargetMarkerStyle(cuas_raw, 'default'),
+    [],
+  );
+
+  return (
+    <div
+      className="grid grid-cols-[minmax(0,1fr)_120px] items-center gap-6 rounded-[10px] border border-white/[0.06] bg-white/[0.015] p-4"
+      data-handoff-component="urgency-unknown-row"
+    >
+      <div className="flex flex-col items-start justify-start gap-2">
+        <UnknownBadge />
+
+        <div className="w-full max-w-[360px]">
+          <TargetCard
+            severity="LOW"
+            completed={slots.completed}
+            open={false}
+            onToggle={() => {
+              /* review surface — open state intentionally inert */
+            }}
+            header={
+              <CardHeader
+                {...slots.header}
+                iconColor={UNKNOWN_GRAY}
+                iconBgColor={hexToRgba(UNKNOWN_GRAY, 0.12)}
+                title="לא מזוהה"
+                status={buildStatusChip(cuas_raw, 8)}
+                open={false}
+              />
+            }
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center justify-center">
+        <MapMarker
+          style={markerStyle}
+          icon={<UnknownIcon color={markerStyle.glyphColor} />}
+          surfaceSize={44}
+          ringSize={36}
+        />
+      </div>
+    </div>
+  );
+}
+
 // ── Page ───────────────────────────────────────────────────────────────
 
 export default function UrgencyReviewPage() {
@@ -429,6 +523,7 @@ export default function UrgencyReviewPage() {
             <HandshakeRow key={fixture.key} fixture={fixture} entity={entity} />
           ))}
           <FriendlyRow entity={entity} />
+          <UnknownRow />
         </div>
       </div>
     </main>

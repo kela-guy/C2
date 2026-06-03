@@ -9,6 +9,11 @@ import {
 
 export type Affiliation = 'friendly' | 'hostile' | 'possibleThreat' | 'neutral' | 'unknown';
 
+// NOTE: `alert`, `weaponPointing`, and `weaponLocked` are legacy states only
+// exercised by the Mapbox `TacticalMap.tsx` renderer. The production Cesium
+// path (`CesiumTacticalMap.tsx`) does not drive them today — it uses
+// `default | hovered | selected | active | disabled | expired | jammer`. They
+// remain in the matrix so the styleguide can document the full design intent.
 export type InteractionState =
   | 'default'
   | 'hovered'

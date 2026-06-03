@@ -2,6 +2,8 @@ export { CARD_TOKENS, ELEVATION, SURFACE, LAYOUT_TOKENS, surfaceAt, overlayAt, h
 export {
   resolveTargetSeverity,
   isReceding,
+  isUnclassifiedUnknown,
+  UNKNOWN_GRAY,
   SEVERITY_ORDER,
   SEVERITY_LABEL,
   SEVERITY_COLOR,
@@ -52,9 +54,16 @@ export {
   TankCardIcon,
   TruckIcon,
   TruckCardIcon,
+  UnknownIcon,
+  UnknownCardIcon,
+  HumanIcon,
+  HumanCardIcon,
   DRONE_PATH,
   MISSILE_PATH,
   CAR_PATH,
+  UNKNOWN_PATH,
+  HUMAN_HEAD_PATH,
+  HUMAN_BODY_PATH,
 } from './MapIcons';
 export {
   type Affiliation,

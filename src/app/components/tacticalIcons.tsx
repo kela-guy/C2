@@ -1,9 +1,12 @@
 /**
  * Tactical SVG icons for assets, drones, and effectors.
  *
- * Extracted from the (now-deleted) Mapbox `TacticalMap.tsx` so consumers can
- * import the icons without dragging `react-map-gl` / `mapbox-gl` into the
- * bundle. Map-free.
+ * Canonical, map-free source of truth for the tactical glyphs. Consumers
+ * (Cesium map, device list, styleguide) import from here so they don't drag
+ * `react-map-gl` / `mapbox-gl` into the bundle. The legacy Mapbox
+ * `TacticalMap.tsx` re-uses these via thin always-stroked wrappers; only its
+ * genuinely divergent glyphs (Camera/Floodlight/Speaker) and the Mapbox-only
+ * `DroneIcon`/`MissileIcon` size variants remain defined there.
  */
 
 import { DRONE_PATH, MISSILE_PATH } from '@/primitives/MapIcons';
@@ -232,3 +235,15 @@ export const SpeakerIcon = ({
     </svg>
   );
 };
+
+/**
+ * Regulus ECM effector glyph — crosshair ring + center dot. Rides
+ * `currentColor` so the parent (map marker or list) drives the tint.
+ */
+export const RegulusIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.5" fill="none" />
+    <path d="M10 2 L10 5 M10 15 L10 18 M2 10 L5 10 M15 10 L18 10" stroke="currentColor" strokeWidth="1.5" />
+    <circle cx="10" cy="10" r="3" fill="currentColor" />
+  </svg>
+);
