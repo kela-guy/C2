@@ -145,6 +145,7 @@ export const NAV: NavGroup[] = [
   {
     label: 'Video HUD',
     items: [
+      { id: 'hud-compass-strip', label: 'Compass Strip' },
       { id: 'hud-device-select', label: 'Device Select' },
       { id: 'hud-angle-toggle', label: 'Angle Toggle' },
       { id: 'hud-setpoint-rail', label: 'Setpoint Rail' },

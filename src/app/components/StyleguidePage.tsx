@@ -122,6 +122,7 @@ import { SandboxSetpointRail } from '@/app/components/video-hud-sandbox/SandboxS
 import { CameraSlewCue } from '@/app/components/video-hud-sandbox/CameraSlewCue';
 import { AutoTrackOverlay } from '@/app/components/video-hud-sandbox/AutoTrackOverlay';
 import { AiDetectionTriangles } from '@/app/components/video-hud-sandbox/AiDetectionTriangles';
+import { CameraCompassStrip } from '@/app/components/camera-v2/CameraCompassStrip';
 import type { DayNightMode, DetectionBox } from '@/app/components/camera-v2/types';
 import sandboxDeviceSelectSrc from '@/app/components/video-hud-sandbox/SandboxDeviceSelect.tsx?raw';
 import sandboxAngleToggleSrc from '@/app/components/video-hud-sandbox/SandboxAngleToggle.tsx?raw';
@@ -132,6 +133,7 @@ import sandboxSetpointRailSrc from '@/app/components/video-hud-sandbox/SandboxSe
 import cameraSlewCueSrc from '@/app/components/video-hud-sandbox/CameraSlewCue.tsx?raw';
 import autoTrackOverlaySrc from '@/app/components/video-hud-sandbox/AutoTrackOverlay.tsx?raw';
 import aiDetectionTrianglesSrc from '@/app/components/video-hud-sandbox/AiDetectionTriangles.tsx?raw';
+import cameraCompassStripSrc from '@/app/components/camera-v2/CameraCompassStrip.tsx?raw';
 
 interface RelatedFile {
   file: string;
@@ -2778,6 +2780,51 @@ function HudSetpointRailSection() {
           },
         ]}
       />
+    </ComponentSection>
+  );
+}
+
+function HudCompassStripSection() {
+  const [bearing, setBearing] = useState(42);
+  return (
+    <ComponentSection
+      id="hud-compass-strip"
+      name="CameraCompassStrip"
+      description="The video HUD's top heading strip — a Call of Duty: Warzone-style horizontal compass pinned center-top of the feed (via CameraTopHud). Cardinals and 5° ticks scroll horizontally as the camera bearing changes; the fixed yellow marker + degrees readout show the current heading. North is tinted red."
+    >
+      <CodePreviewBlock
+        name="CameraCompassStrip"
+        description="Drag to change the camera bearing; the strip scrolls and the degrees readout follows."
+        code={cameraCompassStripSrc}
+      >
+        <div className="w-full space-y-4">
+          <HudStage height={160} center>
+            <CameraCompassStrip bearingDeg={bearing} className="pointer-events-none" />
+          </HudStage>
+          <HudDemoSlider label="Bearing" value={bearing} min={0} max={359} suffix="°" onChange={setBearing} />
+        </div>
+      </CodePreviewBlock>
+
+      <SectionHeading>Usage</SectionHeading>
+      <UsageBlock code={cameraCompassStripSrc} name="CameraCompassStrip" />
+
+      <SectionHeading>States</SectionHeading>
+      <ExampleBlock title="Cardinals — N · E · S · W">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <HudStage height={140} center>
+            <CameraCompassStrip bearingDeg={0} className="pointer-events-none" />
+          </HudStage>
+          <HudStage height={140} center>
+            <CameraCompassStrip bearingDeg={90} className="pointer-events-none" />
+          </HudStage>
+          <HudStage height={140} center>
+            <CameraCompassStrip bearingDeg={180} className="pointer-events-none" />
+          </HudStage>
+          <HudStage height={140} center>
+            <CameraCompassStrip bearingDeg={270} className="pointer-events-none" />
+          </HudStage>
+        </div>
+      </ExampleBlock>
     </ComponentSection>
   );
 }
@@ -5645,6 +5692,7 @@ export function DetectionRow() {
             {activeItem === 'hud-angle-toggle' && <HudAngleToggleSection />}
             {activeItem === 'hud-setpoint-rail' && <HudSetpointRailSection />}
             {activeItem === 'hud-connectivity' && <HudConnectivityBadgeSection />}
+            {activeItem === 'hud-compass-strip' && <HudCompassStripSection />}
             {activeItem === 'hud-slew-cue' && <HudSlewCueSection />}
             {activeItem === 'hud-auto-track' && <HudAutoTrackSection />}
             {activeItem === 'hud-detections' && <HudDetectionsSection />}
