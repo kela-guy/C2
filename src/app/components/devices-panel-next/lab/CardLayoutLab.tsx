@@ -20,7 +20,8 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import IconDotGrid1x3Vertical from '@central-icons-react/square-filled-radius-0-stroke-2/IconDotGrid1x3Vertical';
 import IconBell from '@central-icons-react/round-filled-radius-0-stroke-2/IconBell';
 import { BellOffFilled, Camera } from '@/lib/icons/central';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../../ui/tooltip';
+import { NotificationIcon, NotificationMutedIcon } from '../../devices-panel/icons';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import { DEFAULT_CONNECTION_STATE_LABELS } from '../../devices-panel/constants';
 import type { ConnectionState } from '../../devices-panel/types';
 import { DEVICE_HEALTH_VISUAL, type DeviceHealth } from '../../devices-panel/deviceHealth';
@@ -38,8 +39,12 @@ import {
   type LabDevice,
 } from './presentationRules';
 
-/** Low-signal inspect actions that collapse into the footer 3-dot overflow. */
-const INSPECTION: ActionId[] = ['logs', 'notifications'];
+/**
+ * Secondary actions that collapse into the footer 3-dot overflow rather than
+ * sitting inline: the low-signal inspect actions (Logs / Notifications) plus
+ * Mute, which is a tucked-away toggle on the speaker row.
+ */
+const OVERFLOW_ACTIONS: ActionId[] = ['mute', 'logs', 'notifications'];
 
 /**
  * Tile-tooltip tone — the chosen "Titled header + divider" study (option 2 in
@@ -49,6 +54,7 @@ const INSPECTION: ActionId[] = ['logs', 'notifications'];
  */
 const HEALTH_TONE: Record<DeviceHealth, { dot: string; badge: string | null; label: string }> = {
   critical: { dot: 'bg-red-400', badge: 'bg-red-500/20 text-red-300', label: 'Critical' },
+  error: { dot: 'bg-red-400', badge: 'bg-red-500/20 text-red-300', label: 'Errors' },
   warning: { dot: 'bg-amber-400', badge: 'bg-amber-500/20 text-amber-300', label: 'Warning' },
   offline: { dot: 'bg-zinc-500', badge: null, label: 'Offline' },
   ok: { dot: 'bg-emerald-400', badge: null, label: 'Healthy' },
@@ -105,8 +111,7 @@ function DeviceTile({ device }: { device: LabDevice }) {
       <TooltipContent
         side="top"
         sideOffset={6}
-        showArrow={false}
-        className="min-w-[184px] max-w-[260px] overflow-hidden rounded-none p-0 bg-zinc-800 text-xs text-zinc-300 shadow-[0_0_0_1px_rgba(255,255,255,0.1)]"
+        className="min-w-[184px] max-w-[260px] overflow-hidden p-0"
       >
         <div className="flex items-center justify-start gap-1.5 px-2.5 py-1.5">
           <span className={`size-1.5 shrink-0 rounded-full ${tone.dot}`} />
@@ -309,7 +314,7 @@ function CardShell({
 function FooterBar({ children }: { children: ReactNode }) {
   return (
     <div
-      className="flex w-full flex-wrap items-center gap-2 overflow-visible border-t border-white/[0.06] px-2 py-1.5"
+      className="flex w-full flex-nowrap items-center gap-2 overflow-visible border-t border-white/[0.06] px-2 py-1.5"
       onClick={stop}
     >
       {children}
@@ -448,6 +453,40 @@ function NotificationsMenuItem({ device }: { device: LabDevice }) {
   );
 }
 
+/**
+ * Mute as an interactive overflow-menu row. Reads the shared card `muted`
+ * state so the bell ↔ slashed-bell glyph and label stay in sync, and keeps the
+ * menu open on toggle (it's a checkable item, not a navigate-away entry).
+ */
+function MuteMenuItem({ device }: { device: LabDevice }) {
+  const card = useCardState();
+  const muted = card?.muted ?? false;
+  const disabled = !device.online;
+
+  return (
+    <button
+      type="button"
+      role="menuitemcheckbox"
+      aria-checked={muted}
+      disabled={disabled}
+      onClick={(e) => {
+        e.stopPropagation();
+        card?.setMuted(!muted);
+      }}
+      className={`flex w-full items-center gap-2 rounded px-2 py-1.5 text-start text-xs disabled:cursor-not-allowed disabled:opacity-50 ${
+        muted ? 'bg-white/10 text-white' : 'text-white/80 hover:bg-white/10'
+      }`}
+    >
+      <span
+        className={`inline-flex items-center [&_svg]:size-3 ${muted ? 'text-white' : 'text-white/60'}`}
+      >
+        {muted ? <NotificationMutedIcon size={12} /> : <NotificationIcon size={12} />}
+      </span>
+      <span className="min-w-0 flex-1 leading-none">{muted ? 'Muted' : 'Mute'}</span>
+    </button>
+  );
+}
+
 function OverflowMenu({ device, ids }: { device: LabDevice; ids: ActionId[] }) {
   const [open, setOpen] = useState(false);
   return (
@@ -465,6 +504,10 @@ function OverflowMenu({ device, ids }: { device: LabDevice; ids: ActionId[] }) {
               // entry — render its own armable row that keeps the menu open.
               if (id === 'notifications') {
                 return <NotificationsMenuItem key={id} device={device} />;
+              }
+              // Mute is an interactive toggle row, not a navigate-away entry.
+              if (id === 'mute') {
+                return <MuteMenuItem key={id} device={device} />;
               }
               const m = ACTION_META[id];
               // Logs carries the error signal — the row goes red with a count
@@ -531,8 +574,8 @@ function DeviceCardRow({ device }: { device: LabDevice }) {
   );
   const { secondary } = DEVICE_ACTIONS[device.kind];
 
-  const inlineActions = secondary.filter((id) => !INSPECTION.includes(id));
-  const overflowActions = secondary.filter((id) => INSPECTION.includes(id));
+  const inlineActions = secondary.filter((id) => !OVERFLOW_ACTIONS.includes(id));
+  const overflowActions = secondary.filter((id) => OVERFLOW_ACTIONS.includes(id));
   const hasFooter = inlineActions.length > 0 || overflowActions.length > 0;
 
   return (
@@ -551,11 +594,13 @@ function DeviceCardRow({ device }: { device: LabDevice }) {
       <Telemetry device={device} />
       {hasFooter && (
         <FooterBar>
-          {inlineActions.map((id) => (
-            <ActionControl key={id} id={id} device={device} />
-          ))}
+          <div className="flex w-full flex-wrap items-center gap-2">
+            {inlineActions.map((id) => (
+              <ActionControl key={id} id={id} device={device} />
+            ))}
+          </div>
           {overflowActions.length > 0 && (
-            <div className="flex w-full justify-end">
+            <div className="flex w-fit justify-end">
               <OverflowMenu device={device} ids={overflowActions} />
             </div>
           )}

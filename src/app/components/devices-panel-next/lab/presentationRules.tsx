@@ -30,7 +30,7 @@ import {
   type FC,
   type ReactNode,
 } from 'react';
-import { Check, List, ChevronDown, Power, Radio } from '@/lib/icons/central';
+import { Check, ChevronDown, Power, Radio } from '@/lib/icons/central';
 import { JamIcon } from '@/primitives/ProductIcons';
 import {
   CalibrationIcon,
@@ -88,6 +88,27 @@ export interface ActionMeta {
 
 const ICON = 12;
 
+/** Logs glyph — a 3-column grid of bars (custom, no Central twin). */
+function LogsGridIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      fill="none"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M9 2H9.75H14.25H15V3.5H14.25H9.75H9V2ZM9 12.5H9.75H14.25H15V14H14.25H9.75H9V12.5ZM9.75 7.25H9V8.75H9.75H14.25H15V7.25H14.25H9.75ZM1 12.5H1.75H2.25H3V14H2.25H1.75H1V12.5ZM1.75 2H1V3.5H1.75H2.25H3V2H2.25H1.75ZM1 7.25H1.75H2.25H3V8.75H2.25H1.75H1V7.25ZM5.75 12.5H5V14H5.75H6.25H7V12.5H6.25H5.75ZM5 2H5.75H6.25H7V3.5H6.25H5.75H5V2ZM5.75 7.25H5V8.75H5.75H6.25H7V7.25H6.25H5.75Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
 export const ACTION_META: Record<ActionId, ActionMeta> = {
   showOnMap: {
     label: 'Show on map',
@@ -131,7 +152,7 @@ export const ACTION_META: Record<ActionId, ActionMeta> = {
   },
   logs: {
     label: 'Logs',
-    icon: <List size={ICON} />,
+    icon: <LogsGridIcon size={ICON} />,
     group: 'secondary',
     pattern: 'iconButton',
     tone: 'neutral',
@@ -254,7 +275,7 @@ export const LAB_DEVICES: LabDevice[] = [
     online: true,
     health: 'ok',
   },
-  // critical — errored asset (red tile + ping, red errors chip, red Logs)
+  // errored asset — red errors chip + red Logs, but no critical pulse (warning tile)
   {
     id: 'CAM-1',
     name: 'PTZ North',
@@ -269,7 +290,7 @@ export const LAB_DEVICES: LabDevice[] = [
     online: true,
     cameraPreview: true,
     errorCount: 2,
-    health: 'critical',
+    health: 'warning',
     healthReason: 'Sensor fault',
   },
   // warning — degraded connection (amber tile + dot + orange chip)

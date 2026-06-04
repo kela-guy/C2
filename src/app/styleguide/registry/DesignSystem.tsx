@@ -169,7 +169,7 @@ export default function DesignSystem() {
   const selected = getComponent(selectedId) ?? first;
 
   return (
-    <TooltipProvider delayDuration={0}>
+    <TooltipProvider>
       <div dir="ltr" className="flex min-h-screen bg-[#09090b] font-sans text-white antialiased" style={{ WebkitFontSmoothing: 'antialiased' }}>
         {/* Sidebar */}
         <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col gap-5 overflow-y-auto border-r border-white/[0.06] px-4 py-5">
@@ -203,7 +203,7 @@ export default function DesignSystem() {
             className={cn('min-h-[calc(100vh-2rem)] rounded-2xl px-8 py-10 sm:px-10 lg:px-14 lg:py-12', RING)}
             style={{ backgroundColor: '#0c0c0e' }}
           >
-            {selected && <ComponentDoc component={selected} onNavigate={navigate} />}
+            {selected && <ComponentDoc key={selected.id} component={selected} onNavigate={navigate} />}
           </div>
         </main>
       </div>

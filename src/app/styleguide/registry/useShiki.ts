@@ -12,7 +12,7 @@ import { useEffect, useState } from 'react';
 
 type Highlighter = Awaited<ReturnType<typeof import('shiki')['createHighlighter']>>;
 
-export type ShikiLang = 'tsx' | 'ts' | 'bash';
+export type ShikiLang = 'tsx' | 'ts' | 'bash' | 'css';
 
 let highlighterPromise: Promise<Highlighter> | null = null;
 
@@ -21,7 +21,7 @@ function getHighlighter() {
     highlighterPromise = import('shiki').then(({ createHighlighter }) =>
       createHighlighter({
         themes: ['github-light', 'github-dark'],
-        langs: ['tsx', 'ts', 'bash'],
+        langs: ['tsx', 'ts', 'bash', 'css'],
       }),
     );
   }

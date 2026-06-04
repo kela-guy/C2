@@ -24,6 +24,12 @@ export type ConnectionState = 'online' | 'offline' | 'error' | 'warning';
 export type OperationalStatus = 'operational' | 'malfunctioning';
 export type CameraCapability = 'video' | 'photo';
 
+/** A single open error/warning on a device, shown in the errors modal. */
+export interface DeviceError {
+  severity: 'error' | 'warning';
+  message: string;
+}
+
 export interface Device {
   id: string;
   name: string;
@@ -42,9 +48,16 @@ export interface Device {
   /**
    * Open error count for this device. Drives the Logs error channel (the
    * Logs control turns red with a count badge) and the count badge in the
-   * health tile tooltip. Absent / 0 means no errors.
+   * health tile tooltip. Absent / 0 means no errors. When `errors` is
+   * present its length is the source of truth; this stays for back-compat.
    */
   errorCount?: number;
+  /**
+   * Structured open errors for this device. Drives the header error button
+   * count + the errors modal list (each row shows a severity glyph + the
+   * message). When present, `errorCount` is derived from `errors.length`.
+   */
+  errors?: DeviceError[];
   /**
    * Icons may opt into an `active` prop to render their lit/playing
    * variant (floodlight, speaker). Other icons ignore it.
@@ -153,8 +166,21 @@ export interface DevicesPanelStrings {
   notificationsArmedAriaLabel: string;
   /** Aria-label prefix for the speaker now-playing header readout. */
   nowPlayingAriaLabel: string;
+  /** Errors modal — title prefix + empty-state line. */
+  errorsModalTitle: string;
+  errorsModalEmpty: string;
+  /** Errors modal severity filters (badge labels). */
+  errorsFilterAll: string;
+  errorsFilterErrors: string;
+  errorsFilterWarnings: string;
+  /** Shown in the list area when the active filter matches nothing. */
+  errorsFilterNoMatch: string;
+  /** Per-line copy affordance (idle + post-copy) in the errors modal. */
+  errorCopy: string;
+  errorCopied: string;
   /** Worst-wins severity titles shown in the health-tile tooltip. */
   healthCritical: string;
+  healthError: string;
   healthWarning: string;
   healthOffline: string;
   healthHealthy: string;

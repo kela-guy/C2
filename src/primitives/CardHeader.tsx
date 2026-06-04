@@ -128,12 +128,7 @@ export function CardHeader({
   const iconBoxWithTooltip = iconBox && affiliationLabel ? (
     <Tooltip>
       <TooltipTrigger asChild>{iconBox}</TooltipTrigger>
-      <TooltipContent
-        side="top"
-        sideOffset={6}
-        showArrow={false}
-        className="px-2.5 py-1.5 rounded-none text-xs font-normal font-sans text-white bg-zinc-700 shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_10px_15px_-3px_rgba(0,0,0,0.3)] whitespace-nowrap"
-      >
+      <TooltipContent side="top" sideOffset={6} className="whitespace-nowrap">
         {affiliationLabel}
       </TooltipContent>
     </Tooltip>

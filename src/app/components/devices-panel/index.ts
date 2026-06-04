@@ -39,6 +39,7 @@ export {
 export {
   getDeviceHealth,
   getDeviceHealthReason,
+  getDeviceErrorCount,
   DEVICE_HEALTH_VISUAL,
   DEVICE_HEALTH_CRITICAL_PING,
   type DeviceHealth,
@@ -58,6 +59,7 @@ export type {
   ConnectionState,
   Device,
   DeviceCameraDragItem,
+  DeviceError,
   DeviceRowProps,
   DeviceType,
   DevicesPanelProps,

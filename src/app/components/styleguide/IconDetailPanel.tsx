@@ -12,7 +12,7 @@ import { useState, useMemo } from 'react';
 import { Copy, Download, Image as ImageIcon, X } from 'lucide-react';
 import type { IconEntry } from '@/lib/iconRegistry';
 import { type IconPreviewSize } from '@/lib/iconTokens';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import type { RenderMode } from './IconLibrary';
 import { useIconExportActions } from './useIconExportActions';
 

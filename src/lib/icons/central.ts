@@ -31,10 +31,9 @@
  * ---------------------------------------------------------------------------
  *
  * Variant choice (locked):
- *   - Outlined (line):  @central-icons-react/round-outlined-radius-1-stroke-1.5
+ *   - Primary (filled, no radius): @central-icons-react/round-filled-radius-0-stroke-2
  *   - Filled (paired):  @central-icons-react/round-filled-radius-1-stroke-1.5
- *   - Bold filled (rare exception): @central-icons-react/round-filled-radius-0-stroke-2
- *     (only `BellOffFilled`, for the notifications armed state)
+ *   - Bold filled (square): @central-icons-react/square-filled-radius-0-stroke-2
  *
  * Four buckets live in this file:
  *
@@ -74,85 +73,108 @@
 import { createElement } from 'react';
 import type { ComponentType, SVGAttributes } from 'react';
 
-import IconCamera1Raw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconCamera1';
-import IconBellRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconBell';
-import IconBellOffRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconBellOff';
-import IconPinRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconPin';
-import IconBatteryFullRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconBatteryFull';
-import IconBatteryLowRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconBatteryLow';
-import IconRadarRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconRadar';
-import IconRadioRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconRadio';
-import IconVideoRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconVideo';
-import IconSignalTowerRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconSignalTower';
-import IconMapRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconMap';
-import IconMapPinRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconMapPin';
-import IconCompassRoundRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconCompassRound';
-import IconHomeRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconHome';
-import IconTargetRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconTarget';
-import IconChevronBottomRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconChevronBottom';
-import IconChevronTopRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconChevronTop';
-import IconChevronLeftRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconChevronLeft';
-import IconChevronRightRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconChevronRight';
-import IconChevronDoubleLeftRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconChevronDoubleLeft';
-import IconChevronDoubleRightRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconChevronDoubleRight';
-import IconArrowUpRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconArrowUp';
-import IconArrowBottomTopRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconArrowBottomTop';
-import IconCrossMediumRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconCrossMedium';
-import IconPlusMediumRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconPlusMedium';
-import IconCheckmark1MediumRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconCheckmark1Medium';
-import IconCheckCircle2Raw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconCheckCircle2';
-import IconMagnifyingGlassRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconMagnifyingGlass';
-import IconLockRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconLock';
-import IconUnlockedRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconUnlocked';
-import IconHand5FingerRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconHand5Finger';
-import IconBlockRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconBlock';
-import IconTrashCanSimpleRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconTrashCanSimple';
-import IconEditSmall1Raw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconEditSmall1';
-import IconSendRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconSend';
-import IconPhoneRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconPhone';
-import IconBookSimpleRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconBookSimple';
-import IconTagRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconTag';
-import IconArrowRotateCCRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconArrowRotateCounterClockwise';
-import IconEyeOpenRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconEyeOpen';
-import IconEyeClosedRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconEyeClosed';
-import IconPlayRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconPlay';
-import IconPauseRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconPause';
-import IconFullscreen1Raw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconFullscreen1';
-import IconFullscreen2Raw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconFullscreen2';
-import IconSplitRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconSplit';
-import IconSunRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconSun';
-import IconMoonRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconMoon';
-import IconEscRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconEsc';
-import IconSettingsGear1Raw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconSettingsGear1';
-import IconColorPaletteRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconColorPalette';
-import IconSettingsSliderHorRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconSettingsSliderHor';
-import IconSparkles3BoldRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconSparkles3Bold';
-import IconListBulletsRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconListBullets';
-import IconHistoryRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconHistory';
-import IconStopwatchRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconStopwatch';
-import IconGaugeRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconGauge';
-import IconClockRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconClock';
-import IconAirplaneRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconAirplane';
-import IconShipRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconShip';
-import IconRulerRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconRuler';
-import IconWarningSignRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconWarningSign';
-import IconShieldRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconShield';
-import IconInfoSimpleRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconInfoSimple';
-import IconLightningBoltRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconLightningBolt';
-import IconSquareArrowOutTopLeftRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconSquareArrowOutTopLeft';
-import IconStopRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconStop';
-import IconDropRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconDrop';
-import IconChevronGrabberVerticalRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconChevronGrabberVertical';
-import IconCircleRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconCircle';
-import IconCircleQuestionmarkRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconCircleQuestionmark';
-import IconSquareBehindSquare1Raw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconSquareBehindSquare1';
-import IconChatBubble7Raw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconChatBubble7';
+import IconCamera1Raw from '@central-icons-react/round-filled-radius-0-stroke-2/IconCamera1';
+import IconBellRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconBell';
+import IconBellOffRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconBellOff';
+import IconPinRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconPin';
+import IconBatteryFullRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconBatteryFull';
+import IconBatteryLowRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconBatteryLow';
+import IconRadarRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconRadar';
+import IconRadioRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconRadio';
+import IconVideoRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconVideo';
+import IconSignalTowerRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconSignalTower';
+import IconMapRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconMap';
+import IconMapPinRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconMapPin';
+import IconCompassRoundRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconCompassRound';
+import IconHomeRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconHome';
+import IconTargetRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconTarget';
+import IconChevronBottomRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconChevronBottom';
+import IconChevronTopRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconChevronTop';
+import IconChevronLeftRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconChevronLeft';
+import IconChevronRightRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconChevronRight';
+import IconChevronDoubleLeftRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconChevronDoubleLeft';
+import IconChevronDoubleRightRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconChevronDoubleRight';
+import IconArrowUpRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconArrowUp';
+import IconArrowUpRightRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconArrowUpRight';
+import IconArrowRightRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconArrowRight';
+import IconArrowDownRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconArrowDown';
+import IconArrowBottomTopRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconArrowBottomTop';
+import IconCrossMediumRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconCrossMedium';
+import IconPlusMediumRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconPlusMedium';
+import IconCheckmark1MediumRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconCheckmark1Medium';
+import IconCheckCircle2Raw from '@central-icons-react/round-filled-radius-0-stroke-2/IconCheckCircle2';
+import IconMagnifyingGlassRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconMagnifyingGlass';
+import IconLockRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconLock';
+import IconUnlockedRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconUnlocked';
+import IconHand5FingerRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconHand5Finger';
+import IconBlockRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconBlock';
+import IconTrashCanSimpleRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconTrashCanSimple';
+import IconEditSmall1Raw from '@central-icons-react/round-filled-radius-0-stroke-2/IconEditSmall1';
+import IconSendRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconSend';
+import IconPhoneRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconPhone';
+import IconBookSimpleRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconBookSimple';
+import IconTagRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconTag';
+import IconArrowRotateCCRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconArrowRotateCounterClockwise';
+import IconEyeOpenRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconEyeOpen';
+import IconEyeClosedRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconEyeClosed';
+import IconPlayRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconPlay';
+import IconPauseRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconPause';
+import IconFullscreen1Raw from '@central-icons-react/round-filled-radius-0-stroke-2/IconFullscreen1';
+import IconFullscreen2Raw from '@central-icons-react/round-filled-radius-0-stroke-2/IconFullscreen2';
+import IconSplitRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconSplit';
+import IconSunRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconSun';
+import IconMoonRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconMoon';
+import IconEscRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconEsc';
+import IconSettingsGear1Raw from '@central-icons-react/round-filled-radius-0-stroke-2/IconSettingsGear1';
+import IconColorPaletteRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconColorPalette';
+import IconSettingsSliderHorRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconSettingsSliderHor';
+import IconSparkles3BoldRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconSparkles3Bold';
+import IconListBulletsRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconListBullets';
+import IconHistoryRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconHistory';
+import IconStopwatchRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconStopwatch';
+import IconGaugeRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconGauge';
+import IconClockRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconClock';
+import IconAirplaneRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconAirplane';
+import IconShipRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconShip';
+import IconRulerRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconRuler';
+import IconWarningSignRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconWarningSign';
+import IconExclamationTriangleRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconExclamationTriangle';
+import IconShieldRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconShield';
+import IconInfoSimpleRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconInfoSimple';
+import IconLightningBoltRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconLightningBolt';
+import IconSquareArrowOutTopLeftRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconSquareArrowOutTopLeft';
+import IconStopRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconStop';
+import IconDropRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconDrop';
+import IconChevronGrabberVerticalRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconChevronGrabberVertical';
+import IconCircleRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconCircle';
+import IconCircleQuestionmarkRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconCircleQuestionmark';
+import IconSquareBehindSquare1Raw from '@central-icons-react/round-filled-radius-0-stroke-2/IconSquareBehindSquare1';
+import IconChatBubble7Raw from '@central-icons-react/round-filled-radius-0-stroke-2/IconChatBubble7';
 import IconPinFilledRaw from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconPin';
+import IconStopFilledRaw from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconStop';
+import IconSunFilledRaw from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconSun';
+import IconMoonFilledRaw from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconMoon';
+import IconEscFilledRaw from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconEsc';
+import IconSparkles3BoldFilledRaw from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconSparkles3Bold';
+import IconArrowRotateCCFilledRaw from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconArrowRotateCounterClockwise';
+import IconGaugeFilledRaw from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconGauge';
+import IconLightningBoltFilledRaw from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconLightningBolt';
+import IconSettingsSliderHorFilledRaw from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconSettingsSliderHor';
+import IconSettingsGear1FilledRaw from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconSettingsGear1';
+import IconUnlockedFilledRaw from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconUnlocked';
+import IconMagnifyingGlassFilledRaw from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconMagnifyingGlass';
 // Bolder filled variant (radius-0 / stroke-2) — used only for the
 // notifications "armed" state in the devices lab, where the heavier weight
 // reads as a lit/active bell against the row tint. Intentional second filled
 // variant; the rest of the app stays on the locked radius-1 / stroke-1.5 set.
 import IconBellOffFilledRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconBellOff';
+// Square / filled / radius-0 / stroke-2 chevron — used for the Day/Night
+// view-mode select trigger, where the heavier solid glyph matches the filled
+// mode icons in that lab. Intentional one-off variant outside the locked set.
+import IconChevronDownMediumFilledRaw from '@central-icons-react/square-filled-radius-0-stroke-2/IconChevronDownMedium';
+// Square / filled / radius-0 / stroke-2 half-filled circle — the chosen
+// Day/Night view-mode "Auto" glyph (half day / half night reads as automatic).
+import IconCircleHalfFillRaw from '@central-icons-react/square-filled-radius-0-stroke-2/IconCircleHalfFill';
 
 /**
  * Loose icon component shape that consumers can pass as `ElementType` to
@@ -210,6 +232,9 @@ export const ChevronsUpDown = asIcon(IconChevronGrabberVerticalRaw);
 export const SkipBack = asIcon(IconChevronDoubleLeftRaw);
 export const SkipForward = asIcon(IconChevronDoubleRightRaw);
 export const ArrowUp = asIcon(IconArrowUpRaw);
+export const ArrowUpRight = asIcon(IconArrowUpRightRaw);
+export const ArrowRight = asIcon(IconArrowRightRaw);
+export const ArrowDown = asIcon(IconArrowDownRaw);
 export const ArrowUpDown = asIcon(IconArrowBottomTopRaw);
 
 // --- Actions & form controls ---
@@ -225,6 +250,7 @@ export const CheckCircle2 = asIcon(IconCheckCircle2Raw);
 export const Search = asIcon(IconMagnifyingGlassRaw);
 export const Lock = asIcon(IconLockRaw);
 export const LockOpen = asIcon(IconUnlockedRaw);
+export const LockOpenFilled = asIcon(IconUnlockedFilledRaw);
 export const Hand = asIcon(IconHand5FingerRaw);
 export const Ban = asIcon(IconBlockRaw);
 export const Trash2 = asIcon(IconTrashCanSimpleRaw);
@@ -263,6 +289,7 @@ export const Moon = asIcon(IconMoonRaw);
 // broken by a top stroke; its aria-label is "esc, power").
 export const Power = asIcon(IconEscRaw);
 export const Settings = asIcon(IconSettingsGear1Raw);
+export const SettingsFilled = asIcon(IconSettingsGear1FilledRaw);
 export const Palette = asIcon(IconColorPaletteRaw);
 export const SlidersHorizontal = asIcon(IconSettingsSliderHorRaw);
 export const Sparkles = asIcon(IconSparkles3BoldRaw);
@@ -283,6 +310,9 @@ export const Ruler = asIcon(IconRulerRaw);
 
 // --- Status / alerts ---
 export const AlertTriangle = asIcon(IconWarningSignRaw);
+// The canonical exclamation-in-a-triangle warning glyph (⚠). Distinct from
+// `AlertTriangle`, which maps to Central's striped `WarningSign`.
+export const WarningTriangle = asIcon(IconExclamationTriangleRaw);
 export const Shield = asIcon(IconShieldRaw);
 // ShieldAlert in lucide is a shield with a "!" inside. Central has no
 // matching combo glyph; the plain shield is the closest visual.
@@ -314,6 +344,26 @@ export const PinFilled = asIcon(IconPinFilledRaw);
 // The filled twin comes from the bolder radius-0 / stroke-2 variant.
 export const BellOffFilled = asIcon(IconBellOffFilledRaw);
 
+// `Square` (line) <-> `SquareFilled` for the drone emergency-stop button in
+// the video HUD chrome, where the solid glyph reads as a more emphatic stop.
+export const SquareFilled = asIcon(IconStopFilledRaw);
+
+// `Sun`/`Power` (line) <-> filled twins for the floodlight segmented toggle,
+// where the solid glyphs read as more emphatic on/off states.
+export const SunFilled = asIcon(IconSunFilledRaw);
+export const MoonFilled = asIcon(IconMoonFilledRaw);
+export const PowerFilled = asIcon(IconEscFilledRaw);
+
+// Filled twins for the Day/Night view-mode lab's Auto-icon study, where the
+// solid glyphs are compared against the line set in context.
+export const SparklesFilled = asIcon(IconSparkles3BoldFilledRaw);
+export const RotateCcwFilled = asIcon(IconArrowRotateCCFilledRaw);
+export const GaugeFilled = asIcon(IconGaugeFilledRaw);
+export const ZapFilled = asIcon(IconLightningBoltFilledRaw);
+export const SlidersHorizontalFilled = asIcon(IconSettingsSliderHorFilledRaw);
+export const ChevronDownFilled = asIcon(IconChevronDownMediumFilledRaw);
+export const CircleHalfFill = asIcon(IconCircleHalfFillRaw);
+
 // =====================================================================
 // 3. Former lucide pass-throughs, now mapped to Central glyphs
 // =====================================================================
@@ -322,20 +372,20 @@ export const BellOffFilled = asIcon(IconBellOffFilledRaw);
 // existed. Per the Central-only directive we now map each to the closest
 // glyph in the locked round-outlined / stroke-1.5 set, accepting minor
 // visual/semantic drift (the chosen Central icon's aria label is noted).
-import IconTarget1Raw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconTarget1';
-import IconLoadingCircleRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconLoadingCircle';
-import IconScanCodeRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconScanCode';
-import IconScanTextSparkleRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconScanTextSparkle';
-import IconArScanCube1Raw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconArScanCube1';
-import IconMaintenanceRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconMaintenance';
-import IconImportRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconImport';
-import IconLocationRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconLocation';
-import IconLiveActivityRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconLiveActivity';
-import IconUnpinRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconUnpin';
-import IconImages1Raw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconImages1';
-import IconClockSnoozeRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconClockSnooze';
-import IconMapEditFlatRaw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconMapEditFlat';
-import IconCircleDotsCenter1Raw from '@central-icons-react/round-outlined-radius-1-stroke-1.5/IconCircleDotsCenter1';
+import IconTarget1Raw from '@central-icons-react/round-filled-radius-0-stroke-2/IconTarget1';
+import IconLoadingCircleRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconLoadingCircle';
+import IconScanCodeRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconScanCode';
+import IconScanTextSparkleRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconScanTextSparkle';
+import IconArScanCube1Raw from '@central-icons-react/round-filled-radius-0-stroke-2/IconArScanCube1';
+import IconMaintenanceRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconMaintenance';
+import IconImportRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconImport';
+import IconLocationRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconLocation';
+import IconLiveActivityRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconLiveActivity';
+import IconUnpinRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconUnpin';
+import IconImages1Raw from '@central-icons-react/round-filled-radius-0-stroke-2/IconImages1';
+import IconClockSnoozeRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconClockSnooze';
+import IconMapEditFlatRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconMapEditFlat';
+import IconCircleDotsCenter1Raw from '@central-icons-react/round-filled-radius-0-stroke-2/IconCircleDotsCenter1';
 
 // Crosshair → IconTarget1 (aria: "target-1, zoom, crosshair").
 export const Crosshair = asIcon(IconTarget1Raw);
@@ -440,3 +490,4 @@ const IconZoomCustom = ({ size = 24, ...props }: SVGAttributes<SVGSVGElement> & 
 
 export const TakeControl = asIcon(IconTakeControlCustom);
 export const Zoom = asIcon(IconZoomCustom);
+export const ZoomFilled = asIcon(IconMagnifyingGlassFilledRaw);

@@ -166,7 +166,7 @@ function TransportButton({
           {children}
         </button>
       </TooltipTrigger>
-      <TooltipContent side="top" sideOffset={6} className="rounded-none text-xs">
+      <TooltipContent side="top" sideOffset={6}>
         {label}
       </TooltipContent>
     </Tooltip>

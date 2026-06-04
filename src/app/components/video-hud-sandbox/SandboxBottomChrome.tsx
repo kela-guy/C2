@@ -1,15 +1,29 @@
-import { useCallback, useEffect, useId, useRef, useState, type FocusEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type CSSProperties,
+  type FocusEvent,
+} from 'react';
 import {
   TakeControl,
-  LockOpen,
+  LockOpenFilled,
   Maximize2,
   Minimize2,
-  Moon,
-  Zoom,
-  Sun,
+  ZoomFilled,
+  SquareFilled,
 } from '@/lib/icons/central';
+import { DayNightSpringToggle } from './DayNightSpringToggle';
+import { glassStyle } from './SandboxDeviceSelect';
+import {
+  SandboxAngleToggle,
+  type CameraAngle as PathfinderCameraAngle,
+} from './SandboxAngleToggle';
 import type { CameraStatus, DayNightMode, FeedDeviceType } from '@/app/components/camera-v2/types';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
+import * as TooltipPrimitive from '@radix-ui/react-tooltip';
+import { TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import { DirIsland } from '@/lib/direction';
 import { useStrings } from '@/lib/intl';
 import {
@@ -21,14 +35,16 @@ const MIN_ZOOM = 1;
 const MAX_ZOOM = 30;
 const ZOOM_HOVER_CLOSE_DELAY_MS = 200;
 const BOTTOM_ICON_SIZE = 16;
-const DAY_NIGHT_ICON_SIZE = 12;
 
-const CHROME_PILL =
-  'rounded-full border border-border-default/45 bg-black/25 backdrop-blur-sm';
+// Base UI-style tooltip grouping for the whole bottom bar: the first tooltip
+// waits `TIP_OPEN_DELAY`, then sweeping across adjacent controls opens instantly
+// (no entrance animation) while within `TIP_SKIP_DELAY` of the last close.
+const TIP_OPEN_DELAY = 600;
+const TIP_SKIP_DELAY = 300;
 
-// Luminous white text-shadow from the Figma spec. No palette token exists
-// for a glow text-shadow, so the rgba literal is kept inline (sandbox only).
-const DOCK_STOP_TEXT_GLOW = '[text-shadow:0_4px_24px_rgba(255,255,255,0.55)]';
+// Shape + border only; the glass fill/blur is applied via an inline
+// `glassStyle(...)` so the sandbox opacity/blur sliders can drive it live.
+const CHROME_PILL = 'rounded-full border border-border-default/45';
 
 function DockGlyph() {
   return (
@@ -49,18 +65,6 @@ function DockGlyph() {
         fill="currentColor"
       />
     </svg>
-  );
-}
-
-function CornerBrackets() {
-  const corner = 'pointer-events-none absolute size-1.5 border-slate-12/80';
-  return (
-    <span aria-hidden>
-      <span className={`${corner} left-0 top-0 border-l border-t`} />
-      <span className={`${corner} right-0 top-0 border-r border-t`} />
-      <span className={`${corner} bottom-0 left-0 border-b border-l`} />
-      <span className={`${corner} bottom-0 right-0 border-b border-r`} />
-    </span>
   );
 }
 
@@ -93,11 +97,15 @@ interface SandboxBottomChromeProps {
   onDockToggle: () => void;
   onStopToggle: () => void;
   videoHovered?: boolean;
+  forceVisible?: boolean;
   mutedAlerts?: boolean;
   onMutedAlertsToggle?: () => void;
   deviceKind?: 'camera' | 'drone' | 'pathfinder';
   cameraAngle?: CameraAngle;
   onCameraAngleChange?: (angle: CameraAngle) => void;
+  /** Pathfinder framing preset (Front / Straight / Down) for the angle pill. */
+  pathfinderAngle?: PathfinderCameraAngle;
+  onPathfinderAngleChange?: (angle: PathfinderCameraAngle) => void;
   onAutoTrackStart?: () => void;
   settingsLabelOverrides?: {
     playbackLabel?: string;
@@ -106,6 +114,10 @@ interface SandboxBottomChromeProps {
   };
   alertsAsSwitch?: boolean;
   showAutoTrackItem?: boolean;
+  /** Glass background opacity, 0..1 (black overlay alpha). Default 0.4. */
+  bgOpacity?: number;
+  /** Backdrop blur in px. Default 4 (matches `backdrop-blur-sm`). */
+  blurPx?: number;
 }
 
 export function SandboxBottomChrome({
@@ -129,28 +141,32 @@ export function SandboxBottomChrome({
   onDockToggle,
   onStopToggle,
   videoHovered = false,
+  forceVisible = false,
   mutedAlerts,
   onMutedAlertsToggle,
   deviceKind,
-  cameraAngle,
-  onCameraAngleChange,
-  onAutoTrackStart,
+  pathfinderAngle = 'straight',
+  onPathfinderAngleChange,
   settingsLabelOverrides,
   alertsAsSwitch,
-  showAutoTrackItem,
+  bgOpacity = 0.4,
+  blurPx = 4,
 }: SandboxBottomChromeProps) {
   const t = useStrings();
+  const glass = glassStyle(bgOpacity, blurPx);
   const isDrone = deviceType === 'drone';
-  const dockStopVisible = videoHovered || dockArmed || stopArmed;
+  const isPathfinder = deviceKind === 'pathfinder';
+  const dockStopVisible = forceVisible || videoHovered || dockArmed || stopArmed;
   // The entire bottom chrome (gradient + controls) is hover-revealed.
   // Stay visible while the settings menu is open or dock/stop is armed so the
   // chrome never disappears out from under an in-progress interaction.
-  const chromeVisible = videoHovered || settingsOpen || dockArmed || stopArmed;
+  const chromeVisible =
+    forceVisible || videoHovered || settingsOpen || dockArmed || stopArmed;
   const owned = controlOwner === 'self';
   const takeReleaseLabel = (
     owned ? t.camera.controlBar.releaseControl : t.camera.controlBar.takeControl
   ).replace(/\s*\([^)]*\)\s*$/, '');
-  const TakeReleaseIcon = owned ? LockOpen : TakeControl;
+  const TakeReleaseIcon = owned ? LockOpenFilled : TakeControl;
   const fullscreenLabel = isFullscreen ? 'Exit fullscreen' : 'Fullscreen';
   const FullscreenIcon = isFullscreen ? Minimize2 : Maximize2;
 
@@ -165,56 +181,14 @@ export function SandboxBottomChrome({
         >
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/85 via-black/45 to-transparent" />
 
-        {isDrone && (
-          <div
-            className={`absolute left-1/2 top-0 flex -translate-x-1/2 items-center gap-3 transition-[opacity,transform] duration-150 ease-out motion-reduce:transition-none ${
-              dockStopVisible
-                ? 'opacity-100 translate-y-0'
-                : 'opacity-0 -translate-y-1 pointer-events-none'
-            }`}
-            aria-hidden={!dockStopVisible}
-          >
-            <button
-              type="button"
-              aria-pressed={stopArmed}
-              onClick={onStopToggle}
-              className={`pointer-events-auto relative inline-flex items-center justify-center gap-1.5 border border-slate-12/50 pl-2.5 pr-1.5 py-1 text-[12px] text-slate-12 backdrop-blur-sm transition-colors duration-150 focus-visible:border-slate-12 focus-visible:outline-none ${
-                stopArmed
-                  ? 'bg-accent-danger/30 motion-safe:animate-pulse'
-                  : 'bg-accent-danger-tint hover:bg-accent-danger/25'
-              }`}
-            >
-              <span className={DOCK_STOP_TEXT_GLOW}>עצור</span>
-              <span
-                className="size-3 shrink-0 rounded-[1px] bg-accent-danger"
-                aria-hidden
-              />
-              <CornerBrackets />
-            </button>
-            <button
-              type="button"
-              aria-pressed={dockArmed}
-              onClick={onDockToggle}
-              className={`pointer-events-auto relative inline-flex items-center justify-center gap-1.5 border border-slate-12/50 px-1.5 py-1 text-[12px] text-slate-12 backdrop-blur-sm transition-colors duration-150 focus-visible:border-slate-12 focus-visible:outline-none ${
-                dockArmed
-                  ? 'bg-black/70'
-                  : 'bg-black/40 hover:bg-black/60'
-              }`}
-            >
-              <span className={DOCK_STOP_TEXT_GLOW}>חזרה לעגינה</span>
-              <DockGlyph />
-              <CornerBrackets />
-            </button>
-          </div>
-        )}
-
+        <TooltipProvider delayDuration={TIP_OPEN_DELAY} skipDelayDuration={TIP_SKIP_DELAY}>
         <div className="absolute inset-x-3 bottom-4 flex h-11 items-center justify-between gap-3">
           <div
             className={`flex items-center gap-2 text-slate-12/80 ${
               chromeVisible ? 'pointer-events-auto' : 'pointer-events-none'
             }`}
           >
-            <ControlGroup className="px-0.5">
+            <ControlGroup className="px-0.5" style={glass}>
               <ChromeTooltip label={takeReleaseLabel}>
                 <button
                   type="button"
@@ -233,35 +207,107 @@ export function SandboxBottomChrome({
               </ChromeTooltip>
             </ControlGroup>
 
-            <SandboxZoomControl zoom={zoomLevel} onChange={onZoomChange} />
+            {isDrone && (
+              <div
+                className={`flex items-center transition-[opacity,transform] duration-150 ease-out motion-reduce:transition-none ${
+                  dockStopVisible
+                    ? 'opacity-100 translate-y-0'
+                    : 'opacity-0 -translate-y-1 pointer-events-none'
+                }`}
+                aria-hidden={!dockStopVisible}
+              >
+                <ControlGroup className="pointer-events-auto gap-1 px-0.5" style={glass}>
+                  <ChromeTooltip label="עצור">
+                    <button
+                      type="button"
+                      aria-label="עצור"
+                      aria-pressed={stopArmed}
+                      onClick={onStopToggle}
+                      className={`flex size-8 items-center justify-center rounded-full border border-transparent transition-colors duration-150 focus-visible:border-border-strong focus-visible:outline-none ${
+                        stopArmed
+                          ? 'bg-accent-danger/25 text-accent-danger motion-safe:animate-pulse'
+                          : 'text-accent-danger/80 hover:bg-accent-danger/15 hover:text-accent-danger'
+                      }`}
+                    >
+                      <SquareFilled size={BOTTOM_ICON_SIZE} aria-hidden />
+                    </button>
+                  </ChromeTooltip>
+
+                  <span aria-hidden className="h-5 w-px shrink-0 bg-border-default/45" />
+
+                  <ChromeTooltip label="חזרה לעגינה">
+                    <button
+                      type="button"
+                      aria-label="חזרה לעגינה"
+                      aria-pressed={dockArmed}
+                      onClick={onDockToggle}
+                      className={`flex size-8 items-center justify-center rounded-full border border-transparent transition-colors duration-150 focus-visible:border-border-strong focus-visible:outline-none ${
+                        dockArmed
+                          ? 'bg-state-selected text-slate-12'
+                          : 'text-slate-12/80 hover:bg-state-hover-overlay hover:text-slate-12'
+                      }`}
+                    >
+                      <DockGlyph />
+                    </button>
+                  </ChromeTooltip>
+                </ControlGroup>
+              </div>
+            )}
+
+            {isPathfinder && (
+              <SandboxAngleToggle
+                value={pathfinderAngle}
+                onChange={onPathfinderAngleChange ?? (() => {})}
+                bgOpacity={bgOpacity}
+                blurPx={blurPx}
+              />
+            )}
+
+            <SandboxZoomControl
+              zoom={zoomLevel}
+              onChange={onZoomChange}
+              glass={glass}
+            />
           </div>
 
-          <ControlGroup
-            className={`shrink-0 gap-1 px-0.5 text-slate-12/80 ${
+          <div
+            className={`flex shrink-0 items-center gap-1.5 text-slate-12/80 ${
               chromeVisible ? 'pointer-events-auto' : 'pointer-events-none'
             }`}
           >
-            <DayNightToggle mode={mode} onToggle={onModeToggle} />
-            <CameraSettingsMenu
-              open={settingsOpen}
-              onOpenChange={onSettingsOpenChange}
-              status={{ controlOwner } as CameraStatus}
+            <DayNightSpringToggle
               mode={mode}
-              detectionsOn={detectionsOn}
-              playbackEnabled={playbackOn}
-              onModeToggle={onModeToggle}
-              onDetectionsToggle={onDetectionsToggle}
-              onPlaybackToggle={onPlaybackToggle}
+              onToggle={onModeToggle}
+              bgOpacity={bgOpacity}
+              blurPx={blurPx}
             />
-            <IconButton
-              label={fullscreenLabel}
-              onClick={onFullscreenToggle}
-              pressed={isFullscreen}
-            >
-              <FullscreenIcon size={BOTTOM_ICON_SIZE} />
-            </IconButton>
-          </ControlGroup>
+            <ControlGroup className="gap-1 px-0.5" style={glass}>
+              <CameraSettingsMenu
+                open={settingsOpen}
+                onOpenChange={onSettingsOpenChange}
+                status={{ controlOwner } as CameraStatus}
+                mode={mode}
+                detectionsOn={detectionsOn}
+                playbackEnabled={playbackOn}
+                onModeToggle={onModeToggle}
+                onDetectionsToggle={onDetectionsToggle}
+                onPlaybackToggle={onPlaybackToggle}
+                settingsLabelOverrides={settingsLabelOverrides}
+                mutedAlerts={mutedAlerts}
+                onMutedAlertsToggle={onMutedAlertsToggle}
+                alertsAsSwitch={alertsAsSwitch}
+              />
+              <IconButton
+                label={fullscreenLabel}
+                onClick={onFullscreenToggle}
+                pressed={isFullscreen}
+              >
+                <FullscreenIcon size={BOTTOM_ICON_SIZE} />
+              </IconButton>
+            </ControlGroup>
+          </div>
         </div>
+        </TooltipProvider>
         </div>
       </DirIsland>
     </div>
@@ -272,10 +318,12 @@ function SandboxZoomControl({
   zoom,
   onChange,
   disabled,
+  glass,
 }: {
   zoom: number;
   onChange: (next: number) => void;
   disabled?: boolean;
+  glass?: CSSProperties;
 }) {
   const [open, setOpen] = useState(false);
   const scrubbingRef = useRef(false);
@@ -351,8 +399,9 @@ function SandboxZoomControl({
       onBlurCapture={handleBlurCapture}
     >
       <div
+        style={glass}
         className={`flex h-9 items-center gap-0 ${CHROME_PILL} transition-[gap,padding] duration-150 ease-out motion-reduce:transition-none
-          ${open ? 'overflow-visible pl-0 pr-2.5' : 'overflow-hidden pl-0 pr-2'}`}
+          ${open ? 'overflow-visible pl-0.5 pr-2.5' : 'overflow-hidden pl-0 pr-2'}`}
       >
         <ChromeTooltip label={`Zoom (${zoomLabel})`}>
           <button
@@ -362,9 +411,9 @@ function SandboxZoomControl({
             aria-controls={sliderId}
             onClick={() => setOpen(true)}
             disabled={disabled}
-            className="flex size-9 shrink-0 items-center justify-center rounded-full text-slate-12/85 transition-colors duration-150 ease-out hover:bg-state-hover-overlay hover:text-slate-12 focus-visible:border-border-strong focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex size-8 shrink-0 items-center justify-center rounded-full text-slate-12/85 transition-colors duration-150 ease-out hover:bg-state-hover-overlay hover:text-slate-12 focus-visible:border-border-strong focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <Zoom size={BOTTOM_ICON_SIZE} aria-hidden="true" />
+            <ZoomFilled size={BOTTOM_ICON_SIZE} aria-hidden="true" />
           </button>
         </ChromeTooltip>
 
@@ -412,13 +461,18 @@ function SandboxZoomControl({
 
 function ControlGroup({
   className,
+  style,
   children,
 }: {
   className?: string;
+  style?: CSSProperties;
   children: React.ReactNode;
 }) {
   return (
-    <div className={`flex h-9 items-center ${CHROME_PILL} ${className ?? ''}`}>
+    <div
+      style={style}
+      className={`flex h-9 items-center ${CHROME_PILL} ${className ?? ''}`}
+    >
       {children}
     </div>
   );
@@ -432,44 +486,16 @@ function ChromeTooltip({
   children: React.ReactNode;
 }) {
   return (
-    <Tooltip>
+    <TooltipPrimitive.Root>
       <TooltipTrigger asChild>{children}</TooltipTrigger>
-      <TooltipContent side="top" sideOffset={6} className="rounded-none text-[10px]">
+      <TooltipContent
+        side="top"
+        sideOffset={6}
+        className="data-[state=instant-open]:animate-none"
+      >
         {label}
       </TooltipContent>
-    </Tooltip>
-  );
-}
-
-function DayNightToggle({
-  mode,
-  onToggle,
-  disabled,
-}: {
-  mode: DayNightMode;
-  onToggle: () => void;
-  disabled?: boolean;
-}) {
-  const isNight = mode === 'night';
-  const label = isNight ? 'Switch to day' : 'Switch to night';
-  return (
-    <ChromeTooltip label={label}>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={isNight}
-        aria-label={label}
-        disabled={disabled}
-        onClick={onToggle}
-        className="flex h-6 w-11 shrink-0 items-center rounded-full bg-slate-12 p-0.5 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        <span
-          className={`flex size-5 shrink-0 items-center justify-center rounded-full bg-surface-void text-slate-12 transition-[margin] duration-200 ease-out motion-reduce:transition-none ${isNight ? 'ms-auto' : ''}`}
-        >
-          {isNight ? <Moon size={DAY_NIGHT_ICON_SIZE} aria-hidden /> : <Sun size={DAY_NIGHT_ICON_SIZE} aria-hidden />}
-        </span>
-      </button>
-    </ChromeTooltip>
+    </TooltipPrimitive.Root>
   );
 }
 

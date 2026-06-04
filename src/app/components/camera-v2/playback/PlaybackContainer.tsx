@@ -180,7 +180,7 @@ export function PlaybackContainer({ src, state, onPatch, onExit }: PlaybackConta
               <X size={12} />
             </button>
           </TooltipTrigger>
-          <TooltipContent side="bottom" sideOffset={6} className="rounded-none text-xs">
+          <TooltipContent side="bottom" sideOffset={6}>
             {t.exitPlayback}
           </TooltipContent>
         </Tooltip>

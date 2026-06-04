@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ComponentType } from 'react';
 import {
   Eye, Radio, ShieldAlert, Zap, Crosshair, Ban, AlertTriangle,
   Trash2, Send, Compass, Gauge, Navigation, MapPin, CheckCircle2,
@@ -7,6 +7,7 @@ import {
   BellOff, Camera, Wrench, Search, X, Lock,
   SlidersHorizontal, Tag, ChevronsUpDown, Square,
   Sun, Video,
+  type IconComponent, type IconProps,
 } from '@/lib/icons/central';
 import { toast } from 'sonner';
 import { Toaster } from '@/shared/components/ui/sonner';
@@ -20,6 +21,8 @@ import { StyleguideSearch } from '@/app/styleguide/StyleguideSearch';
 import { StyleguideHeader } from '@/app/styleguide/StyleguideHeader';
 import { StyleguideToc } from '@/app/styleguide/StyleguideToc';
 import { StyleguidePager } from '@/app/styleguide/StyleguidePager';
+import { ComponentPreview } from '@/app/styleguide/registry/docPrimitives';
+import { stripCodeComments } from '@/app/styleguide/registry/stripCodeComments';
 import {
   CARD_TOKENS, ELEVATION, SURFACE, LAYOUT_TOKENS, surfaceAt, overlayAt,
   StatusChip, STATUS_CHIP_COLORS, type StatusChipColor,
@@ -30,7 +33,6 @@ import {
   TargetCard, CardHeader, CardActions,
   CardDetails, CardIdentity, CardSensors, CardMedia, MEDIA_BADGE_CONFIG, CardLog, CardClosure, CopyButton,
   FilterBar, NewUpdatesPill,
-  CesiumMap, type CesiumMarker,
   SEVERITY_COLOR, SEVERITY_PULSE, SEVERITY_ORDER, SEVERITY_LABEL, UNKNOWN_GRAY,
   type Severity,
   type CardAction, type CardSensor,
@@ -110,6 +112,26 @@ import mapIconsSrc from '@/primitives/MapIcons.tsx?raw';
 import tokensSrc from '@/primitives/tokens.ts?raw';
 import markerStylesSrc from '@/primitives/markerStyles.ts?raw';
 import barrelIndexSrc from '@/primitives/index.ts?raw';
+// ── Video HUD components (handoff sections) ──
+import { SandboxDeviceSelect, type SandboxDevice } from '@/app/components/video-hud-sandbox/SandboxDeviceSelect';
+import { SandboxAngleToggle, type CameraAngle as PathfinderCameraAngle } from '@/app/components/video-hud-sandbox/SandboxAngleToggle';
+import { DeviceConnectivityBadge } from '@/app/components/video-hud-sandbox/DeviceConnectivityBadge';
+import { DayNightSpringToggle } from '@/app/components/video-hud-sandbox/DayNightSpringToggle';
+import { SandboxVideoContextMenu } from '@/app/components/video-hud-sandbox/SandboxVideoContextMenu';
+import { SandboxSetpointRail } from '@/app/components/video-hud-sandbox/SandboxSetpointRail';
+import { CameraSlewCue } from '@/app/components/video-hud-sandbox/CameraSlewCue';
+import { AutoTrackOverlay } from '@/app/components/video-hud-sandbox/AutoTrackOverlay';
+import { AiDetectionTriangles } from '@/app/components/video-hud-sandbox/AiDetectionTriangles';
+import type { DayNightMode, DetectionBox } from '@/app/components/camera-v2/types';
+import sandboxDeviceSelectSrc from '@/app/components/video-hud-sandbox/SandboxDeviceSelect.tsx?raw';
+import sandboxAngleToggleSrc from '@/app/components/video-hud-sandbox/SandboxAngleToggle.tsx?raw';
+import deviceConnectivityBadgeSrc from '@/app/components/video-hud-sandbox/DeviceConnectivityBadge.tsx?raw';
+import dayNightSpringToggleSrc from '@/app/components/video-hud-sandbox/DayNightSpringToggle.tsx?raw';
+import sandboxVideoContextMenuSrc from '@/app/components/video-hud-sandbox/SandboxVideoContextMenu.tsx?raw';
+import sandboxSetpointRailSrc from '@/app/components/video-hud-sandbox/SandboxSetpointRail.tsx?raw';
+import cameraSlewCueSrc from '@/app/components/video-hud-sandbox/CameraSlewCue.tsx?raw';
+import autoTrackOverlaySrc from '@/app/components/video-hud-sandbox/AutoTrackOverlay.tsx?raw';
+import aiDetectionTrianglesSrc from '@/app/components/video-hud-sandbox/AiDetectionTriangles.tsx?raw';
 
 interface RelatedFile {
   file: string;
@@ -120,6 +142,58 @@ const BARREL_FILE: RelatedFile = { file: 'index.ts', code: barrelIndexSrc };
 const TOKENS_FILE: RelatedFile = { file: 'tokens.ts', code: tokensSrc };
 
 const COMMON_FILES: RelatedFile[] = [TOKENS_FILE, BARREL_FILE];
+
+// ── Video HUD handoff: shared glass helper + demo device list ──────────────────
+
+/**
+ * The dark-glass HUD chrome that every pill shares. Exposed as its own handoff
+ * tab because `SandboxAngleToggle`, `DeviceConnectivityBadge`, and
+ * `DayNightSpringToggle` all import `glassStyle` from `SandboxDeviceSelect`.
+ */
+const GLASS_HELPER_SRC = `import type { CSSProperties } from 'react';
+
+/**
+ * Dark-glass HUD chrome — translucent black fill + backdrop blur.
+ * Defaults match \`backdrop-blur-sm\` on a 40% black scrim; the live video tunes
+ * these down to 0.2 / 1px so the feed stays legible behind the pills.
+ */
+export function glassStyle(bgOpacity: number, blurPx: number): CSSProperties {
+  const blur = \`blur(\${blurPx}px)\`;
+  return {
+    backgroundColor: \`rgba(0, 0, 0, \${bgOpacity})\`,
+    backdropFilter: blur,
+    WebkitBackdropFilter: blur,
+  };
+}
+`;
+const GLASS_FILE: RelatedFile = { file: 'glassStyle.ts', code: GLASS_HELPER_SRC };
+
+/**
+ * The project's real asset glyphs (`DroneDeviceIcon`, `CameraIcon`, …) paint via
+ * a `fill` prop rather than the `IconComponent` surface, so wrap each in a thin
+ * adapter that forwards `size`/`className` — mirrors the sandbox `assetGlyph`.
+ */
+function hudAssetGlyph(Glyph: ComponentType<{ size?: number }>): IconComponent {
+  return function HudAssetGlyph({ size = 16, className, 'aria-hidden': ariaHidden }: IconProps) {
+    const px = typeof size === 'number' ? size : parseInt(String(size), 10) || 16;
+    return (
+      <span className={className} aria-hidden={ariaHidden} style={{ display: 'inline-flex' }}>
+        <Glyph size={px} />
+      </span>
+    );
+  };
+}
+
+const HUD_DEVICES: SandboxDevice[] = [
+  { id: 'PTH-01', label: 'PTH-01', sublabel: 'Pathfinder', Icon: hudAssetGlyph(RadarIcon) },
+  { id: 'DRN-01', label: 'DRN-01', sublabel: 'Drone', Icon: hudAssetGlyph(DroneDeviceIcon) },
+  { id: 'DRN-02', label: 'DRN-02', sublabel: 'Drone', Icon: hudAssetGlyph(DroneDeviceIcon) },
+  { id: 'CAM-01', label: 'CAM-01', sublabel: 'Camera', Icon: hudAssetGlyph(CameraIcon) },
+];
+
+/** Common focus ring used across every HUD pill (copyable in the class recipe). */
+const HUD_FOCUS_RING =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong focus-visible:ring-offset-1 focus-visible:ring-offset-black';
 
 const CARD_ACTIONS_FILES: RelatedFile[] = [
   { file: 'ActionButton.tsx', code: actionButtonSrc },
@@ -203,229 +277,6 @@ const FILTER_BAR_DEMO_DEFS: FilterDef[] = [
     ],
   },
 ];
-
-// ─── CesiumMap demo data ─────────────────────────────────────────────────────
-
-const CESIUM_ION_TOKEN = (import.meta.env.VITE_CESIUM_ION_TOKEN as string | undefined) ?? '';
-
-const cesiumDemoBasicMarkers: CesiumMarker[] = [
-  { id: 'm-1', lat: 32.470, lon: 35.005, label: 'Drone', color: '#fa5252' },
-  { id: 'm-2', lat: 32.463, lon: 34.998, label: 'Patrol', color: '#74c0fc' },
-  { id: 'm-3', lat: 32.467, lon: 35.012, label: 'Sensor', color: '#22b8cf' },
-];
-
-const cesiumDemoFovMarkers: CesiumMarker[] = [
-  {
-    id: 'cam-north',
-    lat: 32.4776,
-    lon: 34.9913,
-    label: 'PTZ-N',
-    color: '#74c0fc',
-    fov: { rangeM: 1500, bearingDeg: 135, widthDeg: 60 },
-  },
-  {
-    id: 'cam-south',
-    lat: 32.4526,
-    lon: 35.0013,
-    label: 'PTZ-S',
-    color: '#74c0fc',
-    fov: { rangeM: 1500, bearingDeg: 45, widthDeg: 60 },
-  },
-  {
-    id: 'reg-east',
-    lat: 32.4646,
-    lon: 35.0213,
-    label: 'Regulus East',
-    color: '#fa5252',
-    coverageRadiusM: 2500,
-  },
-];
-
-function CesiumFlyToDemo() {
-  const [target, setTarget] = useState<{ lat: number; lon: number; heightM?: number } | null>({
-    lat: 32.466,
-    lon: 35.005,
-    heightM: 10000,
-  });
-
-  const flyTo = (lat: number, lon: number, heightM: number) => {
-    // Always pass a NEW object so the effect re-runs.
-    setTarget({ lat, lon, heightM });
-  };
-
-  return (
-    <PreviewPanel align="stretch">
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => flyTo(32.4776, 34.9913, 4000)}
-            className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.04] shadow-[0_0_0_1px_rgba(255,255,255,0.06)] px-3 py-1.5 text-sm font-medium text-n-11 hover:bg-white/[0.08] hover:text-white transition-colors"
-          >
-            Fly to Camera North
-          </button>
-          <button
-            type="button"
-            onClick={() => flyTo(32.4646, 35.0213, 4000)}
-            className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.04] shadow-[0_0_0_1px_rgba(255,255,255,0.06)] px-3 py-1.5 text-sm font-medium text-n-11 hover:bg-white/[0.08] hover:text-white transition-colors"
-          >
-            Fly to Regulus East
-          </button>
-          <button
-            type="button"
-            onClick={() => flyTo(32.466, 35.005, 12000)}
-            className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.04] shadow-[0_0_0_1px_rgba(255,255,255,0.06)] px-3 py-1.5 text-sm font-medium text-n-11 hover:bg-white/[0.08] hover:text-white transition-colors"
-          >
-            Zoom out
-          </button>
-        </div>
-        <div className="h-[420px] rounded-lg overflow-hidden">
-          <CesiumMap
-            ionToken={CESIUM_ION_TOKEN}
-            initialView={{ lat: 32.466, lon: 35.005, heightM: 10000 }}
-            markers={cesiumDemoFovMarkers}
-            flyTo={target}
-            sceneMode="2D"
-          />
-        </div>
-      </div>
-    </PreviewPanel>
-  );
-}
-
-// ─── Playback investigation mockups ─────────────────────────────────────────
-//
-// Static visual mockups of the camera-v2 playback surface. The live
-// experience is interactive on `/playground`; the styleguide focuses on
-// the design language (layout placement, badge hierarchy, status copy).
-
-function PlaybackLayoutMockup() {
-  return (
-    <div className="space-y-2">
-      <div className="text-xs font-medium text-n-12">
-        50/50 split — live on top, playback on the bottom
-      </div>
-      <div className="relative aspect-video rounded-md overflow-hidden bg-black ring-1 ring-white/10">
-        {/* Live frame (top half) — hosts the live HUD so its bottom
-            control bar sits just above the red divider on hover. */}
-        <div className="absolute top-0 inset-x-0 h-1/2 bg-[radial-gradient(circle_at_30%_40%,#1f2937,#0a0a0a_70%)]">
-          <div className="absolute top-1.5 start-1.5 inline-flex items-center gap-1 bg-black/65 px-1.5 py-0.5">
-            <span className="size-1.5 rounded-full bg-red-500" />
-            <span className="text-xs font-mono font-semibold text-white uppercase tracking-wider">
-              Live
-            </span>
-          </div>
-          <div className="absolute inset-x-1.5 bottom-1 flex items-center gap-1">
-            <div className="h-3 flex-1 rounded-sm bg-black/55 ring-1 ring-white/10" />
-            <div className="size-3 rounded-sm bg-black/55 ring-1 ring-white/10" />
-          </div>
-        </div>
-
-        {/* Playback frame (bottom half) */}
-        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-[radial-gradient(circle_at_50%_50%,#3f1d1d,#1a0a0a_70%)] border-t-2 border-red-500/80">
-          <div className="absolute top-1 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 bg-red-600/90 px-1.5 py-0.5">
-            <span className="text-xs font-mono font-semibold text-white uppercase tracking-wider">
-              Playback
-            </span>
-          </div>
-          <div className="absolute inset-x-2 bottom-1.5 flex items-center gap-2">
-            <span className="text-xs font-mono text-white/85">▶</span>
-            <div className="h-1 flex-1 rounded-full bg-white/15">
-              <div className="h-full w-1/2 rounded-full bg-red-400" />
-            </div>
-            <span className="text-xs font-mono text-white/55 tabular-nums">00:32</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-type PlaybackStatusVariant =
-  | 'loading'
-  | 'buffering'
-  | 'paused'
-  | 'playing'
-  | 'ended'
-  | 'error';
-
-function PlaybackStatusMockup({ variant }: { variant: PlaybackStatusVariant }) {
-  const meta = (() => {
-    switch (variant) {
-      case 'loading':
-        return { title: 'loading', copy: 'Initial metadata fetch — transport disabled until duration arrives.' };
-      case 'buffering':
-        return { title: 'buffering', copy: 'Network stall > 600ms — last frame stays visible, scrubber stays usable.' };
-      case 'paused':
-        return { title: 'paused', copy: 'Default open state — rewinds 30s and pauses so the operator scrubs deliberately.' };
-      case 'playing':
-        return { title: 'playing', copy: 'Active playback — pause icon shown; scrubber tracks media-time.' };
-      case 'ended':
-        return { title: 'ended', copy: 'Clip finished — Replay overlay returns to position 0.' };
-      case 'error':
-        return { title: 'error', copy: 'Media error or autoplay rejection — actionable retry inline.' };
-      default: {
-        const _exhaustive: never = variant;
-        return _exhaustive;
-      }
-    }
-  })();
-
-  return (
-    <div className="space-y-2">
-      <div className="text-xs font-medium text-n-12">{meta.title}</div>
-      <div className="relative aspect-video rounded-md overflow-hidden bg-black ring-1 ring-white/10">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,#3f1d1d,#1a0a0a_70%)]" />
-        <div className="absolute top-1.5 start-1.5 inline-flex items-center gap-1 bg-red-600/90 px-1.5 py-0.5">
-          <span className="size-1 rounded-full bg-white" />
-          <span className="text-xs font-mono font-semibold text-white uppercase tracking-wider">
-            Playback
-          </span>
-        </div>
-
-        {variant === 'loading' && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/60">
-            <AppLoader size={40} label="טוען הקלטה" className="text-white/85" />
-            <span className="text-xs text-white/85 font-mono uppercase tracking-wider">
-              טוען הקלטה…
-            </span>
-          </div>
-        )}
-        {variant === 'buffering' && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/35">
-            <AppLoader size={40} label="באפרינג" className="text-white/85" />
-          </div>
-        )}
-        {variant === 'ended' && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/60">
-            <div className="inline-flex items-center gap-1 px-2 py-1 bg-red-500 text-white text-xs uppercase tracking-wider font-semibold">
-              ▶ נגן שוב
-            </div>
-            <span className="text-xs text-white/55 uppercase tracking-wider">
-              ההקלטה הסתיימה
-            </span>
-          </div>
-        )}
-        {variant === 'error' && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/70 px-3 text-center">
-            <AlertTriangle size={16} className="text-red-300" />
-            <span className="text-xs text-white">הפיד אינו זמין כרגע</span>
-            <span className="text-xs text-white/55 uppercase tracking-wider">
-              ↻ נסה שוב
-            </span>
-          </div>
-        )}
-        {(variant === 'paused' || variant === 'playing') && (
-          <div className="absolute bottom-1 inset-x-1.5 flex items-center justify-between text-xs font-mono text-white/85">
-            <span className="tabular-nums">00:32</span>
-            <span className="text-white/55 tabular-nums">-00:28</span>
-          </div>
-        )}
-      </div>
-      <p className="text-xs leading-snug text-n-10">{meta.copy}</p>
-    </div>
-  );
-}
 
 // ─── DevicesPanel demo data ──────────────────────────────────────────────────
 
@@ -817,6 +668,7 @@ function StyleguideDeviceTile({ label, children, width = 380 }: { label?: string
 /** Worst-wins tone palette, mirroring `DeviceRowHeader`'s `HEALTH_TONE`. */
 const STYLEGUIDE_HEALTH_TONE: Record<DeviceHealth, { dot: string; badge: string | null }> = {
   critical: { dot: 'bg-red-400', badge: 'bg-red-500/20 text-red-300' },
+  error: { dot: 'bg-red-400', badge: 'bg-red-500/20 text-red-300' },
   warning: { dot: 'bg-amber-400', badge: 'bg-amber-500/20 text-amber-300' },
   offline: { dot: 'bg-zinc-500', badge: null },
   ok: { dot: 'bg-emerald-400', badge: null },
@@ -1014,42 +866,6 @@ function StyleguidePlayFilledIcon({ size = 12, className }: { size?: number; cla
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
       <path d="M6.5145 2.14251C6.20556 1.95715 5.82081 1.95229 5.5073 2.1298C5.19379 2.30731 5 2.63973 5 3V21C5 21.3603 5.19379 21.6927 5.5073 21.8702C5.82081 22.0477 6.20556 22.0429 6.5145 21.8575L21.5145 12.8575C21.8157 12.6768 22 12.3513 22 12C22 11.6487 21.8157 11.3232 21.5145 11.1425L6.5145 2.14251Z" />
     </svg>
-  );
-}
-
-interface PropDef {
-  name: string;
-  type: string;
-  default?: string;
-  description: string;
-}
-
-function PropsTable({ items }: { items: PropDef[] }) {
-  return (
-    <div className="space-y-4 mt-6 mb-4">
-      <div className="overflow-x-auto rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)]" dir="ltr">
-        <table className="w-full text-sm" dir="ltr">
-          <thead>
-            <tr className="border-b border-white/5" style={{ backgroundColor: SURFACE.level1 }}>
-              <th className="py-2.5 px-4 text-left font-medium text-n-10">Prop</th>
-              <th className="py-2.5 px-4 text-left font-medium text-n-10">Type</th>
-              <th className="py-2.5 px-4 text-left font-medium text-n-10">Default</th>
-              <th className="py-2.5 px-4 text-left font-medium text-n-10">Description</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((p) => (
-              <tr key={p.name} className="border-b border-white/[0.03] last:border-0">
-                <td className="py-3 px-4 font-mono text-sm text-sky-300/90 font-medium">{p.name}</td>
-                <td className="py-3 px-4 font-mono text-n-9">{p.type}</td>
-                <td className="py-3 px-4 font-mono text-n-9">{p.default ?? '—'}</td>
-                <td className="py-3 px-4 text-n-9">{p.description}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
   );
 }
 
@@ -2211,21 +2027,6 @@ function InlineCopyButton({ text }: { text: string }) {
   );
 }
 
-function ImportBlock({ path, names }: { path: string; names: string[] }) {
-  const code = `import { ${names.join(', ')} } from '${path}'`;
-  return (
-    <div className="flex items-center rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)] overflow-hidden" style={{ backgroundColor: SURFACE.level0 }}>
-      <div className="flex-1 min-w-0 px-4 py-3 overflow-x-auto">
-        <HighlightedCode code={code} />
-      </div>
-      <div className="shrink-0 pr-2">
-        <InlineCopyButton text={code} />
-      </div>
-    </div>
-  );
-}
-
-
 function ChangelogLine({ text }: { text: string }) {
   const parts = text.split(/(`[^`]+`)/g);
   return (
@@ -2244,13 +2045,14 @@ function ChangelogLine({ text }: { text: string }) {
 }
 
 function QuickStartCodeBlock({ code }: { code: string }) {
+  const clean = useMemo(() => stripCodeComments(code, 'tsx'), [code]);
   return (
     <div className="flex items-start rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)] overflow-hidden" style={{ backgroundColor: SURFACE.level0 }}>
       <div className="flex-1 min-w-0 px-4 py-3 overflow-x-auto">
         <HighlightedCode code={code} />
       </div>
       <div className="shrink-0 pt-2 pr-2">
-        <InlineCopyButton text={code} />
+        <InlineCopyButton text={clean} />
       </div>
     </div>
   );
@@ -2320,25 +2122,27 @@ function getHighlighter() {
 
 function HighlightedCode({ code }: { code: string }) {
   const [html, setHtml] = useState<string | null>(null);
+  // Styleguide previews render comment-free code.
+  const clean = useMemo(() => stripCodeComments(code, 'tsx'), [code]);
 
   useEffect(() => {
     let cancelled = false;
     getHighlighter().then((highlighter) => {
       if (cancelled) return;
       setHtml(
-        highlighter.codeToHtml(code, {
+        highlighter.codeToHtml(clean, {
           lang: 'tsx',
           theme: 'winter-is-coming-dark-blue',
         }),
       );
     });
     return () => { cancelled = true; };
-  }, [code]);
+  }, [clean]);
 
   if (!html) {
     return (
       <pre className="text-xs leading-[1.7] font-mono text-n-10 whitespace-pre">
-        {code}
+        {clean}
       </pre>
     );
   }
@@ -2367,126 +2171,17 @@ function extractPropsInterface(source: string): string | null {
   return null;
 }
 
-function extractDependencies(source: string): { external: string[]; internal: string[] } {
-  const external: string[] = [];
-  const internal: string[] = [];
-  const importRegex = /^import\s+.*?from\s+['"]([^'"]+)['"]/gm;
-  let match;
-  while ((match = importRegex.exec(source)) !== null) {
-    const line = match[0];
-    const path = match[1];
-    if (path.startsWith('.') || path.startsWith('@/')) {
-      internal.push(line);
-    } else {
-      external.push(line);
-    }
-  }
-  return { external, internal };
-}
+// ─── Code preview (design-system ComponentPreview) ────────────────────────────
 
-function generateComponentMarkdown(name: string, description: string, source: string): string {
-  const lines: string[] = [];
-
-  lines.push(`# ${name}\n`);
-  lines.push(`> ${description}\n`);
-
-  const props = extractPropsInterface(source);
-  if (props) {
-    lines.push(`## Props Interface\n`);
-    lines.push('```typescript');
-    lines.push(props);
-    lines.push('```\n');
-  }
-
-  lines.push(`## Source Code\n`);
-  lines.push('```tsx');
-  lines.push(source.trim());
-  lines.push('```\n');
-
-  const deps = extractDependencies(source);
-  if (deps.external.length > 0 || deps.internal.length > 0) {
-    lines.push(`## Dependencies\n`);
-    if (deps.external.length > 0) {
-      lines.push('**External:**');
-      for (const d of deps.external) lines.push(`- \`${d}\``);
-      lines.push('');
-    }
-    if (deps.internal.length > 0) {
-      lines.push('**Internal:**');
-      for (const d of deps.internal) lines.push(`- \`${d}\``);
-      lines.push('');
-    }
-  }
-
-  return lines.join('\n');
-}
-
-// ─── Animated copy button ─────────────────────────────────────────────────────
-
-function CopyIconButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-  const prefersReducedMotion = useReducedMotion();
-
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }, [text]);
-
-  const iconTransition = prefersReducedMotion
-    ? { duration: 0 }
-    : { duration: 0.15, ease: [0, 0, 0.2, 1] };
-
-  return (
-    <button
-      onClick={handleCopy}
-      aria-label={copied ? 'Copied' : 'Copy component as markdown'}
-      className="flex items-center gap-1.5 h-7 px-2.5 rounded-[10px_4px_4px_4px] cursor-pointer text-n-120 hover:text-n-11 hover:bg-white/[0.06] active:scale-[0.98] transition-[color,background-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/30"
-    >
-      <AnimatePresence mode="wait" initial={false}>
-        {copied ? (
-          <motion.span
-            key="check"
-            className="flex items-center gap-1.5"
-            initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={prefersReducedMotion ? undefined : { opacity: 0, scale: 0.9 }}
-            transition={iconTransition}
-          >
-            <Check size={13} className="text-emerald-400" />
-            <span className="text-xs font-medium text-emerald-400">Copied</span>
-          </motion.span>
-        ) : (
-          <motion.span
-            key="copy"
-            className="flex items-center gap-1.5"
-            initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={prefersReducedMotion ? undefined : { opacity: 0, scale: 0.9 }}
-            transition={iconTransition}
-          >
-            <Copy size={13} />
-            <span className="text-xs font-medium">Copy .md</span>
-          </motion.span>
-        )}
-      </AnimatePresence>
-    </button>
-  );
-}
-
-// ─── Code preview with tabs ───────────────────────────────────────────────────
-
-type CodeTab = 'preview' | 'source' | 'files';
-
-function CodePreviewBlock({
-  name,
-  description,
-  code,
-  children,
-  tight = false,
-  relatedFiles,
-}: {
+/**
+ * Thin adapter over the design-system {@link ComponentPreview}: live preview on
+ * top, a Base UI-style tabbed source panel below. The component source is the
+ * first tab (`<Name>.tsx`); any `relatedFiles` (tokens, helpers, css) follow as
+ * sibling tabs so a developer can read every dependency in one place. `name`
+ * and `description` are also rendered by the section heading; `tight` is kept in
+ * the signature so existing call sites compile unchanged.
+ */
+function CodePreviewBlock(props: {
   name: string;
   description: string;
   code: string;
@@ -2494,89 +2189,7 @@ function CodePreviewBlock({
   tight?: boolean;
   relatedFiles?: RelatedFile[];
 }) {
-  const hasPreview = !!children;
-  const hasFiles = relatedFiles && relatedFiles.length > 0;
-  const [tab, setTab] = useState<CodeTab>(hasPreview ? 'preview' : 'source');
-  const [activeFile, setActiveFile] = useState(0);
-
-  const tabs: { id: CodeTab; label: string }[] = [
-    ...(hasPreview ? [{ id: 'preview' as CodeTab, label: 'Preview' }] : []),
-    { id: 'source', label: 'Source' },
-    ...(hasFiles ? [{ id: 'files' as CodeTab, label: 'Files' }] : []),
-  ];
-
-  const markdown = useMemo(
-    () => generateComponentMarkdown(name, description, code),
-    [name, description, code],
-  );
-
-  return (
-    <div className="rounded-xl shadow-[0_0_0_1px_rgba(255,255,255,0.06)] overflow-hidden" style={{ backgroundColor: SURFACE.level0 }}>
-      <div className="flex items-center border-b border-white/[0.06]">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`px-3 py-2.5 text-sm font-medium cursor-pointer transition-[color,border-color] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/25 ${
-              tab === t.id
-                ? 'text-n-12 border-b-2 border-n-12'
-                : 'text-n-9 hover:text-n-11 border-b-2 border-transparent'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-        <div className="ml-auto flex items-center pl-1.5">
-          <CopyIconButton text={markdown} />
-        </div>
-      </div>
-      {tab === 'preview' && (
-        <div
-          dir="rtl"
-          className={
-            tight
-              ? 'p-6'
-              : 'p-10 flex items-center justify-center min-h-[200px]'
-          }
-        >
-          {children}
-        </div>
-      )}
-      {tab === 'source' && (
-        <div className="relative p-4 overflow-x-auto max-h-[600px] overflow-y-auto rounded-b-xl text-sm">
-          <div className="absolute top-2 right-2 z-10">
-            <InlineCopyButton text={code} />
-          </div>
-          <HighlightedCode code={code} />
-        </div>
-      )}
-      {tab === 'files' && hasFiles && (
-        <div className="flex">
-          <div className="shrink-0 border-r border-white/[0.06] py-3 min-w-[200px] max-w-[240px]">
-            {relatedFiles.map((f, i) => (
-              <button
-                key={f.file}
-                onClick={() => setActiveFile(i)}
-                className={`block w-full text-left px-4 py-2 text-sm font-mono cursor-pointer transition-colors duration-100 ${
-                  activeFile === i
-                    ? 'text-sky-300/90 bg-white/[0.06]'
-                    : 'text-white/40 hover:text-white/70 hover:bg-white/[0.02]'
-                }`}
-              >
-                {f.file}
-              </button>
-            ))}
-          </div>
-          <div className="relative flex-1 p-4 overflow-x-auto max-h-[600px] overflow-y-auto">
-            <div className="absolute top-2 right-2 z-10">
-              <InlineCopyButton text={relatedFiles[activeFile].code} />
-            </div>
-            <HighlightedCode code={relatedFiles[activeFile].code} />
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  return <ComponentPreview code={props.code} render={() => props.children} />;
 }
 
 function CopyIcon({ copied }: { copied: boolean }) {
@@ -2614,6 +2227,672 @@ function VariantGrid({ entries, renderSample }: {
         </div>
       ))}
     </div>
+  );
+}
+
+// ── Video HUD handoff primitives ───────────────────────────────────────────────
+
+/**
+ * A dark, faintly-lit "video frame" so the dark-glass HUD pills read against a
+ * realistic backdrop (a flat panel makes `backdrop-blur` invisible). LTR-locked
+ * because the live feed chrome is LTR even under the RTL app shell.
+ */
+function HudStage({
+  children,
+  center = false,
+  height = 150,
+  className = '',
+}: {
+  children: React.ReactNode;
+  center?: boolean;
+  height?: number;
+  className?: string;
+}) {
+  return (
+    <div
+      dir="ltr"
+      className={`relative w-full max-w-2xl overflow-hidden rounded-lg ring-1 ring-inset ring-white/10 ${className}`}
+      style={{
+        height,
+        backgroundImage:
+          'radial-gradient(130% 130% at 25% 15%, #2a3a4d 0%, #131c27 55%, #05080d 100%)',
+      }}
+    >
+      {center ? (
+        <div className="flex h-full w-full items-center justify-center">{children}</div>
+      ) : (
+        children
+      )}
+    </div>
+  );
+}
+
+/**
+ * Per-element "class recipe": the exact Tailwind className string behind each
+ * part of a component, each with a one-click copy. This is the developer's
+ * fast path to lift the styling without reading the whole source.
+ */
+function ClassNameRecipe({
+  entries,
+}: {
+  entries: { label: string; className: string; note?: string }[];
+}) {
+  return (
+    <div
+      className="overflow-hidden rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)]"
+      style={{ backgroundColor: SURFACE.level0 }}
+    >
+      {entries.map((e, i) => (
+        <div
+          key={e.label}
+          className={`flex items-start gap-3 px-4 py-3 ${i > 0 ? 'border-t border-white/[0.06]' : ''}`}
+        >
+          <div className="w-36 shrink-0 pt-0.5">
+            <div className="text-xs font-medium text-n-11">{e.label}</div>
+            {e.note && <div className="mt-0.5 text-[11px] leading-snug text-n-9">{e.note}</div>}
+          </div>
+          <code
+            dir="ltr"
+            className="min-w-0 flex-1 whitespace-pre-wrap break-words font-mono text-[12px] leading-relaxed text-[rgba(158,158,158,0.8)]"
+          >
+            {e.className}
+          </code>
+          <div className="shrink-0">
+            <InlineCopyButton text={e.className} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Video HUD handoff sections ─────────────────────────────────────────────────
+
+function HudDeviceSelectSection() {
+  const [value, setValue] = useState('PTH-01');
+  return (
+    <ComponentSection
+      id="hud-device-select"
+      name="SandboxDeviceSelect"
+      description="Dark-glass HUD device switcher. A dropdown pill that lives in the video's top-left corner; choosing a device reconfigures the surrounding HUD. Generic over a device list, rendered with the project's real asset glyphs."
+    >
+      <CodePreviewBlock
+        name="SandboxDeviceSelect"
+        description="Glass dropdown pill with real asset glyphs and a check on the active row."
+        code={sandboxDeviceSelectSrc}
+      >
+        <HudStage center>
+          <SandboxDeviceSelect devices={HUD_DEVICES} value={value} onChange={setValue} />
+        </HudStage>
+      </CodePreviewBlock>
+
+      <SectionHeading>Usage</SectionHeading>
+      <UsageBlock code={sandboxDeviceSelectSrc} name="SandboxDeviceSelect" />
+
+      <SectionHeading>States</SectionHeading>
+      <ExampleBlock title="Disabled">
+        <HudStage center height={120}>
+          <SandboxDeviceSelect devices={HUD_DEVICES} value="DRN-01" onChange={noop} disabled />
+        </HudStage>
+      </ExampleBlock>
+      <ExampleBlock title="Glass tuning — default 0.4 / 4px vs. the live video's 0.2 / 1px">
+        <HudStage center height={120}>
+          <div className="flex items-center gap-6">
+            <SandboxDeviceSelect devices={HUD_DEVICES} value="CAM-01" onChange={noop} />
+            <SandboxDeviceSelect devices={HUD_DEVICES} value="CAM-01" onChange={noop} bgOpacity={0.2} blurPx={1} />
+          </div>
+        </HudStage>
+      </ExampleBlock>
+
+      <SectionHeading>Class recipe</SectionHeading>
+      <ClassNameRecipe
+        entries={[
+          {
+            label: 'Trigger pill',
+            note: 'glass via inline style',
+            className:
+              'group inline-flex h-8 items-center gap-1.5 rounded-full border border-border-default/45 ps-2.5 pe-2 text-[11px] text-slate-12',
+          },
+          {
+            label: 'Menu content',
+            className:
+              'min-w-[11rem] rounded border-none bg-[#1a1a1a]/95 p-1 text-slate-12 shadow-[0_20px_40px_-12px_rgba(0,0,0,0.6)]',
+          },
+          {
+            label: 'Radio item',
+            note: 'drops the built-in dot',
+            className:
+              'gap-2.5 rounded-md py-1.5 ps-2.5 pe-2.5 text-[12px] focus:bg-white/10 focus:text-slate-12 [&>span:first-child]:hidden',
+          },
+          { label: 'Focus ring', className: HUD_FOCUS_RING },
+        ]}
+      />
+    </ComponentSection>
+  );
+}
+
+function HudAngleToggleSection() {
+  const [value, setValue] = useState<PathfinderCameraAngle>('straight');
+  return (
+    <ComponentSection
+      id="hud-angle-toggle"
+      name="SandboxAngleToggle"
+      description="Pathfinder camera-angle control — a segmented spring-thumb toggle. Three framing presets aim the camera at +45° / 0° / −45°; segments show only the degree, and hover/focus reveals a tooltip with the matching rotated arrow."
+    >
+      <CodePreviewBlock
+        name="SandboxAngleToggle"
+        description="Segmented spring-thumb toggle with degree readout + arrow tooltip."
+        code={sandboxAngleToggleSrc}
+        relatedFiles={[GLASS_FILE]}
+      >
+        <HudStage center>
+          <SandboxAngleToggle value={value} onChange={setValue} />
+        </HudStage>
+      </CodePreviewBlock>
+
+      <SectionHeading>Usage</SectionHeading>
+      <UsageBlock code={sandboxAngleToggleSrc} name="SandboxAngleToggle" />
+
+      <SectionHeading>States</SectionHeading>
+      <ExampleBlock title="Presets — Front (+45°) · Straight (0°) · Down (−45°)">
+        <HudStage center height={120}>
+          <div className="flex items-center gap-6">
+            <SandboxAngleToggle value="front" onChange={noop} />
+            <SandboxAngleToggle value="straight" onChange={noop} />
+            <SandboxAngleToggle value="down" onChange={noop} />
+          </div>
+        </HudStage>
+      </ExampleBlock>
+      <ExampleBlock title="Disabled">
+        <HudStage center height={120}>
+          <SandboxAngleToggle value="straight" onChange={noop} disabled />
+        </HudStage>
+      </ExampleBlock>
+
+      <SectionHeading>Class recipe</SectionHeading>
+      <ClassNameRecipe
+        entries={[
+          {
+            label: 'Container',
+            note: 'role=radiogroup',
+            className:
+              'relative inline-flex h-9 items-center justify-start rounded-full border border-border-default/45 p-0.5',
+          },
+          {
+            label: 'Spring thumb',
+            className:
+              'absolute left-0.5 top-0.5 flex h-[30px] items-center justify-center rounded-full bg-state-selected font-sans text-[12px] font-semibold tabular-nums text-slate-12',
+          },
+          {
+            label: 'Segment',
+            className:
+              'relative z-10 flex h-7 items-center justify-center rounded-full font-sans text-[12px] font-semibold tabular-nums transition-colors duration-150',
+          },
+          { label: 'Focus ring', className: HUD_FOCUS_RING },
+        ]}
+      />
+    </ComponentSection>
+  );
+}
+
+function HudConnectivityBadgeSection() {
+  return (
+    <ComponentSection
+      id="hud-connectivity"
+      name="DeviceConnectivityBadge"
+      description="Top-right HUD chip for the active video source: real asset glyph, short label, and a coloured link-status dot. Releasing control flips it to amber 'Manual'. Self-positions absolute inside the nearest relative video frame."
+    >
+      <CodePreviewBlock
+        name="DeviceConnectivityBadge"
+        description="Glass source chip with a coloured link-status dot + hover label."
+        code={deviceConnectivityBadgeSrc}
+        relatedFiles={[GLASS_FILE]}
+      >
+        <HudStage>
+          <DeviceConnectivityBadge />
+        </HudStage>
+      </CodePreviewBlock>
+
+      <SectionHeading>Usage</SectionHeading>
+      <UsageBlock code={deviceConnectivityBadgeSrc} name="DeviceConnectivityBadge" />
+
+      <SectionHeading>States</SectionHeading>
+      <ExampleBlock title="Link status — Online · Degraded · Offline · Manual">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <HudStage height={110}>
+            <DeviceConnectivityBadge source={{ id: 'CAM-01', short: 'EO/IR', name: 'CAM-01', role: 'EO/IR Camera', kind: 'camera', signalPct: 88, status: 'online' }} />
+            <span className="absolute bottom-2 left-3 text-[11px] text-white/45">Online</span>
+          </HudStage>
+          <HudStage height={110}>
+            <DeviceConnectivityBadge source={{ id: 'CAM-01', short: 'EO/IR', name: 'CAM-01', role: 'EO/IR Camera', kind: 'camera', signalPct: 54, status: 'degraded' }} />
+            <span className="absolute bottom-2 left-3 text-[11px] text-white/45">Degraded</span>
+          </HudStage>
+          <HudStage height={110}>
+            <DeviceConnectivityBadge source={{ id: 'CAM-01', short: 'EO/IR', name: 'CAM-01', role: 'EO/IR Camera', kind: 'camera', signalPct: 0, status: 'offline' }} />
+            <span className="absolute bottom-2 left-3 text-[11px] text-white/45">Offline</span>
+          </HudStage>
+          <HudStage height={110}>
+            <DeviceConnectivityBadge manual />
+            <span className="absolute bottom-2 left-3 text-[11px] text-white/45">Manual (control released)</span>
+          </HudStage>
+        </div>
+      </ExampleBlock>
+      <ExampleBlock title="Radar source">
+        <HudStage height={110}>
+          <DeviceConnectivityBadge source={{ id: 'RAD-02', short: 'RADAR', name: 'RAD-02', role: 'Surveillance Radar', kind: 'radar', signalPct: 80, status: 'online' }} />
+        </HudStage>
+      </ExampleBlock>
+
+      <SectionHeading>Class recipe</SectionHeading>
+      <ClassNameRecipe
+        entries={[
+          {
+            label: 'Position wrapper',
+            note: 'needs a relative parent',
+            className: 'pointer-events-none absolute right-3 top-3 z-30',
+          },
+          {
+            label: 'Chip',
+            note: 'glass via inline style',
+            className:
+              'pointer-events-auto inline-flex h-8 items-center gap-1.5 rounded-full border border-border-default/45 px-2.5 text-[11px] text-slate-12',
+          },
+          {
+            label: 'Status dot',
+            note: 'online / degraded / offline',
+            className: 'size-1.5 shrink-0 rounded-full bg-accent-success',
+          },
+        ]}
+      />
+    </ComponentSection>
+  );
+}
+
+function HudDayNightSection() {
+  const [mode, setMode] = useState<DayNightMode>('day');
+  return (
+    <ComponentSection
+      id="hud-day-night"
+      name="DayNightSpringToggle"
+      description="Day/Night view-mode control — a spring-driven thumb that slides between the Sun and Moon stops. Filled glyphs, reduced-motion safe, and Base UI-style grouped tooltips (the first waits, adjacent ones open instantly)."
+    >
+      <CodePreviewBlock
+        name="DayNightSpringToggle"
+        description="Binary spring-thumb toggle with filled Sun/Moon glyphs."
+        code={dayNightSpringToggleSrc}
+        relatedFiles={[GLASS_FILE]}
+      >
+        <HudStage center>
+          <DayNightSpringToggle mode={mode} onToggle={() => setMode((m) => (m === 'day' ? 'night' : 'day'))} />
+        </HudStage>
+      </CodePreviewBlock>
+
+      <SectionHeading>Usage</SectionHeading>
+      <UsageBlock code={dayNightSpringToggleSrc} name="DayNightSpringToggle" />
+
+      <SectionHeading>States</SectionHeading>
+      <ExampleBlock title="Stops — Day · Night">
+        <HudStage center height={120}>
+          <div className="flex items-center gap-6">
+            <DayNightSpringToggle mode="day" onToggle={noop} />
+            <DayNightSpringToggle mode="night" onToggle={noop} />
+          </div>
+        </HudStage>
+      </ExampleBlock>
+      <ExampleBlock title="Disabled">
+        <HudStage center height={120}>
+          <DayNightSpringToggle mode="day" onToggle={noop} disabled />
+        </HudStage>
+      </ExampleBlock>
+
+      <SectionHeading>Class recipe</SectionHeading>
+      <ClassNameRecipe
+        entries={[
+          {
+            label: 'Container',
+            note: 'role=radiogroup',
+            className: 'relative inline-flex h-9 items-center rounded-full border border-border-default/45 p-0.5',
+          },
+          {
+            label: 'Spring thumb',
+            className:
+              'absolute left-0.5 top-0.5 flex size-[30px] items-center justify-center rounded-full bg-state-selected text-slate-12',
+          },
+          {
+            label: 'Segment',
+            className: 'relative z-10 flex size-7 items-center justify-center rounded-full transition-colors duration-150',
+          },
+          { label: 'Focus ring', className: HUD_FOCUS_RING },
+        ]}
+      />
+    </ComponentSection>
+  );
+}
+
+function HudContextMenuSection() {
+  return (
+    <ComponentSection
+      id="hud-context-menu"
+      name="SandboxVideoContextMenu"
+      description="Right-click menu for the video feed, mirroring the map's point-context menu: a copyable coordinate/altitude readout, a 'look at point' slew action, and a 'create target' action. RTL menu with the numeric readout pinned LTR."
+    >
+      <CodePreviewBlock
+        name="SandboxVideoContextMenu"
+        description="Right-click the frame to open the coordinate / look-at / create-target menu."
+        code={sandboxVideoContextMenuSrc}
+      >
+        <HudStage height={180}>
+          <SandboxVideoContextMenu
+            coordinates="688180 / 3593940"
+            altitude="45 m"
+            lookAtLabel="הסתכל לנקודה"
+            createTargetLabel="Create target"
+          >
+            <div className="grid h-full w-full select-none place-items-center text-sm text-white/55">
+              Right-click anywhere
+            </div>
+          </SandboxVideoContextMenu>
+        </HudStage>
+      </CodePreviewBlock>
+
+      <SectionHeading>Usage</SectionHeading>
+      <UsageBlock code={sandboxVideoContextMenuSrc} name="SandboxVideoContextMenu" />
+
+      <SectionHeading>Examples</SectionHeading>
+      <ExampleBlock title="English labels">
+        <HudStage height={180}>
+          <SandboxVideoContextMenu
+            coordinates="688180 / 3593940"
+            altitude="45 m"
+            lookAtLabel="Look at point"
+            createTargetLabel="Create target"
+          >
+            <div className="grid h-full w-full select-none place-items-center text-sm text-white/55">
+              Right-click anywhere
+            </div>
+          </SandboxVideoContextMenu>
+        </HudStage>
+      </ExampleBlock>
+
+      <SectionHeading>Class recipe</SectionHeading>
+      <ClassNameRecipe
+        entries={[
+          {
+            label: 'Content',
+            note: 'glass + shadow from the shared ContextMenu primitive',
+            className: 'min-w-[220px]',
+          },
+          {
+            label: 'Coordinate item',
+            note: 'click to copy "x / y | altitude"',
+            className: 'gap-2.5 text-[13px] font-mono tabular-nums',
+          },
+          { label: 'Action item', className: 'gap-2.5 text-[13px]' },
+        ]}
+      />
+    </ComponentSection>
+  );
+}
+
+const HUD_RANGE_INPUT =
+  'h-1 w-48 cursor-pointer appearance-none rounded-full bg-state-hover-strong accent-accent-info [&::-webkit-slider-thumb]:size-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-slate-12';
+
+function HudDemoSlider({
+  label,
+  value,
+  min,
+  max,
+  step = 1,
+  suffix = '',
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  suffix?: string;
+  onChange: (next: number) => void;
+}) {
+  return (
+    <label dir="ltr" className="flex items-center gap-3 text-[12px]">
+      <span className="w-12 font-mono uppercase tracking-[0.12em] text-n-9">{label}</span>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(parseFloat(e.target.value))}
+        aria-label={label}
+        className={HUD_RANGE_INPUT}
+      />
+      <span className="w-16 text-end font-mono tabular-nums text-n-11">
+        {value}
+        {suffix}
+      </span>
+    </label>
+  );
+}
+
+const HUD_DETECTIONS: DetectionBox[] = [
+  { id: 'det-1', x: 0.3, y: 0.4, w: 0.12, h: 0.18, label: 'Person', confidence: 0.92 },
+  { id: 'det-2', x: 0.58, y: 0.34, w: 0.16, h: 0.12, label: 'Vehicle', confidence: 0.78 },
+  { id: 'det-3', x: 0.16, y: 0.62, w: 0.1, h: 0.1, label: 'Person', confidence: 0.65 },
+];
+
+function HudSetpointRailSection() {
+  const [altitude, setAltitude] = useState(140);
+  const [speed, setSpeed] = useState(10);
+  return (
+    <ComponentSection
+      id="hud-setpoint-rail"
+      name="SandboxSetpointRail"
+      description="Left-edge altitude & speed setpoint sliders for airborne assets. Collapsed, it shows live read-outs; on hover/focus it expands to vertical sliders with chevron steppers and click-to-edit value chips. A live tick trails the commanded target so the closing gap stays visible."
+    >
+      <CodePreviewBlock
+        name="SandboxSetpointRail"
+        description="Hover the left edge to expand the altitude / speed sliders, then drag, step, or click a value to edit."
+        code={sandboxSetpointRailSrc}
+      >
+        <HudStage height={400}>
+          <SandboxSetpointRail
+            altitudeM={120}
+            velocityMps={8.5}
+            batteryPct={74}
+            targetAltitudeM={altitude}
+            targetVelocityMps={speed}
+            disabled={false}
+            design="tube-chips"
+            onTargetAltitudeChange={setAltitude}
+            onTargetVelocityChange={setSpeed}
+          />
+        </HudStage>
+      </CodePreviewBlock>
+
+      <SectionHeading>Usage</SectionHeading>
+      <UsageBlock code={sandboxSetpointRailSrc} name="SandboxSetpointRail" />
+
+      <SectionHeading>States</SectionHeading>
+      <ExampleBlock title="Expanded (pending target) vs. disabled (no control)">
+        <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
+          <HudStage height={320}>
+            <SandboxSetpointRail
+              altitudeM={120}
+              velocityMps={8.5}
+              batteryPct={74}
+              targetAltitudeM={170}
+              targetVelocityMps={14}
+              disabled={false}
+              forceExpanded
+              design="tube-chips"
+              onTargetAltitudeChange={noop}
+              onTargetVelocityChange={noop}
+            />
+          </HudStage>
+          <HudStage height={320}>
+            <SandboxSetpointRail
+              altitudeM={120}
+              velocityMps={8.5}
+              batteryPct={74}
+              targetAltitudeM={140}
+              targetVelocityMps={10}
+              disabled
+              design="tube-chips"
+              onTargetAltitudeChange={noop}
+              onTargetVelocityChange={noop}
+            />
+          </HudStage>
+        </div>
+      </ExampleBlock>
+      <SectionHeading>Class recipe</SectionHeading>
+      <ClassNameRecipe
+        entries={[
+          {
+            label: 'Rail container',
+            note: 'needs a relative parent',
+            className:
+              'pointer-events-none absolute z-20 inset-y-0 left-0 h-full transition-opacity duration-150',
+          },
+          {
+            label: 'Lane',
+            note: 'one per setpoint',
+            className: 'flex w-[64px] shrink-0 flex-col items-center gap-1',
+          },
+          {
+            label: 'Idle read-out',
+            note: 'collapsed value',
+            className:
+              'mt-1.5 block whitespace-nowrap font-mono text-[20px] leading-none tabular-nums text-slate-12',
+          },
+          {
+            label: 'Chevron stepper',
+            className:
+              'flex h-5 w-7 items-center justify-center transition-[color,background-color,transform] duration-150 ease-out active:scale-[0.97] disabled:opacity-30 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong',
+          },
+          {
+            label: 'Value chip',
+            note: 'recessed "well"',
+            className:
+              'ring-1 ring-inset ring-border-default bg-surface-void/30 shadow-[inset_0_0_4px_0_rgba(0,0,0,0.2)] backdrop-blur-md hover:ring-border-strong',
+          },
+        ]}
+      />
+    </ComponentSection>
+  );
+}
+
+function HudSlewCueSection() {
+  const [delta, setDelta] = useState(12);
+  return (
+    <ComponentSection
+      id="hud-slew-cue"
+      name="CameraSlewCue"
+      description="Slew visualization for left/right camera movement. While the camera trails a commanded bearing, a dashed amber guide is drawn from frame center toward the commanded direction and the crosshair rides along it, snapping home once the bearings align."
+    >
+      <CodePreviewBlock
+        name="CameraSlewCue"
+        description="Drag to set the signed bearing gap; the crosshair slews along the dashed guide."
+        code={cameraSlewCueSrc}
+      >
+        <div className="w-full space-y-4">
+          <HudStage height={240} className="max-w-none!">
+            <CameraSlewCue deltaDeg={delta} />
+          </HudStage>
+          <HudDemoSlider label="Δ deg" value={delta} min={-20} max={20} suffix="°" onChange={setDelta} />
+        </div>
+      </CodePreviewBlock>
+
+      <SectionHeading>Usage</SectionHeading>
+      <UsageBlock code={cameraSlewCueSrc} name="CameraSlewCue" />
+
+      <SectionHeading>States</SectionHeading>
+      <ExampleBlock title="Direction — slew left · aligned · slew right">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <HudStage height={200}>
+            <CameraSlewCue deltaDeg={14} />
+          </HudStage>
+          <HudStage height={200}>
+            <CameraSlewCue deltaDeg={0} />
+          </HudStage>
+          <HudStage height={200}>
+            <CameraSlewCue deltaDeg={-14} />
+          </HudStage>
+        </div>
+      </ExampleBlock>
+    </ComponentSection>
+  );
+}
+
+function HudAutoTrackSection() {
+  const [armed, setArmed] = useState(true);
+  return (
+    <ComponentSection
+      id="hud-auto-track"
+      name="AutoTrackOverlay"
+      description="Pathfinder auto-track flow. Once armed, a spinning reticle hunts the cursor across moving targets, snaps dashed brackets onto the nearest one, and locks solid green on click. Click off the box or press Esc to release."
+    >
+      <CodePreviewBlock
+        name="AutoTrackOverlay"
+        description="Move the cursor over the frame to hunt, click a snapped target to lock, Esc to release."
+        code={autoTrackOverlaySrc}
+      >
+        <div className="flex h-full w-full flex-col space-y-4">
+          <HudStage height={300} className="flex !max-w-none flex-col">
+            <AutoTrackOverlay armed={armed} onReleased={() => setArmed(false)} />
+            <span className="pointer-events-none absolute bottom-2 left-3 text-[11px] text-white/45">
+              Move cursor to hunt · click to lock · Esc to release
+            </span>
+          </HudStage>
+          <button
+            type="button"
+            onClick={() => setArmed(true)}
+            disabled={armed}
+            className="rounded border border-border-default bg-surface-2 px-2.5 py-1 text-[11px] text-slate-11 transition-colors hover:border-border-strong disabled:opacity-40"
+          >
+            {armed ? 'Armed' : 'Re-arm'}
+          </button>
+        </div>
+      </CodePreviewBlock>
+
+      <SectionHeading>Usage</SectionHeading>
+      <UsageBlock code={autoTrackOverlaySrc} name="AutoTrackOverlay" />
+    </ComponentSection>
+  );
+}
+
+function HudDetectionsSection() {
+  return (
+    <ComponentSection
+      id="hud-detections"
+      name="AiDetectionTriangles"
+      description="AI-detection markers — fixed-size cyan triangles that point down at each detected box, with a soft gradient fill and glow. Marker size is independent of the detection box, so distant and near detections read consistently."
+    >
+      <CodePreviewBlock
+        name="AiDetectionTriangles"
+        description="Down-pointing cyan triangles mark each AI detection over the feed."
+        code={aiDetectionTrianglesSrc}
+      >
+        <HudStage height={260}>
+          <AiDetectionTriangles detections={HUD_DETECTIONS} />
+        </HudStage>
+      </CodePreviewBlock>
+
+      <SectionHeading>Usage</SectionHeading>
+      <UsageBlock code={aiDetectionTrianglesSrc} name="AiDetectionTriangles" />
+
+      <SectionHeading>States</SectionHeading>
+      <ExampleBlock title="Single detection vs. cluster">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <HudStage height={220}>
+            <AiDetectionTriangles detections={[{ id: 'one', x: 0.42, y: 0.4, w: 0.16, h: 0.2, label: 'Person', confidence: 0.9 }]} />
+          </HudStage>
+          <HudStage height={220}>
+            <AiDetectionTriangles detections={HUD_DETECTIONS} />
+          </HudStage>
+        </div>
+      </ExampleBlock>
+    </ComponentSection>
   );
 }
 
@@ -3484,18 +3763,8 @@ export function DetectionRow() {
                 </div>
               </CodePreviewBlock>
 
-              <SectionHeading>Import</SectionHeading>
-              <ImportBlock path="@/primitives" names={['StatusChip', 'STATUS_CHIP_COLORS', 'type StatusChipColor']} />
-
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={statusChipSrc} name="StatusChip" />
-
-              <SectionHeading>API Reference</SectionHeading>
-              <PropsTable items={[
-                { name: 'label', type: 'string', description: 'Display text' },
-                { name: 'color', type: 'StatusChipColor', default: '"green"', description: 'Semantic color variant' },
-                { name: 'className', type: 'string', description: 'Additional Tailwind classes' },
-              ]} />
 
             </ComponentSection>
             )}
@@ -3511,17 +3780,9 @@ export function DetectionRow() {
                 </div>
               </CodePreviewBlock>
 
-              <SectionHeading>Import</SectionHeading>
-              <ImportBlock path="@/primitives" names={['NewUpdatesPill']} />
-
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={newUpdatesPillSrc} name="NewUpdatesPill" />
 
-              <SectionHeading>API Reference</SectionHeading>
-              <PropsTable items={[
-                { name: 'count', type: 'number', description: 'Number of new updates to display' },
-                { name: 'onClick', type: '() => void', description: 'Scroll-to-top handler' },
-              ]} />
             </ComponentSection>
             )}
 
@@ -3540,22 +3801,8 @@ export function DetectionRow() {
                 </div>
               </CodePreviewBlock>
 
-              <SectionHeading>Import</SectionHeading>
-              <ImportBlock path="@/primitives" names={['ActionButton', 'ACTION_BUTTON_VARIANTS', 'ACTION_BUTTON_SIZES', 'type ActionButtonVariant', 'type ActionButtonSize']} />
-
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={actionButtonSrc} name="ActionButton" />
-
-              <SectionHeading>API Reference</SectionHeading>
-              <PropsTable items={[
-                { name: 'label', type: 'string', description: 'Button text' },
-                { name: 'icon', type: 'React.ElementType', description: 'Lucide icon component' },
-                { name: 'variant', type: 'ActionButtonVariant', default: '"fill"', description: 'Visual treatment' },
-                { name: 'size', type: 'ActionButtonSize', default: '"md"', description: 'Height and padding scale' },
-                { name: 'disabled', type: 'boolean', default: 'false', description: 'Disable interaction' },
-                { name: 'loading', type: 'boolean', default: 'false', description: 'Show spinner, disable click' },
-                { name: 'onClick', type: '(e: MouseEvent) => void', description: 'Click handler' },
-              ]} />
 
               <SectionHeading>Variants</SectionHeading>
               <VariantGrid
@@ -3643,26 +3890,8 @@ export function DetectionRow() {
                 </div>
               </CodePreviewBlock>
 
-              <SectionHeading>Import</SectionHeading>
-              <ImportBlock path="@/primitives" names={['SplitActionButton', 'SPLIT_BUTTON_VARIANTS', 'type SplitButtonVariant']} />
-
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={splitActionButtonSrc} name="SplitActionButton" />
-
-              <SectionHeading>API Reference</SectionHeading>
-              <PropsTable items={[
-                { name: 'label', type: 'string', description: 'Primary button text' },
-                { name: 'badge', type: 'string', description: 'Inline chip displayed after the label (e.g. effector name)' },
-                { name: 'icon', type: 'React.ElementType', description: 'Lucide icon' },
-                { name: 'variant', type: 'SplitButtonVariant', default: '"fill"', description: 'Color treatment' },
-                { name: 'size', type: 'SplitButtonSize', default: '"sm"', description: 'Height scale' },
-                { name: 'dropdownItems', type: 'SplitDropdownItem[]', description: 'Sub-action menu items' },
-                { name: 'dropdownGroups', type: 'SplitDropdownGroup[]', description: 'Grouped dropdown sections with labels and separators' },
-                { name: 'disabled', type: 'boolean', default: 'false', description: 'Disable both segments' },
-                { name: 'loading', type: 'boolean', default: 'false', description: 'Show spinner on primary' },
-                { name: 'dimDisabledShell', type: 'boolean', default: 'true', description: 'Reduce opacity when disabled' },
-                { name: 'onHover', type: '(hovering: boolean) => void', description: 'Fires on mouseEnter/Leave of primary segment — used to highlight effector on map' },
-              ]} />
 
               <SectionHeading>Variants</SectionHeading>
               <VariantGrid
@@ -3778,19 +4007,9 @@ export function DetectionRow() {
                 </div>
               </CodePreviewBlock>
 
-              <SectionHeading>Import</SectionHeading>
-              <ImportBlock path="@/primitives" names={['AccordionSection']} />
-
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={accordionSectionSrc} name="AccordionSection" />
 
-              <SectionHeading>API Reference</SectionHeading>
-              <PropsTable items={[
-                { name: 'title', type: 'ReactNode', description: 'Section heading' },
-                { name: 'icon', type: 'React.ElementType | null', description: 'Leading icon' },
-                { name: 'defaultOpen', type: 'boolean', default: 'false', description: 'Start expanded' },
-                { name: 'headerAction', type: 'ReactNode', description: 'Right-side action slot (badge, button)' },
-              ]} />
             </ComponentSection>
             )}
 
@@ -3805,18 +4024,8 @@ export function DetectionRow() {
                 </div>
               </CodePreviewBlock>
 
-              <SectionHeading>Import</SectionHeading>
-              <ImportBlock path="@/primitives" names={['TelemetryRow']} />
-
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={telemetryRowSrc} name="TelemetryRow" />
-
-              <SectionHeading>API Reference</SectionHeading>
-              <PropsTable items={[
-                { name: 'label', type: 'string', description: 'Metric name' },
-                { name: 'value', type: 'string', description: 'Metric value (monospace, tabular-nums)' },
-                { name: 'icon', type: 'React.ElementType', description: 'Leading icon' },
-              ]} />
 
               <SectionHeading>Examples</SectionHeading>
               <ExampleBlock title="3 items (single row)" tight>
@@ -3891,21 +4100,8 @@ export function DetectionRow() {
                 </div>
               </CodePreviewBlock>
 
-              <SectionHeading>Import</SectionHeading>
-              <ImportBlock path="@/primitives" names={['CopyButton']} />
-
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={copyButtonSrc} name="CopyButton" />
-
-              <SectionHeading>API Reference</SectionHeading>
-              <PropsTable items={[
-                { name: 'value', type: 'string', description: 'Text written to the clipboard. Empty string disables the button.' },
-                { name: 'copyLabel', type: 'string', description: 'Idle-state aria-label + tooltip (compose with the field name at the call site, e.g. "Copy serial number").' },
-                { name: 'copiedLabel', type: 'string', description: 'Success-state aria-label + sr-only announcement.' },
-                { name: 'size', type: "'sm' | 'md'", default: "'sm'", description: 'sm = 14px Copy / 16px Check in a 24px box. md = 16px Copy / 18px Check in a 28px box. Check is rendered ~2px larger than Copy and at stroke 3 (vs 2) to compensate for its larger negative space — equal pixel-size makes the success state read as smaller than the dormant state.' },
-                { name: 'alwaysVisible', type: 'boolean', default: 'false', description: 'Skip the hover-reveal — useful in standalone styleguide previews.' },
-                { name: 'className', type: 'string', default: "''", description: 'Additional classes on the button element.' },
-              ]} />
 
               <SectionHeading>Examples</SectionHeading>
               <ExampleBlock title="Always visible (no group/copy parent)" tight>
@@ -3957,23 +4153,8 @@ export function DetectionRow() {
                 </div>
               </CodePreviewBlock>
 
-              <SectionHeading>Import</SectionHeading>
-              <ImportBlock path="@/primitives" names={['CardHeader']} />
-
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={cardHeaderSrc} name="CardHeader" />
-
-              <SectionHeading>API Reference</SectionHeading>
-              <PropsTable items={[
-                { name: 'title', type: 'string', description: 'Target display name' },
-                { name: 'subtitle', type: 'string', description: 'Target ID or secondary label' },
-                { name: 'icon', type: 'React.ElementType', description: 'Threat type icon' },
-                { name: 'iconColor', type: 'string', description: 'Icon color override' },
-                { name: 'iconBgActive', type: 'boolean', default: 'false', description: 'Use active (red) icon background' },
-                { name: 'status', type: 'ReactNode', description: 'StatusChip or similar' },
-                { name: 'badge', type: 'ReactNode', description: 'Optional badge element' },
-                { name: 'open', type: 'boolean', description: 'Controls chevron rotation' },
-              ]} />
 
               <SectionHeading>Examples</SectionHeading>
               <ExampleBlock title="Open State" tight>
@@ -4027,20 +4208,8 @@ export function DetectionRow() {
                 </div>
               </CodePreviewBlock>
 
-              <SectionHeading>Import</SectionHeading>
-              <ImportBlock path="@/primitives" names={['CardMedia', 'MEDIA_BADGE_CONFIG', 'type MediaBadgeType']} />
-
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={cardMediaSrc} name="CardMedia" />
-
-              <SectionHeading>API Reference</SectionHeading>
-              <PropsTable items={[
-                { name: 'src', type: 'string', description: 'Image or video URL' },
-                { name: 'type', type: '"video" | "image"', default: '"image"', description: 'Media type' },
-                { name: 'badge', type: 'MediaBadgeType | null', description: 'Overlay badge icon' },
-                { name: 'showControls', type: 'boolean', default: 'false', description: 'Show video playback controls' },
-                { name: 'trackingLabel', type: 'string', description: 'Bottom-left tracking status label' },
-              ]} />
 
               <SectionHeading>Badge Types</SectionHeading>
               <VariantGrid
@@ -4062,17 +4231,8 @@ export function DetectionRow() {
                 </div>
               </CodePreviewBlock>
 
-              <SectionHeading>Import</SectionHeading>
-              <ImportBlock path="@/primitives" names={['CardActions']} />
-
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={cardActionsSrc} name="CardActions" />
-
-              <SectionHeading>API Reference</SectionHeading>
-              <PropsTable items={[
-                { name: 'actions', type: 'CardAction[]', description: 'Action definitions with group, variant, confirm' },
-                { name: 'layout', type: '"row" | "grid" | "stack"', default: '"row"', description: 'Fallback layout when no groups' },
-              ]} />
 
               <SectionHeading>Examples</SectionHeading>
               <ExampleBlock title="Flat Grid (no groups)" tight>
@@ -4108,20 +4268,9 @@ export function DetectionRow() {
                 </div>
               </CodePreviewBlock>
 
-              <SectionHeading>Import</SectionHeading>
-              <ImportBlock path="@/primitives" names={['CardDetails']} />
-
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={cardDetailsSrc} name="CardDetails" />
 
-              <SectionHeading>API Reference</SectionHeading>
-              <PropsTable items={[
-                { name: 'rows', type: 'DetailRow[]', description: 'Array of { label, value, icon? } rendered as TelemetryRow children inside a fixed 2-column grid (gap-x-8 / gap-y-2).' },
-                { name: 'title', type: 'string', default: "'Telemetry'", description: 'Section header title shown in the AccordionSection trigger.' },
-                { name: 'classification', type: 'CardDetailsClassification', description: 'Optional classification metadata (type, confidence, color). Accepted by the API but not rendered in the current implementation.' },
-                { name: 'defaultOpen', type: 'boolean', default: 'false', description: 'Start expanded.' },
-                { name: 'className', type: 'string', default: "''", description: 'Passthrough classes on the AccordionSection wrapper.' },
-              ]} />
             </ComponentSection>
             )}
 
@@ -4152,20 +4301,9 @@ export function DetectionRow() {
                 </div>
               </CodePreviewBlock>
 
-              <SectionHeading>Import</SectionHeading>
-              <ImportBlock path="@/primitives" names={['CardIdentity']} />
-
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={cardIdentitySrc} name="CardIdentity" />
 
-              <SectionHeading>API Reference</SectionHeading>
-              <PropsTable items={[
-                { name: 'rows', type: 'IdentityRow[]', description: 'Array of { label, value } entries; each renders as a full-width stacked row with a per-row copy button' },
-                { name: 'title', type: 'string', default: "'General info'", description: 'Section header title' },
-                { name: 'copyLabel', type: 'string', description: 'Verb label for the per-row copy button. Composed with each row label to form the aria-label (e.g. "Copy serial number").' },
-                { name: 'copiedLabel', type: 'string', description: 'Post-success label ("Copied"). Used for icon-button aria-label and aria-live announcement.' },
-                { name: 'defaultOpen', type: 'boolean', default: 'false', description: 'Start expanded' },
-              ]} />
             </ComponentSection>
             )}
 
@@ -4177,18 +4315,8 @@ export function DetectionRow() {
                 </div>
               </CodePreviewBlock>
 
-              <SectionHeading>Import</SectionHeading>
-              <ImportBlock path="@/primitives" names={['CardSensors']} />
-
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={cardSensorsSrc} name="CardSensors" />
-
-              <SectionHeading>API Reference</SectionHeading>
-              <PropsTable items={[
-                { name: 'sensors', type: 'CardSensor[]', description: 'Array of sensor entries' },
-                { name: 'onSensorClick', type: '(id: string) => void', description: 'Makes rows clickable buttons' },
-                { name: 'onSensorHover', type: '(id: string | null) => void', description: 'Hover callback for map highlighting' },
-              ]} />
 
               <SectionHeading>Examples</SectionHeading>
               <ExampleBlock title="Clickable (interactive)" tight>
@@ -4207,18 +4335,9 @@ export function DetectionRow() {
                 </div>
               </CodePreviewBlock>
 
-              <SectionHeading>Import</SectionHeading>
-              <ImportBlock path="@/primitives" names={['CardLog']} />
-
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={cardLogSrc} name="CardLog" />
 
-              <SectionHeading>API Reference</SectionHeading>
-              <PropsTable items={[
-                { name: 'entries', type: 'LogEntry[]', description: 'Array of { time, label }' },
-                { name: 'maxVisible', type: 'number', default: '5', description: 'Entries shown before "show more"' },
-                { name: 'defaultOpen', type: 'boolean', default: 'false', description: 'Start accordion expanded' },
-              ]} />
             </ComponentSection>
             )}
 
@@ -4230,18 +4349,9 @@ export function DetectionRow() {
                 </div>
               </CodePreviewBlock>
 
-              <SectionHeading>Import</SectionHeading>
-              <ImportBlock path="@/primitives" names={['CardClosure']} />
-
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={cardClosureSrc} name="CardClosure" />
 
-              <SectionHeading>API Reference</SectionHeading>
-              <PropsTable items={[
-                { name: 'outcomes', type: 'ClosureOutcome[]', description: 'Array of { id, label, icon }' },
-                { name: 'onSelect', type: '(outcomeId: string) => void', description: 'Selection handler' },
-                { name: 'title', type: 'string', default: '"סגירת אירוע — בחר סיבה"', description: 'Section heading' },
-              ]} />
             </ComponentSection>
             )}
 
@@ -4259,21 +4369,8 @@ export function DetectionRow() {
                 </div>
               </CodePreviewBlock>
 
-              <SectionHeading>Import</SectionHeading>
-              <ImportBlock path="@/primitives" names={['TargetCard']} />
-
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={targetCardSrc} name="TargetCard" />
-
-              <SectionHeading>API Reference</SectionHeading>
-              <PropsTable items={[
-                { name: 'header', type: 'ReactNode', description: 'CardHeader element' },
-                { name: 'children', type: 'ReactNode', description: 'Slot components (media, actions, timeline, details, sensors, log, closure)' },
-                { name: 'open', type: 'boolean', description: 'Expanded state' },
-                { name: 'onToggle', type: '() => void', description: 'Toggle handler' },
-                { name: 'accent', type: 'ThreatAccent', default: '"idle"', description: 'Spine color key' },
-                { name: 'completed', type: 'boolean', description: 'Desaturate card' },
-              ]} />
 
               <SectionHeading>Examples</SectionHeading>
               <ExampleBlock title="Mitigating (active jam)" tight>
@@ -4310,24 +4407,9 @@ export function DetectionRow() {
                 </div>
               </CodePreviewBlock>
 
-              <SectionHeading>Import</SectionHeading>
-              <ImportBlock path="@/primitives" names={['FilterBar', 'type FilterDef', 'type FilterOption']} />
-
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={filterBarSrc} name="FilterBar" />
 
-              <SectionHeading>API Reference</SectionHeading>
-              <PropsTable items={[
-                { name: 'query', type: 'string', description: 'Free-text search value (controlled).' },
-                { name: 'onQueryChange', type: '(next: string) => void', description: 'Search input change handler.' },
-                { name: 'filters', type: 'FilterDef[]', description: 'Filter dimensions to render — each becomes a popover trigger.' },
-                { name: 'selections', type: 'Record<string, string[]>', description: 'Selection state keyed by FilterDef.id.' },
-                { name: 'onFilterChange', type: '(filterId, nextValues) => void', description: 'Replace one filter’s selected values.' },
-                { name: 'onReset', type: '() => void', description: 'Clear query + all selections.' },
-                { name: 'searchPlaceholder', type: 'string', default: '"Search…"', description: 'Input placeholder.' },
-                { name: 'resetLabel', type: 'string', default: '"Reset"', description: 'Reset button text.' },
-                { name: 'emptyOptionsLabel', type: 'string', default: '"No options"', description: 'Shown when a filter has no options.' },
-              ]} />
             </ComponentSection>
             )}
 
@@ -4561,84 +4643,8 @@ export function DetectionRow() {
                 </div>
               </CodePreviewBlock>
 
-              <SectionHeading>Import</SectionHeading>
-              <ImportBlock path="@/shared/components/DevicesPanel" names={['DevicesPanel']} />
-
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={devicesPanelSrc} name="DevicesPanel" />
-
-              <SectionHeading>API Reference</SectionHeading>
-              <PropsTable items={[
-                { name: 'devices', type: 'Device[]', description: 'Full list of devices to render. Grouped by type, sorted offline-first per group.' },
-                { name: 'open', type: 'boolean', description: 'Controls sidebar visibility (slide in/out).' },
-                { name: 'onClose', type: '() => void', description: 'Called when the X close button is clicked.' },
-                { name: 'onFlyTo', type: '(lat, lon) => void', description: 'Called when the centre-on-map action is clicked on an expanded device.' },
-                { name: 'onDeviceHover', type: '(id | null) => void', description: 'Called on row mouse enter/leave for map highlight sync.' },
-                { name: 'onDeviceSelect', type: '(id | null) => void', description: 'Called when a device row toggles open/closed (selection sync with the map).' },
-                { name: 'onJamActivate', type: '(jammerId) => void', description: 'Called when the ECM jam button is clicked on an effector device.' },
-                { name: 'onFloodlightToggle', type: '(floodlightId, next) => void', description: 'Toggle a floodlight on/off. Renders the inline Switch on the row + footer when provided.' },
-                { name: 'onSpeakerToggle', type: '(speakerId, next) => void', description: 'Toggle a speaker between play/stop. Renders the inline secondary Play/Stop button when provided.' },
-                { name: 'floodlightOnIds', type: 'Set<string>', description: 'IDs of floodlights currently lit. Drives the active icon variant and Switch state.' },
-                { name: 'speakerPlayingIds', type: 'Set<string>', description: 'IDs of speakers currently broadcasting. Drives the active icon variant and Play/Stop state.' },
-                { name: 'speakerTracks', type: '{ id, label }[]', default: 'DEFAULT_SPEAKER_TRACKS', description: 'Audio tracks rendered inside the speaker combobox.' },
-                { name: 'noTransition', type: 'boolean', default: 'false', description: 'Skip the slide-in CSS transition (useful for styleguide / tests).' },
-                { name: 'width', type: 'number', default: 'LAYOUT_TOKENS.sidebarWidthPx', description: 'Override the default sidebar width.' },
-                { name: 'focusedDeviceId', type: 'string | null', default: 'undefined', description: 'Auto-expand this device, ensure its type filter is active, clear search, and scroll it into view.' },
-                { name: 'typeLabels', type: 'Partial<Record<DeviceType, string>>', default: 'DEFAULT_TYPE_LABELS', description: 'Override per-type group labels (Cameras, Radars, Floodlights, Speakers, …).' },
-                { name: 'connectionStateLabels', type: 'Partial<Record<ConnectionState, string>>', default: 'DEFAULT_CONNECTION_STATE_LABELS', description: 'Override the connection-state labels used in tooltips and chips.' },
-                { name: 'title', type: 'string', default: '"Devices"', description: 'Header title above the device list.' },
-                { name: 'closeAriaLabel', type: 'string', default: '"Close"', description: 'aria-label for the header close button.' },
-                { name: 'strings', type: 'Partial<DevicesPanelStrings>', default: 'DEFAULT_DEVICE_PANEL_STRINGS', description: 'Override any internal label. See the DevicesPanelStrings table below.' },
-              ]} />
-
-              <SectionHeading>DevicesPanelStrings</SectionHeading>
-              <p className="text-base font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
-                Every user-facing label inside the panel is keyed off a single <code className="text-sm font-mono text-n-10">DevicesPanelStrings</code> object so consumers can localise without forking the component. Pass overrides via the <code className="text-sm font-mono text-n-10">strings</code> prop; missing keys fall back to the English defaults shown here.
-              </p>
-              <PropsTable items={[
-                { name: 'searchPlaceholder', type: 'string', default: '"Search…"', description: 'Placeholder text inside the FilterBar search input.' },
-                { name: 'clearSearch', type: 'string', default: '"Clear search"', description: 'aria-label for the inline X button that clears the search term.' },
-                { name: 'resetFilters', type: 'string', default: '"Reset filters"', description: 'aria-label for the FilterBar reset action.' },
-                { name: 'resetFiltersLabel', type: 'string', default: '"Clear"', description: 'Visible text on the FilterBar reset button.' },
-                { name: 'typeFilterLabel', type: 'string', default: '"Devices"', description: 'Trigger label for the Type filter popover inside the FilterBar.' },
-                { name: 'noMatches', type: 'string', default: '"No matching devices"', description: 'Empty-state copy when search/filter excludes every device.' },
-                { name: 'location', type: 'string', default: '"Location"', description: 'Stat-row label for the lat/lon coordinate pair.' },
-                { name: 'bearing', type: 'string', default: '"Bearing"', description: 'Stat-row label for `device.bearingDeg`.' },
-                { name: 'fieldOfView', type: 'string', default: '"Field of view"', description: 'Stat-row label for `device.fovDeg`.' },
-                { name: 'coverage', type: 'string', default: '"Coverage"', description: 'Stat-row label for `device.coverageRadiusM` (formatted in metres).' },
-                { name: 'altitude', type: 'string', default: '"Altitude"', description: 'Stat-row label for `device.altitude`.' },
-                { name: 'health', type: 'string', default: '"Health"', description: 'Stat-row label for the health line.' },
-                { name: 'healthOk', type: 'string', default: '"OK"', description: 'Health value when `operationalStatus === "operational"`.' },
-                { name: 'healthMalfunction', type: 'string', default: '"Malfunction"', description: 'Health value when `operationalStatus === "malfunctioning"`.' },
-                { name: 'battery', type: 'string', default: '"Battery"', description: 'Stat-row label for `device.batteryPct`.' },
-                { name: 'jam', type: 'string', default: '"Jam"', description: 'Idle label on the ECM jam button — the shared target-card SplitActionButton (danger). Clicking the body or a scope dropdown item arms a Confirm/Cancel panel below the button (with a brief twice-blink); Confirm fires.' },
-                { name: 'jamActive', type: 'string', default: '"Jam active"', description: 'Label on the ECM button while a jammer is broadcasting.' },
-                { name: 'jamDisabledOffline', type: 'string', default: '"Device offline"', description: 'Tooltip when the jam button is disabled because the device is offline.' },
-                { name: 'jamDisabledMalfunction', type: 'string', default: '"Device malfunction"', description: 'Tooltip when the jam button is disabled because of a malfunction.' },
-                { name: 'jamDisabledAlreadyActive', type: 'string', default: '"Already jamming"', description: 'Tooltip when the jam button is disabled because another jammer is already active.' },
-                { name: 'centerOnMap', type: 'string', default: '"Center on map"', description: 'Footer button that calls `onFlyTo` for the current device.' },
-                { name: 'mute', type: 'string', default: '"Mute"', description: 'Idle label on the per-device mute action.' },
-                { name: 'unmute', type: 'string', default: '"Unmute"', description: 'Label on the mute action while the device is silenced.' },
-                { name: 'wipers', type: 'string', default: '"Wipers"', description: 'Inline label next to the drone wipers Switch.' },
-                { name: 'wipersAriaLabel', type: 'string', default: '"Wipers"', description: 'aria-label on the wipers Switch itself.' },
-                { name: 'calibrate', type: 'string', default: '"Calibrate"', description: 'Idle label on the drone calibrate action.' },
-                { name: 'calibrating', type: 'string', default: '"Calibrating…"', description: 'Label on the calibrate action while a calibration is in flight.' },
-                { name: 'calibrated', type: 'string', default: '"Done"', description: 'Label on the calibrate action briefly after a successful run.' },
-                { name: 'calibrateAriaLabel', type: 'string', default: '"Calibrate"', description: 'aria-label on the calibrate button.' },
-                { name: 'floodlightOn', type: 'string', default: '"On"', description: 'Inline status label rendered next to a lit floodlight Switch.' },
-                { name: 'floodlightOff', type: 'string', default: '"Off"', description: 'Inline status label rendered next to an idle floodlight Switch.' },
-                { name: 'floodlightToggleAriaLabel', type: 'string', default: '"Toggle floodlight"', description: 'aria-label for the floodlight Switch (collapsed + expanded rows).' },
-                { name: 'floodlightTurnOn', type: 'string', default: '"Turn on"', description: 'Hover/secondary copy describing what pressing the Switch will do when off.' },
-                { name: 'floodlightTurnOff', type: 'string', default: '"Turn off"', description: 'Hover/secondary copy describing what pressing the Switch will do when on.' },
-                { name: 'speakerPlay', type: 'string', default: '"Play"', description: 'Idle label on the speaker Play/Stop button.' },
-                { name: 'speakerStop', type: 'string', default: '"Stop"', description: 'Label on the Play/Stop button while the speaker is broadcasting.' },
-                { name: 'speakerPlaying', type: 'string', default: '"Playing"', description: 'Status chip shown next to the speaker name while it is broadcasting.' },
-                { name: 'speakerDisabledOffline', type: 'string', default: '"Speaker offline"', description: 'Tooltip when the Play/Stop button is disabled because the speaker is offline.' },
-                { name: 'audioTrack', type: 'string', default: '"Track"', description: 'Default trigger label for the audio-track combobox when no track is selected.' },
-                { name: 'audioTrackAriaLabel', type: 'string', default: '"Audio track"', description: 'aria-label for the audio-track combobox trigger.' },
-                { name: 'audioTrackSearchPlaceholder', type: 'string', default: '"Search…"', description: 'Placeholder text inside the combobox CommandInput.' },
-                { name: 'audioTrackNoMatches', type: 'string', default: '"No matches"', description: 'Empty-state inside the combobox when the search filters out every track.' },
-              ]} />
 
               <SectionHeading>Examples</SectionHeading>
               {/* ── Empty state ─────────────────────────────────── */}
@@ -5303,26 +5309,46 @@ export function DetectionRow() {
             <ComponentSection id="map-markers" name="Map Markers" description="Tactical marker system: SVG icons, composited layers, interaction states, affiliation palettes, and map-level overlays.">
 
               <SectionHeading>Source</SectionHeading>
-              <CodePreviewBlock name="MapMarker" description="Composites 4 visual layers controlled by a style+affiliation matrix" code={mapMarkerSrc} relatedFiles={MARKER_FILES}>
+              <CodePreviewBlock name="MapMarker" description="Composites 4 visual layers; on the live map, target markers are driven by severity (ring + glyph color) — see Severity & Urgency below" code={mapMarkerSrc} relatedFiles={MARKER_FILES}>
                 <div className="flex items-center justify-start gap-6">
-                  {AFFILIATIONS.map(aff => {
-                    const s = resolveMarkerStyle('default', aff);
+                  {SEVERITY_ORDER.map((sev) => {
+                    const color = SEVERITY_COLOR[sev as Severity];
+                    const base = resolveMarkerStyle('default', 'hostile');
+                    const s = {
+                      ...base,
+                      ringColor: color,
+                      ringPulse: SEVERITY_PULSE[sev as Severity],
+                      ringOpacity: 1,
+                      ringWidth: sev === 'CRITICAL' ? 3 : 2,
+                      glyphColor: color,
+                      innerGlowColor: color,
+                    };
                     return (
-                      <div key={aff} className="flex flex-col items-center gap-2">
-                        <MapMarker icon={<SensorIcon size={34} outlined fill={s.glyphColor} />} style={s} surfaceSize={48} ringSize={38} />
-                        <span className="text-xs font-mono font-normal text-white">{aff}</span>
+                      <div key={sev} className="flex flex-col items-center gap-2">
+                        <MapMarker icon={<CarIcon color={color} size={34} />} style={s} surfaceSize={48} ringSize={38} />
+                        <span className="text-xs font-mono font-normal text-white">{sev}</span>
                       </div>
                     );
                   })}
+                  <div className="flex flex-col items-center gap-2">
+                    <MapMarker
+                      icon={<UnknownIcon color={UNKNOWN_GRAY} size={34} />}
+                      style={{
+                        ...resolveMarkerStyle('default', 'unknown'),
+                        ringColor: UNKNOWN_GRAY,
+                        ringWidth: 0,
+                        ringOpacity: 0,
+                        ringPulse: false,
+                        glyphColor: UNKNOWN_GRAY,
+                        innerGlowColor: UNKNOWN_GRAY,
+                      }}
+                      surfaceSize={48}
+                      ringSize={38}
+                    />
+                    <span className="text-xs font-mono font-normal text-white">unclassified</span>
+                  </div>
                 </div>
               </CodePreviewBlock>
-
-              <SectionHeading>Imports</SectionHeading>
-              <div className="space-y-2">
-                <ImportBlock path="@/primitives/MapMarker" names={['MapMarker']} />
-                <ImportBlock path="@/primitives/markerStyles" names={['resolveMarkerStyle', 'INTERACTION_STATES', 'AFFILIATIONS']} />
-                <ImportBlock path="@/app/components/tacticalIcons" names={['CameraIcon', 'RadarIcon', 'SensorIcon', 'DroneIcon', 'DroneHiveIcon', 'LidarIcon', 'LauncherIcon', 'MissileIcon', 'FloodlightIcon', 'SpeakerIcon']} />
-              </div>
 
               {/* ── Layer Anatomy ── */}
               <div id="layer-anatomy" className="scroll-mt-12 space-y-6 pt-10">
@@ -5615,180 +5641,15 @@ export function DetectionRow() {
             </ComponentSection>
             )}
 
-            {activeItem === 'cesium-map' && (
-            <ComponentSection
-              id="cesium-map"
-              name="Cesium Map"
-              description="A CesiumJS-based map primitive — sandbox for replacing the Mapbox-based TacticalMap. Step 1: feature parity with our current map (basemap, markers, FOV, ECM coverage, fly-to). Step 2: Cesium-only capabilities (terrain, time-aware data, true 3D)."
-            >
-              <SectionHeading>Basics — Bing Aerial via Cesium Ion (2D)</SectionHeading>
-              <p className="text-sm leading-6 text-n-10">
-                Imagery: Cesium Ion asset id <code className="text-sm font-mono bg-white/[0.06] px-1 py-0.5 rounded">2</code>{' '}
-                (Bing Maps Aerial). Token comes from the{' '}
-                <code className="text-sm font-mono bg-white/[0.06] px-1 py-0.5 rounded">VITE_CESIUM_ION_TOKEN</code>{' '}
-                env var (see <code className="text-sm font-mono bg-white/[0.06] px-1 py-0.5 rounded">.env.example</code>).
-                Scene mode is <code className="text-sm font-mono bg-white/[0.06] px-1 py-0.5 rounded">'2D'</code> for parity with the top-down Mapbox view.
-              </p>
-
-              {!CESIUM_ION_TOKEN ? (
-                <div className="rounded-md p-4 text-sm text-amber-300 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] bg-amber-500/[0.06]">
-                  <strong>Token missing.</strong> Set <code className="font-mono">VITE_CESIUM_ION_TOKEN</code> in <code className="font-mono">.env.local</code> and restart the dev server.
-                </div>
-              ) : (
-                <div id="cesium-basics" className="scroll-mt-20 space-y-4 mt-10 first:mt-0">
-                  <h3 className="text-sm font-medium text-n-10">3 markers, no FOV / coverage</h3>
-                  <PreviewPanel align="stretch">
-                    <div className="h-[420px] rounded-lg overflow-hidden">
-                      <CesiumMap
-                        ionToken={CESIUM_ION_TOKEN}
-                        initialView={{ lat: 32.466, lon: 35.005, heightM: 8000 }}
-                        markers={cesiumDemoBasicMarkers}
-                        sceneMode="2D"
-                      />
-                    </div>
-                  </PreviewPanel>
-                </div>
-              )}
-
-              {CESIUM_ION_TOKEN && (
-                <>
-                  <SectionHeading>FOV + Coverage</SectionHeading>
-                  <div id="cesium-fov" className="scroll-mt-20 space-y-4 mt-10 first:mt-0">
-                    <h3 className="text-sm font-medium text-n-10">Sensor FOV cone (sector polygon) and ECM coverage ring (ellipse)</h3>
-                    <PreviewPanel align="stretch">
-                      <div className="h-[420px] rounded-lg overflow-hidden">
-                        <CesiumMap
-                          ionToken={CESIUM_ION_TOKEN}
-                          initialView={{ lat: 32.466, lon: 35.005, heightM: 6000 }}
-                          markers={cesiumDemoFovMarkers}
-                          sceneMode="2D"
-                        />
-                      </div>
-                    </PreviewPanel>
-                  </div>
-
-                  <SectionHeading>Fly-To</SectionHeading>
-                  <div id="cesium-fly-to" className="scroll-mt-20 space-y-4 mt-10 first:mt-0">
-                    <h3 className="text-sm font-medium text-n-10">Imperative camera control. Pass a new flyTo prop to trigger an animation.</h3>
-                    <CesiumFlyToDemo />
-                  </div>
-                </>
-              )}
-
-              <SectionHeading>Import</SectionHeading>
-              <ImportBlock
-                path="@/primitives"
-                names={['CesiumMap', 'type CesiumMarker', 'type CesiumMapProps', 'type CesiumSceneMode']}
-              />
-
-              <SectionHeading>API Reference</SectionHeading>
-              <PropsTable
-                items={[
-                  { name: 'ionToken', type: 'string', description: 'Cesium Ion access token (use VITE_CESIUM_ION_TOKEN).' },
-                  { name: 'initialView', type: '{ lat, lon, heightM? }', description: 'First-paint camera target.' },
-                  { name: 'markers', type: 'CesiumMarker[]', description: 'Pins. Each may carry an FOV sector and/or coverage ring.' },
-                  { name: 'flyTo', type: 'CesiumMapFlyTo | null', description: 'Pass a new object to trigger an imperative camera fly.' },
-                  { name: 'sceneMode', type: "'2D' | '2.5D' | '3D'", default: "'2D'", description: 'Cesium scene mode. 2D matches current Mapbox UX.' },
-                  { name: 'ionImageryAssetId', type: 'number', default: '2', description: 'Cesium Ion imagery asset id. 2 = Bing Aerial.' },
-                  { name: 'onMarkerClick', type: '(id: string) => void', description: 'Marker click handler.' },
-                  { name: 'onMarkerHover', type: '(id: string | null) => void', description: 'Hover enter (id) / leave (null).' },
-                  { name: 'className', type: 'string', default: "'w-full h-full'", description: 'Wrapper sizing.' },
-                ]}
-              />
-
-              <SectionHeading>Step 2 — Cesium-only opportunities</SectionHeading>
-              <div id="cesium-step-2" className="scroll-mt-20 space-y-4 mt-10 first:mt-0">
-                <p className="text-sm leading-6 text-n-10">
-                  Once parity lands, these are the capabilities Cesium gives us that Mapbox GL JS does not (or that Cesium does much better). They are deliberately documented here, not implemented yet — so we choose deliberately what to ship next.
-                </p>
-                <ul className="space-y-3 text-sm leading-6 text-n-10 list-disc ps-6 marker:text-n-9">
-                  <li>
-                    <strong className="text-n-12">True 3D globe + terrain.</strong> Cesium World Terrain (Ion asset 1) renders real elevation. Sensor lines-of-sight, drone altitude, missile trajectories all become visually correct in 3D, not faked with flat overlays.
-                  </li>
-                  <li>
-                    <strong className="text-n-12">Time-dynamic data (CZML).</strong> Replay engagements with a built-in clock + scrub bar. Drone, missile, jam, target tracks all driven by timestamped properties — not hand-rolled <code className="font-mono text-sm bg-white/[0.06] px-1 rounded">requestAnimationFrame</code> loops.
-                  </li>
-                  <li>
-                    <strong className="text-n-12">3D Tiles for assets.</strong> Buildings, photogrammetry, ground stations as 3D-Tiles models. Camera collision, occlusion, and identification become possible.
-                  </li>
-                  <li>
-                    <strong className="text-n-12">Real line-of-sight visualization.</strong> Cesium has <code className="font-mono text-sm bg-white/[0.06] px-1 rounded">Cesium.SensorVolume</code>-style primitives + the <code className="font-mono text-sm bg-white/[0.06] px-1 rounded">cesium-sensor-volumes</code> add-on that draw conic / rectangular / spherical sensor volumes intersected with terrain.
-                  </li>
-                  <li>
-                    <strong className="text-n-12">Atmospheric + sun lighting.</strong> Day/night terminator, cast shadows, atmospheric scattering — useful for surveillance scenarios that depend on sun angle.
-                  </li>
-                  <li>
-                    <strong className="text-n-12">Sub-meter cameras.</strong> Cesium camera supports lookAt / lookAtTransform with smooth easing — better fit for our "camera look-at sensor" interaction than Mapbox's bearing/pitch.
-                  </li>
-                  <li>
-                    <strong className="text-n-12">Geodesic correctness everywhere.</strong> Distances, FOV cones, coverage rings are computed on the WGS-84 ellipsoid — no Mercator distortion at high latitude. Our existing FOV math is already approximate; Cesium handles it natively.
-                  </li>
-                  <li>
-                    <strong className="text-n-12">Vector + raster + mesh in one scene.</strong> No need to layer DOM markers above WebGL — Entities, Primitives, GeoJsonDataSource, KmlDataSource all coexist in one render loop.
-                  </li>
-                </ul>
-
-                <p className="text-sm leading-6 text-n-10">
-                  <strong className="text-n-12">Suggested next milestones</strong> (after parity):
-                </p>
-                <ol className="space-y-2 text-sm leading-6 text-n-10 list-decimal ps-6 marker:text-n-9">
-                  <li>Switch this primitive to 3D mode behind a toggle, layer in Cesium World Terrain.</li>
-                  <li>Move drone / missile / engagement-line animations to CZML so the clock / scrub UI works.</li>
-                  <li>Replace the flat FOV polygon with a real <code className="font-mono text-sm bg-white/[0.06] px-1 rounded">SensorVolume</code> (terrain-clipped 3D cone).</li>
-                  <li>Wire <code className="font-mono text-sm bg-white/[0.06] px-1 rounded">CesiumMap</code> into <code className="font-mono text-sm bg-white/[0.06] px-1 rounded">Dashboard</code> behind a feature flag, then deprecate <code className="font-mono text-sm bg-white/[0.06] px-1 rounded">TacticalMap</code> when parity is full.</li>
-                </ol>
-              </div>
-            </ComponentSection>
-            )}
-
-            {activeItem === 'playback-investigation' && (
-            <ComponentSection
-              id="playback-investigation"
-              name="Playback Investigation"
-              description="Camera-v2 playback surface lives only on /playground. One layout — a 50/50 split where live keeps the top half and playback takes the bottom — and a focused transport (play/pause + scrubber + clocks + exit). The live experience is interactive on /playground."
-            >
-              <SectionHeading>Layout</SectionHeading>
-              <p className="text-sm leading-6 text-n-10">
-                Live shrinks to the top half; the playback container takes the bottom half with a 2px red top border so the operator never confuses the two frames. The live HUD (drone overlay, telemetry, control bar) renders inside the live frame so its bottom edge tracks the live half — the operator can still hover the top half to surface the live control bar above the divider while the playback transport stays anchored at the very bottom of the tile.
-              </p>
-              <PreviewPanel align="stretch">
-                <div className="w-full max-w-md">
-                  <PlaybackLayoutMockup />
-                </div>
-              </PreviewPanel>
-
-              <SectionHeading>Status states</SectionHeading>
-              <p className="text-sm leading-6 text-n-10">
-                Every media condition is surfaced inside the playback frame as an actionable, localised state. Browser autoplay rejection and `onError` events both route through the error card. Buffering has a 600ms grace timer so a momentary stall does not flash a spinner.
-              </p>
-              <PreviewPanel align="stretch">
-                <div className="grid grid-cols-3 gap-4 w-full">
-                  <PlaybackStatusMockup variant="loading" />
-                  <PlaybackStatusMockup variant="buffering" />
-                  <PlaybackStatusMockup variant="paused" />
-                  <PlaybackStatusMockup variant="playing" />
-                  <PlaybackStatusMockup variant="ended" />
-                  <PlaybackStatusMockup variant="error" />
-                </div>
-              </PreviewPanel>
-
-              <SectionHeading>Notes</SectionHeading>
-              <ul className="space-y-3 text-sm leading-6 text-n-10 list-disc ps-6 marker:text-n-9">
-                <li>
-                  <strong className="text-n-12">Time always flows L→R.</strong> The transport sits inside <code className="font-mono text-sm bg-white/[0.06] px-1 rounded">&lt;DirIsland direction=&quot;ltr&quot;&gt;</code>. Hebrew tooltip labels still render correctly because the island only repositions chrome, not text.
-                </li>
-                <li>
-                  <strong className="text-n-12">Foreign-locked tiles stay fully usable.</strong> Playback is read-only investigation, not a control op. Only mutating actions (mode swap, zoom slider) are disabled on a foreign-locked tile.
-                </li>
-                <li>
-                  <strong className="text-n-12">No persistence.</strong> Every open starts fresh — there are no preferences, no bookmarks, and no position carry-over. Camera swaps reset playback to <code className="font-mono text-sm bg-white/[0.06] px-1 rounded">undefined</code> at the panel level so a stale position can&apos;t leak across cameras in a 4-up grid.
-                </li>
-                <li>
-                  <strong className="text-n-12">Settings toggle.</strong> The Switch primitive is retuned for our dark popover (white/15 off-state with an inset hairline ring, emerald on-state, 200ms color and thumb transitions). Off and on both read clearly against <code className="font-mono text-sm bg-white/[0.06] px-1 rounded">bg-[#1a1a1a]/95</code>.
-                </li>
-              </ul>
-            </ComponentSection>
-            )}
+            {activeItem === 'hud-device-select' && <HudDeviceSelectSection />}
+            {activeItem === 'hud-angle-toggle' && <HudAngleToggleSection />}
+            {activeItem === 'hud-setpoint-rail' && <HudSetpointRailSection />}
+            {activeItem === 'hud-connectivity' && <HudConnectivityBadgeSection />}
+            {activeItem === 'hud-slew-cue' && <HudSlewCueSection />}
+            {activeItem === 'hud-auto-track' && <HudAutoTrackSection />}
+            {activeItem === 'hud-detections' && <HudDetectionsSection />}
+            {activeItem === 'hud-day-night' && <HudDayNightSection />}
+            {activeItem === 'hud-context-menu' && <HudContextMenuSection />}
 
             <StyleguidePager activeItem={activeItem} onNavigate={navigateTo} />
           </motion.div>

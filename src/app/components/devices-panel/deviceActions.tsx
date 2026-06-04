@@ -46,6 +46,8 @@ export interface DeviceActionContext {
   notifyRemaining: number;
   onToggleNotify: () => void;
   onOpenLogs: () => void;
+  /** Open the device's errors modal (the header error button). */
+  onOpenErrors: () => void;
   onFlyTo: (lat: number, lon: number) => void;
   onToggleMute: (deviceId: string) => void;
   onFloodlightToggle?: (floodlightId: string, next: boolean) => void;

@@ -25,11 +25,13 @@ import {
   DEVICE_CAMERA_DRAG_TYPE,
 } from './constants';
 import { DEVICE_REGISTRY } from './deviceRegistry';
+import { getDeviceErrorCount } from './deviceHealth';
 import type { DeviceActionContext } from './deviceActions';
 import { useDeviceNotify } from './useDeviceNotify';
 import { DeviceRowHeader } from './DeviceRowHeader';
 import { DeviceRowDetails } from './DeviceRowDetails';
 import { DeviceActionBar } from './DeviceActionBar';
+import { DeviceErrorsDialog } from './controls/DeviceErrorsDialog';
 import type { DeviceCameraDragItem, DeviceRowProps } from './types';
 
 export function DeviceRow({
@@ -60,6 +62,7 @@ export function DeviceRow({
   const online = device.connectionState !== 'offline';
 
   const [selectedTrackId, setSelectedTrackId] = useState<string>(speakerTracks[0]?.id ?? '');
+  const [errorsOpen, setErrorsOpen] = useState(false);
   const notify = useDeviceNotify(device.id, online, onArmNotifications);
 
   const ctx: DeviceActionContext = {
@@ -73,11 +76,12 @@ export function DeviceRow({
     speakerTracks,
     selectedTrackId: selectedTrackId || (speakerTracks[0]?.id ?? ''),
     onSelectTrack: setSelectedTrackId,
-    errorCount: device.errorCount ?? 0,
+    errorCount: getDeviceErrorCount(device),
     isNotifyOn: notify.armed,
     notifyRemaining: notify.remaining,
     onToggleNotify: notify.toggle,
     onOpenLogs: () => onOpenLogs?.(device.id),
+    onOpenErrors: () => setErrorsOpen(true),
     onFlyTo,
     onToggleMute,
     onFloodlightToggle,
@@ -141,6 +145,13 @@ export function DeviceRow({
           <DeviceActionBar cfg={cfg} ctx={ctx} />
         </div>
       </CollapsibleContent>
+
+      <DeviceErrorsDialog
+        open={errorsOpen}
+        onOpenChange={setErrorsOpen}
+        device={device}
+        strings={strings}
+      />
     </Collapsible>
   );
 }

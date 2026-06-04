@@ -11,7 +11,7 @@
  */
 
 import React from 'react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../../ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
 
 interface ReasonTooltipProps {
   reason: string | null | undefined;
@@ -27,12 +27,7 @@ export function ReasonTooltip({ reason, children }: ReasonTooltipProps) {
           {children}
         </span>
       </TooltipTrigger>
-      <TooltipContent
-        side="top"
-        sideOffset={6}
-        showArrow={false}
-        className="px-2 py-1 text-xs text-zinc-300 bg-zinc-800 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] whitespace-nowrap"
-      >
+      <TooltipContent side="top" sideOffset={6} className="whitespace-nowrap">
         {reason}
       </TooltipContent>
     </Tooltip>

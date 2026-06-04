@@ -45,6 +45,7 @@ export type {
   ConnectionState,
   Device,
   DeviceCameraDragItem,
+  DeviceError,
   DeviceRowProps,
   DeviceActionProps,
   DeviceActionTone,

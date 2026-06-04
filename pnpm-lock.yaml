@@ -17,9 +17,6 @@ importers:
       '@central-icons-react/round-filled-radius-1-stroke-1.5':
         specifier: ^1.1.225
         version: 1.1.225(react@18.3.1)
-      '@central-icons-react/round-outlined-radius-1-stroke-1.5':
-        specifier: ^1.1.225
-        version: 1.1.225(react@18.3.1)
       '@central-icons-react/square-filled-radius-0-stroke-2':
         specifier: ^1.1.255
         version: 1.1.255(react@18.3.1)
@@ -197,9 +194,6 @@ importers:
       sonner:
         specifier: 2.0.3
         version: 2.0.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      stats-gl:
-        specifier: ^4.1.0
-        version: 4.1.0
       tailwind-merge:
         specifier: 3.2.0
         version: 3.2.0
@@ -212,9 +206,6 @@ importers:
       vite-plugin-cesium:
         specifier: ^1.2.23
         version: 1.2.23(cesium@1.140.0)(rollup@4.60.1)(vite@6.3.5(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.30.1)(yaml@2.9.0))
-      web-vitals:
-        specifier: ^5.2.0
-        version: 5.2.0
     devDependencies:
       '@react-scan/vite-plugin-react-scan':
         specifier: ^0.2.6
@@ -401,11 +392,6 @@ packages:
 
   '@central-icons-react/round-filled-radius-1-stroke-1.5@1.1.225':
     resolution: {integrity: sha512-24W8lJM5bnesQXk2xBO1D99ztIsS301SXfNWb7Y2zpfkudxzWb2DxkmH5Swz5ua6+ly9PCq6V/6l1M9PeoO2rw==}
-    peerDependencies:
-      react: '>=14.0.0 <= 19'
-
-  '@central-icons-react/round-outlined-radius-1-stroke-1.5@1.1.225':
-    resolution: {integrity: sha512-gZSTT6tvbLLTF6xsnOgKITUS6KHmk3TGScTssgaSmCHKT1EBgm/sO7wcegwKb/Y/EWY8pKiMD8LpFl1L0El4Eg==}
     peerDependencies:
       react: '>=14.0.0 <= 19'
 
@@ -4355,14 +4341,6 @@ packages:
     resolution: {integrity: sha512-NzNVhJDYpwceVVii8/Hu6DKfD2G+NrQHlS/V/qgv763EYudVwEcMQNxd2lh+0VrUByXN/oJkl5grOhYWvQUYiw==}
     engines: {node: '>=0.10.0'}
 
-  stats-gl@4.1.0:
-    resolution: {integrity: sha512-A0aw+njfFtowIJ5tCbCxKBRR7oflVmGEjdXfMI7IAc/fDTdms4eIKSaLDWL222XCrfQdT49VE19JgKGDQmz0yw==}
-    peerDependencies:
-      three: '*'
-    peerDependenciesMeta:
-      three:
-        optional: true
-
   statuses@2.0.2:
     resolution: {integrity: sha512-DvEy55V3DB7uknRo+4iOGT5fP1slR8wQohVdknigZPMpMstaKJQWhwiYBACJE3Ul2pTnATihhBYnRhZQHGBiRw==}
     engines: {node: '>= 0.8'}
@@ -4674,9 +4652,6 @@ packages:
     resolution: {integrity: sha512-d2JWLCivmZYTSIoge9MsgFCZrt571BikcWGYkjC1khllbTeDlGqZ2D8vD8E/lJa8WGWbb7Plm8/XJYV7IJHZZw==}
     engines: {node: '>= 8'}
 
-  web-vitals@5.2.0:
-    resolution: {integrity: sha512-i2z98bEmaCqSDiHEDu+gHl/dmR4Q+TxFmG3/13KkMO+o8UxQzCqWaDRCiLgEa41nlO4VpXSI0ASa1xWmO9sBlA==}
-
   webpack-virtual-modules@0.6.2:
     resolution: {integrity: sha512-66/V2i5hQanC51vBQKPH4aI8NMAcBW59FVBs+rC7eGHupMyfn34q7rZIE+ETlJ+XTevqfUhVVBgSUNSW2flEUQ==}
 
@@ -4985,10 +4960,6 @@ snapshots:
       react: 18.3.1
 
   '@central-icons-react/round-filled-radius-1-stroke-1.5@1.1.225(react@18.3.1)':
-    dependencies:
-      react: 18.3.1
-
-  '@central-icons-react/round-outlined-radius-1-stroke-1.5@1.1.225(react@18.3.1)':
     dependencies:
       react: 18.3.1
 
@@ -8886,8 +8857,6 @@ snapshots:
     dependencies:
       extend-shallow: 3.0.2
 
-  stats-gl@4.1.0: {}
-
   statuses@2.0.2: {}
 
   stdin-discarder@0.2.2: {}
@@ -9180,8 +9149,6 @@ snapshots:
       loose-envify: 1.4.0
 
   web-streams-polyfill@3.3.3: {}
-
-  web-vitals@5.2.0: {}
 
   webpack-virtual-modules@0.6.2:
     optional: true

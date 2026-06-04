@@ -1,92 +1,179 @@
 /**
- * Co-located doc module for the AccordionSection primitive. Meta lives in
+ * Co-located doc module for the generic Accordion compound. Documents the
+ * shadcn primitive (`@/shared/components/ui/accordion`) — a vertically stacked
+ * set of collapsible sections — with neutral example content. Meta lives in
  * `registry/manifest.json`.
  */
-import { Radar } from '@/lib/icons/central';
-import { AccordionSection, TelemetryRow } from '@/primitives';
-import accordionSectionSrc from '@/primitives/AccordionSection.tsx?raw';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/shared/components/ui/accordion';
+import accordionSrc from '@/shared/components/ui/accordion.tsx?raw';
 import type { ComponentDocModule } from '../registry/types';
 
 export const accordionDoc: ComponentDocModule = {
   id: 'accordion',
-  source: accordionSectionSrc,
-  usage: `import { AccordionSection } from "@/primitives"
+  source: accordionSrc,
+  usage: `import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 
-<AccordionSection title="חיישנים (3)" icon={Radar} defaultOpen>
-  {/* content */}
-</AccordionSection>`,
+<Accordion type="single" collapsible defaultValue="shipping" className="max-w-lg">
+  <AccordionItem value="shipping">
+    <AccordionTrigger>What are your shipping options?</AccordionTrigger>
+    <AccordionContent>
+      We offer standard (5-7 days), express (2-3 days), and overnight shipping.
+    </AccordionContent>
+  </AccordionItem>
+</Accordion>`,
   examples: [
     {
       id: 'default',
-      title: 'Collapsible section',
-      description: 'Animated expand/collapse with an optional header icon. Used inside cards for details, logs, and sensors.',
+      title: 'Single, collapsible',
+      description:
+        'A vertically stacked set of sections. With type="single" only one item opens at a time; collapsible lets the open item close again.',
       render: () => (
-        <div className="w-[320px] overflow-hidden rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
-          <AccordionSection title="חיישנים" icon={Radar} defaultOpen>
-            <div className="grid w-full grid-cols-3 gap-x-4 py-2">
-              <TelemetryRow label="RF" value="1.2 km" />
-              <TelemetryRow label="Radar" value="0.8 km" />
-              <TelemetryRow label="EO/IR" value="0.5 km" />
-            </div>
-          </AccordionSection>
+        <div dir="ltr" className="w-full max-w-lg">
+          <Accordion type="single" collapsible defaultValue="shipping">
+            <AccordionItem value="shipping">
+              <AccordionTrigger>What are your shipping options?</AccordionTrigger>
+              <AccordionContent>
+                We offer standard (5-7 days), express (2-3 days), and overnight shipping. Free
+                shipping on international orders.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="returns">
+              <AccordionTrigger>What is your return policy?</AccordionTrigger>
+              <AccordionContent>
+                Returns accepted within 30 days. Items must be unused and in original packaging.
+                Refunds processed within 5-7 business days.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="support">
+              <AccordionTrigger>How can I contact customer support?</AccordionTrigger>
+              <AccordionContent>
+                Reach us via email, live chat, or phone. We respond within 24 hours during business
+                days.
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
+      ),
+    },
+    {
+      id: 'multiple',
+      title: 'Multiple open',
+      description: 'With type="multiple" any number of sections can stay open at once.',
+      code: `<Accordion type="multiple" defaultValue={["overview", "details"]}>
+  <AccordionItem value="overview">
+    <AccordionTrigger>Overview</AccordionTrigger>
+    <AccordionContent>A high-level summary.</AccordionContent>
+  </AccordionItem>
+  <AccordionItem value="details">
+    <AccordionTrigger>Details</AccordionTrigger>
+    <AccordionContent>The specifics.</AccordionContent>
+  </AccordionItem>
+</Accordion>`,
+      render: () => (
+        <div dir="ltr" className="w-full max-w-lg">
+          <Accordion type="multiple" defaultValue={['overview', 'details']}>
+            <AccordionItem value="overview">
+              <AccordionTrigger>Overview</AccordionTrigger>
+              <AccordionContent>
+                A high-level summary that stays open while you read the details below.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="details">
+              <AccordionTrigger>Details</AccordionTrigger>
+              <AccordionContent>
+                The specifics — both sections are expanded at the same time.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="notes">
+              <AccordionTrigger>Notes</AccordionTrigger>
+              <AccordionContent>Optional extra context, collapsed by default.</AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </div>
       ),
     },
   ],
   edgeCases: [
     {
-      id: 'long-title',
-      label: 'Long title',
-      note: 'The title sits in a flex row beside the chevron. Long titles push the layout — the chevron stays pinned to the inline-end while the title takes the remaining width.',
+      id: 'long-trigger',
+      label: 'Long trigger text',
+      note: 'The trigger lays out as a flex row beside the chevron. Long text wraps and pushes the chevron to stay pinned at the inline-end, top-aligned.',
       render: () => (
-        <div className="w-[320px] overflow-hidden rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
-          <AccordionSection title="חיישנים מזהים ויומן אירועים מלא" icon={Radar} defaultOpen>
-            <div className="grid w-full grid-cols-3 gap-x-4 py-2">
-              <TelemetryRow label="RF" value="1.2 km" />
-            </div>
-          </AccordionSection>
+        <div dir="ltr" className="w-[320px]">
+          <Accordion type="single" collapsible defaultValue="q">
+            <AccordionItem value="q">
+              <AccordionTrigger>
+                Do you offer discounts for bulk orders, educational institutions, or non-profit
+                organizations?
+              </AccordionTrigger>
+              <AccordionContent>Yes — contact sales for a tailored quote.</AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </div>
       ),
     },
     {
-      id: 'no-icon',
-      label: 'No header icon',
-      note: 'The icon is optional. Without it the title aligns to the trigger padding with no leading gap.',
+      id: 'disabled-item',
+      label: 'Disabled item',
+      note: 'A disabled trigger drops to 50% opacity and ignores pointer + keyboard events; the others stay interactive.',
       render: () => (
-        <div className="w-[320px] overflow-hidden rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
-          <AccordionSection title="פרטים" defaultOpen>
-            <div className="grid w-full grid-cols-3 gap-x-4 py-2">
-              <TelemetryRow label="גובה" value="120m" />
-            </div>
-          </AccordionSection>
+        <div dir="ltr" className="w-[320px]">
+          <Accordion type="single" collapsible>
+            <AccordionItem value="open">
+              <AccordionTrigger>Available section</AccordionTrigger>
+              <AccordionContent>This one opens normally.</AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="locked" disabled>
+              <AccordionTrigger>Locked section</AccordionTrigger>
+              <AccordionContent>Unreachable while disabled.</AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </div>
       ),
     },
     {
-      id: 'empty-content',
-      label: 'Empty content',
-      note: 'With no children the open body collapses to its padding only — no min height. Gate rendering or show an empty-state message upstream.',
+      id: 'single-item',
+      label: 'Single item',
+      note: 'One item with last:border-b-0 — no trailing rule, so it reads as a standalone disclosure rather than a list.',
       render: () => (
-        <div className="w-[320px] overflow-hidden rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
-          <AccordionSection title="חיישנים (0)" icon={Radar} defaultOpen>
-            {null}
-          </AccordionSection>
+        <div dir="ltr" className="w-[320px]">
+          <Accordion type="single" collapsible defaultValue="only">
+            <AccordionItem value="only">
+              <AccordionTrigger>Show more</AccordionTrigger>
+              <AccordionContent>A single collapsible disclosure.</AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </div>
       ),
     },
     {
-      id: 'many-rows',
-      label: 'Many rows (overflow)',
-      note: 'Dense data drops to a 2-column grid so each telemetry value keeps enough width and never overflows its cell. The content grows to fit rather than scrolling.',
+      id: 'rich-content',
+      label: 'Rich content',
+      note: 'Content can hold any nodes — paragraphs, lists, links. The body animates its height open and closed regardless of what it contains.',
       render: () => (
-        <div className="w-[320px] overflow-hidden rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
-          <AccordionSection title="חיישנים (9)" icon={Radar} defaultOpen>
-            <div className="grid w-full grid-cols-2 gap-x-4 py-2">
-              {Array.from({ length: 9 }).map((_, i) => (
-                <TelemetryRow key={i} label={`חיישן ${i + 1}`} value={`${((i + 1) * 0.3).toFixed(1)} km`} />
-              ))}
-            </div>
-          </AccordionSection>
+        <div dir="ltr" className="w-[320px]">
+          <Accordion type="single" collapsible defaultValue="r">
+            <AccordionItem value="r">
+              <AccordionTrigger>What's included?</AccordionTrigger>
+              <AccordionContent>
+                <ul className="list-inside list-disc space-y-1">
+                  <li>Unlimited projects</li>
+                  <li>Priority support</li>
+                  <li>Custom integrations</li>
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </div>
       ),
     },

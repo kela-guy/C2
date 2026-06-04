@@ -2,7 +2,7 @@
  * Shared chrome palette for the Handoff Inspector.
  *
  * Sourced from the project's JS `SURFACE` tokens so the inspector reads
- * as a sibling of `PerfHud` and the rest of the dashboard's dev chrome.
+ * as a sibling of the rest of the dashboard's dev chrome.
  *
  * Why a JS module rather than CSS vars:
  * - `--color-n-*` lives in `src/index.css`, which `main.tsx` does NOT
@@ -40,7 +40,7 @@ export const INSPECTOR_BORDER = {
 
 /** Text tones layered on the surfaces above. Three steps, no hues. */
 export const INSPECTOR_TEXT = {
-  /** Primary copy and headings. Matches `PerfHud` (`#e6edf3`). */
+  /** Primary copy and headings (`#e6edf3`). */
   primary: '#e6edf3',
   /** Section titles, metadata, secondary labels. */
   muted: 'rgba(255, 255, 255, 0.55)',

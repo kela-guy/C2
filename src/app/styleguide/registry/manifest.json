@@ -2,14 +2,24 @@
   "$schema": "./manifest.schema.json",
   "components": [
     {
-      "id": "status-chip",
-      "name": "StatusChip",
+      "id": "badge",
+      "name": "Badge",
       "tier": "primitive",
       "group": "Indicators",
-      "description": "Compact colored badge indicating the operational status of a target or system.",
-      "importPath": "@/primitives",
-      "registryName": "status-chip",
-      "handoffHints": ["status-chip", "badge"]
+      "description": "Compact label for status, counts, and metadata. Six variants on the C2 dark surface — translucent fills and layered rings, no hard borders.",
+      "importPath": "@/shared/components/ui/badge",
+      "registryName": "badge",
+      "handoffHints": ["badge", "status-chip"],
+      "states": [
+        { "id": "default", "label": "Default", "note": "Resting translucent white fill." },
+        { "id": "hover", "label": "Hover", "note": "Brighter surface on interactive (link/asChild) badges." },
+        { "id": "focus", "label": "Focus-visible", "note": "White ring when the badge is a focusable link." }
+      ],
+      "props": [
+        { "name": "variant", "type": "'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link'", "default": "'default'", "description": "Surface treatment." },
+        { "name": "asChild", "type": "boolean", "default": "false", "description": "Render styling onto a child element (Radix Slot) — e.g. an anchor." },
+        { "name": "className", "type": "string", "description": "Class overrides merged via cn()." }
+      ]
     },
     {
       "id": "new-updates",
@@ -26,30 +36,22 @@
       "name": "Button",
       "tier": "primitive",
       "group": "Actions",
-      "description": "The base button primitive — the father of the button family. Owns the variant + size token system and the full state set. ActionButton, SplitActionButton, and CameraToggleButton are presets/composites built on it.",
-      "importPath": "@/primitives",
+      "description": "The base button primitive — the father of the button family. Owns the variant + size token system rendered in the C2 design (layered white opacities, oklch destructive). ActionButton, SplitActionButton, and CameraToggleButton are presets/composites built on it.",
+      "importPath": "@/shared/components/ui/button",
+      "registryName": "button",
       "handoffHints": ["button"],
       "states": [
         { "id": "default", "label": "Default", "note": "Resting fill surface." },
         { "id": "hover", "label": "Hover", "note": "Brighter white surface on pointer-over." },
         { "id": "active", "label": "Active", "note": "Scale 0.98 press feedback." },
         { "id": "focus", "label": "Focus-visible", "note": "Inset white ring for keyboard nav." },
-        { "id": "disabled", "label": "Disabled", "note": "45% opacity, pointer-events none." },
-        { "id": "loading", "label": "Loading", "note": "Spinner replaces icon, cursor-wait." },
-        { "id": "pressed", "label": "Pressed (toggle)", "note": "Brighter fill + inset ring when aria-pressed." }
+        { "id": "disabled", "label": "Disabled", "note": "45% opacity, pointer-events none." }
       ],
       "props": [
-        { "name": "label", "type": "string", "description": "Button text. Animates on change." },
-        { "name": "icon", "type": "React.ElementType", "description": "Optional leading icon component." },
-        { "name": "onClick", "type": "(e: MouseEvent) => void", "description": "Click handler. Suppressed while disabled/loading." },
-        { "name": "variant", "type": "'fill' | 'ghost' | 'outline' | 'danger' | 'warning'", "default": "'fill'", "description": "Surface treatment. Danger/warning use oklch." },
-        { "name": "size", "type": "'sm' | 'md' | 'lg'", "default": "'md'", "description": "Height + type scale." },
-        { "name": "disabled", "type": "boolean", "default": "false", "description": "Non-interactive, dimmed." },
-        { "name": "loading", "type": "boolean", "default": "false", "description": "Shows spinner, sets aria-live polite." },
-        { "name": "pressed", "type": "boolean", "description": "Toggle state. When defined, advertises aria-pressed." },
-        { "name": "title", "type": "string", "description": "When set, wraps the button in a tooltip." },
+        { "name": "variant", "type": "'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link'", "default": "'default'", "description": "Surface treatment. Destructive uses oklch." },
+        { "name": "size", "type": "'default' | 'sm' | 'lg' | 'icon'", "default": "'default'", "description": "Height + type scale; icon is a square slot." },
         { "name": "asChild", "type": "boolean", "default": "false", "description": "Render styling onto a child element (Radix Slot) for links/polymorphism." },
-        { "name": "dataHandoff", "type": "string", "default": "'button'", "description": "data-handoff-component stamp. Presets override it." },
+        { "name": "disabled", "type": "boolean", "default": "false", "description": "Non-interactive, dimmed to 45%." },
         { "name": "className", "type": "string", "description": "Class overrides merged via cn()." }
       ]
     },
@@ -97,13 +99,29 @@
     },
     {
       "id": "accordion",
-      "name": "AccordionSection",
+      "name": "Accordion",
       "tier": "primitive",
       "group": "Layout",
-      "description": "Collapsible section with animated expand/collapse. Used inside cards for details, logs, and sensors.",
-      "importPath": "@/primitives",
-      "registryName": "accordion-section",
-      "handoffHints": ["accordion", "accordion-item", "accordion-trigger", "accordion-content"]
+      "description": "A vertically stacked set of collapsible sections, built on Radix. Each item animates its height open and closed; type single/multiple controls how many can be open.",
+      "importPath": "@/shared/components/ui/accordion",
+      "registryName": "accordion",
+      "handoffHints": ["accordion", "accordion-item", "accordion-trigger", "accordion-content"],
+      "states": [
+        { "id": "closed", "label": "Closed", "note": "Resting; chevron points down." },
+        { "id": "open", "label": "Open", "note": "Body expands with the accordion-down height animation; chevron rotates 180deg." },
+        { "id": "hover", "label": "Hover", "note": "Trigger underlines on pointer-over." },
+        { "id": "focus", "label": "Focus-visible", "note": "Ring on the trigger for keyboard nav." },
+        { "id": "disabled", "label": "Disabled", "note": "50% opacity, pointer-events none on the item trigger." }
+      ],
+      "props": [
+        { "name": "type", "type": "'single' | 'multiple'", "description": "Single allows one open item; multiple allows many." },
+        { "name": "collapsible", "type": "boolean", "default": "false", "description": "Single-type only: lets the open item close again." },
+        { "name": "defaultValue", "type": "string | string[]", "description": "Uncontrolled initial open item(s). Array when type is multiple." },
+        { "name": "value", "type": "string | string[]", "description": "Controlled open item(s)." },
+        { "name": "onValueChange", "type": "(value: string | string[]) => void", "description": "Fires when the open item(s) change." },
+        { "name": "disabled", "type": "boolean", "default": "false", "description": "On AccordionItem: makes the item non-interactive." },
+        { "name": "className", "type": "string", "description": "Class overrides merged via cn(). Available on every part." }
+      ]
     },
     {
       "id": "telemetry",
@@ -124,7 +142,7 @@
       "description": "Top row of a TargetCard — icon, title, subtitle, status chip, badge, and chevron.",
       "importPath": "@/primitives",
       "registryName": "card-header",
-      "anatomy": ["status-chip"],
+      "anatomy": ["badge"],
       "handoffHints": ["card-header"]
     },
     {
@@ -200,7 +218,7 @@
       "description": "The core card shell. Composes CardHeader with slot children via the useCardSlots hook. The single most important block in the system.",
       "importPath": "@/primitives",
       "registryName": "target-card",
-      "anatomy": ["card-header", "card-media", "card-actions", "card-details", "card-sensors", "card-log", "card-closure", "status-chip"],
+      "anatomy": ["card-header", "card-media", "card-actions", "card-details", "card-sensors", "card-log", "card-closure", "badge"],
       "states": [
         { "id": "collapsed", "label": "Collapsed", "note": "Header only; chevron down." },
         { "id": "open", "label": "Open", "note": "Header tinted, content expands with collapsible animation." },
@@ -237,7 +255,7 @@
       "group": "Assemblies",
       "description": "One collapsible row per field asset, registry-driven. Health tile, primary cluster, footer actions, and overflow.",
       "importPath": "@/shared/components/DevicesPanel",
-      "anatomy": ["status-chip", "telemetry"],
+      "anatomy": ["badge", "telemetry"],
       "handoffHints": ["device-card", "device-row", "device-row-header", "device-row-details"]
     },
     {

@@ -9,13 +9,14 @@
  * `active:scale` press feedback, transform/opacity-only animation, reduced
  * motion, and `aria-label` on icon-only buttons.
  */
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Check, ChevronsDownUp, Code2, Copy } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { SURFACE } from '@/primitives';
 import { cn } from '@/shared/components/ui/utils';
 import type { EdgeCase, PropDef } from './types';
 import { useShikiHtml, type ShikiLang } from './useShiki';
+import { stripCodeComments } from './stripCodeComments';
 
 /** Layered ring — the single depth strategy used across docs. */
 export const RING = 'shadow-[0_0_0_1px_rgba(255,255,255,0.06)]';
@@ -61,7 +62,10 @@ export function CopyButton({ text, label = 'Copy' }: { text: string; label?: str
  * surface shows through.
  */
 export function Code({ code, lang = 'tsx' }: { code: string; lang?: ShikiLang }) {
-  const html = useShikiHtml(code, lang);
+  // Styleguide previews show comment-free code so the snippet reads as the
+  // API shape, not its inline narration.
+  const clean = useMemo(() => stripCodeComments(code, lang), [code, lang]);
+  const html = useShikiHtml(clean, lang);
   if (html) {
     return (
       <div
@@ -73,7 +77,7 @@ export function Code({ code, lang = 'tsx' }: { code: string; lang?: ShikiLang })
   }
   return (
     <pre dir="ltr" className="overflow-x-auto px-4 py-3.5 text-sm leading-relaxed">
-      <code className="font-mono text-white/80 tabular-nums">{code}</code>
+      <code className="font-mono text-white/80 tabular-nums">{clean}</code>
     </pre>
   );
 }
@@ -88,10 +92,11 @@ export function CodeBlock({
   className?: string;
   lang?: ShikiLang;
 }) {
+  const clean = useMemo(() => stripCodeComments(code, lang), [code, lang]);
   return (
     <div className={cn('relative rounded-lg overflow-hidden', RING, className)} style={{ backgroundColor: SURFACE.level0 }}>
       <div className="absolute right-2 top-2 z-10">
-        <CopyButton text={code} />
+        <CopyButton text={clean} />
       </div>
       <Code code={code} lang={lang} />
     </div>
@@ -119,6 +124,15 @@ export function ComponentPreview({
   height?: number | string;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const cleanCode = useMemo(() => (code ? stripCodeComments(code, lang) : undefined), [code, lang]);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // Collapsing while the code is scrolled would otherwise leave the container's
+  // retained scrollTop showing a mid-snippet slice under the "View Code" fade —
+  // reset to the top before switching back to the clipped state.
+  const handleCollapse = useCallback(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+    setExpanded(false);
+  }, []);
   return (
     <div
       className={cn('group relative flex flex-col overflow-hidden rounded-xl', RING)}
@@ -140,10 +154,31 @@ export function ComponentPreview({
 
       {code && (
         <div className="relative border-t border-white/[0.06]" style={{ backgroundColor: SURFACE.level1 }}>
-          <div className="absolute right-2 top-3 z-20 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
-            <CopyButton text={code} />
+          {/* Pinned control cluster — lives outside the scroll container so the
+              Collapse affordance stays clickable no matter how far the code has
+              been scrolled. Copy reveals on hover; Collapse only exists (and is
+              always visible) once expanded. */}
+          <div
+            className={cn(
+              'absolute right-2 top-3 z-20 flex items-center gap-1 transition-opacity duration-150',
+              expanded
+                ? 'opacity-100'
+                : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100',
+            )}
+          >
+            {expanded && (
+              <button
+                type="button"
+                onClick={handleCollapse}
+                aria-label="Collapse"
+                className="flex size-8 items-center justify-center rounded-md text-white/50 transition-[color,background-color,transform] duration-150 ease-out hover:bg-white/[0.08] hover:text-white/90 active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+              >
+                <ChevronsDownUp size={14} aria-hidden="true" />
+              </button>
+            )}
+            <CopyButton text={cleanCode ?? code} />
           </div>
-          <div className={cn('relative overflow-hidden', expanded ? 'max-h-[640px] overflow-auto' : 'max-h-72')}>
+          <div ref={scrollRef} className={cn('relative overflow-hidden', expanded ? 'max-h-[640px] overflow-auto' : 'max-h-40')}>
             <Code code={code} lang={lang} />
             {!expanded && (
               <div className="absolute inset-0 flex items-center justify-center pb-4">
@@ -168,18 +203,6 @@ export function ComponentPreview({
               </div>
             )}
           </div>
-          {expanded && (
-            <div className="flex justify-center border-t border-white/[0.06] py-2">
-              <button
-                type="button"
-                onClick={() => setExpanded(false)}
-                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-n-9 transition-[color,background-color,transform] duration-150 ease-out hover:bg-white/[0.06] hover:text-n-11 active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
-              >
-                <ChevronsDownUp size={14} aria-hidden="true" />
-                Collapse
-              </button>
-            </div>
-          )}
         </div>
       )}
     </div>

@@ -6,8 +6,8 @@
  *
  * Section order mirrors the reverse-engineered shadcn/base-ui anatomy:
  * header -> stacked Preview+Code hero -> Examples -> Edge cases ->
- * Anatomy (Blocks) -> States -> API reference. The live Preview is the single
- * focal point per the ui-craft surface model.
+ * Anatomy (Blocks). The live Preview is the single focal point per the
+ * ui-craft surface model.
  */
 import { Boxes, Component as ComponentIcon } from 'lucide-react';
 import { getComponent, resolveAnatomy } from './manifest';
@@ -17,7 +17,6 @@ import {
   DocSectionHeading,
   DocSectionLead,
   EdgeCaseGrid,
-  PropsTable,
   RING,
 } from './docPrimitives';
 import { cn } from '@/shared/components/ui/utils';
@@ -103,30 +102,6 @@ function ParentBacklink({
       <ComponentIcon size={12} aria-hidden="true" />
       Built on {parent.name}
     </button>
-  );
-}
-
-function StatesSection({ c }: { c: ResolvedComponent }) {
-  if (!c.states || c.states.length === 0) return null;
-  return (
-    <section>
-      <DocSectionHeading id="states">States</DocSectionHeading>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {c.states.map((s) => (
-          <div
-            key={s.id}
-            className={cn('rounded-lg p-3', RING)}
-            style={{ backgroundColor: SURFACE.level1 }}
-          >
-            <div className="flex items-baseline gap-2">
-              <span className="text-sm font-medium text-n-11">{s.label}</span>
-              <span className="font-mono text-xs text-n-120">{s.id}</span>
-            </div>
-            {s.note && <p className="mt-1 text-sm leading-relaxed text-n-9">{s.note}</p>}
-          </div>
-        ))}
-      </div>
-    </section>
   );
 }
 
@@ -223,14 +198,6 @@ export function ComponentDoc({
       <ExamplesSection c={c} />
       <EdgeCasesSection c={c} />
       <AnatomySection c={c} onNavigate={onNavigate} />
-      <StatesSection c={c} />
-
-      {c.props && c.props.length > 0 && (
-        <section>
-          <DocSectionHeading id="api">API reference</DocSectionHeading>
-          <PropsTable items={c.props} />
-        </section>
-      )}
     </article>
   );
 }

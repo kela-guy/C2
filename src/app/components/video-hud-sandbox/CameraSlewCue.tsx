@@ -63,7 +63,7 @@ export function CameraSlewCue({ deltaDeg, bloom = 0 }: CameraSlewCueProps) {
         className="absolute inset-0 flex items-center justify-center"
         style={{ transform: `translateX(${offset}px)` }}
       >
-        <CenterCrosshair bloom={bloom} />
+        <CenterCrosshair bloom={bloom} scale={1.8} />
       </div>
     </div>
   );

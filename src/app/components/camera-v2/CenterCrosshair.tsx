@@ -30,31 +30,37 @@ const MAX_BLOOM_PX = 8;
 interface CenterCrosshairProps {
   /** 0 = at rest (~7px inner gap, 9px arms, 2px thick), 1 = fully bloomed (+8px outward per arm). */
   bloom?: number;
+  /** Multiplies arm length, rest offset and bloom travel (thickness stays crisp). Default 1. */
+  scale?: number;
 }
-
-const bloomCalc = (sign: 1 | -1) =>
-  `calc(${sign * REST_OFFSET_PX}px + var(--reticle-bloom, 0) * ${sign * MAX_BLOOM_PX}px)`;
 
 const armBase: CSSProperties = {
   position: 'absolute',
   backgroundColor: 'currentColor',
 };
 
-const vArmStyle = (sign: 1 | -1): CSSProperties => ({
-  ...armBase,
-  width: ARM_THICKNESS_PX,
-  height: ARM_LEN_PX,
-  transform: `translateY(${bloomCalc(sign)})`,
-});
+export function CenterCrosshair({ bloom = 0, scale = 1 }: CenterCrosshairProps) {
+  const armLen = ARM_LEN_PX * scale;
+  const restOffset = REST_OFFSET_PX * scale;
+  const maxBloom = MAX_BLOOM_PX * scale;
 
-const hArmStyle = (sign: 1 | -1): CSSProperties => ({
-  ...armBase,
-  width: ARM_LEN_PX,
-  height: ARM_THICKNESS_PX,
-  transform: `translateX(${bloomCalc(sign)})`,
-});
+  const bloomCalc = (sign: 1 | -1) =>
+    `calc(${sign * restOffset}px + var(--reticle-bloom, 0) * ${sign * maxBloom}px)`;
 
-export function CenterCrosshair({ bloom = 0 }: CenterCrosshairProps) {
+  const vArmStyle = (sign: 1 | -1): CSSProperties => ({
+    ...armBase,
+    width: ARM_THICKNESS_PX,
+    height: armLen,
+    transform: `translateY(${bloomCalc(sign)})`,
+  });
+
+  const hArmStyle = (sign: 1 | -1): CSSProperties => ({
+    ...armBase,
+    width: armLen,
+    height: ARM_THICKNESS_PX,
+    transform: `translateX(${bloomCalc(sign)})`,
+  });
+
   const rootStyle = {
     ['--reticle-bloom' as string]: bloom,
   } satisfies CSSProperties;

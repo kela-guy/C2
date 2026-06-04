@@ -19,7 +19,10 @@ function AccordionItem({
   return (
     <AccordionPrimitive.Item
       data-slot="accordion-item"
-      className={cn("border-b last:border-b-0", className)}
+      className={cn(
+        "border-b border-white/[0.06] last:border-b-0",
+        className,
+      )}
       {...props}
     />
   );
@@ -35,13 +38,13 @@ function AccordionTrigger({
       <AccordionPrimitive.Trigger
         data-slot="accordion-trigger"
         className={cn(
-          "focus-visible:border-ring focus-visible:ring-ring/50 flex flex-1 items-start justify-between gap-4 rounded-md py-4 text-start text-sm font-medium transition-all outline-none hover:underline focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50 [&[data-state=open]>svg]:rotate-180",
+          "group flex flex-1 cursor-pointer items-center justify-between gap-4 bg-white/[0.08] px-2 py-2 text-start text-sm font-normal text-zinc-300 outline-none transition-colors hover:bg-white/[0.11] focus-visible:ring-2 focus-visible:ring-white/25 disabled:pointer-events-none disabled:opacity-50 [&[data-state=open]>svg]:rotate-180",
           className,
         )}
         {...props}
       >
         {children}
-        <ChevronDownIcon className="text-muted-foreground pointer-events-none size-4 shrink-0 translate-y-0.5 transition-transform duration-200" />
+        <ChevronDownIcon className="pointer-events-none size-4 shrink-0 text-zinc-500 transition-transform duration-200" />
       </AccordionPrimitive.Trigger>
     </AccordionPrimitive.Header>
   );
@@ -55,10 +58,10 @@ function AccordionContent({
   return (
     <AccordionPrimitive.Content
       data-slot="accordion-content"
-      className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down overflow-hidden text-sm"
+      className="overflow-hidden text-sm text-zinc-300 data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down"
       {...props}
     >
-      <div className={cn("pt-0 pb-4", className)}>{children}</div>
+      <div className={cn("bg-white/[0.03] px-2 py-2", className)}>{children}</div>
     </AccordionPrimitive.Content>
   );
 }

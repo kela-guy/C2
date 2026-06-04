@@ -140,17 +140,20 @@ export const NAV: NavGroup[] = [
           { id: 'icon-catalog', label: 'Icon Catalog' },
         ],
       },
-      {
-        id: 'cesium-map',
-        label: 'Cesium Map',
-        children: [
-          { id: 'cesium-basics', label: 'Basics' },
-          { id: 'cesium-fov', label: 'FOV + Coverage' },
-          { id: 'cesium-fly-to', label: 'Fly-To' },
-          { id: 'cesium-step-2', label: 'Step 2 — Opportunities' },
-        ],
-      },
-      { id: 'playback-investigation', label: 'Playback Investigation' },
+    ],
+  },
+  {
+    label: 'Video HUD',
+    items: [
+      { id: 'hud-device-select', label: 'Device Select' },
+      { id: 'hud-angle-toggle', label: 'Angle Toggle' },
+      { id: 'hud-setpoint-rail', label: 'Setpoint Rail' },
+      { id: 'hud-connectivity', label: 'Connectivity' },
+      { id: 'hud-slew-cue', label: 'Slew Cue' },
+      { id: 'hud-auto-track', label: 'Auto-Track' },
+      { id: 'hud-detections', label: 'Detections' },
+      { id: 'hud-day-night', label: 'Day / Night' },
+      { id: 'hud-context-menu', label: 'Context Menu' },
     ],
   },
 ];

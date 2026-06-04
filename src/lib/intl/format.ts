@@ -8,7 +8,7 @@
  *    1. Hard-coded `Intl.DateTimeFormat('he-IL', …)` (Dashboard clock,
  *       NotificationSystem timestamps).
  *    2. Bare `value.toLocaleString()` with no locale tag (DevicesPanel
- *       distance, PerfHud counters, chart axes).
+ *       distance, chart axes).
  *    3. Inline `Intl` constructors created on every render (cheap per
  *       call, expensive in tight loops like log streams).
  *

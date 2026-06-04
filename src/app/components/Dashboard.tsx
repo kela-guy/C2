@@ -24,16 +24,14 @@ import { Separator } from '@/shared/components/ui/separator';
 import { DevicesPanel, DevicesIcon, DEVICE_CAMERA_DRAG_TYPE } from './DevicesPanel';
 import type { DeviceCameraDragItem } from './DevicesPanel';
 import { useDevicesFromAssets } from './useDevicesFromAssets';
-import { CameraViewerPanel } from './CameraViewerPanel';
-import type { CameraFeed } from './CameraViewerPanel';
+import { VideoHudPanel } from './video-hud-sandbox/VideoHudPanel';
+import type { VideoHudPanelFeed as CameraFeed } from './video-hud-sandbox/VideoHudPanel';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/shared/components/ui/resizable';
 import { LAYOUT_TOKENS, SURFACE } from '@/primitives/tokens';
 import { toast } from 'sonner';
 import { getPriorityBaseline } from '@/imports/useActivityStatus';
 import { useDirection, useIsRtl, useLocale } from '@/lib/direction';
 import { useStrings, getStrings, type Strings } from '@/lib/intl';
-import { measure } from '@/lib/perf/measure';
-import { PerfProfiled } from './perf/PerfProfiled';
 
 // Stable no-op handler identities and empty collections, shared across renders.
 // Defining these at module scope (instead of recreating them inside Dashboard
@@ -536,7 +534,6 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
     if (!SIM_ENABLED) return;
     const tick = setInterval(() => {
       if (typeof document !== 'undefined' && document.hidden) return;
-      measure('Sim', 'sim.friendlyPatrol', () => {
       trailTickRef.current += 1;
       const sampleTrail = trailTickRef.current % TRAIL_SAMPLE_EVERY === 0;
 
@@ -573,7 +570,6 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
           };
         })
       );
-      }, { properties: { tick: trailTickRef.current, drones: friendlyPatrolRoutes.length } });
     }, PATROL_TICK_MS);
 
     return () => clearInterval(tick);
@@ -613,7 +609,6 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
       // renders frames on demand for new state but the sim doesn't
       // generate any.
       if (typeof document !== 'undefined' && document.hidden) return;
-      measure('Sim', 'sim.hostileLoiter', () => {
       trailTick++;
       const sampleTrail = trailTick % TRAIL_SAMPLE_EVERY === 0;
       // Track which target ids loitered this tick so we can prune
@@ -716,7 +711,6 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
           delete store[id];
         }
       }
-      }, { properties: { tick: trailTick } });
     }, TICK_MS);
 
     return () => clearInterval(interval);
@@ -1845,7 +1839,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
   return (
     <div className="relative flex w-full h-screen overflow-hidden text-white font-sans selection:bg-red-500/30">
       {/* Minimal Left Nav */}
-      <TooltipProvider delayDuration={200}>
+      <TooltipProvider>
       <nav className="relative z-50 flex flex-col justify-start items-center w-8 flex-shrink-0 h-full bg-[#1a1a1a] border-e border-white/10">
         <div className="flex items-center justify-center h-9 w-full">
           <div className="text-white scale-75 origin-center">
@@ -2044,7 +2038,6 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
                 * dashboard down with it.
                 */}
               <CesiumErrorBoundary>
-                <PerfProfiled id="CesiumTacticalMap">
                 <CesiumTacticalMap
                   targets={targets}
                   activeTargetId={activeTargetId}
@@ -2077,7 +2070,6 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
                   sensorDetectionLinks={flowSensorLinks}
                   flowPreview={flowPreview}
                 />
-                </PerfProfiled>
               </CesiumErrorBoundary>
             </div>
           </ResizablePanel>
@@ -2086,14 +2078,12 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
             <>
               <ResizableHandle className="w-px bg-white/10 hover:bg-white/20 transition-colors duration-150 ease-out" />
               <ResizablePanel defaultSize={45} minSize={25} maxSize={60} collapsible collapsedSize={0} onCollapse={() => setCameraViewerFeeds([])}>
-                <PerfProfiled id="CameraViewerPanel">
-                  <CameraViewerPanel
+                  <VideoHudPanel
                     feeds={cameraViewerFeeds}
                     onFeedsChange={setCameraViewerFeeds}
                     onCameraHover={setHoveredSensorIdFromCard}
                     weaponFeedActive={weaponFeedActive}
                   />
-                </PerfProfiled>
               </ResizablePanel>
             </>
           )}
@@ -2126,7 +2116,6 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
             <h2 className="text-xs font-medium text-white/70 uppercase tracking-wider">{t.dashboard.activeSystemsHeading(targets.length)}</h2>
           </div>
           <div className="flex-1 overflow-y-auto" data-handoff-component="target-card">
-            <PerfProfiled id="ListOfSystems">
             <ListOfSystems
               className="flex flex-col gap-0"
               targets={targets}
@@ -2198,7 +2187,6 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
               onTargetHover={setHoveredTargetIdFromCard}
               thinMode
             />
-            </PerfProfiled>
           </div>
         </aside>
 

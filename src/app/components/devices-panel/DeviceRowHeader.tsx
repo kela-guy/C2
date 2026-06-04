@@ -15,9 +15,9 @@
 
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { BellOff } from '@/lib/icons/central';
+import { BellOff, List } from '@/lib/icons/central';
 import { DotmSquare18 } from '@/app/components/ui/dotm-square-18';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import { buildCollapsedMetricLine } from './utils';
 import type { ConnectionState, Device } from './types';
 import { resolveDeviceAction, type DeviceActionContext } from './deviceActions';
@@ -39,6 +39,7 @@ interface DeviceRowHeaderProps {
  */
 const HEALTH_TONE: Record<DeviceHealth, { dot: string; badge: string | null }> = {
   critical: { dot: 'bg-red-400', badge: 'bg-red-500/20 text-red-300' },
+  error: { dot: 'bg-red-400', badge: 'bg-red-500/20 text-red-300' },
   warning: { dot: 'bg-amber-400', badge: 'bg-amber-500/20 text-amber-300' },
   offline: { dot: 'bg-zinc-500', badge: null },
   ok: { dot: 'bg-emerald-400', badge: null },
@@ -56,6 +57,7 @@ export function DeviceRowHeader({ device, cfg, ctx, connectionStateLabels }: Dev
 
   const healthLabel = {
     critical: strings.healthCritical,
+    error: strings.healthError,
     warning: strings.healthWarning,
     offline: strings.healthOffline,
     ok: strings.healthHealthy,
@@ -100,8 +102,7 @@ export function DeviceRowHeader({ device, cfg, ctx, connectionStateLabels }: Dev
           <TooltipContent
             side="top"
             sideOffset={6}
-            showArrow={false}
-            className="min-w-[184px] max-w-[260px] overflow-hidden rounded-none p-0 bg-zinc-800 text-xs text-zinc-300 shadow-[0_0_0_1px_rgba(255,255,255,0.1)]"
+            className="min-w-[184px] max-w-[260px] overflow-hidden p-0"
           >
             <div className="flex items-center justify-start gap-1.5 px-2.5 py-1.5">
               <span className={`size-1.5 shrink-0 rounded-full ${tone.dot}`} />
@@ -165,6 +166,14 @@ function PrimaryCluster({ cfg, ctx }: { cfg: DeviceTypeConfig; ctx: DeviceAction
 
   return (
     <div className="flex shrink-0 items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+      {ctx.errorCount > 0 && (
+        <LogsErrorButton
+          count={ctx.errorCount}
+          logsLabel={ctx.strings.logs}
+          errorsLabel={ctx.strings.errors}
+          onOpenErrors={ctx.onOpenErrors}
+        />
+      )}
       <SpeakerNowPlaying ctx={ctx} />
       {inboard.map((id) => {
         const resolved = resolveDeviceAction(id, ctx, 'header');
@@ -177,6 +186,49 @@ function PrimaryCluster({ cfg, ctx }: { cfg: DeviceTypeConfig; ctx: DeviceAction
       />
       {center?.node}
     </div>
+  );
+}
+
+/**
+ * Header error channel — only mounts when the device has open errors. Shows
+ * the Logs glyph + count in red (no resting surface, just a hover affordance)
+ * so a broken asset surfaces its error count without expanding the row;
+ * clicking opens the errors modal listing each open error.
+ */
+function LogsErrorButton({
+  count,
+  logsLabel,
+  errorsLabel,
+  onOpenErrors,
+}: {
+  count: number;
+  logsLabel: string;
+  errorsLabel: string;
+  onOpenErrors: () => void;
+}) {
+  const display = count > 99 ? '99+' : count;
+  const label = `${logsLabel} · ${count} ${errorsLabel}`;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          data-handoff-component="device-logs-error"
+          aria-label={label}
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenErrors();
+          }}
+          className="inline-flex h-6 shrink-0 items-center gap-1 rounded px-1.5 text-xs font-medium text-red-300 transition-[background-color,transform] duration-150 ease-out hover:bg-red-500/10 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300/40 [&_svg]:size-3"
+        >
+          <List size={12} />
+          <span className="tabular-nums">{display}</span>
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top" sideOffset={6} className="whitespace-nowrap">
+        {label}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 

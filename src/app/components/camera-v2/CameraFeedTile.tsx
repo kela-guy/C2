@@ -59,6 +59,9 @@ interface CameraFeedTileProps {
   /** Fired when the operator designates a point on the feed as a target.
    * Coordinates are normalised to the feed (0..1, top-left origin). */
   onDesignateTarget?: (normX: number, normY: number) => void;
+  /** Override the right-click menu. Receives the tile content and must wrap
+   * it in a context-menu trigger. Defaults to the standard CameraContextMenu. */
+  renderContextMenu?: (content: React.ReactNode) => React.ReactNode;
 }
 
 export function CameraFeedTile({
@@ -87,6 +90,7 @@ export function CameraFeedTile({
   onFocus,
   onResetView,
   onDesignateTarget,
+  renderContextMenu,
 }: CameraFeedTileProps) {
   const tile = useStrings().camera.feedTile;
   const [hovered, setHovered] = useState(false);
@@ -228,19 +232,7 @@ export function CameraFeedTile({
     ? 'absolute top-0 inset-x-0 h-1/2 overflow-hidden'
     : 'absolute inset-0 overflow-hidden';
 
-  return (
-    <CameraContextMenu
-      mode={feed.mode}
-      status={status}
-      detectionsOn={detectionsOn}
-      designateMode={designateMode}
-      onTakeRelease={handleTakeRelease}
-      onModeToggle={onModeToggle}
-      onDetectionsToggle={onDetectionsToggle}
-      onDesignateModeToggle={onDesignateModeToggle}
-      onResetView={() => onResetView?.()}
-      onOpenSettings={() => setSettingsOpen(true)}
-    >
+  const tileContent = (
       <div
         ref={dropRef}
         tabIndex={0}
@@ -318,6 +310,26 @@ export function CameraFeedTile({
           onAssignmentClick={onAssignmentClick}
         />
       </div>
+  );
+
+  if (renderContextMenu) {
+    return <>{renderContextMenu(tileContent)}</>;
+  }
+
+  return (
+    <CameraContextMenu
+      mode={feed.mode}
+      status={status}
+      detectionsOn={detectionsOn}
+      designateMode={designateMode}
+      onTakeRelease={handleTakeRelease}
+      onModeToggle={onModeToggle}
+      onDetectionsToggle={onDetectionsToggle}
+      onDesignateModeToggle={onDesignateModeToggle}
+      onResetView={() => onResetView?.()}
+      onOpenSettings={() => setSettingsOpen(true)}
+    >
+      {tileContent}
     </CameraContextMenu>
   );
 }

@@ -8,14 +8,9 @@ import { Dashboard } from "./components/Dashboard";
 import FovTestPage from "./components/FovTestPage";
 import StyleguidePage from "./components/StyleguidePage";
 import UrgencyReviewPage from "./components/UrgencyReviewPage";
-import { TooltipProvider } from "./components/ui/tooltip";
+import { TooltipProvider } from "@/shared/components/ui/tooltip";
 import { AppLoader } from "./components/ui/app-loader";
 import { DirectionProvider } from "@/lib/direction";
-
-// Playground hosts the rebuilt video feature (`camera-v2/`). Code-split so
-// neither the production dashboard nor the styleguide bundle drags in
-// VideoPanel/CameraFeedTile/HUD overlays until someone opens `/playground`.
-const PlaygroundPage = lazy(() => import("./components/PlaygroundPage"));
 
 // Devices Lab — sandbox for the rebuilt, registry-driven device panel
 // (`devices-panel-next/`). Lives on its own route while the design is
@@ -46,15 +41,6 @@ function PlaygroundFallback() {
   );
 }
 
-// Dev-only perf HUD. Lazy-loaded so the import chain (stats-gl, sink,
-// observers) is dropped from production bundles via tree-shaking on
-// the `import.meta.env.DEV` constant. Becomes visible only when the
-// page loads with `?perf=1` (or persisted equivalent) — see
-// `src/lib/perf/flags.ts`.
-const PerfHud = import.meta.env.DEV
-  ? lazy(() => import("./components/perf/PerfHud").then((m) => ({ default: m.PerfHud })))
-  : null;
-
 // Handoff Inspector — code-split so the hover/click listeners,
 // capture pipeline, and popover only download when the route
 // actually mounts the picker. Shipped in production by request:
@@ -63,29 +49,10 @@ const PerfHud = import.meta.env.DEV
 const HandoffInspector = lazy(() => import("./components/handoff/HandoffInspector"));
 
 /**
- * Renders {@link PerfHud} on every route *except* `/demo`. The
- * marketing demo is recording-focused — the perf overlay is a dev
- * tool that must never appear in a marketing capture, even though
- * the rest of the dev environment (Vite, source maps, etc.) is
- * unchanged. Compiles to `null` in production via the
- * `import.meta.env.DEV` guard at the module-level `PerfHud` const.
- */
-function ScopedPerfHud() {
-  const { pathname } = useLocation();
-  if (!PerfHud) return null;
-  if (pathname.startsWith('/demo')) return null;
-  return (
-    <Suspense fallback={null}>
-      <PerfHud />
-    </Suspense>
-  );
-}
-
-/**
- * Renders {@link HandoffInspector} on every route *except* `/demo`,
- * mirroring {@link ScopedPerfHud}. The `/demo` skip stays because
- * the inspector glyph must never appear in a marketing recording,
- * even though the rest of the production surface is identical.
+ * Renders {@link HandoffInspector} on every route *except* `/demo`.
+ * The `/demo` skip stays because the inspector glyph must never appear
+ * in a marketing recording, even though the rest of the production
+ * surface is identical.
  */
 function ScopedHandoffInspector() {
   const { pathname } = useLocation();
@@ -108,13 +75,13 @@ export default function App() {
     <DirectionProvider>
       <DndProvider backend={HTML5Backend}>
         {/*
-          Single application-wide TooltipProvider. The shadcn `Tooltip`
-          wrapper used to mount its own provider per instance — fine for a
-          marketing site, expensive on a Dashboard with ~30 simultaneous
-          tooltips. Hoisting it here means every `Tooltip` consumer reads
-          from the same context (and the same delay-grouping timer).
+          Single application-wide TooltipProvider. The `Tooltip` wrapper no
+          longer mounts its own provider per instance, so every consumer reads
+          from this one context and shares the same delay-grouping timer. The
+          timing (600ms open / 300ms skip) lives on the `TooltipProvider`
+          defaults in `components/ui/tooltip`, so no props are needed here.
         */}
-        <TooltipProvider delayDuration={0}>
+        <TooltipProvider>
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Dashboard />} />
@@ -144,21 +111,6 @@ export default function App() {
               */}
               <Route path="/demo" element={<Dashboard demoMode />} />
               {/*
-                Playground — sandbox for the rebuilt camera-v2 video feature
-                (VideoPanel + tile HUDs). Lives on its own route while the
-                design is validated; once approved it replaces the legacy
-                CameraViewerPanel inside Dashboard. See
-                `src/app/components/camera-v2/README.md` for promotion path.
-              */}
-              <Route
-                path="/playground"
-                element={
-                  <Suspense fallback={<PlaygroundFallback />}>
-                    <PlaygroundPage />
-                  </Suspense>
-                }
-              />
-              {/*
                 Devices Lab — sandbox route for the registry-driven
                 device panel rebuild. Not linked from the main UI;
                 reviewers open it directly. Removed at promotion.
@@ -187,7 +139,6 @@ export default function App() {
                 />
               )}
             </Routes>
-            <ScopedPerfHud />
             <ScopedHandoffInspector />
           </BrowserRouter>
           <DialRoot position="bottom-right" />

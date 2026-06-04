@@ -8,7 +8,7 @@
  */
 
 import type { ReactNode } from 'react';
-import { Power, Sun } from '@/lib/icons/central';
+import { PowerFilled, SunFilled } from '@/lib/icons/central';
 import { cn } from '../../ui/utils';
 
 export interface FloodlightSegmentedProps {
@@ -111,13 +111,13 @@ function iconSlots(
     seg: chrome.seg,
     labelOff: (
       <>
-        <Power size={off.size} className={off.cls} />
+        <PowerFilled size={off.size} className={off.cls} />
         <span>Off</span>
       </>
     ),
     labelOn: (
       <>
-        <Sun size={on.size} className={cn(on.cls, p.on && 'drop-shadow-[0_0_5px_rgba(251,191,36,0.9)]')} />
+        <SunFilled size={on.size} className={cn(on.cls, p.on && 'drop-shadow-[0_0_5px_rgba(251,191,36,0.9)]')} />
         <span>On</span>
       </>
     ),

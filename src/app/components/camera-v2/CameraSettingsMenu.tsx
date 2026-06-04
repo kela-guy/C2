@@ -9,9 +9,22 @@
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover';
 import { Switch } from '@/shared/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
-import { Eye, History, Moon, Settings, Sun } from '@/lib/icons/central';
+import { Eye, History, SettingsFilled } from '@/lib/icons/central';
 import { useStrings } from '@/lib/intl';
 import type { CameraStatus, DayNightMode } from './types';
+
+/** Camera framing presets exposed by the (optional) auto-track item. */
+export type CameraAngle = 'straight' | 'down' | 'up' | 'left' | 'right';
+
+/**
+ * Per-instance copy overrides. Lets a host (e.g. the video HUD sandbox)
+ * relabel the menu without forking the component or the strings catalog.
+ */
+export interface SettingsLabelOverrides {
+  playbackLabel?: string;
+  displaySection?: string;
+  aiDetectionsLabel?: string;
+}
 
 interface CameraSettingsMenuProps {
   open: boolean;
@@ -23,25 +36,40 @@ interface CameraSettingsMenuProps {
   onModeToggle: () => void;
   onDetectionsToggle: () => void;
   onPlaybackToggle: () => void;
+  /** Optional copy overrides for the section/row labels. */
+  settingsLabelOverrides?: SettingsLabelOverrides;
+  /** Current "alerts muted" state for the mute-alerts row. */
+  mutedAlerts?: boolean;
+  /** Toggle handler for the mute-alerts row. */
+  onMutedAlertsToggle?: () => void;
+  /** Render the mute-alerts control as a toggle switch row. */
+  alertsAsSwitch?: boolean;
 }
 
 export function CameraSettingsMenu({
   open,
   onOpenChange,
-  status,
-  mode,
   detectionsOn,
   playbackEnabled,
-  onModeToggle,
   onDetectionsToggle,
   onPlaybackToggle,
+  settingsLabelOverrides,
+  mutedAlerts = false,
+  onMutedAlertsToggle,
+  alertsAsSwitch = false,
 }: CameraSettingsMenuProps) {
   const t = useStrings().camera.settingsMenu;
-  const writeDisabled = status.controlOwner === 'other';
   const playbackLabel = playbackEnabled ? t.playbackSplitLabel : t.liveLabel;
   const playbackDescription = playbackEnabled
     ? t.playbackSplitDescription
     : t.liveDescription;
+  const playbackSectionTitle =
+    settingsLabelOverrides?.playbackLabel ?? t.playbackSection;
+  const displaySectionTitle =
+    settingsLabelOverrides?.displaySection ?? t.displaySection;
+  const aiDetectionsLabel =
+    settingsLabelOverrides?.aiDetectionsLabel ?? t.aiDetectionsLabel;
+  const showMuteAlerts = alertsAsSwitch && onMutedAlertsToggle != null;
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
@@ -52,18 +80,18 @@ export function CameraSettingsMenu({
               type="button"
               aria-label={t.settingsTriggerAriaLabel}
               aria-pressed={open}
-              className={`p-2 transition-colors duration-150 ease-out
+              className={`p-2 rounded-full transition-colors duration-150 ease-out
                 focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none
                 active:scale-[0.97]
                 ${open
                   ? 'bg-white/15 text-white ring-1 ring-inset ring-white/20'
                   : 'text-white/80 hover:text-white hover:bg-white/10'}`}
             >
-              <Settings size={14} />
+              <SettingsFilled size={14} />
             </button>
           </PopoverTrigger>
         </TooltipTrigger>
-        <TooltipContent side="top" sideOffset={6} className="rounded-none text-xs">
+        <TooltipContent side="top" sideOffset={6}>
           {t.settingsHeading}
         </TooltipContent>
       </Tooltip>
@@ -74,7 +102,7 @@ export function CameraSettingsMenu({
         sideOffset={8}
         className="w-[280px] p-0 rounded-none bg-[#1a1a1a]/95 backdrop-blur-xl shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_25px_50px_-12px_rgba(0,0,0,0.5)] border-none"
       >
-        <Section title={t.playbackSection} icon={<History size={11} />}>
+        <Section title={playbackSectionTitle} icon={<History size={11} />}>
           <Row
             label={playbackLabel}
             description={playbackDescription}
@@ -90,29 +118,23 @@ export function CameraSettingsMenu({
 
         <SectionDivider />
 
-        <Section title={t.displaySection} icon={<Eye size={11} />}>
-          <Row label={t.aiDetectionsLabel} description={t.aiDetectionsDescription}>
+        <Section title={displaySectionTitle} icon={<Eye size={11} />}>
+          <Row label={aiDetectionsLabel} description={t.aiDetectionsDescription}>
             <Switch
               checked={detectionsOn}
               onCheckedChange={onDetectionsToggle}
               aria-label={t.aiDetectionsAriaLabel}
             />
           </Row>
-          <Row
-            label={mode === 'day' ? t.currentDay : t.currentNight}
-            description={t.modeDescription}
-            disabled={writeDisabled}
-          >
-            <button
-              type="button"
-              onClick={onModeToggle}
-              disabled={writeDisabled}
-              aria-label={mode === 'day' ? t.switchToNightAriaLabel : t.switchToDayAriaLabel}
-              className="p-1.5 text-white/85 hover:text-white hover:bg-white/10 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
-            >
-              {mode === 'day' ? <Moon size={13} /> : <Sun size={13} />}
-            </button>
-          </Row>
+          {showMuteAlerts && (
+            <Row label={t.muteAlertsLabel} description={t.muteAlertsDescription}>
+              <Switch
+                checked={mutedAlerts}
+                onCheckedChange={onMutedAlertsToggle}
+                aria-label={t.muteAlertsAriaLabel}
+              />
+            </Row>
+          )}
         </Section>
       </PopoverContent>
     </Popover>

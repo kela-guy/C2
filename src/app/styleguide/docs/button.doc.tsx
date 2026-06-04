@@ -1,81 +1,100 @@
 /**
- * Co-located doc module for the base Button primitive — the father of the
- * button family. Provides the live examples + raw source consumed by the
- * generic ComponentDoc renderer; the meta (props, states, handoff hints) lives
- * in `registry/manifest.json`, and the family children (ActionButton,
- * SplitActionButton, CameraToggleButton, CopyButton) are linked via the
- * manifest's `parentId` -> Family section.
- *
- * Craft gate: examples render the full state set (default / hover / active /
- * focus-visible / disabled / loading / pressed).
+ * Co-located doc module for the generic Button primitive
+ * (`@/shared/components/ui/button`), wearing the C2 design — the variant +
+ * size token system rendered as layered white opacities (and an oklch
+ * destructive) on the dark control-room surface. Meta lives in
+ * `registry/manifest.json`; the family children (ActionButton,
+ * SplitActionButton, CameraToggleButton, CopyButton) link back via `parentId`.
  */
-import { useState } from 'react';
-import { Crosshair, Zap, Ban } from '@/lib/icons/central';
-import { Button } from '@/primitives';
-import buttonSrc from '@/primitives/Button.tsx?raw';
+import { Plus, Trash2 } from 'lucide-react';
+import { Button } from '@/shared/components/ui/button';
+import buttonSrc from '@/shared/components/ui/button.tsx?raw';
 import type { ComponentDocModule } from '../registry/types';
-
-function PressedDemo() {
-  const [on, setOn] = useState(true);
-  return (
-    <Button label={on ? 'Tracking' : 'Track'} icon={Crosshair} pressed={on} onClick={() => setOn((v) => !v)} />
-  );
-}
 
 export const buttonDoc: ComponentDocModule = {
   id: 'button',
   source: buttonSrc,
-  usage: `import { Button } from "@/primitives"
-import { Crosshair } from "@/lib/icons/central"
+  usage: `import { Button } from "@/components/ui/button"
 
-<Button label="Track" icon={Crosshair} variant="fill" onClick={handleTrack} />`,
+<Button>Save</Button>
+<Button variant="secondary">Cancel</Button>
+<Button variant="destructive">Delete</Button>`,
   examples: [
     {
       id: 'variants',
       title: 'Variants',
-      description: 'Five surface treatments. Danger and warning use oklch so they read correctly on the dark control-room surface.',
-      code: `<Button label="Fill" variant="fill" />
-<Button label="Ghost" variant="ghost" />
-<Button label="Outline" variant="outline" />
-<Button label="Jam" variant="danger" icon={Zap} />
-<Button label="Caution" variant="warning" />`,
+      description:
+        'Six surface treatments. Destructive uses oklch so it reads correctly on the dark surface; outline is a layered ring rather than a hard border.',
+      code: `<Button>Default</Button>
+<Button variant="secondary">Secondary</Button>
+<Button variant="destructive">Destructive</Button>
+<Button variant="outline">Outline</Button>
+<Button variant="ghost">Ghost</Button>
+<Button variant="link">Link</Button>`,
       render: () => (
-        <div className="flex flex-wrap items-center gap-3">
-          <Button label="Fill" variant="fill" />
-          <Button label="Ghost" variant="ghost" />
-          <Button label="Outline" variant="outline" />
-          <Button label="Jam" variant="danger" icon={Zap} />
-          <Button label="Caution" variant="warning" />
+        <div dir="ltr" className="flex flex-wrap items-center gap-3">
+          <Button>Default</Button>
+          <Button variant="secondary">Secondary</Button>
+          <Button variant="destructive">Destructive</Button>
+          <Button variant="outline">Outline</Button>
+          <Button variant="ghost">Ghost</Button>
+          <Button variant="link">Link</Button>
         </div>
       ),
     },
     {
       id: 'sizes',
       title: 'Sizes',
-      description: 'sm / md / lg map to height and type scale.',
-      code: `<Button label="Small" size="sm" />
-<Button label="Medium" size="md" />
-<Button label="Large" size="lg" />`,
+      description: 'sm / default / lg map to height and type scale; icon is a square slot for icon-only actions.',
+      code: `<Button size="sm">Small</Button>
+<Button size="default">Default</Button>
+<Button size="lg">Large</Button>
+<Button size="icon" aria-label="Add"><Plus /></Button>`,
       render: () => (
-        <div className="flex flex-wrap items-center gap-3">
-          <Button label="Small" size="sm" icon={Crosshair} />
-          <Button label="Medium" size="md" icon={Crosshair} />
-          <Button label="Large" size="lg" icon={Crosshair} />
+        <div dir="ltr" className="flex flex-wrap items-center gap-3">
+          <Button size="sm">Small</Button>
+          <Button size="default">Default</Button>
+          <Button size="lg">Large</Button>
+          <Button size="icon" aria-label="Add">
+            <Plus />
+          </Button>
         </div>
       ),
     },
     {
-      id: 'states',
-      title: 'States — disabled, loading, pressed',
-      description: 'Disabled dims to 45%; loading swaps the icon for a spinner and sets cursor-wait; pressed brightens with an inset ring.',
-      code: `<Button label="Disabled" disabled />
-<Button label="Working" loading />
-<Button label="Track" pressed onClick={toggle} />`,
+      id: 'with-icon',
+      title: 'With icon & disabled',
+      description: 'Icons size to 16px and gap from the label automatically. Disabled drops to 45% opacity and blocks pointer events.',
+      code: `<Button><Plus /> New item</Button>
+<Button variant="destructive"><Trash2 /> Delete</Button>
+<Button disabled>Disabled</Button>`,
       render: () => (
-        <div className="flex flex-wrap items-center gap-3">
-          <Button label="Disabled" icon={Ban} disabled />
-          <Button label="Working" loading />
-          <PressedDemo />
+        <div dir="ltr" className="flex flex-wrap items-center gap-3">
+          <Button>
+            <Plus /> New item
+          </Button>
+          <Button variant="destructive">
+            <Trash2 /> Delete
+          </Button>
+          <Button disabled>Disabled</Button>
+        </div>
+      ),
+    },
+    {
+      id: 'as-child',
+      title: 'As link (asChild)',
+      description: 'With asChild the button styling is applied onto a child element via Radix Slot, so a real anchor can carry the button look.',
+      code: `<Button asChild>
+  <a href="/docs">Documentation</a>
+</Button>`,
+      render: () => (
+        <div dir="ltr" className="flex flex-wrap items-center gap-3">
+          <Button asChild>
+            <a href="#button">Documentation</a>
+          </Button>
+          <Button asChild variant="outline">
+            <a href="#button">Learn more</a>
+          </Button>
         </div>
       ),
     },

@@ -11,7 +11,7 @@ import { buttonDoc } from './button.doc';
 import { actionButtonDoc } from './action-button.doc';
 import { cameraToggleDoc } from './camera-toggle.doc';
 import { targetCardDoc } from './target-card.doc';
-import { statusChipDoc } from './status-chip.doc';
+import { badgeDoc } from './badge.doc';
 import { newUpdatesDoc } from './new-updates.doc';
 import { splitActionDoc } from './split-action.doc';
 import { accordionDoc } from './accordion.doc';
@@ -23,7 +23,7 @@ export const DOC_MODULES: Record<string, ComponentDocModule> = {
   [actionButtonDoc.id]: actionButtonDoc,
   [cameraToggleDoc.id]: cameraToggleDoc,
   [targetCardDoc.id]: targetCardDoc,
-  [statusChipDoc.id]: statusChipDoc,
+  [badgeDoc.id]: badgeDoc,
   [newUpdatesDoc.id]: newUpdatesDoc,
   [splitActionDoc.id]: splitActionDoc,
   [accordionDoc.id]: accordionDoc,

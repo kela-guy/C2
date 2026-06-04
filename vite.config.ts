@@ -10,7 +10,6 @@ import reactScan from '@react-scan/vite-plugin-react-scan';
 const dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 
 const ANALYZE = process.env.ANALYZE === '1';
-const PERF_BUILD = process.env.PERF_BUILD === '1';
 
 export default defineConfig(({ mode }) => {
   const isDev = mode === 'development';
@@ -46,39 +45,10 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@/shared': path.resolve(dirname, './src/app'),
         '@': path.resolve(dirname, './src'),
-        // `pnpm build:perf` swaps in react-dom/profiling so the React
-        // <Profiler> API actually fires in production-like builds.
-        // Otherwise Profiler `onRender` is a no-op outside dev. The
-        // resulting bundle keeps tree shaking + minification but allows
-        // real-world profiling against production paths.
-        ...(PERF_BUILD ? { 'react-dom$': 'react-dom/profiling' } : {}),
       },
     },
-    // Headers for the dev-only perf instrumentation (src/lib/perf):
-    //   - `Document-Policy: js-profiling` allows the JS Self-Profiling API
-    //     (`new Profiler({...})`) to attach a sampling profiler. Without
-    //     it the constructor throws. Cheap, no side-effects, always on.
-    //
-    // The cross-origin-isolation header pair (COOP `same-origin` +
-    // COEP `credentialless`) is intentionally NOT enabled by default.
-    // It's a precondition for `performance.measureUserAgentSpecificMemory()`,
-    // but in practice it interferes with Bing imagery tile fetches inside
-    // Cesium's Ion provider chain — the globe goes blank with no error
-    // surfaced. We only opt into isolation when the URL has `?perf=full`
-    // (the same gate the memory sampler reads), and we do that via a
-    // dev-time middleware so static asset routes still work normally.
-    //
-    // None of this affects the production bundle — `vite preview` serves
-    // its own headers, and the perf code is dynamically imported behind
-    // an `import.meta.env.DEV` gate so it never reaches end users.
-    server: {
-      headers: {
-        'Document-Policy': 'js-profiling',
-      },
-    },
-    // Help DevTools symbolicate stacks against the original sources so
-    // both LoAF `scripts[].sourceURL` and JS Self Profiler frames point
-    // back to the right files when investigating regressions.
+    // Help DevTools symbolicate stacks against the original sources when
+    // investigating regressions.
     esbuild: {
       sourcemap: true,
       keepNames: true,

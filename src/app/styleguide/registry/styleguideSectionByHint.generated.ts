@@ -11,7 +11,7 @@ export const GENERATED_SECTION_BY_HINT: Record<string, string> = {
   "accordion-item": "accordion",
   "accordion-trigger": "accordion",
   "action-button": "action-button",
-  "badge": "status-chip",
+  "badge": "badge",
   "button": "button",
   "camera-toggle": "camera-toggle",
   "card-actions": "card-actions",
@@ -34,7 +34,7 @@ export const GENERATED_SECTION_BY_HINT: Record<string, string> = {
   "map-markers": "map-markers",
   "new-updates": "new-updates",
   "split-action": "split-action",
-  "status-chip": "status-chip",
+  "status-chip": "badge",
   "target-card": "target-card",
   "telemetry": "telemetry",
 };
