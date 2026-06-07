@@ -15,7 +15,7 @@
  * `DevicesPanel.tsx`.
  */
 
-import { useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { useDrag } from 'react-dnd';
 import { Collapsible, CollapsibleContent } from '../ui/collapsible';
 import {
@@ -35,7 +35,7 @@ import { DeviceChildRow } from './DeviceChildRow';
 import { DeviceErrorsDialog } from './controls/DeviceErrorsDialog';
 import type { DeviceCameraDragItem, DeviceRowProps } from './types';
 
-export function DeviceRow({
+export const DeviceRow = memo(function DeviceRow({
   device,
   isExpanded,
   onToggle,
@@ -66,28 +66,54 @@ export function DeviceRow({
   const [errorsOpen, setErrorsOpen] = useState(false);
   const notify = useDeviceNotify(device.id, online, onArmNotifications);
 
-  const ctx: DeviceActionContext = {
-    device,
-    strings,
-    isFloodlightOn: !!isFloodlightOn,
-    isSpeakerPlaying: !!isSpeakerPlaying,
-    isPinnedToFeed: !!isPinnedToFeed,
-    speakerTracks,
-    selectedTrackId: selectedTrackId || (speakerTracks[0]?.id ?? ''),
-    onSelectTrack: setSelectedTrackId,
-    errorCount: getDeviceErrorCount(device),
-    isNotifyOn: notify.armed,
-    notifyRemaining: notify.remaining,
-    onToggleNotify: notify.toggle,
-    onOpenLogs: () => onOpenLogs?.(device.id),
-    onOpenErrors: () => setErrorsOpen(true),
-    onFlyTo,
-    onFloodlightToggle,
-    onSpeakerToggle,
-    onJamActivate,
-    onPinToFeed,
-    onUnpinFromFeed,
-  };
+  const handleToggle = useCallback(() => onToggle(device.id), [onToggle, device.id]);
+
+  // Memoized so a parent re-render (or another row's notify countdown) does
+  // not hand `DeviceRowHeader` / `DeviceActionBar` a fresh context object.
+  // Only this row's own inputs (notify state, device, toggles) rebuild it.
+  const ctx = useMemo<DeviceActionContext>(
+    () => ({
+      device,
+      strings,
+      isFloodlightOn: !!isFloodlightOn,
+      isSpeakerPlaying: !!isSpeakerPlaying,
+      isPinnedToFeed: !!isPinnedToFeed,
+      speakerTracks,
+      selectedTrackId: selectedTrackId || (speakerTracks[0]?.id ?? ''),
+      onSelectTrack: setSelectedTrackId,
+      errorCount: getDeviceErrorCount(device),
+      isNotifyOn: notify.armed,
+      notifyRemaining: notify.remaining,
+      onToggleNotify: notify.toggle,
+      onOpenLogs: () => onOpenLogs?.(device.id),
+      onOpenErrors: () => setErrorsOpen(true),
+      onFlyTo,
+      onFloodlightToggle,
+      onSpeakerToggle,
+      onJamActivate,
+      onPinToFeed,
+      onUnpinFromFeed,
+    }),
+    [
+      device,
+      strings,
+      isFloodlightOn,
+      isSpeakerPlaying,
+      isPinnedToFeed,
+      speakerTracks,
+      selectedTrackId,
+      notify.armed,
+      notify.remaining,
+      notify.toggle,
+      onOpenLogs,
+      onFlyTo,
+      onFloodlightToggle,
+      onSpeakerToggle,
+      onJamActivate,
+      onPinToFeed,
+      onUnpinFromFeed,
+    ],
+  );
 
   const [{ isDragging }, dragRef] = useDrag(
     () => ({
@@ -112,11 +138,11 @@ export function DeviceRow({
         role="button"
         tabIndex={0}
         aria-expanded={isExpanded}
-        onClick={onToggle}
+        onClick={handleToggle}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            onToggle();
+            handleToggle();
           }
         }}
         onMouseEnter={() => onHover(device.id)}
@@ -168,4 +194,4 @@ export function DeviceRow({
       />
     </Collapsible>
   );
-}
+});

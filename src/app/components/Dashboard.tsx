@@ -3,7 +3,8 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { useDrop } from 'react-dnd';
 import { CAMERA_ASSETS, REGULUS_EFFECTORS, SPEAKER_ASSETS } from './tacticalAssets';
 import { bearingDegrees, haversineDistanceM } from '@/app/lib/mapGeo';
-import { CesiumTacticalMap } from './CesiumTacticalMap';
+import { LiveCesiumTacticalMap } from './LiveCesiumTacticalMap';
+import { useLiveMapStore } from './liveMapStore';
 import { CesiumErrorBoundary } from './CesiumErrorBoundary';
 import { NotificationSystem, showTacticalNotification } from './NotificationSystem';
 import { NotificationCenter } from './NotificationCenter';
@@ -329,8 +330,24 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
   // devices panel is presentational and reads these sets).
   const [floodlightOnIds, setFloodlightOnIds] = useState<Set<string>>(new Set());
   const [speakerPlayingIds, setSpeakerPlayingIds] = useState<Set<string>>(new Set());
-  const [hoveredSensorIdFromCard, setHoveredSensorIdFromCard] = useState<string | null>(null);
-  const [hoveredTargetIdFromCard, setHoveredTargetIdFromCard] = useState<string | null>(null);
+  // High-frequency map state (4 Hz friendly-drone positions + card/row
+  // hover) lives in an external store so its updates re-render only the map
+  // subscriber, never the Dashboard root. See `liveMapStore.ts`.
+  const liveMap = useLiveMapStore(() => {
+    const routes = getFriendlyPatrolRoutes(getStrings(locale));
+    return {
+      friendlyDrones: routes.map((r) => ({
+        id: r.id,
+        name: r.name,
+        lat: r.waypoints[0][0],
+        lon: r.waypoints[0][1],
+        altitude: r.altitude,
+        headingDeg: 0,
+      })),
+      hoveredSensorId: null,
+      hoveredTargetId: null,
+    };
+  });
   const [sensorFocusId, setSensorFocusId] = useState<string | null>(null);
   const [cameraLookAtRequest, setCameraLookAtRequest] = useState<{ cameraId: string; targetLat: number; targetLon: number; fovOverrideDeg?: number } | null>(null);
   const [regulusEffectors, setRegulusEffectors] = useState<RegulusEffector[]>(REGULUS_EFFECTORS);
@@ -367,9 +384,9 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
 
   useEffect(() => {
     if (cameraViewerFeeds.length === 0) {
-      setHoveredSensorIdFromCard(null);
+      liveMap.setHoveredSensorId(null);
     }
-  }, [cameraViewerFeeds.length]);
+  }, [cameraViewerFeeds.length, liveMap]);
 
   const handleCameraDrop = useCallback((item: DeviceCameraDragItem) => {
     setCameraViewerFeeds(prev => {
@@ -391,19 +408,6 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
   const [isSnapping, setIsSnapping] = useState(false);
   const asideRef = useRef<HTMLElement>(null);
   const [cameraControlRequest, setCameraControlRequest] = useState<{ targetId: string; countdown: number } | null>(null);
-  const [friendlyDrones, setFriendlyDrones] = useState<FriendlyDrone[]>(() => {
-    // Same pattern as launchers — drone names are stamped at mount.
-    const routes = getFriendlyPatrolRoutes(getStrings(locale));
-    return routes.map(r => ({
-      id: r.id,
-      name: r.name,
-      lat: r.waypoints[0][0],
-      lon: r.waypoints[0][1],
-      altitude: r.altitude,
-      headingDeg: 0,
-    }));
-  });
-
   const offlineAssetIds = useMemo(
     () => allDevices.filter((d) => d.connectionState === 'offline').map((d) => d.id),
     [allDevices],
@@ -555,7 +559,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
         return next >= friendlyPatrolRoutes[0].waypoints.length ? 0 : next;
       });
 
-      setFriendlyDrones(
+      liveMap.setFriendlyDrones(
         friendlyPatrolRoutes.map((route, i) => {
           const progress = patrolProgressRef.current[i];
           const legIndex = Math.floor(progress) % route.waypoints.length;
@@ -1543,6 +1547,84 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
     setFlowBuilderOpen(true);
   }, [sidebarOpen, devicesPanelOpen, simulationsPanelOpen]);
 
+  // ── Stable handler identities for child panels ─────────────────────
+  //
+  // The DevicesPanel is conditionally mounted but still receives these
+  // callbacks on every Dashboard render. Memoizing them keeps the panel
+  // (and the memoized DeviceRows beneath it) from re-rendering on the
+  // 4 Hz sim ticks that don't touch device state.
+  const handleDeviceJamActivate = useCallback(
+    (jammerId: string) => {
+      toast.success(t.toasts.jamActivated(jammerId), { duration: 3000 });
+    },
+    [t],
+  );
+  const handleDeviceFloodlightToggle = useCallback((id: string, next: boolean) => {
+    setFloodlightOnIds((prev) => {
+      const s = new Set(prev);
+      if (next) s.add(id); else s.delete(id);
+      return s;
+    });
+  }, []);
+  const handleDeviceSpeakerToggle = useCallback((id: string, next: boolean) => {
+    setSpeakerPlayingIds((prev) => {
+      const s = new Set(prev);
+      if (next) s.add(id); else s.delete(id);
+      return s;
+    });
+  }, []);
+  const handleDeviceOpenLogs = useCallback(
+    (id: string) => {
+      toast.info(t.toasts.deviceLogsOpened(id), { duration: 3000 });
+    },
+    [t],
+  );
+  const handleDeviceArmNotifications = useCallback(
+    (id: string, armed: boolean) => {
+      toast.success(
+        armed ? t.toasts.deviceNotificationsArmed(id) : t.toasts.deviceNotificationsDisarmed(id),
+        { duration: 3000 },
+      );
+    },
+    [t],
+  );
+
+  // Rail toggle + panel close handlers — stable so the toggles and the
+  // resizable camera panel don't churn props every render.
+  const handleSidebarPressedChange = useCallback(
+    (next: boolean) => { if (next) openSystemsPanel(); else closeSystemsPanel(); },
+    [openSystemsPanel, closeSystemsPanel],
+  );
+  const handleDevicesPressedChange = useCallback(
+    (next: boolean) => { if (next) openDevicesPanel(); else closeDevicesPanel(); },
+    [openDevicesPanel, closeDevicesPanel],
+  );
+  const handleSimulationsPressedChange = useCallback(
+    (next: boolean) => { if (next) openSimulationsPanel(); else closeSimulationsPanel(); },
+    [openSimulationsPanel, closeSimulationsPanel],
+  );
+  const handleFlowBuilderPressedChange = useCallback(
+    (next: boolean) => (next ? openFlowBuilderPanel() : setFlowBuilderOpen(false)),
+    [openFlowBuilderPanel],
+  );
+  const handleCameraPressedChange = useCallback(() => {
+    setCameraViewerFeeds((prev) =>
+      prev.length > 0 ? [] : [{ cameraId: CAMERA_ASSETS[0]?.id ?? '' }],
+    );
+  }, []);
+  const handleCameraViewerCollapse = useCallback(() => setCameraViewerFeeds([]), []);
+  const handleFlowBuilderClose = useCallback(() => setFlowBuilderOpen(false), []);
+
+  const sidebarStyle = useMemo<React.CSSProperties>(
+    () => ({
+      width: sidebarWidth,
+      backgroundColor: SURFACE.level1,
+      ...(isDragging ? { transition: 'none', willChange: 'width' } : {}),
+      ...(isSnapping ? { transition: 'width 200ms ease-out' } : {}),
+    }),
+    [sidebarWidth, isDragging, isSnapping],
+  );
+
   // Tracks the flow detection id we've already stolen focus to, so the
   // escalation watcher (below) fires exactly once per playback. Resets
   // when the active flow detection clears (reset / new play mints a new
@@ -1917,10 +1999,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
               <Toggle
                 size="sm"
                 pressed={sidebarOpen}
-                onPressedChange={(next) => {
-                  if (next) openSystemsPanel();
-                  else closeSystemsPanel();
-                }}
+                onPressedChange={handleSidebarPressedChange}
                 className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
                 aria-label={sidebarOpen ? t.dashboard.closeSidebar : t.dashboard.openSidebar}
               >
@@ -1937,10 +2016,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
               <Toggle
                 size="sm"
                 pressed={devicesPanelOpen}
-                onPressedChange={(next) => {
-                  if (next) openDevicesPanel();
-                  else closeDevicesPanel();
-                }}
+                onPressedChange={handleDevicesPressedChange}
                 className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
                 aria-label={devicesPanelOpen ? t.dashboard.closeDevices : t.dashboard.devices}
               >
@@ -1957,13 +2033,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
               <Toggle
                 size="sm"
                 pressed={isCameraViewerOpen}
-                onPressedChange={() => {
-                  if (isCameraViewerOpen) {
-                    setCameraViewerFeeds([]);
-                  } else {
-                    setCameraViewerFeeds([{ cameraId: CAMERA_ASSETS[0]?.id ?? '' }]);
-                  }
-                }}
+                onPressedChange={handleCameraPressedChange}
                 className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
                 aria-label={isCameraViewerOpen ? t.dashboard.closeCameras : t.dashboard.cameras}
               >
@@ -1980,10 +2050,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
               <Toggle
                 size="sm"
                 pressed={simulationsPanelOpen}
-                onPressedChange={(next) => {
-                  if (next) openSimulationsPanel();
-                  else closeSimulationsPanel();
-                }}
+                onPressedChange={handleSimulationsPressedChange}
                 className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
                 aria-label={simulationsPanelOpen ? t.flowBuilder.simulations.close : t.flowBuilder.simulations.title}
               >
@@ -2001,7 +2068,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
               <Toggle
                 size="sm"
                 pressed={flowBuilderOpen}
-                onPressedChange={(next: boolean) => (next ? openFlowBuilderPanel() : setFlowBuilderOpen(false))}
+                onPressedChange={handleFlowBuilderPressedChange}
                 className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
                 aria-label={t.flowBuilder.panel.title}
               >
@@ -2101,12 +2168,12 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
                 * dashboard down with it.
                 */}
               <CesiumErrorBoundary>
-                <CesiumTacticalMap
+                <LiveCesiumTacticalMap
+                  store={liveMap}
                   targets={targets}
                   activeTargetId={activeTargetId}
                   onMarkerClick={handleMarkerClick}
                   highlightedSensorIds={highlightedSensorIds}
-                  hoveredSensorIdFromCard={hoveredSensorIdFromCard}
                   sensorFocusId={sensorFocusId}
                   onContextMenuAction={handleContextMenuAction}
                   regulusEffectors={regulusEffectors}
@@ -2119,9 +2186,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
                   missionRoute={null}
                   planningScanViz={null}
                   selectedAssetId={selectedAssetId}
-                  friendlyDrones={friendlyDrones}
                   smoothFocusRequest={mapFocusRequest}
-                  hoveredTargetIdFromCard={hoveredTargetIdFromCard}
                   onAssetClick={handleAssetClick}
                   offlineAssetIds={offlineAssetIds}
                   floodlightOnIds={floodlightOnIds}
@@ -2142,11 +2207,11 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
           {isCameraViewerOpen && (
             <>
               <ResizableHandle className="w-px bg-white/10 hover:bg-white/20 transition-colors duration-150 ease-out" />
-              <ResizablePanel defaultSize={45} minSize={25} maxSize={60} collapsible collapsedSize={0} onCollapse={() => setCameraViewerFeeds([])}>
+              <ResizablePanel defaultSize={45} minSize={25} maxSize={60} collapsible collapsedSize={0} onCollapse={handleCameraViewerCollapse}>
                   <VideoHudPanel
                     feeds={cameraViewerFeeds}
                     onFeedsChange={setCameraViewerFeeds}
-                    onCameraHover={setHoveredSensorIdFromCard}
+                    onCameraHover={liveMap.setHoveredSensorId}
                     weaponFeedActive={weaponFeedActive}
                   />
               </ResizablePanel>
@@ -2164,12 +2229,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
             absolute top-0 bottom-0 start-0 border-e border-white/10 flex flex-col ${panelSwitching || isDragging ? '' : isSnapping ? '' : 'transition-[transform,opacity] duration-300 ease-in-out'} z-30
             ${sidebarOpen ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full'}
           `}
-          style={{
-            width: sidebarWidth,
-            backgroundColor: SURFACE.level1,
-            ...(isDragging ? { transition: 'none', willChange: 'width' } : {}),
-            ...(isSnapping ? { transition: 'width 200ms ease-out' } : {}),
-          }}
+          style={sidebarStyle}
         >
           {sidebarOpen && (
             <div
@@ -2194,7 +2254,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
               onBdaCamera={handleBdaCamera}
               onSendDroneVerification={startBdaSequence}
               droneVerifyingTargetId={null}
-              onSensorHover={setHoveredSensorIdFromCard}
+              onSensorHover={liveMap.setHoveredSensorId}
               onCameraLookAt={noopStrStr}
               onTakeControl={noopStr}
               onReleaseControl={noopStr}
@@ -2251,7 +2311,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
               onRequestCameraControl={handleRequestCameraControl}
               onSensorFocus={handleSensorFocus}
               onTargetFocus={handleTargetFocus}
-              onTargetHover={setHoveredTargetIdFromCard}
+              onTargetHover={liveMap.setHoveredTargetId}
               thinMode
             />
           </div>
@@ -2266,7 +2326,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
         {flowBuilderOpen && (
           <FlowBuilderPanel
             open={flowBuilderOpen}
-            onClose={() => setFlowBuilderOpen(false)}
+            onClose={handleFlowBuilderClose}
             width={sidebarWidth}
             noTransition={panelSwitching}
             draft={flowDraft}
@@ -2298,36 +2358,15 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
             open={devicesPanelOpen}
             onClose={closeDevicesPanel}
             onFlyTo={handleDeviceFlyTo}
-            onDeviceHover={setHoveredSensorIdFromCard}
+            onDeviceHover={liveMap.setHoveredSensorId}
             onDeviceSelect={setSelectedAssetId}
-            onJamActivate={(jammerId) => {
-              toast.success(t.toasts.jamActivated(jammerId), { duration: 3000 });
-            }}
+            onJamActivate={handleDeviceJamActivate}
             floodlightOnIds={floodlightOnIds}
             speakerPlayingIds={speakerPlayingIds}
-            onFloodlightToggle={(id, next) => {
-              setFloodlightOnIds((prev) => {
-                const s = new Set(prev);
-                if (next) s.add(id); else s.delete(id);
-                return s;
-              });
-            }}
-            onSpeakerToggle={(id, next) => {
-              setSpeakerPlayingIds((prev) => {
-                const s = new Set(prev);
-                if (next) s.add(id); else s.delete(id);
-                return s;
-              });
-            }}
-            onOpenLogs={(id) => {
-              toast.info(t.toasts.deviceLogsOpened(id), { duration: 3000 });
-            }}
-            onArmNotifications={(id, armed) => {
-              toast.success(
-                armed ? t.toasts.deviceNotificationsArmed(id) : t.toasts.deviceNotificationsDisarmed(id),
-                { duration: 3000 },
-              );
-            }}
+            onFloodlightToggle={handleDeviceFloodlightToggle}
+            onSpeakerToggle={handleDeviceSpeakerToggle}
+            onOpenLogs={handleDeviceOpenLogs}
+            onArmNotifications={handleDeviceArmNotifications}
             noTransition={panelSwitching}
             width={sidebarWidth}
             focusedDeviceId={focusedDeviceId}

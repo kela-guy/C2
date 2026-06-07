@@ -4,6 +4,7 @@
  * `detailFields`.
  */
 
+import { memo } from 'react';
 import { Camera } from '@/lib/icons/central';
 import type { Device, DevicesPanelStrings } from './types';
 import { buildDetailRows, type DeviceTypeConfig } from './deviceRegistry';
@@ -14,7 +15,7 @@ interface DeviceRowDetailsProps {
   strings: DevicesPanelStrings;
 }
 
-export function DeviceRowDetails({ device, cfg, strings }: DeviceRowDetailsProps) {
+export const DeviceRowDetails = memo(function DeviceRowDetails({ device, cfg, strings }: DeviceRowDetailsProps) {
   const rows = buildDetailRows(device, strings, cfg.detailFields);
   return (
     <>
@@ -29,7 +30,7 @@ export function DeviceRowDetails({ device, cfg, strings }: DeviceRowDetailsProps
       </div>
     </>
   );
-}
+});
 
 function DetailRow({ label, value, color }: { label: string; value: string; color?: string }) {
   return (

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, useReducedMotion } from 'framer-motion';
+import { Virtuoso } from 'react-virtuoso';
 import {
   TargetCard,
   CardHeader,
@@ -623,6 +624,10 @@ function ListOfSystemsImpl({
   const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
   const [newArrivalIds, setNewArrivalIds] = useState<string[]>([]);
   const listScrollRef = useRef<HTMLDivElement>(null);
+  // The list scroll container, exposed to react-virtuoso as its
+  // `customScrollParent` so we keep the existing sticky-header + height
+  // chain instead of letting Virtuoso own the scroller.
+  const [scrollParent, setScrollParent] = useState<HTMLDivElement | null>(null);
   const seenTargetIdsRef = useRef<Set<string>>(new Set());
   const hasHydratedTargetsRef = useRef(false);
 
@@ -880,26 +885,28 @@ function ListOfSystemsImpl({
 
   const renderTargetList = (
     list: Detection[],
-    disableLayout = false,
     emptyLabel: string = los.emptyDefault,
   ) => {
     if (list.length === 0) {
       return <div className="p-2 text-center text-xs text-white">{emptyLabel}</div>;
     }
 
+    // Virtualized: only the on-screen cards are mounted, so a 20-target
+    // swarm renders ~a screenful instead of all rows. `customScrollParent`
+    // reuses the panel's existing scroll container so the sticky tab/filter
+    // header and height chain stay intact. Each `UnifiedCard` is memoized,
+    // so only the actively changing card re-renders.
     return (
-      <AnimatePresence mode={disableLayout ? undefined : 'popLayout'}>
-        {list.map((target, idx) => {
+      <Virtuoso
+        data={list}
+        customScrollParent={scrollParent ?? undefined}
+        computeItemKey={(_, target) => target.id}
+        increaseViewportBy={300}
+        itemContent={(_, target) => {
           const isActive = target.id === activeTargetId;
           return (
-            <motion.div
-              key={target.id}
-              layout={disableLayout ? false : 'position'}
-              initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -8, filter: 'blur(4px)' }}
-              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-              exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
-              transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
-              className="cursor-pointer"
+            <div
+              className="cursor-pointer pb-2"
               id={`detection-card-${target.id}`}
               onMouseEnter={() => onTargetHover?.(target.id)}
               onMouseLeave={() => onTargetHover?.(null)}
@@ -913,10 +920,10 @@ function ListOfSystemsImpl({
                 onFocus={onTargetFocus ? getFocus(target.id) : undefined}
                 thinMode={thinMode}
               />
-            </motion.div>
+            </div>
           );
-        })}
-      </AnimatePresence>
+        }}
+      />
     );
   };
 
@@ -995,18 +1002,21 @@ function ListOfSystemsImpl({
         </AnimatePresence>
 
         <div
-          ref={listScrollRef}
-          className="flex h-full flex-col gap-3 overflow-y-auto px-2 py-2"
+          ref={(el) => {
+            listScrollRef.current = el;
+            setScrollParent(el);
+          }}
+          className="h-full overflow-y-auto px-2 py-2"
         >
           {activeTab === 'active' && (
-            <div id="tabpanel-active" role="tabpanel" aria-labelledby="tab-active" className="space-y-2">
-              {renderTargetList(mainActiveTargets, false, los.emptyActive)}
+            <div id="tabpanel-active" role="tabpanel" aria-labelledby="tab-active" className="h-full">
+              {renderTargetList(mainActiveTargets, los.emptyActive)}
             </div>
           )}
 
           {activeTab === 'completed' && (
-            <div id="tabpanel-completed" role="tabpanel" aria-labelledby="tab-completed">
-              {renderTargetList(filteredCompletedTargets, true, los.emptyCompleted)}
+            <div id="tabpanel-completed" role="tabpanel" aria-labelledby="tab-completed" className="h-full">
+              {renderTargetList(filteredCompletedTargets, los.emptyCompleted)}
             </div>
           )}
         </div>

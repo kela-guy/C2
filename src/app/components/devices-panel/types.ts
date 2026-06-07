@@ -261,7 +261,12 @@ export interface DevicesPanelProps {
 export interface DeviceRowProps {
   device: Device;
   isExpanded: boolean;
-  onToggle: () => void;
+  /**
+   * Toggle this row's expansion. Receives the device id so the parent can
+   * pass a single stable handler to every row (instead of a fresh
+   * per-row closure that would defeat `React.memo` on the row).
+   */
+  onToggle: (id: string) => void;
   onHover: (id: string | null) => void;
   onJamActivate?: (jammerId: string) => void;
   onFloodlightToggle?: (floodlightId: string, next: boolean) => void;

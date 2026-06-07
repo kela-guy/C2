@@ -11,6 +11,7 @@
  * selects it (driving `selectedAssetId`) and flies the map to the unit.
  */
 
+import { memo } from 'react';
 import {
   DEVICE_HEALTH_VISUAL,
   DEVICE_HEALTH_CRITICAL_PING,
@@ -51,7 +52,7 @@ export interface DeviceChildRowProps {
   onFlyTo?: (lat: number, lon: number) => void;
 }
 
-export function DeviceChildRow({
+export const DeviceChildRow = memo(function DeviceChildRow({
   device,
   strings,
   selected = false,
@@ -128,4 +129,4 @@ export function DeviceChildRow({
       )}
     </div>
   );
-}
+});

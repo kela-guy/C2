@@ -13,7 +13,7 @@
  * Show-on-map pinned to the outer edge.
  */
 
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { List } from '@/lib/icons/central';
 import { DotmSquare18 } from '@/app/components/ui/dotm-square-18';
@@ -45,7 +45,7 @@ const HEALTH_TONE: Record<DeviceHealth, { dot: string; badge: string | null }> =
   ok: { dot: 'bg-emerald-400', badge: null },
 };
 
-export function DeviceRowHeader({ device, cfg, ctx, connectionStateLabels }: DeviceRowHeaderProps) {
+export const DeviceRowHeader = memo(function DeviceRowHeader({ device, cfg, ctx, connectionStateLabels }: DeviceRowHeaderProps) {
   const { strings } = ctx;
   const nonOnline = device.connectionState !== 'online';
   const metricLine = device.subtitle ?? buildCollapsedMetricLine(device);
@@ -163,7 +163,7 @@ export function DeviceRowHeader({ device, cfg, ctx, connectionStateLabels }: Dev
       <PrimaryCluster cfg={cfg} ctx={ctx} />
     </>
   );
-}
+});
 
 /**
  * Always-visible action cluster at the row's inline-end. Show-on-map sits

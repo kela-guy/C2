@@ -6,7 +6,7 @@
  * (calibrate).
  */
 
-import { Fragment } from 'react';
+import { Fragment, memo } from 'react';
 import { resolveDeviceAction, type DeviceActionContext } from './deviceActions';
 import { DeviceOverflowMenu } from './controls/DeviceOverflowMenu';
 import type { DeviceTypeConfig } from './deviceRegistry';
@@ -16,7 +16,7 @@ interface DeviceActionBarProps {
   ctx: DeviceActionContext;
 }
 
-export function DeviceActionBar({ cfg, ctx }: DeviceActionBarProps) {
+export const DeviceActionBar = memo(function DeviceActionBar({ cfg, ctx }: DeviceActionBarProps) {
   const items = cfg.footerActions
     .map((kind) => resolveDeviceAction(kind, ctx, 'footer'))
     .filter((item): item is NonNullable<typeof item> => item !== null);
@@ -41,4 +41,4 @@ export function DeviceActionBar({ cfg, ctx }: DeviceActionBarProps) {
       )}
     </div>
   );
-}
+});

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { memo, useState } from "react";
 import {
   Bell,
   Settings,
@@ -63,7 +63,7 @@ const getIcon = (type: NotificationType, priority: Priority) => {
   return <Info size={size} />;
 };
 
-const NotificationRow = ({ item }: { item: NotificationItem }) => {
+const NotificationRow = memo(({ item }: { item: NotificationItem }) => {
   return (
     <div className={`
       group relative flex gap-4 p-4 hover:bg-white/[0.03] transition-colors cursor-pointer border-b border-border/30 last:border-0
@@ -108,7 +108,8 @@ const NotificationRow = ({ item }: { item: NotificationItem }) => {
       </div>
     </div>
   );
-};
+});
+NotificationRow.displayName = 'NotificationRow';
 
 type NotificationCenterProps = {
   trigger?: React.ReactElement;

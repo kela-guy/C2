@@ -10,7 +10,8 @@
  * isolation.
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso';
 import { X } from '@/lib/icons/central';
 import { LAYOUT_TOKENS, SURFACE } from '@/primitives/tokens';
 import { FilterBar, type FilterDef } from '@/primitives';
@@ -31,10 +32,16 @@ import { useFocusedDevice } from './useFocusedDevice';
 import { DeviceRow } from './DeviceRow';
 import type {
   ConnectionState,
+  Device,
   DevicesPanelProps,
   DevicesPanelStrings,
   DeviceType,
 } from './types';
+
+/** Flattened row model for the virtualized device list. */
+type DeviceListRow =
+  | { kind: 'header'; key: string; type: DeviceType; label: string; count: number }
+  | { kind: 'device'; key: string; device: Device };
 
 export function DevicesPanel({
   devices,
@@ -112,6 +119,42 @@ export function DevicesPanel({
     [filtered, typeLabels],
   );
 
+  // Flatten groups + devices into a single row list so the whole panel can
+  // be virtualized with one <Virtuoso>. Group headers stay inline (rendered
+  // as `header` rows) to preserve the original non-sticky layout.
+  const rows = useMemo<DeviceListRow[]>(() => {
+    const out: DeviceListRow[] = [];
+    for (const group of grouped) {
+      out.push({ kind: 'header', key: `header:${group.type}`, type: group.type, label: group.label, count: group.devices.length });
+      for (const device of group.devices) out.push({ kind: 'device', key: device.id, device });
+    }
+    return out;
+  }, [grouped]);
+
+  // The scroll container, handed to Virtuoso as its `customScrollParent` so
+  // the existing panel chrome (header + filter bar) and height chain are
+  // untouched.
+  const [scrollParent, setScrollParent] = useState<HTMLDivElement | null>(null);
+  const virtuosoRef = useRef<VirtuosoHandle>(null);
+
+  // Focused device may be off-screen (unmounted) under virtualization, so the
+  // ref-based scrollIntoView in `useFocusedDevice` can't always find it.
+  // Scroll to its row index via the Virtuoso handle instead. Read `rows`
+  // through a ref so this only fires on a fresh focus signal.
+  const rowsRef = useRef(rows);
+  rowsRef.current = rows;
+  useEffect(() => {
+    if (!focusedDeviceId) return;
+    requestAnimationFrame(() => {
+      const index = rowsRef.current.findIndex(
+        (r) => r.kind === 'device' && r.device.id === focusedDeviceId,
+      );
+      if (index >= 0) {
+        virtuosoRef.current?.scrollToIndex({ index, align: 'center', behavior: 'smooth' });
+      }
+    });
+  }, [focusedDeviceId]);
+
   const handleRowClick = useCallback(
     (id: string) => {
       const next = expandedId === id ? null : id;
@@ -134,6 +177,15 @@ export function DevicesPanel({
         })),
     }),
     [strings.typeFilterLabel, typeCounts, typeLabels, typeFilterIcons],
+  );
+
+  // Stable references for the FilterBar so it (and the rows beneath it)
+  // don't see fresh array/object/function props on every panel render.
+  const filterDefs = useMemo(() => [typeFilterDef], [typeFilterDef]);
+  const filterSelections = useMemo(() => ({ type: selectedTypes }), [selectedTypes]);
+  const handleFilterChange = useCallback(
+    (_id: string, next: string[]) => setSelectedTypes(next as DeviceType[]),
+    [],
   );
 
   return (
@@ -170,9 +222,9 @@ export function DevicesPanel({
         <FilterBar
           query={query}
           onQueryChange={setQuery}
-          filters={[typeFilterDef]}
-          selections={{ type: selectedTypes }}
-          onFilterChange={(_id, next) => setSelectedTypes(next as DeviceType[])}
+          filters={filterDefs}
+          selections={filterSelections}
+          onFilterChange={handleFilterChange}
           onReset={handleReset}
           searchPlaceholder={strings.searchPlaceholder}
           clearSearchAriaLabel={strings.clearSearch}
@@ -181,35 +233,45 @@ export function DevicesPanel({
         />
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        {grouped.length === 0 ? (
+      <div
+        ref={(el) => setScrollParent(el)}
+        className="flex-1 overflow-y-auto"
+      >
+        {rows.length === 0 ? (
           <div className="px-3 py-8 text-center text-xs text-zinc-600">{strings.noMatches}</div>
         ) : (
-          grouped.map((group) => (
-            <div key={group.type} data-handoff-component="device-type-group" data-device-type={group.type}>
-              <div className="px-4 py-1.5 text-xs font-normal uppercase tracking-wider text-white border-b border-white/5 bg-white/[0.08]">
-                {group.label} ({group.devices.length})
-              </div>
-              {group.devices.map((device) => (
+          <Virtuoso
+            ref={virtuosoRef}
+            data={rows}
+            customScrollParent={scrollParent ?? undefined}
+            computeItemKey={(_, row) => row.key}
+            increaseViewportBy={400}
+            itemContent={(_, row) =>
+              row.kind === 'header' ? (
                 <div
-                  key={device.id}
-                  ref={device.id === focusedDeviceId ? focusedRowRef : undefined}
+                  data-handoff-component="device-type-group"
+                  data-device-type={row.type}
+                  className="px-4 py-1.5 text-xs font-normal uppercase tracking-wider text-white border-b border-white/5 bg-white/[0.08]"
                 >
+                  {row.label} ({row.count})
+                </div>
+              ) : (
+                <div ref={row.device.id === focusedDeviceId ? focusedRowRef : undefined}>
                   <DeviceRow
-                    device={device}
-                    isExpanded={expandedId === device.id}
-                    onToggle={() => handleRowClick(device.id)}
+                    device={row.device}
+                    isExpanded={expandedId === row.device.id}
+                    onToggle={handleRowClick}
                     onHover={onDeviceHover ?? noopHover}
                     onJamActivate={onJamActivate}
                     onFloodlightToggle={onFloodlightToggle}
                     onSpeakerToggle={onSpeakerToggle}
-                    isFloodlightOn={floodlightOnIds?.has(device.id)}
-                    isSpeakerPlaying={speakerPlayingIds?.has(device.id)}
+                    isFloodlightOn={floodlightOnIds?.has(row.device.id)}
+                    isSpeakerPlaying={speakerPlayingIds?.has(row.device.id)}
                     speakerTracks={speakerTracks}
                     onFlyTo={onFlyTo}
                     onPinToFeed={onPinToFeed}
                     onUnpinFromFeed={onUnpinFromFeed}
-                    isPinnedToFeed={pinnedSet.has(device.id)}
+                    isPinnedToFeed={pinnedSet.has(row.device.id)}
                     onOpenLogs={onOpenLogs}
                     onArmNotifications={onArmNotifications}
                     onChildSelect={onDeviceSelect}
@@ -218,9 +280,9 @@ export function DevicesPanel({
                     strings={strings}
                   />
                 </div>
-              ))}
-            </div>
-          ))
+              )
+            }
+          />
         )}
       </div>
     </aside>
