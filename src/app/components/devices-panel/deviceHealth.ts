@@ -54,6 +54,42 @@ export function getDeviceHealth(device: Device): DeviceHealth {
   return 'ok';
 }
 
+/**
+ * Worst-wins severity rank. Higher = more urgent. Mirrors the precedence in
+ * `getDeviceHealth` so a roll-up reads identically to a single tile.
+ */
+const HEALTH_RANK: Record<DeviceHealth, number> = {
+  critical: 4,
+  error: 3,
+  warning: 2,
+  offline: 1,
+  ok: 0,
+};
+
+/**
+ * Effective health for a (possibly composite) device: the worst of the
+ * device's own health and every child's health. Non-composite devices have
+ * no `children`, so this equals `getDeviceHealth` — zero behavior change for
+ * the existing flat devices.
+ */
+export function getEffectiveDeviceHealth(device: Device): DeviceHealth {
+  let worst = getDeviceHealth(device);
+  for (const child of device.children ?? []) {
+    const childHealth = getEffectiveDeviceHealth(child);
+    if (HEALTH_RANK[childHealth] > HEALTH_RANK[worst]) worst = childHealth;
+  }
+  return worst;
+}
+
+/** Number of children at or above `warning` — drives the persistent parent cue. */
+export function getUnhealthyChildCount(device: Device): number {
+  let count = 0;
+  for (const child of device.children ?? []) {
+    if (HEALTH_RANK[getEffectiveDeviceHealth(child)] >= HEALTH_RANK.warning) count += 1;
+  }
+  return count;
+}
+
 export interface DeviceHealthVisual {
   /** Icon-tile background. Severity tints mirror the `HEALTH_TONE` badge fills (flat, no ring). */
   tile: string;

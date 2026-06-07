@@ -55,11 +55,16 @@ export const NAV: NavGroup[] = [
     ],
   },
   {
-    label: 'Assemblies & list chrome',
+    label: 'Cards & lists',
     items: [
       { id: 'card-states', label: 'Card States' },
       { id: 'target-card', label: 'TargetCard' },
       { id: 'filter-bar', label: 'FilterBar' },
+    ],
+  },
+  {
+    label: 'Devices',
+    items: [
       {
         id: 'device-card',
         label: 'Device Card',
@@ -74,6 +79,7 @@ export const NAV: NavGroup[] = [
           { id: 'device-overflow', label: 'Overflow + notify' },
           { id: 'device-row', label: 'DeviceRow' },
           { id: 'device-card-states', label: 'Edge cases' },
+          { id: 'device-elements', label: 'Elements catalog' },
         ],
       },
       {
@@ -93,6 +99,15 @@ export const NAV: NavGroup[] = [
           { id: 'devices-track-combobox', label: 'Audio-track combobox' },
         ],
       },
+      {
+        id: 'device-card-flows',
+        label: 'Device Card + Map',
+        children: [
+          { id: 'flow-hover-device', label: 'Hover Device' },
+          { id: 'flow-click-asset', label: 'Click Asset' },
+          { id: 'flow-camera-lookat', label: 'Camera Look-At' },
+        ],
+      },
     ],
   },
   {
@@ -106,15 +121,6 @@ export const NAV: NavGroup[] = [
           { id: 'flow-open-card', label: 'Open Card' },
           { id: 'flow-click-marker', label: 'Click Marker' },
           { id: 'flow-hover-sensor', label: 'Hover Sensor' },
-        ],
-      },
-      {
-        id: 'device-card-flows',
-        label: 'Device Card + Map',
-        children: [
-          { id: 'flow-hover-device', label: 'Hover Device' },
-          { id: 'flow-click-asset', label: 'Click Asset' },
-          { id: 'flow-camera-lookat', label: 'Camera Look-At' },
         ],
       },
       {

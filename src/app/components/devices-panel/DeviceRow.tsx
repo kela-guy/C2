@@ -31,6 +31,7 @@ import { useDeviceNotify } from './useDeviceNotify';
 import { DeviceRowHeader } from './DeviceRowHeader';
 import { DeviceRowDetails } from './DeviceRowDetails';
 import { DeviceActionBar } from './DeviceActionBar';
+import { DeviceChildRow } from './DeviceChildRow';
 import { DeviceErrorsDialog } from './controls/DeviceErrorsDialog';
 import type { DeviceCameraDragItem, DeviceRowProps } from './types';
 
@@ -46,20 +47,20 @@ export function DeviceRow({
   isSpeakerPlaying,
   speakerTracks = DEFAULT_SPEAKER_TRACKS,
   onFlyTo,
-  isMuted,
-  muteRemaining,
-  onToggleMute,
   onPinToFeed,
   onUnpinFromFeed,
   isPinnedToFeed,
   onOpenLogs,
   onArmNotifications,
+  onChildSelect,
+  selectedChildId,
   connectionStateLabels = DEFAULT_CONNECTION_STATE_LABELS,
   strings = DEFAULT_DEVICE_PANEL_STRINGS,
 }: DeviceRowProps) {
   const cfg = DEVICE_REGISTRY[device.type];
   const draggable = !!cfg.capabilities.draggableToFeed;
   const online = device.connectionState !== 'offline';
+  const composite = !!cfg.capabilities.composite && (device.children?.length ?? 0) > 0;
 
   const [selectedTrackId, setSelectedTrackId] = useState<string>(speakerTracks[0]?.id ?? '');
   const [errorsOpen, setErrorsOpen] = useState(false);
@@ -68,8 +69,6 @@ export function DeviceRow({
   const ctx: DeviceActionContext = {
     device,
     strings,
-    isMuted,
-    muteRemaining,
     isFloodlightOn: !!isFloodlightOn,
     isSpeakerPlaying: !!isSpeakerPlaying,
     isPinnedToFeed: !!isPinnedToFeed,
@@ -83,7 +82,6 @@ export function DeviceRow({
     onOpenLogs: () => onOpenLogs?.(device.id),
     onOpenErrors: () => setErrorsOpen(true),
     onFlyTo,
-    onToggleMute,
     onFloodlightToggle,
     onSpeakerToggle,
     onJamActivate,
@@ -143,6 +141,22 @@ export function DeviceRow({
         <div className="flex flex-col bg-white/[0.03]">
           <DeviceRowDetails device={device} cfg={cfg} strings={strings} />
           <DeviceActionBar cfg={cfg} ctx={ctx} />
+          {composite && (
+            <div data-handoff-component="device-child-list">
+              {device.children!.map((child) => (
+                <DeviceChildRow
+                  key={child.id}
+                  device={child}
+                  strings={strings}
+                  selected={selectedChildId === child.id}
+                  connectionStateLabels={connectionStateLabels}
+                  onHover={onHover}
+                  onSelect={(id) => onChildSelect?.(id)}
+                  onFlyTo={onFlyTo}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </CollapsibleContent>
 

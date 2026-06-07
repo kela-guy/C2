@@ -59,16 +59,25 @@ import {
 import { iconPublicUrl } from '@/lib/styleguideIconAssets';
 import {
   DevicesPanel, DeviceRow, DeviceAction,
+  FloodlightSegmentedDefault, FloodlightSegmentedCompact,
+  JamSplitButton, DeviceOverflowMenu, SpeakerTrackSelect,
+  resolveDeviceAction,
+  NotifyHeaderIndicator, NotifyCountdown,
+  DEVICE_ACTION_TONES,
   DEVICE_HEALTH_VISUAL,
   DEVICE_HEALTH_CRITICAL_PING,
   DEFAULT_SPEAKER_TRACKS,
+  DEFAULT_DEVICE_PANEL_STRINGS,
+  NOTIFY_WINDOW_S,
   type Device, type DeviceHealth,
+  type DeviceActionContext, type DeviceActionKind, type DeviceActionTone,
 } from '@/shared/components/DevicesPanel';
 import { JamIcon, DroneDeviceIcon } from '@/primitives/ProductIcons';
 import { Switch } from '@/shared/components/ui/switch';
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/components/ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/shared/components/ui/command';
 import { Button } from '@/shared/components/ui/button';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/app/components/ui/tabs';
 import { useCardSlots, type CardCallbacks, type CardContext } from '@/imports/useCardSlots';
 import {
   cuas_raw, cuas_classified, cuas_classified_bird, cuas_mitigating, cuas_mitigated, cuas_bda_complete,
@@ -546,18 +555,119 @@ function ExampleBlock({
   children,
   tight = false,
   previewClassName = '',
+  hideTitle = false,
 }: {
   id?: string;
   title: string;
   children: React.ReactNode;
   tight?: boolean;
   previewClassName?: string;
+  /** Suppress the inline heading — used when the example sits inside a tab whose trigger already shows the title. */
+  hideTitle?: boolean;
 }) {
   return (
     <div id={id} className={`space-y-4 mt-10 first:mt-0 ${id ? 'scroll-mt-20' : ''}`}>
-      <h3 className="text-sm font-medium text-n-10">{title}</h3>
+      {!hideTitle && <h3 className="text-sm font-medium text-n-10">{title}</h3>}
       <PreviewPanel tight={tight} className={previewClassName}>{children}</PreviewPanel>
     </div>
+  );
+}
+
+interface ExampleTabItem {
+  value: string;
+  label: string;
+  children: React.ReactNode;
+}
+
+/**
+ * Tabbed wrapper for a styleguide "Examples" section. Replaces a long
+ * vertical stack of {@link ExampleBlock}s with a `line`-variant tab strip.
+ *
+ * `TabsContent` is force-mounted so inactive panels stay in the DOM — this
+ * keeps interactive demo state alive and (critically) keeps any nested
+ * `id` anchors reachable by `getElementById` for the styleguide's
+ * scroll-spy + hash deep-link wiring. Radix sets `hidden` on inactive
+ * panels, so only the active one is visible.
+ *
+ * Pass `value`/`onValueChange` to drive it from external anchor state
+ * (see the Device Card section); otherwise it manages its own selection
+ * via `defaultValue`.
+ */
+function ExampleTabs({
+  items,
+  value,
+  defaultValue,
+  onValueChange,
+}: {
+  items: ExampleTabItem[];
+  value?: string;
+  defaultValue?: string;
+  onValueChange?: (value: string) => void;
+}) {
+  if (items.length === 0) return null;
+  const controlled = value !== undefined;
+  return (
+    <Tabs
+      {...(controlled
+        ? { value, onValueChange }
+        : { defaultValue: defaultValue ?? items[0].value, onValueChange })}
+      className="mt-6 gap-6"
+    >
+      <TabsList variant="line" className="flex-wrap">
+        {items.map((it) => (
+          <TabsTrigger key={it.value} value={it.value}>
+            {it.label}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+      {items.map((it) => (
+        <TabsContent key={it.value} value={it.value} forceMount className="data-[state=inactive]:hidden">
+          {it.children}
+        </TabsContent>
+      ))}
+    </Tabs>
+  );
+}
+
+interface AnchoredTab {
+  value: string;
+  label: string;
+  /**
+   * Anchor ids contained in this tab, in document order. The first id is the
+   * tab's representative anchor (what the URL hash / sidebar highlight resolves
+   * to when the tab is opened directly).
+   */
+  anchorIds: string[];
+  children: React.ReactNode;
+}
+
+/**
+ * {@link ExampleTabs} wired to the page's `activeAnchor` state. The active tab
+ * is derived from whichever tab owns the current anchor, so hash deep-links,
+ * the "On This Page" TOC, and app→styleguide handoff links all open the right
+ * tab; selecting a tab directly reports its representative anchor back up.
+ */
+function AnchoredExampleTabs({
+  tabs,
+  activeAnchor,
+  onAnchorChange,
+}: {
+  tabs: AnchoredTab[];
+  activeAnchor: string | null;
+  onAnchorChange: (id: string) => void;
+}) {
+  const activeTab =
+    tabs.find((t) => activeAnchor != null && t.anchorIds.includes(activeAnchor))?.value ??
+    tabs[0]?.value;
+  return (
+    <ExampleTabs
+      value={activeTab}
+      onValueChange={(v) => {
+        const tab = tabs.find((t) => t.value === v);
+        if (tab && tab.anchorIds[0]) onAnchorChange(tab.anchorIds[0]);
+      }}
+      items={tabs.map(({ value, label, children }) => ({ value, label, children }))}
+    />
   );
 }
 
@@ -614,7 +724,6 @@ function IconCatalogTile({ name, icon }: { name: string; icon: React.ReactNode }
 function DeviceCardRowDemo({
   device,
   defaultExpanded = true,
-  initialMuted = false,
   initialFloodOn = false,
   initialSpeakerOn = false,
   initialPinned = false,
@@ -622,13 +731,11 @@ function DeviceCardRowDemo({
   device: Device;
   defaultExpanded?: boolean;
   /** Pre-seed interactive states so the gallery shows them without a click. */
-  initialMuted?: boolean;
   initialFloodOn?: boolean;
   initialSpeakerOn?: boolean;
   initialPinned?: boolean;
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
-  const [muted, setMuted] = useState(initialMuted);
   const [floodOn, setFloodOn] = useState(initialFloodOn);
   const [speakerOn, setSpeakerOn] = useState(initialSpeakerOn);
   const [pinned, setPinned] = useState(initialPinned);
@@ -639,9 +746,6 @@ function DeviceCardRowDemo({
       onToggle={() => setExpanded((v) => !v)}
       onHover={noop}
       onFlyTo={noop}
-      isMuted={muted}
-      muteRemaining={muted ? '29:58' : null}
-      onToggleMute={() => setMuted((v) => !v)}
       isFloodlightOn={floodOn}
       onFloodlightToggle={() => setFloodOn((v) => !v)}
       isSpeakerPlaying={speakerOn}
@@ -663,6 +767,256 @@ function StyleguideDeviceTile({ label, children, width = 380 }: { label?: string
       <div className="bg-n-1 border border-white/10 rounded-lg overflow-hidden" style={{ width }}>
         {children}
       </div>
+    </div>
+  );
+}
+
+// ─── Device elements catalog ─────────────────────────────────────────────────
+
+/** Dark card-like surface so the device controls read in their real context. */
+function CatalogSurface({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="w-full rounded-md border border-white/10 bg-n-1 p-4" dir="ltr">
+      {children}
+    </div>
+  );
+}
+
+function CatalogLabel({ children }: { children: React.ReactNode }) {
+  return <span className="text-[10px] font-medium uppercase tracking-wide text-n-8">{children}</span>;
+}
+
+/**
+ * Builds a live `DeviceActionContext` for the catalog — the same shape the
+ * real row passes to `resolveDeviceAction`, with `useState`-backed toggles and
+ * noop side effects. Driving the real resolver keeps the catalog in lockstep
+ * with the registry: any new action kind shows up here for free.
+ */
+function useCatalogCtx(device: Device): DeviceActionContext {
+  const [isFloodlightOn, setFlood] = useState(false);
+  const [isSpeakerPlaying, setSpeaker] = useState(false);
+  const [isPinnedToFeed, setPinned] = useState(false);
+  const [isNotifyOn, setNotify] = useState(false);
+  const [notifyRemaining, setRemaining] = useState(NOTIFY_WINDOW_S);
+  const [selectedTrackId, setSelectedTrackId] = useState<string>(DEFAULT_SPEAKER_TRACKS[0]?.id ?? '');
+
+  useEffect(() => {
+    if (!isNotifyOn) return;
+    const t = setInterval(() => {
+      setRemaining((r) => {
+        if (r <= 1) {
+          setNotify(false);
+          return NOTIFY_WINDOW_S;
+        }
+        return r - 1;
+      });
+    }, 1000);
+    return () => clearInterval(t);
+  }, [isNotifyOn]);
+
+  return {
+    device,
+    strings: DEFAULT_DEVICE_PANEL_STRINGS,
+    isFloodlightOn,
+    isSpeakerPlaying,
+    isPinnedToFeed,
+    speakerTracks: DEFAULT_SPEAKER_TRACKS,
+    selectedTrackId,
+    onSelectTrack: setSelectedTrackId,
+    errorCount: device.errorCount ?? 3,
+    isNotifyOn,
+    notifyRemaining,
+    onToggleNotify: () => {
+      setRemaining(NOTIFY_WINDOW_S);
+      setNotify((v) => !v);
+    },
+    onOpenLogs: noop,
+    onOpenErrors: noop,
+    onFlyTo: noop,
+    onFloodlightToggle: () => setFlood((v) => !v),
+    onSpeakerToggle: () => setSpeaker((v) => !v),
+    onJamActivate: noop,
+    onPinToFeed: () => setPinned(true),
+    onUnpinFromFeed: () => setPinned(false),
+  };
+}
+
+const CATALOG_TONES: DeviceActionTone[] = ['neutral', 'engaged', 'caution', 'danger'];
+
+function FloodlightToggleDemos() {
+  const [wide, setWide] = useState(false);
+  const [compact, setCompact] = useState(true);
+  return (
+    <div className="flex flex-wrap items-end gap-8">
+      <div className="flex flex-col gap-2">
+        <CatalogLabel>Default</CatalogLabel>
+        <FloodlightSegmentedDefault on={wide} onToggle={() => setWide((v) => !v)} />
+      </div>
+      <div className="flex flex-col gap-2">
+        <CatalogLabel>Compact (header)</CatalogLabel>
+        <FloodlightSegmentedCompact on={compact} onToggle={() => setCompact((v) => !v)} />
+      </div>
+      <div className="flex flex-col gap-2">
+        <CatalogLabel>Disabled</CatalogLabel>
+        <FloodlightSegmentedCompact on={false} onToggle={noop} disabled />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * One container with every action, toggle, and dropdown that lives inside the
+ * device card, each in isolation. Lets a developer eyeball the full control
+ * inventory without reading the row source.
+ */
+function DeviceElementsCatalog() {
+  const camera = deviceCardEdgeCases[0];
+  const drone = deviceCardEdgeCases[6];
+  const speaker = deviceCardEdgeCases[7];
+  const floodlight = deviceCardEdgeCases[8];
+  const ecm = deviceCardEdgeCases[12];
+
+  const cameraCtx = useCatalogCtx(camera);
+  const speakerCtx = useCatalogCtx(speaker);
+  const floodCtx = useCatalogCtx(floodlight);
+  const ecmCtx = useCatalogCtx(ecm);
+  const droneCtx = useCatalogCtx(drone);
+
+  const resolved: { kind: DeviceActionKind; label: string; ctx: DeviceActionContext }[] = [
+    { kind: 'center', label: 'Show on map', ctx: cameraCtx },
+    { kind: 'floodlight', label: 'Floodlight', ctx: floodCtx },
+    { kind: 'jam', label: 'ECM jam', ctx: ecmCtx },
+    { kind: 'speaker', label: 'Speaker play/pause', ctx: speakerCtx },
+    { kind: 'audio', label: 'Audio track', ctx: speakerCtx },
+    { kind: 'watchVideo', label: 'Watch video', ctx: cameraCtx },
+    { kind: 'pin', label: 'Pin to feed', ctx: cameraCtx },
+    { kind: 'wipers', label: 'Wipers', ctx: droneCtx },
+    { kind: 'calibrate', label: 'Calibrate', ctx: droneCtx },
+  ];
+
+  return (
+    <div>
+      <p className="mb-2 text-xs text-n-9">
+        Every interactive element that lives inside the device card, in isolation. The action grid is
+        rendered through the same <code className="font-mono text-n-10">resolveDeviceAction</code>
+        {' '}resolver the real row uses, so it always mirrors the registry.
+      </p>
+
+      {/* ── DeviceAction primitive — tone x state ───────────── */}
+      <ExampleBlock id="device-elements" title="DeviceAction — tone x state matrix">
+        <CatalogSurface>
+          <div className="mb-4 flex flex-wrap items-center gap-6 text-[10px] text-n-8">
+            <span>Solid footer pills: Idle / Pressed / Loading / Disabled</span>
+            <span>·</span>
+            <span>Ghost header glyphs: Idle / Pressed / Disabled</span>
+          </div>
+          <div className="flex flex-col gap-3">
+            {CATALOG_TONES.map((tone) => (
+              <div
+                key={tone}
+                className="flex flex-wrap items-center gap-3 border-b border-white/[0.06] pb-3 last:border-0"
+              >
+                <div className="w-16 shrink-0 font-mono text-[10px] text-n-8">{tone}</div>
+                <DeviceAction tone={tone} icon={<CameraIcon size={12} />} label="Idle" ariaLabel="Idle" onClick={noop} />
+                <DeviceAction tone={tone} pressed icon={<CameraIcon size={12} />} label="Pressed" ariaLabel="Pressed" onClick={noop} />
+                <DeviceAction tone={tone} loading icon={<CameraIcon size={12} />} label="Loading" ariaLabel="Loading" />
+                <DeviceAction
+                  tone={tone}
+                  disabled
+                  disabledReason="Unavailable while offline"
+                  icon={<CameraIcon size={12} />}
+                  label="Disabled"
+                  ariaLabel="Disabled"
+                />
+                <span aria-hidden className="mx-1 h-5 w-px bg-white/10" />
+                <DeviceAction tone={tone} ghost iconOnly icon={<CameraIcon size={12} />} ariaLabel="Ghost idle" onClick={noop} />
+                <DeviceAction tone={tone} ghost iconOnly pressed icon={<CameraIcon size={12} />} ariaLabel="Ghost pressed" onClick={noop} />
+                <DeviceAction tone={tone} ghost iconOnly disabled disabledReason="Unavailable" icon={<CameraIcon size={12} />} ariaLabel="Ghost disabled" />
+              </div>
+            ))}
+          </div>
+        </CatalogSurface>
+      </ExampleBlock>
+
+      {/* ── Every registry action kind ──────────────────────── */}
+      <ExampleBlock id="device-elements-resolved" title="Actions — every registry kind (header + footer)">
+        <CatalogSurface>
+          <div className="flex flex-col gap-4">
+            {resolved.map(({ kind, label, ctx }) => {
+              const header = resolveDeviceAction(kind, ctx, 'header');
+              const footer = resolveDeviceAction(kind, ctx, 'footer');
+              return (
+                <div
+                  key={kind}
+                  className="flex flex-wrap items-start gap-x-8 gap-y-3 border-b border-white/[0.06] pb-4 last:border-0"
+                >
+                  <div className="w-36 shrink-0">
+                    <div className="text-xs text-n-10">{label}</div>
+                    <div className="font-mono text-[10px] text-n-8">{kind}</div>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <CatalogLabel>Header</CatalogLabel>
+                    <div className="flex items-center gap-2">
+                      {header?.node ?? <span className="text-[10px] text-n-7">—</span>}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <CatalogLabel>Footer</CatalogLabel>
+                    <div className="flex items-start gap-2">
+                      {footer?.node ?? <span className="text-[10px] text-n-7">—</span>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CatalogSurface>
+      </ExampleBlock>
+
+      {/* ── Toggles ─────────────────────────────────────────── */}
+      <ExampleBlock id="device-elements-toggles" title="Toggles — floodlight segmented On/Off">
+        <CatalogSurface>
+          <FloodlightToggleDemos />
+        </CatalogSurface>
+      </ExampleBlock>
+
+      {/* ── Dropdowns ───────────────────────────────────────── */}
+      <ExampleBlock id="device-elements-dropdowns" title="Dropdowns — audio-track combobox + ECM jam split">
+        <CatalogSurface>
+          <div className="flex flex-wrap items-start gap-10">
+            <div className="flex flex-col gap-2">
+              <CatalogLabel>Audio track (SpeakerTrackSelect)</CatalogLabel>
+              <SpeakerTrackSelect tracks={DEFAULT_SPEAKER_TRACKS} strings={DEFAULT_DEVICE_PANEL_STRINGS} />
+            </div>
+            <div className="flex flex-col gap-2">
+              <CatalogLabel>ECM jam (split + confirm)</CatalogLabel>
+              <JamSplitButton device={ecm} strings={DEFAULT_DEVICE_PANEL_STRINGS} onJamActivate={noop} />
+            </div>
+          </div>
+        </CatalogSurface>
+      </ExampleBlock>
+
+      {/* ── Overflow + notifications ────────────────────────── */}
+      <ExampleBlock id="device-elements-overflow" title="Overflow + notifications — Logs error channel + timed window">
+        <CatalogSurface>
+          <div className="flex flex-wrap items-end gap-10">
+            <div className="flex flex-col gap-2">
+              <CatalogLabel>3-dot overflow (Logs + Notifications)</CatalogLabel>
+              <div className="flex h-44 items-end">
+                <DeviceOverflowMenu kinds={['logs', 'notifications']} ctx={ecmCtx} />
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <CatalogLabel>Notify header indicator</CatalogLabel>
+              <NotifyHeaderIndicator armed remaining={120} ariaLabelPrefix="Notifications" />
+            </div>
+            <div className="flex flex-col gap-2">
+              <CatalogLabel>Notify countdown</CatalogLabel>
+              <NotifyCountdown remaining={30} />
+            </div>
+          </div>
+        </CatalogSurface>
+      </ExampleBlock>
     </div>
   );
 }
@@ -1420,7 +1774,6 @@ function DeviceCardFlows() {
 
   const noop = useCallback(() => {}, []);
   const noopFlyTo = useCallback((_lat: number, _lon: number) => {}, []);
-  const noopMute = useCallback((_id: string) => {}, []);
 
   return (
     <div className="space-y-8">
@@ -1441,9 +1794,6 @@ function DeviceCardFlows() {
               onToggle={noop}
               onHover={(id) => setFlowHoverDeviceId(id)}
               onFlyTo={noopFlyTo}
-              isMuted={false}
-              muteRemaining={null}
-              onToggleMute={noopMute}
             />
             <DeviceRow
               device={hoverDeviceCam2}
@@ -1451,9 +1801,6 @@ function DeviceCardFlows() {
               onToggle={noop}
               onHover={(id) => setFlowHoverDeviceId(id)}
               onFlyTo={noopFlyTo}
-              isMuted={false}
-              muteRemaining={null}
-              onToggleMute={noopMute}
             />
           </div>
         }
@@ -1506,9 +1853,6 @@ function DeviceCardFlows() {
               onToggle={() => setFlow4Selected(prev => !prev)}
               onHover={(id) => setFlow4HoveredRow(id)}
               onFlyTo={noopFlyTo}
-              isMuted={false}
-              muteRemaining={null}
-              onToggleMute={noopMute}
             />
             <DeviceRow
               device={flow4DeviceCam2}
@@ -1516,9 +1860,6 @@ function DeviceCardFlows() {
               onToggle={noop}
               onHover={(id) => setFlow4HoveredRow(id)}
               onFlyTo={noopFlyTo}
-              isMuted={false}
-              muteRemaining={null}
-              onToggleMute={noopMute}
             />
           </div>
         }
@@ -2825,6 +3166,29 @@ function HudCompassStripSection() {
           </HudStage>
         </div>
       </ExampleBlock>
+
+      <SectionHeading>Class recipe</SectionHeading>
+      <ClassNameRecipe
+        entries={[
+          {
+            label: 'Wrapper',
+            note: 'fixed width via inline style',
+            className: 'block',
+          },
+          {
+            label: 'Degrees readout',
+            note: 'amber + drop-shadow inline',
+            className:
+              'text-center font-mono text-xl leading-none tracking-tight tabular-nums mt-0.5',
+          },
+          {
+            label: 'Ticks & cardinals',
+            note: 'SVG strokes / fills, not classes',
+            className:
+              'stroke rgba(255,255,255,0.18→0.55) · marker fill #fde047 · N fill #fca5a5',
+          },
+        ]}
+      />
     </ComponentSection>
   );
 }
@@ -2867,6 +3231,37 @@ function HudSlewCueSection() {
           </HudStage>
         </div>
       </ExampleBlock>
+
+      <SectionHeading>Class recipe</SectionHeading>
+      <ClassNameRecipe
+        entries={[
+          {
+            label: 'Overlay root',
+            note: 'fills the feed, non-interactive',
+            className: 'absolute inset-0 z-20 overflow-hidden pointer-events-none',
+          },
+          {
+            label: 'Guide group',
+            note: 'fades in while slewing',
+            className:
+              'absolute left-1/2 top-1/2 transition-opacity duration-150 ease-out motion-reduce:transition-none',
+          },
+          {
+            label: 'Dashed guide',
+            note: 'amber border via inline style',
+            className: 'block',
+          },
+          {
+            label: 'Endpoint dot',
+            className:
+              'absolute left-0 top-0 size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full',
+          },
+          {
+            label: 'Crosshair layer',
+            className: 'absolute inset-0 flex items-center justify-center',
+          },
+        ]}
+      />
     </ComponentSection>
   );
 }
@@ -2904,6 +3299,37 @@ function HudAutoTrackSection() {
 
       <SectionHeading>Usage</SectionHeading>
       <UsageBlock code={autoTrackOverlaySrc} name="AutoTrackOverlay" />
+
+      <SectionHeading>Class recipe</SectionHeading>
+      <ClassNameRecipe
+        entries={[
+          {
+            label: 'Overlay root',
+            note: 'toggles pointer-events + cursor-none while hunting',
+            className: 'absolute inset-0 z-20 pointer-events-auto cursor-none',
+          },
+          {
+            label: 'Hunt reticle',
+            note: 'spins via keyframes',
+            className: 'autotrack-reticle-spin text-accent-warning',
+          },
+          {
+            label: 'Corner brackets',
+            note: 'snapped → warning, locked → success',
+            className: 'size-full overflow-visible text-accent-warning',
+          },
+          {
+            label: 'Lock label',
+            className:
+              'absolute font-mono text-[9px] uppercase tracking-[0.18em] text-accent-success',
+          },
+          {
+            label: 'Release fade',
+            note: 'plays on unlock',
+            className: 'autotrack-brackets-out',
+          },
+        ]}
+      />
     </ComponentSection>
   );
 }
@@ -2939,6 +3365,31 @@ function HudDetectionsSection() {
           </HudStage>
         </div>
       </ExampleBlock>
+
+      <SectionHeading>Class recipe</SectionHeading>
+      <ClassNameRecipe
+        entries={[
+          {
+            label: 'Overlay root',
+            note: 'sits under HUD chrome, non-interactive',
+            className: 'pointer-events-none absolute inset-0 z-10',
+          },
+          {
+            label: 'Marker',
+            note: 'fixed 32px, centered + entrance keyframe',
+            className: 'ai-detection-marker absolute',
+          },
+          {
+            label: 'Triangle SVG',
+            className: 'size-full overflow-visible',
+          },
+          {
+            label: 'Cyan fill / stroke',
+            note: 'SVG, not classes',
+            className: 'fill url(#grad) · stroke var(--accent-cyan)',
+          },
+        ]}
+      />
     </ComponentSection>
   );
 }
@@ -3428,10 +3879,20 @@ export default function StyleguidePage() {
     setActiveAnchor(id);
 
     if (parent) {
+      // Double rAF so any tab containing this anchor has a frame to switch
+      // active + unhide its panel before we scroll the (now visible) target.
       requestAnimationFrame(() => {
-        document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        requestAnimationFrame(() => {
+          document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
       });
     }
+  }, []);
+
+  /** Selecting an example tab directly: sync the anchor highlight + hash (no scroll — the tab strip is already in view). */
+  const handleExampleTabAnchor = useCallback((id: string) => {
+    setActiveAnchor(id);
+    window.history.replaceState(null, '', `#${id}`);
   }, []);
 
   useEffect(() => {
@@ -3813,6 +4274,19 @@ export function DetectionRow() {
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={statusChipSrc} name="StatusChip" />
 
+              <SectionHeading>Class recipe</SectionHeading>
+              <ClassNameRecipe
+                entries={[
+                  {
+                    label: 'Chip',
+                    note: 'color via STATUS_CHIP_COLORS[color].bg + .text',
+                    className:
+                      'inline-flex items-center justify-center rounded border border-transparent px-2 py-0.5 text-xs font-medium w-fit max-w-full whitespace-nowrap shrink-0 gap-1',
+                  },
+                  { label: 'Label', className: 'min-w-0 truncate' },
+                ]}
+              />
+
             </ComponentSection>
             )}
 
@@ -3829,6 +4303,18 @@ export function DetectionRow() {
 
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={newUpdatesPillSrc} name="NewUpdatesPill" />
+
+              <SectionHeading>Class recipe</SectionHeading>
+              <ClassNameRecipe
+                entries={[
+                  {
+                    label: 'Pill (Button)',
+                    className:
+                      'h-8 gap-1.5 rounded-full border-0 bg-sky-500 px-3 text-xs font-semibold text-white shadow-[0_8px_24px_rgba(29,155,240,0.35),0_0_0_1px_rgba(255,255,255,0.1)] transition-[background-color,transform] duration-150 ease-out hover:bg-sky-400 focus-visible:border-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 active:scale-[0.98]',
+                  },
+                  { label: 'Arrow icon', note: 'strokeWidth 2.5', className: 'size-[13px]' },
+                ]}
+              />
 
             </ComponentSection>
             )}
@@ -3864,53 +4350,107 @@ export function DetectionRow() {
               />
 
               <SectionHeading>Examples</SectionHeading>
-              <ExampleBlock title="Size Scale">
-                <div className="space-y-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <ActionButton label="sm" icon={Eye} variant="fill" size="sm" />
-                    <ActionButton label="md" icon={Eye} variant="fill" size="md" />
-                    <ActionButton label="lg" icon={Eye} variant="fill" size="lg" />
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <ActionButton label="sm" icon={Trash2} variant="danger" size="sm" />
-                    <ActionButton label="md" icon={Trash2} variant="danger" size="md" />
-                    <ActionButton label="lg" icon={Trash2} variant="danger" size="lg" />
-                  </div>
-                </div>
-              </ExampleBlock>
+              <ExampleTabs
+                items={[
+                  {
+                    value: 'size-scale',
+                    label: 'Size Scale',
+                    children: (
+                      <ExampleBlock hideTitle title="Size Scale">
+                        <div className="space-y-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <ActionButton label="sm" icon={Eye} variant="fill" size="sm" />
+                            <ActionButton label="md" icon={Eye} variant="fill" size="md" />
+                            <ActionButton label="lg" icon={Eye} variant="fill" size="lg" />
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <ActionButton label="sm" icon={Trash2} variant="danger" size="sm" />
+                            <ActionButton label="md" icon={Trash2} variant="danger" size="md" />
+                            <ActionButton label="lg" icon={Trash2} variant="danger" size="lg" />
+                          </div>
+                        </div>
+                      </ExampleBlock>
+                    ),
+                  },
+                  {
+                    value: 'all-variants',
+                    label: 'All Variants × sm',
+                    children: (
+                      <ExampleBlock hideTitle title="All Variants × sm">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <ActionButton label="הפנה מצלמה" icon={Eye} variant="fill" size="sm" />
+                          <ActionButton label="ביטול" icon={Ban} variant="ghost" size="sm" />
+                          <ActionButton label="מעקב" icon={Eye} variant="outline" size="sm" />
+                          <ActionButton label="מחק" icon={Trash2} variant="danger" size="sm" />
+                          <ActionButton label="אזהרה" icon={AlertTriangle} variant="warning" size="sm" />
+                        </div>
+                      </ExampleBlock>
+                    ),
+                  },
+                  {
+                    value: 'without-icon',
+                    label: 'Without Icon',
+                    children: (
+                      <ExampleBlock hideTitle title="Without Icon">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <ActionButton label="fill" variant="fill" size="sm" />
+                          <ActionButton label="ghost" variant="ghost" size="sm" />
+                          <ActionButton label="danger" variant="danger" size="sm" />
+                          <ActionButton label="warning" variant="warning" size="sm" />
+                        </div>
+                      </ExampleBlock>
+                    ),
+                  },
+                  {
+                    value: 'disabled',
+                    label: 'Disabled',
+                    children: (
+                      <ExampleBlock hideTitle title="Disabled">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <ActionButton label="fill" icon={Eye} variant="fill" size="sm" disabled />
+                          <ActionButton label="danger" icon={Trash2} variant="danger" size="sm" disabled />
+                        </div>
+                      </ExampleBlock>
+                    ),
+                  },
+                  {
+                    value: 'loading',
+                    label: 'Loading (click to test)',
+                    children: (
+                      <ExampleBlock hideTitle title="Loading (click to test)">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <ActionButton label="שולח..." icon={Send} variant="fill" size="sm" loading={loading === 'ab-fill'} onClick={() => simulateLoading('ab-fill')} />
+                          <ActionButton label="מוחק..." icon={Trash2} variant="danger" size="sm" loading={loading === 'ab-danger'} onClick={() => simulateLoading('ab-danger')} />
+                        </div>
+                      </ExampleBlock>
+                    ),
+                  },
+                ]}
+              />
 
-              <ExampleBlock title="All Variants × sm">
-                <div className="flex flex-wrap items-center gap-2">
-                  <ActionButton label="הפנה מצלמה" icon={Eye} variant="fill" size="sm" />
-                  <ActionButton label="ביטול" icon={Ban} variant="ghost" size="sm" />
-                  <ActionButton label="מעקב" icon={Eye} variant="outline" size="sm" />
-                  <ActionButton label="מחק" icon={Trash2} variant="danger" size="sm" />
-                  <ActionButton label="אזהרה" icon={AlertTriangle} variant="warning" size="sm" />
-                </div>
-              </ExampleBlock>
-
-              <ExampleBlock title="Without Icon">
-                <div className="flex flex-wrap items-center gap-2">
-                  <ActionButton label="fill" variant="fill" size="sm" />
-                  <ActionButton label="ghost" variant="ghost" size="sm" />
-                  <ActionButton label="danger" variant="danger" size="sm" />
-                  <ActionButton label="warning" variant="warning" size="sm" />
-                </div>
-              </ExampleBlock>
-
-              <ExampleBlock title="Disabled">
-                <div className="flex flex-wrap items-center gap-2">
-                  <ActionButton label="fill" icon={Eye} variant="fill" size="sm" disabled />
-                  <ActionButton label="danger" icon={Trash2} variant="danger" size="sm" disabled />
-                </div>
-              </ExampleBlock>
-
-              <ExampleBlock title="Loading (click to test)">
-                <div className="flex flex-wrap items-center gap-2">
-                  <ActionButton label="שולח..." icon={Send} variant="fill" size="sm" loading={loading === 'ab-fill'} onClick={() => simulateLoading('ab-fill')} />
-                  <ActionButton label="מוחק..." icon={Trash2} variant="danger" size="sm" loading={loading === 'ab-danger'} onClick={() => simulateLoading('ab-danger')} />
-                </div>
-              </ExampleBlock>
+              <SectionHeading>Class recipe</SectionHeading>
+              <ClassNameRecipe
+                entries={[
+                  {
+                    label: 'Button base',
+                    note: 'height/type via BUTTON_SIZES[size]; surface via BUTTON_VARIANTS[variant]',
+                    className:
+                      'inline-flex items-center justify-center gap-2 px-3 rounded overflow-hidden transition-[background-color,box-shadow,transform] duration-150 ease-out',
+                  },
+                  {
+                    label: 'Focus ring',
+                    className:
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/30',
+                  },
+                  { label: 'Press feedback', className: 'active:scale-[0.98] will-change-transform' },
+                  { label: 'Disabled', className: 'opacity-45 pointer-events-none' },
+                  {
+                    label: 'Pressed (toggle)',
+                    className:
+                      'bg-white/[0.20] hover:bg-white/[0.24] active:bg-white/[0.16] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.22)]',
+                  },
+                ]}
+              />
             </ComponentSection>
             )}
 
@@ -3951,86 +4491,149 @@ export function DetectionRow() {
               />
 
               <SectionHeading>Examples</SectionHeading>
-              <ExampleBlock title="Size Scale">
-                <div className="flex flex-wrap items-start gap-3">
-                  <div className="w-44">
-                    <SplitActionButton label="sm" icon={Zap} variant="fill" size="sm" onClick={noop} dropdownItems={[{ id: '1', label: 'Option', onClick: noop }]} />
-                  </div>
-                  <div className="w-48">
-                    <SplitActionButton label="md" icon={Zap} variant="fill" size="md" onClick={noop} dropdownItems={[{ id: '1', label: 'Option', onClick: noop }]} />
-                  </div>
-                  <div className="w-52">
-                    <SplitActionButton label="lg" icon={Zap} variant="fill" size="lg" onClick={noop} dropdownItems={[{ id: '1', label: 'Option', onClick: noop }]} />
-                  </div>
-                </div>
-              </ExampleBlock>
+              <ExampleTabs
+                items={[
+                  {
+                    value: 'size-scale',
+                    label: 'Size Scale',
+                    children: (
+                      <ExampleBlock hideTitle title="Size Scale">
+                        <div className="flex flex-wrap items-start gap-3">
+                          <div className="w-44">
+                            <SplitActionButton label="sm" icon={Zap} variant="fill" size="sm" onClick={noop} dropdownItems={[{ id: '1', label: 'Option', onClick: noop }]} />
+                          </div>
+                          <div className="w-48">
+                            <SplitActionButton label="md" icon={Zap} variant="fill" size="md" onClick={noop} dropdownItems={[{ id: '1', label: 'Option', onClick: noop }]} />
+                          </div>
+                          <div className="w-52">
+                            <SplitActionButton label="lg" icon={Zap} variant="fill" size="lg" onClick={noop} dropdownItems={[{ id: '1', label: 'Option', onClick: noop }]} />
+                          </div>
+                        </div>
+                      </ExampleBlock>
+                    ),
+                  },
+                  {
+                    value: 'disabled',
+                    label: 'Disabled',
+                    children: (
+                      <ExampleBlock hideTitle title="Disabled">
+                        <div className="w-48">
+                          <SplitActionButton label="שיגור" icon={Zap} variant="fill" size="sm" disabled onClick={noop} dropdownItems={[{ id: '1', label: 'אפשרות א׳', onClick: noop }]} />
+                        </div>
+                      </ExampleBlock>
+                    ),
+                  },
+                  {
+                    value: 'loading',
+                    label: 'Loading (click to test)',
+                    children: (
+                      <ExampleBlock hideTitle title="Loading (click to test)">
+                        <div className="w-48">
+                          <SplitActionButton label="שולח..." icon={Zap} variant="fill" size="sm" loading={loading === 'split-fill'} onClick={() => simulateLoading('split-fill')} dropdownItems={[{ id: '1', label: 'אפשרות א׳', onClick: noop }]} />
+                        </div>
+                      </ExampleBlock>
+                    ),
+                  },
+                  {
+                    value: 'with-badge',
+                    label: 'With Badge (effector name inline)',
+                    children: (
+                      <ExampleBlock hideTitle title="With Badge (effector name inline)">
+                        <div className="flex flex-wrap items-start gap-3">
+                          <div className="w-56">
+                            <SplitActionButton label="שיבוש" badge="Regulus North" icon={Radio} variant="danger" size="sm" onClick={noop} dropdownItems={[
+                              { id: '1', label: 'שיבוש כללי', icon: Radio, onClick: noop },
+                              { id: '2', label: 'שיבוש ממוקד', icon: Crosshair, onClick: noop },
+                            ]} />
+                          </div>
+                          <div className="w-56">
+                            <SplitActionButton label="משבש אות..." badge="Regulus South" icon={Radio} variant="danger" size="sm" loading onClick={noop} dropdownItems={[
+                              { id: '1', label: 'שיבוש כללי', onClick: noop },
+                            ]} />
+                          </div>
+                        </div>
+                      </ExampleBlock>
+                    ),
+                  },
+                  {
+                    value: 'grouped-dropdown',
+                    label: 'Grouped Dropdown (RTL, effector selection)',
+                    children: (
+                      <ExampleBlock hideTitle title="Grouped Dropdown (RTL, effector selection)">
+                        <div className="w-56">
+                          <SplitActionButton label="שיבוש" badge="Regulus North" icon={Radio} variant="danger" size="sm" onClick={noop} dropdownItems={[]} dropdownGroups={[
+                            { label: 'בחירת ג׳אמר', items: [
+                              { id: 'eff-1', label: 'Regulus North (1.2 ק״מ)', active: true, onClick: noop },
+                              { id: 'eff-2', label: 'Regulus South (3.8 ק״מ)', active: false, onClick: noop },
+                            ]},
+                            { items: [
+                              { id: 'mode-1', label: 'שיבוש כללי', icon: Radio, onClick: noop },
+                              { id: 'mode-2', label: 'שיבוש ממוקד', icon: Crosshair, onClick: noop },
+                            ]},
+                          ]} />
+                        </div>
+                      </ExampleBlock>
+                    ),
+                  },
+                  {
+                    value: 'ground-hostile',
+                    label: 'Ground Hostile — Weapon Flow',
+                    children: (
+                      <ExampleBlock hideTitle title="Ground Hostile — Weapon Flow">
+                        <div className="flex flex-wrap items-start gap-3">
+                          <div className="w-56">
+                            <SplitActionButton label="כוון נשק" badge="משגר אלפא" icon={Crosshair} variant="danger" size="sm" onClick={noop} dropdownItems={[]} dropdownGroups={[
+                              { label: 'בחירת משגר', items: [
+                                { id: 'lchr-1', label: 'משגר אלפא (0.8 ק״מ)', active: true, onClick: noop },
+                                { id: 'lchr-2', label: 'משגר בראבו (2.1 ק״מ)', active: false, onClick: noop },
+                                { id: 'lchr-3', label: 'משגר גאמא (3.5 ק״מ)', active: false, onClick: noop },
+                              ]},
+                            ]} />
+                          </div>
+                          <div className="w-56">
+                            <SplitActionButton label="מכוון..." badge="משגר אלפא" icon={Crosshair} variant="warning" size="sm" loading onClick={noop} dropdownItems={[]} dropdownGroups={[
+                              { label: 'בחירת משגר', items: [
+                                { id: 'lchr-1', label: 'משגר אלפא (0.8 ק״מ)', active: true, onClick: noop },
+                              ]},
+                            ]} />
+                          </div>
+                          <div className="w-56">
+                            <SplitActionButton label="נעול על מטרה" badge="משגר אלפא" icon={Lock} variant="ghost" size="sm" disabled dimDisabledShell={false} onClick={noop} dropdownItems={[]} />
+                          </div>
+                        </div>
+                      </ExampleBlock>
+                    ),
+                  },
+                ]}
+              />
 
-              <ExampleBlock title="Disabled">
-                <div className="w-48">
-                  <SplitActionButton label="שיגור" icon={Zap} variant="fill" size="sm" disabled onClick={noop} dropdownItems={[{ id: '1', label: 'אפשרות א׳', onClick: noop }]} />
-                </div>
-              </ExampleBlock>
-
-              <ExampleBlock title="Loading (click to test)">
-                <div className="w-48">
-                  <SplitActionButton label="שולח..." icon={Zap} variant="fill" size="sm" loading={loading === 'split-fill'} onClick={() => simulateLoading('split-fill')} dropdownItems={[{ id: '1', label: 'אפשרות א׳', onClick: noop }]} />
-                </div>
-              </ExampleBlock>
-
-              <ExampleBlock title="With Badge (effector name inline)">
-                <div className="flex flex-wrap items-start gap-3">
-                  <div className="w-56">
-                    <SplitActionButton label="שיבוש" badge="Regulus North" icon={Radio} variant="danger" size="sm" onClick={noop} dropdownItems={[
-                      { id: '1', label: 'שיבוש כללי', icon: Radio, onClick: noop },
-                      { id: '2', label: 'שיבוש ממוקד', icon: Crosshair, onClick: noop },
-                    ]} />
-                  </div>
-                  <div className="w-56">
-                    <SplitActionButton label="משבש אות..." badge="Regulus South" icon={Radio} variant="danger" size="sm" loading onClick={noop} dropdownItems={[
-                      { id: '1', label: 'שיבוש כללי', onClick: noop },
-                    ]} />
-                  </div>
-                </div>
-              </ExampleBlock>
-
-              <ExampleBlock title="Grouped Dropdown (RTL, effector selection)">
-                <div className="w-56">
-                  <SplitActionButton label="שיבוש" badge="Regulus North" icon={Radio} variant="danger" size="sm" onClick={noop} dropdownItems={[]} dropdownGroups={[
-                    { label: 'בחירת ג׳אמר', items: [
-                      { id: 'eff-1', label: 'Regulus North (1.2 ק״מ)', active: true, onClick: noop },
-                      { id: 'eff-2', label: 'Regulus South (3.8 ק״מ)', active: false, onClick: noop },
-                    ]},
-                    { items: [
-                      { id: 'mode-1', label: 'שיבוש כללי', icon: Radio, onClick: noop },
-                      { id: 'mode-2', label: 'שיבוש ממוקד', icon: Crosshair, onClick: noop },
-                    ]},
-                  ]} />
-                </div>
-              </ExampleBlock>
-
-              <ExampleBlock title="Ground Hostile — Weapon Flow">
-                <div className="flex flex-wrap items-start gap-3">
-                  <div className="w-56">
-                    <SplitActionButton label="כוון נשק" badge="משגר אלפא" icon={Crosshair} variant="danger" size="sm" onClick={noop} dropdownItems={[]} dropdownGroups={[
-                      { label: 'בחירת משגר', items: [
-                        { id: 'lchr-1', label: 'משגר אלפא (0.8 ק״מ)', active: true, onClick: noop },
-                        { id: 'lchr-2', label: 'משגר בראבו (2.1 ק״מ)', active: false, onClick: noop },
-                        { id: 'lchr-3', label: 'משגר גאמא (3.5 ק״מ)', active: false, onClick: noop },
-                      ]},
-                    ]} />
-                  </div>
-                  <div className="w-56">
-                    <SplitActionButton label="מכוון..." badge="משגר אלפא" icon={Crosshair} variant="warning" size="sm" loading onClick={noop} dropdownItems={[]} dropdownGroups={[
-                      { label: 'בחירת משגר', items: [
-                        { id: 'lchr-1', label: 'משגר אלפא (0.8 ק״מ)', active: true, onClick: noop },
-                      ]},
-                    ]} />
-                  </div>
-                  <div className="w-56">
-                    <SplitActionButton label="נעול על מטרה" badge="משגר אלפא" icon={Lock} variant="ghost" size="sm" disabled dimDisabledShell={false} onClick={noop} dropdownItems={[]} />
-                  </div>
-                </div>
-              </ExampleBlock>
+              <SectionHeading>Class recipe</SectionHeading>
+              <ClassNameRecipe
+                entries={[
+                  { label: 'Shell', className: 'flex w-full items-stretch gap-0.5 rounded' },
+                  {
+                    label: 'Primary segment',
+                    note: 'shares Button variant/size tokens',
+                    className:
+                      'flex flex-1 items-center justify-center gap-2 px-3 min-w-0 overflow-hidden rounded-s-[4px]',
+                  },
+                  {
+                    label: 'Chevron segment',
+                    note: 'width via BUTTON_SIZES[size].chevronMin',
+                    className: 'flex shrink-0 items-center justify-center px-2 rounded-e-[4px]',
+                  },
+                  {
+                    label: 'Menu content',
+                    className:
+                      'rounded-lg border-none p-1 bg-[#1c1c20] text-white shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_8px_30px_rgba(0,0,0,0.5)]',
+                  },
+                  {
+                    label: 'Menu item',
+                    className:
+                      'flex w-full flex-row items-center justify-start gap-2 rounded-md px-2.5 py-2 text-xs text-zinc-200 cursor-pointer transition-[background-color,color] duration-150 ease-out hover:bg-white/[0.08] hover:text-white focus:bg-white/[0.08] focus:text-white',
+                  },
+                ]}
+              />
             </ComponentSection>
             )}
 
@@ -4057,6 +4660,32 @@ export function DetectionRow() {
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={accordionSectionSrc} name="AccordionSection" />
 
+              <SectionHeading>Class recipe</SectionHeading>
+              <ClassNameRecipe
+                entries={[
+                  {
+                    label: 'Trigger',
+                    className:
+                      'flex w-full cursor-pointer items-center justify-between rounded-none bg-white/[0.08] p-[8px] transition-colors hover:bg-white/[0.11] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25',
+                  },
+                  { label: 'Title cluster', className: 'flex items-center gap-2 text-sm font-normal text-zinc-300' },
+                  {
+                    label: 'Chevron',
+                    className: 'text-zinc-500 transition-transform duration-200 group-data-[state=open]:rotate-180',
+                  },
+                  {
+                    label: 'Content',
+                    className:
+                      'overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down',
+                  },
+                  {
+                    label: 'Content inner',
+                    note: 'bg via CARD_TOKENS.elevation.overlay.level3 (inline style)',
+                    className: 'flex flex-wrap px-[8px] py-[0px]',
+                  },
+                ]}
+              />
+
             </ComponentSection>
             )}
 
@@ -4075,31 +4704,61 @@ export function DetectionRow() {
               <UsageBlock code={telemetryRowSrc} name="TelemetryRow" />
 
               <SectionHeading>Examples</SectionHeading>
-              <ExampleBlock title="3 items (single row)" tight>
-                <div className="grid grid-cols-3 gap-x-4 gap-y-2 rounded-lg p-3" style={{ backgroundColor: SURFACE.level1 }}>
-                  <TelemetryRow label="גובה" value="120m" icon={Navigation} />
-                  <TelemetryRow label="מהירות" value="45 km/h" icon={Gauge} />
-                  <TelemetryRow label="כיוון" value="270°" icon={Compass} />
-                </div>
-              </ExampleBlock>
+              <ExampleTabs
+                items={[
+                  {
+                    value: 'three-items',
+                    label: '3 items (single row)',
+                    children: (
+                      <ExampleBlock hideTitle title="3 items (single row)" tight>
+                        <div className="grid grid-cols-3 gap-x-4 gap-y-2 rounded-lg p-3" style={{ backgroundColor: SURFACE.level1 }}>
+                          <TelemetryRow label="גובה" value="120m" icon={Navigation} />
+                          <TelemetryRow label="מהירות" value="45 km/h" icon={Gauge} />
+                          <TelemetryRow label="כיוון" value="270°" icon={Compass} />
+                        </div>
+                      </ExampleBlock>
+                    ),
+                  },
+                  {
+                    value: 'six-items',
+                    label: '6 items (2 rows)',
+                    children: (
+                      <ExampleBlock hideTitle title="6 items (2 rows)" tight>
+                        <div className="grid grid-cols-3 gap-x-4 gap-y-2 rounded-lg p-3" style={{ backgroundColor: SURFACE.level1 }}>
+                          <TelemetryRow label="גובה" value="120m" icon={Navigation} />
+                          <TelemetryRow label="מהירות" value="45 km/h" icon={Gauge} />
+                          <TelemetryRow label="כיוון" value="270°" icon={Compass} />
+                          <TelemetryRow label="מרחק" value="1.2 km" icon={MapPin} />
+                          <TelemetryRow label="RCS" value="0.01 m²" icon={Radio} />
+                          <TelemetryRow label="סוג" value="DJI Mavic 3" icon={Eye} />
+                        </div>
+                      </ExampleBlock>
+                    ),
+                  },
+                  {
+                    value: 'two-items',
+                    label: '2 items (partial row)',
+                    children: (
+                      <ExampleBlock hideTitle title="2 items (partial row)" tight>
+                        <div className="grid grid-cols-3 gap-x-4 gap-y-2 rounded-lg p-3" style={{ backgroundColor: SURFACE.level1 }}>
+                          <TelemetryRow label="גובה" value="120m" icon={Navigation} />
+                          <TelemetryRow label="מהירות" value="45 km/h" icon={Gauge} />
+                        </div>
+                      </ExampleBlock>
+                    ),
+                  },
+                ]}
+              />
 
-              <ExampleBlock title="6 items (2 rows)" tight>
-                <div className="grid grid-cols-3 gap-x-4 gap-y-2 rounded-lg p-3" style={{ backgroundColor: SURFACE.level1 }}>
-                  <TelemetryRow label="גובה" value="120m" icon={Navigation} />
-                  <TelemetryRow label="מהירות" value="45 km/h" icon={Gauge} />
-                  <TelemetryRow label="כיוון" value="270°" icon={Compass} />
-                  <TelemetryRow label="מרחק" value="1.2 km" icon={MapPin} />
-                  <TelemetryRow label="RCS" value="0.01 m²" icon={Radio} />
-                  <TelemetryRow label="סוג" value="DJI Mavic 3" icon={Eye} />
-                </div>
-              </ExampleBlock>
-
-              <ExampleBlock title="2 items (partial row)" tight>
-                <div className="grid grid-cols-3 gap-x-4 gap-y-2 rounded-lg p-3" style={{ backgroundColor: SURFACE.level1 }}>
-                  <TelemetryRow label="גובה" value="120m" icon={Navigation} />
-                  <TelemetryRow label="מהירות" value="45 km/h" icon={Gauge} />
-                </div>
-              </ExampleBlock>
+              <SectionHeading>Class recipe</SectionHeading>
+              <ClassNameRecipe
+                entries={[
+                  { label: 'Row', className: 'w-full flex flex-col items-start justify-start py-1 gap-1' },
+                  { label: 'Label cluster', className: 'flex items-center gap-1.5 shrink-0' },
+                  { label: 'Label', className: 'text-xs text-zinc-400' },
+                  { label: 'Value', className: 'text-sm text-zinc-200 font-mono tabular-nums truncate text-start' },
+                ]}
+              />
             </ComponentSection>
             )}
 
@@ -4151,36 +4810,77 @@ export function DetectionRow() {
               <UsageBlock code={copyButtonSrc} name="CopyButton" />
 
               <SectionHeading>Examples</SectionHeading>
-              <ExampleBlock title="Always visible (no group/copy parent)" tight>
-                <div className="max-w-sm rounded-lg p-3 flex items-center gap-2" style={{ backgroundColor: SURFACE.level1 }}>
-                  <span
-                    className="flex-1 min-w-0 text-sm text-zinc-200 font-mono tabular-nums"
-                    style={{ fontVariantNumeric: 'tabular-nums slashed-zero' }}
-                  >
-                    f7k3c251f00cx623
-                  </span>
-                  <CopyButton value="f7k3c251f00cx623" copyLabel="Copy serial number" copiedLabel="Copied" alwaysVisible />
-                </div>
-              </ExampleBlock>
+              <ExampleTabs
+                items={[
+                  {
+                    value: 'always-visible',
+                    label: 'Always visible (no group/copy parent)',
+                    children: (
+                      <ExampleBlock hideTitle title="Always visible (no group/copy parent)" tight>
+                        <div className="max-w-sm rounded-lg p-3 flex items-center gap-2" style={{ backgroundColor: SURFACE.level1 }}>
+                          <span
+                            className="flex-1 min-w-0 text-sm text-zinc-200 font-mono tabular-nums"
+                            style={{ fontVariantNumeric: 'tabular-nums slashed-zero' }}
+                          >
+                            f7k3c251f00cx623
+                          </span>
+                          <CopyButton value="f7k3c251f00cx623" copyLabel="Copy serial number" copiedLabel="Copied" alwaysVisible />
+                        </div>
+                      </ExampleBlock>
+                    ),
+                  },
+                  {
+                    value: 'disabled-empty',
+                    label: 'Disabled (empty value)',
+                    children: (
+                      <ExampleBlock hideTitle title="Disabled (empty value)" tight>
+                        <div className="max-w-sm rounded-lg p-3 flex items-center gap-2" style={{ backgroundColor: SURFACE.level1 }}>
+                          <span className="flex-1 min-w-0 text-sm text-zinc-500 italic">no value</span>
+                          <CopyButton value="" copyLabel="Copy" copiedLabel="Copied" alwaysVisible />
+                        </div>
+                      </ExampleBlock>
+                    ),
+                  },
+                  {
+                    value: 'size-md',
+                    label: 'Size: md',
+                    children: (
+                      <ExampleBlock hideTitle title="Size: md" tight>
+                        <div className="max-w-sm rounded-lg p-3 flex items-center gap-2" style={{ backgroundColor: SURFACE.level1 }}>
+                          <span
+                            className="flex-1 min-w-0 text-sm text-zinc-200 font-mono tabular-nums"
+                            style={{ fontVariantNumeric: 'tabular-nums slashed-zero' }}
+                          >
+                            TGT-0042
+                          </span>
+                          <CopyButton value="TGT-0042" copyLabel="Copy target id" copiedLabel="Copied" size="md" alwaysVisible />
+                        </div>
+                      </ExampleBlock>
+                    ),
+                  },
+                ]}
+              />
 
-              <ExampleBlock title="Disabled (empty value)" tight>
-                <div className="max-w-sm rounded-lg p-3 flex items-center gap-2" style={{ backgroundColor: SURFACE.level1 }}>
-                  <span className="flex-1 min-w-0 text-sm text-zinc-500 italic">no value</span>
-                  <CopyButton value="" copyLabel="Copy" copiedLabel="Copied" alwaysVisible />
-                </div>
-              </ExampleBlock>
-
-              <ExampleBlock title="Size: md" tight>
-                <div className="max-w-sm rounded-lg p-3 flex items-center gap-2" style={{ backgroundColor: SURFACE.level1 }}>
-                  <span
-                    className="flex-1 min-w-0 text-sm text-zinc-200 font-mono tabular-nums"
-                    style={{ fontVariantNumeric: 'tabular-nums slashed-zero' }}
-                  >
-                    TGT-0042
-                  </span>
-                  <CopyButton value="TGT-0042" copyLabel="Copy target id" copiedLabel="Copied" size="md" alwaysVisible />
-                </div>
-              </ExampleBlock>
+              <SectionHeading>Class recipe</SectionHeading>
+              <ClassNameRecipe
+                entries={[
+                  {
+                    label: 'Button base',
+                    note: 'box via SIZES[size].box (size-6 / size-7)',
+                    className:
+                      'relative shrink-0 inline-flex items-center justify-center rounded-md cursor-pointer text-zinc-500 hover:text-zinc-200 focus-visible:text-zinc-200 data-[copied]:text-zinc-50',
+                  },
+                  { label: 'Hit target', className: "before:absolute before:inset-[-8px] before:content-['']" },
+                  {
+                    label: 'Reveal',
+                    note: 'parent row needs group/copy',
+                    className:
+                      'opacity-0 group-hover/copy:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 data-[copied]:opacity-100',
+                  },
+                  { label: 'Focus ring', className: 'outline-none focus-visible:ring-1 focus-visible:ring-white/30' },
+                  { label: 'Transition', className: 'transition-[opacity,color] duration-150 ease-out' },
+                ]}
+              />
             </ComponentSection>
             )}
 
@@ -4204,31 +4904,76 @@ export function DetectionRow() {
               <UsageBlock code={cardHeaderSrc} name="CardHeader" />
 
               <SectionHeading>Examples</SectionHeading>
-              <ExampleBlock title="Open State" tight>
-                <div className="rounded-lg p-2" style={{ backgroundColor: SURFACE.level1 }}>
-                  <CardHeader icon={Eye} title="עצם לא מזוהה" subtitle="TGT-0099" status={<StatusChip label="חשוד" color="orange" />} open />
-                </div>
-              </ExampleBlock>
+              <ExampleTabs
+                items={[
+                  {
+                    value: 'open-state',
+                    label: 'Open State',
+                    children: (
+                      <ExampleBlock hideTitle title="Open State" tight>
+                        <div className="rounded-lg p-2" style={{ backgroundColor: SURFACE.level1 }}>
+                          <CardHeader icon={Eye} title="עצם לא מזוהה" subtitle="TGT-0099" status={<StatusChip label="חשוד" color="orange" />} open />
+                        </div>
+                      </ExampleBlock>
+                    ),
+                  },
+                  {
+                    value: 'minimal',
+                    label: 'Minimal (no icon, no badge)',
+                    children: (
+                      <ExampleBlock hideTitle title="Minimal (no icon, no badge)" tight>
+                        <div className="rounded-lg p-2" style={{ backgroundColor: SURFACE.level1 }}>
+                          <CardHeader title="יעד בסיסי" subtitle="TGT-0001" open={false} />
+                        </div>
+                      </ExampleBlock>
+                    ),
+                  },
+                  {
+                    value: 'affiliation',
+                    label: 'Affiliation (hover icon for IFF tooltip)',
+                    children: (
+                      <ExampleBlock hideTitle title="Affiliation (hover icon for IFF tooltip)" tight>
+                        <div className="flex flex-col gap-2">
+                          <div className="rounded-lg p-2" style={{ backgroundColor: SURFACE.level1 }}>
+                            <CardHeader icon={ShieldAlert} affiliation="hostile" title="רחפן עוין" subtitle="TGT-0042" open={false} />
+                          </div>
+                          <div className="rounded-lg p-2" style={{ backgroundColor: SURFACE.level1 }}>
+                            <CardHeader icon={ShieldAlert} affiliation="friendly" title="רחפן ידידותי" subtitle="TGT-0043" open={false} />
+                          </div>
+                          <div className="rounded-lg p-2" style={{ backgroundColor: SURFACE.level1 }}>
+                            <CardHeader icon={ShieldAlert} affiliation="unknown" title="עצם לא מזוהה" subtitle="TGT-0044" open={false} />
+                          </div>
+                        </div>
+                      </ExampleBlock>
+                    ),
+                  },
+                ]}
+              />
 
-              <ExampleBlock title="Minimal (no icon, no badge)" tight>
-                <div className="rounded-lg p-2" style={{ backgroundColor: SURFACE.level1 }}>
-                  <CardHeader title="יעד בסיסי" subtitle="TGT-0001" open={false} />
-                </div>
-              </ExampleBlock>
-
-              <ExampleBlock title="Affiliation (hover icon for IFF tooltip)" tight>
-                <div className="flex flex-col gap-2">
-                  <div className="rounded-lg p-2" style={{ backgroundColor: SURFACE.level1 }}>
-                    <CardHeader icon={ShieldAlert} affiliation="hostile" title="רחפן עוין" subtitle="TGT-0042" open={false} />
-                  </div>
-                  <div className="rounded-lg p-2" style={{ backgroundColor: SURFACE.level1 }}>
-                    <CardHeader icon={ShieldAlert} affiliation="friendly" title="רחפן ידידותי" subtitle="TGT-0043" open={false} />
-                  </div>
-                  <div className="rounded-lg p-2" style={{ backgroundColor: SURFACE.level1 }}>
-                    <CardHeader icon={ShieldAlert} affiliation="unknown" title="עצם לא מזוהה" subtitle="TGT-0044" open={false} />
-                  </div>
-                </div>
-              </ExampleBlock>
+              <SectionHeading>Class recipe</SectionHeading>
+              <ClassNameRecipe
+                entries={[
+                  { label: 'Root', note: 'gap via CARD_TOKENS.header.gap (inline)', className: 'flex justify-between items-center' },
+                  { label: 'Lead cluster', className: 'flex items-center gap-2 min-w-0 flex-1' },
+                  {
+                    label: 'Icon box',
+                    note: 'size/radius/bg via CARD_TOKENS.iconBox (inline)',
+                    className: 'flex items-center justify-center shrink-0',
+                  },
+                  {
+                    label: 'Title',
+                    note: 'color via CARD_TOKENS.title (inline)',
+                    className: 'text-sm font-semibold text-balance leading-tight truncate',
+                  },
+                  {
+                    label: 'Subtitle',
+                    note: 'color via CARD_TOKENS.subtitle (inline)',
+                    className: 'text-xs font-mono truncate',
+                  },
+                  { label: 'Trailing cluster', className: 'flex gap-1.5 items-center shrink-0' },
+                  { label: 'Chevron', className: 'text-zinc-500 shrink-0 transition-transform duration-200' },
+                ]}
+              />
             </ComponentSection>
             )}
 
@@ -4267,6 +5012,34 @@ export function DetectionRow() {
                   return <Icon size={20} className={bc.color} />;
                 }}
               />
+
+              <SectionHeading>Class recipe</SectionHeading>
+              <ClassNameRecipe
+                entries={[
+                  {
+                    label: 'Frame',
+                    note: 'height h-[160px] video / h-[100px] image',
+                    className: 'relative w-full overflow-hidden group/media bg-black',
+                  },
+                  {
+                    label: 'Image',
+                    className:
+                      'w-full h-full object-cover opacity-70 group-hover/media:opacity-90 transition-opacity grayscale contrast-125',
+                  },
+                  { label: 'Scrim', className: 'absolute inset-0 bg-black/20 pointer-events-none' },
+                  { label: 'Live badge', className: 'flex items-center gap-1 bg-black/80 px-1.5 py-0.5 rounded-sm' },
+                  {
+                    label: 'Tracking label',
+                    className:
+                      'absolute bottom-2 start-2 flex items-center gap-1 bg-cyan-900/80 shadow-[0_0_0_1px_rgba(34,211,238,0.3)] px-2 py-0.5 rounded',
+                  },
+                  {
+                    label: 'Expand affordance',
+                    className:
+                      'flex items-center gap-1.5 bg-black/70 backdrop-blur-sm px-3 py-1.5 rounded-md shadow-[0_0_0_1px_rgba(255,255,255,0.15)]',
+                  },
+                ]}
+              />
             </ComponentSection>
             )}
 
@@ -4282,28 +5055,72 @@ export function DetectionRow() {
               <UsageBlock code={cardActionsSrc} name="CardActions" />
 
               <SectionHeading>Examples</SectionHeading>
-              <ExampleBlock title="Flat Grid (no groups)" tight>
-                <div className="max-w-sm rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level1 }}>
-                  <CardActions actions={[
-                    { id: 'cam', label: 'הפנה מצלמה', icon: Eye, variant: 'fill', size: 'sm', onClick: noop },
-                    { id: 'del', label: 'מחק', icon: Trash2, variant: 'danger', size: 'sm', onClick: noop },
-                    { id: 'cancel', label: 'ביטול', icon: Ban, variant: 'ghost', size: 'sm', onClick: noop },
-                  ]} />
-                </div>
-              </ExampleBlock>
+              <ExampleTabs
+                items={[
+                  {
+                    value: 'flat-grid',
+                    label: 'Flat Grid (no groups)',
+                    children: (
+                      <ExampleBlock hideTitle title="Flat Grid (no groups)" tight>
+                        <div className="max-w-sm rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level1 }}>
+                          <CardActions actions={[
+                            { id: 'cam', label: 'הפנה מצלמה', icon: Eye, variant: 'fill', size: 'sm', onClick: noop },
+                            { id: 'del', label: 'מחק', icon: Trash2, variant: 'danger', size: 'sm', onClick: noop },
+                            { id: 'cancel', label: 'ביטול', icon: Ban, variant: 'ghost', size: 'sm', onClick: noop },
+                          ]} />
+                        </div>
+                      </ExampleBlock>
+                    ),
+                  },
+                  {
+                    value: 'with-confirm',
+                    label: 'With Confirm Dialog',
+                    children: (
+                      <ExampleBlock hideTitle title="With Confirm Dialog" tight>
+                        <div className="max-w-sm rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level1 }}>
+                          <CardActions actions={[
+                            {
+                              id: 'danger-confirm', label: 'שיגור טיל', icon: Zap, variant: 'danger', size: 'lg',
+                              onClick: noop,
+                              confirm: { title: 'אישור שיגור', description: 'פעולה זו אינה הפיכה. האם אתה בטוח?', confirmLabel: 'שגר', doubleConfirm: true },
+                            },
+                            { id: 'cancel-confirm', label: 'ביטול', icon: Ban, variant: 'ghost', size: 'sm', onClick: noop },
+                          ]} />
+                        </div>
+                      </ExampleBlock>
+                    ),
+                  },
+                ]}
+              />
 
-              <ExampleBlock title="With Confirm Dialog" tight>
-                <div className="max-w-sm rounded-lg overflow-hidden" style={{ backgroundColor: SURFACE.level1 }}>
-                  <CardActions actions={[
-                    {
-                      id: 'danger-confirm', label: 'שיגור טיל', icon: Zap, variant: 'danger', size: 'lg',
-                      onClick: noop,
-                      confirm: { title: 'אישור שיגור', description: 'פעולה זו אינה הפיכה. האם אתה בטוח?', confirmLabel: 'שגר', doubleConfirm: true },
-                    },
-                    { id: 'cancel-confirm', label: 'ביטול', icon: Ban, variant: 'ghost', size: 'sm', onClick: noop },
-                  ]} />
-                </div>
-              </ExampleBlock>
+              <SectionHeading>Class recipe</SectionHeading>
+              <ClassNameRecipe
+                entries={[
+                  { label: 'Container', className: 'px-2 py-2' },
+                  { label: 'Stack', className: 'flex flex-col gap-1.5' },
+                  {
+                    label: 'Secondary grid',
+                    note: 'columns via inline gridTemplateColumns (max 4)',
+                    className: 'grid gap-1.5',
+                  },
+                  {
+                    label: 'Status strip',
+                    className:
+                      'w-full min-h-[30px] flex items-center justify-center gap-2 px-3 text-xs font-medium text-zinc-300 cursor-default select-none pointer-events-none',
+                  },
+                  { label: 'Confirm panel', note: 'surface via CARD_TOKENS (inline)', className: 'mt-1 p-3 rounded' },
+                  {
+                    label: 'Confirm button',
+                    className:
+                      'flex-1 h-8 rounded bg-[oklch(0.348_0.111_17)] hover:bg-[oklch(0.445_0.151_17)] active:bg-[oklch(0.295_0.082_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)] text-xs font-semibold transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25',
+                  },
+                  {
+                    label: 'Cancel button',
+                    className:
+                      'flex-1 h-8 rounded bg-[oklch(0.302_0_0)] hover:bg-[oklch(0.388_0_0)] active:bg-[oklch(0.238_0_0)] text-white text-xs font-medium transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25',
+                  },
+                ]}
+              />
             </ComponentSection>
             )}
 
@@ -4317,6 +5134,14 @@ export function DetectionRow() {
 
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={cardDetailsSrc} name="CardDetails" />
+
+              <SectionHeading>Class recipe</SectionHeading>
+              <ClassNameRecipe
+                entries={[
+                  { label: 'Body', note: 'wraps AccordionSection + TelemetryRow', className: 'w-full py-1' },
+                  { label: 'Metric grid', className: 'w-full grid grid-cols-2 gap-x-8 gap-y-2' },
+                ]}
+              />
 
             </ComponentSection>
             )}
@@ -4351,6 +5176,31 @@ export function DetectionRow() {
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={cardIdentitySrc} name="CardIdentity" />
 
+              <SectionHeading>Class recipe</SectionHeading>
+              <ClassNameRecipe
+                entries={[
+                  { label: 'Body', className: 'w-full py-1' },
+                  { label: 'Grid', className: 'w-full grid grid-cols-2 gap-x-8 gap-y-2' },
+                  {
+                    label: 'Row',
+                    note: 'group/copy scopes the copy reveal',
+                    className: 'group/copy w-full flex flex-col items-start py-1 gap-1 min-w-0',
+                  },
+                  { label: 'Label', className: 'text-xs text-zinc-400' },
+                  {
+                    label: 'Value',
+                    note: 'tabular-nums slashed-zero (inline)',
+                    className: 'block w-fit text-xs text-zinc-200 font-sans tabular-nums break-all text-end',
+                  },
+                  {
+                    label: 'Fade overlay',
+                    note: 'fade bg via SURFACE.level3 (inline var)',
+                    className:
+                      'pointer-events-none absolute inset-y-0 end-0 flex items-center justify-end ps-4 pe-0 bg-gradient-to-r rtl:bg-gradient-to-l from-transparent to-[var(--card-fade-bg)] to-50% opacity-0 group-hover/copy:opacity-100 has-[:focus-visible]:opacity-100 has-[[data-copied]]:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity duration-150 ease-out',
+                  },
+                ]}
+              />
+
             </ComponentSection>
             )}
 
@@ -4371,6 +5221,30 @@ export function DetectionRow() {
                   <CardSensors sensors={sampleSensors} onSensorClick={(id) => console.log('sensor clicked:', id)} />
                 </div>
               </ExampleBlock>
+
+              <SectionHeading>Class recipe</SectionHeading>
+              <ClassNameRecipe
+                entries={[
+                  {
+                    label: 'List',
+                    note: 'top hairline via CARD_TOKENS.surface.level2 (inline)',
+                    className: 'flex flex-col gap-2 w-full',
+                  },
+                  {
+                    label: 'Row',
+                    note: 'row bg via CARD_TOKENS.surface.level4 (inline)',
+                    className:
+                      'flex items-center gap-2 text-xs text-white hover:bg-white/[0.08] rounded px-2 py-1.5 transition-colors group/sensor relative w-full text-end',
+                  },
+                  {
+                    label: 'Row (interactive)',
+                    className:
+                      'cursor-pointer font-sans focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 active:bg-white/[0.04]',
+                  },
+                  { label: 'Timestamp', className: 'text-xs text-white font-mono tabular-nums' },
+                  { label: 'Distance', className: 'text-xs text-zinc-400 font-mono tabular-nums' },
+                ]}
+              />
             </ComponentSection>
             )}
 
@@ -4384,6 +5258,25 @@ export function DetectionRow() {
 
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={cardLogSrc} name="CardLog" />
+
+              <SectionHeading>Class recipe</SectionHeading>
+              <ClassNameRecipe
+                entries={[
+                  { label: 'Body', className: 'flex flex-col py-2 px-1' },
+                  { label: 'Entry row', className: 'flex items-center justify-center gap-2.5 mb-2 relative w-full' },
+                  {
+                    label: 'Bullet',
+                    note: 'bg via CARD_TOKENS.surface.level1 (inline)',
+                    className: 'w-[11px] h-[11px] rounded-full shadow-[0_0_0_1px_rgba(255,255,255,0.2)] shrink-0 mt-0.5 z-[1]',
+                  },
+                  { label: 'Label', className: 'text-xs text-zinc-300' },
+                  { label: 'Time', className: 'text-xs text-white/50 font-mono shrink-0 tabular-nums leading-6 align-middle' },
+                  {
+                    label: 'Show more',
+                    className: 'w-full text-center text-xs text-white hover:text-zinc-300 transition-colors py-0.5',
+                  },
+                ]}
+              />
 
             </ComponentSection>
             )}
@@ -4399,12 +5292,55 @@ export function DetectionRow() {
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={cardClosureSrc} name="CardClosure" />
 
+              <SectionHeading>Class recipe</SectionHeading>
+              <ClassNameRecipe
+                entries={[
+                  {
+                    label: 'Container',
+                    note: 'top hairline via CARD_TOKENS.surface.level2 (inline)',
+                    className: 'p-3 space-y-2',
+                  },
+                  { label: 'Header', className: 'flex items-center gap-2' },
+                  { label: 'Title', className: 'text-xs font-bold text-zinc-300' },
+                  { label: 'Outcome grid', className: 'grid grid-cols-2 gap-1.5' },
+                  {
+                    label: 'Outcome button',
+                    note: 'surface via CARD_TOKENS.surface.level3 (inline)',
+                    className:
+                      'h-auto min-h-0 w-full justify-start px-2.5 py-2 rounded text-zinc-300 transition-colors text-xs font-medium text-end gap-1.5 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 hover:bg-white/[0.08]',
+                  },
+                ]}
+              />
+
             </ComponentSection>
             )}
 
             {activeItem === 'card-states' && (
             <ComponentSection id="card-states" name="Card States" description="Interactive playground to explore how each detection lifecycle state affects the card's visual treatment — spine accent, icon design, ring, opacity, status chip, and closure type.">
               <CardStatePlayground />
+
+              <SectionHeading>Class recipe</SectionHeading>
+              <ClassNameRecipe
+                entries={[
+                  {
+                    label: 'Card shell',
+                    note: 'state visuals derive from TargetCard + useCardSlots',
+                    className:
+                      'group/card relative w-full gap-0 overflow-hidden border-0 bg-transparent p-0 text-white shadow-none transition-colors rounded-none',
+                  },
+                  {
+                    label: 'Header (hover / selected / focus)',
+                    note: 'selected bg + completed saturate/brightness are inline (CARD_TOKENS)',
+                    className:
+                      'transition-colors cursor-pointer hover:bg-white/[0.08] focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none',
+                  },
+                  {
+                    label: 'Content reveal',
+                    className:
+                      'overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down',
+                  },
+                ]}
+              />
             </ComponentSection>
             )}
 
@@ -4420,17 +5356,61 @@ export function DetectionRow() {
               <UsageBlock code={targetCardSrc} name="TargetCard" />
 
               <SectionHeading>Examples</SectionHeading>
-              <ExampleBlock title="Mitigating (active jam)" tight>
-                <div className="w-96 mx-auto">
-                  <StyleguideUnifiedCard detection={cuas_mitigating} defaultOpen />
-                </div>
-              </ExampleBlock>
+              <ExampleTabs
+                items={[
+                  {
+                    value: 'mitigating',
+                    label: 'Mitigating (active jam)',
+                    children: (
+                      <ExampleBlock hideTitle title="Mitigating (active jam)" tight>
+                        <div className="w-96 mx-auto">
+                          <StyleguideUnifiedCard detection={cuas_mitigating} defaultOpen />
+                        </div>
+                      </ExampleBlock>
+                    ),
+                  },
+                  {
+                    value: 'completed',
+                    label: 'Completed (resolved)',
+                    children: (
+                      <ExampleBlock hideTitle title="Completed (resolved)" tight>
+                        <div className="w-96 mx-auto">
+                          <StyleguideUnifiedCard detection={cuas_bda_complete} defaultOpen={false} />
+                        </div>
+                      </ExampleBlock>
+                    ),
+                  },
+                ]}
+              />
 
-              <ExampleBlock title="Completed (resolved)" tight>
-                <div className="w-96 mx-auto">
-                  <StyleguideUnifiedCard detection={cuas_bda_complete} defaultOpen={false} />
-                </div>
-              </ExampleBlock>
+              <SectionHeading>Class recipe</SectionHeading>
+              <ClassNameRecipe
+                entries={[
+                  { label: 'Outer', note: 'marginBottom via CARD_TOKENS.container (inline)', className: 'w-full' },
+                  {
+                    label: 'Card shell',
+                    note: 'bg/radius/shadow + completed saturate/brightness via CARD_TOKENS (inline)',
+                    className:
+                      'group/card relative w-full gap-0 overflow-hidden border-0 bg-transparent p-0 text-white shadow-none transition-colors rounded-none',
+                  },
+                  {
+                    label: 'Header trigger',
+                    note: 'padding + selected bg via CARD_TOKENS (inline)',
+                    className:
+                      'transition-colors cursor-pointer hover:bg-white/[0.08] focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none',
+                  },
+                  {
+                    label: 'Content',
+                    className:
+                      'overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down',
+                  },
+                  {
+                    label: 'Slot stack',
+                    note: 'bg + inset hairline via CARD_TOKENS.content (inline)',
+                    className: 'flex flex-col gap-px',
+                  },
+                ]}
+              />
             </ComponentSection>
             )}
 
@@ -4457,6 +5437,45 @@ export function DetectionRow() {
               <SectionHeading>Usage</SectionHeading>
               <UsageBlock code={filterBarSrc} name="FilterBar" />
 
+              <SectionHeading>Class recipe</SectionHeading>
+              <ClassNameRecipe
+                entries={[
+                  { label: 'Bar', className: 'border-b border-white/5 px-2 py-1.5' },
+                  { label: 'Top row', className: 'flex items-center gap-1.5' },
+                  {
+                    label: 'Search input',
+                    className:
+                      'h-7 w-full rounded bg-white/[0.04] ps-7 pe-7 text-xs text-zinc-100 shadow-[0_0_0_1px_rgba(255,255,255,0.07)] placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sky-400/40 focus-visible:shadow-[0_0_0_1px_rgba(56,189,248,0.35)]',
+                  },
+                  {
+                    label: 'Reset button',
+                    className:
+                      'inline-flex h-7 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded bg-white/[0.06] px-2 text-xs font-medium text-white transition-[background-color,transform] duration-150 hover:bg-white/[0.10] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 active:scale-[0.99]',
+                  },
+                  {
+                    label: 'Filter row',
+                    note: 'columns via inline gridTemplateColumns',
+                    className: 'grid items-center gap-1.5 mt-1.5',
+                  },
+                  {
+                    label: 'Filter trigger',
+                    note: 'active/open → bg-sky-500/[0.12]',
+                    className:
+                      'inline-flex h-7 w-full cursor-pointer items-center justify-center gap-1.5 rounded px-2 text-xs font-medium text-white transition-[background-color,transform] duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 active:scale-[0.99]',
+                  },
+                  {
+                    label: 'Popover',
+                    className:
+                      'w-64 overflow-hidden rounded-lg p-0.5 shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_4px_12px_rgba(0,0,0,0.25),0_16px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl',
+                  },
+                  {
+                    label: 'Option row',
+                    className:
+                      'flex h-7 cursor-pointer items-center gap-2.5 rounded-md px-2.5 text-start text-xs transition-colors duration-150 focus-within:bg-white/10 focus-within:outline-none',
+                  },
+                ]}
+              />
+
             </ComponentSection>
             )}
 
@@ -4469,6 +5488,17 @@ export function DetectionRow() {
               </CodePreviewBlock>
 
               <SectionHeading>Examples</SectionHeading>
+
+              <AnchoredExampleTabs
+                activeAnchor={activeAnchor}
+                onAnchorChange={handleExampleTabAnchor}
+                tabs={[
+                  {
+                    value: 'health',
+                    label: 'Health',
+                    anchorIds: ['device-health', 'device-health-tooltip'],
+                    children: (
+                      <div>
 
               {/* ── Health tile ─────────────────────────────────── */}
               <ExampleBlock id="device-health" title="Health — the icon tile (worst-wins severity)">
@@ -4549,6 +5579,16 @@ export function DetectionRow() {
                 </div>
               </ExampleBlock>
 
+                      </div>
+                    ),
+                  },
+                  {
+                    value: 'anatomy',
+                    label: 'Anatomy',
+                    anchorIds: ['device-detail-grid', 'device-camera-preview', 'device-header-cluster', 'device-row'],
+                    children: (
+                      <div>
+
               {/* ── Detail grid ─────────────────────────────────── */}
               <ExampleBlock id="device-detail-grid" title="Detail grid — registry-driven stat rows">
                 <div className="flex flex-col gap-4">
@@ -4583,6 +5623,27 @@ export function DetectionRow() {
                 </div>
               </ExampleBlock>
 
+              {/* ── Whole row, collapsed vs expanded ────────────── */}
+              <ExampleBlock id="device-row" title="DeviceRow — collapsed vs expanded">
+                <div className="flex flex-col gap-4">
+                  <StyleguideDeviceTile>
+                    <DeviceCardRowDemo device={deviceCardEdgeCases[0]} defaultExpanded={false} />
+                  </StyleguideDeviceTile>
+                  <StyleguideDeviceTile>
+                    <DeviceCardRowDemo device={deviceCardEdgeCases[0]} />
+                  </StyleguideDeviceTile>
+                </div>
+              </ExampleBlock>
+                      </div>
+                    ),
+                  },
+                  {
+                    value: 'controls',
+                    label: 'Controls & states',
+                    anchorIds: ['device-row-actions', 'device-interaction-states', 'device-overflow'],
+                    children: (
+                      <div>
+
               {/* ── Action bar ──────────────────────────────────── */}
               <ExampleBlock id="device-row-actions" title="Action bar — registry footerActions + overflow">
                 <div className="flex flex-col gap-4">
@@ -4606,13 +5667,10 @@ export function DetectionRow() {
                 <div className="w-full">
                   <p className="mb-6 text-xs text-n-9">
                     The footer/header controls pre-seeded into their engaged state so each one is visible
-                    without a click — muted speaker, speaker playing (now-playing strip), floodlight on,
+                    without a click — speaker playing (now-playing strip), floodlight on,
                     camera watching, and the ECM jam split in its idle (pre-confirm) state.
                   </p>
                   <div className="flex flex-col gap-4">
-                    <StyleguideDeviceTile label="Speaker — muted">
-                      <DeviceCardRowDemo device={deviceCardEdgeCases[7]} initialMuted />
-                    </StyleguideDeviceTile>
                     <StyleguideDeviceTile label="Speaker — playing (now-playing strip)">
                       <DeviceCardRowDemo device={deviceCardEdgeCases[7]} initialSpeakerOn />
                     </StyleguideDeviceTile>
@@ -4640,18 +5698,15 @@ export function DetectionRow() {
                   </StyleguideDeviceTile>
                 </div>
               </ExampleBlock>
-
-              {/* ── Whole row, collapsed vs expanded ────────────── */}
-              <ExampleBlock id="device-row" title="DeviceRow — collapsed vs expanded">
-                <div className="flex flex-col gap-4">
-                  <StyleguideDeviceTile>
-                    <DeviceCardRowDemo device={deviceCardEdgeCases[0]} defaultExpanded={false} />
-                  </StyleguideDeviceTile>
-                  <StyleguideDeviceTile>
-                    <DeviceCardRowDemo device={deviceCardEdgeCases[0]} />
-                  </StyleguideDeviceTile>
-                </div>
-              </ExampleBlock>
+                      </div>
+                    ),
+                  },
+                  {
+                    value: 'edge-cases',
+                    label: 'Edge cases',
+                    anchorIds: ['device-card-states'],
+                    children: (
+                      <div>
 
               {/* ── Edge-case gallery ───────────────────────────── */}
               <ExampleBlock id="device-card-states" title="Edge cases — health, offline, malfunction, low battery">
@@ -4663,9 +5718,56 @@ export function DetectionRow() {
                   ))}
                 </div>
               </ExampleBlock>
+                      </div>
+                    ),
+                  },
+                  {
+                    value: 'elements',
+                    label: 'Elements',
+                    anchorIds: [
+                      'device-elements',
+                      'device-elements-resolved',
+                      'device-elements-toggles',
+                      'device-elements-dropdowns',
+                      'device-elements-overflow',
+                    ],
+                    children: <DeviceElementsCatalog />,
+                  },
+                ]}
+              />
 
-              <SectionHeading>Source</SectionHeading>
-              <UsageBlock code={deviceRowSrc} name="DeviceRow" />
+              <SectionHeading>Class recipe</SectionHeading>
+              <ClassNameRecipe
+                entries={[
+                  {
+                    label: 'Header row',
+                    note: 'expanded → bg-white/[0.04]; idle → hover/active',
+                    className:
+                      'flex items-center justify-center gap-2.5 px-4 py-2.5 text-end transition-[background-color,border-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25 border-b border-white/[0.06] cursor-pointer',
+                  },
+                  {
+                    label: 'Health tile',
+                    note: 'tint via DEVICE_HEALTH_VISUAL[health].tile; critical adds ping',
+                    className:
+                      'relative w-8 h-8 rounded flex items-center justify-center shrink-0 transition-[background-color,box-shadow] duration-150 ease-out',
+                  },
+                  { label: 'Name + metric', className: 'flex-1 min-w-0 text-start' },
+                  { label: 'Device name', className: 'text-sm font-medium truncate text-zinc-300 block' },
+                  { label: 'Metric line', className: 'text-start text-xs font-mono tabular-nums text-white/50 truncate' },
+                  { label: 'Primary cluster', className: 'flex shrink-0 items-center gap-0.5' },
+                  { label: 'Expanded content', className: 'overflow-hidden animate-in fade-in-0 duration-200' },
+                  {
+                    label: 'Footer action bar',
+                    className: 'flex flex-wrap items-center gap-2 px-2 py-1.5 border-t border-white/[0.06] overflow-visible',
+                  },
+                  {
+                    label: 'Action pill (DeviceAction)',
+                    note: 'tone via DEVICE_ACTION_TONES[tone]; iconOnly → size-6 p-0, else px-2.5 py-1.5',
+                    className:
+                      'inline-flex shrink-0 items-center justify-center gap-1.5 rounded text-xs font-medium transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25',
+                  },
+                ]}
+              />
             </ComponentSection>
             )}
 
@@ -4694,6 +5796,16 @@ export function DetectionRow() {
               <UsageBlock code={devicesPanelSrc} name="DevicesPanel" />
 
               <SectionHeading>Examples</SectionHeading>
+              <AnchoredExampleTabs
+                activeAnchor={activeAnchor}
+                onAnchorChange={handleExampleTabAnchor}
+                tabs={[
+                  {
+                    value: 'chrome',
+                    label: 'Empty & chrome',
+                    anchorIds: ['devices-empty', 'devices-header', 'devices-search'],
+                    children: (
+                      <div>
               {/* ── Empty state ─────────────────────────────────── */}
               <ExampleBlock id="devices-empty" title="Empty state" tight>
                 <StyleguideDeviceTile label="When no devices match the current search or filter, the panel shows this placeholder.">
@@ -4779,6 +5891,15 @@ export function DetectionRow() {
                 </StyleguideDeviceTile>
               </ExampleBlock>
 
+                      </div>
+                    ),
+                  },
+                  {
+                    value: 'rows',
+                    label: 'Device rows',
+                    anchorIds: ['devices-rows', 'devices-camera', 'devices-ecm', 'devices-drone', 'devices-speaker', 'devices-floodlight'],
+                    children: (
+                      <div>
               {/* ── Device row — collapsed states ──────────────── */}
               <ExampleBlock id="devices-rows" title="Device row — collapsed states" tight>
                 <div className="space-y-4">
@@ -5241,6 +6362,15 @@ export function DetectionRow() {
                 </div>
               </ExampleBlock>
 
+                      </div>
+                    ),
+                  },
+                  {
+                    value: 'actions',
+                    label: 'Actions',
+                    anchorIds: ['devices-actions', 'devices-track-combobox'],
+                    children: (
+                      <div>
               {/* ── Action bar ──────────────────────────────────── */}
               <ExampleBlock id="devices-actions" title="Action bar" tight>
                 <div className="space-y-4">
@@ -5331,6 +6461,39 @@ export function DetectionRow() {
                   </p>
                 </div>
               </ExampleBlock>
+                      </div>
+                    ),
+                  },
+                ]}
+              />
+
+              <SectionHeading>Class recipe</SectionHeading>
+              <ClassNameRecipe
+                entries={[
+                  {
+                    label: 'Panel',
+                    note: 'width/bg via LAYOUT_TOKENS + SURFACE (inline); open/closed via translate',
+                    className: 'absolute top-0 bottom-0 start-0 border-e border-white/10 flex flex-col z-10 font-sans',
+                  },
+                  {
+                    label: 'Header',
+                    className: 'flex items-center justify-between px-4 pt-3 pb-2 border-b border-white/10',
+                  },
+                  { label: 'Title', className: 'text-xs font-medium text-white uppercase tracking-wider' },
+                  {
+                    label: 'Close button',
+                    className:
+                      'p-2 -m-1 rounded hover:bg-white/10 text-zinc-500 hover:text-zinc-300 transition-[color,background-color,transform] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25',
+                  },
+                  { label: 'Scroll area', className: 'flex-1 overflow-y-auto' },
+                  {
+                    label: 'Group header',
+                    className:
+                      'px-4 py-1.5 text-xs font-normal uppercase tracking-wider text-white border-b border-white/5 bg-white/[0.08]',
+                  },
+                  { label: 'Empty state', className: 'px-3 py-8 text-center text-xs text-zinc-600' },
+                ]}
+              />
             </ComponentSection>
             )}
 
@@ -5355,7 +6518,6 @@ export function DetectionRow() {
             {activeItem === 'map-markers' && (
             <ComponentSection id="map-markers" name="Map Markers" description="Tactical marker system: SVG icons, composited layers, interaction states, affiliation palettes, and map-level overlays.">
 
-              <SectionHeading>Source</SectionHeading>
               <CodePreviewBlock name="MapMarker" description="Composites 4 visual layers; on the live map, target markers are driven by severity (ring + glyph color) — see Severity & Urgency below" code={mapMarkerSrc} relatedFiles={MARKER_FILES}>
                 <div className="flex items-center justify-start gap-6">
                   {SEVERITY_ORDER.map((sev) => {

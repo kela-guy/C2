@@ -18,7 +18,10 @@ export type DeviceType =
   | 'lidar'
   | 'weapon_system'
   | 'floodlight'
-  | 'speaker';
+  | 'speaker'
+  // Composite counter-drone effector (Gotcha). Rendered by the shared
+  // `DeviceRow` as a parent with nested `children` (its sensors + camera).
+  | 'effector';
 
 export type ConnectionState = 'online' | 'offline' | 'error' | 'warning';
 export type OperationalStatus = 'operational' | 'malfunctioning';
@@ -63,6 +66,18 @@ export interface Device {
    * variant (floodlight, speaker). Other icons ignore it.
    */
   Icon: React.FC<{ size?: number; fill?: string; active?: boolean }>;
+  /**
+   * Composite children (e.g. a Gotcha effector's 4 sensors + camera). When
+   * present on a device whose registry config is `composite`, the expanded
+   * card renders them as nested child rows. The parent's health tile rolls
+   * up the worst child via `getEffectiveDeviceHealth`.
+   */
+  children?: Device[];
+  /**
+   * Optional collapsed-row metric line override (e.g. "drone · 4 sectors").
+   * Takes precedence over the derived `buildCollapsedMetricLine` when set.
+   */
+  subtitle?: string;
 }
 
 /**
@@ -119,11 +134,9 @@ export interface DevicesPanelStrings {
   jamMoreOptions: string;
   /** Camera controls. */
   centerOnMap: string;
-  mute: string;
-  unmute: string;
-  /** Pressed-state label for the mute toggle (mirrors the lab's state-label toggle). */
-  muted: string;
   wipers: string;
+  /** Pressed-state label while the wipers run continuously. */
+  wiping: string;
   wipersAriaLabel: string;
   calibrate: string;
   calibrating: string;
@@ -226,6 +239,12 @@ export interface DevicesPanelProps {
   noTransition?: boolean;
   width?: number;
   focusedDeviceId?: string | null;
+  /**
+   * Currently selected asset id (the map's `selectedAssetId`). Lets a
+   * composite device's nested child row render a selected state when its
+   * sensor/camera is the active selection.
+   */
+  selectedDeviceId?: string | null;
   /** Override per-type group labels. Falls back to `DEFAULT_TYPE_LABELS` (English). */
   typeLabels?: Partial<Record<DeviceType, string>>;
   /** Override per-state connection labels. Falls back to `DEFAULT_CONNECTION_STATE_LABELS` (English). */
@@ -251,9 +270,6 @@ export interface DeviceRowProps {
   isSpeakerPlaying?: boolean;
   speakerTracks?: SpeakerTrack[];
   onFlyTo: (lat: number, lon: number) => void;
-  isMuted: boolean;
-  muteRemaining: string | null;
-  onToggleMute: (deviceId: string) => void;
   /** Pin a camera/drone into the next available video feed slot. */
   onPinToFeed?: (deviceId: string) => void;
   /** Unpin a camera/drone from its video feed slot. */
@@ -264,6 +280,10 @@ export interface DeviceRowProps {
   onOpenLogs?: (deviceId: string) => void;
   /** Arm / disarm the timed notifications window (overflow "Notifications" toggle). */
   onArmNotifications?: (deviceId: string, armed: boolean) => void;
+  /** Select a nested composite child (sensor/camera) — drives `selectedAssetId`. */
+  onChildSelect?: (childId: string) => void;
+  /** Currently selected device id, so a composite child row can show a selected state. */
+  selectedChildId?: string | null;
   connectionStateLabels?: Record<ConnectionState, string>;
   strings?: DevicesPanelStrings;
 }

@@ -56,7 +56,11 @@ import {
   MissileIcon,
   FloodlightIcon,
   SpeakerIcon,
+  GotchaIcon,
 } from './tacticalIcons';
+import type { GotchaUnit } from './gotcha/types';
+import { effectiveSensorHealth, getUnitHealth } from './gotcha/gotchaHealth';
+import type { DeviceHealth } from './devices-panel/deviceHealth';
 import { CarIcon, TankIcon, TruckIcon, UnknownIcon } from '@/primitives/MapIcons';
 import { SEVERITY_COLOR, isUnclassifiedUnknown, UNKNOWN_GRAY, type Severity } from '@/primitives/urgency';
 import { Phone } from '@/lib/icons/central';
@@ -147,6 +151,14 @@ export interface CesiumTacticalMapProps {
   planningScanViz?: { cameraLat: number; cameraLon: number; bearings: number[] } | null;
   /** Asset ID currently selected for mission planning */
   selectedAssetId?: string | null;
+  /**
+   * Camera look-at: slew a camera's FOV cone to face a target. While set, the
+   * named camera's wedge animates from its resting bearing to the bearing of
+   * the target, stays pinned on, and energizes the marker (white ring + pulse)
+   * so the pointing is legible on the map. `fovOverrideDeg` widens/narrows the
+   * cone during the look-at (e.g. a zoomed-in narrow FOV).
+   */
+  cameraLookAtRequest?: { cameraId: string; targetLat: number; targetLon: number; fovOverrideDeg?: number } | null;
   /** Regulus effectors state for CUAS */
   regulusEffectors?: RegulusEffector[];
   /** Sensor ID to flyTo and flicker (from card click) */
@@ -180,6 +192,14 @@ export interface CesiumTacticalMapProps {
    * marketing demo route to dispatch units to suspicious vehicles.
    */
   forceUnits?: ForceUnitMarker[];
+  /**
+   * Composite Gotcha counter-drone effectors. Each renders as one marker
+   * with up to four 120-degree sector polygons fanned around it. Sectors are
+   * hidden at rest, shown on hover/select of the unit, and ALWAYS shown when
+   * a sector is non-healthy (yellow = warning, red = error/blind). Clicking
+   * a sector drills into that sensor child via `onAssetClick`.
+   */
+  gotchaUnits?: GotchaUnit[];
   /**
    * When true, renders the basemap in dark monochrome — saturation 0,
    * brightness < 1, contrast > 1. The marketing demo route turns this on
@@ -228,6 +248,36 @@ const LAUNCHER_GLYPH = 24;
 /** Floodlight beam: a short, always-on amber wedge showing aim direction. */
 const FLOODLIGHT_BEAM_M = 550;
 const FLOODLIGHT_BEAM_COLOR = '#f59e0b';
+/**
+ * Directional cone width (degrees) drawn while a camera is slewed onto a
+ * target. A pointing camera shows where it's *looking*, so the look-at wedge is
+ * a fixed narrow cone — even for panoramic cameras whose resting `fovDeg` is
+ * 360 (a full ring carries no direction). `fovOverrideDeg` still wins when a
+ * caller supplies an explicit zoom-driven width.
+ */
+const CAMERA_LOOK_AT_FOV_DEG = 120;
+
+/**
+ * Gotcha sector / ring colour from a worst-wins `DeviceHealth`. Reuses the
+ * unified urgency palette (`SEVERITY_COLOR`) so the effector speaks the same
+ * colour language as the threat markers: warning → MEDIUM amber,
+ * error/critical → HIGH/CRITICAL red. Offline is the neutral LOW zinc
+ * (known-absent, not alarmist); healthy sectors use the friendly cyan.
+ */
+const GOTCHA_OK_COLOR = '#22b8cf';
+function gotchaSectorColor(health: DeviceHealth): string {
+  switch (health) {
+    case 'warning':
+      return SEVERITY_COLOR.MEDIUM;
+    case 'error':
+    case 'critical':
+      return SEVERITY_COLOR.HIGH;
+    case 'offline':
+      return SEVERITY_COLOR.LOW;
+    default:
+      return GOTCHA_OK_COLOR;
+  }
+}
 
 /**
  * `DroneIcon` draws its nose pointing east at `rotationDeg = 0`, but our
@@ -476,7 +526,9 @@ function CesiumTacticalMapImpl({
   controlIndicator,
   planningScanViz,
   forceUnits,
+  gotchaUnits,
   darkMonochromeMap,
+  cameraLookAtRequest,
   onMarkerClick,
   onAssetClick,
   onContextMenuAction,
@@ -507,6 +559,56 @@ function CesiumTacticalMapImpl({
   // Drives the white-on-hover ring + tooltip visibility regardless of
   // whether the hover came from this map or from the card sidebar.
   const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null);
+  // Camera look-at slew: the animated bearing of the camera currently being
+  // pointed at a target. `null` when no camera is pointing. The bearing eases
+  // from the camera's resting heading to the target bearing over ~800ms; small
+  // deltas snap so continuous re-targeting of a moving threat reads as smooth
+  // tracking rather than a re-animation each tick.
+  const [cameraLookAtBearing, setCameraLookAtBearing] = useState<{ cameraId: string; bearing: number } | null>(null);
+  const cameraLookAtBearingRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!cameraLookAtRequest) {
+      setCameraLookAtBearing(null);
+      cameraLookAtBearingRef.current = null;
+      return;
+    }
+    const cam = CAMERA_ASSETS.find((c) => c.id === cameraLookAtRequest.cameraId);
+    if (!cam) return;
+    const targetBearing = bearingDegrees(
+      cam.latitude,
+      cam.longitude,
+      cameraLookAtRequest.targetLat,
+      cameraLookAtRequest.targetLon,
+    );
+    const startBearing = cameraLookAtBearingRef.current ?? cam.bearingDeg;
+    let diff = targetBearing - startBearing;
+    if (diff > 180) diff -= 360;
+    if (diff < -180) diff += 360;
+    // Small change → snap directly (continuous tracking of a moving target);
+    // large change → animate the slew.
+    if (Math.abs(diff) < 5) {
+      const b = ((targetBearing % 360) + 360) % 360;
+      setCameraLookAtBearing({ cameraId: cam.id, bearing: b });
+      cameraLookAtBearingRef.current = b;
+      return;
+    }
+    const startTime = performance.now();
+    const duration = 800;
+    let frame: number;
+    const animate = () => {
+      const tt = Math.min(1, (performance.now() - startTime) / duration);
+      const eased = tt < 0.5 ? 2 * tt * tt : 1 - Math.pow(-2 * tt + 2, 2) / 2;
+      const current = startBearing + diff * eased;
+      const b = ((current % 360) + 360) % 360;
+      setCameraLookAtBearing({ cameraId: cam.id, bearing: b });
+      cameraLookAtBearingRef.current = b;
+      if (tt < 1) frame = requestAnimationFrame(animate);
+    };
+    frame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frame);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cameraLookAtRequest?.cameraId, cameraLookAtRequest?.targetLat, cameraLookAtRequest?.targetLon]);
   // Scene mode (2D top-down vs 3D perspective). Default 2D so the post-cutover
   // map looks identical to what operators see today; the in-map toggle (rendered
   // bottom-left) flips to 3D on demand. The primitive layer handles the live
@@ -608,6 +710,10 @@ function CesiumTacticalMapImpl({
 
     // ── JAM flow (drone targets) ────────────────────────────────────────
     if (JAM_FLOW.matchTarget(target)) {
+      // Committed to a Gotcha engagement instead — suppress the jam line so
+      // the map doesn't imply a jammer is on this target. (The Gotcha
+      // engagement line is drawn by its own layer; see gotcha flow.)
+      if (target.gotchaStatus === 'engaging' || target.gotchaStatus === 'engaged') return null;
       if (target.mitigationStatus === 'mitigated') return null;
       if (
         target.status === 'expired' ||
@@ -720,7 +826,7 @@ function CesiumTacticalMapImpl({
       surfaceSize: number = SENSOR_SURFACE,
       fov?: { rangeM: number; bearingDeg: number; widthDeg: number },
       ringSize: number = SENSOR_RING,
-      fovOptions?: { color?: string; alwaysOn?: boolean },
+      fovOptions?: { color?: string; alwaysOn?: boolean; opacity?: number },
       // `active` marks the asset as engaged/energized (e.g. a lit
       // floodlight): white ring + pulse, like a selected marker.
       active: boolean = false,
@@ -756,11 +862,12 @@ function CesiumTacticalMapImpl({
       // to `alwaysOn` so their beam reads as a persistent directional wedge.
       const alwaysOn = fovOptions?.alwaysOn ?? false;
       const showFov = !isOffline && (alwaysOn || isHovered || isSelected || isHighlighted);
-      const fovOpacity = isHighlighted
-        ? 0.55
-        : alwaysOn && !isHovered && !isSelected
-          ? 0.26
-          : 0.4;
+      const fovOpacity = fovOptions?.opacity
+        ?? (isHighlighted
+          ? 0.55
+          : alwaysOn && !isHovered && !isSelected
+            ? 0.26
+            : 0.4);
       const fovColor = fovOptions?.color ?? '#22b8cf';
 
       return {
@@ -825,7 +932,31 @@ function CesiumTacticalMapImpl({
       out.push(m);
     };
     for (const a of CAMERA_ASSETS) {
-      push(buildFriendlyAsset(a.id, a.latitude, a.longitude, <CameraIcon outlined />, a.typeLabel, SENSOR_SURFACE, sensorFov(a)));
+      // While this camera is pointing at a threat, swing its FOV cone to the
+      // animated look-at bearing, pin it on (`alwaysOn`), and energize the
+      // marker so the pointing reads at a glance.
+      const isLookingAt = cameraLookAtBearing?.cameraId === a.id;
+      const fov = isLookingAt
+        ? {
+            rangeM: FOV_RADIUS_M,
+            bearingDeg: cameraLookAtBearing!.bearing,
+            widthDeg: cameraLookAtRequest?.fovOverrideDeg ?? CAMERA_LOOK_AT_FOV_DEG,
+          }
+        : sensorFov(a);
+      push(
+        buildFriendlyAsset(
+          a.id,
+          a.latitude,
+          a.longitude,
+          <CameraIcon outlined />,
+          a.typeLabel,
+          SENSOR_SURFACE,
+          fov,
+          SENSOR_RING,
+          isLookingAt ? { alwaysOn: true, opacity: 0.5 } : undefined,
+          isLookingAt,
+        ),
+      );
     }
     for (const a of RADAR_ASSETS) {
       push(buildFriendlyAsset(a.id, a.latitude, a.longitude, <RadarIcon outlined />, a.typeLabel, SENSOR_SURFACE, sensorFov(a)));
@@ -879,7 +1010,14 @@ function CesiumTacticalMapImpl({
       );
     }
     return out;
-  }, [buildFriendlyAsset, sensorFov, litFloodlightSet, playingSpeakerSet]);
+  }, [
+    buildFriendlyAsset,
+    sensorFov,
+    litFloodlightSet,
+    playingSpeakerSet,
+    cameraLookAtBearing,
+    cameraLookAtRequest?.fovOverrideDeg,
+  ]);
 
   /**
    * Slice 2 — Regulus effectors. Friendly assets but with their own
@@ -1148,6 +1286,92 @@ function CesiumTacticalMapImpl({
     return out;
   }, [forceUnits, hoveredMarkerId]);
 
+  /**
+   * Slice 5c — composite Gotcha effectors. One marker per unit with up to
+   * four sector polygons. Sectors stay hidden at rest (keeps the map quiet),
+   * appear in full when the unit is hovered/selected, and a non-healthy
+   * sector is ALWAYS drawn (yellow = warning, red = error/blind, gray =
+   * offline) so a coverage gap can't hide. Clicking a sector drills into the
+   * child sensor via `onAssetClick` (wired through `onHtmlMarkerSectorClick`).
+   */
+  const gotchaMarkers = useMemo<CesiumHtmlMarker[]>(() => {
+    if (!gotchaUnits || gotchaUnits.length === 0) return [];
+    const out: CesiumHtmlMarker[] = [];
+    const seen = new Set<string>();
+    for (const unit of gotchaUnits) {
+      if (seen.has(unit.id)) continue;
+      seen.add(unit.id);
+
+      const unitHealth = getUnitHealth(unit);
+      const isSelected = selectedAssetId === unit.id;
+      const isHoveredFromCard = hoveredSensorIdFromCard === unit.id;
+      const isHoveredOnMap = hoveredMarkerId === unit.id;
+      const isHovered = isHoveredFromCard || isHoveredOnMap;
+      const showFullRing = isHovered || isSelected;
+
+      const state: InteractionState = isSelected
+        ? 'selected'
+        : isHovered
+          ? 'hovered'
+          : 'default';
+      // Non-healthy units energize their own marker ring so the operator
+      // spots trouble even before reading the sectors. Health never fires
+      // the critical takeover — it's a steady status tint, no pulse.
+      const unhealthy = unitHealth !== 'ok' && unitHealth !== 'offline';
+      const style = resolveMarkerStyle(
+        state,
+        'friendly',
+        unhealthy && !showFullRing
+          ? { ringColor: gotchaSectorColor(unitHealth), glyphColor: gotchaSectorColor(unitHealth) }
+          : undefined,
+      );
+
+      const sectors: NonNullable<CesiumHtmlMarker['fovSectors']> = [];
+      for (const sensor of unit.sensors) {
+        const health = effectiveSensorHealth(sensor.health, sensor.latencyMs);
+        const sensorHovered =
+          hoveredSensorIdFromCard === sensor.id || selectedAssetId === sensor.id;
+        const nonHealthy = health !== 'ok';
+        // Visibility: hidden by default; full ring on hover/select; any
+        // non-healthy sector always visible.
+        if (!showFullRing && !sensorHovered && !nonHealthy) continue;
+        const highlighted = sensorHovered || isHovered;
+        sectors.push({
+          id: sensor.id,
+          rangeM: sensor.rangeM,
+          bearingDeg: sensor.bearingDeg,
+          widthDeg: sensor.fovDeg,
+          color: gotchaSectorColor(health),
+          opacity: highlighted ? 0.5 : nonHealthy ? 0.34 : 0.26,
+        });
+      }
+
+      out.push({
+        id: unit.id,
+        lat: unit.lat,
+        lon: unit.lon,
+        zIndex: isHovered ? 40 : isSelected ? 30 : 14,
+        content: (
+          <MapMarker
+            icon={<GotchaIcon outlined />}
+            style={style}
+            surfaceSize={SENSOR_SURFACE}
+            ringSize={SENSOR_RING}
+            label={unit.name}
+            showLabel={isHovered || isSelected}
+            pulse={isHovered || isSelected}
+          />
+        ),
+        fovSectors: sectors,
+        onClick: () => onAssetClickRef.current?.(unit.id),
+        onContextMenu: (e) => openContextMenu(e, 'effector', unit.id),
+        onMouseEnter: () => setHoveredMarkerId(unit.id),
+        onMouseLeave: () => setHoveredMarkerId((current) => (current === unit.id ? null : current)),
+      });
+    }
+    return out;
+  }, [gotchaUnits, selectedAssetId, hoveredSensorIdFromCard, hoveredMarkerId, openContextMenu]);
+
   /** Slice 6 — engagement-line distance badge. */
   const engagementBadgeMarker = useMemo<CesiumHtmlMarker | null>(() => {
     if (!engagementPair) return null;
@@ -1244,6 +1468,7 @@ function CesiumTacticalMapImpl({
     for (const m of targetMarkers) append(m);
     for (const m of friendlyDroneMarkers) append(m);
     for (const m of forceUnitMarkers) append(m);
+    for (const m of gotchaMarkers) append(m);
     if (flowPreviewMarker) append(flowPreviewMarker);
     if (engagementBadgeMarker) append(engagementBadgeMarker);
     return out;
@@ -1254,6 +1479,7 @@ function CesiumTacticalMapImpl({
     friendlyDroneMarkers,
     launcherEffectorMarkers,
     forceUnitMarkers,
+    gotchaMarkers,
     flowPreviewMarker,
     engagementBadgeMarker,
   ]);
@@ -1576,6 +1802,7 @@ function CesiumTacticalMapImpl({
         flyTo={flyTo}
         sceneMode={sceneMode}
         darkMonochromeMap={darkMonochromeMap}
+        onHtmlMarkerSectorClick={(_unitId, sectorId) => onAssetClickRef.current?.(sectorId)}
         className="absolute inset-0"
       />
 

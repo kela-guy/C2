@@ -158,15 +158,6 @@ export function buildCollapsedMetricLine(device: Device): string | null {
   return parts.length > 0 ? parts.join(' · ') : null;
 }
 
-/** Format a remaining-mute window as `mm:ss`. Returns null when the device isn't muted. */
-export function formatMuteRemaining(expiry: number | undefined, now: number): string | null {
-  if (!expiry) return null;
-  const remaining = Math.max(0, expiry - now);
-  const mins = Math.floor(remaining / 60_000);
-  const secs = Math.floor((remaining % 60_000) / 1000);
-  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-}
-
 /** True when a device exposes pin/unpin affordances (cameras + drones today). */
 export function isPinnableType(type: DeviceType): boolean {
   return type === 'camera' || type === 'drone';

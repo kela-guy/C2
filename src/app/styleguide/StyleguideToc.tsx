@@ -72,7 +72,14 @@ export function StyleguideToc({
               onClick={(e) => {
                 e.preventDefault();
                 onSelect(a.id);
-                document.getElementById(a.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Double rAF so an example that lives in a collapsed tab panel
+                // has a frame to become the active (visible) tab before we
+                // scroll its anchor into view.
+                requestAnimationFrame(() => {
+                  requestAnimationFrame(() => {
+                    document.getElementById(a.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  });
+                });
               }}
               className="relative py-1 text-sm leading-[1.125rem] no-underline transition-colors duration-150 ease-out before:absolute before:inset-y-px before:-left-[13px] before:w-px before:rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 hover:text-white data-[active=true]:text-white data-[active=true]:font-semibold data-[active=true]:before:w-0.5 data-[active=true]:before:bg-white data-[active=false]:text-white/50 data-[active=false]:before:bg-transparent"
             >

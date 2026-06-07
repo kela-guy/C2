@@ -22,7 +22,6 @@ import { getBatteryColor, getHealthColor } from './utils';
 /** Atomic controls a device can expose. Resolved to a `DeviceAction` per slot. */
 export type DeviceActionKind =
   | 'center'
-  | 'mute'
   | 'pin'
   | 'watchVideo'
   | 'floodlight'
@@ -51,6 +50,12 @@ export interface DeviceCapabilities {
   draggableToFeed?: boolean;
   /** Camera rows show the live preview hero above the stat grid. */
   cameraPreview?: boolean;
+  /**
+   * Composite device: the expanded card renders `device.children` as nested
+   * child rows, and the collapsed health tile rolls up the worst child. Used
+   * by the Gotcha effector (parent + 4 sensors + camera).
+   */
+  composite?: boolean;
 }
 
 export interface DeviceTypeConfig {
@@ -76,6 +81,17 @@ const HEADER_CENTER: DeviceActionKind[] = ['center'];
 const INSPECT_OVERFLOW: DeviceActionKind[] = ['notifications', 'logs'];
 
 export const DEVICE_REGISTRY: Record<DeviceType, DeviceTypeConfig> = {
+  // Composite Gotcha effector. Rendered by the shared `DeviceRow`; the
+  // `composite` capability makes the expansion render `device.children`
+  // (its sensors + camera) as nested child rows, and the header tile rolls
+  // their worst health up via `getEffectiveDeviceHealth`.
+  effector: {
+    capabilities: { composite: true },
+    detailFields: ['location', 'health'],
+    headerActions: HEADER_CENTER,
+    footerActions: [],
+    overflowActions: INSPECT_OVERFLOW,
+  },
   camera: {
     capabilities: { pinnable: true, draggableToFeed: true, cameraPreview: true },
     detailFields: ['location', 'bearing', 'fieldOfView', 'health', 'battery'],
@@ -143,7 +159,7 @@ export const DEVICE_REGISTRY: Record<DeviceType, DeviceTypeConfig> = {
     capabilities: {},
     detailFields: ['location', 'health'],
     headerActions: ['speaker', 'center'],
-    footerActions: ['mute', 'audio'],
+    footerActions: ['audio'],
     overflowActions: ['logs'],
   },
 };

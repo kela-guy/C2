@@ -3,7 +3,7 @@
  *
  * Owns the panel-level state (search query, type filter, currently
  * expanded row) and delegates per-row state to small hooks
- * (`useMutedDevices`, `useFocusedDevice`).
+ * (`useFocusedDevice`).
  *
  * Filtering, grouping, and the type-filter definition are computed
  * via pure helpers in `./utils.ts` so they're easy to inspect in
@@ -27,7 +27,6 @@ import {
   normalizePinnedSet,
   pickTypeFilterIcons,
 } from './utils';
-import { useMutedDevices } from './useMutedDevices';
 import { useFocusedDevice } from './useFocusedDevice';
 import { DeviceRow } from './DeviceRow';
 import type {
@@ -58,6 +57,7 @@ export function DevicesPanel({
   noTransition,
   width,
   focusedDeviceId,
+  selectedDeviceId,
   typeLabels: typeLabelsProp,
   connectionStateLabels: connectionStateLabelsProp,
   title = 'Devices',
@@ -96,8 +96,6 @@ export function DevicesPanel({
     setSelectedTypes,
     setQuery,
   });
-
-  const muted = useMutedDevices();
 
   const handleReset = useCallback(() => {
     setQuery('');
@@ -209,14 +207,13 @@ export function DevicesPanel({
                     isSpeakerPlaying={speakerPlayingIds?.has(device.id)}
                     speakerTracks={speakerTracks}
                     onFlyTo={onFlyTo}
-                    isMuted={muted.isMuted(device.id)}
-                    muteRemaining={muted.getRemaining(device.id)}
-                    onToggleMute={muted.toggle}
                     onPinToFeed={onPinToFeed}
                     onUnpinFromFeed={onUnpinFromFeed}
                     isPinnedToFeed={pinnedSet.has(device.id)}
                     onOpenLogs={onOpenLogs}
                     onArmNotifications={onArmNotifications}
+                    onChildSelect={onDeviceSelect}
+                    selectedChildId={selectedDeviceId}
                     connectionStateLabels={connectionStateLabels}
                     strings={strings}
                   />

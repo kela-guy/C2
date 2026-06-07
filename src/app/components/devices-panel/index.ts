@@ -16,6 +16,7 @@ export { DeviceAction, type DeviceActionProps } from './DeviceAction';
 export { DeviceActionBar } from './DeviceActionBar';
 export { DeviceOverflowMenu } from './controls/DeviceOverflowMenu';
 export { JamSplitButton } from './controls/JamSplitButton';
+export { SpeakerTrackSelect } from './controls/SpeakerTrackSelect';
 export {
   FloodlightSegmentedCompact,
   FloodlightSegmentedDefault,

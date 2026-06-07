@@ -15,14 +15,14 @@
 
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { BellOff, List } from '@/lib/icons/central';
+import { List } from '@/lib/icons/central';
 import { DotmSquare18 } from '@/app/components/ui/dotm-square-18';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import { buildCollapsedMetricLine } from './utils';
 import type { ConnectionState, Device } from './types';
 import { resolveDeviceAction, type DeviceActionContext } from './deviceActions';
 import type { DeviceTypeConfig } from './deviceRegistry';
-import { DEVICE_HEALTH_VISUAL, DEVICE_HEALTH_CRITICAL_PING, getDeviceHealth, getDeviceHealthReason, type DeviceHealth } from './deviceHealth';
+import { DEVICE_HEALTH_VISUAL, DEVICE_HEALTH_CRITICAL_PING, getDeviceHealth, getDeviceHealthReason, getEffectiveDeviceHealth, getUnhealthyChildCount, type DeviceHealth } from './deviceHealth';
 import { NotifyHeaderIndicator } from './controls/notify';
 
 interface DeviceRowHeaderProps {
@@ -48,9 +48,13 @@ const HEALTH_TONE: Record<DeviceHealth, { dot: string; badge: string | null }> =
 export function DeviceRowHeader({ device, cfg, ctx, connectionStateLabels }: DeviceRowHeaderProps) {
   const { strings } = ctx;
   const nonOnline = device.connectionState !== 'online';
-  const metricLine = buildCollapsedMetricLine(device);
+  const metricLine = device.subtitle ?? buildCollapsedMetricLine(device);
 
-  const health = getDeviceHealth(device);
+  // Composite parents (Gotcha) roll their worst child up into the tile so the
+  // collapsed row reflects the unit's true state without expanding.
+  const isComposite = cfg.capabilities.composite === true && (device.children?.length ?? 0) > 0;
+  const health = isComposite ? getEffectiveDeviceHealth(device) : getDeviceHealth(device);
+  const unhealthyChildren = isComposite ? getUnhealthyChildCount(device) : 0;
   const healthVisual = DEVICE_HEALTH_VISUAL[health];
   const healthReason = getDeviceHealthReason(device, strings, connectionStateLabels);
   const connectionLabel = connectionStateLabels[device.connectionState];
@@ -64,6 +68,10 @@ export function DeviceRowHeader({ device, cfg, ctx, connectionStateLabels }: Dev
   }[health];
 
   const tone = HEALTH_TONE[health];
+  // Persistent (non-color) cue on a composite parent: a count + label pill so
+  // a degraded/offline child is legible while the row is collapsed, not just a
+  // tile tint. Offline has no tone badge, so fall back to a neutral surface.
+  const compositeBadgeTone = tone.badge ?? 'bg-white/10 text-zinc-300';
   const showBadge = tone.badge != null && ctx.errorCount > 0;
   const badgeLabel = ctx.errorCount > 99 ? '99+' : ctx.errorCount;
   // The header reason text only adds value when it says something the
@@ -140,10 +148,15 @@ export function DeviceRowHeader({ device, cfg, ctx, connectionStateLabels }: Dev
         )}
       </div>
 
-      {ctx.isMuted && ctx.muteRemaining && (
-        <span className="flex shrink-0 items-center gap-1 text-xs font-mono tabular-nums text-white">
-          <BellOff size={12} className="text-white" />
-          {ctx.muteRemaining}
+      {unhealthyChildren > 0 && (
+        <span
+          className={`flex h-5 shrink-0 items-center gap-1 rounded px-1.5 text-[10px] font-semibold tabular-nums ${compositeBadgeTone}`}
+          role="status"
+          aria-label={`${unhealthyChildren} ${healthLabel}`}
+          title={`${unhealthyChildren} ${healthLabel}`}
+        >
+          <span className={`size-1.5 rounded-full ${tone.dot}`} aria-hidden="true" />
+          {unhealthyChildren}
         </span>
       )}
 

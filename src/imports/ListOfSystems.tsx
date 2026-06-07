@@ -36,6 +36,13 @@ export type EntityStage = 'raw_detection' | 'classified';
 export type ClassifiedType = 'drone' | 'bird' | 'aircraft' | 'car' | 'tank' | 'truck' | 'unknown';
 export type MitigationStatus = 'idle' | 'mitigating' | 'mitigated' | 'failed';
 export type WeaponPointingStatus = 'idle' | 'pointing' | 'pointed' | 'locking' | 'locked';
+/**
+ * Gotcha (counter-drone / anti-air net effector) engagement lifecycle.
+ * Peer to `MitigationStatus`: a target can be engaged by either the jammer
+ * (Regulus) or a Gotcha unit — whichever the operator commits, or whichever
+ * the card recommends as nearest.
+ */
+export type GotchaEngageStatus = 'idle' | 'engaging' | 'engaged' | 'failed';
 export type BdaStatus = 'pending' | 'looking' | 'stabilizing' | 'observing' | 'complete';
 export type ActivityStatus = 'active' | 'recently_active' | 'timeout' | 'dismissed' | 'mitigated';
 
@@ -104,6 +111,10 @@ export interface Detection {
   mitigatingEffectorId?: string;
   weaponPointingStatus?: WeaponPointingStatus;
   pointingLauncherId?: string;
+  /** Gotcha engagement lifecycle (peer to `mitigationStatus`). */
+  gotchaStatus?: GotchaEngageStatus;
+  /** Id of the Gotcha unit committed to this target. */
+  engagingGotchaId?: string;
   bdaStatus?: BdaStatus;
   activityStatus?: ActivityStatus;
   alarmZone?: 'red' | 'yellow' | 'none';
@@ -519,6 +530,8 @@ export interface ListOfSystemsProps {
   onEffectorSelect?: (targetId: string, effectorId: string) => void;
   regulusEffectors?: RegulusEffector[];
   selectedEffectorIds?: Map<string, string>;
+  onEngageGotcha?: (targetId: string, gotchaId: string) => void;
+  onGotchaSelect?: (targetId: string, gotchaId: string) => void;
   onPointWeapon?: (targetId: string, launcherId: string) => void;
   onLockWeapon?: (targetId: string) => void;
   onDismissLock?: (targetId: string) => void;
@@ -581,6 +594,8 @@ function ListOfSystemsImpl({
   onEffectorSelect,
   regulusEffectors,
   selectedEffectorIds,
+  onEngageGotcha,
+  onGotchaSelect,
   onPointWeapon,
   onLockWeapon,
   onDismissLock,
@@ -736,7 +751,7 @@ function ListOfSystemsImpl({
     onAdvanceFlowPhase, onEscalateCreatePOI, onEscalateSendDrone, onDroneSelect,
     onDroneOverride, onDroneResume, onDroneRTB, onMissionActivate, onMissionPause,
     onMissionResume, onMissionOverride, onMissionCancel, onMitigate, onMitigateAll,
-    onEffectorSelect, onPointWeapon, onLockWeapon, onDismissLock, onLauncherSelect,
+    onEffectorSelect, onEngageGotcha, onGotchaSelect, onPointWeapon, onLockWeapon, onDismissLock, onLauncherSelect,
     onBdaOutcome, onBdaCamera, onRequestCameraControl, onSensorFocus,
     onTargetClick, onTargetFocus,
   });
@@ -747,7 +762,7 @@ function ListOfSystemsImpl({
     onAdvanceFlowPhase, onEscalateCreatePOI, onEscalateSendDrone, onDroneSelect,
     onDroneOverride, onDroneResume, onDroneRTB, onMissionActivate, onMissionPause,
     onMissionResume, onMissionOverride, onMissionCancel, onMitigate, onMitigateAll,
-    onEffectorSelect, onPointWeapon, onLockWeapon, onDismissLock, onLauncherSelect,
+    onEffectorSelect, onEngageGotcha, onGotchaSelect, onPointWeapon, onLockWeapon, onDismissLock, onLauncherSelect,
     onBdaOutcome, onBdaCamera, onRequestCameraControl, onSensorFocus,
     onTargetClick, onTargetFocus,
   };
@@ -796,6 +811,8 @@ function ListOfSystemsImpl({
       onMitigate: (effectorId) => h.current.onMitigate?.(id, effectorId),
       onMitigateAll: () => h.current.onMitigateAll?.(id),
       onEffectorSelect: (effectorId) => h.current.onEffectorSelect?.(id, effectorId),
+      onEngageGotcha: (gotchaId) => h.current.onEngageGotcha?.(id, gotchaId),
+      onGotchaSelect: (gotchaId) => h.current.onGotchaSelect?.(id, gotchaId),
       onPointWeapon: (launcherId) => h.current.onPointWeapon?.(id, launcherId),
       onLockWeapon: () => h.current.onLockWeapon?.(id),
       onDismissLock: () => h.current.onDismissLock?.(id),
@@ -839,6 +856,8 @@ function ListOfSystemsImpl({
     selectedEffectorId: selectedEffectorIds?.get(target.id) ?? flowSelectedIds?.['regulusEffectors']?.get(target.id),
     launcherEffectors: launcherEffectors ?? flowAssets?.['launcherEffectors'] as LauncherEffector[] | undefined,
     selectedLauncherId: selectedLauncherIds?.get(target.id) ?? flowSelectedIds?.['launcherEffectors']?.get(target.id),
+    gotchaEffectors: flowAssets?.['gotchaEffectors'],
+    selectedGotchaId: flowSelectedIds?.['gotchaEffectors']?.get(target.id),
     nearbyCameras: (target.flowType === 1 || target.flowType === 2) ? nearbyCameras : undefined,
     nearbyHives: target.flowType === 3 ? nearbyHives : undefined,
   });

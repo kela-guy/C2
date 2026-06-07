@@ -19,6 +19,7 @@ export {
   DeviceActionBar,
   DeviceOverflowMenu,
   JamSplitButton,
+  SpeakerTrackSelect,
   FloodlightSegmentedCompact,
   FloodlightSegmentedDefault,
   NotifyHeaderIndicator,

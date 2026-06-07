@@ -10,13 +10,14 @@
  *               draw focus. Confirm fires; Cancel backs out.
  *   - jamming — the active state. Pressing it stands the jammer down.
  *
- * Confirming fires the real `onJamActivate(deviceId)`. The active state is
- * seeded from `device.status === 'active'` so a jammer that arrives hot
- * reads as JAMMING. Offline / malfunctioning jammers are disabled with a
- * reason (an already-active jammer just shows the jamming state instead).
+ * Confirming fires the real `onJamActivate(deviceId)`. The button always
+ * starts in `idle` — JAMMING is only ever reached through the operator's
+ * click-and-confirm flow, never seeded from incoming device data. Offline /
+ * malfunctioning jammers are disabled with a reason.
  */
 
 import { useState } from 'react';
+import { DotmSquare11 } from '@/app/components/ui/dotm-square-11';
 import { JamIcon } from '@/primitives/ProductIcons';
 import { SplitActionButton } from '@/primitives/SplitActionButton';
 import { CARD_TOKENS } from '@/primitives/tokens';
@@ -41,7 +42,7 @@ export function JamSplitButton({ device, strings: s, iconOnly, onJamActivate }: 
   const disabled = offline || malfunction;
   const reason = offline ? s.jamDisabledOffline : malfunction ? s.jamDisabledMalfunction : null;
 
-  const [state, setState] = useState<JamState>(device.status === 'active' ? 'jamming' : 'idle');
+  const [state, setState] = useState<JamState>('idle');
   const [scope, setScope] = useState<JamScope>('one');
 
   const armConfirm = (next: JamScope) => {
@@ -77,10 +78,17 @@ export function JamSplitButton({ device, strings: s, iconOnly, onJamActivate }: 
       <DeviceAction
         dataHandoff="device-jam-button"
         icon={
-          <span className="relative flex size-3 items-center justify-center">
-            <span className="absolute inline-flex size-2 rounded-full bg-red-400 opacity-75 animate-ping motion-reduce:hidden" />
-            <span className="relative inline-flex size-1.5 rounded-full bg-red-300" />
-          </span>
+          <DotmSquare11
+            size={108}
+            dotSize={16}
+            speed={1}
+            pattern="full"
+            colorPreset="solid-theme"
+            animated
+            opacityBase={0.09}
+            opacityMid={0.09}
+            opacityPeak={1}
+          />
         }
         label={scope === 'all' ? s.jammingAll : s.jamActive}
         tone="danger"

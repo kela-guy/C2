@@ -79,9 +79,6 @@ const STRINGS_HE = {
       jamCancel: 'ביטול',
       jamMoreOptions: 'אפשרויות שיבוש נוספות',
       centerOnMap: 'מרכז במפה',
-      mute: 'השתק',
-      unmute: 'בטל השתקה',
-      muted: 'מושתק',
       floodlightOn: 'דולק',
       floodlightOff: 'כבוי',
       floodlightToggleAriaLabel: 'הדלק/כבה זרקור',
@@ -96,6 +93,7 @@ const STRINGS_HE = {
       audioTrackSearchPlaceholder: 'חיפוש רצועה...',
       audioTrackNoMatches: 'אין רצועות תואמות',
       wipers: 'מגבים',
+      wiping: 'מנגב…',
       wipersAriaLabel: 'מגבים',
       calibrate: 'כיול',
       calibrating: 'מכייל...',
@@ -577,6 +575,7 @@ const STRINGS_HE = {
    * user-visible labels live here.
    */
   engagementFlows: {
+    recommended: 'מומלץ',
     jam: {
       idleButton: 'שיבוש',
       mitigatingButton: 'משבש אות...',
@@ -586,6 +585,13 @@ const STRINGS_HE = {
       dropdownAll: 'שיבוש כללי',
       dropdownDirectional: 'שיבוש ממוקד',
       dropdownSpectrum: 'שיבוש ספקטרום רחב',
+    },
+    gotcha: {
+      idleButton: 'לכידה',
+      engagingButton: 'לוכד מטרה...',
+      engagedButton: 'מטרה נלכדה',
+      engagedStrip: 'מטרה נלכדה',
+      verifyBdaPtz: 'תחקור — מעקב PTZ',
     },
     weapon: {
       idleButton: 'כוון נשק',
@@ -626,6 +632,8 @@ const STRINGS_HE = {
     jamEnd: 'שיבוש הושלם — ממתין לאימות',
     jamGlobal: (count: number) => `שיבוש כללי — ${count} אפקטורים`,
     jamGlobalEnd: 'שיבוש כללי הושלם — ממתין לאימות',
+    gotchaStart: 'לכידת Gotcha',
+    gotchaEnd: 'מטרה נלכדה — ממתין לאימות',
     weaponStart: 'כיוון נשק',
     weaponEnd: 'נשק מכוון — ממתין לנעילה',
     locking: 'נועל על מטרה...',
@@ -651,6 +659,8 @@ const STRINGS_HE = {
     jamStarted: 'שיבוש אלקטרוני הופעל',
     jamEndedAwaitVerify: 'שיבוש הושלם — נדרש אימות',
     jamGlobalStarted: (count: number) => `שיבוש כללי הופעל — ${count} אפקטורים`,
+    gotchaStarted: 'Gotcha — לכידה הופעלה',
+    gotchaEngaged: 'מטרה נלכדה — נדרש אימות',
     weaponPointing: 'מכוון נשק למטרה',
     weaponPointed: 'נשק מכוון — ניתן לנעול',
     lockedReadyForFire: 'נעול על מטרה — עבור למכשיר חיצוני לירי',
@@ -962,10 +972,8 @@ const STRINGS_EN: Strings = {
       jamCancel: 'Cancel',
       jamMoreOptions: 'More jam options',
       centerOnMap: 'Center on map',
-      mute: 'Mute',
-      unmute: 'Unmute',
-      muted: 'Muted',
       wipers: 'Wipers',
+      wiping: 'Wiping…',
       wipersAriaLabel: 'Wipers',
       calibrate: 'Calibrate',
       calibrating: 'Calibrating...',
@@ -1396,6 +1404,7 @@ const STRINGS_EN: Strings = {
   },
 
   engagementFlows: {
+    recommended: 'Recommended',
     jam: {
       idleButton: 'Jam',
       mitigatingButton: 'Jamming signal...',
@@ -1405,6 +1414,13 @@ const STRINGS_EN: Strings = {
       dropdownAll: 'Global jamming',
       dropdownDirectional: 'Directional jamming',
       dropdownSpectrum: 'Wide-spectrum jamming',
+    },
+    gotcha: {
+      idleButton: 'Gotcha',
+      engagingButton: 'Capturing target...',
+      engagedButton: 'Target captured',
+      engagedStrip: 'Target captured',
+      verifyBdaPtz: 'Investigate — PTZ tracking',
     },
     weapon: {
       idleButton: 'Point weapon',
@@ -1438,6 +1454,8 @@ const STRINGS_EN: Strings = {
     classifiedAsTruck: 'Classified as truck — 89% confidence',
     jamStart: 'Jamming',
     jamEnd: 'Jamming complete — awaiting verification',
+    gotchaStart: 'Gotcha capture',
+    gotchaEnd: 'Target captured — awaiting verification',
     jamGlobal: (count: number) => `Global jamming — ${count} effectors`,
     jamGlobalEnd: 'Global jamming complete — awaiting verification',
     weaponStart: 'Weapon pointing',
@@ -1460,6 +1478,8 @@ const STRINGS_EN: Strings = {
     cameraControlAcquired: 'Camera control acquired — pointing for verification',
     jamStarted: 'Electronic jamming engaged',
     jamEndedAwaitVerify: 'Jamming complete — verification required',
+    gotchaStarted: 'Gotcha capture engaged',
+    gotchaEngaged: 'Target captured — verification required',
     jamGlobalStarted: (count: number) => `Global jamming engaged — ${count} effectors`,
     weaponPointing: 'Pointing weapon at target',
     weaponPointed: 'Weapon aligned — ready to lock',

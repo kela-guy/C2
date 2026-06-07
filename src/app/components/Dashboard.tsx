@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useDrop } from 'react-dnd';
-import { CAMERA_ASSETS, REGULUS_EFFECTORS } from './tacticalAssets';
+import { CAMERA_ASSETS, REGULUS_EFFECTORS, SPEAKER_ASSETS } from './tacticalAssets';
 import { bearingDegrees, haversineDistanceM } from '@/app/lib/mapGeo';
 import { CesiumTacticalMap } from './CesiumTacticalMap';
 import { CesiumErrorBoundary } from './CesiumErrorBoundary';
@@ -24,6 +24,10 @@ import { Separator } from '@/shared/components/ui/separator';
 import { DevicesPanel, DevicesIcon, DEVICE_CAMERA_DRAG_TYPE } from './DevicesPanel';
 import type { DeviceCameraDragItem } from './DevicesPanel';
 import { useDevicesFromAssets } from './useDevicesFromAssets';
+import { useGotchaUnits } from './gotcha/useGotchaUnits';
+import { gotchaUnitsToDevices } from './gotcha/gotchaUnitsToDevices';
+import { getUnitHealth } from './gotcha/gotchaHealth';
+import { CriticalAlertOverlay, type CriticalDroneAlert } from './gotcha/CriticalAlertOverlay';
 import { VideoHudPanel } from './video-hud-sandbox/VideoHudPanel';
 import type { VideoHudPanelFeed as CameraFeed } from './video-hud-sandbox/VideoHudPanel';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/shared/components/ui/resizable';
@@ -249,6 +253,14 @@ interface DashboardProps {
 
 export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
   const allDevices = useDevicesFromAssets();
+  const { units: gotchaUnits } = useGotchaUnits();
+  // Composite Gotcha effectors render through the shared DeviceRow like every
+  // other asset; the effector group sorts first via TYPE_ORDER.
+  const gotchaDevices = useMemo(() => gotchaUnitsToDevices(gotchaUnits), [gotchaUnits]);
+  const devicesWithGotcha = useMemo(
+    () => [...gotchaDevices, ...allDevices],
+    [gotchaDevices, allDevices],
+  );
   // Active i18n catalog. Locale is driven by the direction system
   // (`'rtl'` ⇒ Hebrew, `'ltr'` ⇒ English), so the marketing
   // `/demo` route — which forces direction to `'ltr'` via the
@@ -323,6 +335,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
   const [cameraLookAtRequest, setCameraLookAtRequest] = useState<{ cameraId: string; targetLat: number; targetLon: number; fovOverrideDeg?: number } | null>(null);
   const [regulusEffectors, setRegulusEffectors] = useState<RegulusEffector[]>(REGULUS_EFFECTORS);
   const [selectedEffectorIds, setSelectedEffectorIds] = useState<Map<string, string>>(new Map());
+  const [selectedGotchaIds, setSelectedGotchaIds] = useState<Map<string, string>>(new Map());
   const [launcherEffectors, setLauncherEffectors] = useState<LauncherEffector[]>(() => {
     // Initial launcher names come from the catalog at mount time —
     // toggling locale at runtime won't relabel existing launchers
@@ -1053,6 +1066,35 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
     setSelectedEffectorIds(prev => new Map(prev).set(targetId, effectorId));
   }, []);
 
+  // --- Gotcha (counter-drone net effector) engagement ---
+  // Expose the Gotcha units as generic flow assets; availability folds the
+  // unit's worst-wins health (a degraded/offline unit can't engage).
+  const gotchaEffectors = useMemo(
+    () => gotchaUnits.map((u) => {
+      const health = getUnitHealth(u);
+      const available = health === 'ok' || health === 'warning';
+      return { id: u.id, name: u.name, lat: u.lat, lon: u.lon, status: available ? 'available' : 'unavailable' };
+    }),
+    [gotchaUnits],
+  );
+
+  const handleGotchaSelect = useCallback((targetId: string, gotchaId: string) => {
+    setSelectedGotchaIds(prev => new Map(prev).set(targetId, gotchaId));
+  }, []);
+
+  const handleEngageGotcha = useCallback((targetId: string, gotchaId: string) => {
+    toast.success(t.toasts.gotchaStarted);
+    setTargets(prev => appendLog(prev, targetId, `${t.actionLog.gotchaStart} — ${gotchaId}`).map(tg =>
+      tg.id === targetId ? { ...tg, gotchaStatus: 'engaging' as const, engagingGotchaId: gotchaId } : tg
+    ));
+    setTimeout(() => {
+      setTargets(prev => appendLog(prev, targetId, t.actionLog.gotchaEnd).map(tg =>
+        tg.id === targetId ? { ...tg, gotchaStatus: 'engaged' as const } : tg
+      ));
+      toast.success(t.toasts.gotchaEngaged);
+    }, 3000);
+  }, [t]);
+
   // --- CUAS Mitigation Handlers ---
   /**
    * Generic factory for the "activate asset -> set target status -> delay -> advance status" pattern.
@@ -1378,12 +1420,12 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
   }, []);
 
   const flowAssets = useMemo(
-    () => ({ regulusEffectors, launcherEffectors }),
-    [regulusEffectors, launcherEffectors],
+    () => ({ regulusEffectors, launcherEffectors, gotchaEffectors }),
+    [regulusEffectors, launcherEffectors, gotchaEffectors],
   );
   const flowSelectedIds = useMemo(
-    () => ({ regulusEffectors: selectedEffectorIds, launcherEffectors: selectedLauncherIds }),
-    [selectedEffectorIds, selectedLauncherIds],
+    () => ({ regulusEffectors: selectedEffectorIds, launcherEffectors: selectedLauncherIds, gotchaEffectors: selectedGotchaIds }),
+    [selectedEffectorIds, selectedLauncherIds, selectedGotchaIds],
   );
 
   const handleDismiss = useCallback((targetId: string, reason?: string) => {
@@ -1429,6 +1471,27 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
     setMapFocusRequest({ lat, lon });
     setTimeout(() => setMapFocusRequest(null), 100);
   }, []);
+
+  // One-click PA broadcast (כריזה) from the critical drone takeover —
+  // lights up every PA speaker (mirrors `onSpeakerToggle` for each) and
+  // surfaces a confirmation toast.
+  const handleGotchaBroadcast = useCallback((trackId: string) => {
+    setSpeakerPlayingIds((prev) => {
+      const s = new Set(prev);
+      for (const spk of SPEAKER_ASSETS) s.add(spk.id);
+      return s;
+    });
+    toast.success(`PA broadcast: ${trackId}`, { duration: 3000 });
+  }, []);
+
+  // "Show on map" from the takeover — focus + select the detecting unit.
+  const handleGotchaLocate = useCallback((alert: CriticalDroneAlert) => {
+    const unit = gotchaUnits.find((u) => u.id === alert.unitId);
+    if (unit) {
+      setSelectedAssetId(alert.sensorId ?? unit.id);
+      handleDeviceFlyTo(unit.lat, unit.lon);
+    }
+  }, [gotchaUnits, handleDeviceFlyTo]);
 
   const openSystemsPanel = useCallback(() => {
     if (devicesPanelOpen || simulationsPanelOpen || flowBuilderOpen) setPanelSwitching(true);
@@ -2069,6 +2132,8 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
                   darkMonochromeMap={demoMode}
                   sensorDetectionLinks={flowSensorLinks}
                   flowPreview={flowPreview}
+                  gotchaUnits={gotchaUnits}
+                  cameraLookAtRequest={cameraLookAtRequest}
                 />
               </CesiumErrorBoundary>
             </div>
@@ -2165,6 +2230,8 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
               onMitigate={handleMitigate}
               onMitigateAll={handleMitigateAll}
               onEffectorSelect={handleEffectorSelect}
+              onEngageGotcha={handleEngageGotcha}
+              onGotchaSelect={handleGotchaSelect}
               regulusEffectors={regulusEffectors}
               selectedEffectorIds={selectedEffectorIds}
               onPointWeapon={handlePointWeapon}
@@ -2227,7 +2294,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
 
         {devicesPanelOpen && (
           <DevicesPanel
-            devices={allDevices}
+            devices={devicesWithGotcha}
             open={devicesPanelOpen}
             onClose={closeDevicesPanel}
             onFlyTo={handleDeviceFlyTo}
@@ -2264,6 +2331,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
             noTransition={panelSwitching}
             width={sidebarWidth}
             focusedDeviceId={focusedDeviceId}
+            selectedDeviceId={selectedAssetId}
             title={t.dashboard.devicesPanelTitle}
             closeAriaLabel={t.dashboard.devicesPanelClose}
             typeLabels={t.devices.typeLabels}
@@ -2275,6 +2343,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
       </div>
 
       <NotificationSystem />
+      <CriticalAlertOverlay onBroadcast={handleGotchaBroadcast} onLocate={handleGotchaLocate} />
     </div>
   );
 };

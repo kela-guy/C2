@@ -6,7 +6,7 @@
  * lapses. The armed flag + live `remaining` are read by both the overflow
  * toggle and the always-visible header indicator. Each arm/disarm reports
  * to the optional `onArm` callback (the only thing wired to the consumer);
- * the countdown itself is in-memory, matching `useMutedDevices`.
+ * the countdown itself is in-memory.
  */
 
 import { useCallback, useEffect, useState } from 'react';

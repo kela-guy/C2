@@ -14,8 +14,9 @@
  */
 
 import { useEffect, useState, type ReactNode } from 'react';
-import { Check, Droplets, Square, Sun, Video, Wrench } from '@/lib/icons/central';
-import { MapPinIcon, NotificationIcon, NotificationMutedIcon, PauseIcon, PlayFilledIcon, WatchStreamIcon } from './icons';
+import { Check, Square, Sun, Video, Wrench } from '@/lib/icons/central';
+import { MapPinIcon, PauseIcon, PlayFilledIcon, WatchStreamIcon, WipeIcon } from './icons';
+import { DotmSquare1 } from '@/app/components/ui/dotm-square-1';
 import { SpeakerTrackSelect } from './controls/SpeakerTrackSelect';
 import { JamSplitButton } from './controls/JamSplitButton';
 import { FloodlightSegmentedCompact } from './controls/FloodlightSegmentedToggle';
@@ -30,8 +31,6 @@ export type DeviceActionPlacement = 'header' | 'footer';
 export interface DeviceActionContext {
   device: Device;
   strings: DevicesPanelStrings;
-  isMuted: boolean;
-  muteRemaining: string | null;
   isFloodlightOn: boolean;
   isSpeakerPlaying: boolean;
   isPinnedToFeed: boolean;
@@ -49,7 +48,6 @@ export interface DeviceActionContext {
   /** Open the device's errors modal (the header error button). */
   onOpenErrors: () => void;
   onFlyTo: (lat: number, lon: number) => void;
-  onToggleMute: (deviceId: string) => void;
   onFloodlightToggle?: (floodlightId: string, next: boolean) => void;
   onSpeakerToggle?: (speakerId: string, next: boolean) => void;
   onJamActivate?: (jammerId: string) => void;
@@ -104,27 +102,6 @@ export function resolveDeviceAction(
               />
             ),
           };
-
-    case 'mute':
-      // Mirror the lab's labeled toggle: a neutral (lit-white-when-pressed)
-      // toggle whose bell becomes a slashed bell only while muted, and whose
-      // label reads the state ("Mute" -> "Muted") rather than the action.
-      return {
-        key: 'mute',
-        node: (
-          <DeviceAction
-            dataHandoff="device-mute"
-            tone="neutral"
-            pressed={ctx.isMuted}
-            icon={ctx.isMuted ? <NotificationMutedIcon size={12} /> : <NotificationIcon size={12} />}
-            label={ctx.isMuted ? s.muted : s.mute}
-            ariaLabel={ctx.isMuted ? s.muted : s.mute}
-            disabled={offline}
-            disabledReason={offline ? s.jamDisabledOffline : null}
-            onClick={() => ctx.onToggleMute(d.id)}
-          />
-        ),
-      };
 
     case 'floodlight':
       // Header: the icon-led segmented Off/On toggle (matches the lab).
@@ -285,14 +262,55 @@ export function resolveDeviceAction(
 function WipersControl({ device, strings }: { device: Device; strings: DevicesPanelStrings }) {
   const [on, setOn] = useState(false);
   const offline = isOffline(device);
+
+  // Wipers run continuously while on, so the lit state swaps the glyph for a
+  // dot-matrix spinner. It stays a normal (non-`loading`) button so the second
+  // click stops it. The label flips Wipers -> Wiping…, and both states share a
+  // single grid cell so the pill never resizes mid-toggle.
+  const glyph = on ? (
+    <DotmSquare1
+      size={20}
+      dotSize={2}
+      speed={1.1}
+      pattern="full"
+      colorPreset="solid-theme"
+      animated
+      opacityBase={0.12}
+      opacityMid={0.42}
+      opacityPeak={1}
+      ariaLabel={strings.wiping}
+    />
+  ) : (
+    <WipeIcon size={12} />
+  );
+
   return (
     <DeviceAction
       dataHandoff="device-wipers"
-      tone="caution"
+      tone="neutral"
       pressed={on}
-      icon={<Droplets size={12} />}
-      label={strings.wipers}
-      ariaLabel={strings.wipersAriaLabel}
+      icon={
+        <span className="inline-flex size-4 shrink-0 items-center justify-center [&_svg]:size-4">
+          {glyph}
+        </span>
+      }
+      label={
+        <span className="grid">
+          <span
+            aria-hidden="true"
+            className={`col-start-1 row-start-1 whitespace-nowrap ${on ? '' : 'invisible'}`}
+          >
+            {strings.wiping}
+          </span>
+          <span
+            aria-hidden="true"
+            className={`col-start-1 row-start-1 whitespace-nowrap ${on ? 'invisible' : ''}`}
+          >
+            {strings.wipers}
+          </span>
+        </span>
+      }
+      ariaLabel={on ? strings.wiping : strings.wipersAriaLabel}
       disabled={offline}
       disabledReason={offline ? strings.jamDisabledOffline : null}
       onClick={() => setOn((v) => !v)}

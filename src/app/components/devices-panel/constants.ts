@@ -22,6 +22,7 @@ export const DEVICE_CAMERA_DRAG_TYPE = 'DEVICE_CAMERA';
 
 /** Display order for type groups. Drives both the group rendering and the type-filter list. */
 export const TYPE_ORDER: DeviceType[] = [
+  'effector',
   'camera',
   'radar',
   'dock',
@@ -46,6 +47,7 @@ export const STATUS_SORT: Record<string, number> = {
 
 /** English type-group labels. Override via `typeLabels` prop. */
 export const DEFAULT_TYPE_LABELS: Record<DeviceType, string> = {
+  effector: 'Effectors',
   camera: 'Cameras',
   radar: 'Radars',
   dock: 'Docks',
@@ -105,10 +107,8 @@ export const DEFAULT_DEVICE_PANEL_STRINGS: DevicesPanelStrings = {
   jamCancel: 'Cancel',
   jamMoreOptions: 'More jam options',
   centerOnMap: 'Center on map',
-  mute: 'Mute',
-  unmute: 'Unmute',
-  muted: 'Muted',
   wipers: 'Wipers',
+  wiping: 'Wiping…',
   wipersAriaLabel: 'Wipers',
   calibrate: 'Calibrate',
   calibrating: 'Calibrating…',

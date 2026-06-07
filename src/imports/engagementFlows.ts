@@ -9,6 +9,7 @@ import {
   Eye,
 } from '@/lib/icons/central';
 import { JamWaveIcon } from '@/primitives/MapIcons';
+import { GotchaIcon } from '@/app/components/tacticalIcons';
 import type { Strings } from '@/lib/intl';
 import { getStrings } from '@/lib/intl';
 import type { Detection } from './ListOfSystems';
@@ -96,6 +97,12 @@ export interface FlowPhaseUI {
     icon: React.ElementType;
     variant: 'fill' | 'ghost' | 'danger' | 'warning';
     callbackKey: string;
+    /**
+     * Optional argument forwarded to the resolved callback. Needed for
+     * callbacks that branch on an action discriminant (e.g. `onVerify` expects
+     * `'investigate'`); callbacks that ignore args are unaffected.
+     */
+    callbackArg?: string;
   }[];
 }
 
@@ -195,7 +202,7 @@ export function getJamFlow(t: Strings): EngagementFlowDef {
         stripIcon: Check,
         stripTone: 'success',
         terminalActions: [
-          { id: 'investigate-bda', label: j.verifyBdaPtz, icon: Eye, variant: 'fill', callbackKey: 'onVerify' },
+          { id: 'investigate-bda', label: j.verifyBdaPtz, icon: Eye, variant: 'fill', callbackKey: 'onVerify', callbackArg: 'investigate' },
         ],
       },
     },
@@ -212,6 +219,81 @@ export function getJamFlow(t: Strings): EngagementFlowDef {
 
     showCamera: true,
     accentPhases: { mitigating: ['mitigating'], active: ['mitigated'] },
+  };
+}
+
+// ─── GOTCHA FLOW (counter-drone net effector — peer to jam) ────────────────
+//
+// Gotcha is an anti-air / counter-drone capture effector. It applies to the
+// same target set as jam (drones / aircraft / uav), so on those cards both
+// jam and gotcha are offered as equal engagement options; the card picks the
+// nearest effector as the recommended primary (see `buildActions`).
+
+/** Renders the Gotcha glyph in the button's text color (not a fixed fill). */
+const GotchaFlowIcon = ({ size = 16 }: { size?: number }) =>
+  React.createElement(GotchaIcon, { size, fill: 'currentColor' });
+
+export function getGotchaFlow(t: Strings): EngagementFlowDef {
+  const g = t.engagementFlows.gotcha;
+  return {
+    id: 'gotcha',
+    // Same counter-air target set as jam.
+    matchTarget: (target) =>
+      target.classifiedType !== 'bird' &&
+      target.classifiedType !== 'car' &&
+      target.classifiedType !== 'tank' &&
+      target.classifiedType !== 'truck',
+
+    assetContextKey: 'gotchaEffectors',
+    selectedIdContextKey: 'selectedGotchaId',
+    availableFilter: (a) => a.status === 'available',
+
+    getPhase: (target) => {
+      if (target.gotchaStatus === 'engaged') return 'engaged';
+      if (target.gotchaStatus === 'engaging') return 'engaging';
+      return 'idle';
+    },
+
+    phases: {
+      idle: {
+        buttonLabel: g.idleButton,
+        buttonIcon: GotchaFlowIcon,
+        buttonVariant: 'danger',
+        showDropdown: true,
+      },
+      engaging: {
+        buttonLabel: g.engagingButton,
+        buttonIcon: GotchaFlowIcon,
+        buttonVariant: 'danger',
+        loading: true,
+        disabled: true,
+        showDropdown: true,
+      },
+      engaged: {
+        buttonLabel: g.engagedButton,
+        buttonIcon: Check,
+        buttonVariant: 'ghost',
+        isTerminal: true,
+        stripLabel: g.engagedStrip,
+        stripIcon: Check,
+        stripTone: 'success',
+        terminalActions: [
+          { id: 'investigate-bda', label: g.verifyBdaPtz, icon: Eye, variant: 'fill', callbackKey: 'onVerify', callbackArg: 'investigate' },
+        ],
+      },
+    },
+
+    lineColor: (phase) => phase === 'engaging' ? '#ef4444' : '#ffffff',
+    badgeTextColor: (phase) => phase === 'engaging' ? '#ffffff' : '#000000',
+    coverageColor: '#12b886',
+
+    dropdownGroupLabel: '',
+
+    primaryCallbackKey: 'onEngageGotcha',
+    selectCallbackKey: 'onGotchaSelect',
+
+    showCamera: false,
+    accentPhases: { mitigating: ['engaging'], active: ['engaged'] },
   };
 }
 
@@ -313,7 +395,16 @@ export function getWeaponFlow(t: Strings): EngagementFlowDef {
  * constants.
  */
 export function getEngagementFlows(t: Strings): EngagementFlowDef[] {
-  return [getJamFlow(t), getWeaponFlow(t)];
+  return [getJamFlow(t), getGotchaFlow(t), getWeaponFlow(t)];
+}
+
+/**
+ * Counter-air flows (jam + gotcha) that can apply to the SAME target. Unlike
+ * `getEngagementFlows` (first-match-wins), these are offered together on a
+ * card, with the nearest effector recommended as primary.
+ */
+export function getCounterAirFlows(t: Strings): EngagementFlowDef[] {
+  return [getJamFlow(t), getGotchaFlow(t)];
 }
 
 export function findFlowForTarget(target: Detection, t: Strings): EngagementFlowDef | null {
@@ -330,5 +421,6 @@ export function findFlowForTarget(target: Detection, t: Strings): EngagementFlow
 // (the map mounts at module init in some demo paths).
 const FALLBACK_STRINGS = getStrings('en');
 export const JAM_FLOW: EngagementFlowDef = getJamFlow(FALLBACK_STRINGS);
+export const GOTCHA_FLOW: EngagementFlowDef = getGotchaFlow(FALLBACK_STRINGS);
 export const WEAPON_FLOW: EngagementFlowDef = getWeaponFlow(FALLBACK_STRINGS);
-export const ENGAGEMENT_FLOWS: EngagementFlowDef[] = [JAM_FLOW, WEAPON_FLOW];
+export const ENGAGEMENT_FLOWS: EngagementFlowDef[] = [JAM_FLOW, GOTCHA_FLOW, WEAPON_FLOW];

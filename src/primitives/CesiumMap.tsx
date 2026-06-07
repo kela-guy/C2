@@ -121,6 +121,22 @@ export interface CesiumHtmlMarker {
    * cone angle. Use `widthDeg: 360` for omnidirectional sensors.
    */
   fov?: { rangeM: number; bearingDeg: number; widthDeg: number; color?: string; opacity?: number };
+  /**
+   * Optional multi-sector field-of-view (terrain-clamped polygons). Used by
+   * composite effectors (e.g. Gotcha) that fan several directional sensors
+   * around one position. Each sector renders + colours independently so a
+   * single blind/degraded sector can be surfaced without lighting the whole
+   * ring. `id` (when present) is reported back through
+   * `onHtmlMarkerSectorClick` so the consumer can drill into that child.
+   */
+  fovSectors?: Array<{
+    id?: string;
+    rangeM: number;
+    bearingDeg: number;
+    widthDeg: number;
+    color?: string;
+    opacity?: number;
+  }>;
   /** Optional coverage ring (terrain-clamped ellipse). */
   coverageRadiusM?: number;
   /** Coverage ring colour (CSS string). Defaults to `#22b8cf`. */
@@ -172,6 +188,12 @@ export interface CesiumMapProps {
   onMarkerClick?: (id: string) => void;
   /** Called when a `markers[]` entity is hovered (point markers only). */
   onMarkerHover?: (id: string | null) => void;
+  /**
+   * Called when an HTML marker's FOV sector polygon (from `fovSectors`) is
+   * clicked. Reports the owning marker id + the sector's `id` so the
+   * consumer can drill into that sensor/child.
+   */
+  onHtmlMarkerSectorClick?: (markerId: string, sectorId: string) => void;
   /** Optional className for the wrapping `<div>`. Set width + height here or via parent. */
   className?: string;
 }
@@ -284,6 +306,7 @@ export function CesiumMap({
   darkMonochromeMap = false,
   onMarkerClick,
   onMarkerHover,
+  onHtmlMarkerSectorClick,
   className = 'w-full h-full',
 }: CesiumMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -299,8 +322,23 @@ export function CesiumMap({
    * reference changes (which happens on hover/selection, not just on real
    * geometry changes).
    */
-  const htmlGeometryEntitiesRef = useRef<Map<string, { fov?: Cesium.Entity; coverage?: Cesium.Entity }>>(new Map());
-  const htmlGeometryFingerprintRef = useRef<Map<string, { fovKey: string | null; coverageKey: string | null }>>(new Map());
+  const htmlGeometryEntitiesRef = useRef<Map<string, { fov?: Cesium.Entity; coverage?: Cesium.Entity; sectors?: Cesium.Entity[] }>>(new Map());
+  const htmlGeometryFingerprintRef = useRef<Map<string, { fovKey: string | null; coverageKey: string | null; sectorsKey: string | null }>>(new Map());
+  /**
+   * Maps a FOV-sector entity id → its owning marker + sector id, so the
+   * LEFT_CLICK picker can route a polygon click back through
+   * `onHtmlMarkerSectorClick` (sector polygons aren't in `markerEntitiesRef`).
+   */
+  const htmlSectorOwnerRef = useRef<Map<string, { markerId: string; sectorId: string }>>(new Map());
+  /**
+   * Latest `onHtmlMarkerSectorClick` callback, held in a ref because the
+   * LEFT_CLICK handler is wired once at mount (`[mountReady]`) and would
+   * otherwise capture a stale prop.
+   */
+  const onHtmlMarkerSectorClickRef = useRef<typeof onHtmlMarkerSectorClick>(onHtmlMarkerSectorClick);
+  useEffect(() => {
+    onHtmlMarkerSectorClickRef.current = onHtmlMarkerSectorClick;
+  }, [onHtmlMarkerSectorClick]);
   /**
    * Polyline entities (trails, engagement lines, etc.) keyed by their
    * stable `CesiumPolyline.id`. Keyed (not array) so the polylines effect
@@ -515,9 +553,15 @@ export function CesiumMap({
     handler.setInputAction((event: Cesium.ScreenSpaceEventHandler.PositionedEvent) => {
       const picked = viewer.scene.pick(event.position);
       const id = picked?.id;
-      if (id instanceof Cesium.Entity && id.id && onMarkerClick) {
-        const markerId = String(id.id);
-        if (markerEntitiesRef.current.has(markerId)) onMarkerClick(markerId);
+      if (id instanceof Cesium.Entity && id.id) {
+        const entityId = String(id.id);
+        // FOV sector polygon → drill into the owning child.
+        const sectorOwner = htmlSectorOwnerRef.current.get(entityId);
+        if (sectorOwner) {
+          onHtmlMarkerSectorClickRef.current?.(sectorOwner.markerId, sectorOwner.sectorId);
+          return;
+        }
+        if (markerEntitiesRef.current.has(entityId)) onMarkerClick?.(entityId);
       }
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
@@ -629,6 +673,7 @@ export function CesiumMap({
       coverageEntitiesRef.current = [];
       htmlGeometryEntitiesRef.current.clear();
       htmlGeometryFingerprintRef.current.clear();
+      htmlSectorOwnerRef.current.clear();
       polylineEntitiesRef.current.clear();
       polylineFingerprintRef.current.clear();
       polylineParticleEntitiesRef.current.clear();
@@ -873,7 +918,9 @@ export function CesiumMap({
       for (const m of htmlMarkers) {
         const hasFov = !!m.fov;
         const hasCoverage = m.coverageRadiusM != null;
-        if (!hasFov && !hasCoverage) continue;
+        const sectors = m.fovSectors ?? [];
+        const hasSectors = sectors.length > 0;
+        if (!hasFov && !hasCoverage && !hasSectors) continue;
         desiredIds.add(m.id);
 
         const fovKey = hasFov
@@ -882,11 +929,25 @@ export function CesiumMap({
         const coverageKey = hasCoverage
           ? `${m.lat},${m.lon},${m.coverageRadiusM},${m.coverageColor ?? '#22b8cf'}`
           : null;
+        const sectorsKey = hasSectors
+          ? `${m.lat},${m.lon},` +
+            sectors
+              .map(
+                (s, i) =>
+                  `${s.id ?? i}:${s.rangeM}:${s.bearingDeg}:${s.widthDeg}:${s.color ?? '#22b8cf'}:${s.opacity ?? 0.18}`,
+              )
+              .join('|')
+          : null;
 
         const prev = fingerprints.get(m.id);
-        if (prev && prev.fovKey === fovKey && prev.coverageKey === coverageKey) {
-          // Identical FOV/coverage params — leave the existing geometry in
-          // place so Cesium doesn't re-tessellate it.
+        if (
+          prev &&
+          prev.fovKey === fovKey &&
+          prev.coverageKey === coverageKey &&
+          prev.sectorsKey === sectorsKey
+        ) {
+          // Identical FOV/coverage/sector params — leave the existing
+          // geometry in place so Cesium doesn't re-tessellate it.
           continue;
         }
 
@@ -894,7 +955,39 @@ export function CesiumMap({
         const slot = entities.get(m.id);
         if (slot?.fov) viewer.entities.remove(slot.fov);
         if (slot?.coverage) viewer.entities.remove(slot.coverage);
-        const nextSlot: { fov?: Cesium.Entity; coverage?: Cesium.Entity } = {};
+        if (slot?.sectors) {
+          for (const s of slot.sectors) {
+            viewer.entities.remove(s);
+            htmlSectorOwnerRef.current.delete(String(s.id));
+          }
+        }
+        const nextSlot: { fov?: Cesium.Entity; coverage?: Cesium.Entity; sectors?: Cesium.Entity[] } = {};
+
+        if (hasSectors) {
+          const sectorEntities: Cesium.Entity[] = [];
+          sectors.forEach((s, i) => {
+            const sectorColor = Cesium.Color.fromCssColorString(s.color ?? '#22b8cf');
+            const sectorOpacity = s.opacity ?? 0.18;
+            const sectorEntityId = `${m.id}__sector__${s.id ?? i}`;
+            const entity = viewer.entities.add({
+              id: sectorEntityId,
+              polygon: {
+                hierarchy: new Cesium.PolygonHierarchy(
+                  buildSectorPositions(m.lat, m.lon, s.rangeM, s.bearingDeg, s.widthDeg),
+                ),
+                material: sectorColor.withAlpha(sectorOpacity),
+                outline: true,
+                outlineColor: sectorColor.withAlpha(Math.min(1, sectorOpacity * 3)),
+                heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+              },
+            });
+            sectorEntities.push(entity);
+            if (s.id) {
+              htmlSectorOwnerRef.current.set(sectorEntityId, { markerId: m.id, sectorId: s.id });
+            }
+          });
+          nextSlot.sectors = sectorEntities;
+        }
 
         if (hasFov) {
           const fovColor = Cesium.Color.fromCssColorString(m.fov!.color ?? '#22b8cf');
@@ -934,15 +1027,21 @@ export function CesiumMap({
         }
 
         entities.set(m.id, nextSlot);
-        fingerprints.set(m.id, { fovKey, coverageKey });
+        fingerprints.set(m.id, { fovKey, coverageKey, sectorsKey });
       }
     }
 
-    // Drop geometry for markers that no longer have FOV/coverage or left the set.
+    // Drop geometry for markers that no longer have FOV/coverage/sectors or left the set.
     for (const [id, slot] of entities) {
       if (desiredIds.has(id)) continue;
       if (slot.fov) viewer.entities.remove(slot.fov);
       if (slot.coverage) viewer.entities.remove(slot.coverage);
+      if (slot.sectors) {
+        for (const s of slot.sectors) {
+          viewer.entities.remove(s);
+          htmlSectorOwnerRef.current.delete(String(s.id));
+        }
+      }
       entities.delete(id);
       fingerprints.delete(id);
       changed = true;

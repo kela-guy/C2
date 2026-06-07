@@ -28,7 +28,7 @@ import {
   Compass,
   ArrowUpDown,
 } from '@/lib/icons/central';
-import { DroneCardIcon, MissileCardIcon, CarCardIcon, UnknownCardIcon } from '@/primitives/MapIcons';
+import { DroneCardIcon, MissileCardIcon, CarCardIcon, TankCardIcon, TruckCardIcon, UnknownCardIcon } from '@/primitives/MapIcons';
 import type { ThreatAccent } from '@/primitives/tokens';
 import { hexToRgba } from '@/primitives/tokens';
 import {
@@ -58,9 +58,12 @@ import type {
 import { getIncidentOutcomes } from './ListOfSystems';
 import {
   getEngagementFlows,
+  getCounterAirFlows,
   resolveNearestAsset,
   type EngagementFlowDef,
   type FlowAsset,
+  type FlowPhaseUI,
+  type ResolvedAsset,
 } from './engagementFlows';
 import { JamWaveIcon } from '@/primitives/MapIcons';
 import { useStrings, type Strings } from '@/lib/intl';
@@ -102,6 +105,8 @@ export interface CardCallbacks {
   onLockWeapon?: () => void;
   onDismissLock?: () => void;
   onLauncherSelect?: (launcherId: string) => void;
+  onEngageGotcha?: (gotchaId: string) => void;
+  onGotchaSelect?: (gotchaId: string) => void;
 }
 
 export interface CardContext {
@@ -114,6 +119,8 @@ export interface CardContext {
   selectedEffectorId?: string;
   launcherEffectors?: LauncherEffector[];
   selectedLauncherId?: string;
+  gotchaEffectors?: FlowAsset[];
+  selectedGotchaId?: string;
   nearbyCameras?: { id: string; typeLabel: string; distanceM: number }[];
   nearbyHives?: { id: string; latitude: number; longitude: number; distanceM: number; battery: number; status: string }[];
 }
@@ -170,6 +177,14 @@ function buildHeaderIcon(target: Detection): React.ElementType {
   // card reads "unidentified" in step with the map marker.
   if (isUnclassifiedUnknown(target)) {
     return UnknownCardIcon;
+  }
+  // Ground vehicles carry a finer classification (car / tank / truck) on
+  // `classifiedType`. Mirror the map's glyph split so the card never shows
+  // a car for a tank or truck.
+  switch (target.classifiedType) {
+    case 'tank': return TankCardIcon;
+    case 'truck': return TruckCardIcon;
+    case 'car': return CarCardIcon;
   }
   switch (target.type) {
     case 'uav': return DroneCardIcon;
@@ -315,6 +330,181 @@ function buildFlowDropdownGroups(
   return groups;
 }
 
+/**
+ * Build a single flow's primary (split) action plus the distance to its
+ * nearest available effector — the signal the card uses to recommend one
+ * counter-air option over another. Returns `null` for terminal phases (those
+ * are handled by `buildFlowActions`' status-strip branch).
+ */
+function resolveFlowPrimary(
+  flow: EngagementFlowDef,
+  target: Detection,
+  callbacks: CardCallbacks,
+  ctx: CardContext,
+  t: Strings,
+): { action: CardAction; nearestKm: number | null } | null {
+  const phase = flow.getPhase(target);
+  const phaseUI = flow.phases[phase];
+  if (!phaseUI || phaseUI.isTerminal) return null;
+
+  const [tLat, tLon] = target.coordinates.split(',').map(s => parseFloat(s.trim()));
+  const assets = (ctx[flow.assetContextKey as keyof CardContext] ?? []) as FlowAsset[];
+  const overrideId = ctx[flow.selectedIdContextKey as keyof CardContext] as string | undefined;
+  const { all: sortedAssets, active } = resolveNearestAsset(tLat, tLon, assets, flow.availableFilter, overrideId);
+  const busy = !!phaseUI.loading;
+  const primaryCb = callbacks[flow.primaryCallbackKey as keyof CardCallbacks] as ((id: string) => void) | undefined;
+
+  const action: CardAction = {
+    id: `${flow.id}-primary`,
+    label: phaseUI.buttonLabel,
+    badge: active ? active.asset.name : undefined,
+    icon: phaseUI.buttonIcon,
+    variant: phaseUI.buttonVariant,
+    size: 'sm',
+    group: 'primary',
+    loading: phaseUI.loading,
+    disabled: phaseUI.disabled,
+    onClick: (e) => {
+      e.stopPropagation();
+      if (!busy && active) primaryCb?.(active.asset.id);
+    },
+    onHover: active ? (hovering) => callbacks.onSensorHover?.(hovering ? active.asset.id : null) : undefined,
+    dropdownActions: flow.extraDropdownActions ? flow.extraDropdownActions(busy) : undefined,
+    dropdownGroups: sortedAssets.length > 0
+      ? buildFlowDropdownGroups(flow, sortedAssets, active?.asset.id ?? '', callbacks, busy, t)
+      : undefined,
+  };
+
+  return { action, nearestKm: active ? active.km : null };
+}
+
+/**
+ * Counter-air cards (drones / aircraft) can be engaged by EITHER the jammer
+ * or a Gotcha unit. To keep ONE main action per card, the card shows a single
+ * split button whose primary press fires the *recommended* engagement — the
+ * flow with the nearest available effector — while its dropdown lists every
+ * effector across both flows (recommended flow first), so the operator can
+ * pick Gotcha (or a specific jammer) without a second button. If either flow
+ * is already mid-/post-engagement, that committed flow takes over the card.
+ */
+function buildCounterAirActions(
+  flows: EngagementFlowDef[],
+  target: Detection,
+  callbacks: CardCallbacks,
+  ctx: CardContext,
+  t: Strings,
+): CardAction[] {
+  // A committed engagement (engaging / engaged / mitigating / mitigated) owns
+  // the card — show only that flow's full UI.
+  const committed = flows.find((f) => f.getPhase(target) !== 'idle');
+  if (committed) return buildFlowActions(committed, target, callbacks, ctx, t);
+
+  const [tLat, tLon] = target.coordinates.split(',').map((s) => parseFloat(s.trim()));
+
+  interface FlowResolved {
+    flow: EngagementFlowDef;
+    phaseUI: FlowPhaseUI;
+    sortedAssets: ResolvedAsset[];
+    active: ResolvedAsset | null;
+    busy: boolean;
+  }
+
+  const resolved: FlowResolved[] = [];
+  for (const flow of flows) {
+    const phaseUI = flow.phases[flow.getPhase(target)];
+    if (!phaseUI) continue;
+    const assets = (ctx[flow.assetContextKey as keyof CardContext] ?? []) as FlowAsset[];
+    const overrideId = ctx[flow.selectedIdContextKey as keyof CardContext] as string | undefined;
+    const { all, active } = resolveNearestAsset(tLat, tLon, assets, flow.availableFilter, overrideId);
+    resolved.push({ flow, phaseUI, sortedAssets: all, active, busy: !!phaseUI.loading });
+  }
+  if (resolved.length === 0) return [];
+
+  // Recommend the flow whose nearest available effector is closest. Unknown
+  // distances (no available asset) sort last.
+  const dist = (r: FlowResolved) => (r.active ? r.active.km : Number.POSITIVE_INFINITY);
+  resolved.sort((a, b) => dist(a) - dist(b));
+  const primary = resolved[0];
+
+  // Combined dropdown: every flow's effectors (recommended flow first) under a
+  // per-flow heading, plus any flow-specific extra actions (e.g. jam modes).
+  const groups: SplitDropdownGroup[] = [];
+  for (const r of resolved) {
+    const selectCb = callbacks[r.flow.selectCallbackKey as keyof CardCallbacks] as ((id: string) => void) | undefined;
+    const primaryCb = callbacks[r.flow.primaryCallbackKey as keyof CardCallbacks] as ((id: string) => void) | undefined;
+    const items = r.sortedAssets.map(({ asset, km }) => ({
+      id: `${r.flow.id}-${asset.id}`,
+      label: t.cards.distanceFromAsset(asset.name, km),
+      active: asset.id === (r.active?.asset.id ?? ''),
+      disabled: !r.flow.availableFilter(asset) || r.busy,
+      onClick: (e: React.MouseEvent) => {
+        e.stopPropagation();
+        selectCb?.(asset.id);
+        primaryCb?.(asset.id);
+      },
+      onHoverStart: () => callbacks.onSensorHover?.(asset.id),
+      onHoverEnd: () => callbacks.onSensorHover?.(null),
+    }));
+    if (items.length > 0) {
+      groups.push({ label: r.flow.phases.idle?.buttonLabel ?? r.flow.dropdownGroupLabel, items });
+    }
+    if (r.flow.extraDropdownActions) {
+      groups.push({ items: r.flow.extraDropdownActions(r.busy) });
+    }
+  }
+
+  const primaryCb = callbacks[primary.flow.primaryCallbackKey as keyof CardCallbacks] as ((id: string) => void) | undefined;
+  const active = primary.active;
+
+  const actions: CardAction[] = [{
+    id: `${primary.flow.id}-primary`,
+    label: primary.phaseUI.buttonLabel,
+    badge: active ? active.asset.name : undefined,
+    icon: primary.phaseUI.buttonIcon,
+    variant: primary.phaseUI.buttonVariant,
+    size: 'sm',
+    group: 'primary',
+    loading: primary.phaseUI.loading,
+    disabled: primary.phaseUI.disabled,
+    onClick: (e) => {
+      e.stopPropagation();
+      if (!primary.busy && active) primaryCb?.(active.asset.id);
+    },
+    onHover: active ? (hovering) => callbacks.onSensorHover?.(hovering ? active.asset.id : null) : undefined,
+    dropdownGroups: groups.length > 0 ? groups : undefined,
+  }];
+
+  // The shared camera/PTZ toggle (jam owns it) rides along once.
+  const cameraFlow = flows.find((f) => f.showCamera);
+  if (cameraFlow) {
+    const cameraPointing = !!ctx.isCameraPointing;
+    const cameraActive = !!ctx.isCameraActive;
+    const cameraOn = cameraActive || cameraPointing;
+    actions.push({
+      id: 'point-camera',
+      label: t.cards.pointCamera,
+      size: 'sm',
+      group: 'secondary',
+      onClick: (e) => {
+        e.stopPropagation();
+        if (cameraOn) callbacks.onBdaCamera?.();
+        else callbacks.onVerify?.('investigate');
+      },
+      toggle: {
+        on: cameraOn,
+        pending: cameraPointing,
+        offLabel: t.cards.pointCamera,
+        onLabel: t.cards.releaseCamera,
+        pendingLabel: t.cards.cameraPointing,
+        offIcon: Video,
+        onIcon: Video,
+      },
+    });
+  }
+
+  return actions;
+}
+
 function buildFlowActions(
   flow: EngagementFlowDef,
   target: Detection,
@@ -349,7 +539,7 @@ function buildFlowActions(
           size: 'sm',
           group: 'secondary',
           loading: ta.id === 'lock-weapon' && phase === 'locking',
-          onClick: (e) => { e.stopPropagation(); cb?.(); },
+          onClick: (e) => { e.stopPropagation(); cb?.(ta.callbackArg); },
         });
       }
     }
@@ -378,34 +568,8 @@ function buildFlowActions(
     return actions;
   }
 
-  const [tLat, tLon] = target.coordinates.split(',').map(s => parseFloat(s.trim()));
-  const assets = (ctx[flow.assetContextKey as keyof CardContext] ?? []) as FlowAsset[];
-  const overrideId = ctx[flow.selectedIdContextKey as keyof CardContext] as string | undefined;
-  const { all: sortedAssets, active } = resolveNearestAsset(tLat, tLon, assets, flow.availableFilter, overrideId);
-  const busy = !!phaseUI.loading;
-
-  const primaryCb = callbacks[flow.primaryCallbackKey as keyof CardCallbacks] as ((id: string) => void) | undefined;
-
-  actions.push({
-    id: `${flow.id}-primary`,
-    label: phaseUI.buttonLabel,
-    badge: active ? active.asset.name : undefined,
-    icon: phaseUI.buttonIcon,
-    variant: phaseUI.buttonVariant,
-    size: 'sm',
-    group: 'primary',
-    loading: phaseUI.loading,
-    disabled: phaseUI.disabled,
-    onClick: (e) => {
-      e.stopPropagation();
-      if (!busy && active) primaryCb?.(active.asset.id);
-    },
-    onHover: active ? (hovering) => callbacks.onSensorHover?.(hovering ? active.asset.id : null) : undefined,
-    dropdownActions: flow.extraDropdownActions ? flow.extraDropdownActions(busy) : undefined,
-    dropdownGroups: sortedAssets.length > 0
-      ? buildFlowDropdownGroups(flow, sortedAssets, active?.asset.id ?? '', callbacks, busy, t)
-      : undefined,
-  });
+  const primary = resolveFlowPrimary(flow, target, callbacks, ctx, t);
+  if (primary) actions.push(primary.action);
 
   if (flow.showCamera) {
     const cameraPointing = !!ctx.isCameraPointing;
@@ -515,8 +679,14 @@ function buildActions(target: Detection, callbacks: CardCallbacks, ctx: CardCont
     return actions;
   }
 
-  // Engagement flow actions (jam, weapon, and future flows) — config-driven
+  // Engagement flow actions (jam, gotcha, weapon, and future flows) — config-driven.
   if (isCuas) {
+    // Counter-air targets (drones / aircraft) can be engaged by both the
+    // jammer and a Gotcha unit — offer both, recommending the nearest.
+    const counterAir = getCounterAirFlows(t).filter((f) => f.matchTarget(target));
+    if (counterAir.length > 1) {
+      return buildCounterAirActions(counterAir, target, callbacks, ctx, t);
+    }
     for (const flow of getEngagementFlows(t)) {
       if (flow.matchTarget(target)) {
         return buildFlowActions(flow, target, callbacks, ctx, t);
