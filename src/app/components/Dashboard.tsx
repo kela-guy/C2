@@ -1573,12 +1573,6 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
       return s;
     });
   }, []);
-  const handleDeviceOpenLogs = useCallback(
-    (id: string) => {
-      toast.info(t.toasts.deviceLogsOpened(id), { duration: 3000 });
-    },
-    [t],
-  );
   const handleDeviceArmNotifications = useCallback(
     (id: string, armed: boolean) => {
       toast.success(
@@ -2365,7 +2359,6 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
             speakerPlayingIds={speakerPlayingIds}
             onFloodlightToggle={handleDeviceFloodlightToggle}
             onSpeakerToggle={handleDeviceSpeakerToggle}
-            onOpenLogs={handleDeviceOpenLogs}
             onArmNotifications={handleDeviceArmNotifications}
             noTransition={panelSwitching}
             width={sidebarWidth}

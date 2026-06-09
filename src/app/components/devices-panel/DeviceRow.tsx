@@ -85,7 +85,12 @@ export const DeviceRow = memo(function DeviceRow({
       isNotifyOn: notify.armed,
       notifyRemaining: notify.remaining,
       onToggleNotify: notify.toggle,
-      onOpenLogs: () => onOpenLogs?.(device.id),
+      // Logs opens the device's errors/logs modal directly; the optional
+      // panel callback stays as a side-channel for hosts that track it.
+      onOpenLogs: () => {
+        setErrorsOpen(true);
+        onOpenLogs?.(device.id);
+      },
       onOpenErrors: () => setErrorsOpen(true),
       onFlyTo,
       onFloodlightToggle,
