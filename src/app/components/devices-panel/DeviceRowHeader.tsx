@@ -18,7 +18,6 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { List } from '@/lib/icons/central';
 import { DotmSquare18 } from '@/app/components/ui/dotm-square-18';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
-import { buildCollapsedMetricLine } from './utils';
 import type { ConnectionState, Device } from './types';
 import { resolveDeviceAction, type DeviceActionContext } from './deviceActions';
 import type { DeviceTypeConfig } from './deviceRegistry';
@@ -48,9 +47,6 @@ const HEALTH_TONE: Record<DeviceHealth, { dot: string; badge: string | null }> =
 export const DeviceRowHeader = memo(function DeviceRowHeader({ device, cfg, ctx, connectionStateLabels }: DeviceRowHeaderProps) {
   const { strings } = ctx;
   const nonOnline = device.connectionState !== 'online';
-  // Jammers (ECM) don't surface a collapsed coverage metric — it adds noise
-  // without aiding the fast scan.
-  const metricLine = device.type === 'ecm' ? null : device.subtitle ?? buildCollapsedMetricLine(device);
 
   // Composite parents (Gotcha) roll their worst child up into the tile so the
   // collapsed row reflects the unit's true state without expanding.
@@ -145,9 +141,6 @@ export const DeviceRowHeader = memo(function DeviceRowHeader({ device, cfg, ctx,
 
       <div className="flex-1 min-w-0 text-start">
         <span className="text-sm font-medium truncate text-zinc-300 block">{device.name}</span>
-        {metricLine && (
-          <div className="text-start text-xs font-mono tabular-nums text-white/50 truncate">{metricLine}</div>
-        )}
       </div>
 
       {unhealthyChildren > 0 && (

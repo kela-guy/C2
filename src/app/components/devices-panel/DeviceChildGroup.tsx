@@ -109,10 +109,13 @@ export const DeviceChildGroup = memo(function DeviceChildGroup({
                 ))}
               </span>
             )}
+            {/* Collapsed: point toward inline-end (right in LTR, left in RTL).
+                The Central icon self-mirrors via scaleX(-1) in RTL, but the
+                down-chevron is symmetric so only the rotate sign matters. */}
             <ChevronDownFilled
               size={14}
               className={`shrink-0 text-white/40 transition-transform duration-150 motion-reduce:transition-none ${
-                open ? '' : 'rotate-90 rtl:-rotate-90'
+                open ? '' : '-rotate-90 rtl:rotate-90'
               }`}
             />
           </span>
