@@ -14,7 +14,6 @@ import rehypeShiki from '@shikijs/rehype';
 const dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 
 const ANALYZE = process.env.ANALYZE === '1';
-const PERF_BUILD = process.env.PERF_BUILD === '1';
 
 export default defineConfig(({ mode }) => {
   const isDev = mode === 'development';
@@ -67,32 +66,9 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@/shared': path.resolve(dirname, './src/app'),
         '@': path.resolve(dirname, './src'),
-        // `pnpm build:perf` swaps in react-dom/profiling so the React
-        // <Profiler> API actually fires in production-like builds.
-        // Otherwise Profiler `onRender` is a no-op outside dev. The
-        // resulting bundle keeps tree shaking + minification but allows
-        // real-world profiling against production paths.
-        ...(PERF_BUILD ? { 'react-dom$': 'react-dom/profiling' } : {}),
       },
     },
-    // Dev-server config (headers + file-watcher exclusions).
-    //
-    // Headers — `Document-Policy: js-profiling` enables the JS
-    // Self-Profiling API (`new Profiler({...})` for src/lib/perf).
-    // Without it the constructor throws. Cheap, no side-effects, always on.
-    //
-    // The cross-origin-isolation header pair (COOP `same-origin` +
-    // COEP `credentialless`) is intentionally NOT enabled by default.
-    // It's a precondition for `performance.measureUserAgentSpecificMemory()`,
-    // but in practice it interferes with Bing imagery tile fetches inside
-    // Cesium's Ion provider chain — the globe goes blank with no error
-    // surfaced. We only opt into isolation when the URL has `?perf=full`
-    // (the same gate the memory sampler reads), and we do that via a
-    // dev-time middleware so static asset routes still work normally.
-    //
-    // None of this affects the production bundle — `vite preview` serves
-    // its own headers, and the perf code is dynamically imported behind
-    // an `import.meta.env.DEV` gate so it never reaches end users.
+    // Dev-server config (file-watcher exclusions).
     //
     // Watch — Vite normally only watches files in the module graph, but
     // pnpm's symlinked `node_modules/.pnpm/*` layout sometimes confuses
@@ -105,9 +81,6 @@ export default defineConfig(({ mode }) => {
     // The icon packages are the worst offender: 4 packages × ~500
     // files each = ~2,000 individual icon ESMs. We use 65 of them.
     server: {
-      headers: {
-        'Document-Policy': 'js-profiling',
-      },
       watch: {
         ignored: [
           '**/node_modules/.pnpm/@central-icons-react+**/dist/**',
@@ -119,19 +92,6 @@ export default defineConfig(({ mode }) => {
           '**/dist/**',
         ],
       },
-    },
-    // Help DevTools symbolicate stacks against the original sources so
-    // both LoAF `scripts[].sourceURL` and JS Self Profiler frames point
-    // back to the right files when investigating regressions.
-    //
-    // Gated behind PERF_BUILD because forcing both knobs on every
-    // esbuild transform roughly doubles HMR rebuild cost on a project
-    // this size (Cesium + Radix + Tailwind v4 + sim hooks). When you
-    // need symbolicated stacks for a profiling session, start the dev
-    // server with `PERF_BUILD=1 pnpm dev` (or use `pnpm build:perf`).
-    esbuild: {
-      sourcemap: PERF_BUILD,
-      keepNames: PERF_BUILD,
     },
     // Pre-bundle dependencies we know we use, so cold start does ONE
     // esbuild pass instead of discovering them lazily as the user

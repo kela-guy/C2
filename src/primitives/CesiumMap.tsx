@@ -1423,9 +1423,6 @@ export function CesiumMap({
               ),
             ),
             material: cesiumColor.withAlpha(0.18),
-            outline: true,
-            outlineColor: cesiumColor.withAlpha(0.6),
-            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
           },
         });
         fovEntitiesRef.current.push(fovEntity);
@@ -1440,9 +1437,6 @@ export function CesiumMap({
             semiMajorAxis: marker.coverageRadiusM,
             semiMinorAxis: marker.coverageRadiusM,
             material: cesiumColor.withAlpha(0.10),
-            outline: true,
-            outlineColor: cesiumColor.withAlpha(0.5),
-            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
           },
         });
         coverageEntitiesRef.current.push(coverageEntity);
@@ -1484,9 +1478,6 @@ export function CesiumMap({
                 buildSectorPositions(m.lat, m.lon, m.fov.rangeM, m.fov.bearingDeg, m.fov.widthDeg),
               ),
               material: fovColor.withAlpha(opacity),
-              outline: true,
-              outlineColor: fovColor.withAlpha(Math.min(1, opacity * 3)),
-              heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
             },
           });
           cache.set(id, { entity, fingerprint });
@@ -1502,10 +1493,10 @@ export function CesiumMap({
           if (cached && cached.fingerprint === fingerprint) continue;
           if (cached) viewer.entities.remove(cached.entity);
           const coverageColor = Cesium.Color.fromCssColorString(color);
-          // Fill / outline opacities tuned to read clearly over satellite
-          // imagery without burying the markers underneath. Roughly mirrors
-          // the FOV cone's solidity (0.40 fill); the outline is fully opaque
-          // so the ring boundary is unambiguous even at larger zoom-outs.
+          // Fill opacity tuned to read clearly over satellite imagery
+          // without burying the markers underneath. The ring is ground-
+          // draped (no height), so a geometry outline can't render on
+          // terrain — fill alone defines the coverage area.
           const entity = viewer.entities.add({
             id,
             position: Cesium.Cartesian3.fromDegrees(m.lon, m.lat),
@@ -1513,9 +1504,6 @@ export function CesiumMap({
               semiMajorAxis: m.coverageRadiusM,
               semiMinorAxis: m.coverageRadiusM,
               material: coverageColor.withAlpha(0.25),
-              outline: true,
-              outlineColor: coverageColor.withAlpha(0.95),
-              heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
             },
           });
           cache.set(id, { entity, fingerprint });

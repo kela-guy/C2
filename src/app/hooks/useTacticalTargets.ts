@@ -34,7 +34,7 @@ import type { Detection } from "@/imports/ListOfSystems";
 import { getPriorityBaseline } from "@/imports/useActivityStatus";
 import { useLocale, type Locale } from "@/lib/direction";
 import { getStrings, useStrings, type Strings } from "@/lib/intl";
-import { measure } from "@/lib/perf/measure";
+import { destination, haversineDistanceM } from "@/app/lib/mapGeo";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -74,6 +74,29 @@ interface SpawnOptions {
    * smooth — only the step count (and milestone offsets) scale.
    */
   approachTotalMs?: number;
+  /**
+   * Approach-endpoint scatter radius (m). Defaults to
+   * `APPROACH_END_JITTER_M`; pass `0` for a precise arrival (the Gotcha
+   * capture flow ingresses right beside a fixed installation).
+   */
+  endJitterM?: number;
+  /**
+   * Sideways bow of the approach leg as a fraction of its length.
+   * Defaults to `APPROACH_BOW_FRACTION`; pass `0` for a straight leg.
+   */
+  bowFraction?: number;
+  /**
+   * Constant-speed approach (no ease-in/out). Defaults to smoothstep
+   * easing; the Gotcha capture uses linear so the ingress feels even and
+   * hands off seamlessly to the loiter at a matching per-tick speed.
+   */
+  linearApproach?: boolean;
+  /**
+   * Override the post-approach roam. When set, the drone loiters around
+   * its arrival point with this radius/speed instead of the field-wide
+   * default — used so a captured drone hovers beside its Gotcha.
+   */
+  roam?: { radiusM: number; speedMPerTick: number };
 }
 
 export interface TacticalTargetsApi {
@@ -90,8 +113,9 @@ export interface TacticalTargetsApi {
   /** Clears the active simulation interval refs (for scenario
    *  re-triggers — `runSingle` etc. call this internally). */
   resetScenarioTimers: () => void;
-  /** Runs the 4-route, staggered scenario. */
-  runFullScenario: () => void;
+  /** Runs the 4-route, staggered scenario. Returns the first (t=0)
+   *  target's id so callers can focus its card. */
+  runFullScenario: () => string | null;
   /** Spawns one target. Returns the spawned target's id. */
   runSingleScenario: () => string;
   /** Spawns 20 targets in a circular swarm. */
@@ -101,11 +125,10 @@ export interface TacticalTargetsApi {
    */
   approachingTargetIds: MutableRefObject<Set<string>>;
   /**
-   * Demo post-neutralization — jam outcome. Cancels the target's
-   * approach motion and drifts it back out along the reverse heading,
-   * then times the track out.
+   * Demo post-neutralization — jam outcome. Halts the target in place
+   * (where it was jammed) and greys it out as a neutralized contact.
    */
-  flyTargetAway: (targetId: string) => void;
+  markJammed: (targetId: string) => void;
   /**
    * Demo post-neutralization — net outcome. Cancels motion, relabels
    * the marker "CAPTURED", and moves the track to neutralized.
@@ -124,9 +147,40 @@ const PATROL_REACT_COMMIT_EVERY_TICKS = 3;
 const TRAIL_SAMPLE_EVERY = 10;
 const TRAIL_MAX_POINTS = 40;
 
+// Friendly drones that have lost their datalink — held stationary at
+// their start waypoint (a patrolling "offline" drone makes no sense).
+// Must match the `offline` entries in `DEVICE_CONNECTION`
+// (useDevicesFromAssets) so the map and devices panel agree.
+const OFFLINE_FRIENDLY_DRONE_IDS = new Set<string>(["FRIENDLY-02"]);
+
 const APPROACH_TOTAL_MS = 24000;
 const APPROACH_TICK_MS = TELEMETRY_TICK_MS;
 const APPROACH_REACT_COMMIT_EVERY_TICKS = 3;
+
+// Roam: once an un-engaged drone reaches its objective it patrols the
+// covered area instead of freezing — a continuous heading-based wander
+// (gentle per-tick turns, steering back when it drifts past the radius)
+// so each track curves naturally and diverges from the others.
+const ROAM_CENTER_LAT = 32.4666;
+const ROAM_CENTER_LON = 35.0013;
+const ROAM_RADIUS_M = 2800;
+const ROAM_SPEED_M_PER_TICK = 10;
+const ROAM_TURN_DEG = 3;
+const ROAM_BOUNDARY_TURN_DEG = 7;
+
+// Approach: per-drone path randomization so they don't all fly a straight
+// line into the same point — the endpoint is jittered within this radius
+// and the leg bows sideways by a fraction of its length.
+const APPROACH_END_JITTER_M = 700;
+const APPROACH_BOW_FRACTION = 0.25;
+
+function normalizeHeading(deg: number): number {
+  return ((deg % 360) + 360) % 360;
+}
+
+function headingDelta(from: number, to: number): number {
+  return ((((to - from) % 360) + 540) % 360) - 180;
+}
 
 interface SimTimer {
   cancel: () => void;
@@ -357,8 +411,6 @@ export function useTacticalTargets(): TacticalTargetsApi {
   // helpers can stop a specific target's motion without reaching into
   // the scenario refs.
   const targetIntervalsRef = useRef<Map<string, SimTimer>>(new Map());
-  // Demo-only drift/RTH animation timers.
-  const demoAnimRefs = useRef<Set<SimTimer>>(new Set());
 
   // Fresh-targets ref so demo helpers can read current coordinates
   // without re-binding through useCallback deps each render.
@@ -383,62 +435,67 @@ export function useTacticalTargets(): TacticalTargetsApi {
     let timerId: ReturnType<typeof setInterval> | null = null;
 
     const runTick = () => {
-      measure(
-        "Sim",
-        "sim.friendlyPatrol",
-        () => {
-          trailTickRef.current += 1;
-          const sampleTrail =
-            trailTickRef.current % TRAIL_SAMPLE_EVERY === 0;
+      trailTickRef.current += 1;
+      const sampleTrail = trailTickRef.current % TRAIL_SAMPLE_EVERY === 0;
 
-          patrolProgressRef.current = patrolProgressRef.current.map((p) => {
-            const next = p + PATROL_SPEED;
-            return next >= friendlyPatrolRoutes[0].waypoints.length ? 0 : next;
-          });
+      patrolProgressRef.current = patrolProgressRef.current.map((p) => {
+        const next = p + PATROL_SPEED;
+        return next >= friendlyPatrolRoutes[0].waypoints.length ? 0 : next;
+      });
 
-          if (!sampleTrail && trailTickRef.current % PATROL_REACT_COMMIT_EVERY_TICKS !== 0) {
-            return;
+      if (!sampleTrail && trailTickRef.current % PATROL_REACT_COMMIT_EVERY_TICKS !== 0) {
+        return;
+      }
+
+      setFriendlyDrones(
+        friendlyPatrolRoutes.map((route, i) => {
+          if (OFFLINE_FRIENDLY_DRONE_IDS.has(route.id)) {
+            const [startLat, startLon] = route.waypoints[0];
+            return {
+              id: route.id,
+              name: route.name,
+              lat: startLat,
+              lon: startLon,
+              altitude: route.altitude,
+              headingDeg: bearingDegrees(
+                startLat,
+                startLon,
+                route.waypoints[1][0],
+                route.waypoints[1][1],
+              ),
+              fovDeg: route.fovDeg,
+              trail: friendlyTrailRef.current[i],
+            };
           }
 
-          setFriendlyDrones(
-            friendlyPatrolRoutes.map((route, i) => {
-              const progress = patrolProgressRef.current[i];
-              const legIndex = Math.floor(progress) % route.waypoints.length;
-              const legFrac = progress - legIndex;
-              const from = route.waypoints[legIndex];
-              const to =
-                route.waypoints[(legIndex + 1) % route.waypoints.length];
+          const progress = patrolProgressRef.current[i];
+          const legIndex = Math.floor(progress) % route.waypoints.length;
+          const legFrac = progress - legIndex;
+          const from = route.waypoints[legIndex];
+          const to = route.waypoints[(legIndex + 1) % route.waypoints.length];
 
-              const lat = from[0] + (to[0] - from[0]) * legFrac;
-              const lon = from[1] + (to[1] - from[1]) * legFrac;
-              const heading = bearingDegrees(from[0], from[1], to[0], to[1]);
+          const lat = from[0] + (to[0] - from[0]) * legFrac;
+          const lon = from[1] + (to[1] - from[1]) * legFrac;
+          const heading = bearingDegrees(from[0], from[1], to[0], to[1]);
 
-              if (sampleTrail) {
-                friendlyTrailRef.current[i] = [
-                  ...friendlyTrailRef.current[i],
-                  [lat, lon],
-                ].slice(-TRAIL_MAX_POINTS);
-              }
+          if (sampleTrail) {
+            friendlyTrailRef.current[i] = [
+              ...friendlyTrailRef.current[i],
+              [lat, lon],
+            ].slice(-TRAIL_MAX_POINTS);
+          }
 
-              return {
-                id: route.id,
-                name: route.name,
-                lat,
-                lon,
-                altitude: route.altitude,
-                headingDeg: heading,
-                fovDeg: route.fovDeg,
-                trail: friendlyTrailRef.current[i],
-              };
-            }),
-          );
-        },
-        {
-          properties: {
-            tick: trailTickRef.current,
-            drones: friendlyPatrolRoutes.length,
-          },
-        },
+          return {
+            id: route.id,
+            name: route.name,
+            lat,
+            lon,
+            altitude: route.altitude,
+            headingDeg: heading,
+            fovDeg: route.fovDeg,
+            trail: friendlyTrailRef.current[i],
+          };
+        }),
       );
     };
 
@@ -483,7 +540,6 @@ export function useTacticalTargets(): TacticalTargetsApi {
     const massRefs = cuasMassRefs;
     const pending = pendingTimeoutsRef;
     const perTarget = targetIntervalsRef;
-    const demoAnims = demoAnimRefs;
     return () => {
       for (const ref of cuasRefs) {
         ref.current?.cancel();
@@ -495,8 +551,6 @@ export function useTacticalTargets(): TacticalTargetsApi {
       pending.current.clear();
       for (const timer of perTarget.current.values()) timer.cancel();
       perTarget.current.clear();
-      for (const timer of demoAnims.current) timer.cancel();
-      demoAnims.current.clear();
     };
   }, []);
 
@@ -505,6 +559,93 @@ export function useTacticalTargets(): TacticalTargetsApi {
   const appendTargetLog = useCallback((targetId: string, label: string) => {
     setTargets((prev) => appendLog(prev, targetId, label));
   }, []);
+
+  // Continuous wander across the covered area for a drone that finished
+  // its approach without being engaged. Each tick the heading drifts by a
+  // small random amount (smooth curves, no kinks); if the drone strays
+  // past the coverage radius it steers back toward center. Registered
+  // under the target id so `stopTargetMotion` (jam drift / net capture)
+  // cancels it cleanly.
+  const startRoam = useCallback(
+    (
+      targetId: string,
+      fromLat: number,
+      fromLon: number,
+      roamOpts?: {
+        centerLat?: number;
+        centerLon?: number;
+        radiusM?: number;
+        speedMPerTick?: number;
+        initialHeading?: number;
+      },
+    ) => {
+      const centerLat = roamOpts?.centerLat ?? ROAM_CENTER_LAT;
+      const centerLon = roamOpts?.centerLon ?? ROAM_CENTER_LON;
+      const radiusM = roamOpts?.radiusM ?? ROAM_RADIUS_M;
+      const speedMPerTick = roamOpts?.speedMPerTick ?? ROAM_SPEED_M_PER_TICK;
+      let lat = fromLat;
+      let lon = fromLon;
+      let heading = roamOpts?.initialHeading ?? Math.random() * 360;
+      let step = 0;
+      const timer = startVisibilityAwareInterval(() => {
+        step++;
+        heading += (Math.random() - 0.5) * 2 * ROAM_TURN_DEG;
+        const distFromCenter = haversineDistanceM(
+          lat,
+          lon,
+          centerLat,
+          centerLon,
+        );
+        if (distFromCenter > radiusM) {
+          const toCenter = bearingDegrees(
+            lat,
+            lon,
+            centerLat,
+            centerLon,
+          );
+          const correction = headingDelta(heading, toCenter);
+          heading += Math.max(
+            -ROAM_BOUNDARY_TURN_DEG,
+            Math.min(ROAM_BOUNDARY_TURN_DEG, correction),
+          );
+        }
+        heading = normalizeHeading(heading);
+        const [nextLon, nextLat] = destination(
+          lat,
+          lon,
+          speedMPerTick,
+          heading,
+        );
+        lat = nextLat;
+        lon = nextLon;
+        const tnow = nowLocaleTime();
+        const sample = step % 6 === 0;
+        const curLat = lat;
+        const curLon = lon;
+        const curHeading = heading;
+        setTargets((prev) =>
+          prev.map((tg) =>
+            tg.id !== targetId
+              ? tg
+              : {
+                  ...tg,
+                  coordinates: formatMovingCoord(curLat, curLon),
+                  timestamp: tnow,
+                  headingDeg: curHeading,
+                  trail: sample
+                    ? [
+                        ...(tg.trail ?? []),
+                        { lat: curLat, lon: curLon, timestamp: tnow },
+                      ]
+                    : tg.trail,
+                },
+          ),
+        );
+      }, TELEMETRY_TICK_MS);
+      targetIntervalsRef.current.set(targetId, timer);
+    },
+    [setTargets],
+  );
 
   const spawnCuasTarget = useCallback(
     (opts: SpawnOptions): string => {
@@ -592,13 +733,51 @@ export function useTacticalTargets(): TacticalTargetsApi {
         });
       }
 
+      // Per-drone path randomization: jitter the endpoint (so drones don't
+      // all converge on the same point) and bow the leg sideways (so the
+      // ingress curves instead of being a straight line). Cars keep their
+      // exact destination. The bow is 0 at both ends, peaking mid-leg.
+      let approachEndLat = opts.endLat;
+      let approachEndLon = opts.endLon;
+      const endJitterM = opts.endJitterM ?? APPROACH_END_JITTER_M;
+      if (!isCar && endJitterM > 0) {
+        const [jLon, jLat] = destination(
+          opts.endLat,
+          opts.endLon,
+          Math.random() * endJitterM,
+          Math.random() * 360,
+        );
+        approachEndLat = jLat;
+        approachEndLon = jLon;
+      }
+      const legDLat = approachEndLat - opts.startLat;
+      const legDLon = approachEndLon - opts.startLon;
+      const legLen = Math.hypot(legDLat, legDLon) || 1;
+      const perpLat = -legDLon / legLen;
+      const perpLon = legDLat / legLen;
+      const bowFraction = opts.bowFraction ?? APPROACH_BOW_FRACTION;
+      const bowMag = isCar
+        ? 0
+        : (Math.random() * 2 - 1) * legLen * bowFraction;
+
       let step = 0;
+      let prevLat = opts.startLat;
+      let prevLon = opts.startLon;
       opts.intervalRef.current = startVisibilityAwareInterval(() => {
         step++;
         const tnow = now();
-        const progress = smoothstep01(Math.min(step / approachSteps, 1));
-        const curLat = opts.startLat + (opts.endLat - opts.startLat) * progress;
-        const curLon = opts.startLon + (opts.endLon - opts.startLon) * progress;
+        const linearProgress = Math.min(step / approachSteps, 1);
+        const progress = opts.linearApproach
+          ? linearProgress
+          : smoothstep01(linearProgress);
+        const bow = Math.sin(progress * Math.PI) * bowMag;
+        const curLat =
+          opts.startLat + legDLat * progress + perpLat * bow;
+        const curLon =
+          opts.startLon + legDLon * progress + perpLon * bow;
+        const curHeading = bearingDegrees(prevLat, prevLon, curLat, curLon);
+        prevLat = curLat;
+        prevLon = curLon;
         const distKm = (3.2 - progress * 2.5).toFixed(1);
         const isMilestone =
           step === milestoneMagos ||
@@ -617,6 +796,7 @@ export function useTacticalTargets(): TacticalTargetsApi {
             updated.coordinates = formatMovingCoord(curLat, curLon);
             updated.distance = sim.distanceKm(distKm);
             updated.timestamp = tnow;
+            updated.headingDeg = curHeading;
             if (tgt.altitude != null)
               updated.altitude = sim.altitudeM(
                 Math.round(120 + Math.sin(progress * Math.PI) * 30),
@@ -749,6 +929,27 @@ export function useTacticalTargets(): TacticalTargetsApi {
           opts.intervalRef.current = null;
           approachingTargetIds.current.delete(targetId);
           targetIntervalsRef.current.delete(targetId);
+          if (!isCar && !isBird) {
+            startRoam(
+              targetId,
+              approachEndLat,
+              approachEndLon,
+              opts.roam
+                ? {
+                    centerLat: approachEndLat,
+                    centerLon: approachEndLon,
+                    radiusM: opts.roam.radiusM,
+                    speedMPerTick: opts.roam.speedMPerTick,
+                    initialHeading: bearingDegrees(
+                      opts.startLat,
+                      opts.startLon,
+                      approachEndLat,
+                      approachEndLon,
+                    ),
+                  }
+                : undefined,
+            );
+          }
         }
       }, APPROACH_TICK_MS);
 
@@ -758,7 +959,7 @@ export function useTacticalTargets(): TacticalTargetsApi {
 
       return targetId;
     },
-    [t],
+    [t, startRoam],
   );
 
   const resetScenarioTimers = useCallback(() => {
@@ -775,7 +976,7 @@ export function useTacticalTargets(): TacticalTargetsApi {
     cuasMassRefs.current = [];
   }, []);
 
-  const runFullScenario = useCallback(() => {
+  const runFullScenario = useCallback((): string | null => {
     resetScenarioTimers();
 
     const routes = [
@@ -822,6 +1023,7 @@ export function useTacticalTargets(): TacticalTargetsApi {
       if (types[i] === "drone" && Math.random() < 0.3) types[i] = "car";
     }
 
+    let firstId: string | null = null;
     routes.forEach((route, i) => {
       const isCar = types[i] === "car";
       const end = isCar ? route.carEnd : route.droneEnd;
@@ -836,12 +1038,14 @@ export function useTacticalTargets(): TacticalTargetsApi {
           isCar,
         });
       if (route.delay === 0) {
-        spawn();
+        const spawnedId = spawn();
+        if (firstId === null) firstId = spawnedId;
       } else {
         const id = setTimeout(spawn, route.delay);
         pendingTimeoutsRef.current.add(id);
       }
     });
+    return firstId;
   }, [resetScenarioTimers, spawnCuasTarget]);
 
   const runSingleScenario = useCallback((): string => {
@@ -922,68 +1126,23 @@ export function useTacticalTargets(): TacticalTargetsApi {
     approachingTargetIds.current.delete(targetId);
   }, []);
 
-  const flyTargetAway = useCallback(
+  // Jam landed: halt the drone where it was jammed and grey it out. No
+  // drift/retreat — it holds its last position as a neutralized contact.
+  const markJammed = useCallback(
     (targetId: string) => {
       stopTargetMotion(targetId);
-      const target = targetsRef.current.find((tg) => tg.id === targetId);
-      if (!target) return;
-      const [startLat, startLon] = target.coordinates
-        .split(",")
-        .map((s) => parseFloat(s.trim()));
-      if (!Number.isFinite(startLat) || !Number.isFinite(startLon)) return;
-
-      // Outbound heading = straight away from the field center, so the
-      // jammed drone reads as breaking off and retreating.
-      const centerLat = 32.4666;
-      const centerLon = 35.0013;
-      const mag = Math.hypot(startLat - centerLat, startLon - centerLon) || 1;
-      const driftDist = 0.03;
-      const endLat = startLat + ((startLat - centerLat) / mag) * driftDist;
-      const endLon = startLon + ((startLon - centerLon) / mag) * driftDist;
-
-      const STEPS = 70;
-      let step = 0;
-      const timer = startVisibilityAwareInterval(() => {
-        step++;
-        const p = smoothstep01(Math.min(step / STEPS, 1));
-        const curLat = startLat + (endLat - startLat) * p;
-        const curLon = startLon + (endLon - startLon) * p;
-        const tnow = nowLocaleTime();
-        const sample = step % 8 === 0 || step >= STEPS;
-        setTargets((prev) =>
-          prev.map((tg) =>
-            tg.id !== targetId
-              ? tg
-              : {
-                  ...tg,
-                  coordinates: formatMovingCoord(curLat, curLon),
-                  timestamp: tnow,
-                  trail: sample
-                    ? [
-                        ...(tg.trail ?? []),
-                        { lat: curLat, lon: curLon, timestamp: tnow },
-                      ]
-                    : tg.trail,
-                },
-          ),
-        );
-        if (step >= STEPS) {
-          timer.cancel();
-          demoAnimRefs.current.delete(timer);
-          setTargets((prev) =>
-            prev.map((tg) =>
-              tg.id === targetId
-                ? {
-                    ...tg,
-                    status: "expired" as const,
-                    activityStatus: "timeout" as const,
-                  }
-                : tg,
-            ),
-          );
-        }
-      }, TELEMETRY_TICK_MS);
-      demoAnimRefs.current.add(timer);
+      setTargets((prev) =>
+        prev.map((tg) =>
+          tg.id === targetId
+            ? {
+                ...tg,
+                neutralizedDrift: true,
+                status: "expired" as const,
+                activityStatus: "timeout" as const,
+              }
+            : tg,
+        ),
+      );
     },
     [setTargets, stopTargetMotion],
   );
@@ -997,6 +1156,7 @@ export function useTacticalTargets(): TacticalTargetsApi {
             ? {
                 ...tg,
                 name: t.simulation.targetCaptured(tg.name ?? ""),
+                neutralizedDrift: true,
                 status: "event_neutralized" as const,
                 activityStatus: "mitigated" as const,
                 mitigationStatus: "mitigated" as const,
@@ -1020,7 +1180,7 @@ export function useTacticalTargets(): TacticalTargetsApi {
     runSingleScenario,
     runSwarmScenario,
     approachingTargetIds,
-    flyTargetAway,
+    markJammed,
     markCaptured,
   };
 }

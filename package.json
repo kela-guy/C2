@@ -7,7 +7,6 @@
   "scripts": {
     "build": "pnpm docs:build && pnpm registry:build && vite build",
     "build:analyze": "ANALYZE=1 vite build",
-    "build:perf": "PERF_BUILD=1 vite build",
     "dev": "vite",
     "perf:budget": "node scripts/check-bundle-budget.mjs",
     "lint:no-hex": "node scripts/lint-no-hex.mjs",
@@ -74,6 +73,7 @@
     "web-vitals": "^5.2.0"
   },
   "devDependencies": {
+    "@babel/plugin-transform-react-jsx": "^7.29.7",
     "@mdx-js/react": "^3.1.1",
     "@mdx-js/rollup": "^3.1.1",
     "@react-scan/vite-plugin-react-scan": "^0.2.6",

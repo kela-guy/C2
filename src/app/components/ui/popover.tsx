@@ -12,18 +12,22 @@ function Popover({
   return <PopoverPrimitive.Root data-slot="popover" {...props} />;
 }
 
-function PopoverTrigger({
-  ...props
-}: React.ComponentProps<typeof PopoverPrimitive.Trigger>) {
-  return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />;
-}
+const PopoverTrigger = React.forwardRef<
+  React.ElementRef<typeof PopoverPrimitive.Trigger>,
+  React.ComponentProps<typeof PopoverPrimitive.Trigger>
+>(function PopoverTrigger(props, ref) {
+  return (
+    <PopoverPrimitive.Trigger ref={ref} data-slot="popover-trigger" {...props} />
+  );
+});
 
-function PopoverContent({
-  className,
-  align = "center",
-  sideOffset = 4,
-  ...props
-}: React.ComponentProps<typeof PopoverPrimitive.Content>) {
+const PopoverContent = React.forwardRef<
+  React.ElementRef<typeof PopoverPrimitive.Content>,
+  React.ComponentProps<typeof PopoverPrimitive.Content>
+>(function PopoverContent(
+  { className, align = "center", sideOffset = 4, ...props },
+  ref,
+) {
   // Radix's `align` prop is **logical**: floating-ui auto-detects RTL from
   // `getComputedStyle(reference).direction` and resolves `start`/`end` to
   // the reading-order-correct physical edge. So `align="end"` anchors to
@@ -44,6 +48,7 @@ function PopoverContent({
     <PopoverPrimitive.Portal>
       <PopoverSurface asChild>
         <PopoverPrimitive.Content
+          ref={ref}
           data-slot="popover-content"
           align={align}
           sideOffset={sideOffset}
@@ -56,7 +61,7 @@ function PopoverContent({
       </PopoverSurface>
     </PopoverPrimitive.Portal>
   );
-}
+});
 
 function PopoverAnchor({
   ...props

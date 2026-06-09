@@ -1308,9 +1308,14 @@ function CesiumTacticalMapImpl({
       const isHoveredOnMap = hoveredMarkerId === e.id;
       const isHovered = isHoveredFromCard || isHoveredOnMap;
       const isEngaged = isEngagementEffector(e.id);
+      // While the operator's jam is mid-flight, the engaged jammer reads
+      // as actively jamming: green pulsing ring + green coverage (vs the
+      // muted `selected` preview shown before the jam is committed).
+      const isActiveJam = isEngaged && engagementPair?.phase === 'mitigating';
+      const isJamState = isJamming || isActiveJam;
       const state: InteractionState = isHovered
         ? 'hovered'
-        : isJamming
+        : isJamState
           ? 'jammer'
           : isEngaged
             ? 'selected'
@@ -1318,7 +1323,7 @@ function CesiumTacticalMapImpl({
       const showHoverEffect = isHovered || isEngaged;
       const showCoverage =
         showHoverEffect || isJamming || coveragePinnedIds.has(e.id);
-      const fingerprint = `${state}|${showHoverEffect ? '1' : '0'}|${showCoverage ? '1' : '0'}|${isJamming ? '1' : '0'}|${e.coverageRadiusM}|${e.name}`;
+      const fingerprint = `${state}|${showHoverEffect ? '1' : '0'}|${showCoverage ? '1' : '0'}|${isJamState ? '1' : '0'}|${e.coverageRadiusM}|${e.name}`;
       const cached = cache.get(e.id);
       if (cached && cached.fingerprint === fingerprint) {
         out.push(cached.marker);
@@ -1338,12 +1343,12 @@ function CesiumTacticalMapImpl({
             surfaceSize={SENSOR_SURFACE}
             ringSize={SENSOR_RING}
             label={e.name}
-            showLabel={showHoverEffect || isJamming}
+            showLabel={showHoverEffect || isJamState}
             pulse={showHoverEffect}
           />
         ),
         coverageRadiusM: showCoverage ? e.coverageRadiusM : undefined,
-        coverageColor: isJamming ? CESIUM_JAM : CESIUM_FOV,
+        coverageColor: isJamState ? CESIUM_JAM : CESIUM_FOV,
         onClick: () => onAssetClickRef.current?.(e.id),
         onContextMenu: (ev) => openContextMenu(ev, 'effector', e.id, e.name),
         onMouseEnter: () => enterMarker(e.id),
@@ -1375,7 +1380,13 @@ function CesiumTacticalMapImpl({
   const activeGotchaIds = useMemo(() => {
     const ids = new Set<string>();
     for (const tg of targets ?? []) {
-      if (tg.missionType === 'net_capture' && tg.mitigatingEffectorId) {
+      // Light the gotcha only while the net is in flight — once the throw
+      // resolves (mitigated/captured) the marker returns to idle.
+      if (
+        tg.missionType === 'net_capture' &&
+        tg.mitigatingEffectorId &&
+        tg.mitigationStatus === 'mitigating'
+      ) {
         ids.add(tg.mitigatingEffectorId);
       }
     }
@@ -1480,13 +1491,17 @@ function CesiumTacticalMapImpl({
       const isHoveredOnMap = hoveredMarkerId === t.id;
       const isHovered = isHoveredFromCard || isHoveredOnMap;
       const baseState = detectionInteractionState(t);
+      // A jammed drone breaking off reads as neutralized (greyed) even
+      // while it's still the selected card's target.
       const state: InteractionState = isHovered
         ? 'hovered'
-        : isActive
-          ? 'selected'
-          : baseState;
+        : t.neutralizedDrift
+          ? 'expired'
+          : isActive
+            ? 'selected'
+            : baseState;
       const isNewArrival = t.isNew === true;
-      const targetHeading = targetHeadingFromTrail(t);
+      const targetHeading = t.headingDeg ?? targetHeadingFromTrail(t);
       const headingBucket = targetHeading != null ? Math.round(targetHeading) : null;
       const fingerprint = `${state}|${headingBucket}|${t.classifiedType ?? ''}|${t.type}|${t.name ?? ''}|${isNewArrival ? '1' : '0'}|${isActive ? '1' : '0'}`;
 
@@ -1513,7 +1528,7 @@ function CesiumTacticalMapImpl({
             heading={targetHeading ?? undefined}
             label={t.name ?? t.id}
             showLabel={isHovered || isActive}
-            pulse={isHovered || isActive || isNewArrival}
+            pulse={(isHovered || isActive || isNewArrival) && !t.neutralizedDrift}
           />
         ),
         kinematic: true,

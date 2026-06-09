@@ -20,6 +20,7 @@ interface DemoLaunchPanelProps {
     hostileCycle: string;
     threeDrones: string;
     jammerFailsGotcha: string;
+    jammerFailsGotchaAuto: string;
     reset: string;
   };
   director: DemoDirectorApi;
@@ -53,6 +54,10 @@ export function DemoLaunchPanel({ labels, director }: DemoLaunchPanelProps) {
           <DemoItem
             label={labels.jammerFailsGotcha}
             onClick={director.runJammerFailsGotcha}
+          />
+          <DemoItem
+            label={labels.jammerFailsGotchaAuto}
+            onClick={director.runJammerFailsGotchaAuto}
           />
           <div className="my-1 h-px bg-border-default" />
           <DemoItem label={labels.reset} onClick={director.reset} tone="muted" />

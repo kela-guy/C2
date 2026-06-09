@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { DialRoot } from "dialkit";
@@ -32,23 +32,6 @@ const OrbSandbox = import.meta.env.DEV
 const MapSandbox = import.meta.env.DEV
   ? lazy(() => import("./components/map-sandbox/MapSandbox"))
   : null;
-
-const PerfHud = import.meta.env.DEV
-  ? lazy(() => import("./components/perf/PerfHud").then((m) => ({ default: m.PerfHud })))
-  : null;
-
-function ScopedPerfHud() {
-  const { pathname } = useLocation();
-  if (!PerfHud) return null;
-  if (pathname.startsWith('/demo')) return null;
-  if (pathname.startsWith('/theme-sandbox')) return null;
-  if (pathname.startsWith('/map-sandbox')) return null;
-  return (
-    <Suspense fallback={null}>
-      <PerfHud />
-    </Suspense>
-  );
-}
 
 export default function App() {
   return (
@@ -126,7 +109,6 @@ export default function App() {
                 />
               )}
             </Routes>
-            <ScopedPerfHud />
           </BrowserRouter>
           <NotificationSystem />
           <DialRoot position="bottom-right" />

@@ -28,9 +28,11 @@ import {
   LidarIcon,
   FloodlightIcon,
   SpeakerIcon,
+  GotchaIcon,
 } from './tacticalIcons';
 import { useStrings } from '@/lib/intl';
 import type { Device } from './DevicesPanel';
+import type { GotchaEffector } from '@/imports/ListOfSystems';
 
 const DEVICE_HEALTH: Record<string, 'operational' | 'malfunctioning'> = {
   'SENS-NVT-MAGOS-S': 'malfunctioning',
@@ -40,6 +42,7 @@ const DEVICE_HEALTH: Record<string, 'operational' | 'malfunctioning'> = {
 const DEVICE_CONNECTION: Record<string, 'online' | 'offline' | 'error' | 'warning'> = {
   'SENS-NVT-MAGOS-S': 'warning',
   'REG-NVT-SOUTH': 'error',
+  // Held stationary on the map by `OFFLINE_FRIENDLY_DRONE_IDS` in useTacticalTargets.
   'FRIENDLY-02': 'offline',
   'LIDAR-NVT-01': 'warning',
 };
@@ -74,6 +77,7 @@ export type SimFriendlyDroneDevice = {
 /** Memoized hook returning the full `Device[]` for this app. */
 export function useDevicesFromAssets(
   friendlyDrones: SimFriendlyDroneDevice[] = [],
+  gotchaEffectors: GotchaEffector[] = [],
 ): Device[] {
   const t = useStrings();
   const launcherDeviceName = t.simulation.deviceNames.missileLauncher;
@@ -129,6 +133,18 @@ export function useDevicesFromAssets(
       connectionState: (DEVICE_CONNECTION[e.id] ?? 'online') as Device['connectionState'],
       coverageRadiusM: e.coverageRadiusM,
       Icon: SensorIcon,
+    })),
+    ...gotchaEffectors.map((g) => ({
+      id: g.id,
+      name: g.name,
+      type: 'gotcha' as const,
+      lat: g.lat,
+      lon: g.lon,
+      status: (g.status === 'active' ? 'active' : g.status === 'inactive' ? 'offline' : 'available') as Device['status'],
+      operationalStatus: 'operational' as const,
+      connectionState: 'online' as const,
+      coverageRadiusM: g.coverageRadiusM,
+      Icon: GotchaIcon,
     })),
     ...LAUNCHER_ASSETS.map((l) => ({
       id: l.id,
@@ -206,5 +222,5 @@ export function useDevicesFromAssets(
         Icon: DroneDeviceIcon,
       };
     }),
-  ], [launcherDeviceName, friendlyDrones]);
+  ], [launcherDeviceName, friendlyDrones, gotchaEffectors]);
 }

@@ -205,7 +205,7 @@ export function GridblockShell({
           ].join(" "),
         }}
       >
-        <div className="gridblock-edge-inline-end min-h-0 bg-[var(--gridblock-floor)]">
+        <div className="gridblock-edge-inline-end min-h-0 bg-[var(--gridblock-bar)]">
           {startRail}
         </div>
 
@@ -296,7 +296,7 @@ export function GridblockShell({
           ) : null}
         </div>
 
-        <div className="gridblock-edge-inline-start min-h-0 bg-[var(--gridblock-floor)]">
+        <div className="gridblock-edge-inline-start min-h-0 bg-[var(--gridblock-bar)]">
           {endRail}
         </div>
       </div>

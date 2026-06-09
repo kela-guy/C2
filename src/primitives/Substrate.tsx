@@ -41,14 +41,27 @@ import {
   Children,
   cloneElement,
   createContext,
+  forwardRef,
   isValidElement,
   useContext,
   useMemo,
   type ReactElement,
   type ReactNode,
+  type Ref,
 } from "react";
 
 import { cn } from "@/app/components/ui/utils";
+
+type PossibleRef<T> = Ref<T> | undefined;
+
+function setRef<T>(ref: PossibleRef<T>, value: T | null) {
+  if (typeof ref === "function") ref(value);
+  else if (ref != null) (ref as React.MutableRefObject<T | null>).current = value;
+}
+
+function composeRefs<T>(...refs: PossibleRef<T>[]) {
+  return (node: T | null) => refs.forEach((ref) => setRef(ref, node));
+}
 
 export type SubstrateLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
@@ -137,13 +150,10 @@ export interface ElevatedProps {
   children: ReactNode;
 }
 
-export function Elevated({
-  level,
-  lift,
-  asChild = false,
-  className,
-  children,
-}: ElevatedProps) {
+export const Elevated = forwardRef<HTMLElement, ElevatedProps>(function Elevated(
+  { level, lift, asChild = false, className, children },
+  ref,
+) {
   const base = useSubstrate();
   const next = resolveElevatedLevel(base, { level, lift });
   const value = useMemo(() => next, [next]);
@@ -159,21 +169,28 @@ export function Elevated({
     // data-substrate attribute + className merged with whatever it
     // already had. Avoids a wrapper div around portal content
     // (Popover.Content, Tooltip.Content, etc. don't like extra DOM).
+    // The incoming ref is composed onto the child so Radix's Slot can
+    // still reach the underlying DOM node.
     const only = Children.only(children) as ReactElement<{
       className?: string;
       "data-substrate"?: number;
-    }>;
+    }> & { ref?: Ref<unknown> };
     if (!isValidElement(only)) {
       painted = children;
     } else {
       painted = cloneElement(only, {
         "data-substrate": next,
         className: cn(only.props.className, surfaceClass),
-      });
+        ref: ref ? composeRefs(ref, only.ref) : only.ref,
+      } as Partial<typeof only.props> & { ref?: Ref<unknown> });
     }
   } else {
     painted = (
-      <div data-substrate={next} className={surfaceClass}>
+      <div
+        ref={ref as Ref<HTMLDivElement>}
+        data-substrate={next}
+        className={surfaceClass}
+      >
         {children}
       </div>
     );
@@ -184,7 +201,7 @@ export function Elevated({
       {painted}
     </SubstrateContext.Provider>
   );
-}
+});
 
 /* ────────────────────────────────────────────────────────────
  * Role wrappers
@@ -206,26 +223,40 @@ export function Elevated({
  * isn't relevant — they need a stable floor regardless of where
  * the trigger was mounted.
  */
-export const PopoverSurface = (props: Omit<ElevatedProps, "level" | "lift">) => (
-  <Elevated lift={2} {...props} />
+type SurfaceProps = Omit<ElevatedProps, "level" | "lift">;
+
+export const PopoverSurface = forwardRef<HTMLElement, SurfaceProps>(
+  function PopoverSurface(props, ref) {
+    return <Elevated ref={ref} lift={2} {...props} />;
+  },
 );
 
-export const MenuSurface = (props: Omit<ElevatedProps, "level" | "lift">) => (
-  <Elevated lift={2} {...props} />
+export const MenuSurface = forwardRef<HTMLElement, SurfaceProps>(
+  function MenuSurface(props, ref) {
+    return <Elevated ref={ref} lift={2} {...props} />;
+  },
 );
 
-export const HoverCardSurface = (
-  props: Omit<ElevatedProps, "level" | "lift">,
-) => <Elevated lift={2} {...props} />;
-
-export const TooltipSurface = (props: Omit<ElevatedProps, "level" | "lift">) => (
-  <Elevated lift={3} {...props} />
+export const HoverCardSurface = forwardRef<HTMLElement, SurfaceProps>(
+  function HoverCardSurface(props, ref) {
+    return <Elevated ref={ref} lift={2} {...props} />;
+  },
 );
 
-export const DialogSurface = (props: Omit<ElevatedProps, "level" | "lift">) => (
-  <Elevated level={5} {...props} />
+export const TooltipSurface = forwardRef<HTMLElement, SurfaceProps>(
+  function TooltipSurface(props, ref) {
+    return <Elevated ref={ref} lift={3} {...props} />;
+  },
 );
 
-export const SheetSurface = (props: Omit<ElevatedProps, "level" | "lift">) => (
-  <Elevated level={5} {...props} />
+export const DialogSurface = forwardRef<HTMLElement, SurfaceProps>(
+  function DialogSurface(props, ref) {
+    return <Elevated ref={ref} level={5} {...props} />;
+  },
+);
+
+export const SheetSurface = forwardRef<HTMLElement, SurfaceProps>(
+  function SheetSurface(props, ref) {
+    return <Elevated ref={ref} level={5} {...props} />;
+  },
 );

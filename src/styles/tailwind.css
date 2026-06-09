@@ -2,9 +2,9 @@
 /*
   Narrow class-extraction sources to directories that actually contain
   JSX / className strings. The previous broad ../star-star/star
-  rescanned src/lib/perf (no UI), src/imports (data only), and
-  src/styles itself on every save -- pure overhead during the
-  Tailwind v4 per-edit extraction pass on a large project.
+  rescanned src/imports (data only) and src/styles itself on every
+  save -- pure overhead during the Tailwind v4 per-edit extraction
+  pass on a large project.
 */
 @source '../app/**/*.{js,ts,jsx,tsx}';
 @source '../primitives/**/*.{js,ts,jsx,tsx}';

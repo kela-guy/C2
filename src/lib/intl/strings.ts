@@ -195,6 +195,7 @@ const STRINGS_HE = {
       hostileCycle: 'רחפן עוין — מחזור מלא',
       threeDrones: 'שלושה רחפנים — מחזור מלא',
       jammerFailsGotcha: 'שיבוש נכשל ← רשת Gotcha',
+      jammerFailsGotchaAuto: 'שיבוש נכשל ← רשת Gotcha (אוטומטי)',
       reset: 'איפוס',
     },
     mapToolbar: {
@@ -1044,6 +1045,7 @@ const STRINGS_EN: Strings = {
       hostileCycle: 'Hostile drone — full cycle',
       threeDrones: 'Three drones — full cycle',
       jammerFailsGotcha: 'Jammer fails → Gotcha net',
+      jammerFailsGotchaAuto: 'Jammer fails → Gotcha net (auto)',
       reset: 'Reset',
     },
     mapToolbar: {

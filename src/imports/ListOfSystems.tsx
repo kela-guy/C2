@@ -119,6 +119,19 @@ export interface Detection {
   contributingSensors?: ContributingSensor[];
   mitigationStatus?: MitigationStatus;
   mitigatingEffectorId?: string;
+  /**
+   * Set while a jammed drone is breaking off and drifting away (demo
+   * post-jam beat). Drives the muted "neutralized" marker read on the
+   * map without affecting production drones awaiting BDA.
+   */
+  neutralizedDrift?: boolean;
+  /**
+   * Explicit travel heading in degrees (0 = north, clockwise), written
+   * by the motion sim each tick. The map marker prefers this over the
+   * trail-derived heading so a fast-turning drone faces exactly where
+   * it's going with no regression lag.
+   */
+  headingDeg?: number;
   weaponPointingStatus?: WeaponPointingStatus;
   pointingLauncherId?: string;
   bdaStatus?: BdaStatus;

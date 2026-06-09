@@ -48,6 +48,7 @@ export type DeviceType =
   | 'dock'
   | 'drone'
   | 'ecm'
+  | 'gotcha'
   | 'launcher'
   | 'lidar'
   | 'weapon_system'
@@ -82,6 +83,7 @@ const TYPE_ORDER: DeviceType[] = [
   'dock',
   'drone',
   'ecm',
+  'gotcha',
   'launcher',
   'lidar',
   'weapon_system',
@@ -96,6 +98,7 @@ export const DEFAULT_TYPE_LABELS: Record<DeviceType, string> = {
   dock: 'Docks',
   drone: 'Drones',
   ecm: 'ECM',
+  gotcha: 'Gotcha',
   launcher: 'Launchers',
   lidar: 'LIDAR',
   weapon_system: 'Weapon systems',

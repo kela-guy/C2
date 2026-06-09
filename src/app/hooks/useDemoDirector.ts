@@ -11,9 +11,9 @@
  */
 
 import { useCallback, useEffect, useRef, type MutableRefObject } from "react";
+import { resolveNearestAsset, type FlowAsset } from "@/imports/engagementFlows";
 import type { EffectorWorkflowApi } from "./useEffectorWorkflow";
 import type { TacticalTargetsApi } from "./useTacticalTargets";
-import type { RegulusEffector } from "@/imports/ListOfSystems";
 
 interface LatLon {
   lat: number;
@@ -36,6 +36,12 @@ export interface DemoDirectorApi {
   runThreeDrones: () => void;
   runJammerFailsGotcha: () => void;
   /**
+   * Hands-free twin of `runJammerFailsGotcha`: spawns the rigged drone
+   * and auto-advances jam-fail → recommended Gotcha net → capture on a
+   * 3-5s-per-phase timeline, no operator clicks.
+   */
+  runJammerFailsGotchaAuto: () => void;
+  /**
    * Jam handler for the card's Jam CTA. For a drone rigged by
    * `runJammerFailsGotcha` the attempt fails (and the Gotcha net is
    * then recommended); every other drone jams normally.
@@ -48,9 +54,18 @@ export interface DemoDirectorApi {
 
 const FIELD_CENTER: LatLon = { lat: 32.4666, lon: 35.0013 };
 
-// Demo drones crawl in over ~72s (3× the 24s production cadence) so the
-// approach reads clearly during a live walkthrough.
-const DEMO_APPROACH_MS = 72_000;
+// Demo drones approach over ~48s (2× the 24s production cadence) so the
+// approach reads clearly during a live walkthrough without dragging.
+const DEMO_APPROACH_MS = 48_000;
+
+// Pause the auto jammer-fails flow holds between scripted actions, so
+// each observable phase lands in the 3-5s window.
+const AUTO_PHASE_MS = 4000;
+
+// Gotcha net "throwing" hold — long enough for the full capture video to
+// play in the card. Mirrors `GOTCHA_NET_THROW_MS` in `useEffectorWorkflow`
+// so the map "CAPTURED" halt lands with the card's capture transition.
+const NET_THROW_MS = 10_000;
 
 // Staggered north-east approach corridor — the arc the Gotcha sites
 // in `demoAssets.ts` cover.
@@ -60,25 +75,37 @@ const APPROACH_STARTS: LatLon[] = [
   { lat: 32.4856, lon: 35.0403 },
 ];
 
-function dist2(a: LatLon, b: LatLon): number {
-  return (a.lat - b.lat) ** 2 + (a.lon - b.lon) ** 2;
+// Gotcha capture geometry. The scripted hostile is detected ~550 m out
+// NE of GOTCHA-CENTER and glides straight in at a constant ~30 m/s
+// (3 m/tick, matching the loiter) so the ingress reads as a steady,
+// natural approach that settles ~95 m beside the installation. Linear
+// speed + matched loiter keep it from looking like a fast dart that
+// brakes on arrival.
+const GOTCHA_CAPTURE_SITE: LatLon = { lat: 32.4712, lon: 35.008 };
+const GOTCHA_APPROACH_START: LatLon = { lat: 32.4741, lon: 35.0114 };
+const GOTCHA_APPROACH_MS = 15_000;
+const GOTCHA_ROAM = { radiusM: 180, speedMPerTick: 3 };
+
+// Auto flow: hold the recommended-Gotcha beat (video playing, hostile
+// still inbound) until the drone reaches the capture site, then throw the
+// net so it lands at close range. Measured from the jam-fail call.
+const GOTCHA_AUTO_THROW_DELAY_MS = GOTCHA_APPROACH_MS - AUTO_PHASE_MS + 500;
+
+function pickNearestAvailableId(
+  assets: FlowAsset[],
+  lat: number,
+  lon: number,
+): string | null {
+  return (
+    resolveNearestAsset(lat, lon, assets, (a) => a.status === "available")
+      .active?.asset.id ?? null
+  );
 }
 
-function nearestAvailable<T extends { lat: number; lon: number; status: string }>(
-  from: LatLon,
-  assets: T[],
-): T | null {
-  let best: T | null = null;
-  let bestD = Infinity;
-  for (const a of assets) {
-    if (a.status !== "available") continue;
-    const d = dist2(from, { lat: a.lat, lon: a.lon });
-    if (d < bestD) {
-      bestD = d;
-      best = a;
-    }
-  }
-  return best;
+function parseCoords(coord: string | undefined): LatLon | null {
+  if (!coord) return null;
+  const [lat, lon] = coord.split(",").map((s) => parseFloat(s.trim()));
+  return Number.isFinite(lat) && Number.isFinite(lon) ? { lat, lon } : null;
 }
 
 export function useDemoDirector({
@@ -93,12 +120,14 @@ export function useDemoDirector({
   // Drones whose Jam attempt is rigged to fail (jammer-fails scenario).
   const failJamIdsRef = useRef<Set<string>>(new Set());
 
-  // Latest regulus list, so the jam-fail step scheduled earlier reads
-  // fresh state when it picks the nearest jammer.
-  const regulusRef = useRef<RegulusEffector[]>(effectors.regulusEffectors);
-  useEffect(() => {
-    regulusRef.current = effectors.regulusEffectors;
-  }, [effectors.regulusEffectors]);
+  // Live state read inside scheduled steps so the auto flow picks the
+  // same nearest assets the map/card resolve at action time.
+  const targetsRef = useRef(tactical.targets);
+  const regulusRef = useRef(effectors.regulusEffectors);
+  const gotchaRef = useRef(effectors.gotchaEffectors);
+  targetsRef.current = tactical.targets;
+  regulusRef.current = effectors.regulusEffectors;
+  gotchaRef.current = effectors.gotchaEffectors;
 
   useEffect(() => {
     const timers = timersRef;
@@ -117,25 +146,53 @@ export function useDemoDirector({
   }, []);
 
   const spawnDrone = useCallback(
-    (start: LatLon): string => {
+    (
+      start: LatLon,
+      opts?: {
+        end?: LatLon;
+        approachMs?: number;
+        endJitterM?: number;
+        roam?: { radiusM: number; speedMPerTick: number };
+      },
+    ): string => {
       const ref: SimTimerLike = { current: null };
       spawnRefsRef.current.push(ref);
+      const end = opts?.end ?? FIELD_CENTER;
       return tactical.spawnCuasTarget({
         startLat: start.lat,
         startLon: start.lon,
-        endLat: FIELD_CENTER.lat,
-        endLon: FIELD_CENTER.lon,
+        endLat: end.lat,
+        endLon: end.lon,
         nameSuffix: String(Math.floor(Math.random() * 900) + 100),
         intervalRef: ref as MutableRefObject<{ cancel: () => void } | null>,
         // Slower, more presentable approach for the demo (vs the 24s
         // production cadence).
-        approachTotalMs: DEMO_APPROACH_MS,
+        approachTotalMs: opts?.approachMs ?? DEMO_APPROACH_MS,
+        endJitterM: opts?.endJitterM,
+        roam: opts?.roam,
       });
     },
     [tactical],
   );
 
-  // Spawn → jam (nearest Regulus) → drone breaks off and drifts away.
+  // The Gotcha flows spawn a hostile that flies straight to the capture
+  // site beside the Gotcha and loiters there through the net video.
+  const spawnGotchaTarget = useCallback(
+    () =>
+      spawnDrone(GOTCHA_APPROACH_START, {
+        end: GOTCHA_CAPTURE_SITE,
+        approachMs: GOTCHA_APPROACH_MS,
+        endJitterM: 0,
+        bowFraction: 0,
+        linearApproach: true,
+        roam: GOTCHA_ROAM,
+      }),
+    [spawnDrone],
+  );
+
+  // Spawn the drone and hand control to the operator — the jam (and the
+  // resulting drift-off) run from the card's Jam click via `mitigate`,
+  // not on a timer.
   const scheduleJamCycle = useCallback(
     (start: LatLon, baseMs: number, activate: boolean) => {
       after(baseMs, () => {
@@ -144,14 +201,9 @@ export function useDemoDirector({
           openTargetsPanel();
           onActivateTarget(id);
         }
-        after(8000, () => {
-          const jammer = nearestAvailable(start, regulusRef.current);
-          if (jammer) effectors.handleMitigate(id, jammer.id);
-        });
-        after(11800, () => tactical.flyTargetAway(id));
       });
     },
-    [after, spawnDrone, openTargetsPanel, onActivateTarget, effectors, tactical],
+    [after, spawnDrone, openTargetsPanel, onActivateTarget],
   );
 
   const runHostileCycle = useCallback(() => {
@@ -172,34 +224,70 @@ export function useDemoDirector({
   const throwNet = useCallback(
     (targetId: string, gotchaId: string) => {
       effectors.handleThrowNet(targetId, gotchaId);
-      after(3000, () => tactical.markCaptured(targetId));
+      after(NET_THROW_MS, () => tactical.markCaptured(targetId));
     },
     [after, effectors, tactical],
   );
 
   // Routes the card's Jam click: rigged drones fail (then recommend the
-  // Gotcha net), everything else jams normally.
+  // Gotcha net); everything else jams normally and, once the jam lands
+  // (~3s mitigate), the drone halts where it was jammed and greys out.
   const mitigate = useCallback(
     (targetId: string, effectorId: string) => {
       if (failJamIdsRef.current.has(targetId)) {
         effectors.handleMitigateFail(targetId, effectorId);
       } else {
         effectors.handleMitigate(targetId, effectorId);
+        after(3800, () => tactical.markJammed(targetId));
       }
     },
-    [effectors],
+    [after, effectors, tactical],
   );
 
   // Spawn a drone whose jam is rigged to fail, then hand control to the
   // operator: the card opens on the Jam CTA, the click fails, and the
   // recommended Gotcha net (→ `throwNet`) finishes the capture.
   const runJammerFailsGotcha = useCallback(() => {
-    const start = APPROACH_STARTS[0];
-    const id = spawnDrone(start);
+    const id = spawnGotchaTarget();
     failJamIdsRef.current.add(id);
     openTargetsPanel();
     onActivateTarget(id);
-  }, [spawnDrone, openTargetsPanel, onActivateTarget]);
+  }, [spawnGotchaTarget, openTargetsPanel, onActivateTarget]);
+
+  // Hands-free twin of the above: drives jam-fail → Gotcha net → capture
+  // on a timeline, picking the same nearest assets the map/card resolve.
+  const runJammerFailsGotchaAuto = useCallback(() => {
+    const start = GOTCHA_APPROACH_START;
+    const id = spawnGotchaTarget();
+    openTargetsPanel();
+    onActivateTarget(id);
+
+    after(AUTO_PHASE_MS, () => {
+      const pos = parseCoords(
+        targetsRef.current.find((t) => t.id === id)?.coordinates,
+      ) ?? start;
+      const regId = pickNearestAvailableId(
+        regulusRef.current as unknown as FlowAsset[],
+        pos.lat,
+        pos.lon,
+      );
+      if (!regId) return;
+      effectors.handleMitigateFail(id, regId);
+
+      after(GOTCHA_AUTO_THROW_DELAY_MS, () => {
+        const pos2 = parseCoords(
+          targetsRef.current.find((t) => t.id === id)?.coordinates,
+        ) ?? start;
+        const gotchaId = pickNearestAvailableId(
+          gotchaRef.current as unknown as FlowAsset[],
+          pos2.lat,
+          pos2.lon,
+        );
+        if (!gotchaId) return;
+        throwNet(id, gotchaId);
+      });
+    });
+  }, [spawnGotchaTarget, openTargetsPanel, onActivateTarget, after, effectors, throwNet]);
 
   const reset = useCallback(() => {
     for (const id of timersRef.current) clearTimeout(id);
@@ -222,6 +310,7 @@ export function useDemoDirector({
     runHostileCycle,
     runThreeDrones,
     runJammerFailsGotcha,
+    runJammerFailsGotchaAuto,
     mitigate,
     throwNet,
     reset,

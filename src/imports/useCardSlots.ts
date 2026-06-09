@@ -217,10 +217,14 @@ function buildHeader(target: Detection, t: Strings): CardHeaderProps {
 }
 
 function buildMedia(target: Detection, ctx: CardContext, t: Strings): CardMediaProps | null {
-  // Gotcha net-capture: the effector's own feed plays in the card the
-  // moment the operator throws the net, and stays (with controls) once
-  // the target is captured.
-  if (target.missionType === 'net_capture') {
+  // Gotcha net-capture: the effector's own feed plays the moment the
+  // Gotcha is recommended (the jam attempt failed) and stays through the
+  // throw and capture, gaining scrubber controls once the target is taken.
+  const isGotchaRecommended =
+    target.mitigationStatus === 'failed' &&
+    target.classifiedType !== 'bird' &&
+    target.classifiedType !== 'car';
+  if (target.missionType === 'net_capture' || isGotchaRecommended) {
     return {
       src: '/videos/gotcha-net.mp4',
       type: 'video',

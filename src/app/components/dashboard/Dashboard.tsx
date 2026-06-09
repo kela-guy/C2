@@ -180,7 +180,10 @@ function DashboardInner({ demoMode = false }: DashboardProps) {
     [demoMode],
   );
   const video = useVideoFeeds();
-  const devices = useDevicesAndAssets(tactical.friendlyDrones);
+  const devices = useDevicesAndAssets(
+    tactical.friendlyDrones,
+    effectors.gotchaEffectors,
+  );
   const offlineAssetIds = useMemo(
     () =>
       devices.allDevices
@@ -481,9 +484,20 @@ function DashboardInner({ demoMode = false }: DashboardProps) {
             ) : (
               <HeaderActions
                 labels={t.gridblock}
-                onSingle={tactical.runSingleScenario}
-                onFull={tactical.runFullScenario}
-                onSwarm={tactical.runSwarmScenario}
+                onSingle={() => {
+                  const id = tactical.runSingleScenario();
+                  setLeftTab("targets");
+                  setActiveTargetId(id);
+                }}
+                onFull={() => {
+                  const id = tactical.runFullScenario();
+                  setLeftTab("targets");
+                  if (id) setActiveTargetId(id);
+                }}
+                onSwarm={() => {
+                  tactical.runSwarmScenario();
+                  setLeftTab("targets");
+                }}
               />
             )
           }

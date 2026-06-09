@@ -50,6 +50,11 @@ const JAMMABLE_STATUSES = new Set([
   "event",
 ]);
 
+// Gotcha net "throwing" hold (demo). Long enough for the full capture
+// video to play in the card before the flow transitions to captured.
+// Must stay in sync with the map "CAPTURED" halt in `useDemoDirector`.
+const GOTCHA_NET_THROW_MS = 10_000;
+
 // ─── Public hook surface ─────────────────────────────────────────────
 
 interface UseEffectorWorkflowProps {
@@ -580,7 +585,7 @@ export function useEffectorWorkflow({
         );
         toast.success(t.toasts.netCaptured);
         pendingTimeoutsRef.current.delete(id);
-      }, 3000);
+      }, GOTCHA_NET_THROW_MS);
       pendingTimeoutsRef.current.add(id);
     },
     [setTargets, t],

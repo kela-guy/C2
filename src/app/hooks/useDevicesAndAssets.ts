@@ -21,6 +21,7 @@ import {
   type SimFriendlyDroneDevice,
 } from "@/app/components/useDevicesFromAssets";
 import type { Device } from "@/app/components/DevicesPanel";
+import type { GotchaEffector } from "@/imports/ListOfSystems";
 
 export interface DevicesAndAssetsApi {
   /** Full list of devices derived from the static asset registries. */
@@ -52,8 +53,9 @@ export interface DevicesAndAssetsApi {
 
 export function useDevicesAndAssets(
   friendlyDrones: SimFriendlyDroneDevice[] = [],
+  gotchaEffectors: GotchaEffector[] = [],
 ): DevicesAndAssetsApi {
-  const allDevices = useDevicesFromAssets(friendlyDrones);
+  const allDevices = useDevicesFromAssets(friendlyDrones, gotchaEffectors);
   const [devicesPanelOpen, setDevicesPanelOpen] = useState(false);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [focusedDeviceId, setFocusedDeviceId] = useState<string | null>(null);
