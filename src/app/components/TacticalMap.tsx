@@ -1629,7 +1629,7 @@ export const TacticalMap = ({
                     <ContextMenu>
                     <ContextMenuTrigger asChild>
                     <div
-                      className={`relative group cursor-pointer transition-all duration-200 ${isActive || isHoveredFromCard ? 'z-50' : 'z-10'}`}
+                      className={`relative group cursor-pointer transition-transform duration-200 ${isActive || isHoveredFromCard ? 'z-50' : 'z-10'}`}
                     >
                         {showPulse && (
                             <div className={`absolute -inset-3 rounded-full opacity-40 animate-ping ${pulseColor}`} />
@@ -2044,7 +2044,7 @@ export const TacticalMap = ({
               anchor="center"
             >
               <div
-                className={`relative cursor-pointer rounded-full p-1 transition-all duration-150 ${isHovered ? 'bg-white/[0.08]' : ''}`}
+                className={`relative cursor-pointer rounded-full p-1 transition-colors duration-150 ${isHovered ? 'bg-white/[0.08]' : ''}`}
                 onMouseEnter={() => setHoveredMissileId(missile.id)}
                 onMouseLeave={() => setHoveredMissileId(null)}
               >
@@ -2128,7 +2128,7 @@ export const TacticalMap = ({
               return (
                 <Marker key={`wp-${idx}`} latitude={wp.lat} longitude={wp.lon} anchor="center">
                   <div className="relative group">
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all ${
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-[transform,background-color,border-color,color] duration-150 ${
                       isActive ? 'border-violet-400 bg-violet-500/30 text-white scale-125' :
                       isVisited ? 'border-violet-400/40 bg-violet-500/10 text-violet-300/60' :
                       'border-violet-400/60 bg-black/70 text-violet-300'

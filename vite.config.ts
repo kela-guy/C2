@@ -54,14 +54,24 @@ export default defineConfig(({ mode }) => {
       keepNames: true,
     },
     build: {
+      // Target modern browsers only — no legacy syntax lowering, no
+      // injected polyfills. Matches the skill's "modern-only build".
+      target: 'esnext',
+      // Minify CSS with Lightning CSS (Rust) — faster and smaller than the
+      // default esbuild CSS minifier.
+      cssMinify: 'lightningcss',
+      // Drop the modulePreload polyfill: every browser we target supports
+      // <link rel=modulepreload> natively, so the polyfill is dead weight.
+      modulePreload: { polyfill: false },
       rollupOptions: {
         input: {
           main: path.resolve(dirname, 'index.html'),
         },
         output: {
-          // Predictable vendor splits — Cesium is huge (the WebGL globe) and
-          // benefits from being its own long-lived cache entry, separate from
-          // app code that ships frequently.
+          // Predictable vendor splits. The hand-tuned cases below stay
+          // (Cesium/shiki isolation + the preload-helper pin are load-bearing);
+          // everything else falls through to a per-package chunk so a bump to
+          // one library invalidates only its own chunk, not a shared bundle.
           manualChunks: (id) => {
             // CRITICAL: pin Vite's preload helper to its own tiny chunk.
             // Without this, Rollup's auto-hoisting puts `__vitePreload`
@@ -71,13 +81,26 @@ export default defineConfig(({ mode }) => {
             // 9.6 MB shiki chunk, ballooning cold-start by ~1.68 MB gzipped.
             if (id.includes('vite/preload-helper')) return 'vendor';
             if (!id.includes('node_modules')) return undefined;
+            // Deliberate group splits — kept as-is. Cesium is the huge WebGL
+            // globe; shiki is the 9.6 MB highlighter behind /styleguide. Both
+            // earn dedicated long-lived cache entries.
             if (id.includes('cesium')) return 'cesium';
             if (id.includes('react-joyride') || id.includes('react-floater')) return 'tour';
             if (id.includes('shiki')) return 'shiki';
             if (id.includes('framer-motion') || id.includes('motion-dom') || id.includes('motion-utils')) return 'motion';
             if (id.includes('lucide-react')) return 'icons';
             if (id.includes('@radix-ui')) return 'radix';
-            return undefined;
+            // Per-package fallback. Cache invalidation becomes per-library
+            // instead of per-app-revision. Resolve the real package name from
+            // the LAST `node_modules/` segment (handles pnpm's nested layout)
+            // and preserve scoped (`@scope/name`) packages.
+            const afterLast = id.split('node_modules/').pop() ?? '';
+            const segments = afterLast.split('/');
+            const pkg = segments[0]?.startsWith('@')
+              ? `${segments[0]}/${segments[1]}`
+              : segments[0];
+            if (!pkg) return undefined;
+            return `vendor-${pkg.replace('@', '').replace(/\//g, '-')}`;
           },
         },
       },

@@ -51,6 +51,39 @@ export interface CesiumMapFlyTo {
   heightM?: number;
   /** Ease duration in seconds. Default 1.2. */
   durationSec?: number;
+  /**
+   * Oblique pitch in degrees (e.g. -35 for a cinematic side-on shot). When
+   * set, the camera backs off the target along its heading so the look vector
+   * still lands on (lat, lon) at ground level. Omit for the legacy top-down fly.
+   */
+  pitchDeg?: number;
+  /** View heading in degrees (0 = north). Defaults to the current heading. */
+  headingDeg?: number;
+  /**
+   * When true, `heightM` is interpreted as metres ABOVE GROUND (AGL): the
+   * terrain elevation at the target is sampled and added, so the camera sits a
+   * fixed height over the surface regardless of terrain. Use for an immersive,
+   * on-the-field framing. Defaults to false (height above the ellipsoid).
+   */
+  terrainRelative?: boolean;
+}
+
+/**
+ * Slow cinematic orbit around a ground point. While set, the camera circles
+ * the centre at a fixed oblique pitch + range; clearing it (null) releases the
+ * camera back to free control. Skipped under reduced motion.
+ */
+export interface CesiumMapOrbit {
+  lat: number;
+  lon: number;
+  /** Camera height above the centre, in meters. */
+  heightM: number;
+  /** Oblique pitch in degrees (negative looks down), e.g. -35. */
+  pitchDeg: number;
+  /** Seconds for one full revolution. */
+  periodSec: number;
+  /** When true, `heightM` is metres above the sampled terrain (AGL). */
+  terrainRelative?: boolean;
 }
 
 /**
@@ -120,7 +153,28 @@ export interface CesiumHtmlMarker {
    * `bearingDeg` is the centre direction (0=N, 90=E); `widthDeg` is the full
    * cone angle. Use `widthDeg: 360` for omnidirectional sensors.
    */
-  fov?: { rangeM: number; bearingDeg: number; widthDeg: number; color?: string; opacity?: number };
+  fov?: {
+    rangeM: number;
+    bearingDeg: number;
+    widthDeg: number;
+    color?: string;
+    opacity?: number;
+    /**
+     * When set, the sector renders as a 3D extruded volume (a "threat
+     * corridor" prism) instead of a terrain-clamped polygon. Height in meters.
+     */
+    extrudedHeightM?: number;
+    /** Base height of the extruded volume in meters. Defaults to 0 (ground). */
+    baseHeightM?: number;
+    /**
+     * When true, also draw a translucent vertical "virtual wall" curtain along
+     * the FOV cone perimeter (terrain-following), demonstrating the sensor's
+     * coverage volume. Independent of the flat/extruded sector fill.
+     */
+    wall?: boolean;
+    /** Height of the FOV wall curtain in meters. Defaults to 120. */
+    wallHeightM?: number;
+  };
   /**
    * Optional multi-sector field-of-view (terrain-clamped polygons). Used by
    * composite effectors (e.g. Gotcha) that fan several directional sensors
@@ -142,6 +196,14 @@ export interface CesiumHtmlMarker {
   /** Coverage ring colour (CSS string). Defaults to `#22b8cf`. */
   coverageColor?: string;
   /**
+   * When true, also render a translucent 3D "shield" dome (EllipsoidGraphics)
+   * over the coverage footprint so protection reads as a volume, not just a
+   * ground ring. Requires `coverageRadiusM`.
+   */
+  coverageDome?: boolean;
+  /** Dome height (vertical radius) in meters. Defaults to coverageRadiusM * 0.5. */
+  coverageHeightM?: number;
+  /**
    * When true, the marker's lat/lon prop is treated as a *sensor sample*
    * rather than a render position. The map maintains a per-id motion track
    * that interpolates between samples and extrapolates forward along the
@@ -155,8 +217,20 @@ export interface CesiumHtmlMarker {
 export interface CesiumMapProps {
   /** Cesium Ion access token. Required for Bing Aerial / Cesium Ion assets. */
   ionToken: string;
-  /** Initial camera target. Required so we don't open over the equator. */
-  initialView: { lat: number; lon: number; heightM?: number };
+  /**
+   * Initial camera target. Required so we don't open over the equator. In 3D,
+   * pass `pitchDeg` (e.g. -35) for an oblique opening frame; the camera backs
+   * off along `headingDeg` so the look vector still lands on (lat, lon).
+   */
+  initialView: {
+    lat: number;
+    lon: number;
+    heightM?: number;
+    pitchDeg?: number;
+    headingDeg?: number;
+    /** When true, `heightM` is metres above the sampled terrain (AGL). */
+    terrainRelative?: boolean;
+  };
   /** Markers to render as Cesium points/entities (cheap, GPU). */
   markers?: CesiumMarker[];
   /** Markers rendered as DOM overlays positioned via scene transforms. */
@@ -165,6 +239,17 @@ export interface CesiumMapProps {
   polylines?: CesiumPolyline[];
   /** Imperatively fly the camera to a position; pass a NEW object each time you want to fly. */
   flyTo?: CesiumMapFlyTo | null;
+  /**
+   * Slow cinematic orbit around a ground point. Pass an object to start
+   * orbiting, `null`/`undefined` to release the camera. Ignored under
+   * `prefers-reduced-motion`.
+   */
+  orbit?: CesiumMapOrbit | null;
+  /**
+   * When true, loads Cesium OSM Buildings (Ion asset) so a close oblique view
+   * shows real 3D structures. Requires a valid `ionToken`. Loaded once at mount.
+   */
+  showOsmBuildings?: boolean;
   /** Scene mode. Defaults to '2D' for parity with our current top-down Mapbox view. */
   sceneMode?: CesiumSceneMode;
   /**
@@ -184,6 +269,13 @@ export interface CesiumMapProps {
    * mid-session would tear down + re-tessellate every tile).
    */
   darkMonochromeMap?: boolean;
+  /**
+   * When true, darkens + desaturates the base imagery into a moody "dark
+   * tactical" theme while keeping the real terrain texture (so 3D relief still
+   * reads). Applied to the Ion satellite layer; the flat CARTO dark basemap is
+   * already dark, so this mainly matters with a token. Read once at mount.
+   */
+  darkImagery?: boolean;
   /** Called when a `markers[]` entity is clicked (point markers only). */
   onMarkerClick?: (id: string) => void;
   /** Called when a `markers[]` entity is hovered (point markers only). */
@@ -194,8 +286,51 @@ export interface CesiumMapProps {
    * consumer can drill into that sensor/child.
    */
   onHtmlMarkerSectorClick?: (markerId: string, sectorId: string) => void;
+  /**
+   * Called when the user clicks bare ground (no marker/sector hit). Reports the
+   * picked lat/lon. Used by the onboarding lab for click-to-place. No-op when
+   * absent, so existing consumers are unaffected.
+   */
+  onGroundClick?: (lat: number, lon: number) => void;
+  /**
+   * Receives an imperative screen->lat/lon picker once the viewer mounts (and
+   * `null` on unmount). Converts client (page) pixel coordinates to a ground
+   * lat/lon via terrain/ellipsoid picking — used for drag-and-drop placement.
+   */
+  pickerRef?: React.MutableRefObject<
+    ((clientX: number, clientY: number) => { lat: number; lon: number } | null) | null
+  >;
   /** Optional className for the wrapping `<div>`. Set width + height here or via parent. */
   className?: string;
+}
+
+/**
+ * Convert a window pixel position to a ground lat/lon. Prefers depth-aware
+ * `pickPosition` in 3D, falls back to the globe ray pick, then the ellipsoid.
+ * Returns null when the pointer isn't over the globe.
+ */
+function pickGroundLatLon(
+  viewer: Cesium.Viewer,
+  windowPos: Cesium.Cartesian2,
+): { lat: number; lon: number } | null {
+  const scene = viewer.scene;
+  let cartesian: Cesium.Cartesian3 | undefined;
+  if (scene.mode === Cesium.SceneMode.SCENE3D && scene.pickPositionSupported) {
+    cartesian = scene.pickPosition(windowPos);
+  }
+  if (!cartesian) {
+    const ray = viewer.camera.getPickRay(windowPos);
+    if (ray) cartesian = scene.globe.pick(ray, scene) ?? undefined;
+  }
+  if (!cartesian) {
+    cartesian = viewer.camera.pickEllipsoid(windowPos, scene.globe.ellipsoid) ?? undefined;
+  }
+  if (!cartesian) return null;
+  const carto = Cesium.Cartographic.fromCartesian(cartesian);
+  return {
+    lat: Cesium.Math.toDegrees(carto.latitude),
+    lon: Cesium.Math.toDegrees(carto.longitude),
+  };
 }
 
 /**
@@ -203,6 +338,90 @@ export interface CesiumMapProps {
  */
 function toCartesian({ lat, lon, heightM }: { lat: number; lon: number; heightM?: number }) {
   return Cesium.Cartesian3.fromDegrees(lon, lat, heightM ?? 1500);
+}
+
+/**
+ * Push a base imagery layer toward a dark, desaturated "tactical" look while
+ * keeping enough texture for 3D terrain relief to read. Tuned to be moody, not
+ * pitch black (markers + glows must still pop against it).
+ */
+function applyDarkImagery(layer: Cesium.ImageryLayer) {
+  layer.brightness = 0.42;
+  layer.contrast = 1.18;
+  layer.saturation = 0.45;
+  layer.gamma = 0.7;
+}
+
+/**
+ * Sample terrain elevation at one or more lat/lon points, forcing the
+ * most-detailed tiles to load so results are accurate even right after mount.
+ * Returns 0 for the flat ellipsoid terrain provider or on any failure.
+ */
+async function sampleGroundHeights(
+  viewer: Cesium.Viewer,
+  points: Array<{ lat: number; lon: number }>,
+): Promise<number[]> {
+  try {
+    const cartos = points.map((p) => Cesium.Cartographic.fromDegrees(p.lon, p.lat));
+    const sampled = await Cesium.sampleTerrainMostDetailed(viewer.terrainProvider, cartos);
+    return sampled.map((s) => s?.height ?? 0);
+  } catch {
+    return points.map(() => 0);
+  }
+}
+
+/** Geometry for an oblique camera: where to sit + which way to look. */
+function obliqueGeometry(lat: number, lon: number, aglM: number, pitchDeg: number, headingDeg: number) {
+  const pitchRad = Cesium.Math.toRadians(pitchDeg);
+  const heading = Cesium.Math.toRadians(headingDeg);
+  const distBack = aglM / Math.tan(Math.abs(pitchRad));
+  const dLat = -Math.cos(heading) * (distBack / 111_000);
+  const dLon = -Math.sin(heading) * (distBack / (111_000 * Math.cos((lat * Math.PI) / 180)));
+  return { camLat: lat + dLat, camLon: lon + dLon, pitchRad, heading };
+}
+
+/**
+ * Build an oblique camera view that lands the look vector on (lat, lon) at
+ * `groundH`, from `aglM` above it. `camGroundH` (the terrain under the backed-
+ * off camera) lifts the camera when needed so it never clips into rising
+ * terrain. Pass 0 for both to get an ellipsoid-relative view.
+ */
+function obliqueView(
+  lat: number,
+  lon: number,
+  groundH: number,
+  aglM: number,
+  pitchDeg: number,
+  headingDeg: number,
+  camGroundH = 0,
+  minClearanceM = 60,
+) {
+  const { camLat, camLon, pitchRad, heading } = obliqueGeometry(lat, lon, aglM, pitchDeg, headingDeg);
+  const camHeight = Math.max(groundH + aglM, camGroundH + minClearanceM);
+  return {
+    destination: Cesium.Cartesian3.fromDegrees(camLon, camLat, camHeight),
+    orientation: { pitch: pitchRad, heading, roll: 0 },
+  };
+}
+
+/**
+ * Async terrain-relative oblique view: samples the ground under both the target
+ * and the (backed-off) camera so the framing hugs the surface and clears hills.
+ */
+async function terrainObliqueView(
+  viewer: Cesium.Viewer,
+  lat: number,
+  lon: number,
+  aglM: number,
+  pitchDeg: number,
+  headingDeg: number,
+) {
+  const { camLat, camLon } = obliqueGeometry(lat, lon, aglM, pitchDeg, headingDeg);
+  const [groundH, camGroundH] = await sampleGroundHeights(viewer, [
+    { lat, lon },
+    { lat: camLat, lon: camLon },
+  ]);
+  return obliqueView(lat, lon, groundH, aglM, pitchDeg, headingDeg, camGroundH);
 }
 
 /**
@@ -255,6 +474,31 @@ function buildSectorPositions(
 }
 
 /**
+ * The closed perimeter path of a FOV sector as lat/lon points, used to build a
+ * vertical "virtual wall" curtain. For a directional cone the path runs
+ * centre → arc → centre (walling both radial edges + the range arc); for an
+ * omni sensor (width >= 360) it's just the closed range ring.
+ */
+function buildSectorPerimeter(
+  centerLat: number,
+  centerLon: number,
+  rangeM: number,
+  bearingDeg: number,
+  widthDeg: number,
+): Array<{ lat: number; lon: number }> {
+  const cart = buildSectorPositions(centerLat, centerLon, rangeM, bearingDeg, widthDeg);
+  // buildSectorPositions returns [center, arc0..arcN, center].
+  const path = widthDeg >= 360 ? cart.slice(1) : cart;
+  return path.map((c) => {
+    const carto = Cesium.Cartographic.fromCartesian(c);
+    return {
+      lat: Cesium.Math.toDegrees(carto.latitude),
+      lon: Cesium.Math.toDegrees(carto.longitude),
+    };
+  });
+}
+
+/**
  * Lazy-built spring lookup table for particle easing. Same physics
  * constants as `useEngagementLine.ts` so the Cesium and Mapbox paths
  * accelerate / settle identically. Built on first use, then cached.
@@ -301,16 +545,22 @@ export function CesiumMap({
   htmlMarkers,
   polylines,
   flyTo,
+  orbit,
+  showOsmBuildings = false,
   sceneMode = '2D',
   ionImageryAssetId = 2,
   darkMonochromeMap = false,
+  darkImagery = false,
   onMarkerClick,
   onMarkerHover,
   onHtmlMarkerSectorClick,
+  onGroundClick,
+  pickerRef,
   className = 'w-full h-full',
 }: CesiumMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Cesium.Viewer | null>(null);
+  const osmBuildingsRef = useRef<Cesium.Cesium3DTileset | null>(null);
   const markerEntitiesRef = useRef<Map<string, Cesium.Entity>>(new Map());
   const fovEntitiesRef = useRef<Cesium.Entity[]>([]);
   const coverageEntitiesRef = useRef<Cesium.Entity[]>([]);
@@ -322,7 +572,7 @@ export function CesiumMap({
    * reference changes (which happens on hover/selection, not just on real
    * geometry changes).
    */
-  const htmlGeometryEntitiesRef = useRef<Map<string, { fov?: Cesium.Entity; coverage?: Cesium.Entity; sectors?: Cesium.Entity[] }>>(new Map());
+  const htmlGeometryEntitiesRef = useRef<Map<string, { fov?: Cesium.Entity; fovWall?: Cesium.Entity; coverage?: Cesium.Entity; dome?: Cesium.Entity; sectors?: Cesium.Entity[] }>>(new Map());
   const htmlGeometryFingerprintRef = useRef<Map<string, { fovKey: string | null; coverageKey: string | null; sectorsKey: string | null }>>(new Map());
   /**
    * Maps a FOV-sector entity id → its owning marker + sector id, so the
@@ -339,6 +589,11 @@ export function CesiumMap({
   useEffect(() => {
     onHtmlMarkerSectorClickRef.current = onHtmlMarkerSectorClick;
   }, [onHtmlMarkerSectorClick]);
+  /** Held in a ref because the LEFT_CLICK handler is wired once at mount. */
+  const onGroundClickRef = useRef<typeof onGroundClick>(onGroundClick);
+  useEffect(() => {
+    onGroundClickRef.current = onGroundClick;
+  }, [onGroundClick]);
   /**
    * Polyline entities (trails, engagement lines, etc.) keyed by their
    * stable `CesiumPolyline.id`. Keyed (not array) so the polylines effect
@@ -514,7 +769,8 @@ export function CesiumMap({
       Cesium.IonImageryProvider.fromAssetId(ionImageryAssetId)
         .then((provider) => {
           if (viewer.isDestroyed()) return;
-          viewer.imageryLayers.addImageryProvider(provider);
+          const layer = viewer.imageryLayers.addImageryProvider(provider);
+          if (darkImagery) applyDarkImagery(layer);
         })
         .catch((err) => {
           if (viewer.isDestroyed()) return;
@@ -537,6 +793,22 @@ export function CesiumMap({
         console.error('[CesiumMap] failed to load world terrain:', err);
       });
 
+    // Cesium OSM Buildings (Ion asset). Gives a close oblique view real 3D
+    // structures for the cinematic demo. Requires a token; destroyed with the
+    // viewer on unmount (it's a scene primitive), so no separate teardown.
+    if (showOsmBuildings && ionToken) {
+      Cesium.createOsmBuildingsAsync()
+        .then((tileset) => {
+          if (viewer.isDestroyed()) return;
+          viewer.scene.primitives.add(tileset);
+          osmBuildingsRef.current = tileset;
+        })
+        .catch((err) => {
+          if (viewer.isDestroyed()) return;
+          console.error('[CesiumMap] failed to load OSM buildings:', err);
+        });
+    }
+
     viewer.scene.mode = SCENE_MODE_MAP[sceneMode];
 
     // Initial camera position. Use `setView` (instant) + a deliberately tall
@@ -544,9 +816,41 @@ export function CesiumMap({
     // interpreted as the orthographic frustum extent, not a metric distance.
     // 50_000 m gives a city-scale view; the consumer can re-target with the
     // imperative `flyTo` prop afterwards.
-    viewer.camera.setView({
-      destination: toCartesian({ ...initialView, heightM: initialView.heightM ?? 50_000 }),
-    });
+    if (sceneMode === '3D' && initialView.pitchDeg != null) {
+      // Oblique opening frame. Set an immediate ellipsoid-relative view, then
+      // (if terrain-relative) refine it once the ground elevation is sampled so
+      // the camera sits the requested height ABOVE the surface, not sea level.
+      const heightM = initialView.heightM ?? 1500;
+      viewer.camera.setView(
+        obliqueView(
+          initialView.lat,
+          initialView.lon,
+          0,
+          heightM,
+          initialView.pitchDeg,
+          initialView.headingDeg ?? 0,
+        ),
+      );
+      if (initialView.terrainRelative) {
+        void (async () => {
+          const view = await terrainObliqueView(
+            viewer,
+            initialView.lat,
+            initialView.lon,
+            heightM,
+            initialView.pitchDeg!,
+            initialView.headingDeg ?? 0,
+          );
+          if (viewer.isDestroyed()) return;
+          viewer.camera.setView(view);
+          viewer.scene.requestRender();
+        })();
+      }
+    } else {
+      viewer.camera.setView({
+        destination: toCartesian({ ...initialView, heightM: initialView.heightM ?? 50_000 }),
+      });
+    }
 
     // Click → marker handler.
     const handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
@@ -561,7 +865,15 @@ export function CesiumMap({
           onHtmlMarkerSectorClickRef.current?.(sectorOwner.markerId, sectorOwner.sectorId);
           return;
         }
-        if (markerEntitiesRef.current.has(entityId)) onMarkerClick?.(entityId);
+        if (markerEntitiesRef.current.has(entityId)) {
+          onMarkerClick?.(entityId);
+          return;
+        }
+      }
+      // Bare-ground click → report lat/lon for click-to-place.
+      if (onGroundClickRef.current) {
+        const ground = pickGroundLatLon(viewer, event.position);
+        if (ground) onGroundClickRef.current(ground.lat, ground.lon);
       }
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
@@ -663,7 +975,18 @@ export function CesiumMap({
 
     viewerRef.current = viewer;
 
+    // Hand the consumer an imperative screen->lat/lon picker for drag-drop.
+    if (pickerRef) {
+      pickerRef.current = (clientX: number, clientY: number) => {
+        if (viewer.isDestroyed()) return null;
+        const rect = viewer.canvas.getBoundingClientRect();
+        const pos = new Cesium.Cartesian2(clientX - rect.left, clientY - rect.top);
+        return pickGroundLatLon(viewer, pos);
+      };
+    }
+
     return () => {
+      if (pickerRef) pickerRef.current = null;
       removePreRender();
       handler.destroy();
       viewer.destroy();
@@ -924,10 +1247,10 @@ export function CesiumMap({
         desiredIds.add(m.id);
 
         const fovKey = hasFov
-          ? `${m.lat},${m.lon},${m.fov!.rangeM},${m.fov!.bearingDeg},${m.fov!.widthDeg},${m.fov!.color ?? '#22b8cf'},${m.fov!.opacity ?? 0.18}`
+          ? `${m.lat},${m.lon},${m.fov!.rangeM},${m.fov!.bearingDeg},${m.fov!.widthDeg},${m.fov!.color ?? '#22b8cf'},${m.fov!.opacity ?? 0.18},${m.fov!.extrudedHeightM ?? 0},${m.fov!.baseHeightM ?? 0},${m.fov!.wall ? 1 : 0},${m.fov!.wallHeightM ?? 0}`
           : null;
         const coverageKey = hasCoverage
-          ? `${m.lat},${m.lon},${m.coverageRadiusM},${m.coverageColor ?? '#22b8cf'}`
+          ? `${m.lat},${m.lon},${m.coverageRadiusM},${m.coverageColor ?? '#22b8cf'},${m.coverageDome ? 1 : 0},${m.coverageHeightM ?? 0}`
           : null;
         const sectorsKey = hasSectors
           ? `${m.lat},${m.lon},` +
@@ -954,14 +1277,16 @@ export function CesiumMap({
         changed = true;
         const slot = entities.get(m.id);
         if (slot?.fov) viewer.entities.remove(slot.fov);
+        if (slot?.fovWall) viewer.entities.remove(slot.fovWall);
         if (slot?.coverage) viewer.entities.remove(slot.coverage);
+        if (slot?.dome) viewer.entities.remove(slot.dome);
         if (slot?.sectors) {
           for (const s of slot.sectors) {
             viewer.entities.remove(s);
             htmlSectorOwnerRef.current.delete(String(s.id));
           }
         }
-        const nextSlot: { fov?: Cesium.Entity; coverage?: Cesium.Entity; sectors?: Cesium.Entity[] } = {};
+        const nextSlot: { fov?: Cesium.Entity; fovWall?: Cesium.Entity; coverage?: Cesium.Entity; dome?: Cesium.Entity; sectors?: Cesium.Entity[] } = {};
 
         if (hasSectors) {
           const sectorEntities: Cesium.Entity[] = [];
@@ -992,6 +1317,7 @@ export function CesiumMap({
         if (hasFov) {
           const fovColor = Cesium.Color.fromCssColorString(m.fov!.color ?? '#22b8cf');
           const fovOpacity = m.fov!.opacity ?? 0.18;
+          const extruded = m.fov!.extrudedHeightM != null;
           nextSlot.fov = viewer.entities.add({
             id: `${m.id}__fov`,
             polygon: {
@@ -1001,9 +1327,48 @@ export function CesiumMap({
               material: fovColor.withAlpha(fovOpacity),
               outline: true,
               outlineColor: fovColor.withAlpha(Math.min(1, fovOpacity * 3)),
-              heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+              // Extruded volume ("threat corridor") vs terrain-clamped polygon.
+              // Extrusion is incompatible with CLAMP_TO_GROUND, so the height
+              // pair replaces the height reference when a volume is requested.
+              ...(extruded
+                ? {
+                    height: m.fov!.baseHeightM ?? 0,
+                    extrudedHeight: m.fov!.extrudedHeightM,
+                  }
+                : { heightReference: Cesium.HeightReference.CLAMP_TO_GROUND }),
             },
           });
+
+          // Vertical "virtual wall" curtain along the cone perimeter. Built
+          // async because it samples terrain at each vertex so the wall hugs
+          // the ground and rises a constant height — reads as a glowing sensor
+          // force-field over uneven terrain.
+          if (m.fov!.wall) {
+            const wallHeight = m.fov!.wallHeightM ?? 120;
+            const perimeter = buildSectorPerimeter(
+              m.lat,
+              m.lon,
+              m.fov!.rangeM,
+              m.fov!.bearingDeg,
+              m.fov!.widthDeg,
+            );
+            const wallEntity = viewer.entities.add({ id: `${m.id}__fovwall` });
+            nextSlot.fovWall = wallEntity;
+            void (async () => {
+              const grounds = await sampleGroundHeights(viewer, perimeter);
+              if (viewer.isDestroyed() || !viewer.entities.contains(wallEntity)) return;
+              wallEntity.wall = new Cesium.WallGraphics({
+                positions: perimeter.map((p) => Cesium.Cartesian3.fromDegrees(p.lon, p.lat)),
+                minimumHeights: grounds,
+                maximumHeights: grounds.map((h) => h + wallHeight),
+                material: fovColor.withAlpha(0.26),
+                outline: true,
+                outlineColor: fovColor.withAlpha(0.9),
+                outlineWidth: 2,
+              });
+              viewer.scene.requestRender();
+            })();
+          }
         }
 
         if (hasCoverage) {
@@ -1024,6 +1389,45 @@ export function CesiumMap({
               heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
             },
           });
+
+          // 3D "shield" dome: a translucent half-ellipsoid over the footprint
+          // so "protected" reads as a volume bubble, not just a ground ring.
+          // Anchored to the sampled terrain height (async) so the dome's base
+          // sits ON the ground instead of being buried at sea level.
+          if (m.coverageDome) {
+            const domeHeight = m.coverageHeightM ?? m.coverageRadiusM! * 0.5;
+            const domeEntity = viewer.entities.add({
+              id: `${m.id}__dome`,
+              position: Cesium.Cartesian3.fromDegrees(m.lon, m.lat, 0),
+              ellipsoid: {
+                radii: new Cesium.Cartesian3(
+                  m.coverageRadiusM!,
+                  m.coverageRadiusM!,
+                  domeHeight,
+                ),
+                material: coverageColor.withAlpha(0.12),
+                outline: true,
+                outlineColor: coverageColor.withAlpha(0.45),
+                // Upper hemisphere only — a dome, not a full sphere.
+                maximumCone: Cesium.Math.PI_OVER_TWO,
+                slicePartitions: 24,
+                stackPartitions: 12,
+              },
+            });
+            nextSlot.dome = domeEntity;
+            const domeLat = m.lat;
+            const domeLon = m.lon;
+            void (async () => {
+              const [groundH] = await sampleGroundHeights(viewer, [{ lat: domeLat, lon: domeLon }]);
+              if (viewer.isDestroyed() || !viewer.entities.contains(domeEntity)) return;
+              // Centre the ellipsoid at ground level so its equator (the flat
+              // base of the upper hemisphere) rests on the terrain.
+              domeEntity.position = new Cesium.ConstantPositionProperty(
+                Cesium.Cartesian3.fromDegrees(domeLon, domeLat, groundH),
+              );
+              viewer.scene.requestRender();
+            })();
+          }
         }
 
         entities.set(m.id, nextSlot);
@@ -1035,7 +1439,9 @@ export function CesiumMap({
     for (const [id, slot] of entities) {
       if (desiredIds.has(id)) continue;
       if (slot.fov) viewer.entities.remove(slot.fov);
+      if (slot.fovWall) viewer.entities.remove(slot.fovWall);
       if (slot.coverage) viewer.entities.remove(slot.coverage);
+      if (slot.dome) viewer.entities.remove(slot.dome);
       if (slot.sectors) {
         for (const s of slot.sectors) {
           viewer.entities.remove(s);
@@ -1352,11 +1758,112 @@ export function CesiumMap({
   // ── Imperative fly-to ──────────────────────────────────────────────────────
   useEffect(() => {
     if (!flyTo || !viewerRef.current) return;
-    viewerRef.current.camera.flyTo({
-      destination: toCartesian({ lat: flyTo.lat, lon: flyTo.lon, heightM: flyTo.heightM ?? 1500 }),
-      duration: flyTo.durationSec ?? 1.2,
-    });
+    const viewer = viewerRef.current;
+    const heightM = flyTo.heightM ?? 1500;
+    const duration = flyTo.durationSec ?? 1.2;
+
+    // Top-down (legacy) fly when no pitch is requested.
+    if (flyTo.pitchDeg == null) {
+      viewer.camera.flyTo({
+        destination: toCartesian({ lat: flyTo.lat, lon: flyTo.lon, heightM }),
+        duration,
+      });
+      return;
+    }
+
+    const headingDeg =
+      flyTo.headingDeg != null ? flyTo.headingDeg : Cesium.Math.toDegrees(viewer.camera.heading);
+
+    // Oblique fly. Ellipsoid-relative is synchronous; terrain-relative samples
+    // the ground first so `heightM` reads as height above the surface.
+    if (!flyTo.terrainRelative) {
+      viewer.camera.flyTo({
+        ...obliqueView(flyTo.lat, flyTo.lon, 0, heightM, flyTo.pitchDeg, headingDeg),
+        duration,
+      });
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      const view = await terrainObliqueView(
+        viewer,
+        flyTo.lat,
+        flyTo.lon,
+        heightM,
+        flyTo.pitchDeg!,
+        headingDeg,
+      );
+      if (cancelled || viewer.isDestroyed()) return;
+      viewer.camera.flyTo({ ...view, duration });
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [flyTo]);
+
+  // ── Cinematic orbit ─────────────────────────────────────────────────────────
+  // While `orbit` is set, circle the centre point at a fixed oblique pitch via
+  // a per-tick `camera.lookAt`. Released (and the camera transform reset) when
+  // cleared. Skipped under reduced motion — we hold a static oblique instead.
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || !orbit) return;
+    const prefersReduced =
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+    let cancelled = false;
+    let teardown: (() => void) | null = null;
+
+    void (async () => {
+      const groundH = orbit.terrainRelative
+        ? (await sampleGroundHeights(viewer, [{ lat: orbit.lat, lon: orbit.lon }]))[0]
+        : 0;
+      if (cancelled || viewer.isDestroyed()) return;
+
+      const center = Cesium.Cartesian3.fromDegrees(orbit.lon, orbit.lat, groundH);
+      const pitchRad = Cesium.Math.toRadians(orbit.pitchDeg);
+      const range = orbit.heightM / Math.sin(Math.abs(pitchRad) || 1);
+
+      if (prefersReduced) {
+        viewer.camera.lookAt(center, new Cesium.HeadingPitchRange(0, pitchRad, range));
+        viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+        viewer.scene.requestRender();
+        return;
+      }
+
+      let heading = viewer.camera.heading;
+      let last = performance.now();
+      const speed = (2 * Math.PI) / orbit.periodSec; // rad/sec
+      const onTick = () => {
+        const now = performance.now();
+        const dt = Math.min(0.1, (now - last) / 1000); // clamp big gaps (tab blur)
+        last = now;
+        heading = (heading + speed * dt) % (2 * Math.PI);
+        viewer.camera.lookAt(center, new Cesium.HeadingPitchRange(heading, pitchRad, range));
+        viewer.scene.requestRender();
+      };
+      const prevShouldAnimate = viewer.clock.shouldAnimate;
+      viewer.clock.onTick.addEventListener(onTick);
+      viewer.clock.shouldAnimate = true;
+
+      teardown = () => {
+        viewer.clock.onTick.removeEventListener(onTick);
+        if (!viewer.isDestroyed()) {
+          // Release the lookAt transform so free camera control resumes, and
+          // restore the clock so we don't leave it spinning for other consumers.
+          viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+          viewer.clock.shouldAnimate = prevShouldAnimate;
+        }
+      };
+    })();
+
+    return () => {
+      cancelled = true;
+      if (teardown) teardown();
+    };
+  }, [orbit]);
 
   return (
     <div ref={containerRef} className={className}>

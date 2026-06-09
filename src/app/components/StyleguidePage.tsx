@@ -6577,7 +6577,7 @@ export function DetectionRow() {
                     ] as const).map(({ num, layer }) => (
                       <div
                         key={layer}
-                        className={`rounded-lg border px-3 py-2.5 cursor-default transition-all duration-200 ${
+                        className={`rounded-lg border px-3 py-2.5 cursor-default transition-colors duration-200 ${
                           hoveredLayer === num
                             ? 'border-white/20 bg-white/[0.06]'
                             : 'border-white/[0.06] bg-white/[0.03]'
@@ -6589,7 +6589,7 @@ export function DetectionRow() {
                       </div>
                     ))}
                     <div
-                      className={`rounded-lg border px-3 py-2.5 cursor-default transition-all duration-200 ${
+                      className={`rounded-lg border px-3 py-2.5 cursor-default transition-colors duration-200 ${
                         hoveredLayer === 5
                           ? 'border-white/20 bg-white/[0.06]'
                           : 'border-white/[0.06] bg-white/[0.03]'
@@ -6658,7 +6658,7 @@ export function DetectionRow() {
                         return (
                           <div
                             key={state}
-                            className={`flex items-center gap-4 rounded-lg border px-3 py-2.5 cursor-default transition-all duration-200 w-full justify-start ${
+                            className={`flex items-center gap-4 rounded-lg border px-3 py-2.5 cursor-default transition-colors duration-200 w-full justify-start ${
                               isHovered
                                 ? 'border-white/20 bg-white/[0.06]'
                                 : 'border-white/[0.06] bg-white/[0.03]'
@@ -6860,6 +6860,31 @@ export function DetectionRow() {
             {activeItem === 'hud-detections' && <HudDetectionsSection />}
             {activeItem === 'hud-day-night' && <HudDayNightSection />}
             {activeItem === 'hud-context-menu' && <HudContextMenuSection />}
+
+            {activeItem === 'onboarding-lab' && (
+              <ComponentSection
+                id="onboarding-lab"
+                name="Onboarding Auto-Coverage"
+                description="Previewable first-run base-protection setup on the live 3D map: auto-suggested asset layout, a live air/ground protection score, dead-zone / open-axis gap callouts, and drag-to-place refinement. Flat coverage estimate (no terrain line-of-sight yet)."
+              >
+                <PreviewPanel align="stretch" tight>
+                  <div className="flex flex-col items-start gap-4">
+                    <p className="text-sm leading-6 text-n-9">
+                      This lab runs full-screen on its own route (it mounts a Cesium map and
+                      docks its own step rail). Open it in a new tab to try the flow.
+                    </p>
+                    <a
+                      href="/onboarding"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-2 rounded-md bg-white/[0.08] px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-white/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+                    >
+                      Open /onboarding
+                    </a>
+                  </div>
+                </PreviewPanel>
+              </ComponentSection>
+            )}
 
             <StyleguidePager activeItem={activeItem} onNavigate={navigateTo} />
           </motion.div>

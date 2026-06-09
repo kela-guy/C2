@@ -71,7 +71,7 @@ import {
   bearingDegrees,
   haversineDistanceM,
 } from '@/app/lib/mapGeo';
-import { JAM_FLOW, WEAPON_FLOW, resolveNearestAsset, type FlowAsset } from '@/imports/engagementFlows';
+import { JAM_FLOW, WEAPON_FLOW, GOTCHA_FLOW, resolveNearestAsset, type FlowAsset } from '@/imports/engagementFlows';
 import { useStrings } from '@/lib/intl';
 import type { Detection, RegulusEffector, LauncherEffector } from '@/imports/ListOfSystems';
 
@@ -664,7 +664,7 @@ function CesiumTacticalMapImpl({
    * Returns `null` for targets the flow doesn't apply to (mitigated /
    * expired / actively-jamming target / mismatched classification).
    */
-  type EngagementFlowKind = 'jam' | 'weapon';
+  type EngagementFlowKind = 'jam' | 'weapon' | 'gotcha';
   type EngagementPair = {
     flow: EngagementFlowKind;
     targetLat: number;
@@ -694,7 +694,7 @@ function CesiumTacticalMapImpl({
       asset: FlowAsset,
       distanceM: number,
       phase: string,
-      flowDef: typeof JAM_FLOW | typeof WEAPON_FLOW,
+      flowDef: typeof JAM_FLOW | typeof WEAPON_FLOW | typeof GOTCHA_FLOW,
     ): EngagementPair => ({
       flow,
       targetLat: tLat,
@@ -707,6 +707,25 @@ function CesiumTacticalMapImpl({
       lineColor: flowDef.lineColor(phase),
       badgeTextColor: flowDef.badgeTextColor(phase),
     });
+
+    // ── GOTCHA flow (counter-drone net effector, drone targets) ─────────
+    // Drawn once the operator commits the net capture: the dashed line +
+    // traveling particles trace from the engaging Gotcha unit to the locked
+    // target, through both the capturing (`engaging`) and captured
+    // (`engaged`) phases. Color follows the flow (red while capturing →
+    // white once locked).
+    if (
+      (target.gotchaStatus === 'engaging' || target.gotchaStatus === 'engaged') &&
+      GOTCHA_FLOW.matchTarget(target)
+    ) {
+      const units = (gotchaUnits ?? []) as unknown as FlowAsset[];
+      const phase = GOTCHA_FLOW.getPhase(target);
+      const unit = units.find((u) => u.id === target.engagingGotchaId);
+      if (unit) {
+        return buildPair('gotcha', unit, haversineDistanceM(tLat, tLon, unit.lat, unit.lon), phase, GOTCHA_FLOW);
+      }
+      return null;
+    }
 
     // ── JAM flow (drone targets) ────────────────────────────────────────
     if (JAM_FLOW.matchTarget(target)) {
@@ -800,6 +819,7 @@ function CesiumTacticalMapImpl({
     selectedLauncherIds,
     hoveredSensorIdFromCard,
     jammingTargetId,
+    gotchaUnits,
   ]);
 
   /**

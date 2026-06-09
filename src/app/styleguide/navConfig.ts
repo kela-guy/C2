@@ -163,6 +163,10 @@ export const NAV: NavGroup[] = [
       { id: 'hud-context-menu', label: 'Context Menu' },
     ],
   },
+  {
+    label: 'Labs',
+    items: [{ id: 'onboarding-lab', label: 'Onboarding Auto-Coverage' }],
+  },
 ];
 
 export function findGroupForId(id: string): NavGroup | undefined {

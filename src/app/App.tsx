@@ -19,18 +19,23 @@ import { DirectionProvider } from "@/lib/direction";
 // production bundle.
 const DevicesLabPage = lazy(() => import("./components/DevicesLabPage"));
 
+// Onboarding Lab — previewable auto-coverage onboarding experience
+// (`components/onboarding/`). First-run base-protection setup on the live 3D
+// map. Not wired into production gating yet; reviewers open it directly.
+// Code-split so the Cesium-heavy lab never enters other bundles.
+const OnboardingLabPage = lazy(() => import("./components/onboarding/OnboardingLabPage"));
+
 // Design System — the manifest-driven successor to `/styleguide`. Mounted on
 // its own route while the strangler migration runs; the legacy monolith stays
 // live at `/styleguide`. Code-split so its doc modules never enter other
 // bundles.
 const DesignSystemPage = lazy(() => import("./styleguide/registry/DesignSystem"));
 
-// Video HUD Sandbox — dev-only sandbox for the camera HUD chrome
-// (setpoint rail, bottom chrome, compass, connectivity, detections).
-// Guarded by `import.meta.env.DEV` so it tree-shakes out of production.
-const VideoHudSandbox = import.meta.env.DEV
-  ? lazy(() => import("./components/video-hud-sandbox/VideoHudSandbox"))
-  : null;
+// Video HUD Sandbox — sandbox for the camera HUD chrome (setpoint rail,
+// bottom chrome, compass, connectivity, detections). Shipped in production
+// on its own route; not linked from the main UI — reviewers open it directly.
+// Code-split so its assets never enter other bundles.
+const VideoHudSandbox = lazy(() => import("./components/video-hud-sandbox/VideoHudSandbox"));
 
 function PlaygroundFallback() {
   return (
@@ -124,20 +129,30 @@ export default function App() {
                 }
               />
               {/*
-                Video HUD Sandbox — dev-only sandbox for the camera HUD
-                chrome rebuild. Not linked from the main UI; reviewers open
-                it directly. Compiles to nothing in production.
+                Onboarding Lab — auto-coverage first-run setup on the live 3D
+                map. Not linked from the main UI; reviewers open it directly.
               */}
-              {VideoHudSandbox && (
-                <Route
-                  path="/video-hud-sandbox"
-                  element={
-                    <Suspense fallback={<PlaygroundFallback />}>
-                      <VideoHudSandbox />
-                    </Suspense>
-                  }
-                />
-              )}
+              <Route
+                path="/onboarding"
+                element={
+                  <Suspense fallback={<PlaygroundFallback />}>
+                    <OnboardingLabPage />
+                  </Suspense>
+                }
+              />
+              {/*
+                Video HUD Sandbox — camera HUD chrome sandbox. Shipped in
+                production on its own route; not linked from the main UI —
+                reviewers open it directly.
+              */}
+              <Route
+                path="/video-hud-sandbox"
+                element={
+                  <Suspense fallback={<PlaygroundFallback />}>
+                    <VideoHudSandbox />
+                  </Suspense>
+                }
+              />
             </Routes>
             <ScopedHandoffInspector />
           </BrowserRouter>

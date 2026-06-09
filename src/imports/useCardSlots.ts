@@ -256,6 +256,19 @@ function buildHeader(target: Detection, severity: Severity, t: Strings): CardHea
 }
 
 function buildMedia(target: Detection, ctx: CardContext, t: Strings): CardMediaProps | null {
+  // Gotcha (counter-drone net) capture feed — the moment the operator fires
+  // the "throwing net" action the card swaps to the net-capture clip and keeps
+  // it through the captured/engaged phase. The asset is pre-trimmed to start at
+  // the net throw, so it plays from the first frame and loops.
+  if (target.gotchaStatus === 'engaging' || target.gotchaStatus === 'engaged') {
+    return {
+      src: '/videos/gotcha-net.mp4',
+      type: 'video',
+      badge: 'threat',
+      trackingLabel: t.cards.trackingPtz,
+    };
+  }
+
   const isCuas = !!target.entityStage;
   const isActive = target.status === 'detection' || target.status === 'event';
   const isSuspicion = target.status === 'suspicion';

@@ -1,1 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+/*
+ * Web fonts (Heebo + IBM Plex Mono) are now loaded from a <link> in
+ * index.html <head>, not a CSS @import. A CSS @import here would chain
+ * behind the app's CSS bundle, creating a render-blocking serial
+ * waterfall. Keeping this file (still imported by styles/index.css) as
+ * the documented home for font config; no @import on purpose.
+ */
+
