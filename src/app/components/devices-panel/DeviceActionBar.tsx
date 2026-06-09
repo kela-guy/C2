@@ -1,15 +1,18 @@
 /**
- * Expanded-card footer. Renders the registry's `footerActions` inline
- * through the resolver — no per-type conditionals — then collapses the
- * `overflowActions` (Logs / Notifications) into a 3-dot overflow pinned to
- * the inline-end. Items can request to be pushed to the inline-end
- * (calibrate).
+ * Expanded-card footer. Concatenates the registry's `footerActions` and
+ * `overflowActions` into one ordered list, then splits it positionally: the
+ * first `MAX_INLINE_FOOTER_ACTIONS` resolve to inline pills through the
+ * resolver — no per-type conditionals — and the remainder collapses into the
+ * 3-dot overflow pinned to the inline-end. The 3-dot only appears when the
+ * list is longer than fits inline. Items can request to be pushed to the
+ * inline-end (calibrate).
  */
 
 import { Fragment, memo } from 'react';
 import { resolveDeviceAction, type DeviceActionContext } from './deviceActions';
 import { DeviceOverflowMenu } from './controls/DeviceOverflowMenu';
 import type { DeviceTypeConfig } from './deviceRegistry';
+import { splitFooterActions } from './footerOverflow';
 
 interface DeviceActionBarProps {
   cfg: DeviceTypeConfig;
@@ -17,11 +20,15 @@ interface DeviceActionBarProps {
 }
 
 export const DeviceActionBar = memo(function DeviceActionBar({ cfg, ctx }: DeviceActionBarProps) {
-  const items = cfg.footerActions
+  const { inline, overflow, hasOverflow } = splitFooterActions([
+    ...cfg.footerActions,
+    ...cfg.overflowActions,
+  ]);
+
+  const items = inline
     .map((kind) => resolveDeviceAction(kind, ctx, 'footer'))
     .filter((item): item is NonNullable<typeof item> => item !== null);
 
-  const hasOverflow = cfg.overflowActions.length > 0;
   if (items.length === 0 && !hasOverflow) return null;
 
   return (
@@ -36,7 +43,7 @@ export const DeviceActionBar = memo(function DeviceActionBar({ cfg, ctx }: Devic
       ))}
       {hasOverflow && (
         <div className="ms-auto flex items-center">
-          <DeviceOverflowMenu kinds={cfg.overflowActions} ctx={ctx} />
+          <DeviceOverflowMenu kinds={overflow} ctx={ctx} />
         </div>
       )}
     </div>

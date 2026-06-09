@@ -81,6 +81,7 @@
   "devDependencies": {
     "@react-scan/vite-plugin-react-scan": "^0.2.6",
     "@tailwindcss/vite": "4.1.12",
+    "@vercel/toolbar": "^0.2.6",
     "@vitejs/plugin-react": "4.7.0",
     "lightningcss": "^1.32.0",
     "react-scan": "^0.5.7",

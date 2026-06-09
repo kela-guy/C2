@@ -197,6 +197,8 @@ export interface DevicesPanelStrings {
   healthWarning: string;
   healthOffline: string;
   healthHealthy: string;
+  /** Group label + toggle for a composite device's nested children panel. */
+  sensorsGroupLabel: string;
 }
 
 export interface DevicesPanelProps {

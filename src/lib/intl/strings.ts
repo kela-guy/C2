@@ -125,6 +125,7 @@ const STRINGS_HE = {
       healthWarning: 'אזהרה',
       healthOffline: 'לא מקוון',
       healthHealthy: 'תקין',
+      sensorsGroupLabel: 'חיישנים',
     },
   },
 
@@ -1122,6 +1123,7 @@ const STRINGS_EN: Strings = {
       healthWarning: 'Warning',
       healthOffline: 'Offline',
       healthHealthy: 'Healthy',
+      sensorsGroupLabel: 'Sensors',
     },
   },
 

@@ -38,13 +38,7 @@ import {
   type ActionId,
   type LabDevice,
 } from './presentationRules';
-
-/**
- * Secondary actions that collapse into the footer 3-dot overflow rather than
- * sitting inline: the low-signal inspect actions (Logs / Notifications) plus
- * Mute, which is a tucked-away toggle on the speaker row.
- */
-const OVERFLOW_ACTIONS: ActionId[] = ['mute', 'logs', 'notifications'];
+import { splitFooterActions } from '../../devices-panel/footerOverflow';
 
 /**
  * Tile-tooltip tone — the chosen "Titled header + divider" study (option 2 in
@@ -574,8 +568,8 @@ function DeviceCardRow({ device }: { device: LabDevice }) {
   );
   const { secondary } = DEVICE_ACTIONS[device.kind];
 
-  const inlineActions = secondary.filter((id) => !OVERFLOW_ACTIONS.includes(id));
-  const overflowActions = secondary.filter((id) => OVERFLOW_ACTIONS.includes(id));
+  const { inline: inlineActions, overflow: overflowActions, hasOverflow } =
+    splitFooterActions(secondary);
   const hasFooter = inlineActions.length > 0 || overflowActions.length > 0;
 
   return (
@@ -599,7 +593,7 @@ function DeviceCardRow({ device }: { device: LabDevice }) {
               <ActionControl key={id} id={id} device={device} />
             ))}
           </div>
-          {overflowActions.length > 0 && (
+          {hasOverflow && (
             <div className="flex w-fit justify-end">
               <OverflowMenu device={device} ids={overflowActions} />
             </div>

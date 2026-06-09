@@ -46,6 +46,12 @@ export interface DeviceChildRowProps {
   strings: DevicesPanelStrings;
   /** True when this child is the currently selected asset. */
   selected?: boolean;
+  /**
+   * Rendered inside the collapsible "Sensors" inset panel: rounded corners and
+   * no full-bleed bottom divider, so rows read as cards stacked on the inset
+   * surface rather than a flat ledger. Defaults to the flat list styling.
+   */
+  inset?: boolean;
   connectionStateLabels?: Record<ConnectionState, string>;
   onHover: (id: string | null) => void;
   onSelect: (id: string) => void;
@@ -56,6 +62,7 @@ export const DeviceChildRow = memo(function DeviceChildRow({
   device,
   strings,
   selected = false,
+  inset = false,
   connectionStateLabels = DEFAULT_CONNECTION_STATE_LABELS,
   onHover,
   onSelect,
@@ -90,9 +97,9 @@ export const DeviceChildRow = memo(function DeviceChildRow({
       data-child-id={device.id}
       data-health={health}
       data-selected={selected || undefined}
-      className={`relative flex min-h-[40px] items-center gap-2.5 ps-4 pe-4 py-2 text-end border-b border-white/[0.04] cursor-pointer transition-[background-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25 focus-visible:ring-inset ${
-        selected ? 'bg-white/[0.07]' : 'hover:bg-white/[0.04] active:bg-white/[0.06]'
-      }`}
+      className={`relative flex min-h-[40px] items-center gap-2.5 py-2 text-end cursor-pointer transition-[background-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25 focus-visible:ring-inset ${
+        inset ? 'px-2 rounded' : 'ps-4 pe-4 border-b border-white/[0.04]'
+      } ${selected ? 'bg-white/[0.07]' : 'hover:bg-white/[0.04] active:bg-white/[0.06]'}`}
     >
       <div
         className={`relative w-6 h-6 rounded flex items-center justify-center shrink-0 ${visual.tile}`}

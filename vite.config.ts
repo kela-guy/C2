@@ -6,6 +6,7 @@ import cesium from 'vite-plugin-cesium';
 import { fileURLToPath } from 'node:url';
 import { visualizer } from 'rollup-plugin-visualizer';
 import reactScan from '@react-scan/vite-plugin-react-scan';
+import { vercelToolbar } from '@vercel/toolbar/plugins/vite';
 
 const dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 
@@ -13,7 +14,10 @@ const ANALYZE = process.env.ANALYZE === '1';
 
 export default defineConfig(({ mode }) => {
   const isDev = mode === 'development';
-  const plugins: PluginOption[] = [react(), tailwindcss(), cesium()];
+  // `vercelToolbar()` serves the toolbar's client assets so PMs can pin
+  // Comments on live elements. It only mounts when `mountVercelToolbar()`
+  // is called (see src/main.tsx) — gated so end-users never see it.
+  const plugins: PluginOption[] = [react(), tailwindcss(), cesium(), vercelToolbar()];
 
   // react-scan annotates every commit with a render-cause overlay in
   // dev. We import its Vite plugin (which only takes effect during

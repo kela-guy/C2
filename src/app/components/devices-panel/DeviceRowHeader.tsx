@@ -48,7 +48,9 @@ const HEALTH_TONE: Record<DeviceHealth, { dot: string; badge: string | null }> =
 export const DeviceRowHeader = memo(function DeviceRowHeader({ device, cfg, ctx, connectionStateLabels }: DeviceRowHeaderProps) {
   const { strings } = ctx;
   const nonOnline = device.connectionState !== 'online';
-  const metricLine = device.subtitle ?? buildCollapsedMetricLine(device);
+  // Jammers (ECM) don't surface a collapsed coverage metric — it adds noise
+  // without aiding the fast scan.
+  const metricLine = device.type === 'ecm' ? null : device.subtitle ?? buildCollapsedMetricLine(device);
 
   // Composite parents (Gotcha) roll their worst child up into the tile so the
   // collapsed row reflects the unit's true state without expanding.

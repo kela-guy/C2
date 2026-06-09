@@ -14,12 +14,13 @@
  */
 
 import { useEffect, useState, type ReactNode } from 'react';
-import { Check, Square, Sun, Video, Wrench } from '@/lib/icons/central';
+import { Check, List, Square, Sun, Video, Wrench } from '@/lib/icons/central';
 import { MapPinIcon, PauseIcon, PlayFilledIcon, WatchStreamIcon, WipeIcon } from './icons';
 import { DotmSquare1 } from '@/app/components/ui/dotm-square-1';
 import { SpeakerTrackSelect } from './controls/SpeakerTrackSelect';
 import { JamSplitButton } from './controls/JamSplitButton';
 import { FloodlightSegmentedCompact } from './controls/FloodlightSegmentedToggle';
+import { NotifyBellIcon, NotifyCountdown } from './controls/notify';
 import type { Device, DevicesPanelStrings, SpeakerTrack } from './types';
 import { DeviceAction } from './DeviceAction';
 import type { DeviceActionKind } from './deviceRegistry';
@@ -251,9 +252,64 @@ export function resolveDeviceAction(
         node: <CalibrateControl device={d} strings={s} />,
       };
 
-    // Logs + Notifications render in the overflow menu, never as a bar pill.
-    case 'logs':
-    case 'notifications':
+    // Notifications: a timed toggle. When it lands inline (footer has room for
+    // it), it renders as a pressable pill that arms the attention window and
+    // swaps its label for the live countdown; otherwise it tucks into the
+    // overflow as a menu row.
+    case 'notifications': {
+      const on = ctx.isNotifyOn;
+      return {
+        key: 'notifications',
+        node: (
+          <DeviceAction
+            dataHandoff="device-notifications"
+            tone="neutral"
+            pressed={on}
+            icon={<NotifyBellIcon armed={on} />}
+            label={on ? <NotifyCountdown remaining={ctx.notifyRemaining} /> : s.notifications}
+            ariaLabel={s.notifications}
+            disabled={offline}
+            disabledReason={offline ? s.jamDisabledOffline : null}
+            onClick={() => ctx.onToggleNotify()}
+          />
+        ),
+      };
+    }
+
+    // Logs: the error channel. Low-signal until something breaks — the pill
+    // turns red and grows a count badge when the device has errors, so there
+    // is no separate "Errors" control.
+    case 'logs': {
+      const count = ctx.errorCount;
+      const hasErrors = count > 0;
+      const label = hasErrors ? `${s.logs} · ${s.errors}` : s.logs;
+      return {
+        key: 'logs',
+        node: (
+          <DeviceAction
+            dataHandoff="device-logs"
+            tone="neutral"
+            icon={<List size={12} />}
+            label={
+              <span className="inline-flex items-center gap-1.5">
+                {label}
+                {hasErrors && (
+                  <span className="rounded-full bg-red-500/20 px-1.5 text-[10px] font-medium text-red-300 tabular-nums">
+                    {count > 99 ? '99+' : count}
+                  </span>
+                )}
+              </span>
+            }
+            ariaLabel={label}
+            className={
+              hasErrors ? 'text-red-300 bg-red-500/10 hover:bg-red-500/15 hover:text-red-200' : undefined
+            }
+            onClick={() => ctx.onOpenLogs()}
+          />
+        ),
+      };
+    }
+
     default:
       return null;
   }

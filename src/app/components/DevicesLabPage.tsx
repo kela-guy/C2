@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { DevicesPanel } from './devices-panel';
 import { MOCK_DEVICES } from './devices-panel-next/mockDevices';
 import { CardLayoutLab } from './devices-panel-next/lab/CardLayoutLab';
+import { GotchaCardLab } from './devices-panel-next/lab/GotchaCardLab';
 import { DeviceTileStates } from './devices-panel-next/lab/DeviceTileStates';
 import { TooltipDesigns } from './devices-panel-next/lab/TooltipDesigns';
 import { FloodlightToggleLab } from './devices-panel-next/lab/FloodlightToggleLab';
@@ -119,13 +120,18 @@ export default function DevicesLabPage() {
           </div>
 
           <div className="mt-12 border-t border-white/[0.06] pt-8">
-            <Tabs defaultValue="tiles" dir={dir} className="gap-8">
+            <Tabs defaultValue="gotcha" dir={dir} className="gap-8">
               <TabsList variant="line">
+                <TabsTrigger value="gotcha">Gotcha card</TabsTrigger>
                 <TabsTrigger value="tiles">Device tiles</TabsTrigger>
                 <TabsTrigger value="tooltips">Tooltips</TabsTrigger>
                 <TabsTrigger value="floodlight">Floodlight toggle</TabsTrigger>
                 <TabsTrigger value="feed">Add to feed</TabsTrigger>
               </TabsList>
+
+              <TabsContent value="gotcha">
+                <GotchaCardLab />
+              </TabsContent>
 
               <TabsContent value="tiles">
                 <DeviceTileStates />

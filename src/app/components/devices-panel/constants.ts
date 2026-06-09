@@ -153,6 +153,7 @@ export const DEFAULT_DEVICE_PANEL_STRINGS: DevicesPanelStrings = {
   healthWarning: 'Warning',
   healthOffline: 'Offline',
   healthHealthy: 'Healthy',
+  sensorsGroupLabel: 'Sensors',
 };
 
 /** Per-state dot colour used for the small status indicator in the row icon. */

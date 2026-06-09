@@ -31,7 +31,7 @@ import { useDeviceNotify } from './useDeviceNotify';
 import { DeviceRowHeader } from './DeviceRowHeader';
 import { DeviceRowDetails } from './DeviceRowDetails';
 import { DeviceActionBar } from './DeviceActionBar';
-import { DeviceChildRow } from './DeviceChildRow';
+import { DeviceChildGroup } from './DeviceChildGroup';
 import { DeviceErrorsDialog } from './controls/DeviceErrorsDialog';
 import type { DeviceCameraDragItem, DeviceRowProps } from './types';
 
@@ -166,23 +166,24 @@ export const DeviceRow = memo(function DeviceRow({
       >
         <div className="flex flex-col bg-white/[0.03]">
           <DeviceRowDetails device={device} cfg={cfg} strings={strings} />
-          <DeviceActionBar cfg={cfg} ctx={ctx} />
+          {/*
+            Composite children render as a collapsible inset panel between the
+            telemetry grid and the action bar (V3 "grouped inset"), so the
+            parent ↔ sensor hierarchy reads as one contained unit instead of a
+            flat list trailing below the footer.
+          */}
           {composite && (
-            <div data-handoff-component="device-child-list">
-              {device.children!.map((child) => (
-                <DeviceChildRow
-                  key={child.id}
-                  device={child}
-                  strings={strings}
-                  selected={selectedChildId === child.id}
-                  connectionStateLabels={connectionStateLabels}
-                  onHover={onHover}
-                  onSelect={(id) => onChildSelect?.(id)}
-                  onFlyTo={onFlyTo}
-                />
-              ))}
-            </div>
+            <DeviceChildGroup
+              device={device}
+              strings={strings}
+              selectedChildId={selectedChildId}
+              connectionStateLabels={connectionStateLabels}
+              onHover={onHover}
+              onChildSelect={onChildSelect}
+              onFlyTo={onFlyTo}
+            />
           )}
+          <DeviceActionBar cfg={cfg} ctx={ctx} />
         </div>
       </CollapsibleContent>
 
