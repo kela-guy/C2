@@ -877,12 +877,20 @@ export function CesiumMap({
     // Allocated once at scope; mutated in place per marker per frame to
     // avoid GC churn on a hot path.
     const terrainSampleCarto = new Cesium.Cartographic();
-    // Throttle kinematic-driven requestRender() calls to ~30fps. The
+    // Throttle kinematic-driven requestRender() calls to ~15fps. The
     // preRender callback runs every frame Cesium chooses to draw; on
     // request-render mode that means once per requestRender() we make.
     // Without throttling, each kinematic frame schedules another
     // immediate frame, creating an unbounded 60-120 fps loop.
-    const KINEMATIC_RENDER_INTERVAL_MS = 33;
+    //
+    // 15fps is the floor at which slow tactical-map motion (patrol
+    // drones, ingress legs, capture loiters) still reads as smooth —
+    // the motion tracker interpolates between samples, so dropping
+    // painted frames doesn't drop positional fidelity. Halving the
+    // rate from 30fps halves the continuous satellite-tile repaint
+    // cost while any track is animating, which is the dominant idle
+    // GPU/CPU draw on a live board.
+    const KINEMATIC_RENDER_INTERVAL_MS = 66;
     let lastKinematicRenderAt = 0;
     const removePreRender = viewer.scene.preRender.addEventListener(() => {
       const nodes = htmlMarkerNodesRef.current;
@@ -1006,6 +1014,10 @@ export function CesiumMap({
     document.addEventListener("visibilitychange", handleVisibilityChange);
     // Apply initial state in case the tab mounts already-hidden.
     handleVisibilityChange();
+
+    if (import.meta.env.DEV) {
+      (window as unknown as { __viewer?: Cesium.Viewer }).__viewer = viewer;
+    }
 
     viewerRef.current = viewer;
 

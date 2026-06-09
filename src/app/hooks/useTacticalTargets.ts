@@ -68,6 +68,11 @@ interface SpawnOptions {
   isCar?: boolean;
   silent?: boolean;
   /**
+   * Seed `LIDAR-NVT-01` as a contributing sensor at spawn. Demo-only:
+   * the LiDAR card row drives the on-map point-cloud window.
+   */
+  includeLidar?: boolean;
+  /**
    * Total approach duration in ms. Defaults to the production cadence
    * (`APPROACH_TOTAL_MS`); the demo passes a larger value for a slower,
    * more presentable drone. The tick rate is unchanged so motion stays
@@ -143,7 +148,12 @@ export interface TacticalTargetsApi {
 const TELEMETRY_TICK_MS = 100;
 const PATROL_TICK_MS = TELEMETRY_TICK_MS;
 const PATROL_SPEED = 0.0032;
-const PATROL_REACT_COMMIT_EVERY_TICKS = 3;
+// Friendly drones render as kinematic markers, so the motion tracker
+// interpolates between committed samples. Committing every 6th 10 Hz
+// tick (~1.7 Hz) instead of every 3rd halves the full-dashboard React
+// reconciles the patrol sim forces while staying well above the sample
+// rate the tracker needs to keep patrol motion smooth.
+const PATROL_REACT_COMMIT_EVERY_TICKS = 6;
 const TRAIL_SAMPLE_EVERY = 10;
 const TRAIL_MAX_POINTS = 40;
 
@@ -167,6 +177,12 @@ const ROAM_RADIUS_M = 2800;
 const ROAM_SPEED_M_PER_TICK = 10;
 const ROAM_TURN_DEG = 3;
 const ROAM_BOUNDARY_TURN_DEG = 7;
+// Roaming hostiles render as kinematic markers, so the motion tracker
+// interpolates between committed samples just like patrol/approach.
+// Commit every 3rd 10 Hz tick (~3.3 Hz) instead of every tick to cut the
+// full-dashboard React reconciles roaming drones force, while staying
+// above the trail sample rate (every 6th tick) so no sample is dropped.
+const ROAM_REACT_COMMIT_EVERY_TICKS = 3;
 
 // Approach: per-drone path randomization so they don't all fly a straight
 // line into the same point — the endpoint is jittered within this radius
@@ -620,6 +636,11 @@ export function useTacticalTargets(): TacticalTargetsApi {
         lon = nextLon;
         const tnow = nowLocaleTime();
         const sample = step % 6 === 0;
+        // Skip the React commit on non-gated ticks — the closure keeps
+        // advancing lat/lon/heading, so the next committed sample carries
+        // the up-to-date position and Cesium interpolates between them.
+        // Always commit on a trail-sample tick so no sample is lost.
+        if (!sample && step % ROAM_REACT_COMMIT_EVERY_TICKS !== 0) return;
         const curLat = lat;
         const curLon = lon;
         const curHeading = heading;
@@ -695,6 +716,16 @@ export function useTacticalTargets(): TacticalTargetsApi {
             firstDetectedAt: now(),
             lastDetectedAt: now(),
           },
+          ...(opts.includeLidar
+            ? [
+                {
+                  sensorId: "LIDAR-NVT-01",
+                  sensorType: "LiDAR",
+                  firstDetectedAt: now(),
+                  lastDetectedAt: now(),
+                },
+              ]
+            : []),
         ],
         trail: [{ lat: opts.startLat, lon: opts.startLon, timestamp: now() }],
         actionLog: [

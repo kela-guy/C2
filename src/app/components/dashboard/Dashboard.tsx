@@ -72,6 +72,7 @@ import {
   DEMO_CAMERA_ASSETS,
   DEMO_RADAR_ASSETS,
   DEMO_DRONE_HIVE_ASSETS,
+  DEMO_LIDAR_ASSETS,
   DEMO_REGULUS_EFFECTORS,
   GOTCHA_EFFECTORS,
 } from "@/app/components/demo/demoAssets";
@@ -90,6 +91,8 @@ import {
   type DashboardLeftTabId,
   type DashboardRightTabId,
 } from "./LeftRailTabs";
+
+const DEMO_LIDAR_SENSOR_IDS = new Set(DEMO_LIDAR_ASSETS.map((a) => a.id));
 
 interface DashboardProps {
   /**
@@ -114,14 +117,19 @@ function DashboardInner({ demoMode = false }: DashboardProps) {
   const t = useStrings();
   const viewedAt = useViewedAt();
 
-  const tabs = getDashboardLeftTabs({
-    targets: t.gridblock.targets,
-    devices: t.gridblock.devices,
-    history: t.gridblock.history,
-  });
-  const rightTabs = getDashboardRightTabs({
-    cameras: t.gridblock.cameras,
-  });
+  const tabs = useMemo(
+    () =>
+      getDashboardLeftTabs({
+        targets: t.gridblock.targets,
+        devices: t.gridblock.devices,
+        history: t.gridblock.history,
+      }),
+    [t.gridblock.targets, t.gridblock.devices, t.gridblock.history],
+  );
+  const rightTabs = useMemo(
+    () => getDashboardRightTabs({ cameras: t.gridblock.cameras }),
+    [t.gridblock.cameras],
+  );
 
   const [leftTab, setLeftTab] = useState<DashboardLeftTabId | null>(null);
   const [rightTab, setRightTab] = useState<DashboardRightTabId | null>(null);
@@ -140,6 +148,7 @@ function DashboardInner({ demoMode = false }: DashboardProps) {
   const [hoveredVideoTileId, setHoveredVideoTileId] = useState<string | null>(
     null,
   );
+  const [lidarWindowOpen, setLidarWindowOpen] = useState(false);
   const [mapViewMode, setMapViewModeState] = useState<MapViewMode>(
     () => readPersistedMapViewMode() ?? (demoMode ? "monochromeTerrain" : "current"),
   );
@@ -169,7 +178,7 @@ function DashboardInner({ demoMode = false }: DashboardProps) {
         ? {
             cameraAssets: DEMO_CAMERA_ASSETS,
             radarAssets: DEMO_RADAR_ASSETS,
-            lidarAssets: [],
+            lidarAssets: DEMO_LIDAR_ASSETS,
             hiveAssets: DEMO_DRONE_HIVE_ASSETS,
             weaponAssets: [],
             launcherAssets: [],
@@ -374,6 +383,11 @@ function DashboardInner({ demoMode = false }: DashboardProps) {
     ],
   );
 
+  const handleSensorFocus = useCallback((sensorId: string) => {
+    if (DEMO_LIDAR_SENSOR_IDS.has(sensorId)) setLidarWindowOpen(true);
+  }, []);
+  const closeLidarWindow = useCallback(() => setLidarWindowOpen(false), []);
+
   const handleDevicePanelHover = useCallback((id: string | null) => {
     setHoveredDevicePanelId(id);
   }, []);
@@ -403,6 +417,38 @@ function DashboardInner({ demoMode = false }: DashboardProps) {
 
   const closeStartPanel = () => setLeftTab(null);
   const closeEndPanel = () => setRightTab(null);
+
+  const handleRunSingle = useCallback(() => {
+    const id = tactical.runSingleScenario();
+    setLeftTab("targets");
+    setActiveTargetId(id);
+  }, [tactical.runSingleScenario]);
+  const handleRunFull = useCallback(() => {
+    const id = tactical.runFullScenario();
+    setLeftTab("targets");
+    if (id) setActiveTargetId(id);
+  }, [tactical.runFullScenario]);
+  const handleRunSwarm = useCallback(() => {
+    tactical.runSwarmScenario();
+    setLeftTab("targets");
+  }, [tactical.runSwarmScenario]);
+
+  // Memoized so the (memoized) left rail bails out of the sim-tick
+  // re-render instead of reconciling a fresh bottomSlot every commit.
+  // The demo director object is intentionally not stabilized (it
+  // depends on the whole tactical API and is a marketing-only surface),
+  // so that branch stays inline.
+  const headerActionsSlot = useMemo(
+    () => (
+      <HeaderActions
+        labels={t.gridblock}
+        onSingle={handleRunSingle}
+        onFull={handleRunFull}
+        onSwarm={handleRunSwarm}
+      />
+    ),
+    [t.gridblock, handleRunSingle, handleRunFull, handleRunSwarm],
+  );
 
   const handleSelectHistoricalTrack = (id: string | null) => {
     setSelectedHistoricalTrackId(id);
@@ -482,23 +528,7 @@ function DashboardInner({ demoMode = false }: DashboardProps) {
             demoMode ? (
               <DemoLaunchPanel labels={t.gridblock.demo} director={demoDirector} />
             ) : (
-              <HeaderActions
-                labels={t.gridblock}
-                onSingle={() => {
-                  const id = tactical.runSingleScenario();
-                  setLeftTab("targets");
-                  setActiveTargetId(id);
-                }}
-                onFull={() => {
-                  const id = tactical.runFullScenario();
-                  setLeftTab("targets");
-                  if (id) setActiveTargetId(id);
-                }}
-                onSwarm={() => {
-                  tactical.runSwarmScenario();
-                  setLeftTab("targets");
-                }}
-              />
+              headerActionsSlot
             )
           }
         />
@@ -536,6 +566,7 @@ function DashboardInner({ demoMode = false }: DashboardProps) {
               onThrowNet: demoMode
                 ? demoDirector.throwNet
                 : effectors.handleThrowNet,
+              onSensorFocus: demoMode ? handleSensorFocus : undefined,
             })
           : null
       }
@@ -573,6 +604,9 @@ function DashboardInner({ demoMode = false }: DashboardProps) {
           onAssetClick={handleAssetClick}
           onContextMenuAction={handleContextMenuAction}
           historicalTrackOverlay={historicalTrackOverlay}
+          lidarWindowOpen={lidarWindowOpen}
+          onCloseLidarWindow={closeLidarWindow}
+          lidarWindowCloseLabel={t.gridblock.closePanel}
           bottomSlot={
             isHistoryActive ? (
               <GridblockFooter
@@ -615,6 +649,8 @@ interface LeftPanelDeps {
   onMitigate: (targetId: string, effectorId: string) => void;
   /** Demo-only Gotcha net throw (video + capture); plain effector handler otherwise. */
   onThrowNet: (targetId: string, gotchaId: string) => void;
+  /** Demo-only: clicking the LiDAR sensor row opens the point-cloud window. */
+  onSensorFocus?: (sensorId: string) => void;
 }
 
 const noopStr = (_a: string) => {};
@@ -677,6 +713,7 @@ function renderLeftPanel(tab: DashboardLeftTabId, deps: LeftPanelDeps) {
               isLive ? deps.effectors.handleLauncherSelect : noopStrStr
             }
             onThrowNet={isLive ? deps.onThrowNet : noopStrStr}
+            onSensorFocus={deps.onSensorFocus}
             activeTargetId={deps.activeTargetId}
             onActiveTargetChange={deps.setActiveTargetId}
           />

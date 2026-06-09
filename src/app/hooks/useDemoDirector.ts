@@ -75,21 +75,26 @@ const APPROACH_STARTS: LatLon[] = [
   { lat: 32.4856, lon: 35.0403 },
 ];
 
-// Gotcha capture geometry. The scripted hostile is detected ~550 m out
-// NE of GOTCHA-CENTER and glides straight in at a constant ~30 m/s
-// (3 m/tick, matching the loiter) so the ingress reads as a steady,
-// natural approach that settles ~95 m beside the installation. Linear
-// speed + matched loiter keep it from looking like a fast dart that
-// brakes on arrival.
+// gotcha-net.mp4 shows the net leave the launcher ~6.1s in. The card
+// plays the clip from the moment the jam fails (Gotcha recommended), so
+// the gotcha timings below are anchored to that launch frame.
+const NET_VIDEO_LAUNCH_MS = 6_100;
+
+// Gotcha capture geometry. The scripted hostile glides straight in at a
+// constant ~30 m/s (3 m/tick, matching the loiter) from ~310 m out NE and
+// settles ~95 m beside the installation exactly as the net fires in the
+// video. Linear speed + matched loiter keep it from looking like a fast
+// dart that brakes on arrival.
 const GOTCHA_CAPTURE_SITE: LatLon = { lat: 32.4712, lon: 35.008 };
-const GOTCHA_APPROACH_START: LatLon = { lat: 32.4741, lon: 35.0114 };
-const GOTCHA_APPROACH_MS = 15_000;
+const GOTCHA_APPROACH_START: LatLon = { lat: 32.4732, lon: 35.0103 };
+const GOTCHA_APPROACH_MS = AUTO_PHASE_MS + NET_VIDEO_LAUNCH_MS;
 const GOTCHA_ROAM = { radiusM: 180, speedMPerTick: 3 };
 
-// Auto flow: hold the recommended-Gotcha beat (video playing, hostile
-// still inbound) until the drone reaches the capture site, then throw the
-// net so it lands at close range. Measured from the jam-fail call.
-const GOTCHA_AUTO_THROW_DELAY_MS = GOTCHA_APPROACH_MS - AUTO_PHASE_MS + 500;
+// Auto flow: throw the net the instant the video shows it leave the
+// launcher — the drone has just reached the capture site, so the launcher
+// plume, the on-map capture, and the card clip land together. Measured
+// from the jam-fail call (when the clip starts).
+const GOTCHA_AUTO_THROW_DELAY_MS = NET_VIDEO_LAUNCH_MS;
 
 function pickNearestAvailableId(
   assets: FlowAsset[],
@@ -170,6 +175,7 @@ export function useDemoDirector({
         approachTotalMs: opts?.approachMs ?? DEMO_APPROACH_MS,
         endJitterM: opts?.endJitterM,
         roam: opts?.roam,
+        includeLidar: true,
       });
     },
     [tactical],

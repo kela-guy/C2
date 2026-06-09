@@ -357,8 +357,33 @@ const HEADING_MIN_REGRESSION_PAIRS = 2;
  *      curve at the head while damping per-pair noise via the fit.
  *
  * Returns `null` when the trail is missing or too short.
+ *
+ * Memoized per target id: the regression is O(window) and ran on every
+ * `targetMarkers` memo pass and every movement-sample rebuild, even on
+ * sim ticks where a target's trail was unchanged. The trail is
+ * append-only, so a new point always changes the tail; a fingerprint of
+ * the trail length plus its tail point is enough to reuse the cached
+ * result until the trail actually grows.
  */
+const headingCache = new Map<string, { fingerprint: string; heading: number | null }>();
+
+function trailFingerprint(t: Detection): string {
+  const trail = t.trail;
+  if (!trail || trail.length === 0) return '0';
+  const tail = trail[trail.length - 1];
+  return `${trail.length}|${tail.lat}|${tail.lon}|${tail.timestamp}`;
+}
+
 function targetHeadingFromTrail(t: Detection): number | null {
+  const fingerprint = trailFingerprint(t);
+  const cached = headingCache.get(t.id);
+  if (cached && cached.fingerprint === fingerprint) return cached.heading;
+  const heading = computeTargetHeadingFromTrail(t);
+  headingCache.set(t.id, { fingerprint, heading });
+  return heading;
+}
+
+function computeTargetHeadingFromTrail(t: Detection): number | null {
   if (!t.trail || t.trail.length < 2) return null;
 
   // Pick the window: prefer the last 5 s, fall back to the last 6 trail

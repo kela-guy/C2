@@ -32,6 +32,10 @@ export const DEMO_DRONE_HIVE_ASSETS: MapAsset[] = [
   { id: 'HIVE-NVT-MAIN', latitude: 32.4666, longitude: 35.0013, typeLabel: 'Drone Hive', fovDeg: 0, bearingDeg: 0 },
 ];
 
+export const DEMO_LIDAR_ASSETS: MapAsset[] = [
+  { id: 'LIDAR-NVT-01', latitude: 32.4696, longitude: 35.0083, typeLabel: 'LiDAR', fovDeg: 360, bearingDeg: 0 },
+];
+
 /**
  * Four jammers along the perimeter. `REG-NVT-SOUTH` is the one the
  * scripted jam-fails beat targets, so the operator falls back to a

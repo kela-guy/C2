@@ -27,11 +27,16 @@ import type { CesiumTacticalMapProps } from "@/app/components/CesiumTacticalMap"
 import { useViewedAt } from "@/app/state/ViewedAtContext";
 import { useStrings } from "@/lib/intl";
 import { MapToolbar } from "./MapToolbar";
+import { LidarWindow } from "./LidarWindow";
 import type { MapViewMode } from "./mapViewMode";
 
 interface MapHostProps extends CesiumTacticalMapProps {
   mapViewMode: MapViewMode;
   onMapViewModeChange: (mode: MapViewMode) => void;
+  /** Demo LiDAR point-cloud window, anchored bottom-right over the map. */
+  lidarWindowOpen?: boolean;
+  onCloseLidarWindow?: () => void;
+  lidarWindowCloseLabel?: string;
   /**
    * Optional footer slot mounted below the map and above any other
    * sibling chrome inside the map's `.gridblock-block`. Used by the
@@ -48,6 +53,9 @@ function MapHostImpl({
   bottomSlot,
   mapViewMode,
   onMapViewModeChange,
+  lidarWindowOpen,
+  onCloseLidarWindow,
+  lidarWindowCloseLabel = "Close",
   ...mapProps
 }: MapHostProps) {
   // `--map-overflow-bottom` drives the `.gridblock-canvas-overflow`
@@ -71,6 +79,12 @@ function MapHostImpl({
       >
         <CesiumTacticalMap {...mapProps} mapViewMode={mapViewMode} />
         <HistoryModeOverlay />
+        {lidarWindowOpen && onCloseLidarWindow ? (
+          <LidarWindow
+            onClose={onCloseLidarWindow}
+            closeAriaLabel={lidarWindowCloseLabel}
+          />
+        ) : null}
       </div>
       {bottomSlot ? (
         <div className="relative shrink-0 overflow-hidden">

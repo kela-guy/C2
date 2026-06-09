@@ -1,4 +1,5 @@
 import React from 'react';
+import { Video } from '@/lib/icons/central';
 import { CARD_TOKENS } from './tokens';
 
 export interface CardSensor {
@@ -37,6 +38,7 @@ export function CardSensors({
     <div className={`flex flex-col gap-2 w-full ${className}`} style={{ boxShadow: `inset 0 1px 0 0 ${CARD_TOKENS.surface.level2}` }}>
       {sensors.map((sensor) => {
         const SensorIcon = sensor.icon;
+        const hasFeed = /lidar/i.test(sensor.typeLabel);
         const aria = `${sensor.typeLabel} — ${sensor.id}`;
         const hoverEnter = () => onSensorHover?.(sensor.id);
         const hoverLeave = () => onSensorHover?.(null);
@@ -49,6 +51,11 @@ export function CardSensors({
               </span>
             )}
             <span className="text-xs">{sensor.typeLabel}</span>
+            {hasFeed && (
+              <span className="shrink-0 opacity-60" aria-hidden="true">
+                <Video size={14} fill="currentColor" />
+              </span>
+            )}
             <span className="flex-1 min-w-0 block" aria-hidden="true" />
             {sensor.detectedAt && (
               <span className="text-[11px] text-slate-12 font-mono tabular-nums">

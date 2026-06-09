@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TargetCard } from '@/primitives/TargetCard';
 import { CardHeader } from '@/primitives/CardHeader';
 import { CardActions } from '@/primitives/CardActions';
@@ -271,21 +271,21 @@ function buildStatusChip(target: Detection, labels: Record<ActivityStatus, strin
 
 // ─── Unified Card ───────────────────────────────────────────────────────────
 
-function UnifiedCard({
+const UnifiedCard = React.memo(function UnifiedCard({
   target,
   isOpen,
   onToggle,
   callbacks,
   ctx,
-  onFocus,
+  onFocusTarget,
   thinMode,
 }: {
   target: Detection;
   isOpen: boolean;
-  onToggle: () => void;
+  onToggle: (target: Detection) => void;
   callbacks: CardCallbacks;
   ctx: CardContext;
-  onFocus?: () => void;
+  onFocusTarget?: (targetId: string) => void;
   thinMode?: boolean;
 }) {
   const slots = useCardSlots(target, callbacks, ctx);
@@ -302,8 +302,8 @@ function UnifiedCard({
       accent={slots.accent}
       completed={slots.completed}
       open={isOpen}
-      onToggle={onToggle}
-      onFocus={onFocus}
+      onToggle={() => onToggle(target)}
+      onFocus={onFocusTarget ? () => onFocusTarget(target.id) : undefined}
       header={
         <CardHeader
           {...slots.header}
@@ -374,6 +374,7 @@ function UnifiedCard({
               sensors={slots.sensors}
               label=""
               onSensorHover={callbacks.onSensorHover}
+              onSensorClick={callbacks.onSensorFocus}
             />
           </div>
         </AccordionSection>
@@ -396,7 +397,7 @@ function UnifiedCard({
       )}
     </TargetCard>
   );
-}
+});
 
 // ─── Legacy exports (backward-compatible wrappers) ──────────────────────────
 
@@ -704,65 +705,163 @@ export default function ListOfSystems({
   const activeCount = activeTargets.length;
   const completedCount = completedTargets.length;
 
-  const buildCallbacks = (target: Detection): CardCallbacks => ({
-    onVerify: (action) => onVerify?.(target.id, action),
-    onEngage: (type) => onEngage?.(target.id, type),
-    onDismiss: (reason) => onDismiss?.(target.id, reason),
-    onCancelMission: () => onCancelMission?.(target.id),
-    onCompleteMission: () => onCompleteMission?.(target.id),
-    onSendDroneVerification: () => onSendDroneVerification?.(target.id),
+  const handleTargetToggle = useCallback(
+    (target: Detection) => {
+      setNewArrivalIds((prev) => prev.filter((id) => id !== target.id));
+      onTargetClick?.(target);
+    },
+    [onTargetClick],
+  );
+
+  // Per-target cache of the card's `callbacks`/`ctx` objects so a
+  // memoized `UnifiedCard` can bail out of the sim-tick re-render.
+  // Without this, every row got fresh `callbacks`/`ctx` objects on
+  // each parent render and re-ran `useCardSlots` even when only one
+  // target moved. The cache is keyed by target id; entries reuse their
+  // object identity until a value fingerprint changes. The `useMemo`
+  // resets the cache whenever any upstream handler or shared list
+  // (effectors, flow assets, nearby sensors) changes identity.
+  const cardDataCacheRef = useRef(
+    new Map<string, { fingerprint: string; data: { callbacks: CardCallbacks; ctx: CardContext } }>(),
+  );
+  const getCardData = useMemo(() => {
+    cardDataCacheRef.current = new Map();
+    return (target: Detection): { callbacks: CardCallbacks; ctx: CardContext } => {
+      const selectedEffectorId =
+        selectedEffectorIds?.get(target.id) ?? flowSelectedIds?.['regulusEffectors']?.get(target.id);
+      const selectedLauncherId =
+        selectedLauncherIds?.get(target.id) ?? flowSelectedIds?.['launcherEffectors']?.get(target.id);
+      const isDroneVerifying = droneVerifyingTargetId === target.id;
+      const isCameraActive = cameraActiveTargetId === target.id;
+      const isCameraPointing = cameraPointingTargetId === target.id;
+      const allCamerasBusy = allCamerasBusyForTarget === target.id;
+      const controlCountdown = controlRequestTargetId === target.id ? controlRequestCountdown : null;
+      const fingerprint = [
+        target.flowType,
+        isDroneVerifying,
+        isCameraActive,
+        isCameraPointing,
+        allCamerasBusy,
+        controlCountdown,
+        selectedEffectorId ?? '',
+        selectedLauncherId ?? '',
+      ].join('|');
+
+      const cached = cardDataCacheRef.current.get(target.id);
+      if (cached && cached.fingerprint === fingerprint) return cached.data;
+
+      const callbacks: CardCallbacks = {
+        onVerify: (action) => onVerify?.(target.id, action),
+        onEngage: (type) => onEngage?.(target.id, type),
+        onDismiss: (reason) => onDismiss?.(target.id, reason),
+        onCancelMission: () => onCancelMission?.(target.id),
+        onCompleteMission: () => onCompleteMission?.(target.id),
+        onSendDroneVerification: () => onSendDroneVerification?.(target.id),
+        onSensorHover,
+        onCameraLookAt: (camId) => onCameraLookAt?.(target.id, camId),
+        onTakeControl: () => onTakeControl?.(target.id),
+        onReleaseControl: () => onReleaseControl?.(target.id),
+        onSensorModeChange: (mode) => onSensorModeChange?.(target.id, mode),
+        onPlaybookSelect: (pbId) => onPlaybookSelect?.(target.id, pbId),
+        onClosureOutcome: (outcome) => onClosureOutcome?.(target.id, outcome),
+        onAdvanceFlowPhase: () => onAdvanceFlowPhase?.(target.id),
+        onEscalateCreatePOI: () => onEscalateCreatePOI?.(target.id),
+        onEscalateSendDrone: () => onEscalateSendDrone?.(target.id),
+        onDroneSelect: (hiveId) => onDroneSelect?.(target.id, hiveId),
+        onDroneOverride: () => onDroneOverride?.(target.id),
+        onDroneResume: () => onDroneResume?.(target.id),
+        onDroneRTB: () => onDroneRTB?.(target.id),
+        onMissionActivate: () => onMissionActivate?.(target.id),
+        onMissionPause: () => onMissionPause?.(target.id),
+        onMissionResume: () => onMissionResume?.(target.id),
+        onMissionOverride: () => onMissionOverride?.(target.id),
+        onMissionCancel: () => onMissionCancel?.(target.id),
+        onMitigate: (effectorId) => onMitigate?.(target.id, effectorId),
+        onMitigateAll: () => onMitigateAll?.(target.id),
+        onEffectorSelect: (effectorId) => onEffectorSelect?.(target.id, effectorId),
+        onPointWeapon: (launcherId) => onPointWeapon?.(target.id, launcherId),
+        onLockWeapon: () => onLockWeapon?.(target.id),
+        onDismissLock: () => onDismissLock?.(target.id),
+        onLauncherSelect: (launcherId) => onLauncherSelect?.(target.id, launcherId),
+        onThrowNet: (gotchaId) => onThrowNet?.(target.id, gotchaId),
+        onBdaOutcome: (outcome) => onBdaOutcome?.(target.id, outcome),
+        onBdaCamera: () => onBdaCamera?.(target.id),
+        onRequestCameraControl: () => onRequestCameraControl?.(target.id),
+        onSensorFocus,
+      };
+
+      const ctx: CardContext = {
+        isDroneVerifying,
+        isCameraActive,
+        isCameraPointing,
+        allCamerasBusy,
+        controlRequestCountdown: controlCountdown,
+        regulusEffectors: regulusEffectors ?? (flowAssets?.['regulusEffectors'] as RegulusEffector[] | undefined),
+        selectedEffectorId,
+        launcherEffectors: launcherEffectors ?? (flowAssets?.['launcherEffectors'] as LauncherEffector[] | undefined),
+        selectedLauncherId,
+        gotchaEffectors: flowAssets?.['gotchaEffectors'] as GotchaEffector[] | undefined,
+        nearbyCameras: target.flowType === 1 || target.flowType === 2 ? nearbyCameras : undefined,
+        nearbyHives: target.flowType === 3 ? nearbyHives : undefined,
+      };
+
+      const data = { callbacks, ctx };
+      cardDataCacheRef.current.set(target.id, { fingerprint, data });
+      return data;
+    };
+  }, [
+    onVerify,
+    onEngage,
+    onDismiss,
+    onCancelMission,
+    onCompleteMission,
+    onSendDroneVerification,
     onSensorHover,
-    onCameraLookAt: (camId) => onCameraLookAt?.(target.id, camId),
-    onTakeControl: () => onTakeControl?.(target.id),
-    onReleaseControl: () => onReleaseControl?.(target.id),
-    onSensorModeChange: (mode) => onSensorModeChange?.(target.id, mode),
-    onPlaybookSelect: (pbId) => onPlaybookSelect?.(target.id, pbId),
-    onClosureOutcome: (outcome) => onClosureOutcome?.(target.id, outcome),
-    onAdvanceFlowPhase: () => onAdvanceFlowPhase?.(target.id),
-    onEscalateCreatePOI: () => onEscalateCreatePOI?.(target.id),
-    onEscalateSendDrone: () => onEscalateSendDrone?.(target.id),
-    onDroneSelect: (hiveId) => onDroneSelect?.(target.id, hiveId),
-    onDroneOverride: () => onDroneOverride?.(target.id),
-    onDroneResume: () => onDroneResume?.(target.id),
-    onDroneRTB: () => onDroneRTB?.(target.id),
-    onMissionActivate: () => onMissionActivate?.(target.id),
-    onMissionPause: () => onMissionPause?.(target.id),
-    onMissionResume: () => onMissionResume?.(target.id),
-    onMissionOverride: () => onMissionOverride?.(target.id),
-    onMissionCancel: () => onMissionCancel?.(target.id),
-    onMitigate: (effectorId) => onMitigate?.(target.id, effectorId),
-    onMitigateAll: () => onMitigateAll?.(target.id),
-    onEffectorSelect: (effectorId) => onEffectorSelect?.(target.id, effectorId),
-    onPointWeapon: (launcherId) => onPointWeapon?.(target.id, launcherId),
-    onLockWeapon: () => onLockWeapon?.(target.id),
-    onDismissLock: () => onDismissLock?.(target.id),
-    onLauncherSelect: (launcherId) => onLauncherSelect?.(target.id, launcherId),
-    onThrowNet: (gotchaId) => onThrowNet?.(target.id, gotchaId),
-    onBdaOutcome: (outcome) => onBdaOutcome?.(target.id, outcome),
-    onBdaCamera: () => onBdaCamera?.(target.id),
-    onRequestCameraControl: () => onRequestCameraControl?.(target.id),
+    onCameraLookAt,
+    onTakeControl,
+    onReleaseControl,
+    onSensorModeChange,
+    onPlaybookSelect,
+    onClosureOutcome,
+    onAdvanceFlowPhase,
+    onEscalateCreatePOI,
+    onEscalateSendDrone,
+    onDroneSelect,
+    onDroneOverride,
+    onDroneResume,
+    onDroneRTB,
+    onMissionActivate,
+    onMissionPause,
+    onMissionResume,
+    onMissionOverride,
+    onMissionCancel,
+    onMitigate,
+    onMitigateAll,
+    onEffectorSelect,
+    onPointWeapon,
+    onLockWeapon,
+    onDismissLock,
+    onLauncherSelect,
+    onThrowNet,
+    onBdaOutcome,
+    onBdaCamera,
+    onRequestCameraControl,
     onSensorFocus,
-  });
-
-  const buildCtx = (target: Detection): CardContext => ({
-    isDroneVerifying: droneVerifyingTargetId === target.id,
-    isCameraActive: cameraActiveTargetId === target.id,
-    isCameraPointing: cameraPointingTargetId === target.id,
-    allCamerasBusy: allCamerasBusyForTarget === target.id,
-    controlRequestCountdown: controlRequestTargetId === target.id ? controlRequestCountdown : null,
-    regulusEffectors: regulusEffectors ?? flowAssets?.['regulusEffectors'] as RegulusEffector[] | undefined,
-    selectedEffectorId: selectedEffectorIds?.get(target.id) ?? flowSelectedIds?.['regulusEffectors']?.get(target.id),
-    launcherEffectors: launcherEffectors ?? flowAssets?.['launcherEffectors'] as LauncherEffector[] | undefined,
-    selectedLauncherId: selectedLauncherIds?.get(target.id) ?? flowSelectedIds?.['launcherEffectors']?.get(target.id),
-    gotchaEffectors: flowAssets?.['gotchaEffectors'] as GotchaEffector[] | undefined,
-    nearbyCameras: (target.flowType === 1 || target.flowType === 2) ? nearbyCameras : undefined,
-    nearbyHives: target.flowType === 3 ? nearbyHives : undefined,
-  });
-
-  const handleTargetToggle = (target: Detection) => {
-    setNewArrivalIds((prev) => prev.filter((id) => id !== target.id));
-    onTargetClick?.(target);
-  };
+    droneVerifyingTargetId,
+    cameraActiveTargetId,
+    cameraPointingTargetId,
+    allCamerasBusyForTarget,
+    controlRequestTargetId,
+    controlRequestCountdown,
+    regulusEffectors,
+    launcherEffectors,
+    selectedEffectorIds,
+    selectedLauncherIds,
+    flowAssets,
+    flowSelectedIds,
+    nearbyCameras,
+    nearbyHives,
+  ]);
 
   const handleListScroll = () => {
     const top = listScrollRef.current?.scrollTop ?? 0;
@@ -784,6 +883,7 @@ export default function ListOfSystems({
       <>
         {list.map((target, idx) => {
           const isActive = target.id === activeTargetId;
+          const { callbacks, ctx } = getCardData(target);
           return (
             <div
               key={target.id}
@@ -796,10 +896,10 @@ export default function ListOfSystems({
               <UnifiedCard
                 target={target}
                 isOpen={isActive}
-                onToggle={() => handleTargetToggle(target)}
-                callbacks={buildCallbacks(target)}
-                ctx={buildCtx(target)}
-                onFocus={onTargetFocus ? () => onTargetFocus(target.id) : undefined}
+                onToggle={handleTargetToggle}
+                callbacks={callbacks}
+                ctx={ctx}
+                onFocusTarget={onTargetFocus}
                 thinMode={thinMode}
               />
             </div>

@@ -25,6 +25,8 @@ interface TargetsPanelProps {
   onCompleteMission: (targetId: string) => void;
   onLauncherSelect: (targetId: string, launcherId: string) => void;
   onThrowNet?: (targetId: string, gotchaId: string) => void;
+  /** Clicking a sensor row in a target card. Demo wires this to the LiDAR window. */
+  onSensorFocus?: (sensorId: string) => void;
 
   activeTargetId: string | null;
   onActiveTargetChange: (id: string | null) => void;
@@ -50,6 +52,7 @@ function TargetsPanelImpl({
   onCompleteMission,
   onLauncherSelect,
   onThrowNet,
+  onSensorFocus,
   activeTargetId,
   onActiveTargetChange,
 }: TargetsPanelProps) {
@@ -146,7 +149,7 @@ function TargetsPanelImpl({
           controlRequestCountdown={null}
           controlRequestTargetId={null}
           onRequestCameraControl={noopStr}
-          onSensorFocus={noopStr}
+          onSensorFocus={onSensorFocus}
           onTargetFocus={noopStr}
           onTargetHover={setHoveredTargetId}
           thinMode
