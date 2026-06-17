@@ -70,9 +70,10 @@
    * Motion tokens — the CSS mirror of `src/lib/springs.ts` (`springMs`).
    * Three speeds, with one-tier-faster exits. The CSS/Radix-overlay layer
    * (tw-animate-css enter/exit) animates on these so it matches the
-   * framer-motion springs used elsewhere. `--ease-bounce` approximates the
-   * spring overshoot for entrances; `--ease-exit` is a quick accelerating
-   * curve for exits (no overshoot, so closes never drag).
+   * framer-motion springs used elsewhere. `--ease-bounce` is a fast-in /
+   * smooth-settle decelerate for entrances (no overshoot/bounce);
+   * `--ease-exit` is a quick accelerating curve for exits (so closes never
+   * drag).
    */
   --motion-fast: 80ms;
   --motion-moderate: 160ms;
@@ -80,7 +81,7 @@
   --motion-fast-exit: 60ms;
   --motion-moderate-exit: 120ms;
   --motion-slow-exit: 160ms;
-  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-bounce: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
 }
 

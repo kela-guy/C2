@@ -16,7 +16,7 @@
 import { memo, useEffect, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { spring } from '@/lib/springs';
-import { List } from '@/lib/icons/central';
+import { List, WarningTriangleSquare } from '@/lib/icons/central';
 import { DotmSquare18 } from '@/app/components/ui/dotm-square-18';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import type { ConnectionState, Device } from './types';
@@ -151,7 +151,7 @@ export const DeviceRowHeader = memo(function DeviceRowHeader({ device, cfg, ctx,
           aria-label={`${unhealthyChildren} ${healthLabel}`}
           title={`${unhealthyChildren} ${healthLabel}`}
         >
-          <span className={`size-1.5 rounded-full ${tone.dot}`} aria-hidden="true" />
+          <WarningTriangleSquare size={11} aria-hidden="true" />
           {unhealthyChildren}
         </span>
       )}

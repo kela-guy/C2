@@ -141,6 +141,7 @@ import IconShipRaw from '@central-icons-react/round-filled-radius-0-stroke-2/Ico
 import IconRulerRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconRuler';
 import IconWarningSignRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconWarningSign';
 import IconExclamationTriangleRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconExclamationTriangle';
+import IconExclamationTriangleSquareRaw from '@central-icons-react/square-filled-radius-0-stroke-2/IconExclamationTriangle';
 import IconShieldRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconShield';
 import IconInfoSimpleRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconInfoSimple';
 import IconLightningBoltRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconLightningBolt';
@@ -322,6 +323,9 @@ export const AlertTriangle = asIcon(IconWarningSignRaw);
 // The canonical exclamation-in-a-triangle warning glyph (⚠). Distinct from
 // `AlertTriangle`, which maps to Central's striped `WarningSign`.
 export const WarningTriangle = asIcon(IconExclamationTriangleRaw);
+// Bold, square-cut twin of `WarningTriangle` for dense status badges where the
+// rounded glyph reads as a dot at small sizes (square-filled-radius-0-stroke-2).
+export const WarningTriangleSquare = asIcon(IconExclamationTriangleSquareRaw);
 export const Shield = asIcon(IconShieldRaw);
 // ShieldAlert in lucide is a shield with a "!" inside. Central has no
 // matching combo glyph; the plain shield is the closest visual.

@@ -101,9 +101,8 @@ export const DeviceChildGroup = memo(function DeviceChildGroup({
                 {summaryChips.map(({ health, count }) => (
                   <span
                     key={health}
-                    className={`inline-flex h-4 items-center gap-1 rounded-[2px] px-1.5 text-[10px] font-medium leading-4 tabular-nums ${HEALTH_TONE[health].badge}`}
+                    className={`inline-flex h-4 items-center rounded-[2px] px-1.5 text-[10px] font-medium leading-4 tabular-nums ${HEALTH_TONE[health].badge}`}
                   >
-                    <span className={`size-1.5 rounded-full ${HEALTH_TONE[health].dot}`} aria-hidden="true" />
                     {count} {healthLabel(health, strings)}
                   </span>
                 ))}
