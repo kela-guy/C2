@@ -1,7 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { ChevronDown, Search, X } from '@/lib/icons/central';
 import { Checkbox } from '@/shared/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover';
+import { useScrollEdges } from '@/lib/scroll/useScrollEdges';
+import { ScrollEdgeCue } from '@/lib/scroll/ScrollEdgeCue';
 
 export interface FilterOption {
   /** Unique identifier within the parent filter. */
@@ -207,6 +209,8 @@ function FilterPopoverButton({
   active: boolean;
   children: React.ReactNode;
 }) {
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const edges = useScrollEdges({ ref: bodyRef, enabled: open });
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
@@ -245,7 +249,11 @@ function FilterPopoverButton({
         sideOffset={4}
         className="w-64 overflow-hidden rounded-lg p-0.5 shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_4px_12px_rgba(0,0,0,0.25),0_16px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl [transform-origin:var(--radix-popover-content-transform-origin)] data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-1 data-[side=top]:slide-in-from-bottom-1 data-[state=open]:duration-150 data-[state=closed]:duration-100"
       >
-        <div className="overflow-y-auto p-0.5">{children}</div>
+        <div className="relative">
+          <div ref={bodyRef} className="max-h-[min(60vh,20rem)] overflow-y-auto p-0.5">{children}</div>
+          <ScrollEdgeCue edge="top" visible={edges.top} surfaceLevel="level2" size="tight" />
+          <ScrollEdgeCue edge="bottom" visible={edges.bottom} surfaceLevel="level2" size="tight" />
+        </div>
       </PopoverContent>
     </Popover>
   );

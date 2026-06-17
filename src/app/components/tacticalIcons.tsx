@@ -225,7 +225,10 @@ export const SpeakerIcon = ({
   outlined?: boolean;
 }) => {
   const stroke = outlined ? 'black' : 'none';
-  const strokeWidth = outlined ? 1.5 : 0;
+  // Lighter than the other tactical glyphs (1.5): the speaker is drawn from
+  // several small adjacent paths, so the stroke doubles up where they meet and
+  // reads too heavy at the 32px map-marker size.
+  const strokeWidth = outlined ? 1 : 0;
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M12.5 17.6768V22H7.5V16.5H10.1455L12.5 17.6768Z" fill={fill} stroke={stroke} strokeWidth={strokeWidth} strokeLinejoin="round" />

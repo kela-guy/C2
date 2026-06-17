@@ -66,7 +66,7 @@ export const DeviceChildGroup = memo(function DeviceChildGroup({
   onFlyTo,
 }: DeviceChildGroupProps) {
   const children = device.children ?? [];
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   const summaryChips = useMemo(() => {
     const counts = children.reduce<Partial<Record<DeviceHealth, number>>>((acc, c) => {

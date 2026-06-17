@@ -14,6 +14,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso';
 import { X } from '@/lib/icons/central';
 import { LAYOUT_TOKENS, SURFACE } from '@/primitives/tokens';
+import { useScrollEdges } from '@/lib/scroll/useScrollEdges';
+import { ScrollEdgeCue } from '@/lib/scroll/ScrollEdgeCue';
 import { FilterBar, type FilterDef } from '@/primitives';
 import {
   DEFAULT_CONNECTION_STATE_LABELS,
@@ -135,6 +137,10 @@ export function DevicesPanel({
   // the existing panel chrome (header + filter bar) and height chain are
   // untouched.
   const [scrollParent, setScrollParent] = useState<HTMLDivElement | null>(null);
+  const scrollParentRef = useRef<HTMLDivElement>(null);
+  // Virtuoso owns scrolling via customScrollParent, so observe that element
+  // directly and overlay the overflow cues in the relative wrapper.
+  const devicesEdges = useScrollEdges({ ref: scrollParentRef, enabled: !!scrollParent });
   const virtuosoRef = useRef<VirtuosoHandle>(null);
 
   // Focused device may be off-screen (unmounted) under virtualization, so the
@@ -233,9 +239,13 @@ export function DevicesPanel({
         />
       </div>
 
+      <div className="relative flex-1 min-h-0">
       <div
-        ref={(el) => setScrollParent(el)}
-        className="flex-1 overflow-y-auto"
+        ref={(el) => {
+          scrollParentRef.current = el;
+          setScrollParent(el);
+        }}
+        className="h-full overflow-y-auto"
       >
         {rows.length === 0 ? (
           <div className="px-3 py-8 text-center text-xs text-zinc-600">{strings.noMatches}</div>
@@ -284,6 +294,9 @@ export function DevicesPanel({
             }
           />
         )}
+      </div>
+        <ScrollEdgeCue edge="top" visible={devicesEdges.top} />
+        <ScrollEdgeCue edge="bottom" visible={devicesEdges.bottom} />
       </div>
     </aside>
   );

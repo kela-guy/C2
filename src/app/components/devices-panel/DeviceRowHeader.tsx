@@ -15,6 +15,7 @@
 
 import { memo, useEffect, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { spring } from '@/lib/springs';
 import { List } from '@/lib/icons/central';
 import { DotmSquare18 } from '@/app/components/ui/dotm-square-18';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
@@ -277,7 +278,7 @@ function SpeakerNowPlaying({ ctx }: { ctx: DeviceActionContext }) {
               initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9, x: 6, filter: 'blur(4px)' }}
               animate={reduceMotion ? { opacity: 1 } : { opacity: 1, scale: 1, x: 0, filter: 'blur(0px)' }}
               exit={{ opacity: 0, transition: { duration: reduceMotion ? 0 : 0.1, ease: 'easeOut' } }}
-              transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 500, damping: 32, mass: 0.7 }}
+              transition={reduceMotion ? { duration: 0 } : spring.moderate}
               className="me-1 rtl:me-1 rtl:ms-1 inline-flex origin-right items-center gap-1.5 whitespace-nowrap text-xs font-medium text-white"
             >
               <DotmSquare18

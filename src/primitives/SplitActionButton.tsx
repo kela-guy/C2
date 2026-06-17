@@ -1,6 +1,7 @@
 import React from 'react';
 import { ChevronDown } from '@/lib/icons/central';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { spring, springExit } from '@/lib/springs';
 import { useIsRtl } from '@/lib/direction';
 import { cn } from '@/shared/components/ui/utils';
 import { AppLoader } from '@/shared/components/ui/app-loader';
@@ -105,7 +106,7 @@ export function SplitActionButton({
   const segmentBase = cn(
     !hasSubtitle && sz.height, sz.text, sz.font, c.text,
     c.base, c.hover, c.active,
-    'transition-[background-color,transform] duration-150 ease-out',
+    'transition-[background-color,transform] duration-[var(--motion-fast)] ease-out',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/30',
   );
 
@@ -177,10 +178,10 @@ export function SplitActionButton({
               <motion.span
                 key={label}
                 className={cn('flex items-center gap-2', hasSubtitle && 'py-1')}
-                transition={prefersReducedMotion ? { duration: 0 } : { type: 'spring', duration: 0.3, bounce: 0 }}
+                transition={prefersReducedMotion ? { duration: 0 } : spring.moderate}
                 initial={prefersReducedMotion ? false : { opacity: 0, y: -25 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={prefersReducedMotion ? undefined : { opacity: 0, y: 25 }}
+                exit={prefersReducedMotion ? undefined : { opacity: 0, y: 25, transition: springExit.moderate }}
               >
                 {loading ? (
                   <AppLoader size={sz.icon} label={label} className="shrink-0 opacity-90" />

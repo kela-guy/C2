@@ -243,8 +243,8 @@ const SENSOR_SURFACE = 36;
 const SENSOR_RING = 28;
 const TARGET_SURFACE = 32;
 const TARGET_RING = 26;
-/** Default LauncherIcon glyph size on Mapbox (`LauncherIcon` defaults to 24). */
-const LAUNCHER_GLYPH = 24;
+/** Launcher marker glyph — bumped past the icon's 24 default to match the 32px floodlight/speaker glyphs. */
+const LAUNCHER_GLYPH = 32;
 /** Floodlight beam: a short, always-on amber wedge showing aim direction. */
 const FLOODLIGHT_BEAM_M = 550;
 const FLOODLIGHT_BEAM_COLOR = '#f59e0b';
@@ -999,7 +999,7 @@ function CesiumTacticalMapImpl({
           a.id,
           a.latitude,
           a.longitude,
-          <FloodlightIcon size={20} outlined />,
+          <FloodlightIcon size={32} outlined />,
           a.typeLabel,
           SENSOR_SURFACE,
           { rangeM: FLOODLIGHT_BEAM_M, bearingDeg: a.bearingDeg, widthDeg: a.fovDeg },
@@ -1018,7 +1018,7 @@ function CesiumTacticalMapImpl({
           a.id,
           a.latitude,
           a.longitude,
-          <SpeakerIcon size={20} outlined />,
+          <SpeakerIcon size={32} outlined />,
           a.typeLabel,
           SENSOR_SURFACE,
           undefined,
@@ -1624,6 +1624,43 @@ function CesiumTacticalMapImpl({
   }, [jammingTargetId, jammingJammerAssetId, targets, regulusEffectors, engagementPair]);
 
   /**
+   * Slice — camera tracking lines. Every hostile drone gets an animated
+   * dashed line to its nearest camera, mirroring the effector→drone
+   * engagement line (same width/dash/particles) so the "camera is watching
+   * this track" relationship reads at a glance alongside the engagement line.
+   */
+  const cameraTrackingPolylines = useMemo<CesiumPolyline[]>(() => {
+    if (!targets || CAMERA_ASSETS.length === 0) return [];
+    const out: CesiumPolyline[] = [];
+    for (const t of targets) {
+      if (t.affiliation !== 'hostile') continue;
+      const [tLat, tLon] = (t.coordinates ?? '').split(',').map((s) => parseFloat(s.trim()));
+      if (!Number.isFinite(tLat) || !Number.isFinite(tLon)) continue;
+      let cam = CAMERA_ASSETS[0];
+      let best = Infinity;
+      for (const c of CAMERA_ASSETS) {
+        const d = haversineDistanceM(tLat, tLon, c.latitude, c.longitude);
+        if (d < best) {
+          best = d;
+          cam = c;
+        }
+      }
+      out.push({
+        id: `camera-track-${t.id}`,
+        points: [
+          { lat: cam.latitude, lon: cam.longitude },
+          { lat: tLat, lon: tLon },
+        ],
+        color: '#ffffff',
+        width: 2,
+        dashed: true,
+        particles: { count: 3, color: '#ffffff', speed: 0.25 },
+      });
+    }
+    return out;
+  }, [targets]);
+
+  /**
    * Slice — sensor-to-target detection geometry. Thin cyan lines
    * from each sensor's static map position to the corresponding
    * target. Reads "this sensor sees this track" without competing
@@ -1730,9 +1767,10 @@ function CesiumTacticalMapImpl({
       ...sensorDetectionPolylines,
       ...previewPolylines,
       ...engagementPolylines,
+      ...cameraTrackingPolylines,
       ...planningScanPolylines,
     ],
-    [trailPolylines, sensorDetectionPolylines, previewPolylines, engagementPolylines, planningScanPolylines],
+    [trailPolylines, sensorDetectionPolylines, previewPolylines, engagementPolylines, cameraTrackingPolylines, planningScanPolylines],
   );
 
   /**

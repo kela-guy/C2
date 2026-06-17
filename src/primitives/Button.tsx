@@ -1,6 +1,7 @@
 import React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { spring, springExit } from "@/lib/springs";
 import { cn } from "@/shared/components/ui/utils";
 import { AppLoader } from "@/shared/components/ui/app-loader";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/shared/components/ui/tooltip";
@@ -93,7 +94,7 @@ export function Button({
         'inline-flex items-center justify-center gap-2 px-3 rounded overflow-hidden',
         sz.height, sz.text, sz.font, c.text,
         c.base, c.hover, c.active,
-        'transition-[background-color,box-shadow,transform] duration-150 ease-out',
+        'transition-[background-color,box-shadow,transform] duration-[var(--motion-fast)] ease-out',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/30',
         !loading && 'active:scale-[0.98] will-change-transform',
         isDisabled && !loading && 'opacity-45 pointer-events-none',
@@ -111,10 +112,10 @@ export function Button({
           <motion.span
             key={label}
             className="flex items-center gap-2"
-            transition={prefersReducedMotion ? { duration: 0 } : { type: 'spring', duration: 0.3, bounce: 0 }}
+            transition={prefersReducedMotion ? { duration: 0 } : spring.moderate}
             initial={prefersReducedMotion ? false : { opacity: 0, y: -25 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={prefersReducedMotion ? undefined : { opacity: 0, y: 25 }}
+            exit={prefersReducedMotion ? undefined : { opacity: 0, y: 25, transition: springExit.moderate }}
           >
             {loading ? (
               <AppLoader size={sz.icon} label={label} className="shrink-0 opacity-90" />

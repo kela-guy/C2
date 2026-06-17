@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { spring, springExit } from '@/lib/springs';
 import { ActionButton } from './ActionButton';
 import { CameraToggleButton } from './CameraToggleButton';
 import { SplitActionButton, type SplitDropdownGroup } from './SplitActionButton';
@@ -171,7 +172,7 @@ export function CardActions({
                   const motionKey = action.statusStrip ? `${action.id}-strip` : action.id;
                   const springTransition = prefersReducedMotion
                     ? { duration: 0 }
-                    : { type: 'spring' as const, duration: 0.3, bounce: 0 };
+                    : spring.moderate;
 
                   return (
                     <motion.div
@@ -180,7 +181,7 @@ export function CardActions({
                       transition={springTransition}
                       initial={prefersReducedMotion ? false : { opacity: 0, y: -20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      exit={prefersReducedMotion ? undefined : { opacity: 0, y: 20 }}
+                      exit={prefersReducedMotion ? undefined : { opacity: 0, y: 20, transition: springExit.moderate }}
                     >
                       {action.statusStrip ? (
                         <StatusStrip strip={action.statusStrip} />

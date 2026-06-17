@@ -1,4 +1,4 @@
-import React, { memo, useState } from "react";
+import React, { memo, useRef, useState } from "react";
 import {
   Bell,
   Settings,
@@ -12,6 +12,8 @@ import {
 } from "@/lib/icons/central";
 import { useIsRtl } from "@/lib/direction";
 import { useStrings } from "@/lib/intl";
+import { useScrollEdges } from "@/lib/scroll/useScrollEdges";
+import { ScrollEdgeCue } from "@/lib/scroll/ScrollEdgeCue";
 import {
   Sheet,
   SheetContent,
@@ -125,6 +127,8 @@ export const NotificationCenter = ({ trigger: customTrigger }: NotificationCente
   const sheetSide: 'right' | 'left' = isRtl ? 'left' : 'right';
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"all" | "alerts" | "unread">("all");
+  const listScrollRef = useRef<HTMLDivElement>(null);
+  const listEdges = useScrollEdges({ ref: listScrollRef, enabled: isOpen });
   // Seed history is composed from language-independent fixtures
   // (priority, time, read state) joined with localised text from the
   // strings catalog. Read-state mutations live in component state.
@@ -251,7 +255,8 @@ export const NotificationCenter = ({ trigger: customTrigger }: NotificationCente
             </div>
           </div>
 
-          <div className="overflow-y-auto flex-1 min-h-0">
+          <div className="relative flex-1 min-h-0">
+          <div ref={listScrollRef} className="h-full overflow-y-auto">
             {Object.entries(grouped).map(([category, items]) => {
               if (items.length === 0) return null;
               return (
@@ -280,6 +285,10 @@ export const NotificationCenter = ({ trigger: customTrigger }: NotificationCente
                 <span className="text-xs font-medium">{nt.emptyState}</span>
               </div>
             )}
+          </div>
+            {/* Sheet surface is zinc-950 (#09090b) — outside the elevation scale. */}
+            <ScrollEdgeCue edge="top" visible={listEdges.top} surfaceColor="#09090b" />
+            <ScrollEdgeCue edge="bottom" visible={listEdges.bottom} surfaceColor="#09090b" />
           </div>
 
           <div className="p-2 border-t border-border bg-zinc-950 flex justify-center">

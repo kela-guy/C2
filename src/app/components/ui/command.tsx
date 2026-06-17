@@ -4,6 +4,8 @@ import * as React from "react";
 import { Command as CommandPrimitive } from "cmdk";
 import { SearchIcon } from "lucide-react";
 
+import { useScrollEdges } from "@/lib/scroll/useScrollEdges";
+import { ScrollEdgeCue } from "@/lib/scroll/ScrollEdgeCue";
 import { cn } from "./utils";
 import {
   Dialog,
@@ -86,15 +88,22 @@ function CommandList({
   className,
   ...props
 }: React.ComponentProps<typeof CommandPrimitive.List>) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const edges = useScrollEdges({ ref });
   return (
-    <CommandPrimitive.List
-      data-slot="command-list"
-      className={cn(
-        "max-h-[300px] scroll-py-1 overflow-x-hidden overflow-y-auto",
-        className,
-      )}
-      {...props}
-    />
+    <div className="relative">
+      <CommandPrimitive.List
+        ref={ref}
+        data-slot="command-list"
+        className={cn(
+          "max-h-[300px] scroll-py-1 overflow-x-hidden overflow-y-auto",
+          className,
+        )}
+        {...props}
+      />
+      <ScrollEdgeCue edge="top" visible={edges.top} surfaceColor="var(--popover)" size="tight" />
+      <ScrollEdgeCue edge="bottom" visible={edges.bottom} surfaceColor="var(--popover)" size="tight" />
+    </div>
   );
 }
 

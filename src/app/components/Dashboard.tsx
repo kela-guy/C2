@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
+import { spring } from '@/lib/springs';
 import { useDrop } from 'react-dnd';
 import { CAMERA_ASSETS, REGULUS_EFFECTORS, SPEAKER_ASSETS } from './tacticalAssets';
 import { bearingDegrees, haversineDistanceM } from '@/app/lib/mapGeo';
@@ -10,7 +11,7 @@ import { NotificationSystem, showTacticalNotification } from './NotificationSyst
 import { NotificationCenter } from './NotificationCenter';
 import ListOfSystems from '@/imports/ListOfSystems';
 import type { Detection, RegulusEffector, LauncherEffector } from '@/imports/ListOfSystems';
-import { List, Bell, Palette, Video, Sparkles } from '@/lib/icons/central';
+import { List, Bell, Palette, Video, Sparkles, Devices, Agents } from '@/lib/icons/central';
 import { FlowBuilderPanel, defaultFlowDraft } from './flow-builder/FlowBuilderPanel';
 import { useFlowPlayer, type FlowPlayerOps } from './flow-builder/useFlowPlayer';
 import type { FlowPreview, SensorDetectionLink } from './CesiumTacticalMap';
@@ -22,7 +23,7 @@ import { resolveTargetSeverity } from '@/primitives/urgency';
 import { Toggle } from '@/shared/components/ui/toggle';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/shared/components/ui/tooltip';
 import { Separator } from '@/shared/components/ui/separator';
-import { DevicesPanel, DevicesIcon, DEVICE_CAMERA_DRAG_TYPE } from './DevicesPanel';
+import { DevicesPanel, DEVICE_CAMERA_DRAG_TYPE } from './DevicesPanel';
 import type { DeviceCameraDragItem } from './DevicesPanel';
 import { useDevicesFromAssets } from './useDevicesFromAssets';
 import { useGotchaUnits } from './gotcha/useGotchaUnits';
@@ -47,17 +48,6 @@ const noop = () => {};
 const noopStr = (_a?: string) => {};
 const noopStrStr = (_a?: string, _b?: string) => {};
 const EMPTY_ARRAY: never[] = [];
-
-function CuasIcon({ size = 20, strokeWidth = 2, className = '' }: { size?: number; strokeWidth?: number; className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
-      <path d="M9.5 5.398C7.093 6.19 5.19 8.093 4.398 10.5M19.86 14.5c.092-.486.14-.987.14-1.5 0-2.01-.742-3.848-1.966-5.253M6.708 19c1.41 1.245 3.263 2 5.292 2 .513 0 1.014-.048 1.5-.14" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"/>
-      <circle cx="12" cy="5" r="2.5" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M3.82 14.835c1.196-.69 2.725-.28 3.415.915.69 1.196.28 2.724-.915 3.415-1.196.69-2.725.28-3.415-.915-.69-1.196-.28-2.725.916-3.415Z" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M17.672 19.165c-1.196-.69-1.605-2.22-.915-3.415.69-1.196 2.219-1.605 3.415-.915 1.195.69 1.605 2.219.915 3.415-.69 1.195-2.22 1.605-3.415.915Z" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  );
-}
 
 // Threat kinds the CUAS simulator can spawn. Drones are the air threat;
 // cars, tanks and trucks are ground vehicles engaged on the kinetic path.
@@ -208,7 +198,7 @@ function SplitDropZone({
           : { x: hiddenX, opacity: 0 }}
         transition={shouldReduceMotion
           ? { duration: 0.15 }
-          : { type: 'spring', duration: 0.45, bounce: 0.15 }}
+          : spring.slow}
         className={`w-full h-full
           flex flex-col items-center justify-center gap-2
           rounded-xl border-2 border-dashed backdrop-blur-sm
@@ -1987,7 +1977,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
         </div>
         <Separator className="bg-white/10" />
 
-        <div className="flex flex-col items-center gap-0.5 py-2 w-fit flex-1">
+        <div className="flex flex-col items-center justify-start gap-0.5 py-1.5 w-full flex-1">
           <Tooltip>
             <TooltipTrigger asChild>
               <Toggle
@@ -2014,7 +2004,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
                 className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
                 aria-label={devicesPanelOpen ? t.dashboard.closeDevices : t.dashboard.devices}
               >
-                <DevicesIcon size={20} />
+                <Devices size={20} strokeWidth={1.5} />
               </Toggle>
             </TooltipTrigger>
             <TooltipContent side={railTooltipSide} sideOffset={8}>
@@ -2048,7 +2038,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
                 className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
                 aria-label={simulationsPanelOpen ? t.flowBuilder.simulations.close : t.flowBuilder.simulations.title}
               >
-                <CuasIcon size={20} strokeWidth={1.5} />
+                <Agents size={20} strokeWidth={1.5} />
               </Toggle>
             </TooltipTrigger>
             <TooltipContent side={railTooltipSide} sideOffset={8}>{t.flowBuilder.simulations.title}</TooltipContent>

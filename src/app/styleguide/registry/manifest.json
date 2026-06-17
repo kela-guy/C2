@@ -2,6 +2,22 @@
   "$schema": "./manifest.schema.json",
   "components": [
     {
+      "id": "motion",
+      "name": "Motion",
+      "tier": "primitive",
+      "group": "Foundations",
+      "description": "The three-spring motion system — fast/moderate/slow with one-tier-faster exits. All timing lives in @/lib/springs (framer-motion tokens) and is mirrored as --motion-* CSS vars + .overlay-motion-* helpers for Radix overlays. Slow in, faster out: every exit runs a tier quicker and drops the bounce.",
+      "importPath": "@/lib/springs"
+    },
+    {
+      "id": "scrolling-list",
+      "name": "Scrolling List",
+      "tier": "primitive",
+      "group": "Foundations",
+      "description": "The scrolling-list edge-cue system. useScrollEdges observes a scroller and reports which edges have more content; ScrollEdgeCue renders a surface-aware gradient + chevron at those edges; ScrollArea composes both with a restyled overlay scrollbar and a native fallback on touch. Signals overflow so a clipped list never looks finished.",
+      "importPath": "@/lib/scroll"
+    },
+    {
       "id": "badge",
       "name": "Badge",
       "tier": "primitive",

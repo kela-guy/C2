@@ -27,7 +27,7 @@ function Switch({
         "peer relative inline-flex h-[1.15rem] w-8 shrink-0 items-center rounded-full",
         "ring-1 ring-inset ring-white/10",
         "data-[state=unchecked]:bg-white/15 data-[state=checked]:bg-emerald-500/80",
-        "transition-colors duration-200 ease-out",
+        "transition-colors duration-[var(--motion-moderate)] ease-out",
         "outline-none focus-visible:ring-2 focus-visible:ring-white/40",
         "disabled:cursor-not-allowed disabled:opacity-50",
         className,
@@ -38,7 +38,7 @@ function Switch({
         data-slot="switch-thumb"
         className={cn(
           "pointer-events-none block size-4 rounded-full bg-white shadow-sm ring-0",
-          "transition-transform duration-200 ease-out",
+          "transition-transform duration-[var(--motion-moderate)] ease-[var(--ease-bounce)]",
           // Physical X-translation isn't direction-aware; use rtl: variants
           // so the thumb travels the trailing edge in RTL contexts (Hebrew),
           // matching the visual on/off semantics readers expect.

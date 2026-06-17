@@ -10,6 +10,12 @@
       "source": "mindrally/skills",
       "sourceType": "github",
       "computedHash": "560d4c5443255951fa76259c22e6ba41a43335efc921d5dac4f5450f65d8ef24"
+    },
+    "vocabulary": {
+      "source": "index-how/vocabulary",
+      "sourceType": "github",
+      "skillPath": "skills/vocabulary/SKILL.md",
+      "computedHash": "c309c9c62165f03584967b2588abe1e37ea085a90064f794c11ac4b6bc90b4d8"
     }
   }
 }

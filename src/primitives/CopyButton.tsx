@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { spring } from '@/lib/springs';
 import { Copy, Check } from '@/lib/icons/central';
 import { cn } from '@/shared/components/ui/utils';
 
@@ -119,17 +120,13 @@ export function CopyButton({
   );
 
   const sz = SIZES[size];
-  // Copy → Check uses ease-out (arrive fast, settle). The Check entry uses a
-  // keyframed scale with a small overshoot (0.85 → 1.06 → 1) so the
-  // confirmation "lands" instead of fading in flat — same total duration,
-  // collapses to a hard swap under prefers-reduced-motion.
-  const motionTransition = prefersReducedMotion
-    ? { duration: 0 }
-    : { duration: 0.18, ease: [0.25, 0.1, 0.25, 1] as const };
-  const checkEnterScale = prefersReducedMotion ? 1 : [0.85, 1.06, 1];
-  const checkEnterTransition = prefersReducedMotion
-    ? { duration: 0 }
-    : { duration: 0.22, ease: [0.34, 1.56, 0.64, 1] as const };
+  // Copy → Check icon swap, on the shared spring tokens (`@/lib/springs`).
+  // The Copy glyph settles on the snappy `fast` spring; the Check entry uses
+  // `moderate` whose bounce makes the confirmation "land" with a small
+  // overshoot instead of fading in flat. Both collapse to a hard swap under
+  // prefers-reduced-motion (handled app-wide by MotionConfig too).
+  const motionTransition = prefersReducedMotion ? { duration: 0 } : spring.fast;
+  const checkEnterTransition = prefersReducedMotion ? { duration: 0 } : spring.moderate;
 
   return (
     <button
@@ -164,7 +161,7 @@ export function CopyButton({
         alwaysVisible && 'opacity-100',
         // Focus ring stays subtle — single neutral accent.
         'outline-none focus-visible:ring-1 focus-visible:ring-white/30',
-        'transition-[opacity,color] duration-150 ease-out',
+        'transition-[opacity,color] duration-[var(--motion-fast)] ease-out',
         className,
       )}
     >
@@ -173,7 +170,7 @@ export function CopyButton({
           <motion.span
             key="check"
             initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.85 }}
-            animate={{ opacity: 1, scale: checkEnterScale }}
+            animate={{ opacity: 1, scale: 1 }}
             exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9 }}
             transition={checkEnterTransition}
             className="inline-flex"

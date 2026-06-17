@@ -8,6 +8,7 @@
  */
 
 import { motion, useReducedMotion } from 'framer-motion';
+import { spring } from '@/lib/springs';
 import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 import { MoonFilled, SunFilled, type IconComponent } from '@/lib/icons/central';
 import type { DayNightMode } from '@/app/components/camera-v2/types';
@@ -68,7 +69,7 @@ export function DayNightSpringToggle({
         className="absolute left-0.5 top-0.5 flex size-[30px] items-center justify-center rounded-full bg-state-selected text-slate-12"
         animate={{ x: idx * STOP }}
         whileTap={disabled ? undefined : { scale: 0.9 }}
-        transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 500, damping: 30 }}
+        transition={reduce ? { duration: 0 } : spring.moderate}
       >
         <ThumbIcon size={13} aria-hidden />
       </motion.span>

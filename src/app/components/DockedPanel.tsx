@@ -18,6 +18,7 @@
 
 import { Close } from '@/lib/icons/central';
 import { LAYOUT_TOKENS, SURFACE } from '@/primitives/tokens';
+import { ScrollArea } from './ui/scroll-area';
 import { cn } from './ui/utils';
 
 export interface DockedPanelProps {
@@ -112,7 +113,9 @@ export function DockedPanel({
         </div>
       </header>
 
-      <div className={cn('flex-1 overflow-y-auto', bodyClassName)}>{children}</div>
+      <ScrollArea className="flex-1 min-h-0" viewportClassName={bodyClassName}>
+        {children}
+      </ScrollArea>
 
       {footer && (
         <footer className="shrink-0 border-t border-white/10 bg-zinc-950/40">

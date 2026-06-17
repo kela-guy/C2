@@ -150,7 +150,7 @@ export const DEFAULT_DEVICE_PANEL_STRINGS: DevicesPanelStrings = {
   errorCopied: 'Copied',
   healthCritical: 'Critical',
   healthError: 'Errors',
-  healthWarning: 'Warning',
+  healthWarning: 'Malfunction',
   healthOffline: 'Offline',
   healthHealthy: 'Healthy',
   sensorsGroupLabel: 'Sensors',

@@ -17,8 +17,12 @@ import { splitActionDoc } from './split-action.doc';
 import { accordionDoc } from './accordion.doc';
 import { telemetryDoc } from './telemetry.doc';
 import { copyButtonDoc } from './copy-button.doc';
+import { motionDoc } from './motion.doc';
+import { scrollingListDoc } from './scrolling-list.doc';
 
 export const DOC_MODULES: Record<string, ComponentDocModule> = {
+  [motionDoc.id]: motionDoc,
+  [scrollingListDoc.id]: scrollingListDoc,
   [buttonDoc.id]: buttonDoc,
   [actionButtonDoc.id]: actionButtonDoc,
   [cameraToggleDoc.id]: cameraToggleDoc,

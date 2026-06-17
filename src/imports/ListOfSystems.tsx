@@ -24,6 +24,8 @@ import {
   Hand,
   Zap,
 } from '@/lib/icons/central';
+import { useScrollEdges } from '@/lib/scroll/useScrollEdges';
+import { ScrollEdgeCue } from '@/lib/scroll/ScrollEdgeCue';
 import { useCardSlots, type CardCallbacks, type CardContext } from './useCardSlots';
 import { useTargetFilters } from './useTargetFilters';
 import { getActivityStatus, getCreatedAtMs, formatTimeSince, isCompletedActivityStatus, useActivityStatus } from './useActivityStatus';
@@ -630,6 +632,10 @@ function ListOfSystemsImpl({
   const [scrollParent, setScrollParent] = useState<HTMLDivElement | null>(null);
   const seenTargetIdsRef = useRef<Set<string>>(new Set());
   const hasHydratedTargetsRef = useRef(false);
+  // Overflow edge cues for the (virtualized) list scroller. Virtuoso owns the
+  // scroll element via customScrollParent, so we observe it directly and
+  // overlay the cues in the relative wrapper rather than wrapping in ScrollArea.
+  const listEdges = useScrollEdges({ ref: listScrollRef });
 
   const uniqueTargets = useMemo(() => {
     const seen = new Set<string>();
@@ -1020,6 +1026,9 @@ function ListOfSystemsImpl({
             </div>
           )}
         </div>
+
+        <ScrollEdgeCue edge="top" visible={listEdges.top} surfaceLevel="level0" />
+        <ScrollEdgeCue edge="bottom" visible={listEdges.bottom} surfaceLevel="level0" />
       </div>
     </div>
   );

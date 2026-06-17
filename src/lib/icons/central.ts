@@ -80,6 +80,8 @@ import IconPinRaw from '@central-icons-react/round-filled-radius-0-stroke-2/Icon
 import IconBatteryFullRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconBatteryFull';
 import IconBatteryLowRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconBatteryLow';
 import IconRadarRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconRadar';
+import IconLayoutWindowRaw from '@central-icons-react/square-filled-radius-0-stroke-2/IconLayoutWindow';
+import IconAgentsRaw from '@central-icons-react/square-filled-radius-0-stroke-2/IconAgents';
 import IconRadioRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconRadio';
 import IconVideoRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconVideo';
 import IconSignalTowerRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconSignalTower';
@@ -201,6 +203,13 @@ export const Pin = asIcon(IconPinRaw);
 export const Battery = asIcon(IconBatteryFullRaw);
 export const BatteryLow = asIcon(IconBatteryLowRaw);
 export const Radar = asIcon(IconRadarRaw);
+// `Devices` is the dashboard rail's device-panel launcher glyph. Uses Central's
+// `IconLayoutWindow` (square / filled / radius-0 / stroke-2) — a windowed panel
+// that reads as the devices surface.
+export const Devices = asIcon(IconLayoutWindowRaw);
+// `Agents` is the dashboard rail's CUAS/simulations launcher glyph. Uses
+// Central's `IconAgents` (square / filled / radius-0 / stroke-2).
+export const Agents = asIcon(IconAgentsRaw);
 export const Radio = asIcon(IconRadioRaw);
 export const Video = asIcon(IconVideoRaw);
 export const SignalHigh = asIcon(IconSignalTowerRaw);

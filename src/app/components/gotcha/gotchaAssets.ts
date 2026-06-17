@@ -21,10 +21,10 @@ export const GOTCHA_UNITS: GotchaUnit[] = [
     lon: 35.005,
     targetClasses: ['drone'],
     sensors: [
-      { id: 'GOTCHA-NVT-01-S-N', name: 'Sector N', bearingDeg: 0, fovDeg: 120, rangeM: GOTCHA_RANGE_M, health: 'ok', latencyMs: 800 },
-      { id: 'GOTCHA-NVT-01-S-E', name: 'Sector E', bearingDeg: 90, fovDeg: 120, rangeM: GOTCHA_RANGE_M, health: 'warning', latencyMs: 5200 },
-      { id: 'GOTCHA-NVT-01-S-S', name: 'Sector S', bearingDeg: 180, fovDeg: 120, rangeM: GOTCHA_RANGE_M, health: 'ok', latencyMs: 900 },
-      { id: 'GOTCHA-NVT-01-S-W', name: 'Sector W', bearingDeg: 270, fovDeg: 120, rangeM: GOTCHA_RANGE_M, health: 'ok', latencyMs: 750 },
+      { id: 'GOTCHA-NVT-01-S-N', name: 'אזור א׳', bearingDeg: 0, fovDeg: 120, rangeM: GOTCHA_RANGE_M, health: 'ok', latencyMs: 800 },
+      { id: 'GOTCHA-NVT-01-S-E', name: 'אזור ב׳', bearingDeg: 90, fovDeg: 120, rangeM: GOTCHA_RANGE_M, health: 'warning', latencyMs: 5200 },
+      { id: 'GOTCHA-NVT-01-S-S', name: 'אזור ג׳', bearingDeg: 180, fovDeg: 120, rangeM: GOTCHA_RANGE_M, health: 'ok', latencyMs: 900 },
+      { id: 'GOTCHA-NVT-01-S-W', name: 'אזור ד׳', bearingDeg: 270, fovDeg: 120, rangeM: GOTCHA_RANGE_M, health: 'ok', latencyMs: 750 },
     ],
     camera: {
       id: 'GOTCHA-NVT-01-CAM',

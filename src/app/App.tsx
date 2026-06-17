@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { MotionConfig } from "framer-motion";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { DialRoot } from "dialkit";
@@ -78,6 +79,14 @@ export default function App() {
     // same direction without each consumer setting `dir` manually.
     // See `src/lib/direction/DirectionProvider.tsx`.
     <DirectionProvider>
+      {/*
+        App-wide reduced-motion handling. `reducedMotion="user"` makes every
+        framer-motion animation respect the OS "Reduce Motion" setting:
+        transform/position changes drop out and only opacity fades remain, so
+        components no longer need to gate transitions by hand. Spring timing
+        tokens live in `src/lib/springs.ts`.
+      */}
+      <MotionConfig reducedMotion="user">
       <DndProvider backend={HTML5Backend}>
         {/*
           Single application-wide TooltipProvider. The `Tooltip` wrapper no
@@ -159,6 +168,7 @@ export default function App() {
           <DialRoot position="bottom-right" />
         </TooltipProvider>
       </DndProvider>
+      </MotionConfig>
     </DirectionProvider>
   );
 }

@@ -116,11 +116,6 @@ export const DeviceChildRow = memo(function DeviceChildRow({
 
       <div className="flex-1 min-w-0 text-start">
         <span className="text-xs font-medium truncate text-zinc-300 block">{device.name}</span>
-        {device.subtitle && (
-          <div className="text-start text-[11px] font-mono tabular-nums text-white/45 truncate">
-            {device.subtitle}
-          </div>
-        )}
       </div>
 
       {health !== 'ok' && (

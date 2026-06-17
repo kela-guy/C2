@@ -65,6 +65,63 @@
   --sidebar-ring: oklch(0.708 0 0);
   /* Dot-matrix loader fill (colorPreset="solid-theme"). Tracks foreground. */
   --color-dot-on: oklch(0.205 0 0);
+
+  /*
+   * Motion tokens — the CSS mirror of `src/lib/springs.ts` (`springMs`).
+   * Three speeds, with one-tier-faster exits. The CSS/Radix-overlay layer
+   * (tw-animate-css enter/exit) animates on these so it matches the
+   * framer-motion springs used elsewhere. `--ease-bounce` approximates the
+   * spring overshoot for entrances; `--ease-exit` is a quick accelerating
+   * curve for exits (no overshoot, so closes never drag).
+   */
+  --motion-fast: 80ms;
+  --motion-moderate: 160ms;
+  --motion-slow: 240ms;
+  --motion-fast-exit: 60ms;
+  --motion-moderate-exit: 120ms;
+  --motion-slow-exit: 160ms;
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+}
+
+/*
+ * Overlay motion helpers — map a Radix primitive's enter/exit (driven by
+ * tw-animate-css `animate-in` / `animate-out` on `data-state`) onto the three
+ * spring tiers from `src/lib/springs.ts`. Entrances use the bounce ease at the
+ * tier duration; exits run one tier faster on a plain accelerating curve so
+ * closes never drag ("slow in, faster out"). Attribute-scoped so they override
+ * tw-animate-css's default `animation-duration`/timing without touching its
+ * keyframes. Add one class (`overlay-motion-fast|moderate|slow`) to any Radix
+ * Content/Overlay that already carries the `data-[state=*]:animate-*` classes.
+ */
+/* Entrance: any non-closed state (open / delayed-open / instant-open). */
+.overlay-motion-fast[data-state]:not([data-state='closed']),
+.overlay-motion-moderate[data-state]:not([data-state='closed']),
+.overlay-motion-slow[data-state]:not([data-state='closed']) {
+  animation-timing-function: var(--ease-bounce);
+}
+.overlay-motion-fast[data-state='closed'],
+.overlay-motion-moderate[data-state='closed'],
+.overlay-motion-slow[data-state='closed'] {
+  animation-timing-function: var(--ease-exit);
+}
+.overlay-motion-fast[data-state]:not([data-state='closed']) {
+  animation-duration: var(--motion-fast);
+}
+.overlay-motion-fast[data-state='closed'] {
+  animation-duration: var(--motion-fast-exit);
+}
+.overlay-motion-moderate[data-state]:not([data-state='closed']) {
+  animation-duration: var(--motion-moderate);
+}
+.overlay-motion-moderate[data-state='closed'] {
+  animation-duration: var(--motion-moderate-exit);
+}
+.overlay-motion-slow[data-state]:not([data-state='closed']) {
+  animation-duration: var(--motion-slow);
+}
+.overlay-motion-slow[data-state='closed'] {
+  animation-duration: var(--motion-slow-exit);
 }
 
 .dark {

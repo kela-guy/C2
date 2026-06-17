@@ -14,6 +14,7 @@
  */
 
 import { motion, useReducedMotion } from 'framer-motion';
+import { spring } from '@/lib/springs';
 import { ArrowRight } from '@/lib/icons/central';
 import { cn } from '@/app/components/ui/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
@@ -95,7 +96,7 @@ export function SandboxAngleToggle({
         style={{ width: SEG }}
         animate={{ x: idx * SEG }}
         whileTap={disabled ? undefined : { scale: 0.94 }}
-        transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 500, damping: 30 }}
+        transition={reduce ? { duration: 0 } : spring.moderate}
       >
         {fmtAngleDeg(value)}
       </motion.span>
