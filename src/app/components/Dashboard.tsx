@@ -26,6 +26,10 @@ import {
   type PathfinderMapPhase,
 } from './pathfinder/pathfinderState';
 import { CesiumErrorBoundary } from './CesiumErrorBoundary';
+import { MapDrawOverlay } from './map-draw/MapDrawOverlay';
+import { MapDrawProvider } from './map-draw/MapDrawProvider';
+import { MapDrawPanel } from './map-draw/MapDrawPanel';
+import { PolygonDrawIcon } from './map-draw/icons';
 import { NotificationSystem, showTacticalNotification } from './NotificationSystem';
 import { NotificationCenter } from './NotificationCenter';
 import ListOfSystems from '@/imports/ListOfSystems';
@@ -313,6 +317,12 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
   // (queue/devices) so launching a sim naturally "switches to the
   // target panel." Replaces the old CUAS dropdown menu.
   const [simulationsPanelOpen, setSimulationsPanelOpen] = useState(false);
+  // Map-draw panel — joins the inline-START mutual-exclusion group
+  // (sidebar / Devices / Simulations / Flow Builder). Opening it closes
+  // the others and vice-versa. The drawing engine itself lives inside
+  // `<MapDrawProvider>` so the panel and the screen-space overlay share
+  // selection / draft / tool state.
+  const [mapDrawPanelOpen, setMapDrawPanelOpen] = useState(false);
   // Saved flow presets are lifted here so BOTH the Flow Builder (author)
   // and the Simulations panel (run gallery) share one live list — a
   // save in the builder shows up as a card immediately, no reload.
@@ -1714,25 +1724,29 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
   }, [gotchaUnits, handleDeviceFlyTo]);
 
   const openSystemsPanel = useCallback(() => {
-    if (devicesPanelOpen || simulationsPanelOpen || flowBuilderOpen) setPanelSwitching(true);
+    if (devicesPanelOpen || simulationsPanelOpen || flowBuilderOpen || mapDrawPanelOpen)
+      setPanelSwitching(true);
     setSidebarOpen(true);
     setDevicesPanelOpen(false);
     setSimulationsPanelOpen(false);
     setFlowBuilderOpen(false);
+    setMapDrawPanelOpen(false);
     setSelectedAssetId(null);
-  }, [devicesPanelOpen, simulationsPanelOpen, flowBuilderOpen]);
+  }, [devicesPanelOpen, simulationsPanelOpen, flowBuilderOpen, mapDrawPanelOpen]);
 
   const closeSystemsPanel = useCallback(() => {
     setSidebarOpen(false);
   }, []);
 
   const openDevicesPanel = useCallback(() => {
-    if (sidebarOpen || simulationsPanelOpen || flowBuilderOpen) setPanelSwitching(true);
+    if (sidebarOpen || simulationsPanelOpen || flowBuilderOpen || mapDrawPanelOpen)
+      setPanelSwitching(true);
     setSidebarOpen(false);
     setSimulationsPanelOpen(false);
     setFlowBuilderOpen(false);
+    setMapDrawPanelOpen(false);
     setDevicesPanelOpen(true);
-  }, [sidebarOpen, simulationsPanelOpen, flowBuilderOpen]);
+  }, [sidebarOpen, simulationsPanelOpen, flowBuilderOpen, mapDrawPanelOpen]);
 
   const closeDevicesPanel = useCallback(() => {
     setDevicesPanelOpen(false);
@@ -1740,28 +1754,50 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
   }, []);
 
   const openSimulationsPanel = useCallback(() => {
-    if (sidebarOpen || devicesPanelOpen || flowBuilderOpen) setPanelSwitching(true);
+    if (sidebarOpen || devicesPanelOpen || flowBuilderOpen || mapDrawPanelOpen)
+      setPanelSwitching(true);
     setSidebarOpen(false);
     setDevicesPanelOpen(false);
     setFlowBuilderOpen(false);
+    setMapDrawPanelOpen(false);
     setSelectedAssetId(null);
     setSimulationsPanelOpen(true);
-  }, [sidebarOpen, devicesPanelOpen, flowBuilderOpen]);
+  }, [sidebarOpen, devicesPanelOpen, flowBuilderOpen, mapDrawPanelOpen]);
 
   const closeSimulationsPanel = useCallback(() => {
     setSimulationsPanelOpen(false);
   }, []);
 
-  // Flow Builder joins the right-side mutual-exclusion group: opening it
-  // closes the queue / Devices / Simulations (and vice-versa, above).
-  const openFlowBuilderPanel = useCallback(() => {
-    if (sidebarOpen || devicesPanelOpen || simulationsPanelOpen) setPanelSwitching(true);
+  // Map-draw panel — same mutual-exclusion choreography. Opening drops
+  // the user into the panel-driven drawing flow; closing also drops out
+  // of any active draft (handled by the panel via `setDrawTool(null)`).
+  const openMapDrawPanel = useCallback(() => {
+    if (sidebarOpen || devicesPanelOpen || simulationsPanelOpen || flowBuilderOpen)
+      setPanelSwitching(true);
     setSidebarOpen(false);
     setDevicesPanelOpen(false);
     setSimulationsPanelOpen(false);
+    setFlowBuilderOpen(false);
+    setSelectedAssetId(null);
+    setMapDrawPanelOpen(true);
+  }, [sidebarOpen, devicesPanelOpen, simulationsPanelOpen, flowBuilderOpen]);
+
+  const closeMapDrawPanel = useCallback(() => {
+    setMapDrawPanelOpen(false);
+  }, []);
+
+  // Flow Builder joins the right-side mutual-exclusion group: opening it
+  // closes the queue / Devices / Simulations / Map-draw (and vice-versa, above).
+  const openFlowBuilderPanel = useCallback(() => {
+    if (sidebarOpen || devicesPanelOpen || simulationsPanelOpen || mapDrawPanelOpen)
+      setPanelSwitching(true);
+    setSidebarOpen(false);
+    setDevicesPanelOpen(false);
+    setSimulationsPanelOpen(false);
+    setMapDrawPanelOpen(false);
     setSelectedAssetId(null);
     setFlowBuilderOpen(true);
-  }, [sidebarOpen, devicesPanelOpen, simulationsPanelOpen]);
+  }, [sidebarOpen, devicesPanelOpen, simulationsPanelOpen, mapDrawPanelOpen]);
 
   // ── Stable handler identities for child panels ─────────────────────
   //
@@ -2192,6 +2228,7 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
   );
 
   return (
+    <MapDrawProvider>
     <div className="relative flex w-full h-screen overflow-hidden text-white font-sans selection:bg-red-500/30">
       {/* Minimal Left Nav */}
       <TooltipProvider>
@@ -2268,6 +2305,31 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
               </Toggle>
             </TooltipTrigger>
             <TooltipContent side={railTooltipSide} sideOffset={8}>{t.flowBuilder.simulations.title}</TooltipContent>
+          </Tooltip>
+
+          {/*
+            Map-draw trigger: opens the docked drawing panel (tool
+            picker + inspector). Joins the inline-START mutual-exclusion
+            group with sidebar / Devices / Simulations / Flow Builder.
+          */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Toggle
+                size="sm"
+                pressed={mapDrawPanelOpen}
+                onPressedChange={(next) => {
+                  if (next) openMapDrawPanel();
+                  else closeMapDrawPanel();
+                }}
+                className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                aria-label={mapDrawPanelOpen ? 'Close drawing' : 'Draw on map'}
+              >
+                <PolygonDrawIcon size={20} />
+              </Toggle>
+            </TooltipTrigger>
+            <TooltipContent side={railTooltipSide} sideOffset={8}>
+              {mapDrawPanelOpen ? 'Close drawing' : 'Draw on map'}
+            </TooltipContent>
           </Tooltip>
         </div>
 
@@ -2411,6 +2473,15 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
                   cameraLookAtRequest={cameraLookAtRequest}
                 />
               </CesiumErrorBoundary>
+              {/*
+                Map-draw screen-space overlay. Sits above the Cesium
+                canvas with `pointer-events: none` at rest so map pan /
+                zoom keep working; flips to `auto` while a draw tool is
+                active or a shape is selected. State (active tool /
+                selection / draft) is read from `<MapDrawProvider>`,
+                which the panel mutates in lockstep.
+              */}
+              <MapDrawOverlay />
             </div>
           </ResizablePanel>
 
@@ -2567,6 +2638,15 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
           />
         )}
 
+        {mapDrawPanelOpen && (
+          <MapDrawPanel
+            open={mapDrawPanelOpen}
+            onClose={closeMapDrawPanel}
+            width={sidebarWidth}
+            noTransition={panelSwitching}
+          />
+        )}
+
         {devicesPanelOpen && (
           <DevicesPanel
             devices={devicesWithGotcha}
@@ -2602,5 +2682,6 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
       <NotificationSystem />
       <CriticalAlertOverlay onBroadcast={handleGotchaBroadcast} onLocate={handleGotchaLocate} />
     </div>
+    </MapDrawProvider>
   );
 };

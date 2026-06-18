@@ -50,6 +50,14 @@ const PathfinderSandbox = lazy(() => import("./components/pathfinder-sandbox/Pat
 // the Caveat/JetBrains fonts only load on this route.
 const PathfinderStory = lazy(() => import("./components/handoff-story/PathfinderStory"));
 
+// Geo Entities Sandbox — dev-only surface for iterating on how geographic
+// entities (targets, friendlies, sensors, zones, POIs) are projected, styled,
+// and selected before the work lands in the real Cesium/Mapbox map layers.
+// Guarded by `import.meta.env.DEV` so it tree-shakes out of production.
+const GeoEntitiesSandbox = import.meta.env.DEV
+  ? lazy(() => import("./components/geo-entities-sandbox/GeoEntitiesSandbox"))
+  : null;
+
 function PlaygroundFallback() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#09090b] text-sm text-neutral-400">
@@ -199,6 +207,21 @@ export default function App() {
                   </Suspense>
                 }
               />
+              {/*
+                Geo Entities Sandbox — dev-only sandbox for the tactical map's
+                geographic entity rendering. Not linked from the main UI;
+                reviewers open it directly. Compiles to nothing in production.
+              */}
+              {GeoEntitiesSandbox && (
+                <Route
+                  path="/geo-entities-sandbox"
+                  element={
+                    <Suspense fallback={<PlaygroundFallback />}>
+                      <GeoEntitiesSandbox />
+                    </Suspense>
+                  }
+                />
+              )}
             </Routes>
             <ScopedHandoffInspector />
           </BrowserRouter>
