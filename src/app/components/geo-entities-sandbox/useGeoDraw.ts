@@ -81,6 +81,12 @@ export interface UseGeoDrawResult {
   setSelectedId: (id: string | null) => void;
   updateShape: (id: string, patch: Partial<GeoShape>) => void;
   deleteShape: (id: string) => void;
+  /**
+   * Restore the most recently deleted shape back to its original index in
+   * the layer stack (most-recent-first). Returns the restored shape's id,
+   * or `null` if nothing was available to restore.
+   */
+  restoreLastDeleted: () => string | null;
   clearAll: () => void;
   cancelDraft: () => void;
   finishDraft: () => void;
@@ -106,6 +112,11 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
   const [draft, setDraft] = useState<DraftShape | null>(null);
   const dragRef = useRef<Drag>({ kind: 'idle' });
   const [draggingTick, setDraggingTick] = useState(0);
+  // Stack of recently deleted shapes (LIFO) so `restoreLastDeleted` can
+  // walk back through accidental deletes. We hang on to the original
+  // index so a restore drops the shape back into its old slot in the
+  // layers list instead of always appending to the end.
+  const deletedStackRef = useRef<{ shape: GeoShape; index: number }[]>([]);
 
   const selectedShape = useMemo(
     () => shapes.find((s) => s.id === selectedId) ?? null,
@@ -120,16 +131,42 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
 
   const deleteShape = useCallback(
     (id: string) => {
-      setShapes((prev) => prev.filter((s) => s.id !== id));
+      setShapes((prev) => {
+        const index = prev.findIndex((s) => s.id === id);
+        if (index < 0) return prev;
+        // Snapshot the deleted shape so `restoreLastDeleted` can put it
+        // back in the exact same layer position.
+        deletedStackRef.current.push({ shape: { ...prev[index] }, index });
+        return prev.filter((s) => s.id !== id);
+      });
       if (selectedId === id) setSelectedId(null);
     },
     [selectedId],
   );
 
+  const restoreLastDeleted = useCallback((): string | null => {
+    const entry = deletedStackRef.current.pop();
+    if (!entry) return null;
+    setShapes((prev) => {
+      // Bail if the same id has somehow been re-added (e.g. from a future
+      // import) — we never want duplicate ids in the layer list.
+      if (prev.some((s) => s.id === entry.shape.id)) return prev;
+      const insertAt = Math.min(entry.index, prev.length);
+      const next = prev.slice();
+      next.splice(insertAt, 0, entry.shape);
+      return next;
+    });
+    setSelectedId(entry.shape.id);
+    return entry.shape.id;
+  }, []);
+
   const clearAll = useCallback(() => {
     setShapes([]);
     setSelectedId(null);
     setDraft(null);
+    // Bulk clears reset the undo history too — restoring a single shape
+    // after a `clearAll` would feel confusing.
+    deletedStackRef.current = [];
   }, []);
 
   // ----- draft / draw flow ---------------------------------------------------
@@ -434,6 +471,7 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
     setSelectedId,
     updateShape,
     deleteShape,
+    restoreLastDeleted,
     clearAll,
     cancelDraft,
     finishDraft,

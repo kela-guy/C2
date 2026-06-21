@@ -29,6 +29,7 @@ import {
   type GeoShape,
 } from '../geo-entities-sandbox/drawTypes';
 import { SANDBOX_BOUNDS } from '../geo-entities-sandbox/fixtures';
+import { deleteShapeWithUndo } from './deleteWithUndo';
 import { CircleDrawIcon, CurveDrawIcon, LineDrawIcon, PolygonDrawIcon } from './icons';
 import { useMapDraw, type MapDrawTool, type MapDrawContextValue } from './MapDrawProvider';
 
@@ -66,14 +67,87 @@ const PALETTE: string[] = [
   '#ec4899',
 ];
 
+/**
+ * Visual variants of the panel — drives tool-button design, Tools-section
+ * layout (static heading vs. collapsible dropdown), and Layers default
+ * open state. Used by the Geo Entities Layers lab to A/B between
+ * candidate designs.
+ *
+ * `original` reproduces today's production panel exactly. The `opt*`
+ * variants share the same "Layers open by default, smaller buttons"
+ * baseline and differ in tool-button look and whether Tools is wrapped
+ * in a dropdown.
+ *
+ * `opt5` is a hybrid of {@link opt2} (collapsible Tools dropdown) and
+ * {@link opt3} (segmented picker chrome): segmented tools inside a
+ * dropdown that's expanded by default — so the connected bar reads as
+ * one control while still collapsing on demand.
+ */
+export type MapDrawPanelVariant = 'original' | 'opt2' | 'opt3' | 'opt5';
+
+type ToolPickerStyle = 'tiles' | 'chips' | 'segmented';
+
+interface VariantConfig {
+  layersDefaultOpen: boolean;
+  toolsCollapsible: boolean;
+  toolsDefaultOpen: boolean;
+  picker: ToolPickerStyle;
+}
+
+const VARIANT_CONFIG: Record<MapDrawPanelVariant, VariantConfig> = {
+  original: {
+    layersDefaultOpen: false,
+    toolsCollapsible: false,
+    toolsDefaultOpen: true,
+    picker: 'tiles',
+  },
+  opt2: {
+    layersDefaultOpen: true,
+    toolsCollapsible: true,
+    toolsDefaultOpen: false,
+    picker: 'chips',
+  },
+  opt3: {
+    layersDefaultOpen: true,
+    toolsCollapsible: false,
+    toolsDefaultOpen: true,
+    picker: 'segmented',
+  },
+  opt5: {
+    layersDefaultOpen: true,
+    toolsCollapsible: true,
+    toolsDefaultOpen: true,
+    picker: 'segmented',
+  },
+};
+
 export interface MapDrawPanelProps {
   open: boolean;
   onClose: () => void;
   width?: number;
   noTransition?: boolean;
+  /**
+   * Visual variant of the panel. Defaults to `'original'` (the production
+   * design). The Geo Entities Layers lab sets this to one of the `opt*`
+   * variants — or enables `lab` to let the user flip between them live.
+   */
+  variant?: MapDrawPanelVariant;
+  /**
+   * Lab mode: shows a segmented variant switcher at the top of the panel
+   * body so reviewers can flip between the five designs live. Off in
+   * production.
+   */
+  lab?: boolean;
 }
 
-export function MapDrawPanel({ open, onClose, width, noTransition }: MapDrawPanelProps) {
+export function MapDrawPanel({
+  open,
+  onClose,
+  width,
+  noTransition,
+  variant: variantProp = 'original',
+  lab = false,
+}: MapDrawPanelProps) {
   const tAll = useStrings();
   // Soft fallback strings: this feature predates a localized i18n
   // namespace. Pull from the simulations close label when it exists,
@@ -82,6 +156,13 @@ export function MapDrawPanel({ open, onClose, width, noTransition }: MapDrawPane
 
   const { draw, drawTool, setDrawTool } = useMapDraw();
   const selected = draw.selectedShape;
+
+  // In lab mode the variant is user-controlled (via the switcher); in
+  // production it's a fixed prop. We re-seed local state whenever the
+  // prop changes so the parent can still force a variant.
+  const [variant, setVariant] = useState<MapDrawPanelVariant>(variantProp);
+  useEffect(() => setVariant(variantProp), [variantProp]);
+  const cfg = VARIANT_CONFIG[variant];
 
   // Keep the inspector "sticky": once a shape has been drawn/selected we
   // hold onto its id so the inspector stays open even after the user
@@ -92,8 +173,26 @@ export function MapDrawPanel({ open, onClose, width, noTransition }: MapDrawPane
     if (selected) setStickyId(selected.id);
   }, [selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Auto-arm Polygon as soon as the panel opens so the user can start
+  // drawing without first picking a tool. Skipped if a tool is already
+  // active (e.g. user re-opens mid-flow) or a draft is mid-flight.
+  useEffect(() => {
+    if (drawTool == null && !draw.draft) setDrawTool('polygon');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const inspected =
     selected ?? draw.shapes.find((s) => s.id === stickyId) ?? null;
+
+  const toolsNode = (
+    <ToolsSection
+      drawTool={drawTool}
+      onPick={setDrawTool}
+      style={cfg.picker}
+      collapsible={cfg.toolsCollapsible}
+      defaultOpen={cfg.toolsDefaultOpen}
+    />
+  );
 
   return (
     <DockedPanel
@@ -110,23 +209,68 @@ export function MapDrawPanel({ open, onClose, width, noTransition }: MapDrawPane
       // and its tool buttons stay clickable and aren't covered by shapes.
       className="z-30"
     >
-      <LayersSection draw={draw} />
+      {lab && <VariantSwitcher variant={variant} onChange={setVariant} />}
+
+      {toolsNode}
+
+      <LayersSection draw={draw} defaultOpen={cfg.layersDefaultOpen} />
 
       {draw.draft ? (
-        <>
-          <ToolPicker drawTool={drawTool} onPick={setDrawTool} />
-          <DraftControls draw={draw} />
-        </>
+        <DraftControls draw={draw} />
       ) : inspected ? (
         <ShapeInspector
           shape={inspected}
           onPatch={(patch) => draw.updateShape(inspected.id, patch)}
-          toolPicker={<ToolPicker drawTool={drawTool} onPick={setDrawTool} />}
         />
-      ) : (
-        <ToolPicker drawTool={drawTool} onPick={setDrawTool} />
-      )}
+      ) : null}
     </DockedPanel>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Variant switcher (lab mode only)
+// ---------------------------------------------------------------------------
+
+const VARIANT_TABS: { id: MapDrawPanelVariant; label: string }[] = [
+  { id: 'opt2', label: 'Opt 2' },
+  { id: 'opt3', label: 'Opt 3' },
+  { id: 'opt5', label: 'Opt 5' },
+  { id: 'original', label: 'Original' },
+];
+
+function VariantSwitcher({
+  variant,
+  onChange,
+}: {
+  variant: MapDrawPanelVariant;
+  onChange: (next: MapDrawPanelVariant) => void;
+}) {
+  return (
+    <div
+      role="tablist"
+      aria-label="Panel design variant"
+      className="-mt-1 flex items-center gap-0.5 rounded-md bg-white/[0.04] p-0.5"
+    >
+      {VARIANT_TABS.map((t) => {
+        const active = variant === t.id;
+        return (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(t.id)}
+            className={`flex-1 rounded px-1.5 py-1 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
+              active
+                ? 'bg-white/[0.14] text-white ring-1 ring-inset ring-white/15'
+                : 'text-white/65 hover:bg-white/10 hover:text-white'
+            }`}
+          >
+            {t.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -139,9 +283,19 @@ function shapeLabel(shape: GeoShape): string {
   return named || shape.name || 'Untitled';
 }
 
-function LayersSection({ draw }: { draw: MapDrawContextValue['draw'] }) {
+function LayersSection({
+  draw,
+  defaultOpen = false,
+}: {
+  draw: MapDrawContextValue['draw'];
+  defaultOpen?: boolean;
+}) {
   const [query, setQuery] = useState('');
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
+  // Variant flips can change the default-open intent at runtime (lab
+  // mode); honour the new default whenever it changes so flipping a
+  // variant flips the section state.
+  useEffect(() => setOpen(defaultOpen), [defaultOpen]);
 
   if (draw.shapes.length === 0) return null;
 
@@ -197,7 +351,7 @@ function LayersSection({ draw }: { draw: MapDrawContextValue['draw'] }) {
                   onRename={(name) => draw.updateShape(s.id, { description: name })}
                   onToggleHidden={() => draw.updateShape(s.id, { hidden: !s.hidden })}
                   onToggleLocked={() => draw.updateShape(s.id, { locked: !s.locked })}
-                  onDelete={() => draw.deleteShape(s.id)}
+                  onDelete={() => deleteShapeWithUndo(draw, s.id)}
                 />
               ))
             )}
@@ -336,28 +490,64 @@ function DraftControls({ draw }: { draw: MapDrawContextValue['draw'] }) {
 }
 
 // ---------------------------------------------------------------------------
-// Tool picker
+// Tools section (variant-aware)
 // ---------------------------------------------------------------------------
+
+type ToolEntry = { id: MapDrawTool; label: string; Icon: typeof PolygonDrawIcon };
+
+const TOOL_ENTRIES: ToolEntry[] = [
+  { id: 'polygon', label: 'Polygon', Icon: PolygonDrawIcon },
+  { id: 'line', label: 'Line', Icon: LineDrawIcon },
+  { id: 'curve', label: 'Curve', Icon: CurveDrawIcon },
+  { id: 'circle', label: 'Circle', Icon: CircleDrawIcon },
+];
+
+function ToolsSection({
+  drawTool,
+  onPick,
+  style,
+  collapsible,
+  defaultOpen,
+}: {
+  drawTool: MapDrawTool | null;
+  onPick: (tool: MapDrawTool | null) => void;
+  style: ToolPickerStyle;
+  collapsible: boolean;
+  defaultOpen: boolean;
+}) {
+  const picker = <ToolPicker drawTool={drawTool} onPick={onPick} style={style} />;
+  if (collapsible) {
+    return (
+      <CollapsibleSection title="Tools" defaultOpen={defaultOpen}>
+        {picker}
+      </CollapsibleSection>
+    );
+  }
+  return (
+    <section className="space-y-2">
+      <h3 className={TYPE_GROUP_TITLE}>Tools</h3>
+      {picker}
+    </section>
+  );
+}
 
 function ToolPicker({
   drawTool,
   onPick,
+  style,
 }: {
   drawTool: MapDrawTool | null;
   onPick: (tool: MapDrawTool | null) => void;
+  style: ToolPickerStyle;
 }) {
-  const tools: { id: MapDrawTool; label: string; Icon: typeof PolygonDrawIcon }[] = [
-    { id: 'polygon', label: 'Polygon', Icon: PolygonDrawIcon },
-    { id: 'line', label: 'Line', Icon: LineDrawIcon },
-    { id: 'curve', label: 'Curve', Icon: CurveDrawIcon },
-    { id: 'circle', label: 'Circle', Icon: CircleDrawIcon },
-  ];
-
-  return (
-    <section className="space-y-2">
-      <h3 className={TYPE_GROUP_TITLE}>Tools</h3>
+  // All visual styles share the same Toggle semantics (pressed +
+  // onPressedChange) so they all participate in the same active-state
+  // bookkeeping; they only differ in layout / chrome.
+  if (style === 'tiles') {
+    // Original 2x2 large tiles.
+    return (
       <div role="group" aria-label="Drawing tools" className="grid grid-cols-2 gap-2">
-        {tools.map((t) => {
+        {TOOL_ENTRIES.map((t) => {
           const active = drawTool === t.id;
           return (
             <Toggle
@@ -374,7 +564,68 @@ function ToolPicker({
           );
         })}
       </div>
-    </section>
+    );
+  }
+
+  if (style === 'chips') {
+    // Small wrap-friendly chips: icon + short label.
+    return (
+      <div role="group" aria-label="Drawing tools" className="flex flex-wrap items-center gap-1.5">
+        {TOOL_ENTRIES.map((t) => {
+          const active = drawTool === t.id;
+          return (
+            <Toggle
+              key={t.id}
+              size="sm"
+              pressed={active}
+              onPressedChange={(next) => onPick(next ? t.id : null)}
+              aria-label={t.label}
+              className="h-8 gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-2.5 text-[11px] text-zinc-300 hover:bg-white/10 hover:text-white aria-pressed:bg-white/[0.12] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+            >
+              <t.Icon size={14} />
+              <span className="text-[11px] font-medium">{t.label}</span>
+            </Toggle>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // segmented — one connected segmented bar. Icon-only to stay compact.
+  // Every adjacent button is separated by the same hairline stroke so
+  // the seam between polygon and line reads identically to the seam
+  // between curve and circle. `border-s` (logical inline-start) keeps
+  // the seam on the correct side in both LTR and RTL — `border-l`
+  // would land on the wrong edge once the row is mirrored.
+  return (
+    <div
+      role="group"
+      aria-label="Drawing tools"
+      className="flex items-stretch overflow-hidden rounded-md border border-white/10 bg-white/[0.04]"
+    >
+      {TOOL_ENTRIES.map((t, i) => {
+        const active = drawTool === t.id;
+        return (
+          <button
+            key={t.id}
+            type="button"
+            aria-pressed={active}
+            aria-label={t.label}
+            title={t.label}
+            onClick={() => onPick(active ? null : t.id)}
+            className={`flex h-8 flex-1 items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/25 ${
+              i > 0 ? 'border-s border-white/20' : ''
+            } ${
+              active
+                ? 'bg-white/[0.14] text-white'
+                : 'text-white/65 hover:bg-white/10 hover:text-white'
+            }`}
+          >
+            <t.Icon size={15} />
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -385,11 +636,9 @@ function ToolPicker({
 function ShapeInspector({
   shape,
   onPatch,
-  toolPicker,
 }: {
   shape: GeoShape;
   onPatch: (patch: Partial<GeoShape>) => void;
-  toolPicker: React.ReactNode;
 }) {
   const fillMode: GeoFillMode = shape.fillMode ?? 'fill';
   const lineStyle: GeoLineStyle = shape.lineStyle ?? 'solid';
@@ -417,7 +666,6 @@ function ShapeInspector({
     <div className="space-y-5">
       <StatusField shape={shape} onPatch={onPatch} />
       <CoordinatesSection shape={shape} />
-      {toolPicker}
       <FillSection shape={shape} fillMode={fillMode} onPatch={onPatchGuarded} />
       <LineSection
         lineStyle={lineStyle}

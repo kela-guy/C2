@@ -41,6 +41,7 @@ import {
   type Vec2,
 } from '../geo-entities-sandbox/drawTypes';
 import { ShapeTransformHandles } from '../geo-entities-sandbox/ShapeTransformHandles';
+import { deleteShapeWithUndo } from './deleteWithUndo';
 import { useMapDraw } from './MapDrawProvider';
 
 export interface MapDrawOverlayProps {
@@ -99,7 +100,7 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
         if (draw.selectedId) {
           e.preventDefault();
-          draw.deleteShape(draw.selectedId);
+          deleteShapeWithUndo(draw, draw.selectedId);
         }
       }
     };

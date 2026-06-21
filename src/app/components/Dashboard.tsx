@@ -272,9 +272,19 @@ interface DashboardProps {
    * branches on it today.
    */
   demoMode?: boolean;
+  /**
+   * "Geo Entities Layers" lab mode: opens the map-draw panel on mount
+   * and surfaces the panel-design variant switcher (Opt 1..4 + Original).
+   * Off (the default) keeps production behaviour. Used by the DEV-only
+   * `/geo-entities-layers-sandbox` route.
+   */
+  drawPanelLab?: boolean;
 }
 
-export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
+export const Dashboard = ({
+  demoMode = false,
+  drawPanelLab = false,
+}: DashboardProps = {}) => {
   const allDevices = useDevicesFromAssets();
   const { units: gotchaUnits } = useGotchaUnits();
   // Composite Gotcha effectors render through the shared DeviceRow like every
@@ -1786,6 +1796,15 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
     setMapDrawPanelOpen(false);
   }, []);
 
+  // Lab mode: auto-open the map-draw panel once on mount so reviewers
+  // land directly on the drawing UI with the variant switcher visible.
+  // The empty dep array is intentional — only fire once per Dashboard
+  // mount; subsequent panel toggles are driven by the user as usual.
+  useEffect(() => {
+    if (drawPanelLab) openMapDrawPanel();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Flow Builder joins the right-side mutual-exclusion group: opening it
   // closes the queue / Devices / Simulations / Map-draw (and vice-versa, above).
   const openFlowBuilderPanel = useCallback(() => {
@@ -2648,6 +2667,12 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
             onClose={closeMapDrawPanel}
             width={sidebarWidth}
             noTransition={panelSwitching}
+            // Production default: Opt 5 (segmented tool bar inside a
+            // Tools dropdown opened by default, layers list open). The
+            // lab route keeps this as the initial variant but still lets
+            // reviewers flip between Opt 2 / Opt 3 / Opt 5 / Original.
+            variant="opt5"
+            lab={drawPanelLab}
           />
         )}
 
