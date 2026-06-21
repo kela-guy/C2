@@ -304,6 +304,24 @@ function ShapeBody({ shape, selected }: { shape: GeoShape; selected: boolean }) 
     );
   }
 
+  if (shape.kind === 'circle') {
+    const a = shape.points[0] ?? { x: 0.5, y: 0.5 };
+    const b = shape.points[1] ?? a;
+    return (
+      <ellipse
+        data-shape-id={shape.id}
+        cx={((a.x + b.x) / 2) * 1000}
+        cy={((a.y + b.y) / 2) * 625}
+        rx={(Math.abs(b.x - a.x) / 2) * 1000}
+        ry={(Math.abs(b.y - a.y) / 2) * 625}
+        fill={fill}
+        stroke={stroke}
+        strokeWidth={strokeWidth}
+        style={{ cursor: 'pointer' }}
+      />
+    );
+  }
+
   const d = pathFromPoints(shape.points, shape.kind === 'polygon' || shape.kind === 'freehand');
 
   return (
@@ -327,6 +345,26 @@ function DraftPreview({ draft }: { draft: DraftShape }) {
     const p = draft.points[0];
     return (
       <circle cx={p.x * 1000} cy={p.y * 625} r={6} fill="#facc15" opacity={0.8} />
+    );
+  }
+
+  if (draft.kind === 'circle') {
+    const center = draft.points[0];
+    const edge = draft.cursor ?? center;
+    return (
+      <g pointerEvents="none">
+        <ellipse
+          cx={center.x * 1000}
+          cy={center.y * 625}
+          rx={Math.abs(edge.x - center.x) * 1000}
+          ry={Math.abs(edge.y - center.y) * 625}
+          fill="rgba(56,189,248,0.12)"
+          stroke="#facc15"
+          strokeWidth={2}
+          strokeDasharray="5 4"
+        />
+        <circle cx={center.x * 1000} cy={center.y * 625} r={4} fill="#facc15" />
+      </g>
     );
   }
 

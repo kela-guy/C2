@@ -45,14 +45,35 @@ import { useMapDraw } from './MapDrawProvider';
 
 export interface MapDrawOverlayProps {
   className?: string;
+  /**
+   * Fired whenever the selected shape changes. The host uses this to open
+   * the drawing panel when the user clicks a shape on the map.
+   */
+  onSelect?: (id: string | null) => void;
 }
 
 const VIEWBOX_W = 1000;
 const VIEWBOX_H = 625;
 
-export function MapDrawOverlay({ className }: MapDrawOverlayProps) {
+// Status tones kept in step with the panel's `STATUS_OPTIONS`.
+const STATUS_TONE: Record<string, { label: string; tone: string }> = {
+  low: { label: 'Low', tone: '#34d399' },
+  middle: { label: 'Middle', tone: '#facc15' },
+  high: { label: 'High', tone: '#f43f5e' },
+};
+
+export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
   const { draw, drawTool } = useMapDraw();
   const svgRef = useRef<SVGSVGElement | null>(null);
+
+  // Notify the host when the selection changes so it can open the panel
+  // when a shape is clicked. Kept in a ref so the effect only depends on
+  // the id, not the callback identity.
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
+  useEffect(() => {
+    onSelectRef.current?.(draw.selectedId);
+  }, [draw.selectedId]);
 
   // ---- keyboard: Escape cancels draft / deselects; Enter finishes; -----
   // ---- Delete removes the selected shape. ------------------------------
@@ -103,9 +124,9 @@ export function MapDrawOverlay({ className }: MapDrawOverlayProps) {
     e.currentTarget.setPointerCapture?.(e.pointerId);
     const isShapeClick = !!shapeId && !draw.draft;
     draw.onCanvasPointerDown(local, { onShapeId: shapeId });
-    if (isShapeClick) {
-      draw.beginHandleDrag('body', shapeId!, local);
-    }
+    // Every map-draw shape is pinned to its location: polygons, lines and
+    // curves can't be moved, scaled or rotated; circles can be resized
+    // (via handles) but not moved. So we never start a body-move gesture.
   };
 
   const handlePointerMove = (e: ReactPointerEvent<SVGSVGElement>) => {
@@ -137,25 +158,32 @@ export function MapDrawOverlay({ className }: MapDrawOverlayProps) {
     }
   };
 
-  // Centered name label rendered in foreign HTML so the font matches the
-  // rest of the UI. Only rendered for shapes the user has actually named
-  // (i.e. not the auto `${tool.label} N` placeholder).
-  const labelInfo = useMemo(() => {
-    const shape = draw.selectedShape;
-    if (!shape || shape.kind === 'point') return null;
+  // Centered name labels, rendered in foreign HTML so the font matches
+  // the rest of the UI. A label is shown for EVERY visible shape and
+  // persists whether or not the shape is selected — empty ones read
+  // "Name" as a placeholder. The selected shape's label is an editable
+  // input; the rest are static text.
+  const labels = useMemo(() => {
     const el = svgRef.current;
-    if (!el) return null;
+    if (!el) return [];
     const r = el.getBoundingClientRect();
-    const b = bbox(shape.points);
-    const cx = (b.minX + b.maxX) / 2;
-    const cy = (b.minY + b.maxY) / 2;
-    return {
-      shape,
-      left: r.left + cx * r.width,
-      top: r.top + cy * r.height,
-    };
-    // shapes is included so the label re-anchors live during a transform.
-  }, [draw.selectedShape, draw.shapes]);
+    return draw.shapes
+      .filter((s) => !s.hidden && s.kind !== 'point')
+      .map((s) => {
+        const b = bbox(s.points);
+        const cx = (b.minX + b.maxX) / 2;
+        const cy = (b.minY + b.maxY) / 2;
+        return {
+          id: s.id,
+          description: s.description ?? '',
+          status: s.status,
+          editable: s.id === draw.selectedId,
+          left: r.left + cx * r.width,
+          top: r.top + cy * r.height,
+        };
+      });
+    // shapes drives the re-anchor so labels follow live during transforms.
+  }, [draw.shapes, draw.selectedId]);
 
   return (
     <div
@@ -178,22 +206,30 @@ export function MapDrawOverlay({ className }: MapDrawOverlayProps) {
         onDoubleClick={handleDoubleClick}
         onContextMenu={(e) => e.preventDefault()}
       >
-        {draw.shapes.map((shape) => (
-          <ShapeBody
-            key={shape.id}
-            shape={shape}
-            selected={shape.id === draw.selectedId}
-            interactive={interactive}
-          />
-        ))}
+        {draw.shapes.map((shape) =>
+          shape.hidden ? null : (
+            <ShapeBody
+              key={shape.id}
+              shape={shape}
+              selected={shape.id === draw.selectedId}
+              interactive={interactive}
+            />
+          ),
+        )}
 
         {draw.draft && <DraftPreview draft={draw.draft} />}
 
-        {draw.selectedShape && (
+        {/* Only circles expose transform handles (to expand). Polygons /
+            lines / curves are fully pinned, so no handles are shown. */}
+        {draw.selectedShape &&
+          !draw.selectedShape.hidden &&
+          !draw.selectedShape.locked &&
+          draw.selectedShape.kind === 'circle' && (
           <ShapeTransformHandles
             shape={draw.selectedShape}
             width={VIEWBOX_W}
             height={VIEWBOX_H}
+            allowRotate={false}
             onHandleDown={(handle, _e, origin) =>
               draw.beginHandleDrag(handle, draw.selectedShape!.id, origin)
             }
@@ -201,20 +237,50 @@ export function MapDrawOverlay({ className }: MapDrawOverlayProps) {
         )}
       </svg>
 
-      {labelInfo && hasUserName(labelInfo.shape.name) && (
+      {labels.map((l) => (
         <div
-          className="pointer-events-none fixed z-30"
+          key={l.id}
+          className="fixed z-30"
           style={{
-            left: labelInfo.left,
-            top: labelInfo.top,
+            left: l.left,
+            top: l.top,
             transform: 'translate(-50%, -50%)',
           }}
         >
-          <span className="rounded-md px-3 py-1.5 text-[13px] font-semibold text-white drop-shadow">
-            {labelInfo.shape.name}
-          </span>
+          <div className="flex flex-col items-center gap-1">
+            {l.status && STATUS_TONE[l.status] && (
+              <span
+                className="pointer-events-none inline-flex items-center gap-1 rounded-full bg-black/45 px-1.5 py-0.5 text-[10px] font-semibold text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]"
+              >
+                <span
+                  aria-hidden
+                  className="size-1.5 rounded-full"
+                  style={{ background: STATUS_TONE[l.status].tone }}
+                />
+                {STATUS_TONE[l.status].label}
+              </span>
+            )}
+            {l.editable ? (
+            <input
+              value={l.description}
+              onChange={(e) => draw.updateShape(l.id, { description: e.target.value })}
+              placeholder="Add name"
+              aria-label="Shape name"
+              spellCheck={false}
+              className="pointer-events-auto w-44 bg-transparent text-center text-[13px] font-semibold text-white caret-white outline-none placeholder:text-white/55 [text-shadow:0_1px_3px_rgba(0,0,0,0.7)]"
+            />
+          ) : (
+            <span
+              className={`pointer-events-none text-balance text-center text-[13px] font-semibold [text-shadow:0_1px_3px_rgba(0,0,0,0.7)] ${
+                l.description.trim() ? 'text-white' : 'text-white/55'
+              }`}
+            >
+              {l.description.trim() ? l.description : 'Add name'}
+            </span>
+          )}
+          </div>
         </div>
-      )}
+      ))}
     </div>
   );
 }
@@ -232,7 +298,7 @@ function ShapeBody({
   selected: boolean;
   interactive: boolean;
 }) {
-  const stroke = shape.color;
+  const stroke = shape.strokeColor ?? shape.color;
   const lineStyle: GeoLineStyle = shape.lineStyle ?? 'solid';
   const fillMode: GeoFillMode = shape.fillMode ?? 'fill';
   const strokeWidth = shape.strokeWidth ?? (selected ? 2.5 : 2);
@@ -265,21 +331,73 @@ function ShapeBody({
     );
   }
 
+  if (shape.kind === 'circle') {
+    const e = ellipseFromPoints(shape.points);
+    const cx = e.cx * VIEWBOX_W;
+    const cy = e.cy * VIEWBOX_H;
+    const rx = e.rx * VIEWBOX_W;
+    const ry = e.ry * VIEWBOX_H;
+    return (
+      <g>
+        {selected && (
+          <ellipse
+            cx={cx}
+            cy={cy}
+            rx={rx}
+            ry={ry}
+            fill="none"
+            stroke="#ffffff"
+            strokeWidth={strokeWidth + 5}
+            strokeOpacity={0.55}
+            style={{ pointerEvents: 'none' }}
+          />
+        )}
+        <ellipse
+          data-shape-id={shape.id}
+          cx={cx}
+          cy={cy}
+          rx={rx}
+          ry={ry}
+          fill={fill}
+          stroke={stroke}
+          strokeWidth={strokeWidth}
+          strokeOpacity={strokeOpacity}
+          strokeDasharray={dasharray}
+          style={{ cursor: 'pointer', pointerEvents: 'all' }}
+        />
+      </g>
+    );
+  }
+
   const d = pathFromPoints(shape.points, shape.kind === 'polygon' || shape.kind === 'freehand');
 
   return (
-    <path
-      data-shape-id={shape.id}
-      d={d}
-      fill={shape.kind === 'polyline' ? 'none' : fill}
-      stroke={stroke}
-      strokeWidth={strokeWidth}
-      strokeOpacity={strokeOpacity}
-      strokeDasharray={dasharray}
-      strokeLinejoin="round"
-      strokeLinecap="round"
-      style={{ cursor: 'pointer', pointerEvents: 'all' }}
-    />
+    <g>
+      {selected && (
+        <path
+          d={d}
+          fill="none"
+          stroke="#ffffff"
+          strokeWidth={strokeWidth + 5}
+          strokeOpacity={0.55}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          style={{ pointerEvents: 'none' }}
+        />
+      )}
+      <path
+        data-shape-id={shape.id}
+        d={d}
+        fill={shape.kind === 'polyline' ? 'none' : fill}
+        stroke={stroke}
+        strokeWidth={strokeWidth}
+        strokeOpacity={strokeOpacity}
+        strokeDasharray={dasharray}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        style={{ cursor: 'pointer', pointerEvents: 'all' }}
+      />
+    </g>
   );
 }
 
@@ -290,6 +408,28 @@ function DraftPreview({ draft }: { draft: DraftShape }) {
     const p = draft.points[0];
     return (
       <circle cx={p.x * VIEWBOX_W} cy={p.y * VIEWBOX_H} r={6} fill="#facc15" opacity={0.8} />
+    );
+  }
+
+  if (draft.kind === 'circle') {
+    const center = draft.points[0];
+    const edge = draft.cursor ?? center;
+    const rx = Math.abs(edge.x - center.x);
+    const ry = Math.abs(edge.y - center.y);
+    return (
+      <g pointerEvents="none">
+        <ellipse
+          cx={center.x * VIEWBOX_W}
+          cy={center.y * VIEWBOX_H}
+          rx={rx * VIEWBOX_W}
+          ry={ry * VIEWBOX_H}
+          fill="rgba(56,189,248,0.10)"
+          stroke="#facc15"
+          strokeWidth={2}
+          strokeDasharray="5 4"
+        />
+        <circle cx={center.x * VIEWBOX_W} cy={center.y * VIEWBOX_H} r={4} fill="#facc15" />
+      </g>
     );
   }
 
@@ -330,15 +470,23 @@ function DraftPreview({ draft }: { draft: DraftShape }) {
 // ---------------------------------------------------------------------------
 
 /**
- * `useGeoDraw` defaults a shape's name to `${tool.label} N`. Treat any
- * such auto-generated string as "no real name" so the on-shape label
- * stays hidden until the user types a real annotation in the panel.
+ * Derive an ellipse (center + radii, all normalized) from a circle's two
+ * bbox-corner points. Tolerates the points being in any order.
  */
-function hasUserName(name: string | undefined): boolean {
-  if (!name || name.trim().length === 0) return false;
-  return !/^(Polygon|Line|Curve|No Fly Zone|Patrol Area|Virtual Wall|Critical Point|Free Drawing) \d+$/.test(
-    name,
-  );
+function ellipseFromPoints(points: { x: number; y: number }[]): {
+  cx: number;
+  cy: number;
+  rx: number;
+  ry: number;
+} {
+  const a = points[0] ?? { x: 0.5, y: 0.5 };
+  const b = points[1] ?? a;
+  return {
+    cx: (a.x + b.x) / 2,
+    cy: (a.y + b.y) / 2,
+    rx: Math.abs(b.x - a.x) / 2,
+    ry: Math.abs(b.y - a.y) / 2,
+  };
 }
 
 function pathFromPoints(points: { x: number; y: number }[], close: boolean): string {

@@ -14,6 +14,7 @@ import type { ComponentType } from 'react';
 import type { IconProps } from '@/lib/icons/central';
 import {
   Ban,
+  Circle,
   Crosshair,
   Curve,
   LineSegment,
@@ -137,6 +138,16 @@ export const DRAW_TOOLS: ToolDescriptor[] = [
     Icon: Curve,
     color: '#34d399',
     fillOpacity: 0.14,
+    group: 'geometry',
+  },
+  {
+    id: 'circle',
+    kind: 'circle',
+    label: 'Circle',
+    description: 'Center-out circle / radius zone',
+    Icon: Circle,
+    color: '#38bdf8',
+    fillOpacity: 0.16,
     group: 'geometry',
   },
 ];

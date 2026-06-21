@@ -43,10 +43,14 @@ const MIN_POLY_POINTS = 2;
 /** Minimum freehand path length (in points) to count as a real drawing. */
 const MIN_FREEHAND_POINTS = 3;
 
+/** Minimum circle radius (normalized) below which the draw is discarded. */
+const MIN_CIRCLE_RADIUS = 0.01;
+
 /** Drag operations the controller can be in the middle of. */
 type Drag =
   | { kind: 'idle' }
   | { kind: 'freehand' }
+  | { kind: 'circle' }
   | {
       kind: 'transform';
       handle: HandleId;
@@ -80,6 +84,8 @@ export interface UseGeoDrawResult {
   clearAll: () => void;
   cancelDraft: () => void;
   finishDraft: () => void;
+  /** Remove the last placed vertex of the in-progress draft (undo step). */
+  undoLastPoint: () => void;
 
   // Canvas-side pointer handlers. The canvas converts events to normalized
   // points before forwarding.
@@ -161,10 +167,25 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
 
   const cancelDraft = useCallback(() => setDraft(null), []);
 
+  const undoLastPoint = useCallback(() => {
+    setDraft((prev) => {
+      if (!prev) return prev;
+      // Point drafts are committed instantly, so there's nothing to step
+      // back through; drop the (degenerate) draft entirely.
+      if (prev.kind === 'point') return null;
+      const points = prev.points.slice(0, -1);
+      // Removing the last remaining vertex ends the draw cleanly.
+      if (points.length === 0) return null;
+      return { ...prev, points, cursor: prev.cursor };
+    });
+  }, []);
+
   const finishDraft = useCallback(() => {
     setDraft((current) => {
       if (!current) return current;
       if (current.kind === 'point') return current;
+      // Circles commit on pointer-up (drag-to-size), not via Enter / dbl-click.
+      if (current.kind === 'circle') return current;
       if (current.kind === 'polygon' && current.points.length < 3) return null;
       if (current.kind === 'polyline' && current.points.length < MIN_POLY_POINTS)
         return null;
@@ -213,6 +234,15 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
       if (meta.kind === 'freehand') {
         dragRef.current = { kind: 'freehand' };
         setDraft({ tool, kind: 'freehand', points: [point], cursor: point });
+        return;
+      }
+
+      // Circle: press sets the center, drag grows the radius, release
+      // commits. The draft keeps the center in `points[0]` and tracks the
+      // live edge in `cursor`.
+      if (meta.kind === 'circle') {
+        dragRef.current = { kind: 'circle' };
+        setDraft({ tool, kind: 'circle', points: [point], cursor: point });
         return;
       }
 
@@ -284,6 +314,26 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
         dragRef.current = { kind: 'idle' };
         return;
       }
+      if (drag.kind === 'circle') {
+        // Commit the circle as its bbox corners so the bbox/transform
+        // helpers can resize it. Discard sub-threshold (accidental) taps.
+        setDraft((prev) => {
+          if (!prev) return prev;
+          const center = prev.points[0];
+          const edge = prev.cursor ?? center;
+          const rx = Math.abs(edge.x - center.x);
+          const ry = Math.abs(edge.y - center.y);
+          if (Math.max(rx, ry) < MIN_CIRCLE_RADIUS) return null;
+          const corners: Vec2[] = [
+            { x: center.x - rx, y: center.y - ry },
+            { x: center.x + rx, y: center.y + ry },
+          ];
+          queueMicrotask(() => commitDraft({ ...prev, points: corners }));
+          return prev;
+        });
+        dragRef.current = { kind: 'idle' };
+        return;
+      }
       if (drag.kind === 'transform') {
         dragRef.current = { kind: 'idle' };
         setDraggingTick((t) => t + 1);
@@ -346,6 +396,9 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
           default:
             anchor = center;
         }
+        // Circles are pinned to their center: resize from the center so the
+        // shape expands/contracts in place and never drifts sideways.
+        if (target.kind === 'circle') anchor = center;
         const startAngle = Math.atan2(origin.y - center.y, origin.x - center.x);
         dragRef.current = {
           kind: 'transform',
@@ -384,6 +437,7 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
     clearAll,
     cancelDraft,
     finishDraft,
+    undoLastPoint,
 
     onCanvasPointerDown,
     onCanvasPointerMove,

@@ -2481,7 +2481,11 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
                 selection / draft) is read from `<MapDrawProvider>`,
                 which the panel mutates in lockstep.
               */}
-              <MapDrawOverlay />
+              <MapDrawOverlay
+                onSelect={(id) => {
+                  if (id && !mapDrawPanelOpen) openMapDrawPanel();
+                }}
+              />
             </div>
           </ResizablePanel>
 

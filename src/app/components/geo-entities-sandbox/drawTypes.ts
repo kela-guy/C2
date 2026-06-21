@@ -38,10 +38,15 @@ export type GeoToolId =
   | 'freeDraw'
   | 'polygon'
   | 'line'
-  | 'curve';
+  | 'curve'
+  | 'circle';
 
-/** Underlying geometry the tool produces. */
-export type GeoShapeKind = 'polygon' | 'polyline' | 'point' | 'freehand';
+/**
+ * Underlying geometry the tool produces. `circle` is stored as the two
+ * opposite corners of its bounding box (`points = [topLeft, bottomRight]`)
+ * so the shared bbox / transform helpers resize it for free.
+ */
+export type GeoShapeKind = 'polygon' | 'polyline' | 'point' | 'freehand' | 'circle';
 
 /** Normalized point in canvas-local space, both components in `[0, 1]`. */
 export interface Vec2 {
@@ -54,7 +59,7 @@ export interface Vec2 {
  * Text popover (Dashboard map-draw flow). The sandbox doesn't read this
  * field — it's purely metadata for the live Dashboard overlay.
  */
-export type GeoAreaStatus = 'urgentA' | 'secondaryB' | 'somethingC';
+export type GeoAreaStatus = 'low' | 'middle' | 'high';
 
 /** Stroke style applied by the map-draw style popover. */
 export type GeoLineStyle = 'solid' | 'dashed' | 'none';
@@ -71,8 +76,11 @@ export interface GeoShape {
   /** User-editable name; defaults to the tool label + index. */
   name: string;
   description: string;
-  /** Hex color used for stroke; fill derives by adding alpha. */
+  /** Hex color used for the fill; stroke derives from this when no
+   * dedicated stroke color is set. */
   color: string;
+  /** Optional dedicated stroke/line color. Falls back to {@link color}. */
+  strokeColor?: string;
   /** 0–1 fill opacity (only meaningful for polygon/freehand-as-area). */
   fillOpacity: number;
   /**
@@ -95,6 +103,10 @@ export interface GeoShape {
   strokeWidth?: number;
   /** How the fill is rendered: fill / transparent / no-fill. Default fill. */
   fillMode?: GeoFillMode;
+  /** Hidden shapes are not painted on the map (toggled from the panel). */
+  hidden?: boolean;
+  /** Locked shapes can't be moved / scaled / rotated on the map. */
+  locked?: boolean;
 }
 
 /** In-progress draft while the user is mid-draw. */

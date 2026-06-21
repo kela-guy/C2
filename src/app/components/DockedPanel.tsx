@@ -41,6 +41,8 @@ export interface DockedPanelProps {
   dataHandoff?: string;
   /** Extra classes for the scrollable body wrapper. */
   bodyClassName?: string;
+  /** Extra classes merged onto the root `<aside>` (e.g. to raise z-index). */
+  className?: string;
   /** Close on Escape (ignored while typing in inputs/textareas). */
   closeOnEsc?: boolean;
   children: React.ReactNode;
@@ -58,6 +60,7 @@ export function DockedPanel({
   footer,
   dataHandoff,
   bodyClassName,
+  className,
   closeOnEsc,
   children,
 }: DockedPanelProps) {
@@ -90,6 +93,7 @@ export function DockedPanel({
           ? ''
           : 'transition-transform duration-300 ease-out motion-reduce:transition-none',
         open ? 'translate-x-0' : `${closedTranslate} pointer-events-none`,
+        className,
       )}
       style={{
         width: width ?? LAYOUT_TOKENS.sidebarWidthPx,

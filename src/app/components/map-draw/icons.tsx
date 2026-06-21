@@ -66,6 +66,28 @@ export function CurveDrawIcon({ size = 20, ...rest }: DrawIconProps) {
 }
 
 /**
+ * Circle outline with a center dot + radius tick — the circle drawing
+ * tool glyph (center-out radius zone).
+ */
+export function CircleDrawIcon({ size = 20, ...rest }: DrawIconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+      {...rest}
+    >
+      <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+      <line x1="12" y1="12" x2="20.5" y2="12" stroke="currentColor" strokeWidth="1.2" strokeDasharray="2 2" />
+    </svg>
+  );
+}
+
+/**
  * Diagonal stroke — the straight-line drawing tool glyph.
  */
 export function LineDrawIcon({ size = 20, ...rest }: DrawIconProps) {

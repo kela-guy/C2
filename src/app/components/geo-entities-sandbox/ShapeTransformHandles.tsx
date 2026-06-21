@@ -21,6 +21,8 @@ export interface ShapeTransformHandlesProps {
   shape: GeoShape;
   width: number;
   height: number;
+  /** Show the rotate handle. Default true; circles pass `false`. */
+  allowRotate?: boolean;
   /** Called when the user grabs a handle. Origin is normalized canvas space. */
   onHandleDown: (
     handle: HandleId,
@@ -41,6 +43,7 @@ export function ShapeTransformHandles({
   shape,
   width,
   height,
+  allowRotate = true,
   onHandleDown,
 }: ShapeTransformHandlesProps) {
   const b = bbox(shape.points);
@@ -85,7 +88,7 @@ export function ShapeTransformHandles({
       )}
 
       {/* Rotate handle: line + circle floating above the top edge midpoint. */}
-      {!isPoint && (
+      {!isPoint && allowRotate && (
         <>
           <line
             x1={px(center.x)}

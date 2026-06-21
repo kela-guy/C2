@@ -24,7 +24,7 @@ import { useGeoDraw, type UseGeoDrawResult } from '../geo-entities-sandbox/useGe
  * Public tool ids the Dashboard rail / panel exposes. Maps onto the
  * engine's `polygon` / `line` / `curve` ids one-to-one.
  */
-export type MapDrawTool = 'polygon' | 'line' | 'curve';
+export type MapDrawTool = 'polygon' | 'line' | 'curve' | 'circle';
 
 export interface MapDrawContextValue {
   /** Underlying drawing engine. Same object both consumers share. */
@@ -38,7 +38,7 @@ export interface MapDrawContextValue {
 const MapDrawContext = createContext<MapDrawContextValue | null>(null);
 
 function isMapDrawTool(id: string): id is MapDrawTool {
-  return id === 'polygon' || id === 'line' || id === 'curve';
+  return id === 'polygon' || id === 'line' || id === 'curve' || id === 'circle';
 }
 
 export function MapDrawProvider({ children }: { children: ReactNode }) {
