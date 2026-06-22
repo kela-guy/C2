@@ -3,6 +3,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { spring } from '@/lib/springs';
 import { useDrop } from 'react-dnd';
 import { CAMERA_ASSETS, REGULUS_EFFECTORS, SPEAKER_ASSETS } from './tacticalAssets';
+import { DEFAULT_SPEAKER_TRACKS } from './devices-panel';
 import { bearingDegrees, haversineDistanceM } from '@/app/lib/mapGeo';
 import { LiveCesiumTacticalMap } from './LiveCesiumTacticalMap';
 import { useLiveMapStore } from './liveMapStore';
@@ -320,6 +321,11 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
   // devices panel is presentational and reads these sets).
   const [floodlightOnIds, setFloodlightOnIds] = useState<Set<string>>(new Set());
   const [speakerPlayingIds, setSpeakerPlayingIds] = useState<Set<string>>(new Set());
+  // Target-card audio broadcast: which target is currently broadcasting over the
+  // PA speakers, plus the per-target selected track. Reuses the same speaker
+  // pulse path (`speakerPlayingIds` over `SPEAKER_ASSETS`) as the device panel.
+  const [audioPlayingTargetId, setAudioPlayingTargetId] = useState<string | null>(null);
+  const [selectedAudioTrackIds, setSelectedAudioTrackIds] = useState<Map<string, string>>(new Map());
   // High-frequency map state (4 Hz friendly-drone positions + card/row
   // hover) lives in an external store so its updates re-render only the map
   // subscriber, never the Dashboard root. See `liveMapStore.ts`.
@@ -1478,6 +1484,36 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
     toast.success(`PA broadcast: ${trackId}`, { duration: 3000 });
   }, []);
 
+  // Target-card "Play audio": toggle a PA broadcast for one target. Drives the
+  // same speaker pulse as the device panel (every SPEAKER_ASSET lights up) and
+  // toasts the selected track label. Pressing again (or on another target's
+  // card) stops this one.
+  const handlePlayAudio = useCallback((targetId: string) => {
+    const willPlay = audioPlayingTargetId !== targetId;
+    setAudioPlayingTargetId(willPlay ? targetId : null);
+    setSpeakerPlayingIds((prev) => {
+      const s = new Set(prev);
+      for (const spk of SPEAKER_ASSETS) {
+        if (willPlay) s.add(spk.id);
+        else s.delete(spk.id);
+      }
+      return s;
+    });
+    if (willPlay) {
+      const trackId = selectedAudioTrackIds.get(targetId) ?? DEFAULT_SPEAKER_TRACKS[0]?.id;
+      const track = DEFAULT_SPEAKER_TRACKS.find((tr) => tr.id === trackId);
+      toast.success(`PA broadcast: ${track?.label ?? trackId}`, { duration: 3000 });
+    }
+  }, [audioPlayingTargetId, selectedAudioTrackIds]);
+
+  const handleSelectAudioTrack = useCallback((targetId: string, trackId: string) => {
+    setSelectedAudioTrackIds((prev) => {
+      const m = new Map(prev);
+      m.set(targetId, trackId);
+      return m;
+    });
+  }, []);
+
   // "Show on map" from the takeover — focus + select the detecting unit.
   const handleGotchaLocate = useCallback((alert: CriticalDroneAlert) => {
     const unit = gotchaUnits.find((u) => u.id === alert.unitId);
@@ -2293,6 +2329,11 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
               controlRequestCountdown={cameraControlRequest?.countdown ?? null}
               controlRequestTargetId={cameraControlRequest?.targetId ?? null}
               onRequestCameraControl={handleRequestCameraControl}
+              onPlayAudio={handlePlayAudio}
+              onSelectAudioTrack={handleSelectAudioTrack}
+              audioPlayingTargetId={audioPlayingTargetId}
+              audioTracks={DEFAULT_SPEAKER_TRACKS}
+              selectedAudioTrackIds={selectedAudioTrackIds}
               onSensorFocus={handleSensorFocus}
               onTargetFocus={handleTargetFocus}
               onTargetHover={liveMap.setHoveredTargetId}

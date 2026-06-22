@@ -1,18 +1,23 @@
 /**
- * Manifest -> consumers generator + drift guard.
+ * Design-system generator + drift guard. One plain-node script (no extra deps)
+ * is the single build step for every machine-readable artifact the system
+ * emits. It reads three sources of truth:
  *
- * Reads the design-system manifest (`src/app/styleguide/registry/manifest.json`)
- * — the single source of truth — and:
- *   1. emits `styleguideSectionByHint.generated.ts` (the handoff hint -> section
- *      map consumed by `src/app/components/handoff/styleguideLink.ts`), and
- *   2. regenerates the "Components" block in `public/llms.txt`.
+ *   - `src/app/styleguide/registry/manifest.json` — components
+ *   - `tokens/core.json` + `tokens/c2-domain.json` — design tokens (DTCG)
+ *   - `governance/rules.json` — governance rules as data
  *
- * With `--check` it does NOT write; it validates and fails (exit 1) when:
- *   - a manifest `registryName` is missing from `registry.json`,
- *   - a handoff hint is claimed by more than one component, or
- *   - the committed generated files are stale.
+ * …and generates:
  *
- * Plain node, no extra deps — the manifest is JSON precisely so this works.
+ *   1. `styleguideSectionByHint.generated.ts` — handoff hint -> section map
+ *   2. `src/primitives/tokens.generated.ts`   — typed, resolved token graph
+ *   3. `src/styles/tokens.generated.css`       — tokens as CSS custom properties
+ *   4. `public/DESIGN_CONTEXT.md`              — agent contract (DSCP-style)
+ *   5. the "Components" / "Tokens" / "Rules" blocks in `public/llms.txt`
+ *
+ * With `--check` it does NOT write; it validates and fails (exit 1) when a
+ * manifest `registryName` is missing from `registry.json`, a handoff hint is
+ * claimed twice, or any committed generated file is stale.
  *
  * Usage:
  *   node scripts/styleguide-manifest.mjs           # write generated files
@@ -24,7 +29,14 @@ import { join } from 'node:path';
 const ROOT = join(import.meta.dirname, '..');
 const MANIFEST_PATH = join(ROOT, 'src/app/styleguide/registry/manifest.json');
 const REGISTRY_PATH = join(ROOT, 'registry.json');
+const CORE_TOKENS_PATH = join(ROOT, 'tokens/core.json');
+const DOMAIN_TOKENS_PATH = join(ROOT, 'tokens/c2-domain.json');
+const RULES_PATH = join(ROOT, 'governance/rules.json');
 const GENERATED_TS_PATH = join(ROOT, 'src/app/styleguide/registry/styleguideSectionByHint.generated.ts');
+const RULES_TS_PATH = join(ROOT, 'src/app/styleguide/registry/designRules.generated.ts');
+const TOKENS_TS_PATH = join(ROOT, 'src/primitives/tokens.generated.ts');
+const TOKENS_CSS_PATH = join(ROOT, 'src/styles/tokens.generated.css');
+const DESIGN_CONTEXT_PATH = join(ROOT, 'public/DESIGN_CONTEXT.md');
 const LLMS_PATH = join(ROOT, 'public/llms.txt');
 
 const STYLEGUIDE_ORIGIN = 'https://c2-hub-three.vercel.app';
@@ -38,6 +50,8 @@ async function readJson(path) {
   return JSON.parse(await readFile(path, 'utf-8'));
 }
 
+/* ───────────────────────── handoff hint map ───────────────────────── */
+
 function buildHintMap(components) {
   /** @type {Record<string, string>} */
   const map = {};
@@ -45,7 +59,6 @@ function buildHintMap(components) {
   const errors = [];
 
   for (const c of components) {
-    // A component always resolves from its own id.
     register(map, owners, errors, c.id, c.id, c.id);
     for (const hint of c.handoffHints ?? []) {
       register(map, owners, errors, hint, c.id, c.id);
@@ -81,12 +94,302 @@ ${entries}
 `;
 }
 
-function renderLlmsBlock(components) {
+/* ───────────────────────── token graph ───────────────────────── */
+
+const TIER_BY_TOP = { primitive: 'primitive', semantic: 'semantic' };
+
+/**
+ * Walk a DTCG token tree into a flat list of leaves. A leaf is any node with a
+ * `$value`. Path segments drop the `$`-prefixed metadata keys.
+ */
+function flattenTokens(node, layer, path, out) {
+  if (node == null || typeof node !== 'object') return;
+  if (Object.prototype.hasOwnProperty.call(node, '$value')) {
+    out.push({
+      layer,
+      path: path.slice(),
+      rawValue: node.$value,
+      type: node.$type ?? 'color',
+      description: node.$description ?? '',
+    });
+    return;
+  }
+  for (const key of Object.keys(node)) {
+    if (key.startsWith('$')) continue;
+    flattenTokens(node[key], layer, [...path, key], out);
+  }
+}
+
+/** Resolve `{a.b.c}` DTCG references against the raw-value index. */
+function resolveValue(rawValue, rawIndex, seen = new Set()) {
+  if (typeof rawValue !== 'string') return rawValue;
+  const ref = rawValue.match(/^\{([^}]+)\}$/);
+  if (!ref) return rawValue;
+  const target = ref[1];
+  if (seen.has(target)) throw new Error(`circular token reference: ${target}`);
+  seen.add(target);
+  if (!(target in rawIndex)) throw new Error(`unresolved token reference: {${target}}`);
+  return resolveValue(rawIndex[target], rawIndex, seen);
+}
+
+/** CSS custom-property name for a token leaf. */
+function cssVarName(leaf) {
+  if (leaf.layer === 'domain') {
+    return `--c2-${leaf.path.join('-')}`;
+  }
+  // core: drop the leading `semantic` segment for readable names; keep
+  // `primitive` so raw values stay namespaced.
+  const segs = leaf.path[0] === 'semantic' ? leaf.path.slice(1) : leaf.path;
+  return `--c2-${segs.join('-')}`;
+}
+
+/** Dot-joined token id used in metadata + the agent contract. */
+function tokenId(leaf) {
+  return `${leaf.layer}.${leaf.path.join('.')}`;
+}
+
+function buildTokenModel(coreJson, domainJson) {
+  const leaves = [];
+  flattenTokens(coreJson, 'core', [], leaves);
+  flattenTokens(domainJson, 'domain', [], leaves);
+
+  // Raw index keyed by dot-path (no layer prefix) so `{primitive.color...}`
+  // references resolve regardless of which file declared them.
+  const rawIndex = {};
+  for (const leaf of leaves) rawIndex[leaf.path.join('.')] = leaf.rawValue;
+
+  const tokens = leaves.map((leaf) => {
+    const tier =
+      leaf.layer === 'domain'
+        ? 'domain'
+        : TIER_BY_TOP[leaf.path[0]] ?? (leaf.type === 'dimension' ? 'dimension' : 'semantic');
+    return {
+      id: tokenId(leaf),
+      cssVar: cssVarName(leaf),
+      value: resolveValue(leaf.rawValue, rawIndex),
+      rawValue: leaf.rawValue,
+      type: leaf.type,
+      tier,
+      layer: leaf.layer,
+      description: leaf.description,
+      path: leaf.path,
+    };
+  });
+  return tokens;
+}
+
+/** Rebuild a resolved nested object (sans $-metadata) for typed TS consumption. */
+function resolvedTree(json, rawIndex) {
+  const walk = (node) => {
+    if (node && typeof node === 'object' && '$value' in node) {
+      return resolveValue(node.$value, rawIndex);
+    }
+    const obj = {};
+    for (const key of Object.keys(node)) {
+      if (key.startsWith('$')) continue;
+      obj[key] = walk(node[key]);
+    }
+    return obj;
+  };
+  return walk(json);
+}
+
+function renderTokensTs(tokens, coreTree, domainTree) {
+  const metaRows = tokens
+    .map(
+      (t) =>
+        `  { id: ${JSON.stringify(t.id)}, cssVar: ${JSON.stringify(t.cssVar)}, value: ${JSON.stringify(
+          t.value,
+        )}, type: ${JSON.stringify(t.type)}, tier: ${JSON.stringify(t.tier)}, layer: ${JSON.stringify(
+          t.layer,
+        )}, description: ${JSON.stringify(t.description)} },`,
+    )
+    .join('\n');
+
+  return `/**
+ * GENERATED by scripts/styleguide-manifest.mjs from tokens/core.json +
+ * tokens/c2-domain.json — do not edit by hand. Run
+ * \`node scripts/styleguide-manifest.mjs\` to regenerate; \`--check\` fails CI
+ * when this file is stale.
+ *
+ * The DTCG JSON is the single source of truth; \`tokens.ts\` consumes the
+ * resolved values below so its public exports stay a stable compatibility
+ * surface while the underlying values are theme-able from one place.
+ */
+
+export interface DesignTokenMeta {
+  /** Dot id, e.g. \`core.semantic.color.surface.base\`. */
+  id: string;
+  /** CSS custom property, e.g. \`--c2-color-surface-base\`. */
+  cssVar: string;
+  /** Resolved value (references followed). */
+  value: string;
+  type: string;
+  /** \`primitive\` | \`semantic\` | \`dimension\` | \`domain\`. */
+  tier: string;
+  /** \`core\` | \`domain\`. */
+  layer: string;
+  description: string;
+}
+
+/** Flat, ordered token graph — drives the styleguide docs and agent contract. */
+export const DESIGN_TOKENS: DesignTokenMeta[] = [
+${metaRows}
+];
+
+/** Resolved CORE token tree (brand-agnostic). */
+export const coreTokens = ${JSON.stringify(coreTree, null, 2)} as const;
+
+/** Resolved C2 DOMAIN token tree (tactical, product-specific). */
+export const domainTokens = ${JSON.stringify(domainTree, null, 2)} as const;
+`;
+}
+
+function renderTokensCss(tokens) {
+  const section = (label, layer, tier) => {
+    const rows = tokens
+      .filter((t) => (layer ? t.layer === layer : true) && (tier ? t.tier === tier : true))
+      .map((t) => `  ${t.cssVar}: ${t.value}; /* ${t.description} */`)
+      .join('\n');
+    return rows ? `  /* ${label} */\n${rows}\n` : '';
+  };
+  return `/**
+ * GENERATED by scripts/styleguide-manifest.mjs from tokens/core.json +
+ * tokens/c2-domain.json — do not edit by hand. Imported by src/styles/index.css.
+ *
+ * CORE tokens are brand-agnostic; DOMAIN tokens are C2-specific. Consume the
+ * semantic + domain custom properties in app/component CSS — never the raw
+ * hex/oklch literals.
+ */
+:root {
+${section('CORE — primitive (raw)', 'core', 'primitive')}
+${section('CORE — semantic', 'core', 'semantic')}
+${section('CORE — dimension', 'core', 'dimension')}
+${section('C2 DOMAIN', 'domain', null)}}
+`;
+}
+
+function renderRulesTs(rules) {
+  const rows = rules
+    .map(
+      (r) =>
+        `  ${JSON.stringify({
+          id: r.id,
+          severity: r.severity,
+          target: r.target,
+          enforcement: r.enforcement,
+          message: r.message,
+          replacement: r.replacement ?? null,
+        })},`,
+    )
+    .join('\n');
+  return `/**
+ * GENERATED by scripts/styleguide-manifest.mjs from governance/rules.json — do
+ * not edit by hand. The typed governance ruleset, consumed by the Conventions
+ * foundation doc so humans and agents read the same source. \`--check\` fails
+ * CI when this file is stale.
+ */
+
+export interface DesignRule {
+  id: string;
+  /** \`error\` | \`warn\` | \`info\`. */
+  severity: string;
+  /** Glob or selector the rule applies to. */
+  target: string;
+  /** \`eslint\` | \`design-lint\` | \`manual\`. */
+  enforcement: string;
+  message: string;
+  /** Suggested fix / correct token, when applicable. */
+  replacement: string | null;
+}
+
+export const DESIGN_RULES: DesignRule[] = [
+${rows}
+];
+`;
+}
+
+/* ───────────────────────── agent contract ───────────────────────── */
+
+function renderDesignContext(components, tokens, rules) {
+  const lines = [];
+  lines.push('# C2 Hub — Design Context (agent contract)');
+  lines.push('');
+  lines.push(
+    'GENERATED by scripts/styleguide-manifest.mjs — do not edit by hand. A machine-readable contract for AI coding agents: read this before generating or reviewing UI. Sections are delimited by typed HTML comments so an agent can jump straight to one.',
+  );
+  lines.push('');
+
+  lines.push('<!-- DESIGN_CONTEXT:tokens START -->');
+  lines.push('## Design tokens');
+  lines.push('');
+  lines.push('Use the CSS custom property (or the matching `@/primitives` export). Never hardcode the raw value.');
+  lines.push('');
+  for (const layer of ['core', 'domain']) {
+    const inLayer = tokens.filter((t) => t.layer === layer);
+    if (inLayer.length === 0) continue;
+    lines.push(`### ${layer === 'core' ? 'CORE (brand-agnostic)' : 'C2 DOMAIN (tactical)'}`);
+    lines.push('');
+    lines.push('| Token | CSS var | Value | Use |');
+    lines.push('| --- | --- | --- | --- |');
+    for (const t of inLayer) {
+      lines.push(`| \`${t.id}\` | \`${t.cssVar}\` | \`${t.value}\` | ${t.description} |`);
+    }
+    lines.push('');
+  }
+  lines.push('<!-- DESIGN_CONTEXT:tokens END -->');
+  lines.push('');
+
+  lines.push('<!-- DESIGN_CONTEXT:components START -->');
+  lines.push('## Components');
+  lines.push('');
+  for (const c of components) {
+    const reg = c.registryName ? ` · \`npx shadcn@latest add @c2/${c.registryName}\`` : '';
+    lines.push(`- **${c.name}** \`${c.importPath}\` (${c.tier}) — ${c.description} ${STYLEGUIDE_ORIGIN}/design-system#${c.id}${reg}`);
+  }
+  lines.push('');
+  lines.push('<!-- DESIGN_CONTEXT:components END -->');
+  lines.push('');
+
+  lines.push('<!-- DESIGN_CONTEXT:rules START -->');
+  lines.push('## Governance rules');
+  lines.push('');
+  lines.push('An agent must self-check generated code against these before presenting it.');
+  lines.push('');
+  for (const r of rules) {
+    lines.push(`- **${r.id}** [${r.severity}] — ${r.message}`);
+    if (r.replacement) lines.push(`  - Fix: ${r.replacement}`);
+  }
+  lines.push('');
+  lines.push('<!-- DESIGN_CONTEXT:rules END -->');
+  lines.push('');
+
+  lines.push('<!-- DESIGN_CONTEXT:violations START -->');
+  lines.push('## Known violations (do NOT emit)');
+  lines.push('');
+  const known = rules.filter((r) => r.replacement);
+  if (known.length === 0) {
+    lines.push('_None recorded._');
+  } else {
+    for (const r of known) {
+      lines.push(`- ${r.message} → ${r.replacement}`);
+    }
+  }
+  lines.push('');
+  lines.push('<!-- DESIGN_CONTEXT:violations END -->');
+  lines.push('');
+  return lines.join('\n');
+}
+
+/* ───────────────────────── llms.txt ───────────────────────── */
+
+function renderLlmsBlock(components, tokens, rules) {
   const lines = ['', '## Components (generated from the design-system manifest)', ''];
-  for (const tier of ['primitive', 'block']) {
+  for (const tier of ['foundation', 'primitive', 'block']) {
     const inTier = components.filter((c) => c.tier === tier);
     if (inTier.length === 0) continue;
-    lines.push(`### ${tier === 'primitive' ? 'Primitives' : 'Blocks'}`, '');
+    const label = tier === 'primitive' ? 'Primitives' : tier === 'block' ? 'Blocks' : 'Foundations';
+    lines.push(`### ${label}`, '');
     for (const c of inTier) {
       const reg = c.registryName ? ` · install: \`npx shadcn@latest add @c2/${c.registryName}\`` : '';
       lines.push(
@@ -95,6 +398,20 @@ function renderLlmsBlock(components) {
     }
     lines.push('');
   }
+
+  lines.push('## Design tokens (generated from tokens/*.json)', '');
+  lines.push('Use the CSS var or the `@/primitives` export — never the raw value.', '');
+  for (const t of tokens) {
+    lines.push(`- \`${t.cssVar}\` = \`${t.value}\` (${t.layer}/${t.tier}) — ${t.description}`);
+  }
+  lines.push('');
+
+  lines.push('## Governance rules (generated from governance/rules.json)', '');
+  for (const r of rules) {
+    const fix = r.replacement ? ` Fix: ${r.replacement}` : '';
+    lines.push(`- **${r.id}** [${r.severity}] — ${r.message}${fix}`);
+  }
+  lines.push('');
   return lines.join('\n');
 }
 
@@ -105,14 +422,19 @@ function spliceLlms(existing, block) {
   if (start !== -1 && end !== -1 && end > start) {
     return existing.slice(0, start) + wrapped + existing.slice(end + LLMS_END.length);
   }
-  // Append a fresh block if markers are absent.
   return `${existing.trimEnd()}\n\n${wrapped}\n`;
 }
+
+/* ───────────────────────── main ───────────────────────── */
 
 async function main() {
   const manifest = await readJson(MANIFEST_PATH);
   const registry = await readJson(REGISTRY_PATH);
+  const coreJson = await readJson(CORE_TOKENS_PATH);
+  const domainJson = await readJson(DOMAIN_TOKENS_PATH);
+  const rulesFile = await readJson(RULES_PATH);
   const components = manifest.components ?? [];
+  const rules = rulesFile.rules ?? [];
   const registryNames = new Set((registry.items ?? []).map((i) => i.name));
 
   const errors = [];
@@ -133,14 +455,38 @@ async function main() {
     process.exit(1);
   }
 
+  // Token graph (resolved).
+  const rawIndex = {};
+  const tmp = [];
+  flattenTokens(coreJson, 'core', [], tmp);
+  flattenTokens(domainJson, 'domain', [], tmp);
+  for (const leaf of tmp) rawIndex[leaf.path.join('.')] = leaf.rawValue;
+  const tokens = buildTokenModel(coreJson, domainJson);
+  const coreTree = resolvedTree(coreJson, rawIndex);
+  const domainTree = resolvedTree(domainJson, rawIndex);
+
   const generatedTs = renderGeneratedTs(map);
+  const rulesTs = renderRulesTs(rules);
+  const tokensTs = renderTokensTs(tokens, coreTree, domainTree);
+  const tokensCss = renderTokensCss(tokens);
+  const designContext = renderDesignContext(components, tokens, rules);
   const llmsExisting = await readFile(LLMS_PATH, 'utf-8');
-  const llmsNext = spliceLlms(llmsExisting, renderLlmsBlock(components));
+  const llmsNext = spliceLlms(llmsExisting, renderLlmsBlock(components, tokens, rules));
 
   if (check) {
-    const currentTs = await readFile(GENERATED_TS_PATH, 'utf-8').catch(() => '');
-    const stale = [];
-    if (currentTs !== generatedTs) stale.push('styleguideSectionByHint.generated.ts');
+    const compare = async (path, next, label) => {
+      const current = await readFile(path, 'utf-8').catch(() => '');
+      return current !== next ? label : null;
+    };
+    const stale = (
+      await Promise.all([
+        compare(GENERATED_TS_PATH, generatedTs, 'styleguideSectionByHint.generated.ts'),
+        compare(RULES_TS_PATH, rulesTs, 'src/app/styleguide/registry/designRules.generated.ts'),
+        compare(TOKENS_TS_PATH, tokensTs, 'src/primitives/tokens.generated.ts'),
+        compare(TOKENS_CSS_PATH, tokensCss, 'src/styles/tokens.generated.css'),
+        compare(DESIGN_CONTEXT_PATH, designContext, 'public/DESIGN_CONTEXT.md'),
+      ])
+    ).filter(Boolean);
     if (llmsExisting !== llmsNext) stale.push('public/llms.txt');
     if (stale.length > 0) {
       console.error(
@@ -149,14 +495,20 @@ async function main() {
       );
       process.exit(1);
     }
-    console.log(`manifest check ok — ${components.length} components, ${Object.keys(map).length} hints.`);
+    console.log(
+      `manifest check ok — ${components.length} components, ${Object.keys(map).length} hints, ${tokens.length} tokens, ${rules.length} rules.`,
+    );
     return;
   }
 
   await writeFile(GENERATED_TS_PATH, generatedTs);
+  await writeFile(RULES_TS_PATH, rulesTs);
+  await writeFile(TOKENS_TS_PATH, tokensTs);
+  await writeFile(TOKENS_CSS_PATH, tokensCss);
+  await writeFile(DESIGN_CONTEXT_PATH, designContext);
   await writeFile(LLMS_PATH, llmsNext);
   console.log(
-    `Generated handoff map (${Object.keys(map).length} hints) + llms.txt for ${components.length} components.`,
+    `Generated handoff map (${Object.keys(map).length} hints), ${tokens.length} tokens, ${rules.length} rules, design context + llms.txt for ${components.length} components.`,
   );
 }
 

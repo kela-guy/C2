@@ -25,7 +25,7 @@ import {
   DEVICE_CAMERA_DRAG_TYPE,
 } from './constants';
 import { DEVICE_REGISTRY } from './deviceRegistry';
-import { getDeviceErrorCount } from './deviceHealth';
+import { getAggregatedIssues, getCompositeErrorCount, getDeviceErrorCount } from './deviceHealth';
 import type { DeviceActionContext } from './deviceActions';
 import { useDeviceNotify } from './useDeviceNotify';
 import { DeviceRowHeader } from './DeviceRowHeader';
@@ -33,7 +33,7 @@ import { DeviceRowDetails } from './DeviceRowDetails';
 import { DeviceActionBar } from './DeviceActionBar';
 import { DeviceChildGroup } from './DeviceChildGroup';
 import { DeviceErrorsDialog } from './controls/DeviceErrorsDialog';
-import type { DeviceCameraDragItem, DeviceRowProps } from './types';
+import type { Device, DeviceCameraDragItem, DeviceRowProps } from './types';
 
 export const DeviceRow = memo(function DeviceRow({
   device,
@@ -64,6 +64,9 @@ export const DeviceRow = memo(function DeviceRow({
 
   const [selectedTrackId, setSelectedTrackId] = useState<string>(speakerTracks[0]?.id ?? '');
   const [errorsOpen, setErrorsOpen] = useState(false);
+  // Which device the errors modal lists — the parent itself (composite parents
+  // get their children's errors rolled up) or a specific child row.
+  const [errorsDevice, setErrorsDevice] = useState<Device | null>(null);
   const notify = useDeviceNotify(device.id, online, onArmNotifications);
 
   const handleToggle = useCallback(() => onToggle(device.id), [onToggle, device.id]);
@@ -81,17 +84,21 @@ export const DeviceRow = memo(function DeviceRow({
       speakerTracks,
       selectedTrackId: selectedTrackId || (speakerTracks[0]?.id ?? ''),
       onSelectTrack: setSelectedTrackId,
-      errorCount: getDeviceErrorCount(device),
+      errorCount: composite ? getCompositeErrorCount(device) : getDeviceErrorCount(device),
       isNotifyOn: notify.armed,
       notifyRemaining: notify.remaining,
       onToggleNotify: notify.toggle,
       // Logs opens the device's errors/logs modal directly; the optional
       // panel callback stays as a side-channel for hosts that track it.
       onOpenLogs: () => {
+        setErrorsDevice(null);
         setErrorsOpen(true);
         onOpenLogs?.(device.id);
       },
-      onOpenErrors: () => setErrorsOpen(true),
+      onOpenErrors: () => {
+        setErrorsDevice(null);
+        setErrorsOpen(true);
+      },
       onFlyTo,
       onFloodlightToggle,
       onSpeakerToggle,
@@ -101,6 +108,7 @@ export const DeviceRow = memo(function DeviceRow({
     }),
     [
       device,
+      composite,
       strings,
       isFloodlightOn,
       isSpeakerPlaying,
@@ -185,6 +193,10 @@ export const DeviceRow = memo(function DeviceRow({
               connectionStateLabels={connectionStateLabels}
               onHover={onHover}
               onChildSelect={onChildSelect}
+              onOpenChildErrors={(child) => {
+                setErrorsDevice(child);
+                setErrorsOpen(true);
+              }}
               onFlyTo={onFlyTo}
             />
           )}
@@ -194,8 +206,17 @@ export const DeviceRow = memo(function DeviceRow({
 
       <DeviceErrorsDialog
         open={errorsOpen}
-        onOpenChange={setErrorsOpen}
-        device={device}
+        onOpenChange={(next) => {
+          setErrorsOpen(next);
+          if (!next) setErrorsDevice(null);
+        }}
+        device={
+          errorsDevice
+            ? { ...errorsDevice, errors: getAggregatedIssues(errorsDevice, strings, connectionStateLabels) }
+            : composite
+              ? { ...device, errors: getAggregatedIssues(device, strings, connectionStateLabels) }
+              : device
+        }
         strings={strings}
       />
     </Collapsible>

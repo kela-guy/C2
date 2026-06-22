@@ -1,0 +1,82 @@
+{
+  "$description": "C2 design-system governance rules as data. Each rule is self-contained: an id, a severity, a target (glob or selector), an enforcement mechanism, a plain-English message, and an optional replacement. Humans read these in /design-system; agents read them in public/DESIGN_CONTEXT.md and must self-check generated code against them. Encoded from design-system.md 'Conventions'.",
+  "rules": [
+    {
+      "id": "no-raw-hex",
+      "severity": "error",
+      "target": "src/**/*.{ts,tsx}",
+      "enforcement": "eslint",
+      "message": "Do not hardcode hex color literals in app or component code. Colors live only in tokens/*.json and are consumed via a design token.",
+      "replacement": "Use a semantic token: the CSS var (e.g. var(--c2-color-surface-base)) or the matching @/primitives export (e.g. SURFACE.level1, CARD_TOKENS.spine.colors).",
+      "exceptions": [
+        "src/primitives/tokens.ts",
+        "src/primitives/tokens.generated.ts",
+        "src/styles/**",
+        "scripts/**"
+      ]
+    },
+    {
+      "id": "icons-central-only",
+      "severity": "error",
+      "target": "src/**/*.{ts,tsx}",
+      "enforcement": "eslint",
+      "message": "Import glyphs from @/lib/icons/central, never from lucide-react or @central-icons-react/* directly. The central wrapper is the only module allowed to know which icon library ships.",
+      "replacement": "import { IconName } from '@/lib/icons/central'. If the glyph is missing, add it to the wrapper (prefer a filled Central glyph).",
+      "exceptions": [
+        "src/lib/icons/central.ts",
+        "src/lib/iconRegistry.ts",
+        "src/app/components/ui/**",
+        "src/app/components/styleguide/**",
+        "src/app/styleguide/**"
+      ]
+    },
+    {
+      "id": "prefer-filled-icons",
+      "severity": "warn",
+      "target": "src/**/*.{ts,tsx}",
+      "enforcement": "manual",
+      "message": "Prefer the filled icon variant over the outlined/line variant whenever a filled twin exists.",
+      "replacement": "Use the *Filled export from @/lib/icons/central (e.g. BellFilled); add the filled export to central.ts if it is missing."
+    },
+    {
+      "id": "interactive-radius",
+      "severity": "warn",
+      "target": "src/**/*.{ts,tsx}",
+      "enforcement": "manual",
+      "message": "Interactive elements (buttons, badges, chips) use the 4px 'rounded' radius — the system's signature corner.",
+      "replacement": "Apply rounded (4px) / var(--c2-radius-interactive); avoid ad-hoc rounded-md|lg|full on interactive controls."
+    },
+    {
+      "id": "rtl-containers",
+      "severity": "warn",
+      "target": "src/app/**/*.tsx",
+      "enforcement": "manual",
+      "message": "User-facing containers are RTL. Use logical Tailwind utilities (ms-*, me-*, ps-*, pe-*, start-*, end-*) for spacing; reserve rtl:/ltr: for physical outcomes like icon mirroring.",
+      "replacement": "Set dir=\"rtl\" on user-facing roots and replace left/right utilities with their logical equivalents."
+    },
+    {
+      "id": "oklch-status-colors",
+      "severity": "info",
+      "target": "tokens/**/*.json",
+      "enforcement": "manual",
+      "message": "Danger and warning action colors are authored in oklch so hover/active stay perceptually even.",
+      "replacement": "Author destructive/warning ramps as oklch in tokens/core.json (action.danger / action.warning)."
+    },
+    {
+      "id": "card-slots-via-hook",
+      "severity": "warn",
+      "target": "src/**/*.tsx",
+      "enforcement": "manual",
+      "message": "Build TargetCard content with the useCardSlots hook from a Detection object; never hardcode card slot data.",
+      "replacement": "const slots = useCardSlots(detection, callbacks, context); pass slots into TargetCard."
+    },
+    {
+      "id": "tokens-single-source",
+      "severity": "info",
+      "target": "src/**/*.{ts,tsx,css}",
+      "enforcement": "manual",
+      "message": "Colors and the interactive radius are defined only in tokens/*.json (generated into tokens.generated.ts + tokens.generated.css). Do not introduce new color scales elsewhere.",
+      "replacement": "Add the value to tokens/core.json (or tokens/c2-domain.json for tactical accents) and run `pnpm tokens:build`."
+    }
+  ]
+}

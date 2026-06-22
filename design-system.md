@@ -45,10 +45,13 @@ npx shadcn@latest add https://c2-hub-three.vercel.app/r/button.json --diff
 
 | Bundle | When to use |
 |--------|-------------|
-| **`domain-primitives`** | **Default.** Tokens, card slots, tactical primitives, map markers/icons (no generic shadcn UI). |
+| **`core`** | **Brand-agnostic foundation.** `cn()`, design tokens, and the full generic shadcn UI set — no C2 tactical domain. Theme it by swapping token primitives. Start here for a new product. |
+| **`domain-primitives`** | **Default for C2.** Tokens, card slots, tactical primitives, map markers/icons (no generic shadcn UI). |
 | **`map-kit`** | Map-only: marker states, `MapMarker`, `MapIcons`. |
-| **`all`** | Everything including generic shadcn components in this registry. |
+| **`all`** | Everything: the `core` bundle plus all C2 domain primitives. |
 | **À la carte** | `npx shadcn@latest add @c2/<name>` — names match [`registry.json`](registry.json) `items[].name`. |
+
+Items are tagged with `categories` — `core` (brand-agnostic: `cn()`, tokens, generic shadcn UI), `domain` (C2 tactical primitives), `map`, and `bundle`. The split is the contract that lets the core travel to other products while the C2 domain stays here.
 
 `FilterBar` is **not** in bundles (hard `@/imports/` types). Install only when you adapt those types locally:
 
@@ -407,10 +410,12 @@ Utility: `import { cn } from '@/app/components/ui/utils'`
 
 ## Conventions
 
-- **Border radius**: `rounded` (4px) on all buttons, badges, and interactive elements
-- **Colors**: Use oklch format for danger/warning. Use design tokens for surfaces. Never hardcode hex outside `tokens.ts`
-- **Direction**: RTL (`dir="rtl"`) on all user-facing containers
-- **Icons**: Lucide React only. Custom SVG icons live in `MapIcons.tsx` and `TacticalMap.tsx`
+These conventions are also encoded as machine-enforceable data in [`governance/rules.json`](governance/rules.json) (id, severity, target, enforcement, replacement) and surfaced for agents in [`public/DESIGN_CONTEXT.md`](public/DESIGN_CONTEXT.md). `pnpm design:check` is the single gate.
+
+- **Border radius**: `rounded` (4px) on all buttons, badges, and interactive elements (`--c2-radius-interactive`)
+- **Colors**: Defined only in [`tokens/core.json`](tokens/core.json) (brand-agnostic) and [`tokens/c2-domain.json`](tokens/c2-domain.json) (tactical accents). Consume the generated CSS vars (`--c2-color-*`, `--c2-threat-*`) or `@/primitives` exports — never hardcode hex/rgb in app code. Danger/warning are authored in oklch. Run `pnpm tokens:build` after editing token JSON.
+- **Direction**: RTL (`dir="rtl"`) on all user-facing containers; prefer logical utilities (`ms-*`, `me-*`, `ps-*`, `pe-*`, `start-*`, `end-*`)
+- **Icons**: Import from `@/lib/icons/central` only — never `lucide-react` or `@central-icons-react/*` directly (the wrapper is the sole module that knows the icon library). Prefer the filled variant when a twin exists. Custom SVG icons live in `MapIcons.tsx` and `TacticalMap.tsx`
 - **Typography**: System font stack. Monospace for values/timestamps (`font-mono tabular-nums`)
 - **Animation**: Framer Motion (`motion/react`) for layout transitions. `useReducedMotion` respected everywhere
 - **Composition**: Use `useCardSlots` to build TargetCard content — never hardcode card slot data

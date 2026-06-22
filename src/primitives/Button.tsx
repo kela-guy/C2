@@ -19,6 +19,8 @@ export interface ButtonProps {
   label: string;
   /** Optional leading icon component. Swapped for a spinner while `loading`. */
   icon?: React.ElementType;
+  /** Optional trailing pill rendered after the label (e.g. a selected-track name). Hidden while `loading`. */
+  badge?: string;
   onClick?: (e: React.MouseEvent) => void;
   /** Surface treatment. Danger/warning use oklch. Defaults to `fill`. */
   variant?: ButtonVariant;
@@ -64,6 +66,7 @@ export interface ButtonProps {
 export function Button({
   label,
   icon: Icon,
+  badge,
   onClick,
   variant = "fill",
   size = "md",
@@ -123,6 +126,11 @@ export function Button({
               Icon && <Icon size={sz.icon} className="shrink-0 opacity-95" aria-hidden="true" />
             )}
             <span className="whitespace-nowrap">{label}</span>
+            {badge && !loading && (
+              <span className="text-xs font-medium bg-white/[0.12] px-1.5 py-0.5 rounded leading-none whitespace-nowrap">
+                {badge}
+              </span>
+            )}
           </motion.span>
         </AnimatePresence>
       )}

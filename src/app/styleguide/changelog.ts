@@ -6,6 +6,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.5.0',
+    date: 'Jun 18, 2026',
+    highlights: [
+      '`DeviceChildGroup`: composite devices (the Gotcha counter-drone effector) now render their children — four 120° sectors + a camera/net — in a **collapsible "Sensors" inset** between the telemetry grid and the action bar, instead of a flat `DeviceChildRow` list dumped below the footer. Collapsed, the header carries a worst-first health roll-up (summary chips, `ok` omitted); expanded, the per-row badges carry the specifics, so the signal is never doubled. Eased via the grid `0fr → 1fr` track trick.',
+      '`CriticalAlertOverlay`: the top-critical **drone-detected takeover** is now documented — a separate lane from the batched notification pool with compass bearing, range readout, snapshot / live video, one-click PA broadcast (כריזה), Show-on-map, an auto-dismiss countdown, and a critical audio cue.',
+      'Styleguide: the Gotcha effector is documented as what it is — a composite **instance** of the Device Card, not a separate component. A new **Composite (Gotcha)** tab on the Device Card page covers the live `Sensors` group + child-row states, the critical-alert takeover (live trigger), and the map marker + 120° sector colour rules — all seeded from the real `GOTCHA_UNITS` through the production `gotchaUnitsToDevices` mapper.',
+      'Handoff picker: every gotcha surface now deep-links to its exact doc — the Sensors inset + child rows (`device-child-list` / `device-child-row` / `device-child-logs-error`) land on the composite tab anchors, and the `gotcha-critical-alert` overlay and `gotcha-marker` map marker each resolve to their sub-anchor instead of falling through to `#top`.',
+    ],
+  },
+  {
     version: '1.4.0',
     date: 'Jun 2, 2026',
     highlights: [

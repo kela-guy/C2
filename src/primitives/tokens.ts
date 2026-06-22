@@ -1,3 +1,5 @@
+import { coreTokens, domainTokens } from './tokens.generated';
+
 export const LAYOUT_TOKENS = {
   sidebarWidthPx: 400,
   sidebarMinWidth: 320,
@@ -6,7 +8,7 @@ export const LAYOUT_TOKENS = {
 } as const;
 
 const ELEVATION = {
-  baseSurface: '#141414',
+  baseSurface: coreTokens.primitive.color.surface[0],
   overlay: {
     level0: 0,
     level1: 0.05,
@@ -65,24 +67,24 @@ export const CARD_TOKENS = {
   },
   selectedRing: {
     ringWidth: 1,
-    ringColor: '#000000',
+    ringColor: coreTokens.primitive.color.black,
     ringOpacity: 0.15,
   },
   title: {
     fontSize: 13,
-    color: '#dee2e6',
+    color: coreTokens.semantic.color.text.default,
     fontWeight: 600,
   },
   subtitle: {
     fontSize: 10,
-    color: '#999999',
+    color: coreTokens.semantic.color.text.muted,
   },
   iconBox: {
     size: 30,
     borderRadius: 6,
     iconSize: 20,
     defaultBg: SURFACE.level4,
-    activeBg: '#ef4444',
+    activeBg: domainTokens.threat.mitigating,
     activeBgOpacity: 0.2,
   },
   content: {
@@ -97,16 +99,7 @@ export const CARD_TOKENS = {
   },
   spine: {
     width: 3,
-    colors: {
-      idle: '#52525b',
-      suspicion: '#f59e0b',
-      detection: '#fa5252',
-      tracking: '#fd7e14',
-      mitigating: '#ef4444',
-      active: '#74c0fc',
-      resolved: '#12b886',
-      expired: '#3f3f46',
-    },
+    colors: domainTokens.threat,
   },
   timeline: {
     dotSize: 8,

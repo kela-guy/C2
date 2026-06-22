@@ -16,6 +16,8 @@ export interface CameraToggleButtonProps {
   pendingLabel?: string;
   offIcon?: React.ElementType;
   onIcon?: React.ElementType;
+  /** Optional trailing pill rendered after the label (e.g. a selected-track name). */
+  badge?: string;
   onToggle: (e: React.MouseEvent) => void;
   className?: string;
 }
@@ -36,6 +38,7 @@ export function CameraToggleButton({
   pendingLabel,
   offIcon,
   onIcon,
+  badge,
   onToggle,
   className = '',
 }: CameraToggleButtonProps) {
@@ -58,6 +61,7 @@ export function CameraToggleButton({
     <Button
       label={on ? onLabel : offLabel}
       icon={on ? onIcon : offIcon}
+      badge={badge}
       variant="fill"
       size={size}
       pressed={on}

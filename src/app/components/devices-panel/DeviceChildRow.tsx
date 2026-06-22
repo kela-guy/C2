@@ -4,32 +4,25 @@
  * never standalone.
  *
  * It deliberately reuses the same health vocabulary as the parent —
- * `getDeviceHealth` + `DEVICE_HEALTH_VISUAL` for the tile, and a `HEALTH_TONE`
- * dot/badge mirroring `DeviceRowHeader` — so a degraded child reads identically
- * to a degraded top-level device. Passive sensors carry no per-row actions, so
- * the row is a single button: hover highlights the matching map sector, click
- * selects it (driving `selectedAssetId`) and flies the map to the unit.
+ * `getDeviceHealth` + `DEVICE_HEALTH_VISUAL` for the tile — so a degraded child
+ * reads identically to a degraded top-level device. The row body selects the
+ * child (hover highlights the matching map sector, click drives
+ * `selectedAssetId` and flies the map to the unit); an unhealthy child also
+ * carries a trailing Logs button that opens the errors modal scoped to it.
  */
 
 import { memo } from 'react';
+import { List } from '@/lib/icons/central';
 import {
   DEVICE_HEALTH_VISUAL,
   DEVICE_HEALTH_CRITICAL_PING,
+  getDeviceErrorCount,
   getDeviceHealth,
   getDeviceHealthReason,
   type DeviceHealth,
 } from './deviceHealth';
 import { DEFAULT_CONNECTION_STATE_LABELS } from './constants';
 import type { ConnectionState, Device, DevicesPanelStrings } from './types';
-
-/** Severity dot + label tone, mirroring `DeviceRowHeader`'s `HEALTH_TONE`. */
-const HEALTH_TONE: Record<DeviceHealth, { dot: string; badge: string }> = {
-  critical: { dot: 'bg-red-400', badge: 'bg-red-500/20 text-red-300' },
-  error: { dot: 'bg-red-400', badge: 'bg-red-500/20 text-red-300' },
-  warning: { dot: 'bg-amber-400', badge: 'bg-amber-500/20 text-amber-300' },
-  offline: { dot: 'bg-zinc-500', badge: 'bg-white/10 text-zinc-300' },
-  ok: { dot: 'bg-emerald-400', badge: 'bg-emerald-500/15 text-emerald-300' },
-};
 
 function healthLabel(health: DeviceHealth, strings: DevicesPanelStrings): string {
   return {
@@ -55,6 +48,8 @@ export interface DeviceChildRowProps {
   connectionStateLabels?: Record<ConnectionState, string>;
   onHover: (id: string | null) => void;
   onSelect: (id: string) => void;
+  /** Open the errors/logs modal for this child. When omitted, no logs button renders. */
+  onOpenErrors?: () => void;
   onFlyTo?: (lat: number, lon: number) => void;
 }
 
@@ -66,13 +61,20 @@ export const DeviceChildRow = memo(function DeviceChildRow({
   connectionStateLabels = DEFAULT_CONNECTION_STATE_LABELS,
   onHover,
   onSelect,
+  onOpenErrors,
   onFlyTo,
 }: DeviceChildRowProps) {
   const health = getDeviceHealth(device);
   const visual = DEVICE_HEALTH_VISUAL[health];
-  const tone = HEALTH_TONE[health];
   const reason = getDeviceHealthReason(device, strings, connectionStateLabels);
   const label = healthLabel(health, strings);
+  const errorCount = getDeviceErrorCount(device);
+  // Mirror the parent header's Logs button tone: amber for a warning, red for
+  // error / critical, so a warning child doesn't read as a hard error.
+  const logsToneClass =
+    health === 'warning'
+      ? 'text-amber-300 hover:bg-amber-500/10 focus-visible:ring-amber-300/40'
+      : 'text-red-300 hover:bg-red-500/10 focus-visible:ring-red-300/40';
 
   const activate = () => {
     onSelect(device.id);
@@ -97,7 +99,7 @@ export const DeviceChildRow = memo(function DeviceChildRow({
       data-child-id={device.id}
       data-health={health}
       data-selected={selected || undefined}
-      className={`relative flex min-h-[40px] items-center gap-2.5 py-2 text-end cursor-pointer transition-[background-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25 focus-visible:ring-inset ${
+      className={`group relative flex min-h-[40px] items-center gap-2.5 py-2 text-end cursor-pointer transition-[background-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25 focus-visible:ring-inset ${
         inset ? 'px-2 rounded' : 'ps-4 pe-4 border-b border-white/[0.04]'
       } ${selected ? 'bg-white/[0.07]' : 'hover:bg-white/[0.04] active:bg-white/[0.06]'}`}
     >
@@ -118,16 +120,23 @@ export const DeviceChildRow = memo(function DeviceChildRow({
         <span className="text-xs font-medium truncate text-zinc-300 block">{device.name}</span>
       </div>
 
-      {health !== 'ok' && (
-        <span
-          className={`flex shrink-0 items-center gap-1 h-4 rounded-[2px] px-1.5 text-[10px] font-medium leading-4 tabular-nums ${tone.badge}`}
-          role="status"
-          aria-label={reason ? `${label} — ${reason}` : label}
+      {health !== 'ok' && onOpenErrors && (
+        <button
+          type="button"
+          data-handoff-component="device-child-logs-error"
+          aria-label={reason ? `${strings.logs} — ${reason}` : strings.logs}
           title={reason ?? label}
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenErrors();
+          }}
+          className={`inline-flex h-5 shrink-0 items-center gap-1 rounded px-1.5 text-[10px] font-medium transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 [&_svg]:size-3 ${logsToneClass}`}
         >
-          <span className={`size-1.5 rounded-full ${tone.dot}`} aria-hidden="true" />
-          {label}
-        </span>
+          <List size={11} aria-hidden="true" />
+          {errorCount > 0 && (
+            <span className="tabular-nums">{errorCount > 99 ? '99+' : errorCount}</span>
+          )}
+        </button>
       )}
     </div>
   );

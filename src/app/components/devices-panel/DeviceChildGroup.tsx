@@ -31,8 +31,12 @@ const HEALTH_TONE: Record<DeviceHealth, { dot: string; badge: string }> = {
   ok: { dot: 'bg-emerald-400', badge: 'bg-emerald-500/15 text-emerald-300' },
 };
 
-/** Worst-tone-first ordering for the summary chips. */
-const SUMMARY_ORDER: DeviceHealth[] = ['critical', 'error', 'warning', 'offline', 'ok'];
+/**
+ * Worst-tone-first ordering for the summary chips. `ok` is intentionally
+ * omitted: the all-healthy state is the default, so a green "N ok" chip is
+ * noise — the header only surfaces buckets that need attention.
+ */
+const SUMMARY_ORDER: DeviceHealth[] = ['critical', 'error', 'warning', 'offline'];
 
 function healthLabel(health: DeviceHealth, strings: DevicesPanelStrings): string {
   return {
@@ -53,6 +57,8 @@ export interface DeviceChildGroupProps {
   connectionStateLabels?: Record<ConnectionState, string>;
   onHover: (id: string | null) => void;
   onChildSelect?: (id: string) => void;
+  /** Open the errors modal scoped to a specific child device. */
+  onOpenChildErrors?: (child: Device) => void;
   onFlyTo?: (lat: number, lon: number) => void;
 }
 
@@ -63,6 +69,7 @@ export const DeviceChildGroup = memo(function DeviceChildGroup({
   connectionStateLabels = DEFAULT_CONNECTION_STATE_LABELS,
   onHover,
   onChildSelect,
+  onOpenChildErrors,
   onFlyTo,
 }: DeviceChildGroupProps) {
   const children = device.children ?? [];
@@ -141,6 +148,7 @@ export const DeviceChildGroup = memo(function DeviceChildGroup({
                   connectionStateLabels={connectionStateLabels}
                   onHover={onHover}
                   onSelect={(id) => onChildSelect?.(id)}
+                  onOpenErrors={onOpenChildErrors ? () => onOpenChildErrors(child) : undefined}
                   onFlyTo={onFlyTo}
                 />
               ))}

@@ -10,12 +10,19 @@
     "dev": "vite",
     "registry:build": "shadcn build",
     "styleguide:manifest": "node scripts/styleguide-manifest.mjs",
-    "styleguide:check": "node scripts/styleguide-manifest.mjs --check"
+    "styleguide:check": "node scripts/styleguide-manifest.mjs --check",
+    "tokens:build": "node scripts/styleguide-manifest.mjs",
+    "design-lint": "node scripts/design-lint.mjs",
+    "design-lint:update": "node scripts/design-lint.mjs --update",
+    "lint": "eslint .",
+    "lint:governance": "eslint -c eslint.governance.config.js .",
+    "design:check": "node scripts/styleguide-manifest.mjs --check && node scripts/design-lint.mjs && eslint -c eslint.governance.config.js ."
   },
   "dependencies": {
     "@central-icons-react/round-filled-radius-0-stroke-2": "^1.1.255",
     "@central-icons-react/round-filled-radius-1-stroke-1.5": "^1.1.225",
     "@central-icons-react/square-filled-radius-0-stroke-2": "^1.1.255",
+    "@central-icons-react/square-outlined-radius-0-stroke-2": "^1.1.273",
     "@popperjs/core": "2.11.8",
     "@radix-ui/react-accordion": "1.2.3",
     "@radix-ui/react-alert-dialog": "1.1.6",
@@ -79,16 +86,22 @@
     "vite-plugin-cesium": "^1.2.23"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
     "@react-scan/vite-plugin-react-scan": "^0.2.6",
     "@tailwindcss/vite": "4.1.12",
     "@vercel/toolbar": "^0.2.6",
     "@vitejs/plugin-react": "4.7.0",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.3",
+    "globals": "^17.6.0",
     "lightningcss": "^1.32.0",
     "react-scan": "^0.5.7",
     "rollup-plugin-visualizer": "^7.0.1",
     "shadcn": "^4.1.2",
     "tailwindcss": "4.1.12",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.61.1",
     "vite": "^6.4.1"
   },
   "peerDependencies": {

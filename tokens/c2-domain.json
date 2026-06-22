@@ -1,0 +1,15 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "$description": "C2 DOMAIN tokens — tactical meaning specific to the C2 Hub product (threat lifecycle accents). These are NOT part of the reusable core; another product would replace this file wholesale. Domain tokens may reference core primitives but core must never reference these.",
+  "threat": {
+    "$description": "Spine/accent colors for a target's threat lifecycle. Each maps to a stage in the detect -> track -> mitigate -> resolve flow. Used as the card spine and status accent.",
+    "idle": { "$type": "color", "$value": "#52525b", "$description": "No activity — neutral grey." },
+    "suspicion": { "$type": "color", "$value": "#f59e0b", "$description": "Suspected target — amber." },
+    "detection": { "$type": "color", "$value": "#fa5252", "$description": "Active detection — red." },
+    "tracking": { "$type": "color", "$value": "#fd7e14", "$description": "Being tracked — orange." },
+    "mitigating": { "$type": "color", "$value": "#ef4444", "$description": "Jam in progress — bright red." },
+    "active": { "$type": "color", "$value": "#74c0fc", "$description": "Mission active — blue." },
+    "resolved": { "$type": "color", "$value": "#12b886", "$description": "Neutralized / resolved — green." },
+    "expired": { "$type": "color", "$value": "#3f3f46", "$description": "Timed out — dark grey." }
+  }
+}

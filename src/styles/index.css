@@ -1,4 +1,5 @@
 @import './fonts.css';
 @import './palette.css';
+@import './tokens.generated.css';
 @import './tailwind.css';
 @import './theme.css';

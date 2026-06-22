@@ -78,6 +78,8 @@ export const NAV: NavGroup[] = [
           { id: 'device-interaction-states', label: 'Interaction states' },
           { id: 'device-overflow', label: 'Overflow + notify' },
           { id: 'device-row', label: 'DeviceRow' },
+          { id: 'gotcha-sensors-group', label: 'Composite — Sensors group' },
+          { id: 'gotcha-child-row', label: 'Composite — child row' },
           { id: 'device-card-states', label: 'Edge cases' },
           { id: 'device-elements', label: 'Elements catalog' },
         ],

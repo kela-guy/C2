@@ -74,6 +74,7 @@ export function resolveAnatomy(c: ResolvedComponent): ResolvedComponent[] {
 }
 
 export const TIER_LABEL: Record<ComponentTier, string> = {
+  foundation: 'Foundations',
   primitive: 'Primitives',
   block: 'Blocks',
 };

@@ -210,6 +210,7 @@ export function CriticalAlertOverlay({
       role="alertdialog"
       aria-modal="true"
       aria-label={alert.title}
+      data-handoff-component="gotcha-critical-alert"
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
     >
       {/* Interactive red scrim (distinct from the pointer-events-none vignette). */}

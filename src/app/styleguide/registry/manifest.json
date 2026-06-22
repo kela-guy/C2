@@ -2,18 +2,35 @@
   "$schema": "./manifest.schema.json",
   "components": [
     {
+      "id": "tokens",
+      "name": "Design Tokens",
+      "tier": "foundation",
+      "group": "Tokens",
+      "description": "The tiered token graph — brand-agnostic CORE (primitive raw values, semantic intent aliases, the 4px interactive radius) and the C2 DOMAIN threat accents. Authored in tokens/core.json + tokens/c2-domain.json (DTCG), generated into src/styles/tokens.generated.css (CSS vars) and src/primitives/tokens.generated.ts (typed). Theme by swapping CORE primitives; CORE never references domain values.",
+      "importPath": "@/primitives",
+      "registryName": "tokens"
+    },
+    {
+      "id": "conventions",
+      "name": "Conventions",
+      "tier": "foundation",
+      "group": "Governance",
+      "description": "The design-system governance rules as data — no raw hex, central icons only, the 4px interactive radius, RTL containers, oklch status colors, useCardSlots composition. Authored in governance/rules.json and enforced by `pnpm design:check` (drift guard + design-lint ratchet + eslint). Humans read them here; agents read the same source in public/DESIGN_CONTEXT.md.",
+      "importPath": "governance/rules.json"
+    },
+    {
       "id": "motion",
       "name": "Motion",
-      "tier": "primitive",
-      "group": "Foundations",
+      "tier": "foundation",
+      "group": "Systems",
       "description": "The three-spring motion system — fast/moderate/slow with one-tier-faster exits. All timing lives in @/lib/springs (framer-motion tokens) and is mirrored as --motion-* CSS vars + .overlay-motion-* helpers for Radix overlays. Slow in, faster out: every exit runs a tier quicker and drops the bounce.",
       "importPath": "@/lib/springs"
     },
     {
       "id": "scrolling-list",
       "name": "Scrolling List",
-      "tier": "primitive",
-      "group": "Foundations",
+      "tier": "foundation",
+      "group": "Systems",
       "description": "The scrolling-list edge-cue system. useScrollEdges observes a scroller and reports which edges have more content; ScrollEdgeCue renders a surface-aware gradient + chevron at those edges; ScrollArea composes both with a restyled overlay scrollbar and a native fallback on touch. Signals overflow so a clipped list never looks finished.",
       "importPath": "@/lib/scroll"
     },

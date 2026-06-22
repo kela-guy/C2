@@ -320,7 +320,7 @@ export function DocSectionHeading({ children, id }: { children: React.ReactNode;
   return (
     <h2
       id={id}
-      className="mb-5 mt-14 scroll-mt-20 border-b border-white/[0.06] pb-2.5 text-2xl font-semibold tracking-tight text-n-12 first:mt-0"
+      className="mb-6 mt-12 scroll-mt-20 border-b border-white/[0.06] pb-2 text-2xl font-semibold tracking-tight text-n-12 first:mt-0"
       style={{ textWrap: 'balance' }}
     >
       {children}

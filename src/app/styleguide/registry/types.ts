@@ -11,8 +11,12 @@
  * cannot silently drift apart.
  */
 
-/** Composition depth. Primitives are atomic; Blocks compose 2-3+ primitives. */
-export type ComponentTier = 'primitive' | 'block';
+/**
+ * Composition depth / entry kind. Foundations are the token + governance +
+ * system layers (not components); Primitives are atomic; Blocks compose 2-3+
+ * primitives.
+ */
+export type ComponentTier = 'foundation' | 'primitive' | 'block';
 
 /** A single row in a component's API reference table. */
 export interface PropDef {

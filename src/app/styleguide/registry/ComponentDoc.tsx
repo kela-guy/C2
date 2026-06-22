@@ -9,7 +9,7 @@
  * Anatomy (Blocks). The live Preview is the single focal point per the
  * ui-craft surface model.
  */
-import { Boxes, Component as ComponentIcon } from 'lucide-react';
+import { Boxes, Component as ComponentIcon, Palette } from 'lucide-react';
 import { getComponent, resolveAnatomy } from './manifest';
 import type { ResolvedComponent } from './types';
 import {
@@ -22,18 +22,26 @@ import {
 import { cn } from '@/shared/components/ui/utils';
 import { SURFACE } from '@/primitives';
 
+const TIER_CHIP: Record<
+  ResolvedComponent['tier'],
+  { label: string; icon: typeof Boxes; className: string }
+> = {
+  foundation: { label: 'Foundation', icon: Palette, className: 'bg-amber-500/15 text-amber-300' },
+  primitive: { label: 'Primitive', icon: ComponentIcon, className: 'bg-sky-500/15 text-sky-300' },
+  block: { label: 'Block', icon: Boxes, className: 'bg-violet-500/15 text-violet-300' },
+};
+
 function TierChip({ tier }: { tier: ResolvedComponent['tier'] }) {
-  const isBlock = tier === 'block';
-  const Icon = isBlock ? Boxes : ComponentIcon;
+  const { label, icon: Icon, className } = TIER_CHIP[tier];
   return (
     <span
       className={cn(
         'inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-xs font-medium',
-        isBlock ? 'bg-violet-500/15 text-violet-300' : 'bg-sky-500/15 text-sky-300',
+        className,
       )}
     >
       <Icon size={12} aria-hidden="true" />
-      {isBlock ? 'Block' : 'Primitive'}
+      {label}
     </span>
   );
 }
@@ -106,18 +114,19 @@ function ParentBacklink({
 }
 
 function ExamplesSection({ c }: { c: ResolvedComponent }) {
-  // First example is the hero (shown above with its usage); list the rest as
-  // preview-only tiles — examples don't carry their own code block.
+  // First example is the hero (shown above with its usage); the rest render as
+  // full code-previews — each carries its own snippet, so every example gets
+  // the live preview + collapsible "View Code", matching the shadcn docs.
   const examples = (c.doc?.examples ?? []).slice(1);
   if (examples.length === 0) return null;
   return (
     <section>
       <DocSectionHeading id="examples">Examples</DocSectionHeading>
-      <div className="space-y-10">
+      <div className="space-y-12">
         {examples.map((ex) => (
           <div key={ex.id} id={ex.id} className="scroll-mt-20 space-y-4">
             <div className="space-y-1">
-              <h3 className="text-base font-medium text-n-12" style={{ textWrap: 'balance' }}>
+              <h3 className="scroll-m-20 text-xl font-semibold tracking-tight text-n-12" style={{ textWrap: 'balance' }}>
                 {ex.title}
               </h3>
               {ex.description && (
@@ -126,7 +135,7 @@ function ExamplesSection({ c }: { c: ResolvedComponent }) {
                 </p>
               )}
             </div>
-            <ComponentPreview render={ex.render} />
+            <ComponentPreview render={ex.render} code={ex.code} />
           </div>
         ))}
       </div>
@@ -178,7 +187,7 @@ export function ComponentDoc({
     <article className="mx-auto max-w-[880px] space-y-12">
       <header className="space-y-3">
         <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-bold tracking-tight text-n-12" style={{ textWrap: 'balance' }}>
+          <h1 className="scroll-m-20 text-3xl font-bold tracking-tight text-n-12" style={{ textWrap: 'balance' }}>
             {c.name}
           </h1>
           <TierChip tier={c.tier} />

@@ -10,7 +10,7 @@
  * chrome.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Boxes, Component as ComponentIcon, Search } from 'lucide-react';
+import { Boxes, Component as ComponentIcon, Palette, Search } from 'lucide-react';
 import { TooltipProvider } from '@/shared/components/ui/tooltip';
 import {
   CommandDialog,
@@ -26,7 +26,13 @@ import type { ComponentTier, ResolvedComponent } from './types';
 import { ComponentDoc } from './ComponentDoc';
 import { RING } from './docPrimitives';
 
-const TIERS: ComponentTier[] = ['primitive', 'block'];
+const TIERS: ComponentTier[] = ['foundation', 'primitive', 'block'];
+
+function tierIcon(tier: ComponentTier) {
+  if (tier === 'block') return Boxes;
+  if (tier === 'foundation') return Palette;
+  return ComponentIcon;
+}
 
 function TierToggle({
   tier,
@@ -39,7 +45,7 @@ function TierToggle({
     <div className={cn('flex gap-1 rounded-lg p-1', RING)}>
       {TIERS.map((t) => {
         const active = t === tier;
-        const Icon = t === 'block' ? Boxes : ComponentIcon;
+        const Icon = tierIcon(t);
         return (
           <button
             key={t}
@@ -214,7 +220,9 @@ export default function DesignSystem() {
           <CommandEmpty>No components found.</CommandEmpty>
           {TIERS.map((t) => (
             <CommandGroup key={t} heading={TIER_LABEL[t]}>
-              {COMPONENTS.filter((c) => c.tier === t).map((c) => (
+              {COMPONENTS.filter((c) => c.tier === t).map((c) => {
+                const ItemIcon = tierIcon(c.tier);
+                return (
                 <CommandItem
                   key={c.id}
                   value={`${c.name} ${c.id} ${c.group}`}
@@ -223,11 +231,12 @@ export default function DesignSystem() {
                     setSearchOpen(false);
                   }}
                 >
-                  {c.tier === 'block' ? <Boxes /> : <ComponentIcon />}
+                  <ItemIcon />
                   <span>{c.name}</span>
                   <span className="ml-auto text-xs text-n-120">{c.group}</span>
                 </CommandItem>
-              ))}
+                );
+              })}
             </CommandGroup>
           ))}
         </CommandList>

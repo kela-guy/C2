@@ -19,7 +19,7 @@
  * "broken, already logged" (still).
  */
 
-import type { ConnectionState, Device, DevicesPanelStrings } from './types';
+import type { ConnectionState, Device, DeviceError, DevicesPanelStrings } from './types';
 
 export type DeviceHealth = 'ok' | 'warning' | 'error' | 'critical' | 'offline';
 
@@ -88,6 +88,64 @@ export function getUnhealthyChildCount(device: Device): number {
     if (HEALTH_RANK[getEffectiveDeviceHealth(child)] >= HEALTH_RANK.warning) count += 1;
   }
   return count;
+}
+
+/**
+ * Rolled-up open-error count for a (possibly composite) device: the device's
+ * own errors plus every descendant child's. Lets a composite parent surface a
+ * single Logs button even when the faults live entirely on its children.
+ */
+export function getCompositeErrorCount(device: Device): number {
+  let count = getDeviceErrorCount(device);
+  for (const child of device.children ?? []) {
+    count += getCompositeErrorCount(child);
+  }
+  return count;
+}
+
+/**
+ * A device's own open issues for the errors modal. Structured `errors[]` are
+ * the source of truth when present; otherwise a warning / error / critical
+ * health is synthesized into a single entry from its human-readable reason, so
+ * a degraded asset that carries no structured error (e.g. a connection warning)
+ * still explains itself in the modal. `ok` / `offline` contribute nothing.
+ */
+function getDeviceOwnIssues(
+  device: Device,
+  strings: DevicesPanelStrings,
+  connectionLabels: Record<ConnectionState, string>,
+): DeviceError[] {
+  if (device.errors?.length) return device.errors;
+  const health = getDeviceHealth(device);
+  const reason = getDeviceHealthReason(device, strings, connectionLabels);
+  if (health === 'warning') {
+    return [{ severity: 'warning', message: reason ?? strings.healthWarning }];
+  }
+  if (health === 'error' || health === 'critical') {
+    return [{ severity: 'error', message: reason ?? strings.healthError }];
+  }
+  return [];
+}
+
+/**
+ * Flattened issue list for a (possibly composite) device: the device's own
+ * issues first, then each child's, with the child name prefixed onto the
+ * message so the parent's errors modal stays legible about which sensor /
+ * camera is at fault. Warnings are included alongside errors so the amber Logs
+ * button always opens onto an explanation.
+ */
+export function getAggregatedIssues(
+  device: Device,
+  strings: DevicesPanelStrings,
+  connectionLabels: Record<ConnectionState, string>,
+): DeviceError[] {
+  const out: DeviceError[] = [...getDeviceOwnIssues(device, strings, connectionLabels)];
+  for (const child of device.children ?? []) {
+    for (const err of getAggregatedIssues(child, strings, connectionLabels)) {
+      out.push({ ...err, message: `${child.name} · ${err.message}` });
+    }
+  }
+  return out;
 }
 
 export interface DeviceHealthVisual {

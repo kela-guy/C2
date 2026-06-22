@@ -1,0 +1,73 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "$description": "C2 CORE tokens — brand- and domain-agnostic. Three tiers: primitive (raw values, no intent), semantic (intent-named aliases of primitives), and dimension (radius/space). A consuming product themes the system by swapping primitives only; semantic names never change. CORE must never reference c2-domain values.",
+  "primitive": {
+    "$description": "Tier 1 — raw values with no intent. Never reference these directly in app code; reach for a semantic token instead.",
+    "color": {
+      "white": { "$type": "color", "$value": "#ffffff", "$description": "Pure white. Base for translucent surface overlays." },
+      "black": { "$type": "color", "$value": "#000000", "$description": "Pure black. Base for the selection ring tint." },
+      "surface": {
+        "$description": "The dark control-room elevation ramp. Each step is white mixed into #141414 at a fixed overlay ratio (0 / 0.05 / 0.08 / 0.11 / 0.14).",
+        "0": { "$type": "color", "$value": "#141414", "$description": "Base — page background and card content area." },
+        "1": { "$type": "color", "$value": "#202020", "$description": "Raised — card container and sidebar." },
+        "2": { "$type": "color", "$value": "#272727", "$description": "Overlay — borders and dividers, card container fill." },
+        "3": { "$type": "color", "$value": "#2e2e2e", "$description": "Inset — icon boxes and closure buttons." },
+        "4": { "$type": "color", "$value": "#353535", "$description": "Hover — sensor rows and hover states." }
+      },
+      "neutral": {
+        "$description": "Foreground greys for text on the dark surface ramp.",
+        "200": { "$type": "color", "$value": "#dee2e6", "$description": "High-contrast text — titles, primary values." },
+        "500": { "$type": "color", "$value": "#999999", "$description": "Low-contrast text — subtitles, captions, metadata." }
+      },
+      "red": {
+        "$description": "Perceptually-uniform red ramp (oklch) for destructive actions.",
+        "base": { "$type": "color", "$value": "oklch(0.435 0.151 25)", "$description": "Resting destructive fill." },
+        "hover": { "$type": "color", "$value": "oklch(0.485 0.151 25)", "$description": "Destructive hover — one lightness step up." },
+        "active": { "$type": "color", "$value": "oklch(0.385 0.151 25)", "$description": "Destructive pressed — one lightness step down." }
+      },
+      "amber": {
+        "$description": "Perceptually-uniform amber ramp (oklch) for warning actions.",
+        "base": { "$type": "color", "$value": "oklch(0.501 0.166 75)", "$description": "Resting warning fill." },
+        "hover": { "$type": "color", "$value": "oklch(0.551 0.166 75)", "$description": "Warning hover — one lightness step up." },
+        "active": { "$type": "color", "$value": "oklch(0.451 0.166 75)", "$description": "Warning pressed — one lightness step down." }
+      }
+    }
+  },
+  "semantic": {
+    "$description": "Tier 2 — intent-named aliases of primitives. This is the layer app code and components should consume. Swapping a primitive re-themes every semantic token that references it.",
+    "color": {
+      "surface": {
+        "base": { "$type": "color", "$value": "{primitive.color.surface.0}", "$description": "Lowest surface — page and card-content background." },
+        "raised": { "$type": "color", "$value": "{primitive.color.surface.1}", "$description": "Raised surface — cards, sidebar, code panels." },
+        "overlay": { "$type": "color", "$value": "{primitive.color.surface.2}", "$description": "Container fill, borders, dividers." },
+        "inset": { "$type": "color", "$value": "{primitive.color.surface.3}", "$description": "Recessed wells — icon boxes, closure buttons." },
+        "hover": { "$type": "color", "$value": "{primitive.color.surface.4}", "$description": "Hover/active row surface." }
+      },
+      "text": {
+        "default": { "$type": "color", "$value": "{primitive.color.neutral.200}", "$description": "Default high-contrast text." },
+        "muted": { "$type": "color", "$value": "{primitive.color.neutral.500}", "$description": "Secondary, lower-emphasis text." }
+      },
+      "action": {
+        "danger": {
+          "bg": { "$type": "color", "$value": "{primitive.color.red.base}", "$description": "Destructive action background." },
+          "hover": { "$type": "color", "$value": "{primitive.color.red.hover}", "$description": "Destructive action hover." },
+          "active": { "$type": "color", "$value": "{primitive.color.red.active}", "$description": "Destructive action pressed." }
+        },
+        "warning": {
+          "bg": { "$type": "color", "$value": "{primitive.color.amber.base}", "$description": "Warning action background." },
+          "hover": { "$type": "color", "$value": "{primitive.color.amber.hover}", "$description": "Warning action hover." },
+          "active": { "$type": "color", "$value": "{primitive.color.amber.active}", "$description": "Warning action pressed." }
+        }
+      },
+      "focus": {
+        "ring": { "$type": "color", "$value": "{primitive.color.white}", "$description": "Focus-visible ring color (applied at reduced opacity by components)." }
+      },
+      "selection": {
+        "ring": { "$type": "color", "$value": "{primitive.color.black}", "$description": "Selected-card ring tint (applied at 15% opacity)." }
+      }
+    },
+    "radius": {
+      "interactive": { "$type": "dimension", "$value": "4px", "$description": "Border radius for all interactive elements — buttons, badges, chips. The system's signature 4px corner." }
+    }
+  }
+}

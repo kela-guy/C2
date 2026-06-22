@@ -46,6 +46,15 @@ const MANUAL_SECTION_BY_HINT: Record<string, string> = {
   'filter-bar': 'filter-bar',
   'new-updates': 'new-updates',
 
+  // Counter-drone Gotcha effector. The composite-unit child group + its rows
+  // are the collapsible "Sensors" inset; both land on the Gotcha section's
+  // exact sub-anchors so picking either deep-links to the right doc. (The
+  // critical-alert + map-marker docs were removed, so those surfaces now fall
+  // through to `/styleguide#top`.)
+  'device-child-list': 'gotcha-sensors-group',
+  'device-child-row': 'gotcha-child-row',
+  'device-child-logs-error': 'gotcha-sensors-group',
+
   // Device panel chrome → the DevicesPanel section.
   'devices-panel': 'devices-panel',
   'devices-panel-header': 'devices-panel',

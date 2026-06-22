@@ -1352,9 +1352,10 @@ function CesiumTacticalMapImpl({
         const sensorHovered =
           hoveredSensorIdFromCard === sensor.id || selectedAssetId === sensor.id;
         const nonHealthy = health !== 'ok';
-        // Visibility: hidden by default; full ring on hover/select; any
-        // non-healthy sector always visible.
-        if (!showFullRing && !sensorHovered && !nonHealthy) continue;
+        // Visibility: hidden by default; only revealed on unit hover/select or
+        // this sensor's own hover/select. Non-healthy sectors no longer
+        // auto-expand — the unhealthy marker-ring tint signals trouble at rest.
+        if (!showFullRing && !sensorHovered) continue;
         const highlighted = sensorHovered || isHovered;
         sectors.push({
           id: sensor.id,
@@ -1372,15 +1373,17 @@ function CesiumTacticalMapImpl({
         lon: unit.lon,
         zIndex: isHovered ? 40 : isSelected ? 30 : 14,
         content: (
-          <MapMarker
-            icon={<GotchaIcon outlined />}
-            style={style}
-            surfaceSize={SENSOR_SURFACE}
-            ringSize={SENSOR_RING}
-            label={unit.name}
-            showLabel={isHovered || isSelected}
-            pulse={isHovered || isSelected}
-          />
+          <span data-handoff-component="gotcha-marker">
+            <MapMarker
+              icon={<GotchaIcon outlined />}
+              style={style}
+              surfaceSize={SENSOR_SURFACE}
+              ringSize={SENSOR_RING}
+              label={unit.name}
+              showLabel={isHovered || isSelected}
+              pulse={isHovered || isSelected}
+            />
+          </span>
         ),
         fovSectors: sectors,
         onClick: () => onAssetClickRef.current?.(unit.id),
@@ -1624,43 +1627,6 @@ function CesiumTacticalMapImpl({
   }, [jammingTargetId, jammingJammerAssetId, targets, regulusEffectors, engagementPair]);
 
   /**
-   * Slice — camera tracking lines. Every hostile drone gets an animated
-   * dashed line to its nearest camera, mirroring the effector→drone
-   * engagement line (same width/dash/particles) so the "camera is watching
-   * this track" relationship reads at a glance alongside the engagement line.
-   */
-  const cameraTrackingPolylines = useMemo<CesiumPolyline[]>(() => {
-    if (!targets || CAMERA_ASSETS.length === 0) return [];
-    const out: CesiumPolyline[] = [];
-    for (const t of targets) {
-      if (t.affiliation !== 'hostile') continue;
-      const [tLat, tLon] = (t.coordinates ?? '').split(',').map((s) => parseFloat(s.trim()));
-      if (!Number.isFinite(tLat) || !Number.isFinite(tLon)) continue;
-      let cam = CAMERA_ASSETS[0];
-      let best = Infinity;
-      for (const c of CAMERA_ASSETS) {
-        const d = haversineDistanceM(tLat, tLon, c.latitude, c.longitude);
-        if (d < best) {
-          best = d;
-          cam = c;
-        }
-      }
-      out.push({
-        id: `camera-track-${t.id}`,
-        points: [
-          { lat: cam.latitude, lon: cam.longitude },
-          { lat: tLat, lon: tLon },
-        ],
-        color: '#ffffff',
-        width: 2,
-        dashed: true,
-        particles: { count: 3, color: '#ffffff', speed: 0.25 },
-      });
-    }
-    return out;
-  }, [targets]);
-
-  /**
    * Slice — sensor-to-target detection geometry. Thin cyan lines
    * from each sensor's static map position to the corresponding
    * target. Reads "this sensor sees this track" without competing
@@ -1767,10 +1733,9 @@ function CesiumTacticalMapImpl({
       ...sensorDetectionPolylines,
       ...previewPolylines,
       ...engagementPolylines,
-      ...cameraTrackingPolylines,
       ...planningScanPolylines,
     ],
-    [trailPolylines, sensorDetectionPolylines, previewPolylines, engagementPolylines, cameraTrackingPolylines, planningScanPolylines],
+    [trailPolylines, sensorDetectionPolylines, previewPolylines, engagementPolylines, planningScanPolylines],
   );
 
   /**

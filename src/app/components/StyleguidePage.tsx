@@ -42,7 +42,7 @@ import {
 import {
   CameraIcon, SensorIcon, RadarIcon, DroneIcon, DroneHiveIcon,
   LidarIcon, LauncherIcon, MissileIcon,
-  FloodlightIcon, SpeakerIcon,
+  FloodlightIcon, SpeakerIcon, GotchaIcon,
 } from '@/app/components/tacticalIcons';
 import {
   DroneCardIcon, JamWaveIcon, MissileCardIcon, CarIcon,
@@ -72,6 +72,10 @@ import {
   type Device, type DeviceHealth,
   type DeviceActionContext, type DeviceActionKind, type DeviceActionTone,
 } from '@/shared/components/DevicesPanel';
+import { DeviceChildRow } from '@/app/components/devices-panel/DeviceChildRow';
+import { GOTCHA_UNITS } from '@/app/components/gotcha/gotchaAssets';
+import { gotchaUnitsToDevices } from '@/app/components/gotcha/gotchaUnitsToDevices';
+import { CriticalAlertOverlay, showCriticalDroneAlert } from '@/app/components/gotcha/CriticalAlertOverlay';
 import { JamIcon, DroneDeviceIcon } from '@/primitives/ProductIcons';
 import { Switch } from '@/shared/components/ui/switch';
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/components/ui/popover';
@@ -112,6 +116,10 @@ import deviceRowSrc from '@/app/components/devices-panel/DeviceRow.tsx?raw';
 import deviceActionSrc from '@/app/components/devices-panel/DeviceAction.tsx?raw';
 import deviceRegistrySrc from '@/app/components/devices-panel/deviceRegistry.ts?raw';
 import deviceHealthSrc from '@/app/components/devices-panel/deviceHealth.ts?raw';
+import deviceChildGroupSrc from '@/app/components/devices-panel/DeviceChildGroup.tsx?raw';
+import deviceChildRowSrc from '@/app/components/devices-panel/DeviceChildRow.tsx?raw';
+import criticalAlertOverlaySrc from '@/app/components/gotcha/CriticalAlertOverlay.tsx?raw';
+import gotchaUnitsToDevicesSrc from '@/app/components/gotcha/gotchaUnitsToDevices.ts?raw';
 import popoverSrc from '@/shared/components/ui/popover.tsx?raw';
 import commandSrc from '@/shared/components/ui/command.tsx?raw';
 import buttonSrc from '@/shared/components/ui/button.tsx?raw';
@@ -245,6 +253,13 @@ const MARKER_FILES: RelatedFile[] = [
   { file: 'markerStyles.ts', code: markerStylesSrc },
   { file: 'MapIcons.tsx', code: mapIconsSrc },
   TOKENS_FILE, BARREL_FILE,
+];
+
+const GOTCHA_FILES: RelatedFile[] = [
+  { file: 'DeviceChildGroup.tsx', code: deviceChildGroupSrc },
+  { file: 'DeviceChildRow.tsx', code: deviceChildRowSrc },
+  { file: 'gotchaUnitsToDevices.ts', code: gotchaUnitsToDevicesSrc },
+  { file: 'CriticalAlertOverlay.tsx', code: criticalAlertOverlaySrc },
 ];
 
 // ─── Lazy sections ───────────────────────────────────────────────────────────
@@ -757,6 +772,135 @@ function DeviceCardRowDemo({
       onOpenLogs={(id) => console.info('[styleguide] open logs', id)}
       onArmNotifications={(id, armed) => console.info('[styleguide] notifications', id, armed)}
     />
+  );
+}
+
+/**
+ * The seed Gotcha effector, adapted through the production mapper into the
+ * shared `Device` shape so the styleguide renders the exact composite card the
+ * app ships (parent + 4 sector children + camera). Module-scope: the source is
+ * static, so it never needs to recompute per render.
+ */
+const GOTCHA_STYLEGUIDE_DEVICE = gotchaUnitsToDevices(GOTCHA_UNITS)[0];
+
+/**
+ * Standalone `DeviceChildRow` gallery — the sensor/camera children pulled out
+ * of the collapsible group so their selected / hover / unhealthy-with-Logs
+ * states are visible without expanding the parent. Owns its own selection so
+ * clicking a row shows the selected treatment.
+ */
+function GotchaSensorRowsDemo() {
+  const [selected, setSelected] = useState<string | null>(
+    GOTCHA_STYLEGUIDE_DEVICE?.children?.[0]?.id ?? null,
+  );
+  const children = GOTCHA_STYLEGUIDE_DEVICE?.children ?? [];
+  return (
+    <div className="w-full max-w-[320px] rounded border border-white/[0.06] bg-white/[0.04] p-1" dir="ltr">
+      <div className="flex flex-col gap-0.5">
+        {children.map((child) => (
+          <DeviceChildRow
+            key={child.id}
+            device={child}
+            strings={DEFAULT_DEVICE_PANEL_STRINGS}
+            inset
+            selected={selected === child.id}
+            onHover={noop}
+            onSelect={(id) => setSelected((cur) => (cur === id ? null : id))}
+            onOpenErrors={noop}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Live trigger for the critical drone-alert takeover. Fires the same window
+ * event the production detection pipeline uses (`showCriticalDroneAlert`); the
+ * mounted overlay renders full-screen and is dismissable via the X, the scrim,
+ * or Escape.
+ */
+function GotchaCriticalAlertDemo() {
+  const fire = (withMedia: boolean) =>
+    showCriticalDroneAlert({
+      title: 'Drone detected',
+      message: 'אזור ב׳ · quadcopter · closing',
+      bearingDeg: 95,
+      distanceM: 420,
+      ...(withMedia ? { snapshotUrl: iconPublicUrl('tactical', 'DroneIcon.svg') } : {}),
+    });
+  return (
+    <div className="flex w-full flex-col items-start gap-4" dir="ltr">
+      <p className="max-w-[64ch] text-sm leading-6 text-n-9">
+        The highest-severity lane: bypasses the batched notification pool entirely and drives an
+        interactive full-screen takeover with a compass bearing, range readout, optional snapshot /
+        live video, a one-click PA broadcast (כריזה), a Show-on-map jump, and a critical audio cue.
+        It auto-dismisses on a countdown. Trigger it below — dismiss with the X, the scrim, or Escape.
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => fire(true)}
+          className="inline-flex items-center gap-2 rounded-md bg-red-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300/60"
+        >
+          <AlertTriangle size={16} />
+          Trigger critical alert
+        </button>
+        <button
+          type="button"
+          onClick={() => fire(false)}
+          className="inline-flex items-center gap-2 rounded-md border border-white/15 bg-white/[0.04] px-3.5 py-2 text-sm font-medium text-n-10 transition-colors hover:bg-white/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+        >
+          Without media
+        </button>
+      </div>
+      <CriticalAlertOverlay onBroadcast={noop} onLocate={noop} />
+    </div>
+  );
+}
+
+/** Sector / ring colour rules, mirroring `gotchaSectorColor` in CesiumTacticalMap. */
+const GOTCHA_SECTOR_LEGEND: { label: string; color: string; note: string }[] = [
+  { label: 'Healthy', color: '#22b8cf', note: 'friendly cyan — hidden at rest' },
+  { label: 'Warning', color: SEVERITY_COLOR.MEDIUM, note: 'always drawn' },
+  { label: 'Error / blind', color: SEVERITY_COLOR.HIGH, note: 'always drawn' },
+  { label: 'Offline', color: SEVERITY_COLOR.LOW, note: 'neutral, known-absent' },
+];
+
+/** Map marker + 120-degree sector colour legend for the Gotcha effector. */
+function GotchaMapDemo() {
+  const style = resolveMarkerStyle('default', 'friendly');
+  return (
+    <div className="flex w-full flex-wrap items-start gap-12" dir="ltr">
+      <div className="flex flex-col items-center gap-2">
+        <MapMarker
+          icon={<GotchaIcon outlined fill="white" size={34} />}
+          style={style}
+          surfaceSize={48}
+          ringSize={38}
+          label="Gotcha North"
+          showLabel
+        />
+        <span className="text-xs font-mono text-n-9">GotchaIcon marker</span>
+      </div>
+      <div className="flex flex-col gap-3">
+        <span className="text-[10px] font-medium uppercase tracking-wide text-n-8">
+          Sector colour (worst-wins health)
+        </span>
+        {GOTCHA_SECTOR_LEGEND.map(({ label, color, note }) => (
+          <div key={label} className="flex items-center gap-3">
+            <span
+              className="size-4 shrink-0 rounded-sm"
+              style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}` }}
+              aria-hidden="true"
+            />
+            <span className="text-sm font-medium text-n-11">{label}</span>
+            <span className="font-mono text-[11px] text-n-9">{color}</span>
+            <span className="text-xs text-n-120">{note}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -5698,6 +5842,69 @@ export function DetectionRow() {
                   </StyleguideDeviceTile>
                 </div>
               </ExampleBlock>
+                      </div>
+                    ),
+                  },
+                  {
+                    value: 'composite',
+                    label: 'Composite (Gotcha)',
+                    anchorIds: ['gotcha-sensors-group', 'gotcha-child-row'],
+                    children: (
+                      <div>
+                        {/* ── Sensors group (collapsible inset) ──────────── */}
+                        <ExampleBlock id="gotcha-sensors-group" title="Sensors group — collapsible inset (composite unit)">
+                          <div className="flex w-full flex-col gap-4">
+                            <CodePreviewBlock
+                              name="Gotcha unit card"
+                              description="The composite effector rendered through the shared DeviceRow. Children (4 sectors + camera) live in the collapsible 'Sensors' inset; toggle the group to compare the collapsed roll-up vs the expanded per-row badges."
+                              tight
+                              code={deviceChildGroupSrc}
+                              relatedFiles={GOTCHA_FILES}
+                            >
+                              <StyleguideDeviceTile>
+                                <DeviceCardRowDemo device={GOTCHA_STYLEGUIDE_DEVICE} />
+                              </StyleguideDeviceTile>
+                            </CodePreviewBlock>
+                          </div>
+                        </ExampleBlock>
+
+                        {/* ── Sensor child rows (states) ─────────────────── */}
+                        <ExampleBlock id="gotcha-child-row" title="Sensor child row — selected / hover / unhealthy">
+                          <div className="flex w-full flex-col items-center justify-center gap-4">
+                            <GotchaSensorRowsDemo />
+                          </div>
+                        </ExampleBlock>
+
+                        <div className="mt-12">
+                          <h3 className="mb-4 text-sm font-medium text-n-10">Class recipe — Sensors inset</h3>
+                          <ClassNameRecipe
+                            entries={[
+                              {
+                                label: 'Sensors inset (outer)',
+                                note: 'nested radii: outer rounded (4px) minus p-1 (4px) = inner rounded-sm (2px)',
+                                className: 'rounded border border-white/[0.06] bg-white/[0.04] p-1',
+                              },
+                              {
+                                label: 'Group toggle (header)',
+                                note: 'summary chips while collapsed; chevron rotates -90deg collapsed',
+                                className:
+                                  'flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-start transition-colors duration-150 ease-out hover:bg-white/[0.04] active:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-white/25',
+                              },
+                              {
+                                label: 'Collapse track',
+                                note: 'grid 0fr to 1fr height ease; overflow-hidden clips rows as they close',
+                                className:
+                                  'grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none grid-rows-[0fr]',
+                              },
+                              {
+                                label: 'Child row (inset)',
+                                note: 'rounded; selected adds bg-white/[0.07]',
+                                className:
+                                  'group relative flex min-h-[40px] items-center gap-2.5 py-2 px-2 rounded text-end cursor-pointer transition-[background-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25 focus-visible:ring-inset',
+                              },
+                            ]}
+                          />
+                        </div>
                       </div>
                     ),
                   },

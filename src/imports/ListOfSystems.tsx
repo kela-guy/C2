@@ -553,6 +553,16 @@ export interface ListOfSystemsProps {
   controlRequestCountdown?: number | null;
   controlRequestTargetId?: string | null;
   onRequestCameraControl?: (targetId: string) => void;
+  /** Toggle audio broadcast over the nearest speaker for a target (play/stop). */
+  onPlayAudio?: (targetId: string) => void;
+  /** Pick which speaker track a target broadcasts. */
+  onSelectAudioTrack?: (targetId: string, trackId: string) => void;
+  /** Target whose audio broadcast is currently live. */
+  audioPlayingTargetId?: string | null;
+  /** Selectable speaker tracks for the card's Play-audio control. */
+  audioTracks?: { id: string; label: string }[];
+  /** Per-target selected speaker track id. */
+  selectedAudioTrackIds?: Map<string, string>;
   onSensorFocus?: (sensorId: string) => void;
   onTargetFocus?: (targetId: string) => void;
   onTargetHover?: (targetId: string | null) => void;
@@ -615,6 +625,11 @@ function ListOfSystemsImpl({
   controlRequestCountdown,
   controlRequestTargetId,
   onRequestCameraControl,
+  onPlayAudio,
+  onSelectAudioTrack,
+  audioPlayingTargetId,
+  audioTracks,
+  selectedAudioTrackIds,
   onSensorFocus,
   onTargetFocus,
   onTargetHover,
@@ -763,7 +778,7 @@ function ListOfSystemsImpl({
     onDroneOverride, onDroneResume, onDroneRTB, onMissionActivate, onMissionPause,
     onMissionResume, onMissionOverride, onMissionCancel, onMitigate, onMitigateAll,
     onEffectorSelect, onEngageGotcha, onGotchaSelect, onPointWeapon, onLockWeapon, onDismissLock, onLauncherSelect,
-    onBdaOutcome, onBdaCamera, onRequestCameraControl, onSensorFocus,
+    onBdaOutcome, onBdaCamera, onRequestCameraControl, onPlayAudio, onSelectAudioTrack, onSensorFocus,
     onTargetClick, onTargetFocus,
   });
   handlersRef.current = {
@@ -774,7 +789,7 @@ function ListOfSystemsImpl({
     onDroneOverride, onDroneResume, onDroneRTB, onMissionActivate, onMissionPause,
     onMissionResume, onMissionOverride, onMissionCancel, onMitigate, onMitigateAll,
     onEffectorSelect, onEngageGotcha, onGotchaSelect, onPointWeapon, onLockWeapon, onDismissLock, onLauncherSelect,
-    onBdaOutcome, onBdaCamera, onRequestCameraControl, onSensorFocus,
+    onBdaOutcome, onBdaCamera, onRequestCameraControl, onPlayAudio, onSelectAudioTrack, onSensorFocus,
     onTargetClick, onTargetFocus,
   };
 
@@ -831,6 +846,8 @@ function ListOfSystemsImpl({
       onBdaOutcome: (outcome) => h.current.onBdaOutcome?.(id, outcome),
       onBdaCamera: () => h.current.onBdaCamera?.(id),
       onRequestCameraControl: () => h.current.onRequestCameraControl?.(id),
+      onPlayAudio: () => h.current.onPlayAudio?.(id),
+      onSelectAudioTrack: (trackId) => h.current.onSelectAudioTrack?.(id, trackId),
       onSensorFocus: (sensorId) => h.current.onSensorFocus?.(sensorId),
     };
     callbacksCacheRef.current.set(id, cb);
@@ -871,6 +888,9 @@ function ListOfSystemsImpl({
     selectedGotchaId: flowSelectedIds?.['gotchaEffectors']?.get(target.id),
     nearbyCameras: (target.flowType === 1 || target.flowType === 2) ? nearbyCameras : undefined,
     nearbyHives: target.flowType === 3 ? nearbyHives : undefined,
+    audioTracks,
+    selectedAudioTrackId: selectedAudioTrackIds?.get(target.id),
+    isAudioPlaying: audioPlayingTargetId === target.id,
   });
 
   // Reuse the previous ctx object identity when none of its derived values

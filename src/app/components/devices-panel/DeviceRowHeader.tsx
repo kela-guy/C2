@@ -16,7 +16,7 @@
 import { memo, useEffect, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { spring } from '@/lib/springs';
-import { List, WarningTriangleSquare } from '@/lib/icons/central';
+import { List } from '@/lib/icons/central';
 import { DotmSquare18 } from '@/app/components/ui/dotm-square-18';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import type { ConnectionState, Device } from './types';
@@ -53,7 +53,6 @@ export const DeviceRowHeader = memo(function DeviceRowHeader({ device, cfg, ctx,
   // collapsed row reflects the unit's true state without expanding.
   const isComposite = cfg.capabilities.composite === true && (device.children?.length ?? 0) > 0;
   const health = isComposite ? getEffectiveDeviceHealth(device) : getDeviceHealth(device);
-  const unhealthyChildren = isComposite ? getUnhealthyChildCount(device) : 0;
   const healthVisual = DEVICE_HEALTH_VISUAL[health];
   const healthReason = getDeviceHealthReason(device, strings, connectionStateLabels);
   const connectionLabel = connectionStateLabels[device.connectionState];
@@ -67,10 +66,6 @@ export const DeviceRowHeader = memo(function DeviceRowHeader({ device, cfg, ctx,
   }[health];
 
   const tone = HEALTH_TONE[health];
-  // Persistent (non-color) cue on a composite parent: a count + label pill so
-  // a degraded/offline child is legible while the row is collapsed, not just a
-  // tile tint. Offline has no tone badge, so fall back to a neutral surface.
-  const compositeBadgeTone = tone.badge ?? 'bg-white/10 text-zinc-300';
   const showBadge = tone.badge != null && ctx.errorCount > 0;
   const badgeLabel = ctx.errorCount > 99 ? '99+' : ctx.errorCount;
   // The header reason text only adds value when it says something the
@@ -79,6 +74,20 @@ export const DeviceRowHeader = memo(function DeviceRowHeader({ device, cfg, ctx,
   const fenceConnection = nonOnline ? connectionLabel : null;
   const hasFence = reasonText != null || fenceConnection != null;
   const hasTooltip = nonOnline || healthReason != null || ctx.errorCount > 0;
+
+  // Header Logs button: composites roll their unhealthy children into one
+  // count; flat devices keep their own open-error count. The button's tone
+  // follows the worst-wins severity (amber for warning, red for error /
+  // critical) so a degraded-but-not-broken unit still surfaces a channel.
+  const issueCount = isComposite ? getUnhealthyChildCount(device) : ctx.errorCount;
+  const logsTone: 'error' | 'warning' | null =
+    issueCount > 0
+      ? health === 'warning'
+        ? 'warning'
+        : health === 'error' || health === 'critical'
+          ? 'error'
+          : null
+      : null;
 
   const tile = (
     <div
@@ -144,19 +153,7 @@ export const DeviceRowHeader = memo(function DeviceRowHeader({ device, cfg, ctx,
         <span className="text-sm font-medium truncate text-zinc-300 block">{device.name}</span>
       </div>
 
-      {unhealthyChildren > 0 && (
-        <span
-          className={`flex h-5 shrink-0 items-center gap-1 rounded px-1.5 text-[10px] font-semibold tabular-nums ${compositeBadgeTone}`}
-          role="status"
-          aria-label={`${unhealthyChildren} ${healthLabel}`}
-          title={`${unhealthyChildren} ${healthLabel}`}
-        >
-          <WarningTriangleSquare size={11} aria-hidden="true" />
-          {unhealthyChildren}
-        </span>
-      )}
-
-      <PrimaryCluster cfg={cfg} ctx={ctx} />
+      <PrimaryCluster cfg={cfg} ctx={ctx} logsTone={logsTone} logsCount={issueCount} />
     </>
   );
 });
@@ -167,7 +164,17 @@ export const DeviceRowHeader = memo(function DeviceRowHeader({ device, cfg, ctx,
  * floodlight segmented) sit inboard of it, with the speaker now-playing
  * readout and the armed-notifications echo ahead of them.
  */
-function PrimaryCluster({ cfg, ctx }: { cfg: DeviceTypeConfig; ctx: DeviceActionContext }) {
+function PrimaryCluster({
+  cfg,
+  ctx,
+  logsTone,
+  logsCount,
+}: {
+  cfg: DeviceTypeConfig;
+  ctx: DeviceActionContext;
+  logsTone: 'error' | 'warning' | null;
+  logsCount: number;
+}) {
   const inboard = cfg.headerActions.filter((id) => id !== 'center');
   const center = cfg.headerActions.includes('center')
     ? resolveDeviceAction('center', ctx, 'header')
@@ -175,11 +182,12 @@ function PrimaryCluster({ cfg, ctx }: { cfg: DeviceTypeConfig; ctx: DeviceAction
 
   return (
     <div className="flex shrink-0 items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
-      {ctx.errorCount > 0 && (
+      {logsTone && (
         <LogsErrorButton
-          count={ctx.errorCount}
+          count={logsCount}
+          tone={logsTone}
           logsLabel={ctx.strings.logs}
-          errorsLabel={ctx.strings.errors}
+          errorsLabel={logsTone === 'warning' ? ctx.strings.errorsFilterWarnings : ctx.strings.errors}
           onOpenErrors={ctx.onOpenErrors}
         />
       )}
@@ -199,24 +207,31 @@ function PrimaryCluster({ cfg, ctx }: { cfg: DeviceTypeConfig; ctx: DeviceAction
 }
 
 /**
- * Header error channel — only mounts when the device has open errors. Shows
- * the Logs glyph + count in red (no resting surface, just a hover affordance)
- * so a broken asset surfaces its error count without expanding the row;
- * clicking opens the errors modal listing each open error.
+ * Header issue channel — mounts when the device (or its children) needs
+ * attention. Shows the Logs glyph + count, tinted by the worst-wins
+ * severity: red for error / critical, amber for warning (no resting
+ * surface, just a hover affordance). Clicking opens the errors modal,
+ * which lists each open error and warning.
  */
 function LogsErrorButton({
   count,
+  tone,
   logsLabel,
   errorsLabel,
   onOpenErrors,
 }: {
   count: number;
+  tone: 'error' | 'warning';
   logsLabel: string;
   errorsLabel: string;
   onOpenErrors: () => void;
 }) {
   const display = count > 99 ? '99+' : count;
   const label = `${logsLabel} · ${count} ${errorsLabel}`;
+  const toneClass =
+    tone === 'warning'
+      ? 'text-amber-300 hover:bg-amber-500/10 focus-visible:ring-amber-300/40'
+      : 'text-red-300 hover:bg-red-500/10 focus-visible:ring-red-300/40';
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -228,7 +243,7 @@ function LogsErrorButton({
             e.stopPropagation();
             onOpenErrors();
           }}
-          className="inline-flex h-6 shrink-0 items-center gap-1 rounded px-1.5 text-xs font-medium text-red-300 transition-[background-color,transform] duration-150 ease-out hover:bg-red-500/10 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300/40 [&_svg]:size-3"
+          className={`inline-flex h-6 shrink-0 items-center gap-1 rounded px-1.5 text-xs font-medium transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 [&_svg]:size-3 ${toneClass}`}
         >
           <List size={12} />
           <span className="tabular-nums">{display}</span>

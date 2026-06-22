@@ -88,6 +88,12 @@ import IconSignalTowerRaw from '@central-icons-react/round-filled-radius-0-strok
 import IconMapRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconMap';
 import IconMapPinRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconMapPin';
 import IconCompassRoundRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconCompassRound';
+// Sensor-direction glyph for Gotcha sector child rows — a progress arc reads
+// as a directional sector. Intentionally the OUTLINED (line) variant: the open
+// arc conveys "direction / sweep" better than a solid wedge, so this is a
+// deliberate exception to the prefer-filled icon rule (requested at the call
+// site). This pulls in the `square-outlined-radius-0-stroke-2` family.
+import IconProgressArcRaw from '@central-icons-react/square-outlined-radius-0-stroke-2/IconProgressArc';
 import IconHomeRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconHome';
 import IconTargetRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconTarget';
 import IconChevronBottomRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconChevronBottom';
@@ -166,6 +172,7 @@ import IconSettingsSliderHorFilledRaw from '@central-icons-react/round-filled-ra
 import IconSettingsGear1FilledRaw from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconSettingsGear1';
 import IconUnlockedFilledRaw from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconUnlocked';
 import IconMagnifyingGlassFilledRaw from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconMagnifyingGlass';
+import IconSpeakerFilledRaw from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconSpeaker';
 // Bolder filled variant (radius-0 / stroke-2) — used only for the
 // notifications "armed" state in the devices lab, where the heavier weight
 // reads as a lit/active bell against the row tint. Intentional second filled
@@ -223,6 +230,8 @@ export const SignalLow = asIcon(IconSignalTowerRaw);
 export const Map = asIcon(IconMapRaw);
 export const MapPin = asIcon(IconMapPinRaw);
 export const Compass = asIcon(IconCompassRoundRaw);
+// Directional sector arc — rotate via `transform: rotate(${bearingDeg}deg)`.
+export const ProgressArc = asIcon(IconProgressArcRaw);
 export const Home = asIcon(IconHomeRaw);
 export const Target = asIcon(IconTargetRaw);
 
@@ -376,6 +385,10 @@ export const ZapFilled = asIcon(IconLightningBoltFilledRaw);
 export const SlidersHorizontalFilled = asIcon(IconSettingsSliderHorFilledRaw);
 export const ChevronDownFilled = asIcon(IconChevronDownMediumFilledRaw);
 export const CircleHalfFill = asIcon(IconCircleHalfFillRaw);
+
+// Filled speaker for the gotcha/counter-air card's "Play audio" broadcast
+// action — the solid glyph reads as an emphatic, active PA control.
+export const SpeakerFilled = asIcon(IconSpeakerFilledRaw);
 
 // =====================================================================
 // 3. Former lucide pass-throughs, now mapped to Central glyphs

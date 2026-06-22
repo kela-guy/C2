@@ -27,8 +27,10 @@ import {
   Timer,
   Compass,
   ArrowUpDown,
+  SpeakerFilled,
 } from '@/lib/icons/central';
 import { DroneCardIcon, MissileCardIcon, CarCardIcon, TankCardIcon, TruckCardIcon, UnknownCardIcon } from '@/primitives/MapIcons';
+import { SpeakerWaveLoaderIcon } from '@/imports/SpeakerWaveLoaderIcon';
 import type { ThreatAccent } from '@/primitives/tokens';
 import { hexToRgba } from '@/primitives/tokens';
 import {
@@ -107,6 +109,10 @@ export interface CardCallbacks {
   onLauncherSelect?: (launcherId: string) => void;
   onEngageGotcha?: (gotchaId: string) => void;
   onGotchaSelect?: (gotchaId: string) => void;
+  /** Toggle audio broadcast over the nearest speaker for this target (play/stop). */
+  onPlayAudio?: () => void;
+  /** Pick which speaker track plays when audio is broadcast. */
+  onSelectAudioTrack?: (trackId: string) => void;
 }
 
 export interface CardContext {
@@ -123,6 +129,12 @@ export interface CardContext {
   selectedGotchaId?: string;
   nearbyCameras?: { id: string; typeLabel: string; distanceM: number }[];
   nearbyHives?: { id: string; latitude: number; longitude: number; distanceM: number; battery: number; status: string }[];
+  /** Speaker tracks selectable from the card's Play-audio action. */
+  audioTracks?: { id: string; label: string }[];
+  /** Currently selected speaker track id for this target. */
+  selectedAudioTrackId?: string;
+  /** True while this target's audio broadcast is live. */
+  isAudioPlaying?: boolean;
 }
 
 export interface CardSlots {
@@ -487,32 +499,63 @@ function buildCounterAirActions(
     dropdownGroups: groups.length > 0 ? groups : undefined,
   }];
 
-  // The shared camera/PTZ toggle (jam owns it) rides along once.
-  const cameraFlow = flows.find((f) => f.showCamera);
-  if (cameraFlow) {
-    const cameraPointing = !!ctx.isCameraPointing;
-    const cameraActive = !!ctx.isCameraActive;
-    const cameraOn = cameraActive || cameraPointing;
+  // Secondary control follows the recommended flow, sharing one button shape:
+  //  - gotcha recommended -> a Play-audio broadcast toggle (broadcast over the
+  //    nearest speaker), using the same secondary CameraToggle button as Point
+  //    camera — no accent color, just an on/off press.
+  //  - jammer recommended -> the shared camera/PTZ toggle (jam owns the camera).
+  if (primary.flow.id === 'gotcha') {
+    const isAudioPlaying = !!ctx.isAudioPlaying;
+    // Per-card picker is gone, so fall back to the first track — the badge
+    // still names whatever will broadcast.
+    const trackLabel =
+      ctx.audioTracks?.find((tk) => tk.id === ctx.selectedAudioTrackId)?.label ??
+      ctx.audioTracks?.[0]?.label;
     actions.push({
-      id: 'point-camera',
-      label: t.cards.pointCamera,
+      id: 'play-audio',
+      label: t.cards.playAudio,
       size: 'sm',
       group: 'secondary',
       onClick: (e) => {
         e.stopPropagation();
-        if (cameraOn) callbacks.onBdaCamera?.();
-        else callbacks.onVerify?.('investigate');
+        callbacks.onPlayAudio?.();
       },
       toggle: {
-        on: cameraOn,
-        pending: cameraPointing,
-        offLabel: t.cards.pointCamera,
-        onLabel: t.cards.releaseCamera,
-        pendingLabel: t.cards.cameraPointing,
-        offIcon: Video,
-        onIcon: Video,
+        on: isAudioPlaying,
+        offLabel: t.cards.playAudio,
+        onLabel: t.cards.stopAudio,
+        offIcon: SpeakerFilled,
+        onIcon: SpeakerWaveLoaderIcon,
+        badge: trackLabel,
       },
     });
+  } else {
+    const cameraFlow = flows.find((f) => f.showCamera);
+    if (cameraFlow) {
+      const cameraPointing = !!ctx.isCameraPointing;
+      const cameraActive = !!ctx.isCameraActive;
+      const cameraOn = cameraActive || cameraPointing;
+      actions.push({
+        id: 'point-camera',
+        label: t.cards.pointCamera,
+        size: 'sm',
+        group: 'secondary',
+        onClick: (e) => {
+          e.stopPropagation();
+          if (cameraOn) callbacks.onBdaCamera?.();
+          else callbacks.onVerify?.('investigate');
+        },
+        toggle: {
+          on: cameraOn,
+          pending: cameraPointing,
+          offLabel: t.cards.pointCamera,
+          onLabel: t.cards.releaseCamera,
+          pendingLabel: t.cards.cameraPointing,
+          offIcon: Video,
+          onIcon: Video,
+        },
+      });
+    }
   }
 
   return actions;

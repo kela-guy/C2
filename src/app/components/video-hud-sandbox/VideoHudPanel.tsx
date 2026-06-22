@@ -31,11 +31,15 @@ import type {
 import { DirIsland } from '@/lib/direction';
 import type { IconComponent, IconProps } from '@/lib/icons/central';
 import { CAMERA_ASSETS } from '@/app/components/tacticalAssets';
+import { CameraIcon, RadarIcon } from '@/app/components/tacticalIcons';
+import { DroneDeviceIcon } from '@/primitives/ProductIcons';
 import { useDevicesFromAssets } from '@/app/components/useDevicesFromAssets';
 import type { Device } from '@/app/components/DevicesPanel';
 import { SandboxSetpointRail } from './SandboxSetpointRail';
 import { SandboxBottomChrome } from './SandboxBottomChrome';
 import { SandboxDeviceSelect, type SandboxDevice } from './SandboxDeviceSelect';
+import type { CameraAngle as PathfinderCameraAngle } from './SandboxAngleToggle';
+import { AutoTrackOverlay } from './AutoTrackOverlay';
 import { CameraSlewCue } from './CameraSlewCue';
 import { DeviceConnectivityBadge } from './DeviceConnectivityBadge';
 import { AiDetectionTriangles } from './AiDetectionTriangles';
@@ -77,6 +81,28 @@ function deviceFeedType(device: Device | undefined): FeedDeviceType {
   return device?.type === 'drone' ? 'drone' : 'camera';
 }
 
+/** Asset variants the HUD chrome knows how to reconfigure for. */
+type HudAssetType = 'camera' | 'drone' | 'pathfinder';
+
+interface HudDemoDevice extends SandboxDevice {
+  assetType: HudAssetType;
+}
+
+/**
+ * Fixed demo devices appended below the real open feeds so the dropdown always
+ * covers all HUD variants (pathfinder / drone / camera). Selecting one swaps the
+ * surrounding chrome the same way the `/video-hud-sandbox` demo does. The ids
+ * deliberately don't map to real `CAMERA_ASSETS`; the tile falls back to the id
+ * and shared demo video.
+ */
+const DEMO_HUD_DEVICES: HudDemoDevice[] = [
+  { id: 'PTH-DEMO', label: 'PTH-01', sublabel: 'Pathfinder', assetType: 'pathfinder', Icon: toIconComponent(RadarIcon) },
+  { id: 'DRN-DEMO', label: 'DRN-01', sublabel: 'Drone', assetType: 'drone', Icon: toIconComponent(DroneDeviceIcon) },
+  { id: 'CAM-DEMO', label: 'CAM-01', sublabel: 'Camera', assetType: 'camera', Icon: toIconComponent(CameraIcon) },
+];
+
+const DEMO_DEVICE_IDS = new Set(DEMO_HUD_DEVICES.map((d) => d.id));
+
 export function VideoHudPanel({ feeds, onFeedsChange, onCameraHover }: VideoHudPanelProps) {
   const devices = useDevicesFromAssets();
   const deviceById = useMemo(() => {
@@ -92,11 +118,26 @@ export function VideoHudPanel({ feeds, onFeedsChange, onCameraHover }: VideoHudP
 
   const feedIds = useMemo(() => feeds.map((f) => f.cameraId), [feeds]);
 
+  // Asset type per selectable device: real feeds resolve to camera/drone, demo
+  // devices carry their own variant. Drives every HUD chrome branch below.
+  const assetTypeById = useMemo<Record<string, HudAssetType>>(() => {
+    const map: Record<string, HudAssetType> = {};
+    for (const id of feedIds) {
+      map[id] = deviceFeedType(deviceById[id]) === 'drone' ? 'drone' : 'camera';
+    }
+    for (const d of DEMO_HUD_DEVICES) map[d.id] = d.assetType;
+    return map;
+  }, [feedIds, deviceById]);
+
   const [activeCameraId, setActiveCameraId] = useState<string>(feedIds[0] ?? '');
   // Keep the active selection valid as feeds are added / removed.
   useEffect(() => {
     if (feedIds.length === 0) return;
-    if (!feedIds.includes(activeCameraId)) setActiveCameraId(feedIds[0]);
+    // Demo devices live outside `feedIds` but are valid selections, so only
+    // snap back when the active id is neither an open feed nor a demo device.
+    if (!feedIds.includes(activeCameraId) && !DEMO_DEVICE_IDS.has(activeCameraId)) {
+      setActiveCameraId(feedIds[0]);
+    }
   }, [feedIds, activeCameraId]);
 
   // Per-feed HUD state — local because there's no live backend yet.
@@ -112,11 +153,15 @@ export function VideoHudPanel({ feeds, onFeedsChange, onCameraHover }: VideoHudP
   const [stopArmed, setStopArmed] = useState(false);
   const [mutedAlerts, setMutedAlerts] = useState(false);
   const [videoHovered, setVideoHovered] = useState(false);
+  const [pathfinderAngle, setPathfinderAngle] = useState<PathfinderCameraAngle>('straight');
+  const [autoTrackArmed, setAutoTrackArmed] = useState(false);
 
   const activeDevice = deviceById[activeCameraId];
   const activeAsset = cameraAssetById[activeCameraId];
-  const deviceType = deviceFeedType(activeDevice);
-  const isAirborne = deviceType === 'drone';
+  const assetType: HudAssetType = assetTypeById[activeCameraId] ?? 'camera';
+  // Pathfinder rides on the airborne (drone) feed type but gets its own chrome.
+  const deviceType: FeedDeviceType = assetType === 'camera' ? 'camera' : 'drone';
+  const isAirborne = assetType !== 'camera';
   const mode = modeById[activeCameraId] ?? 'day';
   const detectionsOn = !!detectionsById[activeCameraId];
   const controlOwner: CameraStatus['controlOwner'] = ownerById[activeCameraId] ?? 'none';
@@ -127,8 +172,8 @@ export function VideoHudPanel({ feeds, onFeedsChange, onCameraHover }: VideoHudP
   const crosshairBloom = useCrosshairBloom(false);
 
   const hudDevices = useMemo<SandboxDevice[]>(
-    () =>
-      feedIds.map((id) => {
+    () => [
+      ...feedIds.map((id) => {
         const device = deviceById[id];
         const asset = cameraAssetById[id];
         const label = device?.name ?? asset?.typeLabel ?? id;
@@ -141,6 +186,8 @@ export function VideoHudPanel({ feeds, onFeedsChange, onCameraHover }: VideoHudP
           Icon: Glyph ? toIconComponent(Glyph) : toIconComponent(() => null),
         };
       }),
+      ...DEMO_HUD_DEVICES,
+    ],
     [feedIds, deviceById, cameraAssetById],
   );
 
@@ -183,6 +230,13 @@ export function VideoHudPanel({ feeds, onFeedsChange, onCameraHover }: VideoHudP
   const handleMutedAlertsToggle = useCallback(() => setMutedAlerts((v) => !v), []);
   const handleVideoEnter = useCallback(() => setVideoHovered(true), []);
   const handleVideoLeave = useCallback(() => setVideoHovered(false), []);
+  const handleAutoTrackStart = useCallback(() => setAutoTrackArmed(true), []);
+  const handleAutoTrackReleased = useCallback(() => setAutoTrackArmed(false), []);
+
+  // Drop the auto-track arm when the active device is no longer a pathfinder.
+  useEffect(() => {
+    if (assetType !== 'pathfinder') setAutoTrackArmed(false);
+  }, [assetType]);
 
   const handleDeviceChange = useCallback(
     (id: string) => {
@@ -257,6 +311,10 @@ export function VideoHudPanel({ feeds, onFeedsChange, onCameraHover }: VideoHudP
 
       {detectionsOn && <AiDetectionTriangles detections={detections} />}
 
+      {assetType === 'pathfinder' && (
+        <AutoTrackOverlay armed={autoTrackArmed} onReleased={handleAutoTrackReleased} />
+      )}
+
       {isAirborne && (
         <SandboxSetpointRail
           altitudeM={status.altitudeM ?? 0}
@@ -271,7 +329,7 @@ export function VideoHudPanel({ feeds, onFeedsChange, onCameraHover }: VideoHudP
         />
       )}
 
-      {!isAirborne && <DeviceConnectivityBadge manual={isManual} />}
+      {assetType !== 'drone' && <DeviceConnectivityBadge manual={isManual} />}
 
       <SandboxBottomChrome
         mode={mode}
@@ -296,7 +354,11 @@ export function VideoHudPanel({ feeds, onFeedsChange, onCameraHover }: VideoHudP
         videoHovered={videoHovered}
         mutedAlerts={mutedAlerts}
         onMutedAlertsToggle={handleMutedAlertsToggle}
-        deviceKind={deviceType}
+        deviceKind={assetType}
+        pathfinderAngle={pathfinderAngle}
+        onPathfinderAngleChange={setPathfinderAngle}
+        onAutoTrackStart={handleAutoTrackStart}
+        showAutoTrackItem={false}
         alertsAsSwitch
       />
     </div>

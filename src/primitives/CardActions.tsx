@@ -63,6 +63,8 @@ export interface CardAction {
     pendingLabel?: string;
     offIcon?: React.ElementType;
     onIcon?: React.ElementType;
+    /** Optional trailing pill rendered after the label (e.g. a selected-track name). */
+    badge?: string;
   };
 }
 
@@ -301,6 +303,7 @@ function renderSecondaryAction(
         pendingLabel={tg.pendingLabel}
         offIcon={tg.offIcon}
         onIcon={tg.onIcon}
+        badge={tg.badge}
         onToggle={(e) => handleClick(action, e)}
         className={action.className ?? ''}
       />

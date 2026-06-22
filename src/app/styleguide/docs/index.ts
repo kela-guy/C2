@@ -19,8 +19,12 @@ import { telemetryDoc } from './telemetry.doc';
 import { copyButtonDoc } from './copy-button.doc';
 import { motionDoc } from './motion.doc';
 import { scrollingListDoc } from './scrolling-list.doc';
+import { tokensDoc } from './tokens.doc';
+import { conventionsDoc } from './conventions.doc';
 
 export const DOC_MODULES: Record<string, ComponentDocModule> = {
+  [tokensDoc.id]: tokensDoc,
+  [conventionsDoc.id]: conventionsDoc,
   [motionDoc.id]: motionDoc,
   [scrollingListDoc.id]: scrollingListDoc,
   [buttonDoc.id]: buttonDoc,
