@@ -279,11 +279,19 @@ interface DashboardProps {
    * `/geo-entities-layers-sandbox` route.
    */
   drawPanelLab?: boolean;
+  /**
+   * Lab mode for the Type section of the map-draw panel. Auto-opens the
+   * map-draw panel and surfaces a 5-tab switcher (Opt 1..Opt 5) that
+   * swaps the zone-type selector's layout. Used by the DEV-only
+   * `/geo-entities-type-sandbox` route.
+   */
+  typePanelLab?: boolean;
 }
 
 export const Dashboard = ({
   demoMode = false,
   drawPanelLab = false,
+  typePanelLab = false,
 }: DashboardProps = {}) => {
   const allDevices = useDevicesFromAssets();
   const { units: gotchaUnits } = useGotchaUnits();
@@ -1801,7 +1809,7 @@ export const Dashboard = ({
   // The empty dep array is intentional — only fire once per Dashboard
   // mount; subsequent panel toggles are driven by the user as usual.
   useEffect(() => {
-    if (drawPanelLab) openMapDrawPanel();
+    if (drawPanelLab || typePanelLab) openMapDrawPanel();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -2673,6 +2681,7 @@ export const Dashboard = ({
             // reviewers flip between Opt 2 / Opt 3 / Opt 5 / Original.
             variant="opt5"
             lab={drawPanelLab}
+            typeLab={typePanelLab}
           />
         )}
 

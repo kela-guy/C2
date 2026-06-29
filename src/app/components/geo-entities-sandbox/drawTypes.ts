@@ -39,7 +39,8 @@ export type GeoToolId =
   | 'polygon'
   | 'line'
   | 'curve'
-  | 'circle';
+  | 'circle'
+  | 'point';
 
 /**
  * Underlying geometry the tool produces. `circle` is stored as the two
@@ -66,6 +67,31 @@ export type GeoLineStyle = 'solid' | 'dashed' | 'none';
 
 /** Fill rendering mode applied by the map-draw style popover. */
 export type GeoFillMode = 'fill' | 'transparent' | 'none';
+
+/**
+ * Semantic zone preset. The map-draw flow tags each shape with one of
+ * these — the color, line color, and behavior parameters all derive
+ * from the picked type. The {@link import('../map-draw/zoneTypes').ZONE_TYPES}
+ * registry is the source of truth for labels / colors / parameter
+ * schemas; this string is what's persisted on a shape.
+ */
+export type GeoZoneType = 'noFly' | 'restricted' | 'alarm' | 'silent';
+
+/**
+ * Per-zone parameters. Schema is loose on purpose — the inspector only
+ * scaffolds the fields today; concrete validation lands when each type's
+ * details ship.
+ */
+export interface GeoZoneParams {
+  /** No Fly Zone — minimum altitude (meters) the restriction starts at. */
+  altitudeMin?: number;
+  /** No Fly Zone — maximum altitude (meters) the restriction ends at. */
+  altitudeMax?: number;
+  /** Alarm Zone — start of the active window, ISO time-of-day "HH:mm". */
+  alarmStart?: string;
+  /** Alarm Zone — end of the active window, ISO time-of-day "HH:mm". */
+  alarmEnd?: string;
+}
 
 /** Persisted shape after a draw is finished. */
 export interface GeoShape {
@@ -97,6 +123,19 @@ export interface GeoShape {
 
   /** Urgency status set from the Area Text popover (Dashboard). */
   status?: GeoAreaStatus;
+  /**
+   * Semantic zone preset. Selecting one updates `color` / `strokeColor`
+   * to the type's signature color and unlocks the matching parameter
+   * fields in the inspector.
+   */
+  zoneType?: GeoZoneType;
+  /** Parameters scoped to the picked zone type. See {@link GeoZoneParams}. */
+  zoneParams?: GeoZoneParams;
+  /**
+   * Optional reference link (e.g. a source map / KML / document URL)
+   * attached from the panel's Coordinates section. Display-only metadata.
+   */
+  linkUrl?: string;
   /** Stroke style: solid / dashed / none. Default is solid. */
   lineStyle?: GeoLineStyle;
   /** Stroke width in CSS pixels. Default is 2. */
@@ -216,6 +255,22 @@ export function unproject(p: Vec2, bounds: GeoBounds): { lat: number; lng: numbe
   // Canvas y grows downward, latitude grows northward — invert.
   const lat = bounds.minLat + (1 - p.y) * (bounds.maxLat - bounds.minLat);
   return { lat, lng };
+}
+
+/**
+ * Inverse of {@link unproject}: map a lat/lng onto a normalized canvas
+ * point. Used by the panel's editable Coordinates section so typing a
+ * coordinate re-anchors the matching vertex on the map. The result is
+ * clamped to `[0, 1]` so out-of-bounds coordinates still land on-canvas.
+ */
+export function project(
+  coord: { lat: number; lng: number },
+  bounds: GeoBounds,
+): Vec2 {
+  const x = (coord.lng - bounds.minLng) / (bounds.maxLng - bounds.minLng);
+  // Latitude grows northward, canvas y grows downward — invert.
+  const y = 1 - (coord.lat - bounds.minLat) / (bounds.maxLat - bounds.minLat);
+  return clampPoint({ x, y });
 }
 
 /** Format a normalized point as a "lat, lng" string with 4-decimal precision. */

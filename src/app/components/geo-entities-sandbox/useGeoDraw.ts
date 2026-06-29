@@ -87,6 +87,17 @@ export interface UseGeoDrawResult {
    * or `null` if nothing was available to restore.
    */
   restoreLastDeleted: () => string | null;
+  /**
+   * Move a shape to the END of the `shapes` array. Because the overlay
+   * paints shapes in array order, the last entry sits visually on top of
+   * every other shape (= "Bring to front").
+   */
+  bringToFront: (id: string) => void;
+  /**
+   * Move a shape to the START of the `shapes` array — painted first, so
+   * every other shape sits on top of it (= "Send to back").
+   */
+  sendToBack: (id: string) => void;
   clearAll: () => void;
   cancelDraft: () => void;
   finishDraft: () => void;
@@ -103,6 +114,34 @@ export interface UseGeoDrawResult {
   // Transform handles drag lifecycle.
   beginHandleDrag: (handle: HandleId, shapeId: string, origin: Vec2) => void;
   isDraggingHandle: boolean;
+
+  /**
+   * Tell the engine whether Shift is currently held. Drives "snap to a
+   * perfect circle" behaviour for circle drafts and circle resize handles.
+   */
+  setShiftKey: (shift: boolean) => void;
+
+  /** Undo the last shape mutation (commit, edit, delete, z-order, …). */
+  undo: () => void;
+  /** Redo the last undone mutation. Cleared whenever a fresh edit lands. */
+  redo: () => void;
+
+  /**
+   * Id of the shape that was just committed via `commitDraft`. The panel
+   * consumes this to auto-focus the matching LayerRow's name input (so
+   * the user can start typing a name as soon as the shape is drawn).
+   * Reset via {@link clearLastCommittedId}.
+   */
+  lastCommittedId: string | null;
+  clearLastCommittedId: () => void;
+  /**
+   * Coalesce a sequence of edits into a single undo entry. Used by live
+   * drags (vertex chips, transform handles) so one Cmd+Z rewinds the whole
+   * gesture instead of one pointermove frame at a time. Must be paired
+   * with `endEditTransaction`.
+   */
+  beginEditTransaction: () => void;
+  endEditTransaction: () => void;
 }
 
 export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
@@ -110,6 +149,9 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
   const [activeToolId, setActiveToolId] = useState<GeoToolId>('select');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<DraftShape | null>(null);
+  // One-shot signal: set on `commitDraft`, cleared once the consumer
+  // (the panel's LayerRow) has used it to enter rename mode.
+  const [lastCommittedId, setLastCommittedId] = useState<string | null>(null);
   const dragRef = useRef<Drag>({ kind: 'idle' });
   const [draggingTick, setDraggingTick] = useState(0);
   // Stack of recently deleted shapes (LIFO) so `restoreLastDeleted` can
@@ -118,6 +160,65 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
   // layers list instead of always appending to the end.
   const deletedStackRef = useRef<{ shape: GeoShape; index: number }[]>([]);
 
+  // Snapshots of the `shapes` array for undo/redo. We snapshot BEFORE
+  // every mutation through `mutate()` so undo always rewinds to a
+  // known-good state. The redo stack is wiped whenever a new edit lands.
+  const undoStackRef = useRef<GeoShape[][]>([]);
+  const redoStackRef = useRef<GeoShape[][]>([]);
+  const UNDO_LIMIT = 100;
+  // Per-frame mutations during a live drag should NOT each push an undo
+  // entry — that would make a single Cmd+Z rewind one pixel at a time.
+  // Drag handlers wrap the drag in `beginEditTransaction`/`endEdit-
+  // Transaction`, which snapshots once at the start and suppresses
+  // further snapshots until the transaction ends.
+  const txDepthRef = useRef(0);
+
+  /** Wraps a `setShapes` call with an undo-stack snapshot. */
+  const mutate = useCallback(
+    (updater: (prev: GeoShape[]) => GeoShape[]) => {
+      setShapes((prev) => {
+        const next = updater(prev);
+        if (next === prev) return prev;
+        if (txDepthRef.current === 0) {
+          undoStackRef.current.push(prev);
+          if (undoStackRef.current.length > UNDO_LIMIT) {
+            undoStackRef.current.shift();
+          }
+          redoStackRef.current = [];
+        }
+        return next;
+      });
+    },
+    [],
+  );
+
+  const beginEditTransaction = useCallback(() => {
+    if (txDepthRef.current === 0) {
+      // Snapshot the current state once at the start of the transaction.
+      setShapes((prev) => {
+        undoStackRef.current.push(prev);
+        if (undoStackRef.current.length > UNDO_LIMIT) {
+          undoStackRef.current.shift();
+        }
+        redoStackRef.current = [];
+        return prev;
+      });
+    }
+    txDepthRef.current += 1;
+  }, []);
+
+  const endEditTransaction = useCallback(() => {
+    if (txDepthRef.current > 0) txDepthRef.current -= 1;
+  }, []);
+
+  // Live Shift-key state. Used by the circle draft/resize paths to
+  // snap the ellipse to a perfect circle. A ref (not state) keeps
+  // pointer-move hot path allocation-free.
+  const shiftRef = useRef(false);
+  const setShiftKey = useCallback((shift: boolean) => {
+    shiftRef.current = shift;
+  }, []);
+
   const selectedShape = useMemo(
     () => shapes.find((s) => s.id === selectedId) ?? null,
     [shapes, selectedId],
@@ -125,13 +226,16 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
 
   // ----- shape mutations -----------------------------------------------------
 
-  const updateShape = useCallback((id: string, patch: Partial<GeoShape>) => {
-    setShapes((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
-  }, []);
+  const updateShape = useCallback(
+    (id: string, patch: Partial<GeoShape>) => {
+      mutate((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+    },
+    [mutate],
+  );
 
   const deleteShape = useCallback(
     (id: string) => {
-      setShapes((prev) => {
+      mutate((prev) => {
         const index = prev.findIndex((s) => s.id === id);
         if (index < 0) return prev;
         // Snapshot the deleted shape so `restoreLastDeleted` can put it
@@ -141,13 +245,13 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
       });
       if (selectedId === id) setSelectedId(null);
     },
-    [selectedId],
+    [mutate, selectedId],
   );
 
   const restoreLastDeleted = useCallback((): string | null => {
     const entry = deletedStackRef.current.pop();
     if (!entry) return null;
-    setShapes((prev) => {
+    mutate((prev) => {
       // Bail if the same id has somehow been re-added (e.g. from a future
       // import) — we never want duplicate ids in the layer list.
       if (prev.some((s) => s.id === entry.shape.id)) return prev;
@@ -158,16 +262,74 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
     });
     setSelectedId(entry.shape.id);
     return entry.shape.id;
-  }, []);
+  }, [mutate]);
+
+  const bringToFront = useCallback(
+    (id: string) => {
+      mutate((prev) => {
+        const i = prev.findIndex((s) => s.id === id);
+        if (i < 0 || i === prev.length - 1) return prev;
+        const next = prev.slice();
+        const [shape] = next.splice(i, 1);
+        next.push(shape);
+        return next;
+      });
+    },
+    [mutate],
+  );
+
+  const sendToBack = useCallback(
+    (id: string) => {
+      mutate((prev) => {
+        const i = prev.findIndex((s) => s.id === id);
+        if (i <= 0) return prev;
+        const next = prev.slice();
+        const [shape] = next.splice(i, 1);
+        next.unshift(shape);
+        return next;
+      });
+    },
+    [mutate],
+  );
 
   const clearAll = useCallback(() => {
-    setShapes([]);
+    mutate(() => []);
     setSelectedId(null);
     setDraft(null);
     // Bulk clears reset the undo history too — restoring a single shape
     // after a `clearAll` would feel confusing.
     deletedStackRef.current = [];
-  }, []);
+  }, [mutate]);
+
+  // --- undo / redo -----------------------------------------------------------
+
+  const undo = useCallback(() => {
+    const prevSnapshot = undoStackRef.current.pop();
+    if (!prevSnapshot) return;
+    setShapes((current) => {
+      redoStackRef.current.push(current);
+      // If the currently selected shape no longer exists in the restored
+      // snapshot (e.g. we just undid its creation), drop the selection.
+      if (selectedId && !prevSnapshot.some((s) => s.id === selectedId)) {
+        setSelectedId(null);
+      }
+      return prevSnapshot;
+    });
+    setDraft(null);
+  }, [selectedId]);
+
+  const redo = useCallback(() => {
+    const nextSnapshot = redoStackRef.current.pop();
+    if (!nextSnapshot) return;
+    setShapes((current) => {
+      undoStackRef.current.push(current);
+      if (selectedId && !nextSnapshot.some((s) => s.id === selectedId)) {
+        setSelectedId(null);
+      }
+      return nextSnapshot;
+    });
+    setDraft(null);
+  }, [selectedId]);
 
   // ----- draft / draw flow ---------------------------------------------------
 
@@ -184,23 +346,41 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
     (d: DraftShape) => {
       const meta = toolById(d.tool);
       const id = makeShapeId(d.tool);
+      // Freehand records a dense pencil stroke (dozens of points). Thin it
+      // out on commit so the finished curve carries a handful of editable
+      // coordinate vertices instead of an unusable cloud of dots.
+      const committedPoints =
+        d.kind === 'freehand'
+          ? simplifyPath(d.points, 0.025).map(clampPoint)
+          : d.points.map(clampPoint);
       const shape: GeoShape = {
         id,
         tool: d.tool,
         kind: d.kind,
         name: defaultName(d.tool),
         description: '',
-        color: meta.color,
+        // New shapes start black-filled with a thin white outline so the
+        // shape stands out against any basemap. Picking a Type recolors the
+        // fill; the outline and width stay user-adjustable.
+        color: '#000000',
+        strokeColor: '#ffffff',
         fillOpacity: meta.fillOpacity,
-        points: d.points.map(clampPoint),
+        points: committedPoints,
+        strokeWidth: 1,
+        lineStyle: 'solid',
       };
-      setShapes((prev) => [...prev, shape]);
+      mutate((prev) => [...prev, shape]);
       setSelectedId(id);
       setDraft(null);
       setActiveToolId('select');
+      // Flag the just-committed shape so the panel can auto-focus its
+      // name input (the "Add name" inline editor with a visible caret).
+      setLastCommittedId(id);
     },
-    [defaultName],
+    [defaultName, mutate],
   );
+
+  const clearLastCommittedId = useCallback(() => setLastCommittedId(null), []);
 
   const cancelDraft = useCallback(() => setDraft(null), []);
 
@@ -238,20 +418,15 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
   const onCanvasPointerDown = useCallback(
     (p: Vec2, opts?: { onShapeId?: string }) => {
       const tool = activeToolId;
-      // Hitting an existing shape always selects it — even if a drawing tool
-      // is active — provided there's no draft mid-flight. This is what makes
-      // the "click a shape → see Move / Rotate / Delete" flow possible
-      // without an explicit Select cursor in the toolbar.
-      if (opts?.onShapeId && !draft) {
-        setActiveToolId('select');
-        setSelectedId(opts.onShapeId);
-        return;
-      }
-      // Select tool with no shape under cursor: clear selection.
+      // Select tool: click a shape to select it, click empty to clear.
       if (tool === 'select') {
         setSelectedId(opts?.onShapeId ?? null);
         return;
       }
+      // A drawing tool is active → keep drawing, even when the click lands
+      // on top of an existing shape. (Selecting an existing shape happens
+      // via the Layers list, a right-click, or the select tool — so a tool
+      // being armed never blocks drawing a new, overlapping shape.)
       const meta = toolById(tool);
       const point = clampPoint(p);
 
@@ -324,7 +499,14 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
       setShapes((prev) =>
         prev.map((s) =>
           s.id === drag.shapeId
-            ? { ...s, points: applyHandle(drag, point) }
+            ? {
+                ...s,
+                // Circles snap to a perfect circle when Shift is held —
+                // matches the draft-time shift behaviour below.
+                points: applyHandle(drag, point, {
+                  equalAspect: s.kind === 'circle' && shiftRef.current,
+                }),
+              }
             : s,
         ),
       );
@@ -333,8 +515,24 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
       return;
     }
 
-    // Polygon/polyline: just track the cursor for the rubber-band preview.
-    setDraft((prev) => (prev ? { ...prev, cursor: point } : prev));
+    // Polygon/polyline / circle draft: track the cursor for the
+    // rubber-band preview. For circle drafts, Shift snaps the cursor to a
+    // square offset from the center so the preview is a perfect circle.
+    setDraft((prev) => {
+      if (!prev) return prev;
+      if (drag.kind === 'circle' && shiftRef.current) {
+        const center = prev.points[0];
+        const dx = point.x - center.x;
+        const dy = point.y - center.y;
+        const m = Math.max(Math.abs(dx), Math.abs(dy));
+        const snapped = {
+          x: center.x + (dx >= 0 ? m : -m),
+          y: center.y + (dy >= 0 ? m : -m),
+        };
+        return { ...prev, cursor: snapped };
+      }
+      return { ...prev, cursor: point };
+    });
   }, []);
 
   const onCanvasPointerUp = useCallback(
@@ -358,9 +556,14 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
           if (!prev) return prev;
           const center = prev.points[0];
           const edge = prev.cursor ?? center;
-          const rx = Math.abs(edge.x - center.x);
-          const ry = Math.abs(edge.y - center.y);
+          let rx = Math.abs(edge.x - center.x);
+          let ry = Math.abs(edge.y - center.y);
           if (Math.max(rx, ry) < MIN_CIRCLE_RADIUS) return null;
+          // Shift constrains the commit to a perfect circle even if the
+          // pointer wasn't moved after the modifier was pressed.
+          if (shiftRef.current) {
+            rx = ry = Math.max(rx, ry);
+          }
           const corners: Vec2[] = [
             { x: center.x - rx, y: center.y - ry },
             { x: center.x + rx, y: center.y + ry },
@@ -397,6 +600,14 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
       setShapes((prev) => {
         const target = prev.find((s) => s.id === shapeId);
         if (!target) return prev;
+        // Snapshot once for the whole drag (move events run raw, without
+        // pushing per-frame undo entries). This way a single Cmd+Z rolls
+        // back the entire transform instead of jittering vertex-by-vertex.
+        undoStackRef.current.push(prev);
+        if (undoStackRef.current.length > UNDO_LIMIT) {
+          undoStackRef.current.shift();
+        }
+        redoStackRef.current = [];
         const b = bbox(target.points);
         const center = bboxCenter(b);
         const width = Math.max(b.maxX - b.minX, 1e-4);
@@ -472,6 +683,8 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
     updateShape,
     deleteShape,
     restoreLastDeleted,
+    bringToFront,
+    sendToBack,
     clearAll,
     cancelDraft,
     finishDraft,
@@ -484,6 +697,15 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
 
     beginHandleDrag,
     isDraggingHandle,
+
+    setShiftKey,
+    undo,
+    redo,
+    beginEditTransaction,
+    endEditTransaction,
+
+    lastCommittedId,
+    clearLastCommittedId,
   };
 }
 
@@ -498,6 +720,24 @@ function distance(a: Vec2, b: Vec2): number {
 }
 
 /**
+ * Thin a dense path by distance: keep the first point, then only points
+ * that are at least `minGap` (normalized units) from the last kept one,
+ * always keeping the final point. Cheap enough to run on commit; good
+ * enough to turn a freehand scribble into a few editable vertices.
+ */
+function simplifyPath(points: Vec2[], minGap: number): Vec2[] {
+  if (points.length <= 2) return points.slice();
+  const out: Vec2[] = [points[0]];
+  for (let i = 1; i < points.length - 1; i++) {
+    if (distance(points[i], out[out.length - 1]) >= minGap) {
+      out.push(points[i]);
+    }
+  }
+  out.push(points[points.length - 1]);
+  return out;
+}
+
+/**
  * Compute the new point set for the active drag based on the current pointer
  * position. `applyHandle` always works from the drag's `original` snapshot, so
  * each move call is idempotent relative to the start of the drag.
@@ -505,6 +745,7 @@ function distance(a: Vec2, b: Vec2): number {
 function applyHandle(
   drag: Extract<Drag, { kind: 'transform' }>,
   pointer: Vec2,
+  opts: { equalAspect?: boolean } = {},
 ): Vec2[] {
   const { handle, original, origin, anchor, center, width, height, startAngle } = drag;
 
@@ -548,5 +789,12 @@ function applyHandle(
   const minScale = 0.05 / Math.min(width, height);
   sx = Math.max(minScale, sx);
   sy = Math.max(minScale, sy);
+  // Shift-snap (circles): equalize both axes to the larger magnitude so
+  // the bbox stays square and the rendered ellipse becomes a true circle.
+  if (opts.equalAspect) {
+    const m = Math.max(Math.abs(sx), Math.abs(sy));
+    sx = sx < 0 ? -m : m;
+    sy = sy < 0 ? -m : m;
+  }
   return scalePoints(original, anchor, sx, sy);
 }

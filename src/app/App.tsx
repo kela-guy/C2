@@ -65,6 +65,13 @@ const GeoEntitiesLayersSandbox = import.meta.env.DEV
   ? lazy(() => import("./components/geo-entities-sandbox/GeoEntitiesLayersSandbox"))
   : null;
 
+// Geo Entities Type — dev-only surface that boots the live Dashboard with
+// the map-draw panel auto-opened and a 5-tab switcher at the top of the
+// panel that swaps the zone-type selector's layout (Opt 1..Opt 5).
+const GeoEntitiesTypeSandbox = import.meta.env.DEV
+  ? lazy(() => import("./components/geo-entities-sandbox/GeoEntitiesTypeSandbox"))
+  : null;
+
 function PlaygroundFallback() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#09090b] text-sm text-neutral-400">
@@ -241,6 +248,23 @@ export default function App() {
                   element={
                     <Suspense fallback={<PlaygroundFallback />}>
                       <GeoEntitiesLayersSandbox />
+                    </Suspense>
+                  }
+                />
+              )}
+              {/*
+                Geo Entities Type — DEV-only. Boots the live Dashboard
+                with the map-draw panel auto-opened and exposes a 5-tab
+                switcher (Opt 1..Opt 5) at the top of the panel that
+                swaps the zone-type selector's layout.
+                Reach it directly at /geo-entities-type-sandbox.
+              */}
+              {GeoEntitiesTypeSandbox && (
+                <Route
+                  path="/geo-entities-type-sandbox"
+                  element={
+                    <Suspense fallback={<PlaygroundFallback />}>
+                      <GeoEntitiesTypeSandbox />
                     </Suspense>
                   }
                 />

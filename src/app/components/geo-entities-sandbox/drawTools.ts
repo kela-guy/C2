@@ -150,6 +150,16 @@ export const DRAW_TOOLS: ToolDescriptor[] = [
     fillOpacity: 0.16,
     group: 'geometry',
   },
+  {
+    id: 'point',
+    kind: 'point',
+    label: 'Pin',
+    description: 'Drop a pin at a single location',
+    Icon: MapPin,
+    color: '#facc15',
+    fillOpacity: 0,
+    group: 'geometry',
+  },
 ];
 
 /**

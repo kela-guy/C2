@@ -6,8 +6,8 @@
  * the map) and `MapDrawPanel` (tool picker + inspector + actions) read
  * and mutate the same drawing state.
  *
- * The "user-facing" tool surface (`MapDrawTool`) is the polygon/line/curve
- * triplet exposed by the rail. Internally the engine still uses its full
+ * The "user-facing" tool surface (`MapDrawTool`) is the polygon/line/pin/circle
+ * set exposed by the rail. Internally the engine still uses its full
  * {@link import('../geo-entities-sandbox/drawTypes').GeoToolId} alphabet,
  * so this provider derives the public tool from `draw.activeToolId` and
  * translates `setDrawTool(null)` into a clean drop into Select mode (with
@@ -17,14 +17,15 @@
  * via {@link useMapDraw}.
  */
 
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
 import { useGeoDraw, type UseGeoDrawResult } from '../geo-entities-sandbox/useGeoDraw';
 
 /**
  * Public tool ids the Dashboard rail / panel exposes. Maps onto the
- * engine's `polygon` / `line` / `curve` ids one-to-one.
+ * engine's `polygon` / `line` / `point` / `circle` ids one-to-one.
+ * `point` drops a pin (single-click commits) instead of a freehand curve.
  */
-export type MapDrawTool = 'polygon' | 'line' | 'curve' | 'circle';
+export type MapDrawTool = 'polygon' | 'line' | 'point' | 'circle';
 
 export interface MapDrawContextValue {
   /** Underlying drawing engine. Same object both consumers share. */
@@ -33,16 +34,25 @@ export interface MapDrawContextValue {
   drawTool: MapDrawTool | null;
   /** Switch the active tool. `null` parks the engine in Select mode. */
   setDrawTool: (tool: MapDrawTool | null) => void;
+  /**
+   * Whether the panel's Coordinates section is currently expanded. The
+   * map overlay reads this to decide whether to render the numbered,
+   * draggable vertex chips — they appear only while the user is in
+   * "edit coordinates" mode, not just because a shape is selected.
+   */
+  coordinatesOpen: boolean;
+  setCoordinatesOpen: (open: boolean) => void;
 }
 
 const MapDrawContext = createContext<MapDrawContextValue | null>(null);
 
 function isMapDrawTool(id: string): id is MapDrawTool {
-  return id === 'polygon' || id === 'line' || id === 'curve' || id === 'circle';
+  return id === 'polygon' || id === 'line' || id === 'point' || id === 'circle';
 }
 
 export function MapDrawProvider({ children }: { children: ReactNode }) {
   const draw = useGeoDraw();
+  const [coordinatesOpen, setCoordinatesOpen] = useState(false);
 
   const drawTool: MapDrawTool | null = isMapDrawTool(draw.activeToolId)
     ? draw.activeToolId
@@ -60,7 +70,9 @@ export function MapDrawProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <MapDrawContext.Provider value={{ draw, drawTool, setDrawTool }}>
+    <MapDrawContext.Provider
+      value={{ draw, drawTool, setDrawTool, coordinatesOpen, setCoordinatesOpen }}
+    >
       {children}
     </MapDrawContext.Provider>
   );

@@ -125,15 +125,17 @@ export function ShapeTransformHandles({
 
       {!isPoint &&
         handles.map((handle) => (
-          <rect
+          // Round handles match the vocabulary used by polygon vertex chips
+          // (white fill, shape-colored outline) so corners + vertices read
+          // as the same kind of grabbable thing.
+          <circle
             key={handle.id}
-            x={px(handle.cx) - HANDLE_SIZE_PX / 2}
-            y={py(handle.cy) - HANDLE_SIZE_PX / 2}
-            width={HANDLE_SIZE_PX}
-            height={HANDLE_SIZE_PX}
-            fill="#0f172a"
-            stroke="white"
-            strokeWidth={1.25}
+            cx={px(handle.cx)}
+            cy={py(handle.cy)}
+            r={HANDLE_SIZE_PX / 2}
+            fill="#ffffff"
+            stroke={shape.color}
+            strokeWidth={2}
             style={{ cursor: handle.cursor }}
             pointerEvents="all"
             onPointerDown={(e) => {

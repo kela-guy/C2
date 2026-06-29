@@ -28,21 +28,28 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useState,
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
+  type RefObject,
 } from 'react';
 import {
   bbox,
   clampPoint,
+  unproject,
   type DraftShape,
   type GeoFillMode,
   type GeoLineStyle,
   type GeoShape,
   type Vec2,
 } from '../geo-entities-sandbox/drawTypes';
+import { SANDBOX_BOUNDS } from '../geo-entities-sandbox/fixtures';
 import { ShapeTransformHandles } from '../geo-entities-sandbox/ShapeTransformHandles';
+import { MapPin } from '@/lib/icons/central';
 import { deleteShapeWithUndo } from './deleteWithUndo';
 import { useMapDraw } from './MapDrawProvider';
+import { getZOrderActions, type ShapeAction } from './shapeActions';
+import { ZONE_TYPE_BY_ID } from './zoneTypes';
 
 export interface MapDrawOverlayProps {
   className?: string;
@@ -64,8 +71,21 @@ const STATUS_TONE: Record<string, { label: string; tone: string }> = {
 };
 
 export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
-  const { draw, drawTool } = useMapDraw();
+  const { draw, drawTool, coordinatesOpen } = useMapDraw();
   const svgRef = useRef<SVGSVGElement | null>(null);
+
+  // ---- right-click context menu ---------------------------------------
+  // Tracks the viewport-space anchor + which shape the user right-clicked.
+  // `null` = menu closed. Opened from the SVG's onContextMenu handler when
+  // the event target carries a `data-shape-id`; dismissed by click-away
+  // or Escape inside the floating menu.
+  const [ctxMenu, setCtxMenu] = useState<
+    { x: number; y: number; shapeId: string } | null
+  >(null);
+
+  // Active vertex drag (editing a coordinate directly on the map). Holds
+  // the shape + vertex index being dragged; `null` when idle.
+  const vertexDragRef = useRef<{ shapeId: string; index: number } | null>(null);
 
   // Notify the host when the selection changes so it can open the panel
   // when a shape is clicked. Kept in a ref so the effect only depends on
@@ -77,18 +97,37 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
   }, [draw.selectedId]);
 
   // ---- keyboard: Escape cancels draft / deselects; Enter finishes; -----
-  // ---- Delete removes the selected shape. ------------------------------
+  // ---- Delete + undo/redo + draft shortcuts ----------------------------
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      if (
-        target &&
+      const inEditable =
+        !!target &&
         (target.tagName === 'INPUT' ||
           target.tagName === 'TEXTAREA' ||
-          target.isContentEditable)
-      ) {
-        return;
+          target.isContentEditable);
+
+      // Cmd+Z / Cmd+Shift+Z (and Ctrl+Z / Ctrl+Y on Windows) drive the
+      // global undo/redo stack. Skipped when the user is typing in a
+      // form field so editor shortcuts keep working in inputs.
+      const isMod = e.metaKey || e.ctrlKey;
+      if (isMod && !inEditable) {
+        const key = e.key.toLowerCase();
+        if (key === 'z') {
+          e.preventDefault();
+          if (e.shiftKey) draw.redo();
+          else draw.undo();
+          return;
+        }
+        if (key === 'y') {
+          // Windows-style redo shortcut.
+          e.preventDefault();
+          draw.redo();
+          return;
+        }
       }
+
+      if (inEditable) return;
       if (e.key === 'Escape') {
         if (draw.draft) draw.cancelDraft();
         else if (draw.selectedId) draw.setSelectedId(null);
@@ -123,7 +162,9 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
     const shapeId = target?.getAttribute('data-shape-id') ?? undefined;
     const local = toLocal(e.clientX, e.clientY);
     e.currentTarget.setPointerCapture?.(e.pointerId);
-    const isShapeClick = !!shapeId && !draw.draft;
+    // Forward modifier state to the engine — circle draft / resize
+    // listens to it for Shift-snap (perfect-circle constraint).
+    draw.setShiftKey(e.shiftKey);
     draw.onCanvasPointerDown(local, { onShapeId: shapeId });
     // Every map-draw shape is pinned to its location: polygons, lines and
     // curves can't be moved, scaled or rotated; circles can be resized
@@ -131,10 +172,47 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
   };
 
   const handlePointerMove = (e: ReactPointerEvent<SVGSVGElement>) => {
+    draw.setShiftKey(e.shiftKey);
     draw.onCanvasPointerMove(toLocal(e.clientX, e.clientY));
   };
   const handlePointerUp = (e: ReactPointerEvent<SVGSVGElement>) => {
+    draw.setShiftKey(e.shiftKey);
     draw.onCanvasPointerUp(toLocal(e.clientX, e.clientY));
+  };
+
+  // ---- on-map vertex editing -----------------------------------------
+  // Each vertex is rendered as a numbered HTML chip (no separate dot).
+  // The chip itself is the drag handle: pressing it captures the pointer
+  // and drags that single vertex to a new map coordinate.
+  const beginVertexDrag = (
+    e: ReactPointerEvent<HTMLButtonElement>,
+    shapeId: string,
+    index: number,
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    vertexDragRef.current = { shapeId, index };
+    // Coalesce the per-frame point updates into one undo entry for the
+    // whole drag — Cmd+Z then rewinds the entire vertex motion.
+    draw.beginEditTransaction();
+  };
+  const moveVertexDrag = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const drag = vertexDragRef.current;
+    if (!drag) return;
+    const p = toLocal(e.clientX, e.clientY);
+    const shape = draw.shapes.find((s) => s.id === drag.shapeId);
+    if (shape) {
+      const points = shape.points.map((pt, i) => (i === drag.index ? p : pt));
+      draw.updateShape(drag.shapeId, { points });
+    }
+  };
+  const endVertexDrag = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    if (vertexDragRef.current) {
+      vertexDragRef.current = null;
+      e.currentTarget.releasePointerCapture?.(e.pointerId);
+      draw.endEditTransaction();
+    }
   };
   const handleDoubleClick = (e: ReactPointerEvent<SVGSVGElement>) => {
     draw.onCanvasDoubleClick(toLocal(e.clientX, e.clientY));
@@ -178,12 +256,100 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
           id: s.id,
           description: s.description ?? '',
           status: s.status,
+          zoneType: s.zoneType,
           editable: s.id === draw.selectedId,
           left: r.left + cx * r.width,
           top: r.top + cy * r.height,
         };
       });
     // shapes drives the re-anchor so labels follow live during transforms.
+  }, [draw.shapes, draw.selectedId]);
+
+  // Numbered badges for each vertex of the SELECTED shape (1, 2, 3, …) so
+  // the user can match a map dot to its row in the panel's Coordinates
+  // list. Rendered as HTML (like the name labels) to dodge the SVG's
+  // non-uniform stretch. Circles are excluded (they use transform handles).
+  //
+  // Visible ONLY while the panel's Coordinates section is open — selecting
+  // a shape no longer auto-shows the dots. Type is the mandatory primary
+  // action; coordinate editing is an opt-in mode.
+  const vertexLabels = useMemo(() => {
+    const el = svgRef.current;
+    const s = draw.selectedShape;
+    if (
+      !el ||
+      !s ||
+      !coordinatesOpen ||
+      s.hidden ||
+      s.kind === 'circle' ||
+      s.kind === 'point'
+    ) {
+      return [];
+    }
+    const r = el.getBoundingClientRect();
+    return s.points.map((p, i) => ({
+      key: `${s.id}-${i}`,
+      shapeId: s.id,
+      index: i,
+      n: i + 1,
+      left: r.left + p.x * r.width,
+      top: r.top + p.y * r.height,
+    }));
+  }, [draw.selectedShape, draw.shapes, coordinatesOpen]);
+
+  // Draft vertex dots — rendered as HTML so they stay perfect circles
+  // (the SVG layer uses `preserveAspectRatio="none"` which stretches any
+  // `<circle>` into an oval). The first vertex is highlighted; the rest
+  // are smaller. Circles get a single center dot.
+  const draftDots = useMemo(() => {
+    const el = svgRef.current;
+    const d = draw.draft;
+    if (!el || !d) {
+      return [] as { key: string; left: number; top: number; primary: boolean }[];
+    }
+    const r = el.getBoundingClientRect();
+    if (d.kind === 'circle') {
+      const c = d.points[0];
+      if (!c) return [];
+      return [
+        {
+          key: 'draft-circle-center',
+          left: r.left + c.x * r.width,
+          top: r.top + c.y * r.height,
+          primary: true,
+        },
+      ];
+    }
+    // Freehand draws as a continuous pencil stroke — no per-point dots.
+    if (d.kind === 'freehand') return [];
+    if (d.kind === 'point') return [];
+    return d.points.map((p, i) => ({
+      key: `draft-${i}`,
+      left: r.left + p.x * r.width,
+      top: r.top + p.y * r.height,
+      primary: i === 0,
+    }));
+  }, [draw.draft]);
+
+  // Pin glyphs for every committed point shape. Rendered as HTML so the
+  // MapPin icon stays crisp regardless of the SVG's non-uniform stretch.
+  // The tip is anchored at the dropped coordinate (translate -50% / -100%).
+  const pinMarkers = useMemo(() => {
+    const el = svgRef.current;
+    if (!el) return [] as { id: string; color: string; left: number; top: number; selected: boolean }[];
+    const r = el.getBoundingClientRect();
+    return draw.shapes
+      .filter((s) => !s.hidden && s.kind === 'point')
+      .map((s) => {
+        const p = s.points[0] ?? { x: 0.5, y: 0.5 };
+        return {
+          id: s.id,
+          color: s.color,
+          left: r.left + p.x * r.width,
+          top: r.top + p.y * r.height,
+          selected: s.id === draw.selectedId,
+        };
+      });
   }, [draw.shapes, draw.selectedId]);
 
   return (
@@ -198,6 +364,9 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
         preserveAspectRatio="none"
         style={{ cursor: surfaceCursor, touchAction: drawTool ? 'none' : 'auto' }}
         onPointerDown={(e) => {
+          // Right-click is reserved for the context menu — never let it
+          // start a draw / select / clear gesture.
+          if (e.button === 2) return;
           handleSurfaceMouseDown(e);
           handlePointerDown(e);
         }}
@@ -205,7 +374,18 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         onDoubleClick={handleDoubleClick}
-        onContextMenu={(e) => e.preventDefault()}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          const target = e.target as SVGElement | null;
+          const shapeId = target?.getAttribute('data-shape-id');
+          if (!shapeId) {
+            setCtxMenu(null);
+            return;
+          }
+          // Right-click also selects the shape so the panel + menu agree.
+          draw.setSelectedId(shapeId);
+          setCtxMenu({ x: e.clientX, y: e.clientY, shapeId });
+        }}
       >
         {draw.shapes.map((shape) =>
           shape.hidden ? null : (
@@ -249,6 +429,18 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
           }}
         >
           <div className="flex flex-col items-center gap-1">
+            {l.zoneType && ZONE_TYPE_BY_ID[l.zoneType] && (
+              <span
+                className="pointer-events-none inline-flex items-center gap-1 rounded-full bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]"
+              >
+                <span
+                  aria-hidden
+                  className="size-1.5 rounded-full"
+                  style={{ background: ZONE_TYPE_BY_ID[l.zoneType].color }}
+                />
+                {ZONE_TYPE_BY_ID[l.zoneType].label}
+              </span>
+            )}
             {l.status && STATUS_TONE[l.status] && (
               <span
                 className="pointer-events-none inline-flex items-center gap-1 rounded-full bg-black/45 px-1.5 py-0.5 text-[10px] font-semibold text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]"
@@ -282,6 +474,206 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
           </div>
         </div>
       ))}
+
+      {vertexLabels.map((v) => (
+        <button
+          key={v.key}
+          type="button"
+          aria-label={`Edit point ${v.n}`}
+          title={`Drag to move point ${v.n}`}
+          onPointerDown={(e) => beginVertexDrag(e, v.shapeId, v.index)}
+          onPointerMove={moveVertexDrag}
+          onPointerUp={endVertexDrag}
+          onPointerCancel={endVertexDrag}
+          // Fixed size = true circle (no width drift from variable-width
+          // digit content). Numbers ≥10 stay legible at size-5.
+          className="pointer-events-auto fixed z-30 inline-flex size-5 cursor-grab touch-none items-center justify-center rounded-full bg-black/75 text-[10px] font-semibold leading-none text-white ring-1 ring-white/50 [text-shadow:0_1px_2px_rgba(0,0,0,0.6)] active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+          style={{
+            left: v.left,
+            top: v.top,
+            transform: 'translate(-50%, -50%)',
+          }}
+        >
+          {v.n}
+        </button>
+      ))}
+
+      {/* Draft vertex dots — true circles in HTML space (SVG circles would
+          be stretched into ovals by the canvas's non-uniform aspect). */}
+      {draftDots.map((dot) => (
+        <div
+          key={dot.key}
+          aria-hidden
+          className={`pointer-events-none fixed z-30 rounded-full ${
+            dot.primary
+              ? 'size-2.5 bg-black ring-2 ring-white'
+              : 'size-2 bg-white ring-1 ring-black/80'
+          }`}
+          style={{
+            left: dot.left,
+            top: dot.top,
+            transform: 'translate(-50%, -50%)',
+          }}
+        />
+      ))}
+
+      {/* Map-pin glyphs for every point shape, anchored tip-down on the
+          dropped coordinate. Pointer events are passthrough — selection is
+          driven by the SVG hit area in `ShapeBody`. */}
+      {pinMarkers.map((m) => (
+        <div
+          key={m.id}
+          className="pointer-events-none fixed z-30"
+          style={{
+            left: m.left,
+            top: m.top,
+            transform: 'translate(-50%, -100%)',
+            color: m.color,
+            filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.55))',
+          }}
+        >
+          <MapPin size={28} />
+          {m.selected && (
+            <div
+              aria-hidden
+              className="absolute -bottom-1 left-1/2 size-2 -translate-x-1/2 rounded-full bg-white/85 ring-2 ring-black/50"
+            />
+          )}
+        </div>
+      ))}
+
+      <CoordsStatusBar svgRef={svgRef} />
+
+      {ctxMenu && (
+        <ShapeContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          actions={getZOrderActions(draw, ctxMenu.shapeId)}
+          onClose={() => setCtxMenu(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ShapeContextMenu — lightweight fixed-position menu opened by right-click
+// on a shape. Styled to match the Radix ContextMenu primitive used in the
+// Layers list so the on-map and in-list menus read as one family. Closes
+// on click-away, Escape, or after an action is invoked.
+// ---------------------------------------------------------------------------
+function ShapeContextMenu({
+  x,
+  y,
+  actions,
+  onClose,
+}: {
+  x: number;
+  y: number;
+  actions: ShapeAction[];
+  onClose: () => void;
+}) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const onDocPointerDown = (e: PointerEvent) => {
+      const el = rootRef.current;
+      if (el && !el.contains(e.target as Node)) onClose();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('pointerdown', onDocPointerDown, true);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('pointerdown', onDocPointerDown, true);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      ref={rootRef}
+      role="menu"
+      className="pointer-events-auto fixed z-50 min-w-[10rem] overflow-hidden rounded-lg bg-[#1a1a1a]/95 p-1 shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_25px_50px_-12px_rgba(0,0,0,0.5)] backdrop-blur-xl"
+      style={{ top: y, left: x }}
+    >
+      {actions.map((a) => (
+        <button
+          key={a.id}
+          type="button"
+          role="menuitem"
+          disabled={a.disabled}
+          onClick={() => {
+            if (a.disabled) return;
+            a.onSelect();
+            onClose();
+          }}
+          className={`flex w-full items-center gap-2.5 rounded px-2.5 py-1.5 text-left text-xs transition-colors focus:outline-none ${
+            a.destructive
+              ? 'text-red-400 hover:bg-red-500/10 hover:text-red-300 disabled:hover:bg-transparent disabled:hover:text-red-400'
+              : 'text-zinc-300 hover:bg-white/5 hover:text-white disabled:hover:bg-transparent disabled:hover:text-zinc-300'
+          } disabled:cursor-default disabled:opacity-40`}
+        >
+          <a.Icon
+            size={14}
+            className={a.destructive ? 'text-red-400/70' : 'text-zinc-500'}
+          />
+          {a.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// CoordsStatusBar — pinned to the bottom-left of the map area, mirrors the
+// GeoLibre viewer's "Coords" readout. Uses the same SANDBOX_BOUNDS projection
+// as the side-panel coordinate listing, so on-map and in-panel values agree.
+// ---------------------------------------------------------------------------
+function CoordsStatusBar({
+  svgRef,
+}: {
+  svgRef: RefObject<SVGSVGElement | null>;
+}) {
+  const [coord, setCoord] = useState<{ lat: number; lng: number } | null>(null);
+
+  useEffect(() => {
+    const handleMove = (e: PointerEvent) => {
+      const el = svgRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      if (r.width <= 0 || r.height <= 0) return;
+      const x = (e.clientX - r.left) / r.width;
+      const y = (e.clientY - r.top) / r.height;
+      if (x < 0 || x > 1 || y < 0 || y > 1) {
+        setCoord(null);
+        return;
+      }
+      setCoord(unproject({ x, y }, SANDBOX_BOUNDS));
+    };
+    const handleLeave = () => setCoord(null);
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerleave', handleLeave);
+    return () => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerleave', handleLeave);
+    };
+  }, [svgRef]);
+
+  return (
+    <div
+      dir="ltr"
+      role="status"
+      aria-live="off"
+      className="pointer-events-none absolute bottom-2 left-2 z-30 inline-flex items-center gap-1 rounded-md border border-white/10 bg-black/60 px-2 py-0.5 font-mono text-[11px] leading-4 tabular-nums text-white/85 shadow-sm backdrop-blur-sm"
+    >
+      <span className="text-white/55">Coords:</span>
+      <span className="min-w-[140px] text-center">
+        {coord
+          ? `${coord.lng.toFixed(5)}, ${coord.lat.toFixed(5)}`
+          : '—, —'}
+      </span>
     </div>
   );
 }
@@ -299,11 +691,16 @@ function ShapeBody({
   selected: boolean;
   interactive: boolean;
 }) {
+  // Outline color is independent of fill (set via the Color section's
+  // Outline chip). Falls back to the fill color when nothing's set, so
+  // shapes without an explicit outline still draw something.
   const stroke = shape.strokeColor ?? shape.color;
   const lineStyle: GeoLineStyle = shape.lineStyle ?? 'solid';
   const fillMode: GeoFillMode = shape.fillMode ?? 'fill';
   const strokeWidth = shape.strokeWidth ?? (selected ? 2.5 : 2);
-  const strokeOpacity = lineStyle === 'none' ? 0 : 1;
+  // "None" is genuinely without stroke — no painted line and no selection
+  // halo. Selection is still legible via the vertex dots (below).
+  const noStroke = lineStyle === 'none';
   const dasharray = lineStyle === 'dashed' ? '8 6' : undefined;
 
   let fill: string;
@@ -316,18 +713,22 @@ function ShapeBody({
   }
 
   if (shape.kind === 'point') {
+    // The visible pin glyph is an HTML overlay (see `pinMarkers` in the
+    // parent). Here we only emit an invisible circular hit area so the
+    // SVG layer can still capture clicks for selection / context menu.
     const p = shape.points[0] ?? { x: 0.5, y: 0.5 };
     const cx = p.x * VIEWBOX_W;
     const cy = p.y * VIEWBOX_H;
     return (
-      <g
-        data-shape-id={shape.id}
-        style={{ cursor: 'pointer', pointerEvents: interactive ? 'auto' : 'all' }}
-      >
-        <circle cx={cx} cy={cy} r={7} fill={stroke} stroke="#0f172a" strokeWidth={1.25} />
-        {selected && (
-          <circle cx={cx} cy={cy} r={14} fill="none" stroke={stroke} strokeOpacity={0.4} />
-        )}
+      <g data-shape-id={shape.id}>
+        <circle
+          data-shape-id={shape.id}
+          cx={cx}
+          cy={cy}
+          r={14}
+          fill="transparent"
+          style={{ cursor: 'pointer', pointerEvents: interactive ? 'auto' : 'all' }}
+        />
       </g>
     );
   }
@@ -340,19 +741,6 @@ function ShapeBody({
     const ry = e.ry * VIEWBOX_H;
     return (
       <g>
-        {selected && (
-          <ellipse
-            cx={cx}
-            cy={cy}
-            rx={rx}
-            ry={ry}
-            fill="none"
-            stroke="#ffffff"
-            strokeWidth={strokeWidth + 5}
-            strokeOpacity={0.55}
-            style={{ pointerEvents: 'none' }}
-          />
-        )}
         <ellipse
           data-shape-id={shape.id}
           cx={cx}
@@ -360,9 +748,8 @@ function ShapeBody({
           rx={rx}
           ry={ry}
           fill={fill}
-          stroke={stroke}
-          strokeWidth={strokeWidth}
-          strokeOpacity={strokeOpacity}
+          stroke={noStroke ? 'none' : stroke}
+          strokeWidth={noStroke ? 0 : strokeWidth}
           strokeDasharray={dasharray}
           style={{ cursor: 'pointer', pointerEvents: 'all' }}
         />
@@ -374,30 +761,19 @@ function ShapeBody({
 
   return (
     <g>
-      {selected && (
-        <path
-          d={d}
-          fill="none"
-          stroke="#ffffff"
-          strokeWidth={strokeWidth + 5}
-          strokeOpacity={0.55}
-          strokeLinejoin="round"
-          strokeLinecap="round"
-          style={{ pointerEvents: 'none' }}
-        />
-      )}
       <path
         data-shape-id={shape.id}
         d={d}
         fill={shape.kind === 'polyline' ? 'none' : fill}
-        stroke={stroke}
-        strokeWidth={strokeWidth}
-        strokeOpacity={strokeOpacity}
+        stroke={noStroke ? 'none' : stroke}
+        strokeWidth={noStroke ? 0 : strokeWidth}
         strokeDasharray={dasharray}
         strokeLinejoin="round"
         strokeLinecap="round"
         style={{ cursor: 'pointer', pointerEvents: 'all' }}
       />
+      {/* Vertices of the selected shape are drawn as numbered, draggable
+          chips in the HTML overlay (see `vertexLabels`) — no SVG dot. */}
     </g>
   );
 }
@@ -406,10 +782,9 @@ function DraftPreview({ draft }: { draft: DraftShape }) {
   if (draft.points.length === 0) return null;
 
   if (draft.kind === 'point') {
-    const p = draft.points[0];
-    return (
-      <circle cx={p.x * VIEWBOX_W} cy={p.y * VIEWBOX_H} r={6} fill="#facc15" opacity={0.8} />
-    );
+    // Point tools commit immediately on click — there's no draft preview
+    // window to show. Branch kept defensively in case timing ever flips.
+    return null;
   }
 
   if (draft.kind === 'circle') {
@@ -424,12 +799,12 @@ function DraftPreview({ draft }: { draft: DraftShape }) {
           cy={center.y * VIEWBOX_H}
           rx={rx * VIEWBOX_W}
           ry={ry * VIEWBOX_H}
-          fill="rgba(56,189,248,0.10)"
-          stroke="#facc15"
-          strokeWidth={2}
-          strokeDasharray="5 4"
+          fill="rgba(0,0,0,0.10)"
+          stroke="#000000"
+          strokeWidth={1}
         />
-        <circle cx={center.x * VIEWBOX_W} cy={center.y * VIEWBOX_H} r={4} fill="#facc15" />
+        {/* Center dot rendered as an HTML circle (see `draftDots`) so it
+            stays a true circle under the SVG's non-uniform aspect. */}
       </g>
     );
   }
@@ -443,24 +818,16 @@ function DraftPreview({ draft }: { draft: DraftShape }) {
     <g pointerEvents="none">
       <path
         d={d}
-        fill={close ? 'rgba(56,189,248,0.10)' : 'none'}
-        stroke="#facc15"
-        strokeWidth={2}
-        strokeDasharray={draft.kind === 'freehand' ? undefined : '5 4'}
+        fill={close ? 'rgba(0,0,0,0.10)' : 'none'}
+        stroke="#000000"
+        strokeWidth={1}
         strokeLinejoin="round"
         strokeLinecap="round"
       />
-      {draft.points.map((p, i) => (
-        <circle
-          key={i}
-          cx={p.x * VIEWBOX_W}
-          cy={p.y * VIEWBOX_H}
-          r={i === 0 ? 5 : 3}
-          fill={i === 0 ? '#facc15' : '#fff'}
-          stroke="#0f172a"
-          strokeWidth={1}
-        />
-      ))}
+      {/* Polygon / polyline vertex dots are drawn as HTML circles in the
+          parent overlay (see `draftDots`) so they aren't squashed by the
+          SVG's non-uniform aspect ratio. Freehand intentionally has no
+          per-point dots (the stroke speaks for itself). */}
     </g>
   );
 }
