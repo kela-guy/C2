@@ -1,5 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+/* Caveat = handwritten annotations; JetBrains Mono = story code blocks. Only
+ * loaded for the /handoff interaction stories surface. */
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 /* Tactical red scale (OKLCH hue ~17) — use for danger CTAs, jam, destructive fills */
 :root {
@@ -52,6 +55,9 @@
   /* ── Fonts ── */
   --font-sans: "Heebo", sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
+  /* Handoff stories: handwritten annotations + code blocks (see /handoff). */
+  --font-handwriting: "Caveat", cursive;
+  --font-code: "JetBrains Mono", "IBM Plex Mono", monospace;
 
   /* ── Radius (4pt grid) ── */
   --radius-sm: 4px;

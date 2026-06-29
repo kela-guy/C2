@@ -38,7 +38,7 @@ export const DeviceActionBar = memo(function DeviceActionBar({ cfg, ctx }: Devic
     >
       {items.map((item) => (
         <Fragment key={item.key}>
-          {item.pushEnd ? <div className="ms-auto mr-0 flex items-center">{item.node}</div> : item.node}
+          {item.pushEnd ? <div className="mr-0 flex items-center">{item.node}</div> : item.node}
         </Fragment>
       ))}
       {hasOverflow && (

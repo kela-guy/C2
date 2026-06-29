@@ -24,6 +24,12 @@ export type DeviceActionKind =
   | 'center'
   | 'pin'
   | 'watchVideo'
+  // Pathfinder takeoff primary. State-aware: renders Launch when docked,
+  // Return-to-base when airborne (see `resolveDeviceAction`).
+  | 'launchControl'
+  // Pathfinder header abort. Resolves to a Stop glyph only while the launch
+  // sequence is running (`pathfinderFlightState === 'launching'`); null otherwise.
+  | 'launchAbort'
   | 'floodlight'
   | 'speaker'
   | 'jam'
@@ -118,6 +124,15 @@ export const DEVICE_REGISTRY: Record<DeviceType, DeviceTypeConfig> = {
     detailFields: ['location', 'altitude', 'health', 'battery'],
     headerActions: HEADER_CENTER,
     footerActions: ['watchVideo', 'calibrate', 'wipers'],
+    overflowActions: INSPECT_OVERFLOW,
+  },
+  // Pathfinder mirrors the drone affordances (pinnable feed, calibrate) but
+  // leads with the state-aware `launchControl` (Launch <-> Return to base).
+  pathfinder: {
+    capabilities: { pinnable: true },
+    detailFields: ['location', 'altitude', 'health', 'battery'],
+    headerActions: ['launchAbort', 'center'],
+    footerActions: ['launchControl', 'watchVideo', 'calibrate'],
     overflowActions: INSPECT_OVERFLOW,
   },
   ecm: {

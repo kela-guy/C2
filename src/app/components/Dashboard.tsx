@@ -7,6 +7,24 @@ import { DEFAULT_SPEAKER_TRACKS } from './devices-panel';
 import { bearingDegrees, haversineDistanceM } from '@/app/lib/mapGeo';
 import { LiveCesiumTacticalMap } from './LiveCesiumTacticalMap';
 import { useLiveMapStore } from './liveMapStore';
+import {
+  SonnerPathfinderToast,
+  type PathfinderSimSnapshot,
+  type PathfinderControls,
+} from './pathfinder/SonnerPathfinderToast';
+import {
+  cardFlightState,
+  mapPhase,
+  PATHFINDER_DEVICE_ID,
+  PATHFINDER_HOME,
+  PATHFINDER_LOITER_CENTER,
+  PATHFINDER_LOITER_RADIUS,
+  PATHFINDER_ORBIT_SPEED,
+  PATHFINDER_RETURN_MS,
+  PATHFINDER_FOV_DEG,
+  type PathfinderCardState,
+  type PathfinderMapPhase,
+} from './pathfinder/pathfinderState';
 import { CesiumErrorBoundary } from './CesiumErrorBoundary';
 import { NotificationSystem, showTacticalNotification } from './NotificationSystem';
 import { NotificationCenter } from './NotificationCenter';
@@ -113,6 +131,15 @@ export interface FriendlyDrone {
   fovDeg?: number;
   trail?: [number, number][];
 }
+
+/** Stable id for the single Pathfinder launch toast (replace-in-place). */
+const PATHFINDER_TOAST_ID = 'pathfinder-launch';
+/**
+ * Sonner keeps a dismissed toast in the DOM through its exit animation. Firing a
+ * fresh launch toast inside that window stacks it behind the leaving one (reads
+ * as a doubled toast), so a re-launch waits this out first.
+ */
+const PATHFINDER_TOAST_EXIT_MS = 350;
 
 interface FriendlyPatrolRoute {
   id: string;
@@ -344,6 +371,125 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
       hoveredTargetId: null,
     };
   });
+  // ── Pathfinder launch lifecycle ─────────────────────────────────────
+  // The launch sim lives inside the Sonner toast (so it re-renders per step);
+  // these mirror its state for the two other surfaces. `pathfinderFlightStates`
+  // drives the device card's tri-state primary; the refs drive the map marker
+  // kinematics, read by the 4 Hz patrol tick below.
+  const [pathfinderFlightStates, setPathfinderFlightStates] = useState<
+    Record<string, PathfinderCardState>
+  >({ [PATHFINDER_DEVICE_ID]: 'docked' });
+  // Live abort / return-to-base controls, published by the toast while it runs,
+  // so the card's Stop / Return-to-dock buttons can command the same sequence.
+  const pathfinderControlsRef = useRef<PathfinderControls | null>(null);
+  const pathfinderToastClosedAtRef = useRef(0);
+  const pathfinderMapPhaseRef = useRef<PathfinderMapPhase>('docked');
+  const pathfinderOrbitRef = useRef(0);
+  const pathfinderReturnRef = useRef<{ from: [number, number]; start: number } | null>(null);
+  const pathfinderPosRef = useRef<[number, number]>(PATHFINDER_HOME);
+  const pathfinderTrailRef = useRef<[number, number][]>([]);
+  const pathfinderLabelRef = useRef({
+    name: t.simulation.friendlyDrones.pathfinder.name,
+    altitude: t.simulation.friendlyDrones.pathfinder.altitude,
+  });
+  useEffect(() => {
+    pathfinderLabelRef.current = {
+      name: t.simulation.friendlyDrones.pathfinder.name,
+      altitude: t.simulation.friendlyDrones.pathfinder.altitude,
+    };
+  }, [t]);
+
+  const closePathfinderToast = useCallback(() => {
+    pathfinderToastClosedAtRef.current = Date.now();
+    toast.dismiss(PATHFINDER_TOAST_ID);
+  }, []);
+
+  // Single sync point: the toast reports every phase/runState change here, and
+  // we fan it out to the card flight state + the map marker phase.
+  const handlePathfinderSimChange = useCallback(
+    (snap: PathfinderSimSnapshot) => {
+      const card = cardFlightState(snap);
+      setPathfinderFlightStates((s) =>
+        s[PATHFINDER_DEVICE_ID] === card ? s : { ...s, [PATHFINDER_DEVICE_ID]: card },
+      );
+
+      const phase = mapPhase(snap);
+      if (phase !== pathfinderMapPhaseRef.current) {
+        if (phase === 'returning') {
+          pathfinderReturnRef.current = { from: pathfinderPosRef.current, start: Date.now() };
+        } else if (phase === 'docked') {
+          pathfinderReturnRef.current = null;
+          pathfinderTrailRef.current = [];
+        }
+        pathfinderMapPhaseRef.current = phase;
+      }
+
+      if (snap.runState === 'done' || snap.runState === 'aborted') {
+        closePathfinderToast();
+      }
+    },
+    [closePathfinderToast],
+  );
+
+  const firePathfinderToast = useCallback(() => {
+    const show = () =>
+      toast.custom(
+        () => (
+          <SonnerPathfinderToast
+            locale={locale}
+            onClose={closePathfinderToast}
+            onSimChange={handlePathfinderSimChange}
+            controlsRef={pathfinderControlsRef}
+          />
+        ),
+        {
+          id: PATHFINDER_TOAST_ID,
+          duration: Infinity,
+          // The shared Toaster styles every `<li>` with its own bg/radius/shadow.
+          // Our card brings its own surface, so strip the default container or it
+          // peeks out behind ours and reads as a doubled toast.
+          unstyled: true,
+          style: {
+            background: 'transparent',
+            border: 'none',
+            boxShadow: 'none',
+            borderRadius: 0,
+            padding: 0,
+            width: 'auto',
+          },
+        },
+      );
+    const sinceClose = Date.now() - pathfinderToastClosedAtRef.current;
+    if (sinceClose >= PATHFINDER_TOAST_EXIT_MS) show();
+    else window.setTimeout(show, PATHFINDER_TOAST_EXIT_MS - sinceClose);
+  }, [locale, closePathfinderToast, handlePathfinderSimChange]);
+
+  const handlePathfinderLaunch = useCallback(() => {
+    pathfinderMapPhaseRef.current = 'launching';
+    pathfinderOrbitRef.current = 0;
+    pathfinderReturnRef.current = null;
+    pathfinderTrailRef.current = [];
+    pathfinderPosRef.current = PATHFINDER_HOME;
+    setPathfinderFlightStates((s) => ({ ...s, [PATHFINDER_DEVICE_ID]: 'launching' }));
+    firePathfinderToast();
+  }, [firePathfinderToast]);
+
+  // Stop / return command the live sequence; its `onSimChange` then parks the
+  // card + map. Defensive fallback resets directly if no toast is live.
+  const handlePathfinderAbort = useCallback(() => {
+    if (pathfinderControlsRef.current) {
+      pathfinderControlsRef.current.abort();
+    } else {
+      setPathfinderFlightStates((s) => ({ ...s, [PATHFINDER_DEVICE_ID]: 'docked' }));
+      pathfinderMapPhaseRef.current = 'docked';
+      closePathfinderToast();
+    }
+  }, [closePathfinderToast]);
+
+  const handlePathfinderReturnToBase = useCallback(() => {
+    pathfinderControlsRef.current?.returnToBase();
+  }, []);
+
   const [sensorFocusId, setSensorFocusId] = useState<string | null>(null);
   const [cameraLookAtRequest, setCameraLookAtRequest] = useState<{ cameraId: string; targetLat: number; targetLon: number; fovOverrideDeg?: number } | null>(null);
   const [regulusEffectors, setRegulusEffectors] = useState<RegulusEffector[]>(REGULUS_EFFECTORS);
@@ -555,34 +701,78 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
         return next >= friendlyPatrolRoutes[0].waypoints.length ? 0 : next;
       });
 
-      liveMap.setFriendlyDrones(
-        friendlyPatrolRoutes.map((route, i) => {
-          const progress = patrolProgressRef.current[i];
-          const legIndex = Math.floor(progress) % route.waypoints.length;
-          const legFrac = progress - legIndex;
-          const from = route.waypoints[legIndex];
-          const to = route.waypoints[(legIndex + 1) % route.waypoints.length];
+      const drones: FriendlyDrone[] = friendlyPatrolRoutes.map((route, i) => {
+        const progress = patrolProgressRef.current[i];
+        const legIndex = Math.floor(progress) % route.waypoints.length;
+        const legFrac = progress - legIndex;
+        const from = route.waypoints[legIndex];
+        const to = route.waypoints[(legIndex + 1) % route.waypoints.length];
 
-          const lat = from[0] + (to[0] - from[0]) * legFrac;
-          const lon = from[1] + (to[1] - from[1]) * legFrac;
-          const heading = bearingDegrees(from[0], from[1], to[0], to[1]);
+        const lat = from[0] + (to[0] - from[0]) * legFrac;
+        const lon = from[1] + (to[1] - from[1]) * legFrac;
+        const heading = bearingDegrees(from[0], from[1], to[0], to[1]);
 
-          if (sampleTrail) {
-            friendlyTrailRef.current[i] = [...friendlyTrailRef.current[i], [lat, lon]].slice(-TRAIL_MAX_POINTS);
-          }
+        if (sampleTrail) {
+          friendlyTrailRef.current[i] = [...friendlyTrailRef.current[i], [lat, lon]].slice(-TRAIL_MAX_POINTS);
+        }
 
-          return {
-            id: route.id,
-            name: route.name,
-            lat,
-            lon,
-            altitude: route.altitude,
-            headingDeg: heading,
-            fovDeg: route.fovDeg,
-            trail: friendlyTrailRef.current[i],
-          };
-        })
-      );
+        return {
+          id: route.id,
+          name: route.name,
+          lat,
+          lon,
+          altitude: route.altitude,
+          headingDeg: heading,
+          fovDeg: route.fovDeg,
+          trail: friendlyTrailRef.current[i],
+        };
+      });
+
+      // Pathfinder marker — only on the map once a launch is in flight. Driven
+      // by the launch lifecycle: holds at the dock through prepare/takeoff,
+      // orbits the loiter centre when airborne, then glides home on RTB.
+      const pfPhase = pathfinderMapPhaseRef.current;
+      if (pfPhase !== 'docked') {
+        let plat = PATHFINDER_HOME[0];
+        let plon = PATHFINDER_HOME[1];
+        let pheading = 0;
+        if (pfPhase === 'launching') {
+          pheading = bearingDegrees(
+            PATHFINDER_HOME[0], PATHFINDER_HOME[1],
+            PATHFINDER_LOITER_CENTER[0], PATHFINDER_LOITER_CENTER[1],
+          );
+        } else if (pfPhase === 'airborne') {
+          pathfinderOrbitRef.current += PATHFINDER_ORBIT_SPEED;
+          const theta = pathfinderOrbitRef.current;
+          const latRad = (PATHFINDER_LOITER_CENTER[0] * Math.PI) / 180;
+          plat = PATHFINDER_LOITER_CENTER[0] + PATHFINDER_LOITER_RADIUS * Math.cos(theta);
+          plon = PATHFINDER_LOITER_CENTER[1] + (PATHFINDER_LOITER_RADIUS * Math.sin(theta)) / Math.cos(latRad);
+          pheading = ((theta * 180) / Math.PI + 90) % 360;
+        } else if (pfPhase === 'returning') {
+          const r = pathfinderReturnRef.current;
+          const frac = r ? Math.min(1, (Date.now() - r.start) / PATHFINDER_RETURN_MS) : 1;
+          const fromPos = r?.from ?? PATHFINDER_HOME;
+          plat = fromPos[0] + (PATHFINDER_HOME[0] - fromPos[0]) * frac;
+          plon = fromPos[1] + (PATHFINDER_HOME[1] - fromPos[1]) * frac;
+          pheading = bearingDegrees(plat, plon, PATHFINDER_HOME[0], PATHFINDER_HOME[1]);
+        }
+        pathfinderPosRef.current = [plat, plon];
+        if (sampleTrail && pfPhase !== 'launching') {
+          pathfinderTrailRef.current = [...pathfinderTrailRef.current, [plat, plon]].slice(-TRAIL_MAX_POINTS);
+        }
+        drones.push({
+          id: PATHFINDER_DEVICE_ID,
+          name: pathfinderLabelRef.current.name,
+          lat: plat,
+          lon: plon,
+          altitude: pathfinderLabelRef.current.altitude,
+          headingDeg: pheading,
+          fovDeg: PATHFINDER_FOV_DEG,
+          trail: pathfinderTrailRef.current,
+        });
+      }
+
+      liveMap.setFriendlyDrones(drones);
     }, PATROL_TICK_MS);
 
     return () => clearInterval(tick);
@@ -2400,6 +2590,10 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
             typeLabels={t.devices.typeLabels}
             connectionStateLabels={t.devices.connectionLabels}
             strings={t.devices.strings}
+            pathfinderFlightStates={pathfinderFlightStates}
+            onLaunch={handlePathfinderLaunch}
+            onAbort={handlePathfinderAbort}
+            onReturnToBase={handlePathfinderReturnToBase}
           />
         )}
 

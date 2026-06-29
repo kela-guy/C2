@@ -50,6 +50,10 @@ export const DeviceRow = memo(function DeviceRow({
   onPinToFeed,
   onUnpinFromFeed,
   isPinnedToFeed,
+  pathfinderFlightState,
+  onLaunch,
+  onAbort,
+  onReturnToBase,
   onOpenLogs,
   onArmNotifications,
   onChildSelect,
@@ -105,6 +109,10 @@ export const DeviceRow = memo(function DeviceRow({
       onJamActivate,
       onPinToFeed,
       onUnpinFromFeed,
+      pathfinderFlightState,
+      onLaunch,
+      onAbort,
+      onReturnToBase,
     }),
     [
       device,
@@ -125,6 +133,10 @@ export const DeviceRow = memo(function DeviceRow({
       onJamActivate,
       onPinToFeed,
       onUnpinFromFeed,
+      pathfinderFlightState,
+      onLaunch,
+      onAbort,
+      onReturnToBase,
     ],
   );
 

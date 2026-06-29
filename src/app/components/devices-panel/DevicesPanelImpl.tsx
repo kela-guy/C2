@@ -72,6 +72,10 @@ export function DevicesPanel({
   title = 'Devices',
   closeAriaLabel = 'Close',
   strings: stringsProp,
+  pathfinderFlightStates,
+  onLaunch,
+  onAbort,
+  onReturnToBase,
 }: DevicesPanelProps) {
   const strings = useMemo<DevicesPanelStrings>(
     () => ({ ...DEFAULT_DEVICE_PANEL_STRINGS, ...(stringsProp ?? {}) }),
@@ -286,6 +290,10 @@ export function DevicesPanel({
                     onArmNotifications={onArmNotifications}
                     onChildSelect={onDeviceSelect}
                     selectedChildId={selectedDeviceId}
+                    pathfinderFlightState={pathfinderFlightStates?.[row.device.id]}
+                    onLaunch={onLaunch}
+                    onAbort={onAbort}
+                    onReturnToBase={onReturnToBase}
                     connectionStateLabels={connectionStateLabels}
                     strings={strings}
                   />

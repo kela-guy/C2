@@ -228,5 +228,21 @@ export function useDevicesFromAssets(): Device[] {
       altitude: friendly.observation7.altitude,
       Icon: DroneDeviceIcon,
     },
+    {
+      // Airborne pathfinding asset — same drone marker, but owns a takeoff
+      // lifecycle (docked → launch → loiter → return). Flight state is supplied
+      // per-row by the Dashboard; this entry is the static catalog record.
+      id: 'PATHFINDER-01',
+      name: friendly.pathfinder.name,
+      type: 'pathfinder' as const,
+      lat: 32.477,
+      lon: 35.005,
+      status: 'available' as const,
+      operationalStatus: 'operational' as const,
+      connectionState: 'online' as const,
+      altitude: friendly.pathfinder.altitude,
+      batteryPct: 82,
+      Icon: DroneDeviceIcon,
+    },
   ], [launcherDeviceName, friendly]);
 }

@@ -19,6 +19,9 @@ export type DeviceType =
   | 'weapon_system'
   | 'floodlight'
   | 'speaker'
+  // Airborne pathfinding asset. Visually a drone, but owns a takeoff
+  // lifecycle (docked -> launch -> loiter -> return) so it is its own type.
+  | 'pathfinder'
   // Composite counter-drone effector (Gotcha). Rendered by the shared
   // `DeviceRow` as a parent with nested `children` (its sensors + camera).
   | 'effector';
@@ -134,6 +137,15 @@ export interface DevicesPanelStrings {
   jamMoreOptions: string;
   /** Camera controls. */
   centerOnMap: string;
+  /** Pathfinder takeoff control — primary action when the asset is docked. */
+  launch: string;
+  launchAriaLabel: string;
+  /** Pathfinder return-to-base control — primary action when airborne. */
+  returnToBase: string;
+  returnToBaseAriaLabel: string;
+  /** Pathfinder abort — stops a launch sequence in progress (header + footer). */
+  abort: string;
+  abortAriaLabel: string;
   wipers: string;
   /** Pressed-state label while the wipers run continuously. */
   wiping: string;
@@ -257,6 +269,18 @@ export interface DevicesPanelProps {
   closeAriaLabel?: string;
   /** Override any of the internal labels. Falls back to `DEFAULT_DEVICE_PANEL_STRINGS` (English). */
   strings?: Partial<DevicesPanelStrings>;
+  /**
+   * Per-device Pathfinder flight state, keyed by device id. Drives the
+   * state-aware primary (Launch / Stop / Return-to-dock) and the collapsed-row
+   * abort glyph. Devices not present default to `docked`.
+   */
+  pathfinderFlightStates?: Record<string, 'docked' | 'launching' | 'airborne'>;
+  /** Fire a Pathfinder takeoff sequence (docked → launching). */
+  onLaunch?: (deviceId: string) => void;
+  /** Abort an in-progress Pathfinder launch sequence (launching → docked). */
+  onAbort?: (deviceId: string) => void;
+  /** Command a Pathfinder back to base (airborne → docked). */
+  onReturnToBase?: (deviceId: string) => void;
 }
 
 /** Props consumed by the colocated `DeviceRow` (also exported for the styleguide). */
@@ -283,6 +307,14 @@ export interface DeviceRowProps {
   onUnpinFromFeed?: (deviceId: string) => void;
   /** Whether this device is currently pinned to a feed. Drives the toggle visual + label. */
   isPinnedToFeed?: boolean;
+  /** Pathfinder flight state — drives the state-aware Launch/Abort/Return-to-base primary. */
+  pathfinderFlightState?: 'docked' | 'launching' | 'airborne';
+  /** Fire the Pathfinder takeoff sequence (docked -> launching). */
+  onLaunch?: (deviceId: string) => void;
+  /** Abort an in-progress launch sequence (launching -> docked). */
+  onAbort?: (deviceId: string) => void;
+  /** Command the Pathfinder back to base (airborne -> docked). */
+  onReturnToBase?: (deviceId: string) => void;
   /** Open the device's log / event channel (overflow "Logs" entry). */
   onOpenLogs?: (deviceId: string) => void;
   /** Arm / disarm the timed notifications window (overflow "Notifications" toggle). */

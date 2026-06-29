@@ -14,8 +14,8 @@
  */
 
 import { useEffect, useState, type ReactNode } from 'react';
-import { Check, List, Square, Sun, Video, Wrench } from '@/lib/icons/central';
-import { MapPinIcon, PauseIcon, PlayFilledIcon, WatchStreamIcon, WipeIcon } from './icons';
+import { Check, List, Plane, Square, SquareFilled, Sun, Video, Wrench } from '@/lib/icons/central';
+import { DockIcon, MapPinIcon, PauseIcon, PlayFilledIcon, WatchStreamIcon, WipeIcon } from './icons';
 import { DotmSquare1 } from '@/app/components/ui/dotm-square-1';
 import { SpeakerTrackSelect } from './controls/SpeakerTrackSelect';
 import { JamSplitButton } from './controls/JamSplitButton';
@@ -54,6 +54,14 @@ export interface DeviceActionContext {
   onJamActivate?: (jammerId: string) => void;
   onPinToFeed?: (deviceId: string) => void;
   onUnpinFromFeed?: (deviceId: string) => void;
+  /** Pathfinder flight state — drives the state-aware `launchControl` + `launchAbort` actions. */
+  pathfinderFlightState?: 'docked' | 'launching' | 'airborne';
+  /** Fire the Pathfinder takeoff sequence (docked -> launching). */
+  onLaunch?: (deviceId: string) => void;
+  /** Abort an in-progress launch sequence (launching -> docked). */
+  onAbort?: (deviceId: string) => void;
+  /** Command the Pathfinder back to base (airborne -> docked). */
+  onReturnToBase?: (deviceId: string) => void;
 }
 
 export interface ResolvedAction {
@@ -233,7 +241,84 @@ export function resolveDeviceAction(
             ariaLabel={ctx.isPinnedToFeed ? s.unpinFromFeedAriaLabel : s.pinToFeedAriaLabel}
             disabled={disabled}
             disabledReason={reason}
+            className="w-fit"
             onClick={toggle}
+          />
+        ),
+      };
+    }
+
+    // Pathfinder takeoff primary. State-aware: airborne shows Return-to-base,
+    // launching shows Stop (abort), otherwise the Launch go-action (disabled
+    // while offline / malfunctioning).
+    case 'launchControl': {
+      if (ctx.pathfinderFlightState === 'airborne') {
+        return {
+          key: 'launchControl',
+          node: (
+            <DeviceAction
+              dataHandoff="device-return-to-base"
+              tone="neutral"
+              icon={<DockIcon size={12} />}
+              label={s.returnToBase}
+              ariaLabel={s.returnToBaseAriaLabel}
+              disabled={offline}
+              disabledReason={offline ? s.jamDisabledOffline : null}
+              onClick={() => ctx.onReturnToBase?.(d.id)}
+            />
+          ),
+        };
+      }
+      if (ctx.pathfinderFlightState === 'launching') {
+        return {
+          key: 'launchControl',
+          node: (
+            <DeviceAction
+              dataHandoff="device-launch-abort"
+              tone="danger"
+              icon={<SquareFilled size={12} />}
+              label={s.abort}
+              ariaLabel={s.abortAriaLabel}
+              onClick={() => ctx.onAbort?.(d.id)}
+            />
+          ),
+        };
+      }
+      const malfunction = d.operationalStatus === 'malfunctioning';
+      return {
+        key: 'launchControl',
+        node: (
+          <DeviceAction
+            dataHandoff="device-launch"
+            tone="neutral"
+            icon={<Plane size={12} />}
+            label={s.launch}
+            ariaLabel={s.launchAriaLabel}
+            disabled={offline || malfunction}
+            disabledReason={offline ? s.jamDisabledOffline : malfunction ? s.jamDisabledMalfunction : null}
+            onClick={() => ctx.onLaunch?.(d.id)}
+          />
+        ),
+      };
+    }
+
+    // Pathfinder header abort. Resolves to a compact Stop glyph only while the
+    // launch sequence is running; otherwise it contributes nothing to the
+    // always-visible header cluster.
+    case 'launchAbort': {
+      if (ctx.pathfinderFlightState !== 'launching') return null;
+      return {
+        key: 'launchAbort',
+        node: (
+          <DeviceAction
+            dataHandoff="device-launch-abort"
+            tone="danger"
+            iconOnly
+            ghost
+            icon={<SquareFilled size={12} />}
+            tooltip={s.abort}
+            ariaLabel={s.abortAriaLabel}
+            onClick={() => ctx.onAbort?.(d.id)}
           />
         ),
       };
@@ -294,7 +379,7 @@ export function resolveDeviceAction(
               <span className="inline-flex items-center gap-1.5">
                 {label}
                 {hasErrors && (
-                  <span className="rounded-full bg-red-500/20 px-1.5 text-[10px] font-medium text-red-300 tabular-nums">
+                  <span className="flex h-fit w-fit flex-col items-center justify-center bg-red-500/20 px-1.5 py-0.5 text-[10px] font-medium text-red-300 tabular-nums">
                     {count > 99 ? '99+' : count}
                   </span>
                 )}

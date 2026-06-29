@@ -17,6 +17,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           boxShadow: '0 0 0 1px rgba(255,255,255,0.10), 0 8px 30px rgba(0,0,0,0.5)',
           borderRadius: '8px',
           direction: 'rtl',
+          width: '100%',
         },
       }}
       {...props}

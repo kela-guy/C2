@@ -160,7 +160,7 @@ export function buildCollapsedMetricLine(device: Device): string | null {
 
 /** True when a device exposes pin/unpin affordances (cameras + drones today). */
 export function isPinnableType(type: DeviceType): boolean {
-  return type === 'camera' || type === 'drone';
+  return type === 'camera' || type === 'drone' || type === 'pathfinder';
 }
 
 /** Resolve a device by id and return its type — used by `useFocusedDevice`. */

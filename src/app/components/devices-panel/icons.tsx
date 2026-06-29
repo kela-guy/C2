@@ -231,6 +231,30 @@ export function CalibrationIcon({ size = 16, className = '' }: IconProps) {
   );
 }
 
+/**
+ * Drone-over-dock glyph — Pathfinder "return to dock" (RTB). Shared with the
+ * video HUD bottom chrome so the action reads identically everywhere it appears.
+ */
+export function DockIcon({ size = 16, className = '' }: IconProps) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      fill="none"
+      className={className}
+      aria-hidden="true"
+    >
+      <path
+        d="M13.6409 1.18815L13.7192 4.44135L14.4518 4.81672L14.6176 5.52909C14.8468 6.51427 14.2527 7.50847 13.272 7.76107L11.316 8.265L12.3906 10.2885L9.57159 11.034L6.65013 9.46293L3.29606 10.2543C2.65793 10.4048 1.99493 10.1482 1.6212 9.61013C1.1804 8.97567 1.25206 8.11473 1.79293 7.56273L2.86946 6.46402C3.1068 6.22183 3.404 6.04919 3.73413 5.9653C4.84413 5.68323 8.18313 4.83344 9.59077 4.46116C9.84308 4.39443 10.0532 4.21685 10.1629 3.97306L11.1158 1.85599L13.6409 1.18815Z"
+        fill="currentColor"
+      />
+      <path d="M14.6666 12.3335V13.3335H1.33327V12.3335H14.6666Z" fill="currentColor" />
+    </svg>
+  );
+}
+
 /** Wiper sweep — wipers. */
 export function WipeIcon({ size = 16, className = '' }: IconProps) {
   return (

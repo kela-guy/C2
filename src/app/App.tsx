@@ -38,6 +38,18 @@ const DesignSystemPage = lazy(() => import("./styleguide/registry/DesignSystem")
 // Code-split so its assets never enter other bundles.
 const VideoHudSandbox = lazy(() => import("./components/video-hud-sandbox/VideoHudSandbox"));
 
+// Pathfinder Sandbox — design surface for the multi-step takeoff toast
+// (prepare → takeoff → loiter → return). Not linked from the main UI;
+// reviewers open it directly. Code-split so it never enters other bundles.
+const PathfinderSandbox = lazy(() => import("./components/pathfinder-sandbox/PathfinderSandbox"));
+
+// Handoff Stories — scrollytelling interaction handoff for the Pathfinder
+// launch toast (`components/handoff-story/`). A devouringdetails-style narrated
+// walkthrough: prose + sticky live stage + debug console + spec contract. Not
+// linked from the main UI; reviewers open it directly. Code-split so the kit and
+// the Caveat/JetBrains fonts only load on this route.
+const PathfinderStory = lazy(() => import("./components/handoff-story/PathfinderStory"));
+
 function PlaygroundFallback() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#09090b] text-sm text-neutral-400">
@@ -159,6 +171,31 @@ export default function App() {
                 element={
                   <Suspense fallback={<PlaygroundFallback />}>
                     <VideoHudSandbox />
+                  </Suspense>
+                }
+              />
+              {/*
+                Pathfinder Sandbox — multi-step takeoff toast design surface.
+                Not linked from the main UI; reviewers open it directly.
+              */}
+              <Route
+                path="/pathfinder-sandbox"
+                element={
+                  <Suspense fallback={<PlaygroundFallback />}>
+                    <PathfinderSandbox />
+                  </Suspense>
+                }
+              />
+              {/*
+                Handoff Stories — narrated interaction walkthrough for the
+                Pathfinder launch toast. Not linked from the main UI; reviewers
+                open it directly.
+              */}
+              <Route
+                path="/handoff"
+                element={
+                  <Suspense fallback={<PlaygroundFallback />}>
+                    <PathfinderStory />
                   </Suspense>
                 }
               />
