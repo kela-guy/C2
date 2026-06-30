@@ -14,7 +14,7 @@
  */
 
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { AlertTriangle, SquareFilled } from '@/lib/icons/central';
+import { SquareFilled } from '@/lib/icons/central';
 import { DockIcon } from '@/app/components/devices-panel/icons';
 import { DroneDeviceIcon } from '@/primitives/ProductIcons';
 import { DotmSquare12 } from '@/app/components/ui/dotm-square-12';
@@ -70,7 +70,7 @@ function currentLabel(sim: PathfinderSim, locale: Locale): string {
 function StateIcon({ sim }: { sim: PathfinderSim }) {
   switch (sim.runState) {
     case 'error':
-      return <AlertTriangle size={16} style={{ color: ERROR }} />;
+      return <DroneDeviceIcon size={15} fill={ERROR} />;
     // Active work → "Origin Wave" dot-matrix loader (ripple from center) stands
     // in for the identity glyph. Explicit light color (not the theme-coupled
     // preset) so it stays legible on this deliberately fixed-dark monochrome card.

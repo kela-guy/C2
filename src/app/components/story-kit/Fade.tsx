@@ -10,6 +10,14 @@
 import type { CSSProperties } from 'react';
 import { cn } from '@/app/components/ui/utils';
 
+/** Which story surface the fade dissolves into. */
+type FadeBlend = 'canvas' | 'panel';
+
+const BLEND_VAR: Record<FadeBlend, string> = {
+  canvas: '--story-bg',
+  panel: '--story-panel',
+};
+
 interface FadeProps {
   side: 'top' | 'bottom';
   /** Height of the fade band in px. */
@@ -18,15 +26,26 @@ interface FadeProps {
   blur?: number;
   /** Mask stop — how far the band stays fully opaque before dissolving. */
   stop?: string;
+  /** Surface colour the fade blends into. Defaults to the page canvas. */
+  blend?: FadeBlend;
   className?: string;
   style?: CSSProperties;
 }
 
-export function Fade({ side, height = 120, blur = 4, stop = '45%', className, style }: FadeProps) {
+export function Fade({
+  side,
+  height = 120,
+  blur = 4,
+  stop = '45%',
+  blend = 'canvas',
+  className,
+  style,
+}: FadeProps) {
+  const toColor = `var(${BLEND_VAR[blend]})`;
   const toCanvas =
     side === 'top'
-      ? 'linear-gradient(to top, transparent, var(--story-bg))'
-      : 'linear-gradient(to bottom, transparent, var(--story-bg))';
+      ? `linear-gradient(to top, transparent, ${toColor})`
+      : `linear-gradient(to bottom, transparent, ${toColor})`;
   const mask =
     side === 'top'
       ? `linear-gradient(to bottom, #000 ${stop}, transparent)`

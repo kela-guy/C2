@@ -91,8 +91,8 @@ function GalleryStage() {
           ))}
         </div>
       </div>
-      <Fade side="top" height={56} stop="20%" className="absolute inset-x-0 top-0" />
-      <Fade side="bottom" height={56} stop="20%" className="absolute inset-x-0 bottom-0" />
+      <Fade side="top" height={56} stop="20%" blend="panel" className="absolute inset-x-0 top-0" />
+      <Fade side="bottom" height={56} stop="20%" blend="panel" className="absolute inset-x-0 bottom-0" />
     </div>
   );
 }

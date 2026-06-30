@@ -7,10 +7,15 @@
  * The whole surface is painted from the `--story-*` palette set on the root, so
  * the Mood toggle repaints everything at once. Pass `chapters`; the layout maps
  * them to left-column `StorySection`s and a right-column `StoryStage`.
+ *
+ * Pinned LTR via `<DirIsland>` so the English editorial layout stays stable
+ * when the app is running in Hebrew/RTL — component demos inside chapters
+ * can still set their own `dir` for locale previews.
  */
 
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { DirIsland } from '@/lib/direction';
 import { paletteVars, PALETTES, type Mood } from './palette';
 import { useScrollOpacity } from './useScrollOpacity';
 import { writeToClipboard } from './clipboard';
@@ -41,15 +46,19 @@ export function StoryLayout({ title, kicker, homeHref = '/', chapters, aiPrompt 
   useScrollOpacity(leftRef);
 
   return (
-    <div
-      data-mood={mood}
-      style={{
-        ...paletteVars(PALETTES[mood]),
-        backgroundColor: 'var(--story-bg)',
-        color: 'var(--story-ink)',
-      }}
+    <DirIsland
+      direction="ltr"
       className="relative min-h-screen w-full font-[family:var(--font-sans)]"
     >
+      <div
+        data-mood={mood}
+        style={{
+          ...paletteVars(PALETTES[mood]),
+          backgroundColor: 'var(--story-bg)',
+          color: 'var(--story-ink)',
+        }}
+        className="relative min-h-screen w-full"
+      >
       <ScrollProgress />
 
       {/* Breadcrumb */}
@@ -101,7 +110,8 @@ export function StoryLayout({ title, kicker, homeHref = '/', chapters, aiPrompt 
         activeId={activeId}
         aiPrompt={aiPrompt}
       />
-    </div>
+      </div>
+    </DirIsland>
   );
 }
 
