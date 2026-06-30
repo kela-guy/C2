@@ -62,7 +62,7 @@ export const PALETTES: Record<Mood, Palette> = {
     muted: '#6f6f6f',
     band: '#f1f1f1',
     border: '#e3e3e3',
-    annot: '#8a8a8a',
+    annot: '#262626',
     surface: 'rgba(0,0,0,0.03)',
     dot: 'rgba(0,0,0,0.06)',
     accent: '#fb6a1f',

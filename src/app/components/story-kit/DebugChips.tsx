@@ -3,9 +3,11 @@
  * Each chip is a clickable control bound to a keyboard shortcut; the reader gets
  * the same toggles the author used to sand the interaction's edge cases.
  *
- * Shortcuts are only live while the chip group is on screen (an
- * `IntersectionObserver` gate), so several chapters can reuse the same keys
- * without colliding, and typing into an input never triggers them.
+ * Several chapters reuse the same keys, so a single shared keydown listener owns
+ * routing: it hands each keystroke to exactly one chip strip — the one whose
+ * centre is closest to the viewport centre (i.e. the one the reader is actually
+ * looking at). That keeps keys live whenever a strip is on screen, even if it is
+ * only partly visible, and guarantees two strips never fire from one keystroke.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -18,6 +20,65 @@ export interface DebugChip {
   onTrigger: () => void;
 }
 
+interface Owner {
+  el: HTMLElement;
+  getChips: () => DebugChip[];
+  fire: (chip: DebugChip) => void;
+}
+
+const owners = new Set<Owner>();
+let keyListener: ((e: KeyboardEvent) => void) | null = null;
+
+function handleKey(e: KeyboardEvent) {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const target = e.target as HTMLElement | null;
+  const tag = target?.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable) {
+    return;
+  }
+
+  const vh = window.innerHeight || document.documentElement.clientHeight;
+  const center = vh / 2;
+
+  // Hand the key to the single strip closest to the viewport centre, ignoring
+  // any strip scrolled fully out of view.
+  let best: Owner | null = null;
+  let bestDist = Infinity;
+  owners.forEach((o) => {
+    const r = o.el.getBoundingClientRect();
+    if (r.bottom <= 0 || r.top >= vh) return;
+    const dist = Math.abs(r.top + r.height / 2 - center);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = o;
+    }
+  });
+  if (!best) return;
+
+  const key = e.key.toLowerCase();
+  const chip = (best as Owner).getChips().find((c) => c.shortcut.toLowerCase() === key);
+  if (chip) {
+    e.preventDefault();
+    (best as Owner).fire(chip);
+  }
+}
+
+function register(owner: Owner) {
+  owners.add(owner);
+  if (!keyListener) {
+    keyListener = handleKey;
+    window.addEventListener('keydown', keyListener);
+  }
+}
+
+function unregister(owner: Owner) {
+  owners.delete(owner);
+  if (owners.size === 0 && keyListener) {
+    window.removeEventListener('keydown', keyListener);
+    keyListener = null;
+  }
+}
+
 export function DebugChips({
   chips,
   className,
@@ -28,42 +89,27 @@ export function DebugChips({
   const ref = useRef<HTMLDivElement>(null);
   const chipsRef = useRef(chips);
   chipsRef.current = chips;
-  const [visible, setVisible] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const io = new IntersectionObserver(([e]) => setVisible(e.isIntersecting), {
-      threshold: 0.25,
-    });
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
 
   const trigger = (chip: DebugChip) => {
     chip.onTrigger();
     setFlash(chip.shortcut);
     window.setTimeout(() => setFlash((f) => (f === chip.shortcut ? null : f)), 180);
   };
+  const triggerRef = useRef(trigger);
+  triggerRef.current = trigger;
 
   useEffect(() => {
-    if (!visible) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      const tag = (e.target as HTMLElement | null)?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-      const chip = chipsRef.current.find(
-        (c) => c.shortcut.toLowerCase() === e.key.toLowerCase(),
-      );
-      if (chip) {
-        e.preventDefault();
-        trigger(chip);
-      }
+    const el = ref.current;
+    if (!el) return;
+    const owner: Owner = {
+      el,
+      getChips: () => chipsRef.current,
+      fire: (chip) => triggerRef.current(chip),
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [visible]);
+    register(owner);
+    return () => unregister(owner);
+  }, []);
 
   return (
     <div ref={ref} className={cn('flex flex-wrap items-center justify-center gap-1.5', className)}>

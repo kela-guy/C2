@@ -159,28 +159,46 @@ function FooterPill({
   aiPrompt?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   const jump = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     setOpen(false);
   };
 
+  useEffect(() => {
+    if (!open) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setOpen(false);
+      }
+    };
+
+    const onPointerDown = (e: PointerEvent) => {
+      if (rootRef.current?.contains(e.target as Node)) return;
+      setOpen(false);
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('pointerdown', onPointerDown);
+    };
+  }, [open]);
+
   return (
-    <div className="fixed bottom-6 start-1/2 z-40 -translate-x-1/2 rtl:translate-x-1/2">
+    <div
+      ref={rootRef}
+      className="fixed bottom-6 start-1/2 z-40 -translate-x-1/2 rtl:translate-x-1/2"
+    >
       {open && (
-        <>
-          {/* Outside-click catcher. */}
-          <button
-            type="button"
-            aria-hidden
-            tabIndex={-1}
-            className="fixed inset-0 z-0 cursor-default"
-            onClick={() => setOpen(false)}
-          />
-          <div
-            className="absolute bottom-[calc(100%+8px)] start-1/2 z-10 w-60 -translate-x-1/2 rtl:translate-x-1/2 overflow-hidden rounded-xl border p-1.5 shadow-xl backdrop-blur"
-            style={{ borderColor: 'var(--story-border)', backgroundColor: 'var(--story-bg)' }}
-          >
+        <div
+          className="absolute bottom-[calc(100%+8px)] start-1/2 z-10 w-60 -translate-x-1/2 rtl:translate-x-1/2 overflow-hidden rounded-xl border p-1.5 shadow-xl backdrop-blur"
+          style={{ borderColor: 'var(--story-border)', backgroundColor: 'var(--story-bg)' }}
+        >
             <button
               type="button"
               onClick={onToggleMood}
@@ -218,12 +236,13 @@ function FooterPill({
               ))}
             </div>
           </div>
-        </>
       )}
 
       <div className="relative z-10 flex items-center gap-2">
         <button
           type="button"
+          aria-expanded={open}
+          aria-haspopup="menu"
           onClick={() => setOpen((v) => !v)}
           className="flex items-center gap-2 rounded-full border px-3 py-1.5 shadow-lg backdrop-blur"
           style={{ borderColor: 'var(--story-border)', backgroundColor: 'var(--story-surface)' }}

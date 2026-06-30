@@ -83,7 +83,7 @@ export function Takeaway({ children, className }: { children: ReactNode; classNa
     <div
       data-prose
       className={cn(
-        'mt-2 border-s-2 ps-4 text-[16px] leading-[28px] text-[color:var(--story-muted)]',
+        'mt-10 border-s-2 ps-4 text-[16px] leading-[28px] text-[color:var(--story-muted)]',
         className,
       )}
       style={{ borderColor: 'var(--story-accent)' }}

@@ -242,13 +242,13 @@ export default function PathfinderStory() {
       ),
       stage: (
         <ToastStage sim={RUNNING_SNAPSHOT}>
-          <Annotation arrow="down" style={{ bottom: 'calc(100% + 6px)', left: -4 }}>
+          <Annotation arrow="down" labelAlign="end" style={{ bottom: 'calc(100% + 2px)', left: 13 }}>
             icon / loader
           </Annotation>
-          <Annotation arrow="down" style={{ bottom: 'calc(100% + 6px)', left: 130 }}>
+          <Annotation arrow="down" labelAlign="start" style={{ bottom: 'calc(100% + 2px)', left: 82 }}>
             task label
           </Annotation>
-          <Annotation arrow="up" style={{ top: 'calc(100% + 6px)', right: 0 }}>
+          <Annotation arrow="up" style={{ top: 'calc(100% + 2px)', left: 283 }}>
             context action
           </Annotation>
         </ToastStage>
@@ -284,7 +284,7 @@ export default function PathfinderStory() {
       ),
       stage: (
         <ToastStage sim={simPrimary}>
-          <Annotation arrow="up" style={{ top: 'calc(100% + 6px)', right: 4 }}>
+          <Annotation arrow="up" style={{ top: 'calc(100% + 2px)', left: 289 }}>
             morphs with state
           </Annotation>
         </ToastStage>
@@ -295,17 +295,23 @@ export default function PathfinderStory() {
     // 4 · Auto-run + gate ---------------------------------------------------
     {
       id: 'gate',
-      label: 'Auto-run, then gate',
+      label: 'Backend pace, client gate',
       prose: (
         <>
           <P>
-            Prepare runs on its own — sixteen checks and gates tick by automatically.
-            But the sequence will not commit to flight without a human: at the end of
-            prepare it stops and waits on the operator&apos;s <Mono>Takeoff</Mono>.
+            The prepare steps advance on their own — but the row is not running a
+            clock. It is presentational: in production the backend owns the rhythm
+            and reports each step as it resolves, and the toast simply renders the
+            latest snapshot. On this page a local simulation stands in for that
+            backend so the flow can play.
           </P>
           <P>
-            Pause and step through it beat by beat to feel the pacing, or speed it up.
+            The one thing the client decides is the gate. The sequence will not
+            commit to flight on its own: at the end of prepare it parks in{' '}
+            <Mono>awaiting-takeoff</Mono> and waits for the operator&apos;s{' '}
+            <Mono>Takeoff</Mono> before anything irreversible happens.
           </P>
+          <P>Drive the stand-in to feel the pacing — pause it, or step through it beat by beat.</P>
           <CodeBlock code={CODE_GATE} highlightLines={[3, 4]} />
           <DebugChips
             chips={[
@@ -319,12 +325,12 @@ export default function PathfinderStory() {
       ),
       stage: (
         <ToastStage sim={simGate}>
-          <Annotation arrow="down" style={{ bottom: 'calc(100% + 6px)', left: 96 }}>
-            auto-advances
+          <Annotation arrow="down" style={{ bottom: 'calc(100% + 2px)', left: 82 }}>
+            backend-paced
           </Annotation>
         </ToastStage>
       ),
-      takeaway: <>Automate the rote work, but gate the irreversible step on a deliberate human action.</>,
+      takeaway: <>Let the backend stream the rote steps; gate the one irreversible step on a deliberate human action.</>,
     },
 
     // 5 · Fault + retry -----------------------------------------------------
@@ -355,7 +361,7 @@ export default function PathfinderStory() {
       ),
       stage: (
         <ToastStage sim={simFault}>
-          <Annotation arrow="up" style={{ top: 'calc(100% + 6px)', left: 8 }}>
+          <Annotation arrow="up" style={{ top: 'calc(100% + 2px)', left: 59 }}>
             fault colour
           </Annotation>
         </ToastStage>
@@ -385,7 +391,7 @@ export default function PathfinderStory() {
       ),
       stage: (
         <ToastStage sim={simGate}>
-          <Annotation arrow="down" style={{ bottom: 'calc(100% + 6px)', left: 96 }}>
+          <Annotation arrow="down" style={{ bottom: 'calc(100% + 2px)', left: 82 }}>
             slides on change
           </Annotation>
         </ToastStage>
@@ -486,8 +492,9 @@ export default function PathfinderStory() {
           </P>
           <P>
             Spam them. Mash <Mono>Stop</Mono> mid-step, retry a state with no fault,
-            change speed while it runs. A good interaction tolerates abuse without
-            breaking — the only way to find the broken states is to click around a lot.
+            change the simulated backend pace while it runs. A good interaction
+            tolerates abuse without breaking — the only way to find the broken states
+            is to click around a lot.
           </P>
           <DebugChips
             chips={[
@@ -503,7 +510,7 @@ export default function PathfinderStory() {
           />
           <div className="flex flex-wrap items-center gap-3">
             <label className="flex items-center gap-2 text-[12px] text-[color:var(--story-muted)]">
-              <span className="font-[family:var(--font-mono)] uppercase tracking-[0.12em]">Speed</span>
+              <span className="font-[family:var(--font-mono)] uppercase tracking-[0.12em]">Sim pace</span>
               <input
                 type="range"
                 min={200}
@@ -511,7 +518,7 @@ export default function PathfinderStory() {
                 step={50}
                 value={speedMs}
                 onChange={(e) => setSpeedMs(parseInt(e.target.value, 10))}
-                aria-label="Step speed (ms)"
+                aria-label="Simulated backend pace (ms per step)"
                 className="h-1 w-28 cursor-pointer appearance-none rounded-full"
                 style={{ backgroundColor: 'var(--story-border)', accentColor: 'var(--story-accent)' }}
               />
@@ -545,7 +552,7 @@ export default function PathfinderStory() {
       ),
       stage: (
         <ToastStage sim={simDebug}>
-          <Annotation arrow="down" style={{ bottom: 'calc(100% + 6px)', left: 110 }}>
+          <Annotation arrow="down" style={{ bottom: 'calc(100% + 2px)', left: 82 }}>
             drive every state
           </Annotation>
         </ToastStage>
@@ -562,7 +569,8 @@ export default function PathfinderStory() {
           <P>
             Everything above reduces to a small contract. The toast is presentational:
             give it a <Mono>sim</Mono> and a <Mono>locale</Mono>, and it renders the
-            right row for the current state.
+            right row for the current state. It never owns the pace, the timing, or
+            the sequence — only how the current state looks.
           </P>
 
           <div
@@ -574,7 +582,10 @@ export default function PathfinderStory() {
             </div>
             <div className="mt-1 divide-y" style={{ borderColor: 'var(--story-border)' }}>
               <SpecRow name="sim">
-                A <Mono>PathfinderSim</Mono> from <Mono>usePathfinderLaunchSim</Mono> — state plus the command callbacks.
+                A <Mono>PathfinderSim</Mono> — the current state plus the command
+                callbacks. Here it comes from <Mono>usePathfinderLaunchSim</Mono>, a
+                local timer that fakes the backend; in production you feed the row
+                your backend-driven snapshot instead.
               </SpecRow>
               <SpecRow name="locale">
                 <Mono>&apos;he&apos;</Mono> or <Mono>&apos;en&apos;</Mono>; drives copy and direction.
@@ -601,9 +612,10 @@ export default function PathfinderStory() {
           </div>
 
           <P>
-            Do drive it from the sim and let state pick the CTA. Don&apos;t add buttons
-            outside the context slot, wrap it in another card (it brings its own
-            surface), or animate it on first mount.
+            Do drive it from one state snapshot and let state pick the CTA. Don&apos;t
+            add buttons outside the context slot, wrap it in another card (it brings
+            its own surface), animate it on first mount, or drive the pace from the
+            client — that belongs to the backend.
           </P>
           <P className="text-[16px] leading-[28px] text-[color:var(--story-muted)]">
             The full state set is on the right — the same gallery used to review the

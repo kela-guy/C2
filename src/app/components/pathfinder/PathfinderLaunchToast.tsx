@@ -4,8 +4,8 @@
  * Three elements, nothing else:
  *   1. Icon / loader   — reflects the current state (spinner while working).
  *   2. Task label      — the current step; switches with a snappy slide/fade.
- *   3. Context CTA      — only the action that matters right now (Takeoff /
- *                         Return to dock / Retry), or nothing while auto-running.
+ *   3. Context CTA      — only the action that matters right now for the current
+ *                         state (Stop / Takeoff / Return to dock / Retry).
  *
  * Deliberately near-monochrome: the surface matches the app's sonner card, and
  * color is reserved for the two destructive/fault signals — the Stop action and
