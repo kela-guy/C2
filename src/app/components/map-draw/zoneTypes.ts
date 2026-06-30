@@ -8,7 +8,12 @@
  * Line palettes, and the on-map type chip all iterate this list.
  */
 
-export type GeoZoneType = 'noFly' | 'restricted' | 'alarm' | 'silent';
+export type GeoZoneType =
+  | 'general'
+  | 'noFly'
+  | 'restricted'
+  | 'alarm'
+  | 'silent';
 
 export interface ZoneTypeMeta {
   id: GeoZoneType;
@@ -19,7 +24,18 @@ export interface ZoneTypeMeta {
   description: string;
 }
 
+// `general` is the default every new shape ships with so users can save
+// a shape without having to pick a specific zone type first. We keep a
+// neutral gray as its signature color even though the panel no longer
+// surfaces those circle swatches — other consumers (e.g. on-shape type
+// chip in the overlay) still read `color`.
 export const ZONE_TYPES: ZoneTypeMeta[] = [
+  {
+    id: 'general',
+    label: 'General',
+    color: '#71717a',
+    description: 'No specific zone semantics — generic shape',
+  },
   {
     id: 'noFly',
     label: 'No Fly Zone',

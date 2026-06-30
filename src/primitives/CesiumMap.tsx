@@ -1891,7 +1891,16 @@ export function CesiumMap({
         context, so the per-marker `zIndex` values (10..60) only compete
         with each other instead of bubbling up to the document root.
       */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden z-[1]">
+      {/*
+        Elevated above the map-draw overlay (`z-20` in `MapDrawOverlay`)
+        so map icons stay visible AND clickable even when drawn
+        polygons sit on top of them — fills no longer occlude markers,
+        and clicks land on the icon rather than the polygon. The
+        on-shape label layer at `z-30` is still above, so polygon
+        names continue to float over icons (labels > icons > shapes >
+        basemap).
+      */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden z-[25]">
         {htmlMarkers?.map((m) => (
           <div
             key={m.id}

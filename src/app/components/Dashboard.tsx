@@ -2349,13 +2349,13 @@ export const Dashboard = ({
                   else closeMapDrawPanel();
                 }}
                 className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
-                aria-label={mapDrawPanelOpen ? 'Close drawing' : 'Draw on map'}
+                aria-label="Geo Entities"
               >
                 <PolygonDrawIcon size={20} />
               </Toggle>
             </TooltipTrigger>
             <TooltipContent side={railTooltipSide} sideOffset={8}>
-              {mapDrawPanelOpen ? 'Close drawing' : 'Draw on map'}
+              Geo Entities
             </TooltipContent>
           </Tooltip>
         </div>
@@ -2513,6 +2513,9 @@ export const Dashboard = ({
                   if (id && !mapDrawPanelOpen) openMapDrawPanel();
                 }}
               />
+              {/* Floating Photoshop-style tool palette was removed —
+                  drawing is now initiated via the in-panel "Pick a
+                  tool" CTA in `MapDrawPanel`. */}
             </div>
           </ResizablePanel>
 

@@ -16,7 +16,7 @@
  * panel doesn't feel empty between selections.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Check,
   Eye,
@@ -25,21 +25,33 @@ import {
   LockOpen,
   RotateCcw,
   ChevronRight,
+  ChevronDown,
+  ChevronLeft,
   Search,
   Trash2,
-  X,
   Plus,
   Download,
+  MapPin,
 } from '@/lib/icons/central';
+import {
+  CircleDrawIcon,
+  LineDrawIcon,
+  PolygonDrawIcon,
+} from './icons';
 import { useStrings } from '@/lib/intl';
 import { DockedPanel } from '@/app/components/DockedPanel';
-import { Toggle } from '@/shared/components/ui/toggle';
+import { DirIsland } from '@/lib/direction/DirIsland';
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuTrigger,
 } from '@/app/components/ui/context-menu';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/app/components/ui/popover';
 import { Slider } from '@/app/components/ui/slider';
 import {
   project,
@@ -54,9 +66,12 @@ import {
 import { SANDBOX_BOUNDS } from '../geo-entities-sandbox/fixtures';
 import { ZONE_TYPES, ZONE_TYPE_BY_ID } from './zoneTypes';
 import { deleteShapeWithUndo } from './deleteWithUndo';
-import { CircleDrawIcon, LineDrawIcon, PolygonDrawIcon } from './icons';
-import { MapPin } from '@/lib/icons/central';
-import { useMapDraw, type MapDrawTool, type MapDrawContextValue } from './MapDrawProvider';
+import {
+  useMapDraw,
+  type MapDrawContextValue,
+  type MapDrawTool,
+} from './MapDrawProvider';
+import type { UseGeoDrawResult } from '../geo-entities-sandbox/useGeoDraw';
 import { getZOrderActions, type ShapeAction } from './shapeActions';
 
 // Type scale kept in step with the sibling docked panels (Simulations /
@@ -67,12 +82,6 @@ const STATUS_OPTIONS: { id: GeoAreaStatus; label: string; tone: string }[] = [
   { id: 'low', label: 'Low', tone: '#34d399' },
   { id: 'middle', label: 'Middle', tone: '#facc15' },
   { id: 'high', label: 'High', tone: '#f43f5e' },
-];
-
-const LINE_STYLES: { id: GeoLineStyle; label: string }[] = [
-  { id: 'solid', label: 'Solid' },
-  { id: 'dashed', label: 'Dashed' },
-  { id: 'none', label: 'None' },
 ];
 
 /**
@@ -93,42 +102,20 @@ const LINE_STYLES: { id: GeoLineStyle; label: string }[] = [
  */
 export type MapDrawPanelVariant = 'original' | 'opt2' | 'opt3' | 'opt5';
 
-type ToolPickerStyle = 'tiles' | 'chips' | 'segmented';
-
 interface VariantConfig {
   layersDefaultOpen: boolean;
-  toolsCollapsible: boolean;
-  toolsDefaultOpen: boolean;
-  picker: ToolPickerStyle;
 }
 
+// Tool-picker fields used to live here too, but with tools moved into the
+// floating `MapDrawToolbar` only the Layers default-open state still varies
+// between lab variants. The variant prop and switcher are kept for the lab
+// route so reviewers can keep comparing the historical designs side by
+// side; in production they all collapse to the same panel chrome.
 const VARIANT_CONFIG: Record<MapDrawPanelVariant, VariantConfig> = {
-  original: {
-    layersDefaultOpen: false,
-    toolsCollapsible: false,
-    toolsDefaultOpen: true,
-    picker: 'tiles',
-  },
-  opt2: {
-    layersDefaultOpen: true,
-    toolsCollapsible: true,
-    toolsDefaultOpen: false,
-    picker: 'chips',
-  },
-  opt3: {
-    layersDefaultOpen: true,
-    toolsCollapsible: false,
-    toolsDefaultOpen: true,
-    picker: 'segmented',
-  },
-  opt5: {
-    layersDefaultOpen: true,
-    // Production keeps the top of the panel chrome-free — Tools is a
-    // plain heading, not a collapsible (no chevron, no expand state).
-    toolsCollapsible: false,
-    toolsDefaultOpen: true,
-    picker: 'segmented',
-  },
+  original: { layersDefaultOpen: false },
+  opt2: { layersDefaultOpen: true },
+  opt3: { layersDefaultOpen: true },
+  opt5: { layersDefaultOpen: true },
 };
 
 export interface MapDrawPanelProps {
@@ -173,14 +160,20 @@ export function MapDrawPanel({
   const closeLabel = tAll.flowBuilder.simulations.close ?? 'Close';
 
   const { draw, drawTool, setDrawTool } = useMapDraw();
-  const selected = draw.selectedShape;
+  // `draw.selectedShape` is no longer read here: the new view machine
+  // is driven entirely by `pendingShapeId` so a regular click-select
+  // never opens the editor — only a freshly-drawn (staged) shape does.
 
   // In lab mode the variant is user-controlled (via the switcher); in
   // production it's a fixed prop. We re-seed local state whenever the
   // prop changes so the parent can still force a variant.
   const [variant, setVariant] = useState<MapDrawPanelVariant>(variantProp);
   useEffect(() => setVariant(variantProp), [variantProp]);
-  const cfg = VARIANT_CONFIG[variant];
+  // VARIANT_CONFIG only carried `layersDefaultOpen`, which is no longer
+  // consulted since the search input is now always visible and the
+  // Geo Entities list is always expanded. Kept around as the live
+  // variant string so the lab switcher still has something to drive.
+  void VARIANT_CONFIG[variant];
 
   // Type-panel lab state. Only consulted when `typeLab` is on; we still
   // hold it unconditionally so the hook order is stable across renders.
@@ -192,35 +185,23 @@ export function MapDrawPanel({
     makePreviewShape(),
   );
 
-  // Keep the inspector "sticky": once a shape has been drawn/selected we
-  // hold onto its id so the inspector stays open even after the user
-  // clicks off the shape (deselects). It only falls back to the empty
-  // instruction state when there is no shape to edit at all.
-  const [stickyId, setStickyId] = useState<string | null>(null);
-  useEffect(() => {
-    if (selected) setStickyId(selected.id);
-  }, [selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Two-view state machine driven by `pendingShapeId`:
+  //
+  //   pendingShapeId !== null  -> view B (Draft detail + Save / Cancel
+  //                                footer; Layers list hidden)
+  //   pendingShapeId === null  -> view A (Layers list / empty state +
+  //                                "Pick a tool" CTA footer)
+  //
+  // The pending shape is the only "inspected" shape in view B. Once
+  // the user Saves or Cancels we drop back into view A.
+  const pendingShape = draw.pendingShapeId
+    ? (draw.shapes.find((s) => s.id === draw.pendingShapeId) ?? null)
+    : null;
+  const inspected = pendingShape;
 
-  // Auto-arm Polygon as soon as the panel opens so the user can start
-  // drawing without first picking a tool. Skipped if a tool is already
-  // active (e.g. user re-opens mid-flow) or a draft is mid-flight.
-  useEffect(() => {
-    if (drawTool == null && !draw.draft) setDrawTool('polygon');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const inspected =
-    selected ?? draw.shapes.find((s) => s.id === stickyId) ?? null;
-
-  const toolsNode = (
-    <ToolsSection
-      drawTool={drawTool}
-      onPick={setDrawTool}
-      style={cfg.picker}
-      collapsible={cfg.toolsCollapsible}
-      defaultOpen={cfg.toolsDefaultOpen}
-    />
-  );
+  // Removed: the previous version auto-armed Polygon when the panel
+  // opened. The new flow forces the user to deliberately pick a tool
+  // via the in-panel "Pick a tool" CTA, so we leave the tool null.
 
   return (
     <DockedPanel
@@ -230,13 +211,50 @@ export function MapDrawPanel({
       width={width}
       noTransition={noTransition}
       dataHandoff="map-draw-panel"
-      title={<h2 className="text-sm font-semibold truncate">Drawing</h2>}
+      title={
+        <DirIsland as="span" direction="ltr" className="block">
+          {inspected ? (
+            // Detail view — render a back arrow on the LEFT so the user
+            // can return to the Geo Entities list without having to use
+            // the footer Cancel button. Tapping it calls `cancelPending`,
+            // which for a brand-new draft hard-deletes the shape and for
+            // an existing-shape edit (`pendingIsNew === false`) just
+            // closes the editor.
+            <span className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => draw.cancelPending()}
+                aria-label="Back to Geo Entities"
+                title="Back to Geo Entities"
+                className="-ms-1 grid size-6 shrink-0 place-items-center rounded text-zinc-300 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <h2 className="truncate text-sm font-semibold">Geo Entities</h2>
+            </span>
+          ) : (
+            <h2 className="text-sm font-semibold truncate">Geo Entities</h2>
+          )}
+        </DirIsland>
+      }
       closeAriaLabel={closeLabel}
-      bodyClassName="px-4 py-3 space-y-5"
+      bodyClassName="px-4 py-3"
       // Raise above the screen-space drawing overlay (z-20) so the panel
       // and its tool buttons stay clickable and aren't covered by shapes.
       className="z-30"
     >
+      {/* All copy in the panel is English-only (section titles, field
+          labels, layer names typed by users). Pin the entire body to LTR
+          via `DirIsland` so the headings read in their natural order and
+          logical CSS utilities (`ms-*`, `text-start`) anchor on the left
+          regardless of the app's global Hebrew direction.
+
+          A full-height flex column lets the active branch (LayersView /
+          DraftDetailView / DraftControls) expand to fill the body, which
+          in turn lets the in-branch CTA / Save-Cancel footer pin against
+          the actual bottom of the panel rather than floating mid-body
+          when the list above it is short. */}
+      <DirIsland direction="ltr" className="flex h-full flex-col gap-5">
       {lab && <VariantSwitcher variant={variant} onChange={setVariant} />}
 
       {typeLab && (
@@ -257,51 +275,267 @@ export function MapDrawPanel({
         </>
       )}
 
-      {/* While a draft is in flight the panel collapses down to just the
-          tool picker + the draft controls — every other section (Type,
-          Inspector, Layers) is hidden so the user can focus on placing
-          vertices. The full panel reappears the moment the draft is
-          committed. */}
-      {draw.draft ? (
-        <>
-          {toolsNode}
+      {/* Three render branches, gated on the draw state machine:
+          1. `draw.draft` in flight   -> DraftControls only (Finish / Reset)
+          2. `pendingShape` staged   -> view B: full editor + Save/Cancel
+          3. otherwise                -> view A: Geo Entities list + Pick-a-tool CTA
+
+          The wrapper is `flex flex-1 min-h-0 flex-col` so each branch
+          owns the panel's full vertical space — that's what lets the
+          footers in views A / B pin to the panel bottom on a short list. */}
+      <div className="flex min-h-0 flex-1 flex-col">
+        {draw.draft ? (
           <DraftControls draw={draw} />
-        </>
-      ) : (
-        <>
-          {/* Type lives ABOVE Tools — it's the first required choice once
-              a shape is drawn / selected. Rendered as a plain section
-              (no chevron) so the panel header reads cleanly. */}
-          {inspected && (
-            <TypeField
-              shape={inspected}
-              onPatch={(patch) => draw.updateShape(inspected.id, patch)}
-              variant={typeLab ? typeVariant : undefined}
-              chrome="plain"
-            />
-          )}
-
-          {toolsNode}
-
-          {inspected && (
-            <ShapeInspector
-              shape={inspected}
-              onPatch={(patch) => draw.updateShape(inspected.id, patch)}
-            />
-          )}
-
-          {/* Layers always sits at the bottom (Figma-style) so the panel
-              reads top-down: what you're working on → how to draw → the
-              full project list. */}
-          <LayersSection
+        ) : inspected ? (
+          <DraftDetailView
+            shape={inspected}
             draw={draw}
-            defaultOpen={cfg.layersDefaultOpen}
-            autoEditId={draw.lastCommittedId}
-            onAutoEditConsumed={draw.clearLastCommittedId}
+            typeLab={typeLab}
+            typeVariant={typeVariant}
           />
-        </>
-      )}
+        ) : (
+          <LayersView
+            draw={draw}
+            drawTool={drawTool}
+            setDrawTool={setDrawTool}
+          />
+        )}
+      </div>
+      </DirIsland>
     </DockedPanel>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// View B: Draft detail
+//
+// Shown while a shape is staged (`pendingShapeId` set on the draw
+// engine). Hosts the per-shape editor stack — Name, Type, Coordinates,
+// Color — and a sticky Save / Cancel footer. Save is gated on
+// `description.trim()` being non-empty so the user always commits a
+// named shape; Cancel discards the shape entirely (no undo toast).
+// The Layers list is intentionally not rendered here: the user is in
+// "finish this shape" mode, not "review the project" mode.
+// ---------------------------------------------------------------------------
+
+function DraftDetailView({
+  shape,
+  draw,
+  typeLab,
+  typeVariant,
+}: {
+  shape: GeoShape;
+  draw: UseGeoDrawResult;
+  typeLab: boolean;
+  typeVariant: TypePanelVariant;
+}) {
+  const canSave = shape.description.trim().length > 0;
+  return (
+    // Full-height flex column — scrollable editor stack on top, pinned
+    // Save / Cancel footer at the bottom. The parent (panel body) hands
+    // us the full vertical space so the footer always sits flush
+    // against the panel's bottom edge.
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex flex-1 min-h-0 flex-col gap-5 overflow-y-auto pb-3">
+        <NameField
+          key={`name-${shape.id}`}
+          shape={shape}
+          onPatch={(patch) => draw.updateShape(shape.id, patch)}
+          autoFocus={draw.lastCommittedId === shape.id}
+          onAutoFocusConsumed={draw.clearLastCommittedId}
+        />
+        <TypeField
+          shape={shape}
+          onPatch={(patch) => draw.updateShape(shape.id, patch)}
+          variant={typeLab ? typeVariant : undefined}
+          chrome="plain"
+        />
+        <CoordinatesSection
+          shape={shape}
+          onPatch={(patch) => draw.updateShape(shape.id, patch)}
+        />
+        <hr className="border-t border-white/10" />
+        <ColorSection
+          shape={shape}
+          onPatch={(patch) => draw.updateShape(shape.id, patch)}
+        />
+      </div>
+
+      {/* Save / Cancel footer pinned to the panel bottom via the flex
+          layout above (not `sticky`). Save is disabled when the shape
+          has no name — empty names slip through the project too
+          easily otherwise. */}
+      <div className="-mx-4 -mb-3 shrink-0 flex items-center justify-end gap-2 border-t border-white/10 bg-[#161616]/95 px-4 py-3 backdrop-blur-md">
+        <button
+          type="button"
+          onClick={() => draw.cancelPending()}
+          className="rounded-md border border-white/10 bg-transparent px-3 py-1.5 text-[12px] font-medium text-zinc-200 transition-colors hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          disabled={!canSave}
+          onClick={() => draw.savePending()}
+          title={canSave ? 'Save shape' : 'Name is required'}
+          className="rounded-md border border-transparent bg-white px-3 py-1.5 text-[12px] font-semibold text-black transition-colors hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 disabled:cursor-not-allowed disabled:bg-white/20 disabled:text-white/45"
+        >
+          Save
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// View A: Layers + Pick-a-tool
+//
+// The default panel view. Renders the project-wide Layers list (or a
+// centered empty-state callout when there are none) and a sticky
+// "Pick a tool" footer that arms the drawing engine. The four tools
+// surfaced in the popover are Polygon, Line, Circle, and Point —
+// matching the canonical drawing primitives. Selecting a tool kicks
+// the user straight into draw mode; the panel then transitions to
+// view B once the geometry is complete.
+// ---------------------------------------------------------------------------
+
+/**
+ * Tool entries surfaced in the "Pick a tool" popover. The icon column
+ * mirrors the leading-glyph treatment on each Geo Entities row so the
+ * user reads "pick this shape" -> "row carries the same icon" without
+ * a translation step.
+ */
+const PICK_TOOL_OPTIONS: {
+  id: MapDrawTool;
+  label: string;
+  Icon: React.ComponentType<{ size?: number; className?: string }>;
+}[] = [
+  { id: 'polygon', label: 'Polygon', Icon: PolygonDrawIcon },
+  { id: 'line', label: 'Line', Icon: LineDrawIcon },
+  { id: 'circle', label: 'Circle', Icon: CircleDrawIcon },
+  { id: 'point', label: 'Point', Icon: MapPin },
+];
+
+function LayersView({
+  draw,
+  drawTool,
+  setDrawTool,
+}: {
+  draw: UseGeoDrawResult;
+  drawTool: MapDrawTool | null;
+  setDrawTool: (tool: MapDrawTool | null) => void;
+}) {
+  const [pickOpen, setPickOpen] = useState(false);
+  // Search query lives here (lifted out of LayersSection) so the input
+  // can render unconditionally at the top of the view — the reference
+  // shows it as an always-visible field rather than a magnifier toggle.
+  const [query, setQuery] = useState('');
+  const hasLayers = draw.shapes.length > 0;
+  return (
+    // Full-height flex column so the CTA footer pins to the panel
+    // bottom regardless of how short the list above it is. The list
+    // region takes the remaining space and scrolls internally.
+    <div className="flex h-full min-h-0 flex-col">
+      {/* Always-visible search input — promoted out of the inner
+          Layers subheader and into the view header. Disabled when
+          there are no entities to filter so the placeholder still
+          reads as the "look here to search" affordance once the user
+          starts adding shapes. */}
+      {hasLayers && (
+        <div className="mb-3 shrink-0">
+          <div className="relative">
+            <Search
+              size={14}
+              className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-white/45"
+            />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by name or entity"
+              aria-label="Search geo entities by name or entity"
+              className="w-full rounded-md border border-white/10 bg-white/[0.04] py-1.5 ps-8 pe-2.5 text-[12.5px] text-white placeholder:text-white/40 outline-none focus:border-white/30 focus:bg-white/[0.08]"
+            />
+          </div>
+        </div>
+      )}
+      <div className="flex-1 min-h-0 overflow-y-auto pb-3">
+        {hasLayers ? (
+          <LayersSection draw={draw} query={query} />
+        ) : (
+          // Centered empty-state callout — fills the list region so the
+          // copy sits in the visual middle of the panel rather than
+          // collapsing against the section header.
+          <div className="flex h-full items-center justify-center px-2 text-center">
+            <p className="max-w-[28ch] text-[12.5px] leading-relaxed text-zinc-400">
+              Pick a tool from the bottom of this panel, then click to start
+              drawing. The shape&apos;s details show up here once it&apos;s placed.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Footer hosting the "Pick a tool" Popover. Pinned to the panel
+          bottom via the flex layout above (not `sticky`, since the
+          parent column gives us a real bottom edge). Styled as a solid
+          primary CTA — full-width accent fill, centered label,
+          chevron-down — matching the product reference's primary CTA. */}
+      <div className="-mx-4 -mb-3 shrink-0 border-t border-white/10 bg-[#161616]/95 px-4 py-3 backdrop-blur-md">
+        <Popover open={pickOpen} onOpenChange={setPickOpen}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="flex w-full items-center justify-center gap-2 rounded-md bg-accent-info px-3 py-2.5 text-[12.5px] font-semibold text-slate-1 shadow-sm transition-colors hover:bg-accent-info/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-info/50"
+            >
+              <span>
+                {drawTool
+                  ? `Drawing: ${
+                      PICK_TOOL_OPTIONS.find((t) => t.id === drawTool)?.label ??
+                      drawTool
+                    }`
+                  : 'Add a Geo Entity'}
+              </span>
+              <ChevronDown size={15} className="text-slate-1/80" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            align="end"
+            side="top"
+            className="w-[var(--radix-popover-trigger-width)] border-white/10 bg-[#1a1a1a]/95 p-1 text-white backdrop-blur-xl"
+          >
+            <ul role="listbox" aria-label="Geo entity tool">
+              {PICK_TOOL_OPTIONS.map((opt) => {
+                const isActive = drawTool === opt.id;
+                return (
+                  <li key={opt.id}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={isActive}
+                      onClick={() => {
+                        setDrawTool(opt.id);
+                        setPickOpen(false);
+                      }}
+                      className={`flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-[12.5px] transition-colors focus-visible:outline-none ${
+                        isActive
+                          ? 'bg-white/[0.10] text-white'
+                          : 'text-zinc-200 hover:bg-white/[0.06] hover:text-white'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <opt.Icon size={15} className="text-white/75" />
+                        <span>{opt.label}</span>
+                      </span>
+                      {isActive && <Check size={14} className="text-white" />}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </PopoverContent>
+        </Popover>
+      </div>
+    </div>
   );
 }
 
@@ -422,7 +656,7 @@ function makePreviewShape(): GeoShape {
 }
 
 // ---------------------------------------------------------------------------
-// Layers — searchable list of every drawn shape
+// Geo Entities — searchable list of every drawn shape
 // ---------------------------------------------------------------------------
 
 function shapeLabel(shape: GeoShape): string {
@@ -430,42 +664,48 @@ function shapeLabel(shape: GeoShape): string {
   return named || shape.name || 'Untitled';
 }
 
+/**
+ * Shape-kind glyph — surfaced both on each Geo Entities row (to make the
+ * list scannable at a glance: triangle for polygon, slash for line,
+ * etc.) and in the "Pick a tool" popover (one glyph per tool option).
+ *
+ * `tool` is consulted as a fallback because `polyline` covers BOTH the
+ * straight-line and arrow tools at the engine level — without it the
+ * arrow tool's rows would still read as a plain line glyph. Returning
+ * `LineDrawIcon` for arrows is intentional: the arrow's directional cue
+ * lives on the shape itself, not on the row icon.
+ */
+function ShapeKindIcon({
+  kind,
+  tool,
+  size = 15,
+  className,
+}: {
+  kind: GeoShape['kind'];
+  tool?: GeoShape['tool'];
+  size?: number;
+  className?: string;
+}) {
+  if (kind === 'circle') return <CircleDrawIcon size={size} className={className} />;
+  if (kind === 'point') return <MapPin size={size} className={className} />;
+  if (kind === 'polyline') return <LineDrawIcon size={size} className={className} />;
+  // polygon | freehand — both render as the polygon glyph (freehand is a
+  // closed irregular polygon at the engine level).
+  void tool;
+  return <PolygonDrawIcon size={size} className={className} />;
+}
+
 function LayersSection({
   draw,
-  defaultOpen = false,
-  autoEditId,
-  onAutoEditConsumed,
+  query = '',
 }: {
   draw: MapDrawContextValue['draw'];
-  defaultOpen?: boolean;
   /**
-   * Id of a shape that should open in rename mode the moment its row
-   * mounts. Used to focus the freshly-drawn shape's name input so the
-   * user sees a blinking caret and can start typing immediately.
+   * Filter substring driven by the always-visible search input in the
+   * parent `LayersView`. Empty string means "no filter".
    */
-  autoEditId?: string | null;
-  onAutoEditConsumed?: () => void;
+  query?: string;
 }) {
-  const [query, setQuery] = useState('');
-  const [open, setOpen] = useState(defaultOpen);
-  // Search is hidden behind an icon by default; toggling it reveals the
-  // input (and clears the query when collapsed so the list isn't silently
-  // filtered while the field is out of sight).
-  const [searching, setSearching] = useState(false);
-  // Variant flips can change the default-open intent at runtime (lab
-  // mode); honour the new default whenever it changes so flipping a
-  // variant flips the section state.
-  useEffect(() => setOpen(defaultOpen), [defaultOpen]);
-
-  // Pop the section open + clear search whenever a brand-new shape is
-  // committed so the auto-focused rename input is actually visible.
-  useEffect(() => {
-    if (autoEditId) {
-      setOpen(true);
-      setQuery('');
-    }
-  }, [autoEditId]);
-
   if (draw.shapes.length === 0) return null;
 
   const q = query.trim().toLowerCase();
@@ -474,199 +714,167 @@ function LayersSection({
   );
 
   return (
-    <section className="space-y-2">
-      <div className="flex w-full items-center gap-2">
-        <button
-          type="button"
-          aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
-          className="flex min-w-0 flex-1 items-center text-left focus-visible:outline-none"
-        >
-          <span className={`${TYPE_GROUP_TITLE} flex min-w-0 items-center`}>
-            <span className="truncate">Layers</span>
-          </span>
-        </button>
-        <button
-          type="button"
-          aria-label={searching ? 'Hide search' : 'Search layers'}
-          title={searching ? 'Hide search' : 'Search layers'}
-          aria-pressed={searching}
-          onClick={() => {
-            // Opening the section if needed, then toggling the field.
-            setOpen(true);
-            setSearching((v) => {
-              if (v) setQuery('');
-              return !v;
-            });
-          }}
-          className={`grid size-5 shrink-0 place-items-center rounded transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
-            searching ? 'text-white' : 'text-zinc-500'
-          }`}
-        >
-          <Search size={14} />
-        </button>
-      </div>
-
-      {open && (
-        <>
-          {searching && (
-            <input
-              type="text"
-              autoFocus
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by name"
-              aria-label="Search layers by name"
-              className="w-full rounded-md border border-white/10 bg-white/5 px-2.5 py-1.5 text-[13px] text-white placeholder:text-white/40 outline-none focus:border-white/30"
-            />
-          )}
-
-          <ul className="max-h-56 space-y-1 overflow-y-auto">
-            {matches.length === 0 ? (
-              <li className="px-1 py-2 text-[12px] text-zinc-500">No layers match “{query}”.</li>
-            ) : (
-              matches.map((s) => (
-                <LayerRow
-                  key={s.id}
-                  shape={s}
-                  active={s.id === draw.selectedId}
-                  zOrderActions={getZOrderActions(draw, s.id)}
-                  onSelect={() => draw.setSelectedId(s.id)}
-                  onRename={(name) => draw.updateShape(s.id, { description: name })}
-                  onToggleHidden={() => draw.updateShape(s.id, { hidden: !s.hidden })}
-                  onToggleLocked={() => draw.updateShape(s.id, { locked: !s.locked })}
-                  onDelete={() => deleteShapeWithUndo(draw, s.id)}
-                  autoEdit={s.id === autoEditId}
-                  onAutoEditConsumed={onAutoEditConsumed}
-                />
-              ))
-            )}
-          </ul>
-        </>
+    // Subheader and magnifier toggle removed — the panel-level title
+    // already says "Geo Entities" and the search input now lives at
+    // the top of `LayersView` as an always-visible field. This
+    // section is just the list now.
+    <ul className="space-y-1.5">
+      {matches.length === 0 ? (
+        <li className="px-1 py-2 text-[12px] text-zinc-500">
+          No entities match “{query}”.
+        </li>
+      ) : (
+        matches.map((s) => (
+          <LayerRow
+            key={s.id}
+            shape={s}
+            zOrderActions={getZOrderActions(draw, s.id)}
+            onToggleHidden={() => draw.updateShape(s.id, { hidden: !s.hidden })}
+            onToggleLocked={() => draw.updateShape(s.id, { locked: !s.locked })}
+            onDelete={() => deleteShapeWithUndo(draw, s.id)}
+            onEdit={() => draw.beginEditShape(s.id)}
+          />
+        ))
       )}
-    </section>
+    </ul>
   );
 }
 
 function LayerRow({
   shape,
-  active,
   zOrderActions,
-  onSelect,
-  onRename,
   onToggleHidden,
   onToggleLocked,
   onDelete,
-  autoEdit = false,
-  onAutoEditConsumed,
+  onEdit,
 }: {
   shape: GeoShape;
-  active: boolean;
   zOrderActions: ShapeAction[];
-  onSelect: () => void;
-  onRename: (name: string) => void;
   onToggleHidden: () => void;
   onToggleLocked: () => void;
   onDelete: () => void;
-  /** Render in rename mode immediately on first mount (auto-focus). */
-  autoEdit?: boolean;
-  /** Called once `autoEdit` has been handled so the parent can clear it. */
-  onAutoEditConsumed?: () => void;
+  /** Open the Draft-detail editor for this shape. */
+  onEdit: () => void;
 }) {
   const status = STATUS_OPTIONS.find((o) => o.id === shape.status);
-  const [editing, setEditing] = useState(autoEdit);
-  // Pop into rename mode whenever the parent flags this row as the
-  // "just-committed" shape — runs in an effect (not at render time) so
-  // we can call back to clear the marker in the same tick.
-  useEffect(() => {
-    if (autoEdit) {
-      setEditing(true);
-      onAutoEditConsumed?.();
-    }
-    // We only react to a fresh `autoEdit === true` signal; subsequent
-    // false transitions shouldn't force editing back off (the user may
-    // still be typing).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoEdit]);
+  // Bridge the row hover state to the shared map-draw context so the
+  // overlay can paint a highlight halo on the matching shape. Keyboard
+  // focus is also surfaced so tab-through the list highlights too.
+  // Also *read* the hover state so the row brightens whenever its
+  // shape is hovered on the map — symmetric with hovering the row.
+  const { hoveredShapeId, setHoveredShapeId } = useMapDraw();
+  const hovered = hoveredShapeId === shape.id;
+  // Open the detail editor for this row's shape and proactively drop
+  // the hovered marker from the context. The row unmounts on transition
+  // and React doesn't reliably fire `pointerleave` on an unmounting
+  // node, so without this the map-side fill overlay can stick around
+  // on the freshly-edited shape.
+  const openDetail = useCallback(() => {
+    setHoveredShapeId(null);
+    onEdit();
+  }, [onEdit, setHoveredShapeId]);
+  // Keep Eye / Lock / Trash from also triggering the card's `openDetail`
+  // — the bottom-row toggles are local actions, not navigation.
+  const stop = (e: { stopPropagation: () => void }) => e.stopPropagation();
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <li
-          className={`group flex items-center gap-2 rounded-md border px-2 py-1.5 transition-colors ${
-            active
-              ? 'border-white/20 bg-white/[0.10]'
-              : 'border-transparent hover:border-white/10 hover:bg-white/[0.05]'
+          onClick={openDetail}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              openDetail();
+            }
+          }}
+          tabIndex={0}
+          role="button"
+          aria-label={`Open ${shapeLabel(shape)}`}
+          onMouseEnter={() => setHoveredShapeId(shape.id)}
+          onMouseLeave={() => setHoveredShapeId(null)}
+          onFocus={() => setHoveredShapeId(shape.id)}
+          onBlur={() => setHoveredShapeId(null)}
+          className={`group flex cursor-pointer flex-col gap-1.5 rounded-md border px-2.5 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
+            hovered
+              ? 'border-white/15 bg-white/[0.08]'
+              : 'border-transparent bg-white/[0.03] hover:border-white/10 hover:bg-white/[0.06]'
           }`}
         >
-          {status && (
+          {/* Top row — shape-kind glyph + name + Trash. The whole row
+              opens the detail editor on click; Trash stops propagation
+              so the delete action doesn't double-fire as "open then
+              delete". The name renders as a span (not an input) — the
+              user edits it inside the detail panel where the name
+              field is the canonical home. */}
+          <div className="flex items-center gap-2">
             <span
-              className="size-2 shrink-0 rounded-full ring-1 ring-inset ring-white/20"
-              style={{ background: status.tone }}
-              title={`Status: ${status.label}`}
-              aria-label={`Status: ${status.label}`}
-            />
-          )}
-          {editing ? (
-            <input
-              autoFocus
-              type="text"
-              value={shape.description ?? ''}
-              placeholder="Add name"
-              aria-label="Layer name"
-              onChange={(e) => onRename(e.target.value)}
-              onFocus={(e) => e.currentTarget.select()}
-              onBlur={() => setEditing(false)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === 'Escape') {
-                  e.preventDefault();
-                  setEditing(false);
-                }
-              }}
-              className="min-w-0 flex-1 rounded border border-white/20 bg-white/10 px-1.5 py-0.5 text-[13px] text-white placeholder:text-white/40 outline-none focus:border-white/40"
-            />
-          ) : (
-            <button
-              type="button"
-              onClick={onSelect}
-              onDoubleClick={() => setEditing(true)}
-              className={`min-w-0 flex-1 truncate text-left text-[13px] ${
+              className="grid size-5 shrink-0 place-items-center text-white/70"
+              aria-hidden
+            >
+              <ShapeKindIcon kind={shape.kind} tool={shape.tool} size={15} />
+            </span>
+            <span
+              className={`min-w-0 flex-1 truncate text-[13px] font-medium ${
                 shape.hidden ? 'text-white/40' : 'text-zinc-100'
               }`}
-              title="Click to select · double-click to rename"
             >
               {shapeLabel(shape)}
+            </span>
+            <button
+              type="button"
+              onClick={(e) => {
+                stop(e);
+                onDelete();
+              }}
+              aria-label="Delete layer"
+              title="Delete layer"
+              className="grid size-6 shrink-0 place-items-center rounded text-white/45 transition-colors hover:bg-rose-500/20 hover:text-rose-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+            >
+              <Trash2 size={14} />
             </button>
-          )}
-          <button
-            type="button"
-            onClick={onToggleLocked}
-            aria-label={shape.locked ? 'Unlock layer' : 'Lock layer'}
-            title={shape.locked ? 'Unlock layer' : 'Lock layer'}
-            aria-pressed={!!shape.locked}
-            className={`grid size-6 shrink-0 place-items-center rounded transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
-              shape.locked ? 'text-white' : 'text-white/45'
-            }`}
-          >
-            {shape.locked ? <Lock size={14} /> : <LockOpen size={14} />}
-          </button>
-          <button
-            type="button"
-            onClick={onToggleHidden}
-            aria-label={shape.hidden ? 'Show layer' : 'Hide layer'}
-            title={shape.hidden ? 'Show layer' : 'Hide layer'}
-            className="grid size-6 shrink-0 place-items-center rounded text-white/45 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
-          >
-            {shape.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
-          </button>
-          <button
-            type="button"
-            onClick={onDelete}
-            aria-label="Delete layer"
-            title="Delete layer"
-            className="grid size-6 shrink-0 place-items-center rounded text-white/45 opacity-0 transition-colors hover:bg-rose-500/20 hover:text-rose-300 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 group-hover:opacity-100"
-          >
-            <Trash2 size={14} />
-          </button>
+          </div>
+
+          {/* Bottom row — Eye + Lock toggles + status dot. Always
+              visible so the user can flip visibility / lock state from
+              the card without opening the detail editor. Each button
+              stops the click from bubbling to the card-level handler. */}
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={(e) => {
+                stop(e);
+                onToggleHidden();
+              }}
+              aria-label={shape.hidden ? 'Show layer' : 'Hide layer'}
+              title={shape.hidden ? 'Show layer' : 'Hide layer'}
+              className="grid size-6 shrink-0 place-items-center rounded text-white/55 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+            >
+              {shape.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                stop(e);
+                onToggleLocked();
+              }}
+              aria-label={shape.locked ? 'Unlock layer' : 'Lock layer'}
+              title={shape.locked ? 'Unlock layer' : 'Lock layer'}
+              aria-pressed={!!shape.locked}
+              className={`grid size-6 shrink-0 place-items-center rounded transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
+                shape.locked ? 'text-white' : 'text-white/45'
+              }`}
+            >
+              {shape.locked ? <Lock size={14} /> : <LockOpen size={14} />}
+            </button>
+            {status && (
+              <span
+                className="ms-1 size-2 shrink-0 rounded-full ring-1 ring-inset ring-white/20"
+                style={{ background: status.tone }}
+                title={`Status: ${status.label}`}
+                aria-label={`Status: ${status.label}`}
+              />
+            )}
+          </div>
         </li>
       </ContextMenuTrigger>
       <ContextMenuContent>
@@ -682,6 +890,111 @@ function LayerRow({
         ))}
       </ContextMenuContent>
     </ContextMenu>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Name field — first row of the inspector. Auto-focuses + selects its
+// input the moment a fresh shape is committed (driven by
+// `draw.lastCommittedId`) so the user can start typing the shape's name
+// without an extra click. Acts as the canonical home for the shape name;
+// the Layers row no longer pops into rename mode on commit.
+// ---------------------------------------------------------------------------
+
+function NameField({
+  shape,
+  onPatch,
+  autoFocus,
+  onAutoFocusConsumed,
+}: {
+  shape: GeoShape;
+  onPatch: (patch: Partial<GeoShape>) => void;
+  /** Focus + select the input on mount (and on transitions to true). */
+  autoFocus: boolean;
+  /** Called once the auto-focus has been handled so the parent can clear it. */
+  onAutoFocusConsumed?: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  // "Needs attention" — true the moment this field is auto-focused after
+  // a draw commit, and stays true until the user starts typing or hits
+  // Enter. While true, the input wears an orange ring so it reads as
+  // "this is the next thing to do". The state is local (not derived
+  // from props) because we want it to survive past the one-tick
+  // `autoFocus` signal that triggers it.
+  const [needsAttention, setNeedsAttention] = useState(autoFocus);
+
+  // Live commit: every keystroke patches the shape directly. The user
+  // asked for the Save button to light up the moment they start typing
+  // (rather than requiring an Enter / blur first). Save is gated on
+  // `shape.description.trim().length > 0` in the parent, so binding the
+  // input straight to `shape.description` and patching on each change
+  // gives Save its real-time-enabled behavior.
+  const stored = shape.description ?? '';
+
+  // Pop the caret into the input whenever the auto-focus marker fires.
+  // Runs in an effect (not at render time) so we can call back to clear
+  // the signal in the same tick — otherwise the next render would try to
+  // re-steal focus from anything the user has tabbed into.
+  useEffect(() => {
+    if (!autoFocus) return;
+    const el = inputRef.current;
+    if (!el) return;
+    setNeedsAttention(true);
+    // Defer one frame so the focus call lands after the panel's open
+    // transition settles; otherwise the browser may swallow the caret
+    // when the surrounding panel is still animating in.
+    const id = window.requestAnimationFrame(() => {
+      el.focus();
+      el.select();
+    });
+    onAutoFocusConsumed?.();
+    return () => window.cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoFocus]);
+
+  // Borderless, transparent name field — reads as "the title is right
+  // there, just click and type". The user explicitly didn't want a
+  // bordered input box around the name; the caret + spell-check is the
+  // only chrome we keep. The attention treatment still draws a hairline
+  // orange ring so a freshly-committed shape calls itself out, but the
+  // base state is pure text-on-panel.
+  const baseClass =
+    'w-full rounded-md border border-transparent bg-transparent px-0 py-1 text-[15px] font-medium text-white placeholder:text-white/35 outline-none transition-colors';
+  const attentionClass = needsAttention
+    ? 'ring-[0.5px] ring-orange-400/80 focus:ring-orange-400/80'
+    : 'focus:bg-white/[0.04]';
+
+  return (
+    <section className="space-y-2">
+      <span className={`${TYPE_GROUP_TITLE} block`}>Name</span>
+      <input
+        ref={inputRef}
+        type="text"
+        value={stored}
+        onChange={(e) => {
+          // Live commit — patches the shape on every keystroke so Save
+          // lights up the moment the first character is typed.
+          if (needsAttention) setNeedsAttention(false);
+          onPatch({ description: e.target.value });
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            // Already committed live; Enter just dismisses the caret
+            // and clears the attention ring.
+            e.preventDefault();
+            setNeedsAttention(false);
+            (e.currentTarget as HTMLInputElement).blur();
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            (e.currentTarget as HTMLInputElement).blur();
+          }
+        }}
+        placeholder="Add name"
+        aria-label="Shape name"
+        spellCheck={false}
+        className={`${baseClass} ${attentionClass}`}
+      />
+    </section>
   );
 }
 
@@ -709,195 +1022,6 @@ function DraftControls({ draw }: { draw: MapDrawContextValue['draw'] }) {
         Undo
       </button>
     </section>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Tools section (variant-aware)
-// ---------------------------------------------------------------------------
-
-type ToolEntry = { id: MapDrawTool; label: string; Icon: typeof PolygonDrawIcon };
-
-const TOOL_ENTRIES: ToolEntry[] = [
-  { id: 'polygon', label: 'Polygon', Icon: PolygonDrawIcon },
-  { id: 'line', label: 'Line', Icon: LineDrawIcon },
-  { id: 'point', label: 'Pin', Icon: MapPin },
-  { id: 'circle', label: 'Circle', Icon: CircleDrawIcon },
-];
-
-function ToolsSection({
-  drawTool,
-  onPick,
-  style,
-  collapsible,
-  defaultOpen,
-}: {
-  drawTool: MapDrawTool | null;
-  onPick: (tool: MapDrawTool | null) => void;
-  style: ToolPickerStyle;
-  collapsible: boolean;
-  defaultOpen: boolean;
-}) {
-  const picker = <ToolPicker drawTool={drawTool} onPick={onPick} style={style} />;
-  if (collapsible) {
-    return (
-      <CollapsibleSection title="Tools" defaultOpen={defaultOpen}>
-        {picker}
-      </CollapsibleSection>
-    );
-  }
-  return (
-    <section className="space-y-2">
-      <h3 className={TYPE_GROUP_TITLE}>Tools</h3>
-      {picker}
-    </section>
-  );
-}
-
-function ToolPicker({
-  drawTool,
-  onPick,
-  style,
-}: {
-  drawTool: MapDrawTool | null;
-  onPick: (tool: MapDrawTool | null) => void;
-  style: ToolPickerStyle;
-}) {
-  // All visual styles share the same Toggle semantics (pressed +
-  // onPressedChange) so they all participate in the same active-state
-  // bookkeeping; they only differ in layout / chrome.
-  if (style === 'tiles') {
-    // Original 2x2 large tiles.
-    return (
-      <div role="group" aria-label="Drawing tools" className="grid grid-cols-2 gap-2">
-        {TOOL_ENTRIES.map((t) => {
-          const active = drawTool === t.id;
-          return (
-            <Toggle
-              key={t.id}
-              size="sm"
-              pressed={active}
-              onPressedChange={(next) => onPick(next ? t.id : null)}
-              aria-label={t.label}
-              className="h-auto min-h-16 flex-col gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2 py-2.5 text-[11px] text-zinc-300 hover:bg-white/10 hover:text-white aria-pressed:bg-white/[0.10] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
-            >
-              <t.Icon size={20} />
-              <span className="text-[11px] font-medium">{t.label}</span>
-            </Toggle>
-          );
-        })}
-      </div>
-    );
-  }
-
-  if (style === 'chips') {
-    // Small wrap-friendly chips: icon + short label.
-    return (
-      <div role="group" aria-label="Drawing tools" className="flex flex-wrap items-center gap-1.5">
-        {TOOL_ENTRIES.map((t) => {
-          const active = drawTool === t.id;
-          return (
-            <Toggle
-              key={t.id}
-              size="sm"
-              pressed={active}
-              onPressedChange={(next) => onPick(next ? t.id : null)}
-              aria-label={t.label}
-              className="h-8 gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-2.5 text-[11px] text-zinc-300 hover:bg-white/10 hover:text-white aria-pressed:bg-white/[0.12] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
-            >
-              <t.Icon size={14} />
-              <span className="text-[11px] font-medium">{t.label}</span>
-            </Toggle>
-          );
-        })}
-      </div>
-    );
-  }
-
-  // segmented — one connected segmented bar. Icon-only to stay compact.
-  // Every adjacent button is separated by the same hairline stroke so
-  // the seam between polygon and line reads identically to the seam
-  // between curve and circle. `border-s` (logical inline-start) keeps
-  // the seam on the correct side in both LTR and RTL — `border-l`
-  // would land on the wrong edge once the row is mirrored.
-  return (
-    <div
-      role="group"
-      aria-label="Drawing tools"
-      className="flex items-stretch overflow-hidden rounded-md border border-white/10 bg-white/[0.04]"
-    >
-      {TOOL_ENTRIES.map((t, i) => {
-        const active = drawTool === t.id;
-        return (
-          <button
-            key={t.id}
-            type="button"
-            aria-pressed={active}
-            aria-label={t.label}
-            title={t.label}
-            onClick={() => onPick(active ? null : t.id)}
-            className={`flex h-8 flex-1 items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/25 ${
-              i > 0 ? 'border-s border-white/20' : ''
-            } ${
-              active
-                ? 'bg-white/[0.14] text-white'
-                : 'text-white/65 hover:bg-white/10 hover:text-white'
-            }`}
-          >
-            <t.Icon size={15} />
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Shape inspector
-// ---------------------------------------------------------------------------
-
-function ShapeInspector({
-  shape,
-  onPatch,
-}: {
-  shape: GeoShape;
-  onPatch: (patch: Partial<GeoShape>) => void;
-}) {
-  const fillMode: GeoFillMode = shape.fillMode ?? 'fill';
-  const lineStyle: GeoLineStyle = shape.lineStyle ?? 'solid';
-
-  // A shape needs at least one of fill / line to remain visible. If the
-  // user turns off whichever is left, we flip the other one back on so a
-  // shape can never become fully invisible (= "can't be drawn").
-  const onPatchGuarded = (patch: Partial<GeoShape>) => {
-    const nextFill = patch.fillMode ?? fillMode;
-    const nextLine = patch.lineStyle ?? lineStyle;
-    if (nextFill === 'none' && nextLine === 'none') {
-      if (patch.fillMode === 'none') {
-        onPatch({ ...patch, lineStyle: 'solid' });
-        return;
-      }
-      if (patch.lineStyle === 'none') {
-        onPatch({ ...patch, fillMode: 'fill' });
-        return;
-      }
-    }
-    onPatch(patch);
-  };
-
-  return (
-    <div className="space-y-5">
-      {/* Type is lifted above Tools (rendered by the panel itself) — it's
-          the first required choice after a shape is drawn. */}
-      <ParametersSection shape={shape} onPatch={onPatch} />
-      <CoordinatesSection shape={shape} onPatch={onPatch} />
-      <ColorSection
-        shape={shape}
-        fillMode={fillMode}
-        lineStyle={lineStyle}
-        onPatch={onPatchGuarded}
-      />
-    </div>
   );
 }
 
@@ -1057,6 +1181,21 @@ function CoordinatesSection({
   );
 }
 
+// Display format for a single coordinate value — fixed to 5 decimal
+// places so each row reads as e.g. "33.36742°, -118.40625°", matching
+// the reference. Lower precision than the on-map vertex chips on
+// purpose: those are pixel-anchored and need more sig-figs, the panel
+// row is a textual readout.
+const COORD_DECIMALS = 5;
+
+const formatPair = (lat: number, lng: number) =>
+  `${lat.toFixed(COORD_DECIMALS)}°, ${lng.toFixed(COORD_DECIMALS)}°`;
+
+// Accept "lat, lng" with optional degree symbols, signs, and whitespace.
+// Anything else (NaN, extra tokens, missing comma) is rejected and the
+// row reverts to its formatted display value on blur / Enter.
+const COORD_PAIR = /^\s*(-?\d+(?:\.\d+)?)\s*°?\s*,\s*(-?\d+(?:\.\d+)?)\s*°?\s*$/;
+
 function CoordinateRow({
   label,
   point,
@@ -1069,47 +1208,119 @@ function CoordinateRow({
   onRemove?: () => void;
 }) {
   const { lat, lng } = unproject(point, SANDBOX_BOUNDS);
+  const display = formatPair(lat, lng);
 
-  const commit = (nextLat: number, nextLng: number) => {
-    if (Number.isNaN(nextLat) || Number.isNaN(nextLng)) return;
+  // Local draft so half-typed strings don't round-trip through
+  // project/unproject and clobber the user's keystrokes. We only push to
+  // the parent on a successful parse at commit time (Enter / blur).
+  const [draft, setDraft] = useState(display);
+  const [focused, setFocused] = useState(false);
+
+  // Keep the draft in sync with the shape's authoritative value whenever
+  // the input isn't actively being edited — covers the case where the
+  // user drags a vertex chip on the map and we want the row to reflect
+  // the new coordinates immediately.
+  useEffect(() => {
+    if (!focused) setDraft(display);
+  }, [display, focused]);
+
+  const commit = () => {
+    const match = COORD_PAIR.exec(draft);
+    if (!match) {
+      setDraft(display);
+      return;
+    }
+    const nextLat = parseFloat(match[1]);
+    const nextLng = parseFloat(match[2]);
+    if (
+      Number.isNaN(nextLat) ||
+      Number.isNaN(nextLng) ||
+      nextLat < -90 ||
+      nextLat > 90 ||
+      nextLng < -180 ||
+      nextLng > 180
+    ) {
+      setDraft(display);
+      return;
+    }
     onChange(project({ lat: nextLat, lng: nextLng }, SANDBOX_BOUNDS));
   };
 
   return (
-    <li className="flex items-center gap-1.5">
-      <span className="w-5 shrink-0 text-center text-[11px] tabular-nums text-zinc-500">
-        {label}
+    <li className="group flex items-center gap-1.5">
+      <span
+        aria-hidden
+        title="Drag to reorder"
+        className="grid size-5 shrink-0 cursor-grab place-items-center text-white/35 transition-colors group-hover:text-white/60 active:cursor-grabbing"
+      >
+        <GripDotsIcon size={14} />
       </span>
       <input
-        type="number"
-        step="0.0001"
+        type="text"
+        value={draft}
         inputMode="decimal"
-        value={lat.toFixed(4)}
-        aria-label={`Latitude ${label}`}
-        onChange={(e) => commit(parseFloat(e.target.value), lng)}
-        className="min-w-0 flex-1 rounded border border-white/10 bg-white/5 px-1.5 py-1 text-[12px] tabular-nums text-zinc-100 outline-none focus:border-white/30"
+        spellCheck={false}
+        aria-label={`Coordinates ${label}`}
+        onChange={(e) => setDraft(e.target.value)}
+        onFocus={(e) => {
+          setFocused(true);
+          e.currentTarget.select();
+        }}
+        onBlur={() => {
+          setFocused(false);
+          commit();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            commit();
+            (e.currentTarget as HTMLInputElement).blur();
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            setDraft(display);
+            (e.currentTarget as HTMLInputElement).blur();
+          }
+        }}
+        className="min-w-0 flex-1 rounded-md border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[12px] tabular-nums text-zinc-100 outline-none transition-colors focus:border-white/30 focus:bg-white/[0.08]"
       />
-      <input
-        type="number"
-        step="0.0001"
-        inputMode="decimal"
-        value={lng.toFixed(4)}
-        aria-label={`Longitude ${label}`}
-        onChange={(e) => commit(lat, parseFloat(e.target.value))}
-        className="min-w-0 flex-1 rounded border border-white/10 bg-white/5 px-1.5 py-1 text-[12px] tabular-nums text-zinc-100 outline-none focus:border-white/30"
-      />
-      {onRemove && (
+      {onRemove ? (
         <button
           type="button"
           onClick={onRemove}
           aria-label={`Remove point ${label}`}
           title="Remove point"
-          className="grid size-6 shrink-0 place-items-center rounded text-white/45 transition-colors hover:bg-rose-500/20 hover:text-rose-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+          className="grid size-7 shrink-0 place-items-center rounded text-white/45 transition-colors hover:bg-rose-500/15 hover:text-rose-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
         >
-          <X size={12} />
+          <Trash2 size={14} />
         </button>
+      ) : (
+        // Reserve trash slot so single-point rows (circle Center, polylines
+        // at min-length) stay aligned with their multi-point siblings.
+        <span aria-hidden className="size-7 shrink-0" />
       )}
     </li>
+  );
+}
+
+// 6-dot drag handle — Central Icons doesn't ship a `GripVertical`
+// equivalent, and the project's `no-restricted-imports` lock keeps
+// lucide-react out of feature files, so we inline the SVG locally.
+function GripDotsIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <circle cx="6" cy="3.25" r="1.1" />
+      <circle cx="10" cy="3.25" r="1.1" />
+      <circle cx="6" cy="8" r="1.1" />
+      <circle cx="10" cy="8" r="1.1" />
+      <circle cx="6" cy="12.75" r="1.1" />
+      <circle cx="10" cy="12.75" r="1.1" />
+    </svg>
   );
 }
 
@@ -1144,11 +1355,13 @@ function TypeField({
   chrome?: 'collapsible' | 'plain';
 }) {
   const activeType = shape.zoneType;
-  const isMissing = !activeType;
-  // Stroke clears so the line always inherits the fill color; there's no
-  // separate line-color control any more.
-  const pick = (id: GeoZoneType, color: string) =>
-    onPatch({ zoneType: id, color, strokeColor: undefined });
+  // Type pick ONLY records the semantic zone type — never re-colors
+  // the shape and never moves focus. The previous Name -> Type and
+  // Type -> Color auto-focus hand-offs were removed: type now defaults
+  // to "General" and changing it is a manual, opt-in step.
+  const pick = (id: GeoZoneType, _color: string) => {
+    onPatch({ zoneType: id });
+  };
 
   const body = (
     <>
@@ -1170,32 +1383,20 @@ function TypeField({
     </>
   );
 
-  // Only the Required pill is allowed to be red — the title text stays
-  // neutral so the section reads as a heading, not an error.
-  const requiredPill = isMissing ? (
-    <span className="rounded-full bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-rose-300 ring-1 ring-inset ring-rose-500/30">
-      Required
-    </span>
-  ) : null;
-
+  // Required indicator now lives INSIDE the dropdown trigger (see
+  // TypeVariantDropdown), so the section heading reads clean — just
+  // "Type" without an extra pill competing with the field below.
   if (chrome === 'plain') {
     return (
       <section className="space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <span className={TYPE_GROUP_TITLE}>Type</span>
-          {requiredPill}
-        </div>
+        <span className={`${TYPE_GROUP_TITLE} block`}>Type</span>
         {body}
       </section>
     );
   }
 
   return (
-    <CollapsibleSection
-      title="Type"
-      defaultOpen
-      headerAction={requiredPill ?? undefined}
-    >
+    <CollapsibleSection title="Type" defaultOpen>
       {body}
     </CollapsibleSection>
   );
@@ -1412,6 +1613,10 @@ function TypeVariantDropdown({
 }) {
   const [open, setOpen] = useState(false);
   const active = activeType ? ZONE_TYPE_BY_ID[activeType] : null;
+  // "General" is the implicit default — it's a real, valid type so we
+  // never treat it as "missing"; missing only means the shape carries
+  // no zoneType at all (legacy shapes from before this change).
+  const isMissing = !active;
   return (
     <div className="group relative">
       <button
@@ -1423,17 +1628,37 @@ function TypeVariantDropdown({
         // when the menu is open the full trigger chrome and chevron appear.
         className="flex w-full items-center gap-2 rounded-md border border-transparent bg-transparent px-2 py-1.5 text-left transition-colors group-hover:border-white/10 group-hover:bg-white/[0.04] group-focus-within:border-white/10 group-focus-within:bg-white/[0.04] aria-expanded:border-white/10 aria-expanded:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
       >
-        <span
-          aria-hidden
-          className="size-3.5 shrink-0 rounded-full ring-1 ring-inset ring-white/20"
-          style={{ background: active?.color ?? '#52525b' }}
-        />
-        <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-white">
-          {active ? active.label : 'Choose a zone type'}
-        </span>
+        {/* Color swatch removed — types no longer surface their signature
+            color in the trigger; the label alone is the identity. */}
+        {active ? (
+          <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-white">
+            {active.label}
+          </span>
+        ) : (
+          // Empty state: grey placeholder that turns white the moment
+          // the user engages the trigger (hover / focus / open). The
+          // chevron stays visible while `isMissing` (see below) so the
+          // mandatory affordance still reads without a "Required" word.
+          <span
+            className={`min-w-0 flex-1 truncate text-[12px] font-medium transition-colors ${
+              open
+                ? 'text-white'
+                : 'text-zinc-500 group-hover:text-white group-focus-within:text-white'
+            }`}
+          >
+            Choose a zone type
+          </span>
+        )}
         <ChevronRight
           size={14}
-          className={`shrink-0 text-zinc-400 opacity-0 transition-[opacity,transform] group-hover:opacity-100 group-focus-within:opacity-100 ${open ? 'rotate-90 opacity-100' : ''}`}
+          className={`shrink-0 text-zinc-400 transition-[opacity,transform] ${
+            // Keep the chevron visible when the field still needs an
+            // answer so the affordance reads from the start; once a
+            // type is set, fall back to the hover-only reveal.
+            isMissing
+              ? 'opacity-100'
+              : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
+          } ${open ? 'rotate-90 opacity-100' : ''}`}
         />
       </button>
       {open && (
@@ -1460,11 +1685,8 @@ function TypeVariantDropdown({
                       : 'text-zinc-200 hover:bg-white/[0.06] hover:text-white'
                   }`}
                 >
-                  <span
-                    aria-hidden
-                    className="size-3 shrink-0 rounded-full ring-1 ring-inset ring-white/20"
-                    style={{ background: t.color }}
-                  />
+                  {/* Per-option color swatch removed for the same reason as
+                      the trigger swatch above. */}
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[12px] font-medium">
                       {t.label}
@@ -1487,395 +1709,12 @@ function TypeVariantDropdown({
 }
 
 // ---------------------------------------------------------------------------
-// Parameters — per-type field scaffold. Concrete behavior lands when
-// each type's details ship; today the fields are visible but disabled so
-// reviewers can see the eventual shape of the form.
-// ---------------------------------------------------------------------------
-
-function ParametersSection({
-  shape,
-  onPatch: _onPatch,
-}: {
-  shape: GeoShape;
-  onPatch: (patch: Partial<GeoShape>) => void;
-}) {
-  if (!shape.zoneType) return null;
-  const params = shape.zoneParams ?? {};
-  return (
-    <CollapsibleSection title="Parameters" defaultOpen>
-      {shape.zoneType === 'noFly' && (
-        <div className="grid grid-cols-2 gap-2">
-          <ParamField label="Min altitude (m)" value={params.altitudeMin} suffix="m" />
-          <ParamField label="Max altitude (m)" value={params.altitudeMax} suffix="m" />
-        </div>
-      )}
-      {shape.zoneType === 'alarm' && (
-        <div className="grid grid-cols-2 gap-2">
-          <ParamField label="Active from" value={params.alarmStart} placeholder="HH:mm" />
-          <ParamField label="Active to" value={params.alarmEnd} placeholder="HH:mm" />
-        </div>
-      )}
-      {(shape.zoneType === 'restricted' || shape.zoneType === 'silent') && (
-        <p className="rounded-md border border-dashed border-white/10 px-2.5 py-2 text-[11px] text-zinc-500">
-          Parameters for this zone type are coming soon.
-        </p>
-      )}
-    </CollapsibleSection>
-  );
-}
-
-function ParamField({
-  label,
-  value,
-  suffix,
-  placeholder,
-}: {
-  label: string;
-  value: number | string | undefined;
-  suffix?: string;
-  placeholder?: string;
-}) {
-  return (
-    <label className="flex flex-col gap-1">
-      <span className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">
-        {label}
-      </span>
-      <span className="flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 text-[12px] text-zinc-200">
-        <input
-          type="text"
-          disabled
-          value={value ?? ''}
-          placeholder={placeholder ?? '—'}
-          className="min-w-0 flex-1 bg-transparent text-[12px] text-zinc-200 placeholder:text-zinc-600 outline-none disabled:cursor-not-allowed"
-        />
-        {suffix && <span className="text-[10px] text-zinc-500">{suffix}</span>}
-      </span>
-    </label>
-  );
-}
-
-const STROKE_MIN = 1;
-const STROKE_MAX = 8;
-const STROKE_DASHED_MAX = 4;
-const STROKE_STEP = 0.5;
-const STROKE_DEFAULT = 2;
-
-// Single compact "Color" section that replaces the old Fill / Line
-// pair. Two side-by-side chips (Fill / Outline) each open a
-// `ColorPopover` — palette + native picker + hex input — and the
-// section also owns the line-style picker and thickness slider so
-// every visual control for the shape stroke / fill sits together.
-function ColorSection({
-  shape,
-  fillMode,
-  lineStyle,
-  onPatch,
-}: {
-  shape: GeoShape;
-  fillMode: GeoFillMode;
-  lineStyle: GeoLineStyle;
-  onPatch: (patch: Partial<GeoShape>) => void;
-}) {
-  const fillColor = fillMode === 'none' ? null : shape.color;
-  const outlineColor = lineStyle === 'none' ? null : (shape.strokeColor ?? shape.color);
-
-  const disabled = lineStyle === 'none';
-  const maxWeight = lineStyle === 'dashed' ? STROKE_DASHED_MAX : STROKE_MAX;
-  const weight = Math.min(shape.strokeWidth ?? STROKE_DEFAULT, maxWeight);
-
-  return (
-    <CollapsibleSection title="Color" defaultOpen>
-      {/* Row 1 — Fill / Outline chips */}
-      <div className="grid grid-cols-2 gap-2">
-        <ColorChip
-          label="Fill"
-          color={fillColor}
-          onPick={(value) =>
-            value === null
-              ? onPatch({ fillMode: 'none' })
-              : onPatch({ color: value, fillMode: 'fill' })
-          }
-        />
-        <ColorChip
-          label="Outline"
-          color={outlineColor}
-          onPick={(value) =>
-            value === null
-              ? onPatch({ lineStyle: 'none' })
-              : onPatch({
-                  strokeColor: value,
-                  // Picking an outline color implies the shape should
-                  // have a stroke — flip back to solid if it was None.
-                  ...(lineStyle === 'none' ? { lineStyle: 'solid' } : null),
-                })
-          }
-        />
-      </div>
-
-      {/* Divider — visual break between color chips and line controls
-          (also satisfies the "divider above the Line section" ask). */}
-      <hr className="border-t border-white/10" />
-
-      {/* Row 2 — line style picker (Solid · Dashed · None) */}
-      <SegmentedControl>
-        {LINE_STYLES.map((mode) => (
-          <SegmentButton
-            key={mode.id}
-            active={lineStyle === mode.id}
-            onClick={() =>
-              // Switching to dashed clamps an over-thick line back to the cap.
-              onPatch(
-                mode.id === 'dashed' && weight > STROKE_DASHED_MAX
-                  ? { lineStyle: mode.id, strokeWidth: STROKE_DASHED_MAX }
-                  : { lineStyle: mode.id },
-              )
-            }
-          >
-            <LineGlyph style={mode.id} />
-            {mode.label}
-          </SegmentButton>
-        ))}
-      </SegmentedControl>
-
-      {/* Row 3 — thickness slider */}
-      <div className="flex items-center gap-3 px-0.5">
-        <Slider
-          aria-label="Line thickness"
-          value={[weight]}
-          min={STROKE_MIN}
-          max={maxWeight}
-          step={STROKE_STEP}
-          disabled={disabled}
-          onValueChange={(v) => onPatch({ strokeWidth: v[0] })}
-          className="flex-1"
-        />
-        <span
-          className={`w-8 shrink-0 text-right text-[11px] tabular-nums ${
-            disabled ? 'text-zinc-600' : 'text-zinc-400'
-          }`}
-        >
-          {weight.toFixed(1)}
-        </span>
-      </div>
-    </CollapsibleSection>
-  );
-}
-
-// A named swatch with a hex label that opens the color picker popover.
-// `color === null` means "transparent / none" and renders the crossed-out
-// circle treatment.
-function ColorChip({
-  label,
-  color,
-  onPick,
-}: {
-  label: string;
-  color: string | null;
-  onPick: (color: string | null) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const buttonRef = useRef<HTMLButtonElement | null>(null);
-
-  return (
-    <div className="relative">
-      <button
-        ref={buttonRef}
-        type="button"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 rounded-md border border-white/10 bg-white/[0.04] px-2 py-1.5 text-left transition-colors hover:border-white/20 hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
-      >
-        {color === null ? (
-          // Crossed-out circle marks the transparent / none state.
-          <span className="grid size-5 shrink-0 place-items-center rounded-full ring-1 ring-inset ring-white/30 text-zinc-300">
-            <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden>
-              <circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
-              <line x1="3.6" y1="12.4" x2="12.4" y2="3.6" stroke="currentColor" strokeWidth="1.5" />
-            </svg>
-          </span>
-        ) : (
-          <span
-            aria-hidden
-            className="size-5 shrink-0 rounded-full ring-1 ring-inset ring-white/15"
-            style={{ background: color }}
-          />
-        )}
-        <span className="min-w-0 flex-1 truncate">
-          <span className="block text-[11px] uppercase tracking-wide text-zinc-500">
-            {label}
-          </span>
-          <span className="block text-[12px] font-medium text-white truncate">
-            {color === null ? 'None' : color.toUpperCase()}
-          </span>
-        </span>
-      </button>
-      {open && (
-        <ColorPopover
-          value={color}
-          onPick={(c) => {
-            onPick(c);
-            setOpen(false);
-          }}
-          onClose={() => setOpen(false)}
-        />
-      )}
-    </div>
-  );
-}
-
-const COLOR_PALETTE: { id: string; label: string; value: string }[] = [
-  { id: 'white', label: 'White', value: '#ffffff' },
-  { id: 'black', label: 'Black', value: '#000000' },
-  { id: 'red', label: 'Red', value: '#f43f5e' },
-  { id: 'orange', label: 'Orange', value: '#f59e0b' },
-  { id: 'yellow', label: 'Yellow', value: '#facc15' },
-  { id: 'green', label: 'Green', value: '#10b981' },
-  { id: 'cyan', label: 'Cyan', value: '#06b6d4' },
-  { id: 'blue', label: 'Blue', value: '#3b82f6' },
-  { id: 'indigo', label: 'Indigo', value: '#6366f1' },
-  { id: 'violet', label: 'Violet', value: '#a78bfa' },
-];
-
-// Popover with: Transparent button → palette grid → native color picker
-// → hex text input. Closes on outside-click. Anchored under the chip.
-function ColorPopover({
-  value,
-  onPick,
-  onClose,
-}: {
-  value: string | null;
-  onPick: (color: string | null) => void;
-  onClose: () => void;
-}) {
-  // Hex input mirrors the popover's current value so the user can paste
-  // an arbitrary hex without losing track of it. Live-commits on a valid
-  // 6-char hex; otherwise just tracks the input state.
-  const initial = value ?? '#ffffff';
-  const [hex, setHex] = useState(initial);
-  const rootRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const onDocPointer = (e: PointerEvent) => {
-      const node = rootRef.current;
-      if (!node) return;
-      if (!node.contains(e.target as Node)) onClose();
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    // Defer to the next tick so the click that opened us doesn't
-    // immediately close us.
-    const id = window.setTimeout(() => {
-      window.addEventListener('pointerdown', onDocPointer);
-      window.addEventListener('keydown', onKey);
-    }, 0);
-    return () => {
-      window.clearTimeout(id);
-      window.removeEventListener('pointerdown', onDocPointer);
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [onClose]);
-
-  const commitHex = (raw: string) => {
-    const cleaned = raw.trim().replace(/^#?/, '#');
-    setHex(cleaned);
-    if (/^#[0-9a-fA-F]{6}$/.test(cleaned)) onPick(cleaned.toLowerCase());
-  };
-
-  return (
-    <div
-      ref={rootRef}
-      role="dialog"
-      aria-label="Pick a color"
-      className="absolute z-40 mt-1.5 w-[228px] rounded-lg border border-white/10 bg-[#1c1c1c] p-2 shadow-xl shadow-black/40"
-    >
-      {/* Transparent / none */}
-      <button
-        type="button"
-        onClick={() => onPick(null)}
-        className={`mb-2 flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px] transition-colors hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
-          value === null ? 'bg-white/[0.08] text-white' : 'text-white/75'
-        }`}
-      >
-        <span className="grid size-5 place-items-center rounded-full ring-1 ring-inset ring-white/30 text-zinc-300">
-          <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden>
-            <circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
-            <line x1="3.6" y1="12.4" x2="12.4" y2="3.6" stroke="currentColor" strokeWidth="1.5" />
-          </svg>
-        </span>
-        Transparent
-      </button>
-
-      {/* Palette grid */}
-      <div className="grid grid-cols-5 gap-1.5">
-        {COLOR_PALETTE.map((sw) => {
-          const active = value?.toLowerCase() === sw.value.toLowerCase();
-          return (
-            <button
-              key={sw.id}
-              type="button"
-              aria-label={sw.label}
-              title={sw.label}
-              onClick={() => onPick(sw.value)}
-              className={`size-7 rounded-full transition-[box-shadow,transform] active:scale-[0.94] focus-visible:outline-none ${
-                active
-                  ? 'ring-2 ring-white/85 ring-offset-2 ring-offset-[#1c1c1c]'
-                  : 'ring-1 ring-inset ring-white/15 hover:ring-white/40'
-              }`}
-              style={{ background: sw.value }}
-            />
-          );
-        })}
-      </div>
-
-      {/* Custom: native picker + hex input */}
-      <div className="mt-3 flex items-center gap-2">
-        <label
-          className="relative grid size-7 cursor-pointer place-items-center overflow-hidden rounded-full ring-1 ring-inset ring-white/15 hover:ring-white/40"
-          title="Pick a custom color"
-          style={{ background: /^#[0-9a-fA-F]{6}$/.test(hex) ? hex : '#ffffff' }}
-        >
-          <input
-            type="color"
-            value={/^#[0-9a-fA-F]{6}$/.test(hex) ? hex : '#ffffff'}
-            onChange={(e) => commitHex(e.target.value)}
-            // Hide the native swatch but keep the input clickable to open
-            // the OS color picker UI.
-            className="absolute inset-0 cursor-pointer opacity-0"
-            aria-label="Custom color"
-          />
-        </label>
-        <input
-          type="text"
-          value={hex}
-          onChange={(e) => commitHex(e.target.value)}
-          spellCheck={false}
-          inputMode="text"
-          maxLength={7}
-          aria-label="Hex color"
-          placeholder="#000000"
-          className="min-w-0 flex-1 rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[12px] uppercase tracking-wider text-white outline-none placeholder:text-white/40 focus:border-white/30"
-        />
-      </div>
-    </div>
-  );
-}
-
-
-// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 /**
- * Segmented control matching the platform's neutral accent system (the
- * same white-wash active state the tool toggles and rail buttons use —
- * no off-brand violet). Concentric radius: outer `rounded-lg` (8px) with
- * `p-1` (4px) padding → inner `rounded` (4px).
- */
-/**
  * Section with a chevron header that collapses its contents — the shared
- * dropdown pattern used by Coordinates / Color / Line / Layers.
+ * dropdown pattern used by Coordinates / Type / Layers.
  */
 function CollapsibleSection({
   title,
@@ -1949,6 +1788,160 @@ function CollapsibleSection({
   );
 }
 
+// ---------------------------------------------------------------------------
+// Color section — two independent chips: Fill (mutates only `color` +
+// `fillMode`) and Outline (mutates only `strokeColor` + `lineStyle`).
+//
+// Why this matters: the visible line stroke falls back to `color` when
+// `strokeColor` is undefined (see `MapDrawOverlay`'s `ShapeBody`). To keep
+// fill and outline truly independent, we always write `strokeColor`
+// explicitly on commit and on each Outline-pick, and we never touch
+// `strokeColor` from the Fill chip. Picking a Type (`zoneType`) likewise
+// leaves both colors untouched — the user picks colors themselves.
+// ---------------------------------------------------------------------------
+
+// Stroke-width clamps. Dashed strokes are capped lower so the dash
+// rhythm stays legible — bumping a dashed line past ~4 px reads as
+// uneven blobs rather than a proper dash. Minimum is 0.5 px (hairline)
+// to match the default white outline new shapes ship with.
+const STROKE_MIN = 0.5;
+const STROKE_MAX = 8;
+const STROKE_DASHED_MAX = 4;
+const STROKE_STEP = 0.5;
+const STROKE_DEFAULT = 0.5;
+
+// "None" intentionally NOT in this list. Hiding the outline is still
+// reachable from the Outline ColorChip's "Transparent" button, which
+// also enforces the "fill OR outline must stay visible" guard. Keeping
+// it on the line-style picker would offer a second path to invisible
+// shapes that bypasses that guard.
+const LINE_STYLES: { id: GeoLineStyle; label: string }[] = [
+  { id: 'solid', label: 'Solid' },
+  { id: 'dashed', label: 'Dashed' },
+];
+
+function ColorSection({
+  shape,
+  onPatch,
+  fillTriggerRef,
+}: {
+  shape: GeoShape;
+  onPatch: (patch: Partial<GeoShape>) => void;
+  /** Forwarded ref to the Fill chip's trigger button so a parent can
+   * focus it after the user picks a Type — mirrors Name -> Type hand-off. */
+  fillTriggerRef?: React.RefObject<HTMLButtonElement | null>;
+}) {
+  const fillMode: GeoFillMode = shape.fillMode ?? 'fill';
+  const lineStyle: GeoLineStyle = shape.lineStyle ?? 'solid';
+  const fillColor = fillMode === 'none' ? null : shape.color;
+  const outlineColor = lineStyle === 'none' ? null : (shape.strokeColor ?? shape.color);
+
+  // Slider state — disabled when there's no visible line at all, and
+  // clamped to the dashed cap when the current style is `dashed` so a
+  // previously over-thick line doesn't sneak past the cap visually.
+  const disabled = lineStyle === 'none';
+  const maxWeight = lineStyle === 'dashed' ? STROKE_DASHED_MAX : STROKE_MAX;
+  const weight = Math.min(shape.strokeWidth ?? STROKE_DEFAULT, maxWeight);
+
+  return (
+    <section className="space-y-3">
+      <span className={`${TYPE_GROUP_TITLE} block`}>Color</span>
+
+      {/* Row 1 — Fill / Outline chips. Each writes ONLY its own field
+          (see comments below) so Fill / Outline stay independent. The
+          renderer-side fix in `MapDrawOverlay` (fill derived from
+          `shape.color`, not from stroke) closes the loop.
+
+          GUARD: at least one of fill / outline must stay visible —
+          otherwise the shape paints nothing at all. We surface this by
+          disabling the OTHER chip's "Transparent" option whenever the
+          current chip is already transparent. */}
+      <div className="grid grid-cols-2 gap-2">
+        <ColorChip
+          label="Fill"
+          color={fillColor}
+          triggerRef={fillTriggerRef}
+          // Fill can only become Transparent if the outline still
+          // paints something — otherwise the shape would be invisible.
+          transparentAllowed={lineStyle !== 'none'}
+          onPick={(value) => {
+            if (value === null) {
+              onPatch({ fillMode: 'none' });
+              return;
+            }
+            onPatch({ color: value, fillMode: 'fill' });
+          }}
+        />
+        <ColorChip
+          label="Outline"
+          color={outlineColor}
+          // Mirror image: outline can only go Transparent if the fill
+          // is still being painted.
+          transparentAllowed={fillMode !== 'none'}
+          onPick={(value) => {
+            if (value === null) {
+              onPatch({ lineStyle: 'none' });
+              return;
+            }
+            // Picking an outline color implies the shape should have a
+            // stroke — flip back to solid if it was None.
+            onPatch({
+              strokeColor: value,
+              ...(lineStyle === 'none' ? { lineStyle: 'solid' } : null),
+            });
+          }}
+        />
+      </div>
+
+      {/* Divider between the color chips and the line controls. */}
+      <hr className="border-t border-white/10" />
+
+      {/* Row 2 — line style picker (Solid · Dashed · None). */}
+      <SegmentedControl>
+        {LINE_STYLES.map((mode) => (
+          <SegmentButton
+            key={mode.id}
+            active={lineStyle === mode.id}
+            onClick={() =>
+              // Switching to dashed clamps an over-thick line back to the cap
+              // so the dash rhythm stays legible after the swap.
+              onPatch(
+                mode.id === 'dashed' && weight > STROKE_DASHED_MAX
+                  ? { lineStyle: mode.id, strokeWidth: STROKE_DASHED_MAX }
+                  : { lineStyle: mode.id },
+              )
+            }
+          >
+            <LineGlyph style={mode.id} />
+            {mode.label}
+          </SegmentButton>
+        ))}
+      </SegmentedControl>
+
+      {/* Row 3 — thickness slider. */}
+      <div className="flex items-center gap-3 px-0.5">
+        <Slider
+          aria-label="Line thickness"
+          value={[weight]}
+          min={STROKE_MIN}
+          max={maxWeight}
+          step={STROKE_STEP}
+          disabled={disabled}
+          onValueChange={(v) => onPatch({ strokeWidth: v[0] })}
+          className="flex-1"
+        />
+        <span
+          className={`w-8 shrink-0 text-right text-[11px] tabular-nums ${
+            disabled ? 'text-zinc-600' : 'text-zinc-400'
+          }`}
+        >
+          {weight.toFixed(1)}
+        </span>
+      </div>
+    </section>
+  );
+}
+
 function SegmentedControl({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-1 rounded-lg bg-white/[0.04] p-1">
@@ -2007,3 +2000,190 @@ function LineGlyph({ style }: { style: GeoLineStyle }) {
   );
 }
 
+const COLOR_PALETTE: { id: string; label: string; value: string }[] = [
+  { id: 'white', label: 'White', value: '#ffffff' },
+  { id: 'black', label: 'Black', value: '#000000' },
+  { id: 'red', label: 'Red', value: '#f43f5e' },
+  { id: 'orange', label: 'Orange', value: '#f59e0b' },
+  { id: 'yellow', label: 'Yellow', value: '#facc15' },
+  { id: 'green', label: 'Green', value: '#10b981' },
+  { id: 'cyan', label: 'Cyan', value: '#06b6d4' },
+  { id: 'blue', label: 'Blue', value: '#3b82f6' },
+  { id: 'indigo', label: 'Indigo', value: '#6366f1' },
+  { id: 'violet', label: 'Violet', value: '#a78bfa' },
+];
+
+/**
+ * Named swatch + hex label that opens a color picker popover. The
+ * popover renders through Radix's `Popover` (shadcn wrapper), which
+ * portals to `document.body` and bypasses the `DockedPanel`'s
+ * `overflow-y-auto` scroll container — the previous hand-rolled
+ * `position: absolute` popover was getting clipped/trapped by that
+ * container and read as "I can't grab on it".
+ *
+ * Picker contents: Transparent button -> palette grid -> native color
+ * input + hex text input. `color === null` renders the crossed-out
+ * circle treatment (the "none" / transparent state).
+ */
+function ColorChip({
+  label,
+  color,
+  onPick,
+  triggerRef,
+  transparentAllowed = true,
+}: {
+  label: string;
+  color: string | null;
+  onPick: (color: string | null) => void;
+  triggerRef?: React.RefObject<HTMLButtonElement | null>;
+  /**
+   * When false, the popover's "Transparent" option is disabled — used
+   * by the Color section to enforce the "fill OR outline must stay
+   * visible" rule (a shape that's transparent on both sides has
+   * nothing to paint).
+   */
+  transparentAllowed?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  // Hex draft kept local so half-typed hex values don't fire onPick on
+  // every keystroke. Synced from the prop whenever the popover is
+  // closed so the next open shows the up-to-date value.
+  const [hex, setHex] = useState(color ?? '#ffffff');
+  useEffect(() => {
+    if (!open) setHex(color ?? '#ffffff');
+  }, [color, open]);
+
+  const commitHex = (raw: string) => {
+    const cleaned = raw.trim().replace(/^#?/, '#');
+    setHex(cleaned);
+    if (/^#[0-9a-fA-F]{6}$/.test(cleaned)) onPick(cleaned.toLowerCase());
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          ref={triggerRef}
+          type="button"
+          className="flex w-full items-center gap-2 rounded-md border border-white/10 bg-white/[0.04] px-2 py-1.5 text-left transition-colors hover:border-white/20 hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+        >
+          {color === null ? (
+            <span className="grid size-5 shrink-0 place-items-center rounded-full ring-1 ring-inset ring-white/30 text-zinc-300">
+              <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden>
+                <circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
+                <line x1="3.6" y1="12.4" x2="12.4" y2="3.6" stroke="currentColor" strokeWidth="1.5" />
+              </svg>
+            </span>
+          ) : (
+            <span
+              aria-hidden
+              className="size-5 shrink-0 rounded-full ring-1 ring-inset ring-white/15"
+              style={{ background: color }}
+            />
+          )}
+          <span className="min-w-0 flex-1 truncate">
+            <span className="block text-[11px] uppercase tracking-wide text-zinc-500">
+              {label}
+            </span>
+            <span className="block text-[12px] font-medium text-white truncate">
+              {color === null ? 'None' : color.toUpperCase()}
+            </span>
+          </span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        sideOffset={6}
+        // Override shadcn's default w-72 / bg-popover with our dark
+        // sheet styling so it matches the rest of the draw panel.
+        className="w-[232px] border-white/10 bg-[#1c1c1c] p-2 text-white shadow-xl shadow-black/40"
+      >
+        {(() => {
+          // Disable Transparent only when (a) we're not already
+          // transparent (no point disabling the "on" state) AND (b)
+          // the parent says it's not allowed (the other side is also
+          // transparent). Already-transparent stays clickable so it
+          // reads as an interactive option in its active state.
+          const blockTransparent = transparentAllowed === false && color !== null;
+          return (
+            <button
+              type="button"
+              onClick={() => {
+                if (blockTransparent) return;
+                onPick(null);
+              }}
+              disabled={blockTransparent}
+              title={
+                blockTransparent
+                  ? 'A shape must have either a fill or an outline'
+                  : undefined
+              }
+              aria-disabled={blockTransparent}
+              className={`mb-2 flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
+                blockTransparent
+                  ? 'cursor-not-allowed text-white/30'
+                  : `hover:bg-white/[0.08] ${color === null ? 'bg-white/[0.08] text-white' : 'text-white/75'}`
+              }`}
+            >
+              <span className="grid size-5 place-items-center rounded-full ring-1 ring-inset ring-white/30 text-zinc-300">
+                <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden>
+                  <circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
+                  <line x1="3.6" y1="12.4" x2="12.4" y2="3.6" stroke="currentColor" strokeWidth="1.5" />
+                </svg>
+              </span>
+              Transparent
+            </button>
+          );
+        })()}
+
+        <div className="grid grid-cols-5 gap-1.5">
+          {COLOR_PALETTE.map((sw) => {
+            const active = color?.toLowerCase() === sw.value.toLowerCase();
+            return (
+              <button
+                key={sw.id}
+                type="button"
+                aria-label={sw.label}
+                title={sw.label}
+                onClick={() => onPick(sw.value)}
+                className={`size-7 rounded-full transition-[box-shadow,transform] active:scale-[0.94] focus-visible:outline-none ${
+                  active
+                    ? 'ring-2 ring-white/85 ring-offset-2 ring-offset-[#1c1c1c]'
+                    : 'ring-1 ring-inset ring-white/15 hover:ring-white/40'
+                }`}
+                style={{ background: sw.value }}
+              />
+            );
+          })}
+        </div>
+
+        <div className="mt-3 flex items-center gap-2">
+          <label
+            className="relative grid size-7 cursor-pointer place-items-center overflow-hidden rounded-full ring-1 ring-inset ring-white/15 hover:ring-white/40"
+            title="Pick a custom color"
+            style={{ background: /^#[0-9a-fA-F]{6}$/.test(hex) ? hex : '#ffffff' }}
+          >
+            <input
+              type="color"
+              value={/^#[0-9a-fA-F]{6}$/.test(hex) ? hex : '#ffffff'}
+              onChange={(e) => commitHex(e.target.value)}
+              className="absolute inset-0 cursor-pointer opacity-0"
+              aria-label="Custom color"
+            />
+          </label>
+          <input
+            type="text"
+            value={hex}
+            onChange={(e) => commitHex(e.target.value)}
+            spellCheck={false}
+            inputMode="text"
+            maxLength={7}
+            aria-label="Hex color"
+            placeholder="#000000"
+            className="min-w-0 flex-1 rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[12px] uppercase tracking-wider text-white outline-none placeholder:text-white/40 focus:border-white/30"
+          />
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}

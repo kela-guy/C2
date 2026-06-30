@@ -38,6 +38,7 @@ export type GeoToolId =
   | 'freeDraw'
   | 'polygon'
   | 'line'
+  | 'arrow'
   | 'curve'
   | 'circle'
   | 'point';
@@ -75,7 +76,12 @@ export type GeoFillMode = 'fill' | 'transparent' | 'none';
  * registry is the source of truth for labels / colors / parameter
  * schemas; this string is what's persisted on a shape.
  */
-export type GeoZoneType = 'noFly' | 'restricted' | 'alarm' | 'silent';
+export type GeoZoneType =
+  | 'general'
+  | 'noFly'
+  | 'restricted'
+  | 'alarm'
+  | 'silent';
 
 /**
  * Per-zone parameters. Schema is loose on purpose — the inspector only

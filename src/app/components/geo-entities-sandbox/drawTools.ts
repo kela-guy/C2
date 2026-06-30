@@ -13,6 +13,7 @@
 import type { ComponentType } from 'react';
 import type { IconProps } from '@/lib/icons/central';
 import {
+  ArrowUpRight,
   Ban,
   Circle,
   Crosshair,
@@ -127,6 +128,16 @@ export const DRAW_TOOLS: ToolDescriptor[] = [
     description: 'Straight segments / polyline',
     Icon: LineSegment,
     color: '#a78bfa',
+    fillOpacity: 0,
+    group: 'geometry',
+  },
+  {
+    id: 'arrow',
+    kind: 'polyline',
+    label: 'Arrow',
+    description: 'Directional line with arrowhead at the end',
+    Icon: ArrowUpRight,
+    color: '#f97316',
     fillOpacity: 0,
     group: 'geometry',
   },

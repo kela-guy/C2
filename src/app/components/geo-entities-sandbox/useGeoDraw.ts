@@ -134,6 +134,40 @@ export interface UseGeoDrawResult {
    */
   lastCommittedId: string | null;
   clearLastCommittedId: () => void;
+
+  /**
+   * Id of the shape currently being staged. Set on `commitDraft` and
+   * cleared by `savePending` / `cancelPending`. While set the panel
+   * lives in its "Draft detail" view (with Save / Cancel buttons in
+   * the footer); once cleared the panel falls back to the default
+   * Layers view.
+   *
+   * Decoupled from `selectedId` so we can keep "this shape is what the
+   * user is finalizing" as a distinct state from generic selection —
+   * selecting a previously-saved layer mustn't open the draft footer.
+   */
+  pendingShapeId: string | null;
+  /**
+   * `true` when the pending shape was just drawn (and thus a brand-new
+   * draft that Cancel should hard-delete); `false` when the pending
+   * shape is a previously-saved entity reopened for editing via
+   * {@link beginEditShape} (in which case Cancel just closes the
+   * editor without touching the shape).
+   */
+  pendingIsNew: boolean;
+  /** Finalize the pending shape — clears the staging flag, keeps the shape. */
+  savePending: () => void;
+  /** Discard the pending shape entirely and clear the staging flag. */
+  cancelPending: () => void;
+  /**
+   * Reopen a previously-saved shape in the panel's Draft-detail view
+   * (Name / Type / Coordinates / Color editor + Save / Cancel footer).
+   * Unlike a fresh draft, Cancel here is non-destructive: it only
+   * closes the editor — the shape stays in `shapes` with whatever
+   * field edits the user applied during the session (edits land live
+   * through `updateShape`).
+   */
+  beginEditShape: (id: string) => void;
   /**
    * Coalesce a sequence of edits into a single undo entry. Used by live
    * drags (vertex chips, transform handles) so one Cmd+Z rewinds the whole
@@ -152,6 +186,16 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
   // One-shot signal: set on `commitDraft`, cleared once the consumer
   // (the panel's LayerRow) has used it to enter rename mode.
   const [lastCommittedId, setLastCommittedId] = useState<string | null>(null);
+  // Two-phase commit: `commitDraft` adds the shape to `shapes` AND
+  // sets this flag. The panel then renders its Draft-detail view with
+  // Save / Cancel buttons. `savePending()` keeps the shape and clears
+  // the flag; `cancelPending()` deletes the shape and clears the flag.
+  const [pendingShapeId, setPendingShapeId] = useState<string | null>(null);
+  // Distinguishes a brand-new draft (Cancel hard-deletes) from a
+  // previously-saved shape reopened for edit via `beginEditShape`
+  // (Cancel just closes the editor). Always kept in sync with
+  // `pendingShapeId`.
+  const [pendingIsNew, setPendingIsNew] = useState(false);
   const dragRef = useRef<Drag>({ kind: 'idle' });
   const [draggingTick, setDraggingTick] = useState(0);
   // Stack of recently deleted shapes (LIFO) so `restoreLastDeleted` can
@@ -366,8 +410,16 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
         strokeColor: '#ffffff',
         fillOpacity: meta.fillOpacity,
         points: committedPoints,
-        strokeWidth: 1,
+        // Hairline white outline (0.5 px) — fine enough to read as a
+        // crisp boundary against any basemap without dominating the
+        // shape. The slider in the Color section lets the user thicken
+        // it (clamped to 0.5–8 px, dashed at 4 px max).
+        strokeWidth: 0.5,
         lineStyle: 'solid',
+        // Every new shape ships tagged as "General" so it has a valid
+        // type from the moment it's drawn — the user can re-tag it via
+        // the Type dropdown but is never forced to pick a type to save.
+        zoneType: 'general',
       };
       mutate((prev) => [...prev, shape]);
       setSelectedId(id);
@@ -376,9 +428,59 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
       // Flag the just-committed shape so the panel can auto-focus its
       // name input (the "Add name" inline editor with a visible caret).
       setLastCommittedId(id);
+      // Enter the two-phase Save / Cancel staging flow — the panel
+      // will keep this shape in its "Draft detail" view until the user
+      // explicitly saves or cancels. Brand-new drafts are marked
+      // `pendingIsNew` so Cancel hard-deletes them.
+      setPendingShapeId(id);
+      setPendingIsNew(true);
     },
     [defaultName, mutate],
   );
+
+  const savePending = useCallback(() => {
+    // No-op on the underlying shape — Save just dismisses the staging
+    // flag so the panel falls back to the Layers view. The shape is
+    // already in `shapes`.
+    setPendingShapeId(null);
+    setPendingIsNew(false);
+  }, []);
+
+  const cancelPending = useCallback(() => {
+    setPendingShapeId((id) => {
+      if (!id) return null;
+      // For brand-new drafts (just-drawn shapes), Cancel hard-deletes:
+      // "as if this draft never happened", straight through `mutate`
+      // (snapshots undo, no toast, no `deletedStackRef` entry — the
+      // user shouldn't be able to "undo a cancel").
+      //
+      // For reopened existing shapes (`pendingIsNew === false`), Cancel
+      // is non-destructive: the shape stays in `shapes` and we only
+      // close the editor. Field edits made during the session are kept
+      // because they were already applied live via `updateShape`.
+      if (pendingIsNew) {
+        mutate((prev) => prev.filter((s) => s.id !== id));
+      }
+      // Always drop the selection on close, regardless of pendingIsNew.
+      // Otherwise `selectedId` stays pinned to the just-edited shape and
+      // keeps the map overlay in `interactive` mode — which (with the
+      // new "click shape on map opens detail" flow) makes a subsequent
+      // click on a different layer row feel broken because the map
+      // overlay still owns pointer capture for the previous shape.
+      setSelectedId((selected) => (selected === id ? null : selected));
+      return null;
+    });
+    setPendingIsNew(false);
+  }, [mutate, pendingIsNew]);
+
+  const beginEditShape = useCallback((id: string) => {
+    // Reopen an existing shape in the Draft-detail view. `pendingIsNew`
+    // stays false so Cancel won't delete the shape — the editor is a
+    // read/write window onto the live shape, not a staging buffer.
+    setPendingShapeId(id);
+    setPendingIsNew(false);
+    setSelectedId(id);
+  }, []);
 
   const clearLastCommittedId = useCallback(() => setLastCommittedId(null), []);
 
@@ -418,9 +520,19 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
   const onCanvasPointerDown = useCallback(
     (p: Vec2, opts?: { onShapeId?: string }) => {
       const tool = activeToolId;
-      // Select tool: click a shape to select it, click empty to clear.
+      // Select tool: clicking a shape opens its Draft-detail editor
+      // (same flow as the pencil icon on a layer row), clicking empty
+      // space clears the current selection. We route through
+      // `beginEditShape` here instead of just `setSelectedId` so the
+      // panel transitions to the editor for the clicked shape — the
+      // user's "click on a shape goes to the editor, not the layers
+      // list" requirement.
       if (tool === 'select') {
-        setSelectedId(opts?.onShapeId ?? null);
+        if (opts?.onShapeId) {
+          beginEditShape(opts.onShapeId);
+        } else {
+          setSelectedId(null);
+        }
         return;
       }
       // A drawing tool is active → keep drawing, even when the click lands
@@ -477,7 +589,7 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
         });
       }
     },
-    [activeToolId, commitDraft, draft],
+    [activeToolId, beginEditShape, commitDraft, draft],
   );
 
   const onCanvasPointerMove = useCallback((p: Vec2) => {
@@ -706,6 +818,12 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
 
     lastCommittedId,
     clearLastCommittedId,
+
+    pendingShapeId,
+    pendingIsNew,
+    savePending,
+    cancelPending,
+    beginEditShape,
   };
 }
 

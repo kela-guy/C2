@@ -23,6 +23,14 @@ export interface ShapeTransformHandlesProps {
   height: number;
   /** Show the rotate handle. Default true; circles pass `false`. */
   allowRotate?: boolean;
+  /**
+   * Render the 8 scale circle handles inside the SVG. Default true.
+   * Set to `false` when the caller wants to render the handles itself
+   * as HTML overlays (e.g. `MapDrawOverlay`, where the SVG is stretched
+   * non-uniformly and SVG circles render as ovals). The dashed bbox
+   * + rotate handle still render normally.
+   */
+  renderHandles?: boolean;
   /** Called when the user grabs a handle. Origin is normalized canvas space. */
   onHandleDown: (
     handle: HandleId,
@@ -44,6 +52,7 @@ export function ShapeTransformHandles({
   width,
   height,
   allowRotate = true,
+  renderHandles = true,
   onHandleDown,
 }: ShapeTransformHandlesProps) {
   const b = bbox(shape.points);
@@ -124,6 +133,7 @@ export function ShapeTransformHandles({
       )}
 
       {!isPoint &&
+        renderHandles &&
         handles.map((handle) => (
           // Round handles match the vocabulary used by polygon vertex chips
           // (white fill, shape-colored outline) so corners + vertices read
