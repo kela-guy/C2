@@ -29,6 +29,10 @@ import {
   type Vec2,
 } from './drawTypes';
 import { toolById } from './drawTools';
+import {
+  DEFAULT_ZONE_TYPE,
+  getZoneColor,
+} from '../map-draw/zoneTypes';
 
 /**
  * Distance (in normalized units) within which clicking the first vertex of an
@@ -176,6 +180,26 @@ export interface UseGeoDrawResult {
    * through `updateShape`).
    */
   beginEditShape: (id: string) => void;
+
+  /**
+   * Latest focus request emitted by `requestFocus`. The panel's "center
+   * on map" action bumps this; a Dashboard-mounted bridge watches it
+   * and forwards the shape's projected centroid to the Cesium camera.
+   *
+   * The wrapping `id`/`shapeId` pair makes the request idempotent —
+   * consumers key off `id` so the same shape can be re-centered by
+   * clicking twice in a row, and stale renders don't accidentally
+   * re-fire it.
+   */
+  focusRequest: { id: number; shapeId: string; point?: Vec2 } | null;
+  /**
+   * Ask the map to center on the given shape (see {@link focusRequest}).
+   * Pass an optional normalized `point` to center on a specific
+   * coordinate (e.g. a single vertex) instead of the shape's centroid —
+   * used by the panel's per-coordinate "show on map" affordance.
+   */
+  requestFocus: (shapeId: string, point?: Vec2) => void;
+
   /**
    * Coalesce a sequence of edits into a single undo entry. Used by live
    * drags (vertex chips, transform handles) so one Cmd+Z rewinds the whole
@@ -204,6 +228,19 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
   // (Cancel just closes the editor). Always kept in sync with
   // `pendingShapeId`.
   const [pendingIsNew, setPendingIsNew] = useState(false);
+  // Focus request bus — the panel's "center on map" action bumps this
+  // and a Dashboard-mounted bridge forwards it to Cesium. Using an id
+  // instead of just a shape id makes repeated requests idempotent: a
+  // consumer effect keys off `id`, so clicking the action twice on the
+  // same shape re-triggers the fly-to.
+  const [focusRequest, setFocusRequest] = useState<
+    { id: number; shapeId: string; point?: Vec2 } | null
+  >(null);
+  const focusRequestSeqRef = useRef(0);
+  const requestFocus = useCallback((shapeId: string, point?: Vec2) => {
+    focusRequestSeqRef.current += 1;
+    setFocusRequest({ id: focusRequestSeqRef.current, shapeId, point });
+  }, []);
   const dragRef = useRef<Drag>({ kind: 'idle' });
   const [draggingTick, setDraggingTick] = useState(0);
   // Stack of recently deleted shapes (LIFO) so `restoreLastDeleted` can
@@ -405,7 +442,6 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
 
   const commitDraft = useCallback(
     (d: DraftShape) => {
-      const meta = toolById(d.tool);
       const id = makeShapeId(d.tool);
       // Freehand records a dense pencil stroke (dozens of points). Thin it
       // out on commit so the finished curve carries a handful of editable
@@ -414,29 +450,35 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
         d.kind === 'freehand'
           ? simplifyPath(d.points, 0.025).map(clampPoint)
           : d.points.map(clampPoint);
+      // Default type is "No fly zone". Its signature color drives BOTH
+      // the fill and the stroke on commit so the shape reads as its
+      // type from the moment it's drawn. Users can still override the
+      // colors independently via the Color section; changing the Type
+      // re-stamps both colors to the new type's signature.
+      const defaultTypeColor = getZoneColor(DEFAULT_ZONE_TYPE);
       const shape: GeoShape = {
         id,
         tool: d.tool,
         kind: d.kind,
         name: defaultName(d.tool),
         description: '',
-        // New shapes start black-filled with a thin white outline so the
-        // shape stands out against any basemap. Picking a Type recolors the
-        // fill; the outline and width stay user-adjustable.
-        color: '#000000',
-        strokeColor: '#ffffff',
-        fillOpacity: meta.fillOpacity,
+        color: defaultTypeColor,
+        strokeColor: defaultTypeColor,
+        // Fill starts at 30% so the shape's interior reads as a tint
+        // rather than covering the map underneath; the outline stays
+        // fully opaque so the boundary is unambiguous. The user can
+        // dial either channel from the inline % input on each
+        // ColorChip.
+        fillOpacity: 0.3,
+        strokeOpacity: 1,
         points: committedPoints,
-        // Hairline white outline (0.5 px) — fine enough to read as a
-        // crisp boundary against any basemap without dominating the
-        // shape. The slider in the Color section lets the user thicken
-        // it (clamped to 0.5–8 px, dashed at 4 px max).
-        strokeWidth: 0.5,
+        // Default outline weight of 2 px — reads as a clear, confident
+        // boundary out of the box. The slider in the Color section lets
+        // the user thin or thicken it (clamped to 0.5–8 px, dashed at
+        // 4 px max).
+        strokeWidth: 2,
         lineStyle: 'solid',
-        // Every new shape ships tagged as "General" so it has a valid
-        // type from the moment it's drawn — the user can re-tag it via
-        // the Type dropdown but is never forced to pick a type to save.
-        zoneType: 'general',
+        zoneType: DEFAULT_ZONE_TYPE,
       };
       mutate((prev) => [...prev, shape]);
       setSelectedId(id);
@@ -856,6 +898,9 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
     savePending,
     cancelPending,
     beginEditShape,
+
+    focusRequest,
+    requestFocus,
   };
 }
 

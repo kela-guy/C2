@@ -31,7 +31,6 @@ import {
   useState,
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
-  type RefObject,
 } from 'react';
 import {
   bbox,
@@ -60,6 +59,18 @@ export interface MapDrawOverlayProps {
    * the drawing panel when the user clicks a shape on the map.
    */
   onSelect?: (id: string | null) => void;
+  /**
+   * Whether the docked drawing panel is open. When true the overlay is
+   * clipped so its SVG contents (and its fixed-positioned labels /
+   * chips) never render on top of the panel — drawing feedback stays
+   * confined to the visible map area.
+   */
+  panelOpen?: boolean;
+  /**
+   * Width in px of the docked panel. Only consulted when
+   * {@link panelOpen} is true; used to compute the clip inset.
+   */
+  panelWidthPx?: number;
 }
 
 const VIEWBOX_W = 1000;
@@ -127,9 +138,21 @@ const STATUS_TONE: Record<string, { label: string; tone: string }> = {
   high: { label: 'High', tone: '#f43f5e' },
 };
 
-export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
-  const { draw, drawTool, coordinatesOpen, hoveredShapeId, setHoveredShapeId } =
-    useMapDraw();
+export function MapDrawOverlay({
+  className,
+  onSelect,
+  panelOpen = false,
+  panelWidthPx = 0,
+}: MapDrawOverlayProps) {
+  const {
+    draw,
+    drawTool,
+    coordinatesOpen,
+    hoveredShapeId,
+    setHoveredShapeId,
+    focusedVertex,
+    setFocusedVertex,
+  } = useMapDraw();
   const svgRef = useRef<SVGSVGElement | null>(null);
 
   // ---- right-click context menu ---------------------------------------
@@ -143,7 +166,11 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
 
   // Active vertex drag (editing a coordinate directly on the map). Holds
   // the shape + vertex index being dragged; `null` when idle.
-  const vertexDragRef = useRef<{ shapeId: string; index: number } | null>(null);
+  const vertexDragRef = useRef<{
+    shapeId: string;
+    index: number;
+    moved: boolean;
+  } | null>(null);
 
   // Notify the host when the selection changes so it can open the panel
   // when a shape is clicked. Kept in a ref so the effect only depends on
@@ -219,6 +246,14 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
     const target = e.target as SVGElement | null;
     const shapeId = target?.getAttribute('data-shape-id') ?? undefined;
     const local = toLocal(e.clientX, e.clientY);
+    // Clicking a committed shape (no draw tool armed) must ALWAYS surface
+    // the drawing panel — even when the shape is already the current
+    // selection. The `selectedId` effect below only fires on a *change*,
+    // so re-clicking a shape whose panel the user had closed would
+    // otherwise be a no-op. Notifying the host here closes that gap.
+    if (shapeId && !drawTool) {
+      onSelectRef.current?.(shapeId);
+    }
     e.currentTarget.setPointerCapture?.(e.pointerId);
     // Report the surface aspect ratio so the engine's Shift "perfect
     // circle" snap is round on screen (normalized space is stretched to
@@ -256,14 +291,23 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
     e.preventDefault();
     e.stopPropagation();
     e.currentTarget.setPointerCapture?.(e.pointerId);
-    vertexDragRef.current = { shapeId, index };
-    // Coalesce the per-frame point updates into one undo entry for the
-    // whole drag — Cmd+Z then rewinds the entire vertex motion.
-    draw.beginEditTransaction();
+    vertexDragRef.current = { shapeId, index, moved: false };
+    // Locate this vertex in the panel's Coordinates list immediately, so a
+    // plain click (press without drag) still highlights + scrolls to the
+    // matching row — the drag itself only kicks in once the pointer moves.
+    setFocusedVertex({ shapeId, index });
   };
   const moveVertexDrag = (e: ReactPointerEvent<HTMLButtonElement>) => {
     const drag = vertexDragRef.current;
     if (!drag) return;
+    // Defer the undo snapshot until the pointer actually moves: a plain
+    // click shouldn't push an empty (no-op) entry onto the undo stack.
+    // Once moving, all per-frame updates coalesce into a single undo
+    // entry so Cmd+Z rewinds the whole vertex motion at once.
+    if (!drag.moved) {
+      drag.moved = true;
+      draw.beginEditTransaction();
+    }
     const p = toLocal(e.clientX, e.clientY);
     const shape = draw.shapes.find((s) => s.id === drag.shapeId);
     if (shape) {
@@ -272,10 +316,11 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
     }
   };
   const endVertexDrag = (e: ReactPointerEvent<HTMLButtonElement>) => {
-    if (vertexDragRef.current) {
+    const drag = vertexDragRef.current;
+    if (drag) {
       vertexDragRef.current = null;
       e.currentTarget.releasePointerCapture?.(e.pointerId);
-      draw.endEditTransaction();
+      if (drag.moved) draw.endEditTransaction();
     }
   };
   const handleDoubleClick = (e: ReactPointerEvent<SVGSVGElement>) => {
@@ -301,17 +346,22 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
     }
   };
 
-  // Centered name labels, rendered in foreign HTML so the font matches
-  // the rest of the UI. A label is shown for EVERY visible shape and
-  // persists whether or not the shape is selected — empty ones read
-  // "Name" as a placeholder. The selected shape's label is an editable
-  // input; the rest are static text.
+  // Centered name / type / status labels — rendered in HTML so the
+  // font matches the rest of the UI.
+  //
+  // Visibility rule (per spec): labels are hidden by default and only
+  // appear when the user actively engages the shape — on hover or
+  // while it's selected. This keeps the map clean when many shapes are
+  // present while still surfacing the shape's identity on demand. The
+  // selected shape's label is an editable input; hovered-only labels
+  // stay read-only.
   const labels = useMemo(() => {
     const el = svgRef.current;
     if (!el) return [];
     const r = el.getBoundingClientRect();
     return draw.shapes
       .filter((s) => !s.hidden && s.kind !== 'point')
+      .filter((s) => s.id === draw.selectedId || s.id === hoveredShapeId)
       .map((s) => {
         const b = bbox(s.points);
         const cx = (b.minX + b.maxX) / 2;
@@ -322,78 +372,112 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
           status: s.status,
           zoneType: s.zoneType,
           editable: s.id === draw.selectedId,
-          left: r.left + cx * r.width,
-          top: r.top + cy * r.height,
+          // The zone-type chip is hover-only: it shows while the pointer
+          // is over the shape, but disappears for a merely-selected shape
+          // so the map stays uncluttered during editing.
+          hovered: s.id === hoveredShapeId,
+          // Overlay-div-relative (the annotations render as `absolute`
+          // children of the `inset-0` overlay, so we drop the viewport
+          // origin `r.left`/`r.top`). This keeps them inside the
+          // overlay's stacking context + clip-path so they never paint
+          // over the docked panel.
+          left: cx * r.width,
+          top: cy * r.height,
         };
       });
     // shapes drives the re-anchor so labels follow live during transforms.
-  }, [draw.shapes, draw.selectedId]);
+  }, [draw.shapes, draw.selectedId, hoveredShapeId]);
 
-  // Numbered badges for each vertex of the SELECTED shape (1, 2, 3, …) so
-  // the user can match a map dot to its row in the panel's Coordinates
-  // list. Rendered as HTML (like the name labels) to dodge the SVG's
-  // non-uniform stretch. Circles are excluded (they use transform handles).
-  //
-  // Visible ONLY while the panel's Coordinates section is open — selecting
-  // a shape no longer auto-shows the dots. Type is the mandatory primary
-  // action; coordinate editing is an opt-in mode.
-  const vertexLabels = useMemo(() => {
-    const el = svgRef.current;
-    const s = draw.selectedShape;
-    if (
-      !el ||
-      !s ||
-      !coordinatesOpen ||
-      s.hidden ||
-      s.kind === 'circle' ||
-      s.kind === 'point'
-    ) {
-      return [];
-    }
-    const r = el.getBoundingClientRect();
-    return s.points.map((p, i) => ({
-      key: `${s.id}-${i}`,
-      shapeId: s.id,
-      index: i,
-      n: i + 1,
-      left: r.left + p.x * r.width,
-      top: r.top + p.y * r.height,
-    }));
-  }, [draw.selectedShape, draw.shapes, coordinatesOpen]);
+  // Numbered vertex badges are intentionally never rendered on the map:
+  // per the current spec, coordinates live only in the side panel's
+  // Coordinates list, and shape metadata (name / type / meters) is
+  // hover / selection-only. Kept as an empty memo so downstream code
+  // paths (map, key references) stay wired without adding conditionals.
+  const vertexLabels = useMemo(
+    () =>
+      [] as {
+        key: string;
+        shapeId: string;
+        index: number;
+        n: number;
+        left: number;
+        top: number;
+      }[],
+    [],
+  );
 
-  // Draft vertex dots — rendered as HTML so they stay perfect circles
-  // (the SVG layer uses `preserveAspectRatio="none"` which stretches any
-  // `<circle>` into an oval). The first vertex is highlighted; the rest
-  // are smaller. Circles get a single center dot.
-  const draftDots = useMemo(() => {
+  // Draft vertex dots are intentionally never rendered on the map:
+  // the user sees each new coordinate appear live in the drawing
+  // panel's Coordinates list instead. Kept as an empty memo so the
+  // render pipeline stays intact.
+  const draftDots = useMemo(
+    () =>
+      [] as {
+        key: string;
+        left: number;
+        top: number;
+        primary: boolean;
+        coordText: string;
+      }[],
+    [],
+  );
+
+  // Coordinate vertex dots — clickable markers on each vertex of a
+  // shape. Shown for the shape currently open in the panel (the pending
+  // / editing shape) so its dots are always available to click, plus any
+  // hovered shape. Clicking a dot highlights the matching coordinate row
+  // in the panel (via `focusedVertex`) so the user can see where that
+  // map point sits in the Coordinates list. Circles expose their center
+  // (mirrors the panel's single "Center" row); pins have no vertices.
+  const vertexDots = useMemo(() => {
+    const out: {
+      key: string;
+      shapeId: string;
+      index: number;
+      left: number;
+      top: number;
+      active: boolean;
+      // Polygon / polyline / freehand vertices map 1:1 to a stored point,
+      // so they can be dragged to edit that coordinate live. Circles show
+      // a synthetic *center* dot (derived from two bbox corners), so their
+      // dot stays click-only — resizing is done via the transform handles.
+      draggable: boolean;
+    }[] = [];
     const el = svgRef.current;
-    const d = draw.draft;
-    if (!el || !d) {
-      return [] as { key: string; left: number; top: number; primary: boolean }[];
-    }
+    if (!el) return out;
+    const ids = new Set<string>();
+    if (hoveredShapeId) ids.add(hoveredShapeId);
+    if (focusedVertex) ids.add(focusedVertex.shapeId);
+    if (draw.pendingShapeId) ids.add(draw.pendingShapeId);
+    if (ids.size === 0) return out;
     const r = el.getBoundingClientRect();
-    if (d.kind === 'circle') {
-      const c = d.points[0];
-      if (!c) return [];
-      return [
-        {
-          key: 'draft-circle-center',
-          left: r.left + c.x * r.width,
-          top: r.top + c.y * r.height,
-          primary: true,
-        },
-      ];
+    for (const s of draw.shapes) {
+      if (s.hidden || s.kind === 'point' || !ids.has(s.id)) continue;
+      const isCircle = s.kind === 'circle';
+      const pts =
+        isCircle
+          ? (() => {
+              const a = s.points[0];
+              if (!a) return [] as Vec2[];
+              const b = s.points[1] ?? a;
+              return [{ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }];
+            })()
+          : s.points;
+      pts.forEach((p, i) => {
+        out.push({
+          draggable: !isCircle,
+          key: `${s.id}-${i}`,
+          shapeId: s.id,
+          index: i,
+          left: p.x * r.width,
+          top: p.y * r.height,
+          active:
+            focusedVertex?.shapeId === s.id && focusedVertex.index === i,
+        });
+      });
     }
-    // Freehand draws as a continuous pencil stroke — no per-point dots.
-    if (d.kind === 'freehand') return [];
-    if (d.kind === 'point') return [];
-    return d.points.map((p, i) => ({
-      key: `draft-${i}`,
-      left: r.left + p.x * r.width,
-      top: r.top + p.y * r.height,
-      primary: i === 0,
-    }));
-  }, [draw.draft]);
+    return out;
+  }, [draw.shapes, draw.pendingShapeId, hoveredShapeId, focusedVertex]);
 
   // Live distance / radius readout for the in-flight draft. Circles
   // show their radius (center -> cursor); polylines / arrows show the
@@ -413,8 +497,8 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
       if (!center) return null;
       return {
         text: `Radius ${formatMeters(metersBetween(center, cursor))}`,
-        left: r.left + cursor.x * r.width,
-        top: r.top + cursor.y * r.height,
+        left: cursor.x * r.width,
+        top: cursor.y * r.height,
       };
     }
     // Polyline / arrow: anchor on the last committed vertex; chip
@@ -431,17 +515,16 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
       const midY = (last.y + cursor.y) / 2;
       return {
         text: formatMeters(segMeters),
-        left: r.left + midX * r.width,
-        top: r.top + midY * r.height,
+        left: midX * r.width,
+        top: midY * r.height,
       };
     }
     return null;
   }, [draw.draft]);
 
-  // Persistent meters chips for every committed circle (radius) and
-  // polyline (total length over every segment). Stays visible after
-  // the user finishes drawing so the shape's real-world size remains
-  // legible. Same pill style as the live `draftMeterChip`.
+  // Meter chips for committed circles (radius) and polylines (total
+  // length). Same visibility rule as the name/type labels: only surface
+  // on hover / selection so the map stays clean at rest.
   const shapeMeterChips = useMemo(() => {
     const el = svgRef.current;
     if (!el)
@@ -449,6 +532,7 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
     const r = el.getBoundingClientRect();
     return draw.shapes.flatMap((s) => {
       if (s.hidden) return [];
+      if (s.id !== draw.selectedId && s.id !== hoveredShapeId) return [];
       if (s.kind === 'circle' && s.points.length >= 2) {
         // Circle is stored as bbox corners; reconstruct center + the
         // right-side radius edge so the chip anchors just outside the
@@ -460,8 +544,8 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
           {
             id: s.id,
             text: `Radius ${formatMeters(meters)}`,
-            left: r.left + edge.x * r.width,
-            top: r.top + edge.y * r.height,
+            left: edge.x * r.width,
+            top: edge.y * r.height,
           },
         ];
       }
@@ -479,14 +563,14 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
           {
             id: s.id,
             text: formatMeters(total),
-            left: r.left + mid.x * r.width,
-            top: r.top + mid.y * r.height,
+            left: mid.x * r.width,
+            top: mid.y * r.height,
           },
         ];
       }
       return [];
     });
-  }, [draw.shapes]);
+  }, [draw.shapes, draw.selectedId, hoveredShapeId]);
 
   // Transform handles for the currently-selected circle, rendered as
   // HTML overlays positioned in screen space. Done in HTML (not SVG)
@@ -528,8 +612,8 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
     ];
     return positions.map((p) => ({
       id: p.id,
-      left: r.left + p.cx * r.width,
-      top: r.top + p.cy * r.height,
+      left: p.cx * r.width,
+      top: p.cy * r.height,
       cursor: p.cursor,
       origin: { x: p.cx, y: p.cy },
       shapeId: sel.id,
@@ -550,17 +634,36 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
         return {
           id: s.id,
           color: s.color,
-          left: r.left + p.x * r.width,
-          top: r.top + p.y * r.height,
+          left: p.x * r.width,
+          top: p.y * r.height,
           selected: s.id === draw.selectedId,
         };
       });
   }, [draw.shapes, draw.selectedId]);
 
+  // Direction-aware clip inset so drawing NEVER paints over the docked
+  // panel — the panel occupies the inline-start edge (left in LTR,
+  // right in RTL). We compute the physical side at render time from
+  // the document direction and use `clip-path: inset(...)`. Because the
+  // on-map annotations (labels / dots / meter chips / handles) render as
+  // `absolute` children of this overlay div — not `fixed` — the clip AND
+  // this element's own `z-20` stacking context both apply to them, so
+  // they can never spill over (or above) the panel.
+  const clip = (() => {
+    if (!panelOpen || !panelWidthPx) return undefined;
+    const isRtl =
+      typeof document !== 'undefined' &&
+      document.documentElement.getAttribute('dir') === 'rtl';
+    return isRtl
+      ? `inset(0 ${panelWidthPx}px 0 0)`
+      : `inset(0 0 0 ${panelWidthPx}px)`;
+  })();
+
   return (
     <div
       className={`pointer-events-none absolute inset-0 z-20 ${className ?? ''}`.trim()}
       data-map-draw-overlay="true"
+      style={clip ? { clipPath: clip } : undefined}
     >
       <svg
         ref={svgRef}
@@ -635,7 +738,7 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
       {labels.map((l) => (
         <div
           key={l.id}
-          className="fixed z-30"
+          className="absolute z-30"
           style={{
             left: l.left,
             top: l.top,
@@ -643,18 +746,22 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
           }}
         >
           <div className="flex flex-col items-center gap-1">
-            {/* On-shape zone-type chip — hidden for the implicit
-                "general" default and for shapes with no type at all so
-                only meaningfully-tagged shapes carry a chip. The
-                colored swatch in the chip is dropped per the spec
-                ("types have no circle color"). */}
-            {l.zoneType &&
-              l.zoneType !== 'general' &&
-              ZONE_TYPE_BY_ID[l.zoneType] && (
-                <span className="pointer-events-none inline-flex items-center rounded-full bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]">
-                  {ZONE_TYPE_BY_ID[l.zoneType].label}
-                </span>
-              )}
+            {/* On-shape zone-type chip. "General" has been removed as
+                a type, so every shape with a `zoneType` gets a chip.
+                A small colored swatch mirrors the STATUS chip below —
+                the same swatch appears in the panel's Type Select, so
+                the two surfaces read consistently. Hover/selection-only
+                (the parent label pipeline already gates this). */}
+            {l.hovered && l.zoneType && ZONE_TYPE_BY_ID[l.zoneType] && (
+              <span className="pointer-events-none inline-flex items-center gap-1 rounded-full bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]">
+                <span
+                  aria-hidden
+                  className="size-1.5 rounded-full"
+                  style={{ background: ZONE_TYPE_BY_ID[l.zoneType].color }}
+                />
+                {ZONE_TYPE_BY_ID[l.zoneType].label}
+              </span>
+            )}
             {l.status && STATUS_TONE[l.status] && (
               <span
                 className="pointer-events-none inline-flex items-center gap-1 rounded-full bg-black/45 px-1.5 py-0.5 text-[10px] font-semibold text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]"
@@ -710,7 +817,7 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
           onPointerCancel={endVertexDrag}
           // Fixed size = true circle (no width drift from variable-width
           // digit content). Numbers ≥10 stay legible at size-5.
-          className="pointer-events-auto fixed z-30 inline-flex size-5 cursor-grab touch-none items-center justify-center rounded-full bg-black/75 text-[10px] font-semibold leading-none text-white ring-1 ring-white/50 [text-shadow:0_1px_2px_rgba(0,0,0,0.6)] active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+          className="pointer-events-auto absolute z-30 inline-flex size-5 cursor-grab touch-none items-center justify-center rounded-full bg-black/75 text-[10px] font-semibold leading-none text-white ring-1 ring-white/50 [text-shadow:0_1px_2px_rgba(0,0,0,0.6)] active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
           style={{
             left: v.left,
             top: v.top,
@@ -719,6 +826,54 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
         >
           {v.n}
         </button>
+      ))}
+
+      {/* Coordinate vertex dots — draggable markers on each vertex of the
+          shape open in the panel (and any hovered shape). Dragging a dot
+          moves that vertex on the map and updates the matching row in the
+          panel's Coordinates list live; a plain click just highlights +
+          scrolls to that row. Circle dots (a synthetic center) are
+          click-only. The active dot (last touched) gets a larger, tinted
+          ring and shows a grab cursor when it can be dragged. */}
+      {vertexDots.map((dot) => (
+        <button
+          key={dot.key}
+          type="button"
+          aria-label={
+            dot.draggable
+              ? `Drag to move coordinate ${dot.index + 1}`
+              : `Show coordinate ${dot.index + 1} in panel`
+          }
+          title={dot.draggable ? 'Drag to move this point' : 'Show in coordinates list'}
+          onPointerDown={
+            dot.draggable
+              ? (e) => beginVertexDrag(e, dot.shapeId, dot.index)
+              : undefined
+          }
+          onPointerMove={dot.draggable ? moveVertexDrag : undefined}
+          onPointerUp={dot.draggable ? endVertexDrag : undefined}
+          onPointerCancel={dot.draggable ? endVertexDrag : undefined}
+          onClick={
+            dot.draggable
+              ? undefined
+              : (e) => {
+                  e.stopPropagation();
+                  setFocusedVertex({ shapeId: dot.shapeId, index: dot.index });
+                }
+          }
+          className={`pointer-events-auto absolute z-30 grid touch-none place-items-center rounded-full transition-[width,height] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 ${
+            dot.draggable ? 'cursor-grab active:cursor-grabbing' : ''
+          } ${
+            dot.active
+              ? 'size-3.5 bg-sky-400 ring-2 ring-sky-200/80 shadow-[0_0_0_2px_rgba(0,0,0,0.55)]'
+              : 'size-2.5 bg-white ring-1 ring-black/70 hover:size-3 hover:bg-sky-200'
+          }`}
+          style={{
+            left: dot.left,
+            top: dot.top,
+            transform: 'translate(-50%, -50%)',
+          }}
+        />
       ))}
 
       {/* Live distance / radius chip — follows the cursor while the
@@ -730,7 +885,7 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
       {draftMeterChip && (
         <div
           aria-hidden
-          className="pointer-events-none fixed z-30 rounded-md border border-white/15 bg-black/75 px-1.5 py-0.5 text-[11px] font-medium leading-tight tabular-nums text-white shadow-sm backdrop-blur-sm"
+          className="pointer-events-none absolute z-30 rounded-md border border-white/15 bg-black/75 px-1.5 py-0.5 text-[11px] font-medium leading-tight tabular-nums text-white shadow-sm backdrop-blur-sm"
           style={{
             left: draftMeterChip.left + 12,
             top: draftMeterChip.top + 12,
@@ -748,7 +903,7 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
         <div
           key={chip.id}
           aria-hidden
-          className="pointer-events-none fixed z-30 rounded-md border border-white/15 bg-black/75 px-1.5 py-0.5 text-[11px] font-medium leading-tight tabular-nums text-white shadow-sm backdrop-blur-sm"
+          className="pointer-events-none absolute z-30 rounded-md border border-white/15 bg-black/75 px-1.5 py-0.5 text-[11px] font-medium leading-tight tabular-nums text-white shadow-sm backdrop-blur-sm"
           style={{
             left: chip.left + 8,
             top: chip.top - 8,
@@ -760,22 +915,39 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
       ))}
 
       {/* Draft vertex dots — true circles in HTML space (SVG circles would
-          be stretched into ovals by the canvas's non-uniform aspect). */}
+          be stretched into ovals by the canvas's non-uniform aspect).
+          Each dot carries a small coordinate pill anchored just to its
+          bottom-right so the user reads the lat/lng at the exact
+          moment they click. The first vertex is subtly highlighted so
+          "click here to close the polygon" still reads as an affordance. */}
       {draftDots.map((dot) => (
-        <div
-          key={dot.key}
-          aria-hidden
-          className={`pointer-events-none fixed z-30 rounded-full ${
-            dot.primary
-              ? 'size-2.5 bg-white ring-2 ring-black/70'
-              : 'size-2 bg-white ring-1 ring-black/70'
-          }`}
-          style={{
-            left: dot.left,
-            top: dot.top,
-            transform: 'translate(-50%, -50%)',
-          }}
-        />
+        <div key={dot.key}>
+          <div
+            aria-hidden
+            className={`pointer-events-none absolute z-30 rounded-full ${
+              dot.primary
+                ? 'size-2.5 bg-white ring-2 ring-black/70'
+                : 'size-2 bg-white ring-1 ring-black/70'
+            }`}
+            style={{
+              left: dot.left,
+              top: dot.top,
+              transform: 'translate(-50%, -50%)',
+            }}
+          />
+          <div
+            aria-hidden
+            className={`pointer-events-none absolute z-30 rounded border bg-black/75 px-1 py-[1px] font-mono text-[10px] leading-tight tabular-nums text-white/90 shadow-sm backdrop-blur-sm [text-shadow:0_1px_2px_rgba(0,0,0,0.7)] ${
+              dot.primary ? 'border-white/40' : 'border-white/10'
+            }`}
+            style={{
+              left: dot.left + 8,
+              top: dot.top + 8,
+            }}
+          >
+            {dot.coordText}
+          </div>
+        </div>
       ))}
 
       {/* Transform handles for the selected circle. HTML-rendered so
@@ -789,7 +961,7 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
           key={h.id}
           aria-label={`Resize ${h.id}`}
           role="button"
-          className="pointer-events-auto fixed z-30 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_0_0_1.5px_rgba(0,0,0,0.6)] hover:scale-110 transition-transform"
+          className="pointer-events-auto absolute z-30 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_0_0_1.5px_rgba(0,0,0,0.6)] hover:scale-110 transition-transform"
           style={{
             left: h.left,
             top: h.top,
@@ -834,7 +1006,7 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
       {pinMarkers.map((m) => (
         <div
           key={m.id}
-          className="pointer-events-none fixed z-30"
+          className="pointer-events-none absolute z-30"
           style={{
             left: m.left,
             top: m.top,
@@ -852,8 +1024,6 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
           )}
         </div>
       ))}
-
-      <CoordsStatusBar svgRef={svgRef} />
 
       {ctxMenu && (
         <ShapeContextMenu
@@ -938,58 +1108,6 @@ function ShapeContextMenu({
 }
 
 // ---------------------------------------------------------------------------
-// CoordsStatusBar — pinned to the bottom-left of the map area, mirrors the
-// GeoLibre viewer's "Coords" readout. Uses the same SANDBOX_BOUNDS projection
-// as the side-panel coordinate listing, so on-map and in-panel values agree.
-// ---------------------------------------------------------------------------
-function CoordsStatusBar({
-  svgRef,
-}: {
-  svgRef: RefObject<SVGSVGElement | null>;
-}) {
-  const [coord, setCoord] = useState<{ lat: number; lng: number } | null>(null);
-
-  useEffect(() => {
-    const handleMove = (e: PointerEvent) => {
-      const el = svgRef.current;
-      if (!el) return;
-      const r = el.getBoundingClientRect();
-      if (r.width <= 0 || r.height <= 0) return;
-      const x = (e.clientX - r.left) / r.width;
-      const y = (e.clientY - r.top) / r.height;
-      if (x < 0 || x > 1 || y < 0 || y > 1) {
-        setCoord(null);
-        return;
-      }
-      setCoord(unproject({ x, y }, SANDBOX_BOUNDS));
-    };
-    const handleLeave = () => setCoord(null);
-    window.addEventListener('pointermove', handleMove);
-    window.addEventListener('pointerleave', handleLeave);
-    return () => {
-      window.removeEventListener('pointermove', handleMove);
-      window.removeEventListener('pointerleave', handleLeave);
-    };
-  }, [svgRef]);
-
-  return (
-    <div
-      dir="ltr"
-      role="status"
-      aria-live="off"
-      className="pointer-events-none absolute bottom-2 left-2 z-30 inline-flex items-center gap-1 rounded-md border border-white/10 bg-black/60 px-2 py-0.5 font-mono text-[11px] leading-4 tabular-nums text-white/85 shadow-sm backdrop-blur-sm"
-    >
-      <span className="text-white/55">Coords:</span>
-      <span className="min-w-[140px] text-center">
-        {coord
-          ? `${coord.lng.toFixed(5)}, ${coord.lat.toFixed(5)}`
-          : '—, —'}
-      </span>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Rendering helpers (mirrors GeoDrawCanvas but reads new style fields).
 // ---------------------------------------------------------------------------
 
@@ -1024,8 +1142,16 @@ function ShapeBody({
   };
   // Outline color is independent of fill (set via the Color section's
   // Outline chip). Falls back to the fill color when nothing's set, so
-  // shapes without an explicit outline still draw something.
-  const stroke = shape.strokeColor ?? shape.color;
+  // shapes without an explicit outline still draw something. Stroke
+  // opacity mirrors fill's — an editable 0-100% inline with the
+  // outline chip in the panel.
+  const strokeBase = shape.strokeColor ?? shape.color;
+  const strokeAlpha =
+    typeof shape.strokeOpacity === 'number' &&
+    Number.isFinite(shape.strokeOpacity)
+      ? Math.max(0, Math.min(1, shape.strokeOpacity))
+      : 1;
+  const stroke = strokeAlpha < 1 ? withAlpha(strokeBase, strokeAlpha) : strokeBase;
   const lineStyle: GeoLineStyle = shape.lineStyle ?? 'solid';
   const fillMode: GeoFillMode = shape.fillMode ?? 'fill';
   // Hairline default to match the on-commit width in `useGeoDraw`.
@@ -1051,7 +1177,17 @@ function ShapeBody({
   } else if (fillMode === 'transparent') {
     fill = withAlpha(shape.color, 0.05);
   } else {
-    fill = withAlpha(shape.color, shape.fillOpacity > 0 ? shape.fillOpacity : 0.18);
+    // The Fill chip's inline % input drives fill opacity live. When
+    // it's zero, still paint fully transparent rather than snapping
+    // back to the default hint. Fallback is 0.3 (matching the commit
+    // default) so shapes without an explicit fillOpacity read as a
+    // tint over the map instead of a solid block.
+    const alpha =
+      typeof shape.fillOpacity === 'number' &&
+      Number.isFinite(shape.fillOpacity)
+        ? Math.max(0, Math.min(1, shape.fillOpacity))
+        : 0.3;
+    fill = withAlpha(shape.color, alpha);
   }
 
   // Hover highlight — applied when the user hovers the corresponding

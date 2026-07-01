@@ -77,7 +77,6 @@ export type GeoFillMode = 'fill' | 'transparent' | 'none';
  * schemas; this string is what's persisted on a shape.
  */
 export type GeoZoneType =
-  | 'general'
   | 'noFly'
   | 'restricted'
   | 'alarm'
@@ -115,6 +114,8 @@ export interface GeoShape {
   strokeColor?: string;
   /** 0–1 fill opacity (only meaningful for polygon/freehand-as-area). */
   fillOpacity: number;
+  /** 0–1 stroke opacity. Defaults to 1 when unset. */
+  strokeOpacity?: number;
   /**
    * Geometry. Order is the order they were drawn in. For polygons we DO NOT
    * repeat the first point at the end — the renderer closes the path.

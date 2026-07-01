@@ -22,10 +22,17 @@ import { useGeoDraw, type UseGeoDrawResult } from '../geo-entities-sandbox/useGe
 
 /**
  * Public tool ids the Dashboard rail / panel exposes. Maps onto the
- * engine's `polygon` / `line` / `point` / `circle` ids one-to-one.
- * `point` drops a pin (single-click commits) instead of a freehand curve.
+ * engine's `polygon` / `line` / `point` / `circle` / `arrow` ids
+ * one-to-one. `point` drops a pin (single-click commits). Freehand
+ * has been retired from the panel/floating strip; only the four
+ * canonical primitives remain in the user-facing surface.
  */
-export type MapDrawTool = 'polygon' | 'line' | 'arrow' | 'point' | 'circle';
+export type MapDrawTool =
+  | 'polygon'
+  | 'line'
+  | 'arrow'
+  | 'point'
+  | 'circle';
 
 export interface MapDrawContextValue {
   /** Underlying drawing engine. Same object both consumers share. */
@@ -51,6 +58,15 @@ export interface MapDrawContextValue {
    */
   hoveredShapeId: string | null;
   setHoveredShapeId: (id: string | null) => void;
+  /**
+   * The coordinate vertex the user is currently pointing at from the
+   * panel's Coordinates list (via the per-row "show on map" dot). The
+   * overlay renders the vertex dots for this shape and highlights the
+   * matching dot so the user can see exactly which coordinate they're
+   * looking at. `null` when no row is being located. UI-only.
+   */
+  focusedVertex: { shapeId: string; index: number } | null;
+  setFocusedVertex: (v: { shapeId: string; index: number } | null) => void;
 }
 
 const MapDrawContext = createContext<MapDrawContextValue | null>(null);
@@ -67,8 +83,15 @@ function isMapDrawTool(id: string): id is MapDrawTool {
 
 export function MapDrawProvider({ children }: { children: ReactNode }) {
   const draw = useGeoDraw();
-  const [coordinatesOpen, setCoordinatesOpen] = useState(false);
+  // Coordinates section is always open by default now — the panel no
+  // longer renders it as a collapsible, so the shared "are the numbered
+  // vertex chips on the map visible?" bit defaults to true and matches
+  // the panel state at all times.
+  const [coordinatesOpen, setCoordinatesOpen] = useState(true);
   const [hoveredShapeId, setHoveredShapeId] = useState<string | null>(null);
+  const [focusedVertex, setFocusedVertex] = useState<
+    { shapeId: string; index: number } | null
+  >(null);
 
   const drawTool: MapDrawTool | null = isMapDrawTool(draw.activeToolId)
     ? draw.activeToolId
@@ -95,6 +118,8 @@ export function MapDrawProvider({ children }: { children: ReactNode }) {
         setCoordinatesOpen,
         hoveredShapeId,
         setHoveredShapeId,
+        focusedVertex,
+        setFocusedVertex,
       }}
     >
       {children}

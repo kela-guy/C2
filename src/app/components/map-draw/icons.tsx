@@ -88,6 +88,46 @@ export function CircleDrawIcon({ size = 20, ...rest }: DrawIconProps) {
 }
 
 /**
+ * Upload glyph — a tray with an upward arrow. Used by the Coordinates
+ * section's "Upload file" button. Central Icons doesn't ship a matching
+ * neutral upload glyph, so we keep this bespoke SVG alongside the rest
+ * of the map-draw icon set.
+ */
+export function UploadIcon({ size = 14, ...rest }: DrawIconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+      {...rest}
+    >
+      <path
+        d="M12 4L12 15"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+      />
+      <path
+        d="M7 9L12 4L17 9"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M4 15V18C4 19.1046 4.89543 20 6 20H18C19.1046 20 20 19.1046 20 18V15"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+/**
  * Diagonal stroke — the straight-line drawing tool glyph.
  */
 export function LineDrawIcon({ size = 20, ...rest }: DrawIconProps) {

@@ -29,7 +29,8 @@ import { CesiumErrorBoundary } from './CesiumErrorBoundary';
 import { MapDrawOverlay } from './map-draw/MapDrawOverlay';
 import { MapDrawProvider } from './map-draw/MapDrawProvider';
 import { MapDrawPanel } from './map-draw/MapDrawPanel';
-import { PolygonDrawIcon } from './map-draw/icons';
+import { FloatingGeoEntitiesControl } from './map-draw/FloatingGeoEntitiesControl';
+import { MapFocusBridge } from './map-draw/MapFocusBridge';
 import { NotificationSystem, showTacticalNotification } from './NotificationSystem';
 import { NotificationCenter } from './NotificationCenter';
 import ListOfSystems from '@/imports/ListOfSystems';
@@ -2256,6 +2257,18 @@ export const Dashboard = ({
 
   return (
     <MapDrawProvider>
+    {/* Bridge the geo-drawing engine's per-shape "center on map"
+        requests to the Dashboard's existing map-focus state, which
+        already drives Cesium's smooth camera focus. Renders nothing;
+        acts purely as a side-effect wire. */}
+    <MapFocusBridge
+      onFocus={({ lat, lon }) => {
+        setMapFocusRequest({ lat, lon });
+        // Clear a moment later so re-focusing the same coord still
+        // fires (Cesium reads a null->value transition).
+        setTimeout(() => setMapFocusRequest(null), 100);
+      }}
+    />
     <div className="relative flex w-full h-screen overflow-hidden text-white font-sans selection:bg-red-500/30">
       {/* Minimal Left Nav */}
       <TooltipProvider>
@@ -2334,30 +2347,9 @@ export const Dashboard = ({
             <TooltipContent side={railTooltipSide} sideOffset={8}>{t.flowBuilder.simulations.title}</TooltipContent>
           </Tooltip>
 
-          {/*
-            Map-draw trigger: opens the docked drawing panel (tool
-            picker + inspector). Joins the inline-START mutual-exclusion
-            group with sidebar / Devices / Simulations / Flow Builder.
-          */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Toggle
-                size="sm"
-                pressed={mapDrawPanelOpen}
-                onPressedChange={(next) => {
-                  if (next) openMapDrawPanel();
-                  else closeMapDrawPanel();
-                }}
-                className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
-                aria-label="Geo Entities"
-              >
-                <PolygonDrawIcon size={20} />
-              </Toggle>
-            </TooltipTrigger>
-            <TooltipContent side={railTooltipSide} sideOffset={8}>
-              Geo Entities
-            </TooltipContent>
-          </Tooltip>
+          {/* Map-draw trigger moved to a floating control on the map
+              (top-right). See `FloatingGeoEntitiesControl` mounted next
+              to `MapDrawOverlay` below. */}
         </div>
 
         <Separator className="bg-white/10" />
@@ -2512,10 +2504,21 @@ export const Dashboard = ({
                 onSelect={(id) => {
                   if (id && !mapDrawPanelOpen) openMapDrawPanel();
                 }}
+                panelOpen={mapDrawPanelOpen}
+                panelWidthPx={sidebarWidth}
               />
-              {/* Floating Photoshop-style tool palette was removed —
-                  drawing is now initiated via the in-panel "Pick a
-                  tool" CTA in `MapDrawPanel`. */}
+              {/* Floating Geo Entities entry point (top-right).
+                  Collapsed = a single polygon glyph; expanded = a row
+                  of Line / Circle / POI buttons. Picking a tool closes
+                  the docked panel and arms the drawing engine; once
+                  the user commits a shape, the panel reopens for the
+                  Save / Cancel editor. Replaces the old left-rail
+                  "Geo Entities" Toggle. */}
+              <FloatingGeoEntitiesControl
+                panelOpen={mapDrawPanelOpen}
+                onOpenPanel={openMapDrawPanel}
+                onClosePanel={closeMapDrawPanel}
+              />
             </div>
           </ResizablePanel>
 
