@@ -329,7 +329,20 @@ function DraftDetailView({
   typeLab: boolean;
   typeVariant: TypePanelVariant;
 }) {
-  const canSave = shape.description.trim().length > 0;
+  // Snapshot the shape as it looked when this editor opened (keyed by
+  // id so re-opening a different shape re-captures). Edits are applied
+  // live via `updateShape`, so we compare the current shape against the
+  // snapshot to know whether anything actually changed this session.
+  const snapshotRef = useRef<{ id: string; json: string } | null>(null);
+  const currentJson = JSON.stringify(shape);
+  if (!snapshotRef.current || snapshotRef.current.id !== shape.id) {
+    snapshotRef.current = { id: shape.id, json: currentJson };
+  }
+  const dirty = snapshotRef.current.json !== currentJson;
+  // Save is active only when there's an actual change since opening the
+  // page AND the shape carries a name (empty names slip through the
+  // project too easily otherwise).
+  const canSave = dirty && shape.description.trim().length > 0;
   return (
     // Full-height flex column — scrollable editor stack on top, pinned
     // Save / Cancel footer at the bottom. The parent (panel body) hands
@@ -377,8 +390,14 @@ function DraftDetailView({
           type="button"
           disabled={!canSave}
           onClick={() => draw.savePending()}
-          title={canSave ? 'Save shape' : 'Name is required'}
-          className="rounded-md border border-transparent bg-white px-3 py-1.5 text-[12px] font-semibold text-black transition-colors hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 disabled:cursor-not-allowed disabled:bg-white/20 disabled:text-white/45"
+          title={
+            canSave
+              ? 'Save shape'
+              : shape.description.trim().length === 0
+                ? 'Name is required'
+                : 'No changes to save'
+          }
+          className="rounded-md border border-transparent bg-white px-3 py-1.5 text-[12px] font-semibold text-black transition-colors hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 disabled:cursor-not-allowed disabled:border-white/15 disabled:bg-transparent disabled:text-white/40 disabled:hover:bg-transparent"
         >
           Save
         </button>
@@ -468,8 +487,8 @@ function LayersView({
           // collapsing against the section header.
           <div className="flex h-full items-center justify-center px-2 text-center">
             <p className="max-w-[28ch] text-[12.5px] leading-relaxed text-zinc-400">
-              Pick a tool from the bottom of this panel, then click to start
-              drawing. The shape&apos;s details show up here once it&apos;s placed.
+              Pick a tool from the bottom of the panel, then start drawing. The
+              shape&apos;s details show up here once it&apos;s placed.
             </p>
           </div>
         )}
@@ -757,6 +776,12 @@ function LayerRow({
   onEdit: () => void;
 }) {
   const status = STATUS_OPTIONS.find((o) => o.id === shape.status);
+  // Type label shown above the name. When the shape has a zone type we
+  // surface its registry label; otherwise we fall back to "General" so
+  // the card always states a type rather than leaving a blank.
+  const typeLabel = shape.zoneType
+    ? ZONE_TYPE_BY_ID[shape.zoneType].label
+    : 'General';
   // Bridge the row hover state to the shared map-draw context so the
   // overlay can paint a highlight halo on the matching shape. Keyboard
   // focus is also surfaced so tab-through the list highlights too.
@@ -813,12 +838,18 @@ function LayerRow({
             >
               <ShapeKindIcon kind={shape.kind} tool={shape.tool} size={15} />
             </span>
-            <span
-              className={`min-w-0 flex-1 truncate text-[13px] font-medium ${
-                shape.hidden ? 'text-white/40' : 'text-zinc-100'
-              }`}
-            >
-              {shapeLabel(shape)}
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span
+                className={`truncate text-[13px] font-medium leading-tight ${
+                  shape.hidden ? 'text-white/40' : 'text-zinc-100'
+                }`}
+              >
+                {shapeLabel(shape)}
+              </span>
+              {/* Type sits below the name as a plain, un-boxed label. */}
+              <span className="truncate text-[11px] leading-tight text-white/45">
+                {typeLabel}
+              </span>
             </span>
             <button
               type="button"
@@ -953,16 +984,13 @@ function NameField({
   }, [autoFocus]);
 
   // Borderless, transparent name field — reads as "the title is right
-  // there, just click and type". The user explicitly didn't want a
-  // bordered input box around the name; the caret + spell-check is the
-  // only chrome we keep. The attention treatment still draws a hairline
-  // orange ring so a freshly-committed shape calls itself out, but the
-  // base state is pure text-on-panel.
+  // there, just click and type". No box, no ring: the caret +
+  // spell-check is the only chrome. (The old orange "needs attention"
+  // ring was removed — the empty state already reads as editable via
+  // the "Add name" placeholder.)
   const baseClass =
-    'w-full rounded-md border border-transparent bg-transparent px-0 py-1 text-[15px] font-medium text-white placeholder:text-white/35 outline-none transition-colors';
-  const attentionClass = needsAttention
-    ? 'ring-[0.5px] ring-orange-400/80 focus:ring-orange-400/80'
-    : 'focus:bg-white/[0.04]';
+    'w-full rounded-md border border-transparent bg-transparent px-0 py-1 text-[13px] font-medium text-white placeholder:text-zinc-400 outline-none transition-colors';
+  const attentionClass = 'focus:bg-white/[0.04]';
 
   return (
     <section className="space-y-2">
@@ -1136,7 +1164,7 @@ function CoordinatesSection({
             shape.linkUrl ? 'text-white' : 'text-zinc-500'
           }`}
         >
-          <Download size={12} />
+          <Download size={10} />
         </button>
       }
     >
@@ -1631,7 +1659,7 @@ function TypeVariantDropdown({
         {/* Color swatch removed — types no longer surface their signature
             color in the trigger; the label alone is the identity. */}
         {active ? (
-          <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-white">
+          <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-zinc-400">
             {active.label}
           </span>
         ) : (
@@ -2046,12 +2074,17 @@ function ColorChip({
 }) {
   const [open, setOpen] = useState(false);
   // Hex draft kept local so half-typed hex values don't fire onPick on
-  // every keystroke. Synced from the prop whenever the popover is
-  // closed so the next open shows the up-to-date value.
+  // every keystroke. Synced from the prop whenever the committed color
+  // changes — including while the popover is open — so picking a swatch
+  // (or any external color change) updates the hex field live. We skip
+  // the write when the draft already represents the same color so we
+  // don't flip case or clobber a value the user is mid-typing (a
+  // half-typed hex never changes `color`, so this effect won't fire).
   const [hex, setHex] = useState(color ?? '#ffffff');
   useEffect(() => {
-    if (!open) setHex(color ?? '#ffffff');
-  }, [color, open]);
+    const next = color ?? '#ffffff';
+    setHex((cur) => (cur.toLowerCase() === next.toLowerCase() ? cur : next));
+  }, [color]);
 
   const commitHex = (raw: string) => {
     const cleaned = raw.trim().replace(/^#?/, '#');

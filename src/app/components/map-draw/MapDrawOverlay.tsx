@@ -220,6 +220,12 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
     const shapeId = target?.getAttribute('data-shape-id') ?? undefined;
     const local = toLocal(e.clientX, e.clientY);
     e.currentTarget.setPointerCapture?.(e.pointerId);
+    // Report the surface aspect ratio so the engine's Shift "perfect
+    // circle" snap is round on screen (normalized space is stretched to
+    // a non-square container). Captured at gesture start — the container
+    // won't resize mid-drag.
+    const r = e.currentTarget.getBoundingClientRect();
+    if (r.height > 0) draw.setCanvasAspect(r.width / r.height);
     // Forward modifier state to the engine — circle draft / resize
     // listens to it for Shift-snap (perfect-circle constraint).
     draw.setShiftKey(e.shiftKey);
@@ -793,6 +799,11 @@ export function MapDrawOverlay({ className, onSelect }: MapDrawOverlayProps) {
             e.preventDefault();
             e.stopPropagation();
             e.currentTarget.setPointerCapture?.(e.pointerId);
+            const svg = svgRef.current;
+            if (svg) {
+              const r = svg.getBoundingClientRect();
+              if (r.height > 0) draw.setCanvasAspect(r.width / r.height);
+            }
             draw.setShiftKey(e.shiftKey);
             draw.beginHandleDrag(h.id, h.shapeId, h.origin);
           }}

@@ -120,6 +120,14 @@ export interface UseGeoDrawResult {
    * perfect circle" behaviour for circle drafts and circle resize handles.
    */
   setShiftKey: (shift: boolean) => void;
+  /**
+   * Report the drawing surface's on-screen aspect ratio (`width /
+   * height` in CSS pixels). Needed so the Shift "perfect circle" snap
+   * produces a shape that reads as round *on screen* — the normalized
+   * coordinate space is stretched to a non-square container, so equal
+   * normalized radii would otherwise render as an oval.
+   */
+  setCanvasAspect: (aspect: number) => void;
 
   /** Undo the last shape mutation (commit, edit, delete, z-order, …). */
   undo: () => void;
@@ -261,6 +269,15 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
   const shiftRef = useRef(false);
   const setShiftKey = useCallback((shift: boolean) => {
     shiftRef.current = shift;
+  }, []);
+
+  // On-screen aspect ratio (width / height) of the drawing surface.
+  // Defaults to 1 (square) until the overlay reports its real size. The
+  // circle Shift-snap divides the two axes by this so a "perfect circle"
+  // is round in CSS pixels, not in the (stretched) normalized space.
+  const canvasAspectRef = useRef(1);
+  const setCanvasAspect = useCallback((aspect: number) => {
+    if (Number.isFinite(aspect) && aspect > 0) canvasAspectRef.current = aspect;
   }, []);
 
   const selectedShape = useMemo(
@@ -614,9 +631,11 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
             ? {
                 ...s,
                 // Circles snap to a perfect circle when Shift is held —
-                // matches the draft-time shift behaviour below.
+                // matches the draft-time shift behaviour below. Pass the
+                // surface aspect ratio so the snap is round on screen.
                 points: applyHandle(drag, point, {
                   equalAspect: s.kind === 'circle' && shiftRef.current,
+                  aspect: canvasAspectRef.current,
                 }),
               }
             : s,
@@ -636,9 +655,16 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
         const center = prev.points[0];
         const dx = point.x - center.x;
         const dy = point.y - center.y;
-        const m = Math.max(Math.abs(dx), Math.abs(dy));
+        // Snap in *pixel* space so the preview is round on screen. The
+        // normalized X axis is `aspect`× wider in pixels than the Y
+        // axis, so scale dx up before comparing, then scale the chosen
+        // magnitude back down for the X radius.
+        const aspect = canvasAspectRef.current;
+        const pxDx = Math.abs(dx) * aspect;
+        const pxDy = Math.abs(dy);
+        const m = Math.max(pxDx, pxDy);
         const snapped = {
-          x: center.x + (dx >= 0 ? m : -m),
+          x: center.x + (dx >= 0 ? m : -m) / aspect,
           y: center.y + (dy >= 0 ? m : -m),
         };
         return { ...prev, cursor: snapped };
@@ -672,9 +698,14 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
           let ry = Math.abs(edge.y - center.y);
           if (Math.max(rx, ry) < MIN_CIRCLE_RADIUS) return null;
           // Shift constrains the commit to a perfect circle even if the
-          // pointer wasn't moved after the modifier was pressed.
+          // pointer wasn't moved after the modifier was pressed. Equalize
+          // in pixel space (via the surface aspect ratio) so the stored
+          // ellipse renders as a round circle on screen.
           if (shiftRef.current) {
-            rx = ry = Math.max(rx, ry);
+            const aspect = canvasAspectRef.current;
+            const m = Math.max(rx * aspect, ry);
+            rx = m / aspect;
+            ry = m;
           }
           const corners: Vec2[] = [
             { x: center.x - rx, y: center.y - ry },
@@ -811,6 +842,7 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
     isDraggingHandle,
 
     setShiftKey,
+    setCanvasAspect,
     undo,
     redo,
     beginEditTransaction,
@@ -863,7 +895,7 @@ function simplifyPath(points: Vec2[], minGap: number): Vec2[] {
 function applyHandle(
   drag: Extract<Drag, { kind: 'transform' }>,
   pointer: Vec2,
-  opts: { equalAspect?: boolean } = {},
+  opts: { equalAspect?: boolean; aspect?: number } = {},
 ): Vec2[] {
   const { handle, original, origin, anchor, center, width, height, startAngle } = drag;
 
@@ -907,12 +939,17 @@ function applyHandle(
   const minScale = 0.05 / Math.min(width, height);
   sx = Math.max(minScale, sx);
   sy = Math.max(minScale, sy);
-  // Shift-snap (circles): equalize both axes to the larger magnitude so
-  // the bbox stays square and the rendered ellipse becomes a true circle.
+  // Shift-snap (circles): make the resulting bbox square in *pixel*
+  // space so the rendered ellipse is a true circle on screen. The
+  // normalized X extent is `aspect`× wider in pixels, so we compare the
+  // scaled pixel half-extents and drive both back to the larger one.
   if (opts.equalAspect) {
-    const m = Math.max(Math.abs(sx), Math.abs(sy));
-    sx = sx < 0 ? -m : m;
-    sy = sy < 0 ? -m : m;
+    const aspect = opts.aspect ?? 1;
+    const pxX = Math.abs(sx) * width * aspect;
+    const pxY = Math.abs(sy) * height;
+    const m = Math.max(pxX, pxY);
+    sx = (sx < 0 ? -1 : 1) * (m / (width * aspect));
+    sy = (sy < 0 ? -1 : 1) * (m / height);
   }
   return scalePoints(original, anchor, sx, sy);
 }
