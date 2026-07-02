@@ -43,6 +43,34 @@ export function PolygonDrawIcon({ size = 20, ...rest }: DrawIconProps) {
 }
 
 /**
+ * "Stacked layers" — two overlaid open diamond outlines. Rail glyph for
+ * the Geo Entities panel trigger; the layered-stack semantic reads
+ * better than the polygon-with-handles when the button's job is "open
+ * the list of drawn layers" rather than "arm a draw tool". Stroke-only
+ * so the glyph inherits the rail's color states (`currentColor`).
+ */
+export function LayersStackIcon({ size = 20, ...rest }: DrawIconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+      {...rest}
+    >
+      <path
+        d="M8 12.2222L3 15L12 20L21 15L16 12.2222M12 4L3 9L12 14L21 9L12 4Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="square"
+      />
+    </svg>
+  );
+}
+
+/**
  * "Dashed circle" — represents the freehand / curve drawing tool in the
  * map-draw flyout.
  */

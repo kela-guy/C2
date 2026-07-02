@@ -71,6 +71,86 @@ export interface MapDrawOverlayProps {
    * {@link panelOpen} is true; used to compute the clip inset.
    */
   panelWidthPx?: number;
+  /**
+   * Fired while the operator is drafting a shape and the cursor
+   * approaches (or leaves) an edge of the visible map area. The
+   * velocity is in unitless "screen widths per second" — 0 in each
+   * axis means the cursor is safely away from that edge, ±1 means
+   * "right at the edge, pan as fast as we can". Dashboard forwards
+   * the value to `CesiumTacticalMap.panVelocity`, which drives an
+   * rAF camera-slide loop in the primitive.
+   *
+   * Fires ONLY while `draw.draft` is non-null and only when the
+   * velocity actually changes (rounded to 0.1 to dedupe pixel-level
+   * churn on pointer moves). Called with `null` on pointer-leave,
+   * draft-end and unmount so the host can stop panning cleanly.
+   */
+  onEdgePan?: (velocity: { vx: number; vy: number } | null) => void;
+}
+
+// ── Edge-pan tuning ──────────────────────────────────────────────────────
+// Distance from the visible-map edge, in CSS px, at which panning is
+// fully engaged. Between 0 and HOT_ZONE_PX the velocity ramps linearly
+// from 0 (at HOT_ZONE_PX away) to 1 (right at the edge).
+const EDGE_HOT_ZONE_PX = 60;
+// Velocity quantum. Rounding to this step makes pointer-move-driven
+// updates deduplicate at the React level (the overlay tracks the last
+// dispatched value in a ref and skips no-op updates), keeping Dashboard
+// re-renders in the low single digits per drag rather than per pixel.
+const EDGE_VELOCITY_STEP = 0.1;
+
+/**
+ * Compute an edge-pan velocity from a pointer position relative to the
+ * SVG rect. The camera is meant to move AWAY from the edge (so new
+ * terrain slides in), so a cursor near the LEFT edge produces
+ * `vx = -1`.
+ *
+ * Panel occlusion is folded in by pushing the visible edge on the
+ * panel side inward by `panelWidthPx` — the panel edge is treated as
+ * a map edge, which is exactly the "finishing point is behind the
+ * panel" case the feature exists for.
+ *
+ * Returns `null` if the cursor is safely outside every hot zone (so
+ * the overlay can dispatch a single `null` and shut down the rAF loop
+ * cleanly instead of an oscillating `{0, 0}`).
+ */
+function computeEdgeVelocity(
+  rect: DOMRect,
+  cursor: { clientX: number; clientY: number },
+  panelWidthPx: number,
+  isRtl: boolean,
+): { vx: number; vy: number } | null {
+  // Visible map rect: rect, but with the panel-side edge pushed in.
+  const left = rect.left + (isRtl ? 0 : panelWidthPx);
+  const right = rect.right - (isRtl ? panelWidthPx : 0);
+  const top = rect.top;
+  const bottom = rect.bottom;
+
+  const distLeft = cursor.clientX - left;
+  const distRight = right - cursor.clientX;
+  const distTop = cursor.clientY - top;
+  const distBottom = bottom - cursor.clientY;
+
+  const ramp = (d: number) => {
+    if (d >= EDGE_HOT_ZONE_PX) return 0;
+    if (d <= 0) return 1;
+    return 1 - d / EDGE_HOT_ZONE_PX;
+  };
+
+  // Camera moves AWAY from the edge. Cursor near LEFT → move camera
+  // left → vx < 0.
+  let vx = ramp(distRight) - ramp(distLeft);
+  let vy = ramp(distTop) - ramp(distBottom);
+
+  vx = Math.max(-1, Math.min(1, vx));
+  vy = Math.max(-1, Math.min(1, vy));
+
+  const round = (v: number) => Math.round(v / EDGE_VELOCITY_STEP) * EDGE_VELOCITY_STEP;
+  vx = round(vx);
+  vy = round(vy);
+
+  if (vx === 0 && vy === 0) return null;
+  return { vx, vy };
 }
 
 const VIEWBOX_W = 1000;
@@ -143,6 +223,7 @@ export function MapDrawOverlay({
   onSelect,
   panelOpen = false,
   panelWidthPx = 0,
+  onEdgePan,
 }: MapDrawOverlayProps) {
   const {
     draw,
@@ -180,6 +261,44 @@ export function MapDrawOverlay({
   useEffect(() => {
     onSelectRef.current?.(draw.selectedId);
   }, [draw.selectedId]);
+
+  // ---- edge-pan dispatcher ---------------------------------------------
+  // Only surface velocity changes to the host — pointer-move fires per
+  // pixel, but Dashboard only needs to re-render when the rounded value
+  // (see `computeEdgeVelocity`) actually flips. `null` and `{0,0}` are
+  // treated as the same "stop" state; the helper never returns `{0,0}`,
+  // but this guard covers direct null-out paths (pointer-leave, unmount,
+  // draft-end) safely.
+  const onEdgePanRef = useRef(onEdgePan);
+  onEdgePanRef.current = onEdgePan;
+  const lastEdgePanRef = useRef<{ vx: number; vy: number } | null>(null);
+  const dispatchEdgePan = useCallback(
+    (next: { vx: number; vy: number } | null) => {
+      const prev = lastEdgePanRef.current;
+      const sameNull = next === null && prev === null;
+      const sameVec =
+        next !== null && prev !== null && prev.vx === next.vx && prev.vy === next.vy;
+      if (sameNull || sameVec) return;
+      lastEdgePanRef.current = next;
+      onEdgePanRef.current?.(next);
+    },
+    [],
+  );
+
+  // Whenever the draft ends (commit / cancel / tool disarm) or the
+  // component unmounts, kill any in-flight pan. The draft dep re-runs
+  // this cleanup path on every draft transition, so we always exit
+  // through `null` before starting a new session.
+  useEffect(() => {
+    if (draw.draft) return;
+    dispatchEdgePan(null);
+  }, [draw.draft, dispatchEdgePan]);
+  useEffect(() => {
+    return () => {
+      onEdgePanRef.current?.(null);
+      lastEdgePanRef.current = null;
+    };
+  }, []);
 
   // ---- keyboard: Escape cancels draft / deselects; Enter finishes; -----
   // ---- Delete + undo/redo + draft shortcuts ----------------------------
@@ -222,15 +341,39 @@ export function MapDrawOverlay({
           draw.finishDraft();
         }
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (draw.selectedId) {
-          e.preventDefault();
-          deleteShapeWithUndo(draw, draw.selectedId);
+        // A focused Layers row handles (and preventDefaults) its own
+        // Delete via the row's onKeyDown — bail so we don't double-fire
+        // on the same shape.
+        if (e.defaultPrevented) return;
+        // Target the map / right-click selection first, then fall back to
+        // the shape currently HIGHLIGHTED in the Layers list (the row
+        // under the pointer or with keyboard focus). That's what lets the
+        // user open the Layers panel at any time and delete the shape they
+        // point at with the Delete key — no need to first "select" it.
+        const targetId = draw.selectedId ?? hoveredShapeId;
+        if (!targetId) return;
+        const target = draw.shapes.find((s) => s.id === targetId);
+        // Locked shapes are protected — leave them (and the highlight) be.
+        if (!target || target.locked) return;
+        e.preventDefault();
+        // List-driven delete (no map selection): walk the highlight to the
+        // next deletable shape so a stream of Delete presses clears rows
+        // one at a time even without moving the mouse.
+        if (!draw.selectedId) {
+          const list = draw.shapes;
+          const idx = list.findIndex((s) => s.id === targetId);
+          const successor =
+            list.slice(idx + 1).find((s) => !s.locked) ??
+            [...list.slice(0, Math.max(idx, 0))].reverse().find((s) => !s.locked) ??
+            null;
+          setHoveredShapeId(successor ? successor.id : null);
         }
+        deleteShapeWithUndo(draw, targetId);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [draw]);
+  }, [draw, hoveredShapeId, setHoveredShapeId]);
 
   // ---- pointer geometry helpers --------------------------------------
   const toLocal = useCallback((clientX: number, clientY: number): Vec2 => {
@@ -273,10 +416,33 @@ export function MapDrawOverlay({
   const handlePointerMove = (e: ReactPointerEvent<SVGSVGElement>) => {
     draw.setShiftKey(e.shiftKey);
     draw.onCanvasPointerMove(toLocal(e.clientX, e.clientY));
+    // Edge-pan only while a draft is actively in progress. Anything else
+    // (browsing, hover, transform-handle drag) should leave the map's
+    // native pan alone.
+    if (draw.draft && svgRef.current) {
+      const rect = svgRef.current.getBoundingClientRect();
+      const isRtl =
+        typeof document !== 'undefined' &&
+        document.documentElement.getAttribute('dir') === 'rtl';
+      const effectivePanelPx = panelOpen ? panelWidthPx : 0;
+      const v = computeEdgeVelocity(
+        rect,
+        { clientX: e.clientX, clientY: e.clientY },
+        effectivePanelPx,
+        isRtl,
+      );
+      dispatchEdgePan(v);
+    }
   };
   const handlePointerUp = (e: ReactPointerEvent<SVGSVGElement>) => {
     draw.setShiftKey(e.shiftKey);
     draw.onCanvasPointerUp(toLocal(e.clientX, e.clientY));
+  };
+  // Cursor leaves the overlay while drafting → stop panning. Without
+  // this, dragging past the browser window edge would strand the camera
+  // in a permanent slide until the user moved back in.
+  const handlePointerLeave = () => {
+    dispatchEdgePan(null);
   };
 
   // ---- on-map vertex editing -----------------------------------------
@@ -681,6 +847,7 @@ export function MapDrawOverlay({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
+        onPointerLeave={handlePointerLeave}
         onDoubleClick={handleDoubleClick}
         onContextMenu={(e) => {
           e.preventDefault();

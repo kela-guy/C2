@@ -126,6 +126,35 @@ body {
   cursor: pointer !important;
 }
 
+/* Toast action / cancel buttons — mirror the map-draw panel's Cancel
+   button so an "Undo" affordance in a toast reads as a sibling of the
+   panel footer instead of sonner's default filled pill. Same padding,
+   font weight, border tint, hover ramp. Applied to BOTH the action
+   button (Undo) and cancel button so the two never diverge. */
+[data-sonner-toast] [data-button][data-action],
+[data-sonner-toast] [data-button][data-cancel] {
+  height: auto !important;
+  padding: 6px 12px !important;
+  border-radius: 6px !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  background: transparent !important;
+  color: #e4e4e7 !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease !important;
+}
+[data-sonner-toast] [data-button][data-action]:hover,
+[data-sonner-toast] [data-button][data-cancel]:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #ffffff !important;
+}
+[data-sonner-toast] [data-button][data-action]:focus-visible,
+[data-sonner-toast] [data-button][data-cancel]:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25) !important;
+}
+
 [data-sonner-toast][data-type="success"] [data-icon] {
   color: #22c55e !important;
 }

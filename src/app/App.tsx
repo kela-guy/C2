@@ -72,6 +72,24 @@ const GeoEntitiesTypeSandbox = import.meta.env.DEV
   ? lazy(() => import("./components/geo-entities-sandbox/GeoEntitiesTypeSandbox"))
   : null;
 
+// Geo Entities Card — dev-only side-by-side review of 5 candidate designs
+// for the Geo Entities LIST card (the LayerRow inside the map-draw panel).
+// Each design renders in a 367px mock panel column against a common set
+// of sample shapes so a reviewer can compare directions before we port a
+// winner into the real panel.
+const GeoEntitiesCardSandbox = import.meta.env.DEV
+  ? lazy(() => import("./components/geo-entities-sandbox/GeoEntitiesCardSandbox"))
+  : null;
+
+// Floating Panel Sandbox — dev-only review of horizontal-only floating
+// tool-strip variants (chip pill / segmented / labeled / grouped /
+// glass). Each variant renders on top of a mock map frame with a
+// shared anchor radio so the reviewer can preview placements before
+// we port a winner into `FloatingGeoEntitiesControl`.
+const FloatingPanelSandbox = import.meta.env.DEV
+  ? lazy(() => import("./components/floating-panel-sandbox/FloatingPanelSandbox"))
+  : null;
+
 function PlaygroundFallback() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#09090b] text-sm text-neutral-400">
@@ -265,6 +283,38 @@ export default function App() {
                   element={
                     <Suspense fallback={<PlaygroundFallback />}>
                       <GeoEntitiesTypeSandbox />
+                    </Suspense>
+                  }
+                />
+              )}
+              {/*
+                Geo Entities Card — DEV-only. Standalone review of 5
+                candidate designs for the LayerRow card, rendered side-by-
+                side in 367px mock panel columns. Reach it directly at
+                /geo-entities-card-sandbox.
+              */}
+              {GeoEntitiesCardSandbox && (
+                <Route
+                  path="/geo-entities-card-sandbox"
+                  element={
+                    <Suspense fallback={<PlaygroundFallback />}>
+                      <GeoEntitiesCardSandbox />
+                    </Suspense>
+                  }
+                />
+              )}
+              {/*
+                Floating Panel Sandbox — DEV-only. Reviews 5 horizontal
+                variants of the map's floating Geo Entities tool strip
+                against a mock map with a shared anchor radio. Reach
+                it directly at /floating-panel-sandbox.
+              */}
+              {FloatingPanelSandbox && (
+                <Route
+                  path="/floating-panel-sandbox"
+                  element={
+                    <Suspense fallback={<PlaygroundFallback />}>
+                      <FloatingPanelSandbox />
                     </Suspense>
                   }
                 />

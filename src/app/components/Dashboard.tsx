@@ -30,6 +30,7 @@ import { MapDrawOverlay } from './map-draw/MapDrawOverlay';
 import { MapDrawProvider } from './map-draw/MapDrawProvider';
 import { MapDrawPanel } from './map-draw/MapDrawPanel';
 import { FloatingGeoEntitiesControl } from './map-draw/FloatingGeoEntitiesControl';
+import { GeoEntitiesRailToggle } from './map-draw/GeoEntitiesRailToggle';
 import { MapFocusBridge } from './map-draw/MapFocusBridge';
 import { NotificationSystem, showTacticalNotification } from './NotificationSystem';
 import { NotificationCenter } from './NotificationCenter';
@@ -342,6 +343,16 @@ export const Dashboard = ({
   // `<MapDrawProvider>` so the panel and the screen-space overlay share
   // selection / draft / tool state.
   const [mapDrawPanelOpen, setMapDrawPanelOpen] = useState(false);
+  // Edge-pan velocity while the operator is drafting a geo shape near
+  // a map edge. Published by `<MapDrawOverlay>` (rounded to 0.1 to
+  // deduplicate churn), forwarded to `<CesiumTacticalMap>` which drives
+  // an rAF loop in the Cesium primitive. `null` = no pan; a state
+  // update fires only when the rounded velocity changes, so Dashboard
+  // re-renders stay in the low single digits per drag.
+  const [edgePanVelocity, setEdgePanVelocity] = useState<{
+    vx: number;
+    vy: number;
+  } | null>(null);
   // Saved flow presets are lifted here so BOTH the Flow Builder (author)
   // and the Simulations panel (run gallery) share one live list — a
   // save in the builder shows up as a card immediately, no reload.
@@ -2347,9 +2358,21 @@ export const Dashboard = ({
             <TooltipContent side={railTooltipSide} sideOffset={8}>{t.flowBuilder.simulations.title}</TooltipContent>
           </Tooltip>
 
-          {/* Map-draw trigger moved to a floating control on the map
-              (top-right). See `FloatingGeoEntitiesControl` mounted next
-              to `MapDrawOverlay` below. */}
+          {/* Geo Entities rail toggle — the "give me the layers list"
+              affordance. Extracted into its own component so it can
+              use `useMapDraw` and scrub any in-flight draft / pending
+              shape BEFORE the panel opens, guaranteeing the panel
+              lands on LayersView (not the Draft Detail editor). The
+              floating top-right control (`FloatingGeoEntitiesControl`)
+              remains the entry point for arming draw tools. */}
+          <GeoEntitiesRailToggle
+            open={mapDrawPanelOpen}
+            onOpen={openMapDrawPanel}
+            onClose={closeMapDrawPanel}
+            tooltipSide={railTooltipSide}
+            openLabel="Geo Entities"
+            closeLabel="Close Geo Entities"
+          />
         </div>
 
         <Separator className="bg-white/10" />
@@ -2490,6 +2513,7 @@ export const Dashboard = ({
                   flowPreview={flowPreview}
                   gotchaUnits={gotchaUnits}
                   cameraLookAtRequest={cameraLookAtRequest}
+                  panVelocity={edgePanVelocity}
                 />
               </CesiumErrorBoundary>
               {/*
@@ -2506,6 +2530,7 @@ export const Dashboard = ({
                 }}
                 panelOpen={mapDrawPanelOpen}
                 panelWidthPx={sidebarWidth}
+                onEdgePan={setEdgePanVelocity}
               />
               {/* Floating Geo Entities entry point (top-right).
                   Collapsed = a single polygon glyph; expanded = a row

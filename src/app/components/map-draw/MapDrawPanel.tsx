@@ -16,7 +16,7 @@
  * panel doesn't feel empty between selections.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   Check,
   Eye,
@@ -29,6 +29,7 @@ import {
   Trash2,
   Plus,
   MapPin,
+  X,
 } from '@/lib/icons/central';
 import {
   CircleDrawIcon,
@@ -39,6 +40,11 @@ import {
 import { useStrings } from '@/lib/intl';
 import { DockedPanel } from '@/app/components/DockedPanel';
 import { DirIsland } from '@/lib/direction/DirIsland';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/app/components/ui/tooltip';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -61,7 +67,6 @@ import { Slider } from '@/app/components/ui/slider';
 import {
   project,
   unproject,
-  type GeoAreaStatus,
   type GeoFillMode,
   type GeoLineStyle,
   type GeoShape,
@@ -87,11 +92,11 @@ import { getZOrderActions, type ShapeAction } from './shapeActions';
 // Flow Builder): Heebo only, no mono / uppercase / letter-tracking.
 const TYPE_GROUP_TITLE = 'text-[11px] font-semibold text-zinc-400';
 
-const STATUS_OPTIONS: { id: GeoAreaStatus; label: string; tone: string }[] = [
-  { id: 'low', label: 'Low', tone: '#34d399' },
-  { id: 'middle', label: 'Middle', tone: '#facc15' },
-  { id: 'high', label: 'High', tone: '#f43f5e' },
-];
+// Neutral rail color painted on hidden layer rows so a hidden shape
+// reads consistently across all its cues (dimmed card + grey rail +
+// EyeOff icon). Kept alongside the panel constants so tweaking the
+// neutral tone is a single-line change.
+const HIDDEN_RAIL_COLOR = '#949494';
 
 /**
  * Visual variants of the panel — drives tool-button design, Tools-section
@@ -268,20 +273,12 @@ export function MapDrawPanel({
     setDraftMeta({});
   }, [draw.pendingShapeId, draw.updateShape]);
 
-  // Empty state removed: the drawing flow starts from the floating
-  // map control, so an empty panel (no shapes and no in-flight draft)
-  // has nothing meaningful to show. Render nothing at all in that
-  // case; the panel returns once a shape is committed or the user
-  // clicks an existing shape on the map.
-  const hasContent =
-    !!draw.draft ||
-    !!draw.pendingShapeId ||
-    draw.shapes.length > 0 ||
-    // Lab modes always need to render so reviewers can compare
-    // variants without first drawing a shape.
-    lab ||
-    typeLab;
-  if (!hasContent) return null;
+  // When the panel is opened from the left rail with nothing drawn
+  // yet, the LayersView branch renders an empty state ("No geo
+  // entities on the map yet") so the user gets a clear signal that
+  // the click was received. We deliberately do NOT early-return
+  // here anymore — the panel is a first-class navigation target and
+  // has to show up whenever it's asked to.
 
   // Removed: the previous version auto-armed Polygon when the panel
   // opened. The new flow forces the user to deliberately pick a tool
@@ -297,13 +294,19 @@ export function MapDrawPanel({
       dataHandoff="map-draw-panel"
       title={
         <DirIsland as="span" direction="ltr" className="block">
-          {inspected ? (
-            // Detail view — render a back arrow on the LEFT so the user
-            // can return to the Geo Entities list without having to use
-            // the footer Cancel button. Tapping it calls `cancelPending`,
-            // which for a brand-new draft hard-deletes the shape and for
-            // an existing-shape edit (`pendingIsNew === false`) just
-            // closes the editor.
+          {inspected && !draw.pendingIsNew ? (
+            // Detail view for an EXISTING shape — render a back arrow on
+            // the LEFT so the user can return to the Geo Entities list
+            // without touching the footer. Tapping it calls
+            // `cancelPending`, which for an existing-shape edit just
+            // closes the editor (no shape is destroyed).
+            //
+            // For a brand-new pending shape (`pendingIsNew === true`)
+            // we deliberately DON'T render a back arrow. The freshly
+            // drawn shape isn't committed yet, and a stray back tap
+            // would silently discard it — Save (commits) and Cancel
+            // (discards) in the footer are the only exits so the
+            // intent is always explicit.
             <span className="flex items-center gap-1.5">
               <button
                 type="button"
@@ -451,11 +454,28 @@ function DraftDetailView({
   // user just finished drawing and Save is the next action. Reopened
   // existing shapes fall back to the "enabled only when dirty" rule.
   const isFreshDraw = draw.pendingShapeId === shape.id && draw.pendingIsNew;
-  const canSave = drafting ? false : isFreshDraw || dirty;
+  // Locked shapes open in a read-only detail view: users can inspect
+  // every field but not change anything (the whole editor is dimmed
+  // and its pointer events are suppressed). Drafting is inherently
+  // a "new shape" flow, so the lock check only applies to committed
+  // shapes. Save is force-disabled while locked so it can't fire even
+  // via keyboard.
+  const isLocked = !drafting && !!shape.locked;
+  const canSave = drafting || isLocked ? false : isFreshDraw || dirty;
+  // Cancel mirrors Save's activation window, plus stays live during the
+  // in-progress draft so the user can always bail out of a half-drawn
+  // shape. For a re-opened committed shape, Cancel starts DISABLED and
+  // only lights up once the user actually edits something — matches
+  // Save so both footer actions appear in step: nothing to save →
+  // nothing to cancel.
+  const canCancel = !isLocked && (drafting || isFreshDraw || dirty);
 
   // Route every child's onPatch either to the live shape (post-commit)
-  // or the parent's draftMeta buffer (during draft).
+  // or the parent's draftMeta buffer (during draft). Swallowed while
+  // locked so a mis-rendered interactive control can never mutate the
+  // shape from this view.
   const patch = (p: Partial<GeoShape>) => {
+    if (isLocked) return;
     if (drafting) onDraftPatch?.(p);
     else draw.updateShape(shape.id, p);
   };
@@ -465,7 +485,36 @@ function DraftDetailView({
     // us the full vertical space so the footer always sits flush
     // against the panel's bottom edge.
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex flex-1 min-h-0 flex-col gap-5 overflow-y-auto pb-3">
+      {isLocked && (
+        // Locked banner: reads as a small at-a-glance status chip so
+        // the user immediately understands why every field below is
+        // greyed out. Message matches the Layers list tooltip so the
+        // two surfaces speak with one voice.
+        <div
+          role="status"
+          className="mb-3 flex shrink-0 items-center gap-2 rounded-[2px] border border-white/10 bg-white/[0.04] px-2.5 py-2 text-[12px] text-white/75"
+        >
+          <Lock size={14} className="shrink-0 text-white/85" />
+          <span className="min-w-0 flex-1">
+            <span className="block font-medium text-white">Locked layer</span>
+            <span className="block text-[11px] text-white/55">
+              Requires approval to edit.
+            </span>
+          </span>
+        </div>
+      )}
+      <div
+        // Dim + interaction-block the entire editor stack when the
+        // shape is locked. `pointer-events-none` neutralizes mouse
+        // events; `aria-disabled` and `tabIndex={-1}` communicate the
+        // state to keyboard/assistive tech. Cancel/back navigation
+        // stays fully live because it lives outside this container.
+        className={`flex flex-1 min-h-0 flex-col gap-5 overflow-y-auto pb-3 transition-opacity ${
+          isLocked ? 'pointer-events-none select-none opacity-55' : ''
+        }`}
+        aria-disabled={isLocked || undefined}
+        tabIndex={isLocked ? -1 : undefined}
+      >
         {/* Type is now the FIRST field so users see the mandatory,
             default-set-to-No-Fly-Zone dropdown at the top and can
             change it before naming. Name follows and is fully
@@ -494,12 +543,25 @@ function DraftDetailView({
       {/* Save / Cancel footer pinned to the panel bottom via the flex
           layout above (not `sticky`). While drafting, Save is disabled
           and Cancel drops the whole draft (`cancelDraft`) rather than
-          touching a committed pending shape. */}
+          touching a committed pending shape. When the layer is locked
+          BOTH footer buttons are disabled — the only exit is the back
+          arrow next to the "Geo Entities" title (which is rendered
+          because `pendingIsNew === false` for an existing locked
+          shape). That keeps the destructive `cancelPending` off the
+          footer for something the user isn't allowed to mutate. */}
       <div className="-mx-4 -mb-3 shrink-0 flex items-center justify-end gap-2 border-t border-white/10 bg-[#161616]/95 px-4 py-3 backdrop-blur-md">
         <button
           type="button"
+          disabled={!canCancel}
           onClick={() => (drafting ? draw.cancelDraft() : draw.cancelPending())}
-          className="rounded-md border border-white/10 bg-transparent px-3 py-1.5 text-[12px] font-medium text-zinc-200 transition-colors hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+          title={
+            isLocked
+              ? 'Locked — requires approval to edit'
+              : canCancel
+                ? 'Discard changes'
+                : 'No changes to cancel'
+          }
+          className="rounded-md border border-white/10 bg-transparent px-3 py-1.5 text-[12px] font-medium text-zinc-200 transition-colors hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 disabled:cursor-not-allowed disabled:border-white/15 disabled:text-white/40 disabled:hover:bg-transparent disabled:hover:text-white/40"
         >
           Cancel
         </button>
@@ -508,11 +570,13 @@ function DraftDetailView({
           disabled={!canSave}
           onClick={() => draw.savePending()}
           title={
-            drafting
-              ? 'Finish the shape first (double-click to close)'
-              : canSave
-                ? 'Save shape'
-                : 'No changes to save'
+            isLocked
+              ? 'Locked — requires approval to edit'
+              : drafting
+                ? 'Finish the shape first (double-click to close)'
+                : canSave
+                  ? 'Save shape'
+                  : 'No changes to save'
           }
           className="rounded-md border border-transparent bg-white px-3 py-1.5 text-[12px] font-semibold text-black transition-colors hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 disabled:cursor-not-allowed disabled:border-white/15 disabled:bg-transparent disabled:text-white/40 disabled:hover:bg-transparent"
         >
@@ -558,7 +622,7 @@ function LayersView({ draw }: { draw: UseGeoDrawResult }) {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by name or entity"
             aria-label="Search geo entities by name or entity"
-            className="w-full rounded-md border border-white/10 bg-white/[0.04] py-1.5 ps-8 pe-2.5 text-[12.5px] text-white placeholder:text-white/40 outline-none focus:border-white/30 focus:bg-white/[0.08]"
+            className="w-full rounded-[2px] border border-white/10 bg-white/[0.04] py-1.5 ps-8 pe-2.5 text-[12.5px] text-white placeholder:text-white/40 outline-none focus:border-white/30 focus:bg-white/[0.08]"
           />
         </div>
       </div>
@@ -736,19 +800,75 @@ function LayersSection({
    */
   query?: string;
 }) {
-  if (draw.shapes.length === 0) return null;
+  // Rapid-fire keyboard delete: pressing Delete on a focused row removes
+  // it and slides focus onto the NEXT row so a stream of Delete presses
+  // clears the list one entry at a time. We drive the hand-off by shape
+  // id (not DOM-sibling walking): the row's handler stashes the id of
+  // the row that should inherit focus, and the layout effect below
+  // re-focuses it AFTER React has committed the deletion — so the target
+  // node is guaranteed to be in the DOM. This is what makes consecutive
+  // deletes work; the previous `nextElementSibling` + rAF approach let
+  // focus fall back to <body> after the first delete, which is why a
+  // second Delete press did nothing.
+  const ulRef = useRef<HTMLUListElement | null>(null);
+  const refocusIdRef = useRef<string | null>(null);
+
+  useLayoutEffect(() => {
+    const id = refocusIdRef.current;
+    if (!id) return;
+    refocusIdRef.current = null;
+    const el = ulRef.current?.querySelector<HTMLElement>(
+      `[data-layer-row="${CSS.escape(id)}"]`,
+    );
+    el?.focus();
+    // Re-runs whenever the shape list changes — a delete mutates the
+    // array identity, so the effect fires right after the row unmounts
+    // and the surviving rows are committed.
+  }, [draw.shapes]);
+
+  if (draw.shapes.length === 0) {
+    // Empty-state — surfaced when the user opens the panel from the
+    // rail before drawing anything. Reads as a passive hint rather
+    // than an error, and points them at the top-right polygon tool
+    // as the next step.
+    return (
+      <div className="grid h-full place-items-center px-4 py-8 text-center">
+        <p className="max-w-[220px] text-[12px] leading-relaxed text-zinc-500">
+          No geo entities on the map yet.
+        </p>
+      </div>
+    );
+  }
 
   const q = query.trim().toLowerCase();
   const matches = draw.shapes.filter((s) =>
     q === '' ? true : shapeLabel(s).toLowerCase().includes(q),
   );
 
+  // Delete a row and line up the next VISIBLE row (falling back to the
+  // previous one when the last row is removed) to inherit keyboard
+  // focus. Skips locked rows when picking the successor so focus never
+  // parks on a row the user can't act on. Computed against `matches`,
+  // not `draw.shapes`, so an active search filter is respected.
+  const handleDelete = (id: string) => {
+    const idx = matches.findIndex((s) => s.id === id);
+    const successor =
+      matches.slice(idx + 1).find((s) => !s.locked) ??
+      matches
+        .slice(0, Math.max(idx, 0))
+        .reverse()
+        .find((s) => !s.locked) ??
+      null;
+    refocusIdRef.current = successor ? successor.id : null;
+    deleteShapeWithUndo(draw, id);
+  };
+
   return (
     // Subheader and magnifier toggle removed — the panel-level title
     // already says "Geo Entities" and the search input now lives at
     // the top of `LayersView` as an always-visible field. This
     // section is just the list now.
-    <ul className="space-y-1.5">
+    <ul ref={ulRef} className="space-y-1.5">
       {matches.length === 0 ? (
         <li className="px-1 py-2 text-[12px] text-zinc-500">
           No entities match “{query}”.
@@ -761,7 +881,7 @@ function LayersSection({
             zOrderActions={getZOrderActions(draw, s.id)}
             onToggleHidden={() => draw.updateShape(s.id, { hidden: !s.hidden })}
             onToggleLocked={() => draw.updateShape(s.id, { locked: !s.locked })}
-            onDelete={() => deleteShapeWithUndo(draw, s.id)}
+            onDelete={() => handleDelete(s.id)}
             onEdit={() => draw.beginEditShape(s.id)}
             onCenter={() => draw.requestFocus(s.id)}
           />
@@ -790,14 +910,18 @@ function LayerRow({
   /** Ask the map to fly to this shape's centroid. */
   onCenter: () => void;
 }) {
-  const status = STATUS_OPTIONS.find((o) => o.id === shape.status);
-  // Type label shown above the name. New shapes always ship with the
-  // default `noFly` type, but legacy shapes drawn before that migration
-  // may not carry a type — fall back to the default label so the card
-  // always names a type rather than leaving a blank.
+  // Type label shown as a muted inline suffix after the name. New shapes
+  // always ship with the default `noFly` type, but legacy shapes drawn
+  // before that migration may not carry a type — fall back to the
+  // default label so the card always names a type rather than leaving a
+  // blank.
   const typeLabel = shape.zoneType
     ? ZONE_TYPE_BY_ID[shape.zoneType]?.label ?? ZONE_TYPE_BY_ID.noFly.label
     : ZONE_TYPE_BY_ID.noFly.label;
+  // Zone color drives the leading rail so the card carries the same
+  // signature hue as the shape on the map. Neutralized to grey when the
+  // layer is hidden, matching the dimmed card + EyeOff icon.
+  const railColor = shape.hidden ? HIDDEN_RAIL_COLOR : getZoneColor(shape.zoneType);
   // Bridge the row hover state to the shared map-draw context so the
   // overlay can paint a highlight halo on the matching shape. Keyboard
   // focus is also surfaced so tab-through the list highlights too.
@@ -814,18 +938,34 @@ function LayerRow({
     setHoveredShapeId(null);
     onEdit();
   }, [onEdit, setHoveredShapeId]);
-  // Keep Eye / Lock / Trash from also triggering the card's `openDetail`
-  // — the bottom-row toggles are local actions, not navigation.
+  // Keep Eye / Lock / Center from also triggering the card's `openDetail`
+  // — the action buttons are local, not navigation.
   const stop = (e: { stopPropagation: () => void }) => e.stopPropagation();
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <li
+          data-layer-row={shape.id}
           onClick={openDetail}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
               openDetail();
+              return;
+            }
+            // Keyboard delete — Delete / Backspace on a focused row
+            // removes it, but only when the layer is unlocked. Locked
+            // shapes must be unlocked from the detail view first, which
+            // guards against a stray key press wiping a protected layer.
+            //
+            // The parent `LayersSection` owns focus hand-off: `onDelete`
+            // lines up the next row's id and a layout effect re-focuses
+            // it once React has committed the removal. That's what lets
+            // a stream of Delete presses clear the list one row at a
+            // time instead of dropping focus after the first delete.
+            if ((e.key === 'Delete' || e.key === 'Backspace') && !shape.locked) {
+              e.preventDefault();
+              onDelete();
             }
           }}
           tabIndex={0}
@@ -835,104 +975,165 @@ function LayerRow({
           onMouseLeave={() => setHoveredShapeId(null)}
           onFocus={() => setHoveredShapeId(shape.id)}
           onBlur={() => setHoveredShapeId(null)}
-          className={`group flex cursor-pointer flex-col gap-1.5 rounded-md border px-2.5 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
+          className={`group flex cursor-pointer items-stretch overflow-hidden rounded-[2px] border transition-[background,border-color,opacity] duration-100 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
+            // Figma-style layer highlight — a subtle brand-blue tint
+            // that reads as "this is the row you're pointing at /
+            // hovering on the map" without shouting. Idle rows have a
+            // near-invisible fill; hover and map-hover both promote to
+            // the same blue-tinted state so pointing at a shape on
+            // either surface highlights the SAME visual pair.
             hovered
-              ? 'border-white/15 bg-white/[0.08]'
-              : 'border-transparent bg-white/[0.03] hover:border-white/10 hover:bg-white/[0.06]'
+              ? 'border-[#3B82F6]/35 bg-[#3B82F6]/[0.12]'
+              : 'border-transparent bg-white/[0.03] hover:border-[#3B82F6]/25 hover:bg-[#3B82F6]/[0.08]'
+          } ${
+            // Whole-card dim mirrors the "off the map" state. Icons and
+            // text inherit this via `opacity` compounding so the row
+            // reads uniformly muted while still legible.
+            shape.hidden ? 'opacity-55' : ''
           }`}
         >
-          {/* Top row — shape-kind glyph + name + Center-on-map + Trash.
-              The whole row opens the detail editor on click; the action
-              buttons stop propagation so they don't double-fire as
-              "open then act". The name renders as a span (not an input)
-              — the user edits it inside the detail panel where the name
-              field is the canonical home. */}
-          <div className="flex items-center gap-2">
+          {/* Leading zone-color rail — the card's identity cue. Painted
+              in the shape's zone color at rest, neutralized to grey
+              when hidden. */}
+          <span
+            aria-hidden
+            className="w-[3px] shrink-0"
+            style={{ background: railColor }}
+          />
+          <div className="flex min-w-0 flex-1 items-center gap-2 px-2.5 py-2">
             <span
               className="grid size-5 shrink-0 place-items-center text-white/70"
               aria-hidden
             >
               <ShapeKindIcon kind={shape.kind} tool={shape.tool} size={15} />
             </span>
-            <span className="flex min-w-0 flex-1 flex-col gap-1">
+            <span className="flex min-w-0 flex-1 items-baseline gap-1.5">
               <span
                 className={`truncate text-[13px] font-medium leading-tight ${
-                  shape.hidden ? 'text-white/40' : 'text-zinc-100'
+                  shape.hidden ? 'text-white/60' : 'text-zinc-100'
                 }`}
               >
                 {shapeLabel(shape)}
               </span>
-              {/* Type sits below the name as a plain, un-boxed label. */}
+              {/* Type sits inline as a muted suffix after the name. */}
               <span className="truncate text-[11px] leading-tight text-white/45">
-                {typeLabel}
+                · {typeLabel}
               </span>
             </span>
-            <button
-              type="button"
-              onClick={(e) => {
-                stop(e);
-                onCenter();
-              }}
-              aria-label="Center on map"
-              title="Center on map"
-              className="grid size-6 shrink-0 place-items-center rounded text-white/55 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
-            >
-              <MapPin size={14} />
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                stop(e);
-                onDelete();
-              }}
-              aria-label="Delete layer"
-              title="Delete layer"
-              className="grid size-6 shrink-0 place-items-center rounded text-white/45 transition-colors hover:bg-rose-500/20 hover:text-rose-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
-            >
-              <Trash2 size={14} />
-            </button>
-          </div>
-
-          {/* Bottom row — Eye + Lock + status dot. Always visible so the
-              user can flip visibility / lock state from the card without
-              opening the detail editor. Each button stops the click
-              from bubbling to the card-level handler. */}
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={(e) => {
-                stop(e);
-                onToggleHidden();
-              }}
-              aria-label={shape.hidden ? 'Show layer' : 'Hide layer'}
-              title={shape.hidden ? 'Show layer' : 'Hide layer'}
-              className="grid size-6 shrink-0 place-items-center rounded text-white/55 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
-            >
-              {shape.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                stop(e);
-                onToggleLocked();
-              }}
-              aria-label={shape.locked ? 'Unlock layer' : 'Lock layer'}
-              title={shape.locked ? 'Unlock layer' : 'Lock layer'}
-              aria-pressed={!!shape.locked}
-              className={`grid size-6 shrink-0 place-items-center rounded transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
-                shape.locked ? 'text-white' : 'text-white/45'
-              }`}
-            >
-              {shape.locked ? <Lock size={14} /> : <LockOpen size={14} />}
-            </button>
-            {status && (
+            {/* Three fixed action slots: Eye · Lock · Center. Each slot
+                is either PERSISTENT (reflects state — Eye when hidden,
+                Lock when locked) or HOVER-REVEALED (fades in on group
+                hover / focus). Order is stable so the layout never
+                shifts between states. Deletion is keyboard-only: pressing
+                Delete/Backspace removes the shape highlighted here (the
+                row under the pointer or with keyboard focus), handled by
+                the global map-draw key handler and gated on
+                `!shape.locked`. */}
+            <div className="flex items-center gap-0.5">
               <span
-                className="ms-1 size-2 shrink-0 rounded-full ring-1 ring-inset ring-white/20"
-                style={{ background: status.tone }}
-                title={`Status: ${status.label}`}
-                aria-label={`Status: ${status.label}`}
-              />
-            )}
+                className={`transition-opacity ${
+                  shape.hidden
+                    ? 'opacity-100'
+                    : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
+                }`}
+              >
+                <button
+                  type="button"
+                  // Locked layers freeze every list-level action, not
+                  // just the lock toggle: the eye button is still
+                  // painted so the state reads, but it's non-interactive
+                  // until the shape is unlocked from the detail view.
+                  disabled={shape.locked}
+                  onClick={(e) => {
+                    stop(e);
+                    if (shape.locked) return;
+                    onToggleHidden();
+                  }}
+                  aria-label={shape.hidden ? 'Show layer' : 'Hide layer'}
+                  title={shape.hidden ? 'Show layer' : 'Hide layer'}
+                  className={`grid size-6 shrink-0 place-items-center rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
+                    shape.locked
+                      ? 'cursor-default text-white/55 opacity-70'
+                      : 'text-white/55 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  {shape.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </span>
+              <span
+                className={`transition-opacity ${
+                  shape.locked
+                    ? 'opacity-100'
+                    : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
+                }`}
+              >
+                {/* Lock is a plain toggle: click to lock, click again to
+                    unlock. No approval gate — this is a simulation, so a
+                    layer locked by accident can always be freed straight
+                    from the list. While locked we still surface the Radix
+                    tooltip beneath the icon so the state reads at a glance;
+                    the message just makes clear the lock is undoable. */}
+                {shape.locked ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          stop(e);
+                          onToggleLocked();
+                        }}
+                        aria-label="Unlock layer"
+                        aria-pressed
+                        className="grid size-6 shrink-0 place-items-center rounded text-white transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+                      >
+                        <Lock size={14} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="bottom"
+                      sideOffset={6}
+                      className="text-[11px]"
+                    >
+                      Requires approval
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      stop(e);
+                      onToggleLocked();
+                    }}
+                    aria-label="Lock layer"
+                    title="Lock layer"
+                    aria-pressed={false}
+                    className="grid size-6 shrink-0 place-items-center rounded text-white/45 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+                  >
+                    <LockOpen size={14} />
+                  </button>
+                )}
+              </span>
+              <span className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                <button
+                  type="button"
+                  disabled={shape.locked}
+                  onClick={(e) => {
+                    stop(e);
+                    if (shape.locked) return;
+                    onCenter();
+                  }}
+                  aria-label="Center on map"
+                  title="Center on map"
+                  className={`grid size-6 shrink-0 place-items-center rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
+                    shape.locked
+                      ? 'cursor-default text-white/55 opacity-70'
+                      : 'text-white/55 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <MapPin size={14} />
+                </button>
+              </span>
+            </div>
           </div>
         </li>
       </ContextMenuTrigger>
@@ -1017,7 +1218,7 @@ function NameField({
   // ring was removed — the empty state already reads as editable via
   // the "Add name" placeholder.)
   const baseClass =
-    'w-full rounded-md border border-transparent bg-transparent px-0 py-1 text-[13px] font-medium text-white placeholder:text-zinc-400 outline-none transition-colors';
+    'w-full rounded-md border border-transparent bg-transparent px-0 py-1 text-[13px] font-medium text-white placeholder:text-white/50 outline-none transition-colors';
   const attentionClass = 'focus:bg-white/[0.04]';
 
   return (
@@ -1045,7 +1246,7 @@ function NameField({
             (e.currentTarget as HTMLInputElement).blur();
           }
         }}
-        placeholder="Add name"
+        placeholder={shape.name || 'Add name'}
         aria-label="Shape name"
         spellCheck={false}
         className={`${baseClass} ${attentionClass}`}
@@ -1174,7 +1375,7 @@ function CoordinatesSection({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="flex w-full items-center justify-center gap-2 rounded-[2px] border border-white/15 bg-white/[0.04] px-3 py-2 text-[12.5px] font-medium text-zinc-100 transition-colors hover:border-white/25 hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+            className="flex w-full items-center justify-center gap-2 rounded-[2px] border border-white/15 bg-white/[0.04] px-3 py-1.5 text-[12.5px] font-medium text-[#3b82f6] transition-colors hover:border-white/25 hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
           >
             <UploadIcon size={14} />
             <span>Upload file</span>
@@ -1334,7 +1535,7 @@ function CoordinateRow({
   return (
     <li
       ref={rowRef}
-      className="group flex items-center gap-1.5 rounded-[2px] transition-colors"
+      className="group relative flex items-center rounded-[2px] transition-colors"
     >
       <input
         type="text"
@@ -1375,30 +1576,31 @@ function CoordinateRow({
                 }
               }
         }
-        className={`min-w-0 flex-1 rounded-[2px] border bg-white/[0.04] px-2.5 py-1.5 text-[12px] tabular-nums text-zinc-100 outline-none transition-colors ${
-          active
-            ? 'border-sky-400/80 bg-sky-400/10 ring-1 ring-sky-400/40'
-            : 'border-white/10'
+        // Full-width so the row lines up flush with the "Upload file"
+        // button above; the remove affordance now lives INSIDE the
+        // input (absolutely positioned x on the inline-end), so we
+        // reserve trailing padding for it only when it's present.
+        // Borderless: matches the panel's segmented-control chrome — just
+        // the subtle fill, no stroke. The active-vertex highlight keeps a
+        // ring (not a border) so a map-clicked dot still reads clearly.
+        className={`w-full rounded-[2px] bg-white/[0.04] py-1.5 ps-2.5 text-[12px] tabular-nums text-zinc-100 outline-none transition-colors ${
+          onRemove ? 'pe-8' : 'pe-2.5'
         } ${
-          readOnly
-            ? 'cursor-default'
-            : 'focus:border-white/30 focus:bg-white/[0.08]'
+          active ? 'bg-sky-400/10 ring-1 ring-inset ring-sky-400/40' : ''
+        } ${
+          readOnly ? 'cursor-default' : 'focus:bg-white/[0.08]'
         }`}
       />
-      {onRemove ? (
+      {onRemove && (
         <button
           type="button"
           onClick={onRemove}
           aria-label={`Remove point ${label}`}
           title="Remove point"
-          className="grid size-7 shrink-0 place-items-center rounded text-white/45 transition-colors hover:bg-rose-500/15 hover:text-rose-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+          className="absolute end-1.5 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded-[2px] text-white/45 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
         >
-          <Trash2 size={14} />
+          <X size={13} />
         </button>
-      ) : (
-        // Reserve trash slot so single-point rows (circle Center, polylines
-        // at min-length) stay aligned with their multi-point siblings.
-        <span aria-hidden className="size-7 shrink-0" />
       )}
     </li>
   );
@@ -1827,14 +2029,14 @@ function TypeVariantSelect({
       <SelectTrigger
         size="sm"
         aria-label="Zone type"
-        className="w-full border-white/10 bg-white/[0.04] text-[13px] text-white hover:bg-white/[0.08] focus-visible:ring-white/25"
+        className="w-full rounded-[2px] border-white/10 bg-white/[0.04] text-[12px] text-white hover:bg-white/[0.08] focus-visible:ring-white/25"
       >
         <SelectValue placeholder="Choose a zone type">
           {active && (
             <span className="flex items-center gap-2">
               <span
                 aria-hidden
-                className="size-2.5 rounded-full ring-1 ring-inset ring-white/20"
+                className="size-2.5 rounded-full"
                 style={{ background: active.color }}
               />
               <span className="truncate">{active.label}</span>
@@ -1844,7 +2046,7 @@ function TypeVariantSelect({
       </SelectTrigger>
       <SelectContent className="border-white/10 bg-[#1a1a1a]/95 text-white backdrop-blur-xl">
         {ZONE_TYPES.map((t) => (
-          <SelectItem key={t.id} value={t.id} className="text-[13px]">
+          <SelectItem key={t.id} value={t.id} className="text-[12px]">
             <span className="flex items-center gap-2">
               <span
                 aria-hidden
@@ -2104,7 +2306,7 @@ function ColorSection({
 
 function SegmentedControl({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-1 rounded-[2px] bg-white/[0.04] p-1">
+    <div className="flex items-center gap-1 rounded-[2px] bg-white/[0.04] p-[3px]">
       {children}
     </div>
   );
@@ -2250,7 +2452,7 @@ function ColorChip({
             <span className="block text-[10px] uppercase tracking-wide text-zinc-500">
               {label}
             </span>
-            <span className="block text-[12px] font-medium text-white truncate">
+            <span className="block text-[10px] font-medium text-[#949494] truncate">
               {color === null ? 'None' : color.toUpperCase()}
             </span>
           </span>
