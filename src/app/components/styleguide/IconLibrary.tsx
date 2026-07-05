@@ -19,6 +19,7 @@
  */
 
 import {
+  memo,
   useState,
   useMemo,
   useCallback,
@@ -101,6 +102,12 @@ export default function IconLibrary() {
     () => (selectedId ? ICON_REGISTRY.find((e) => e.id === selectedId) ?? null : null),
     [selectedId],
   );
+
+  // Stable identity so `IconTile` (memoized) only re-renders the two tiles
+  // whose `selected` flag actually flips, not the whole grid, on each pick.
+  const handleSelect = useCallback((id: string) => {
+    setSelectedId((prev) => (prev === id ? null : id));
+  }, []);
 
   // Global "/" focus shortcut — convenience that matches the muscle memory
   // from the rest of the styleguide search.
@@ -244,7 +251,7 @@ export default function IconLibrary() {
                   size={previewSize}
                   renderMode={renderMode}
                   selected={entry.id === selectedId}
-                  onSelect={() => setSelectedId(entry.id === selectedId ? null : entry.id)}
+                  onSelect={handleSelect}
                 />
               ))}
             </div>
@@ -271,10 +278,14 @@ interface IconTileProps {
   size: number;
   renderMode: RenderMode;
   selected: boolean;
-  onSelect: () => void;
+  onSelect: (id: string) => void;
 }
 
-function IconTile({ entry, size, renderMode, selected, onSelect }: IconTileProps) {
+// Memoized so a selection change (or any parent state update) only re-renders
+// the tiles whose props actually changed, instead of reconciling the whole
+// grid — each tile mounts a Radix ContextMenu and runs an export hook, so the
+// saved work adds up across the full registry.
+const IconTile = memo(function IconTile({ entry, size, renderMode, selected, onSelect }: IconTileProps) {
   const Component = entry.Component;
   // Lucide's official "filled icon" recipe is `fill="currentColor"` plus
   // `strokeWidth={0}` (the stroke would otherwise sit on top of the fill and
@@ -297,7 +308,7 @@ function IconTile({ entry, size, renderMode, selected, onSelect }: IconTileProps
       <ContextMenuTrigger asChild>
         <button
           type="button"
-          onClick={onSelect}
+          onClick={() => onSelect(entry.id)}
           aria-pressed={selected}
           title={entry.name}
           className={`group flex flex-col items-center justify-between gap-2 aspect-[1/1] rounded-lg p-2 text-n-10 transition-[color,background-color,box-shadow] duration-150 ease-out cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25
@@ -347,7 +358,7 @@ function IconTile({ entry, size, renderMode, selected, onSelect }: IconTileProps
       </ContextMenuContent>
     </ContextMenu>
   );
-}
+});
 
 interface EmptyStateProps {
   onReset: () => void;

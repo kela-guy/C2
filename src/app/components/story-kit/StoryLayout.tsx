@@ -30,7 +30,10 @@ interface StoryLayoutProps {
   title: string;
   /** Small mono kicker before the title in the breadcrumb. */
   kicker?: string;
+  /** Link for the settings-menu Home row (e.g. the related sandbox). */
   homeHref?: string;
+  /** Footer pill that returns to the main app. Defaults to `/`. */
+  appHref?: string;
   chapters: StoryChapter[];
   /**
    * Optional "build this" prompt. When provided, a second footer pill copies it
@@ -39,7 +42,14 @@ interface StoryLayoutProps {
   aiPrompt?: string;
 }
 
-export function StoryLayout({ title, kicker, homeHref = '/', chapters, aiPrompt }: StoryLayoutProps) {
+export function StoryLayout({
+  title,
+  kicker,
+  homeHref = '/',
+  appHref = '/',
+  chapters,
+  aiPrompt,
+}: StoryLayoutProps) {
   const [activeId, setActiveId] = useState<string | null>(chapters[0]?.id ?? null);
   const [mood, setMood] = useState<Mood>('dark');
   const leftRef = useRef<HTMLDivElement>(null);
@@ -106,6 +116,7 @@ export function StoryLayout({ title, kicker, homeHref = '/', chapters, aiPrompt 
         mood={mood}
         onToggleMood={() => setMood((m) => (m === 'dark' ? 'light' : 'dark'))}
         homeHref={homeHref}
+        appHref={appHref}
         chapters={chapters}
         activeId={activeId}
         aiPrompt={aiPrompt}
@@ -156,6 +167,7 @@ function FooterPill({
   mood,
   onToggleMood,
   homeHref,
+  appHref,
   chapters,
   activeId,
   aiPrompt,
@@ -164,6 +176,7 @@ function FooterPill({
   mood: Mood;
   onToggleMood: () => void;
   homeHref: string;
+  appHref: string;
   chapters: StoryChapter[];
   activeId: string | null;
   aiPrompt?: string;
@@ -200,13 +213,10 @@ function FooterPill({
   }, [open]);
 
   return (
-    <div
-      ref={rootRef}
-      className="fixed bottom-6 start-1/2 z-40 -translate-x-1/2 rtl:translate-x-1/2"
-    >
+    <div ref={rootRef} className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2">
       {open && (
         <div
-          className="absolute bottom-[calc(100%+8px)] start-1/2 z-10 w-60 -translate-x-1/2 rtl:translate-x-1/2 overflow-hidden rounded-xl border p-1.5 shadow-xl backdrop-blur"
+          className="absolute bottom-[calc(100%+8px)] left-1/2 z-10 w-60 -translate-x-1/2 overflow-hidden rounded-xl border p-1.5 shadow-xl backdrop-blur"
           style={{ borderColor: 'var(--story-border)', backgroundColor: 'var(--story-bg)' }}
         >
             <button
@@ -249,6 +259,15 @@ function FooterPill({
       )}
 
       <div className="relative z-10 flex items-center gap-2">
+        <a
+          href={appHref}
+          className="flex items-center gap-1.5 rounded-full border px-3 py-1.5 shadow-lg backdrop-blur"
+          style={{ borderColor: 'var(--story-border)', backgroundColor: 'var(--story-surface)' }}
+        >
+          <Home size={13} style={{ color: 'var(--story-accent)' }} />
+          <span className="text-[13px] font-medium text-[color:var(--story-ink)]">Back to app</span>
+        </a>
+
         <button
           type="button"
           aria-expanded={open}

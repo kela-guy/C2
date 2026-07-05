@@ -633,6 +633,7 @@ export default function PathfinderStory() {
       kicker="Handoff"
       title="Pathfinder · Launch toast"
       homeHref="/pathfinder-sandbox"
+      appHref="/"
       chapters={chapters}
       aiPrompt={PATHFINDER_IMPLEMENTATION_PROMPT}
     />
