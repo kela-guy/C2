@@ -156,6 +156,11 @@ function computeEdgeVelocity(
 const VIEWBOX_W = 1000;
 const VIEWBOX_H = 625;
 
+/** Dash/gap lengths scaled to stroke width so dashed reads at the same weight as solid for a given slider value. */
+function dashedStrokeDasharray(strokeWidth: number): string {
+  return `${strokeWidth * 4} ${strokeWidth * 3}`;
+}
+
 /**
  * Great-circle distance between two normalized canvas points, in
  * meters. Used by the live draft readout so the user sees a real
@@ -1368,7 +1373,8 @@ function ShapeBody({
   // "None" is genuinely without stroke — no painted line and no selection
   // halo. Selection is still legible via the vertex dots (below).
   const noStroke = lineStyle === 'none';
-  const dasharray = lineStyle === 'dashed' ? '8 6' : undefined;
+  const dasharray =
+    lineStyle === 'dashed' ? dashedStrokeDasharray(strokeWidth) : undefined;
 
   // Fill MUST derive from the explicit fill input (`shape.color`), NOT
   // from `stroke`. Previously the fill was tinted with the stroke

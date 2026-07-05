@@ -509,13 +509,13 @@ function DraftDetailView({
         aria-disabled={isLocked || undefined}
         tabIndex={isLocked ? -1 : undefined}
       >
-        {/* Field order: Type, Name, Color / Line / Line thickness,
+        {/* Field order: Type, Name, Color / Line / Line Thickness,
             Coordinates. Type comes first (mandatory, default No-Fly-Zone)
             so users pick it before naming; Name is fully optional; the
             color/line block sits above Coordinates so styling happens
             before the fine-grained vertex list — Coordinates is the
             "detail" section that only some users edit. `ColorSection`
-            renders Color / Line style / Line thickness internally so
+            renders Color / Line style / Line Thickness internally so
             those three items stay grouped visually. */}
         <TypeField
           shape={shape}
@@ -2150,13 +2150,12 @@ function CollapsibleSection({
 // leaves both colors untouched — the user picks colors themselves.
 // ---------------------------------------------------------------------------
 
-// Stroke-width clamps. Dashed strokes are capped lower so the dash
-// rhythm stays legible — bumping a dashed line past ~4 px reads as
-// uneven blobs rather than a proper dash. Minimum is 0.5 px (hairline)
-// to match the default white outline new shapes ship with.
+// Stroke-width clamps. One shared slider range for Solid and Dashed so
+// the thumb position and readout stay stable when switching line style.
+// Minimum is 0.5 px (hairline) to match the default white outline new
+// shapes ship with.
 const STROKE_MIN = 0.5;
 const STROKE_MAX = 8;
-const STROKE_DASHED_MAX = 4;
 const STROKE_STEP = 0.5;
 const STROKE_DEFAULT = 0.5;
 
@@ -2186,15 +2185,13 @@ function ColorSection({
   const fillColor = fillMode === 'none' ? null : shape.color;
   const outlineColor = lineStyle === 'none' ? null : (shape.strokeColor ?? shape.color);
 
-  // Slider state — disabled when there's no visible line at all, and
-  // clamped to the dashed cap when the current style is `dashed` so a
-  // previously over-thick line doesn't sneak past the cap visually.
+  // Slider — disabled when there's no visible line at all. Same range
+  // for Solid and Dashed so switching style doesn't move the thumb.
   const disabled = lineStyle === 'none';
-  const maxWeight = lineStyle === 'dashed' ? STROKE_DASHED_MAX : STROKE_MAX;
-  const weight = Math.min(shape.strokeWidth ?? STROKE_DEFAULT, maxWeight);
+  const weight = shape.strokeWidth ?? STROKE_DEFAULT;
 
   return (
-    // Three uniform titled groups (Color, Line, Line thickness) stacked
+    // Three uniform titled groups (Color, Line, Line Thickness) stacked
     // with the SAME `gap-5` the parent editor uses between its own
     // sections — so this "one section" reads as three siblings in the
     // outer rhythm, and every title-to-content gap (`space-y-2`) matches
@@ -2257,15 +2254,7 @@ function ColorSection({
             <SegmentButton
               key={mode.id}
               active={lineStyle === mode.id}
-              onClick={() =>
-                // Switching to dashed clamps an over-thick line back to
-                // the cap so the dash rhythm stays legible after the swap.
-                onPatch(
-                  mode.id === 'dashed' && weight > STROKE_DASHED_MAX
-                    ? { lineStyle: mode.id, strokeWidth: STROKE_DASHED_MAX }
-                    : { lineStyle: mode.id },
-                )
-              }
+              onClick={() => onPatch({ lineStyle: mode.id })}
             >
               <LineGlyph style={mode.id} />
               {mode.label}
@@ -2274,10 +2263,10 @@ function ColorSection({
         </SegmentedControl>
       </div>
 
-      {/* Group 3 — Line thickness: title + live weight readout + slider. */}
+      {/* Group 3 — Line Thickness: title + live weight readout + slider. */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <span className={TYPE_GROUP_TITLE}>Line thickness</span>
+          <span className={TYPE_GROUP_TITLE}>Line Thickness</span>
           <span
             className={`text-[11px] tabular-nums ${
               disabled ? 'text-zinc-600' : 'text-zinc-400'
@@ -2287,10 +2276,10 @@ function ColorSection({
           </span>
         </div>
         <Slider
-          aria-label="Line thickness"
+          aria-label="Line Thickness"
           value={[weight]}
           min={STROKE_MIN}
-          max={maxWeight}
+          max={STROKE_MAX}
           step={STROKE_STEP}
           disabled={disabled}
           onValueChange={(v) => onPatch({ strokeWidth: v[0] })}
