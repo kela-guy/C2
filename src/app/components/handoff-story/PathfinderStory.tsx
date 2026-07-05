@@ -37,7 +37,16 @@ import {
   PATHFINDER_GALLERY,
 } from '@/app/components/pathfinder/frozenSim';
 import { PREPARE_STEPS, TAKEOFF_STEPS, type Locale } from '@/app/components/pathfinder/launchSequence';
-import { PATHFINDER_IMPLEMENTATION_PROMPT } from '@/app/components/pathfinder/implementationPrompt';
+// The dependency-free reference implementation, shipped both as source (the
+// Component chapter's code view) and as a live import (the chapter's preview)
+// — never out of sync with the repo because it IS the repo file.
+import STARTER_SOURCE from '@/app/components/pathfinder/ProcessStatusToast.starter.tsx?raw';
+import {
+  ProcessStatusToast,
+  ProcessStatusToastDemo,
+  useDemoSim,
+} from '@/app/components/pathfinder/ProcessStatusToast.starter';
+import { ComponentPreview } from '@/app/styleguide/registry/docPrimitives';
 import { DroneDeviceIcon } from '@/primitives/ProductIcons';
 import { cn } from '@/app/components/ui/utils';
 
@@ -189,6 +198,9 @@ export default function PathfinderStory() {
   const simGate = usePathfinderLaunchSim({ speedMs, failStepId: null });
   const simFault = usePathfinderLaunchSim({ speedMs, failStepId: FAULT_ID });
   const simDebug = usePathfinderLaunchSim({ speedMs, failStepId: debugFault });
+  // Drives the Component chapter's stage — the generic starter toast, running
+  // from the same file the chapter hands off (via its demo driver).
+  const starter = useDemoSim({ speedMs: 900 });
 
   const chapters: StoryChapter[] = [
     // 1 · Intro -------------------------------------------------------------
@@ -619,12 +631,60 @@ export default function PathfinderStory() {
           </P>
           <P className="text-[16px] leading-[28px] text-[color:var(--story-muted)]">
             The full state set is on the right — the same gallery used to review the
-            design, now the reference a dev builds against.
+            design, now the reference a dev builds against. The final chapter hands
+            you the code itself.
           </P>
         </>
       ),
       stage: <GalleryStage />,
       takeaway: <>A handoff ends in a contract: the props, the states, and a side-by-side of every one of them.</>,
+    },
+
+    // 11 · Component ---------------------------------------------------------
+    {
+      id: 'component',
+      label: 'Component',
+      prose: (
+        <>
+          <P>
+            And here is the code itself. One self-contained React file, zero
+            dependencies: no animation library, no icon package, no CSS framework.
+            Copy it from the card below — paste it into any project and it runs.
+          </P>
+          <P>
+            It ships as a generic deployment pipeline (build → gate on{' '}
+            <Mono>Deploy</Mono> → live → take offline) so nothing app-specific
+            leaks into your starting point. The contract is the point: the toast
+            renders a <Mono>ProcessState</Mono> snapshot and calls{' '}
+            <Mono>ProcessCommands</Mono> — your backend owns the pace, exactly as
+            chapter 4 described. A wiring sketch in the file shows how to feed
+            both from your real event stream.
+          </P>
+          <P>
+            The comments are the instructions: replace the sequence model with
+            your domain, keep the contract and the presentational toast, and
+            delete the demo driver at the bottom — it is a fake backend that
+            exists only so this file plays on your desk.
+          </P>
+          <ComponentPreview
+            render={() => <ProcessStatusToastDemo />}
+            code={STARTER_SOURCE}
+            stripComments={false}
+          />
+        </>
+      ),
+      stage: (
+        <StageFrame className="w-full max-w-[560px]">
+          <ProcessStatusToast
+            state={starter.state}
+            commands={starter.commands}
+            onDismiss={starter.restart}
+          />
+        </StageFrame>
+      ),
+      takeaway: (
+        <>The handoff ends in runnable code — both previews on this spread are rendered from the very file you copy.</>
+      ),
     },
   ];
 
@@ -635,7 +695,6 @@ export default function PathfinderStory() {
       homeHref="/pathfinder-sandbox"
       appHref="/"
       chapters={chapters}
-      aiPrompt={PATHFINDER_IMPLEMENTATION_PROMPT}
     />
   );
 }

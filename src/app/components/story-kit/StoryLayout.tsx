@@ -14,16 +14,14 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { DirIsland } from '@/lib/direction';
 import { paletteVars, PALETTES, type Mood } from './palette';
 import { useScrollOpacity } from './useScrollOpacity';
-import { writeToClipboard } from './clipboard';
 import { Fade } from './Fade';
 import { StorySection } from './StorySection';
 import { StoryStage } from './StoryStage';
 import type { StoryChapter } from './types';
-import { Sun, Moon, Home, Settings, SparklesFilled, Check } from '@/lib/icons/central';
+import { Sun, Moon, Home, Settings } from '@/lib/icons/central';
 import { cn } from '@/app/components/ui/utils';
 
 interface StoryLayoutProps {
@@ -35,11 +33,6 @@ interface StoryLayoutProps {
   /** Footer pill that returns to the main app. Defaults to `/`. */
   appHref?: string;
   chapters: StoryChapter[];
-  /**
-   * Optional "build this" prompt. When provided, a second footer pill copies it
-   * to the clipboard so a reader can hand it to their own coding agent.
-   */
-  aiPrompt?: string;
 }
 
 export function StoryLayout({
@@ -48,7 +41,6 @@ export function StoryLayout({
   homeHref = '/',
   appHref = '/',
   chapters,
-  aiPrompt,
 }: StoryLayoutProps) {
   const [activeId, setActiveId] = useState<string | null>(chapters[0]?.id ?? null);
   const [mood, setMood] = useState<Mood>('dark');
@@ -119,7 +111,6 @@ export function StoryLayout({
         appHref={appHref}
         chapters={chapters}
         activeId={activeId}
-        aiPrompt={aiPrompt}
       />
       </div>
     </DirIsland>
@@ -170,7 +161,6 @@ function FooterPill({
   appHref,
   chapters,
   activeId,
-  aiPrompt,
 }: {
   title: string;
   mood: Mood;
@@ -179,7 +169,6 @@ function FooterPill({
   appHref: string;
   chapters: StoryChapter[];
   activeId: string | null;
-  aiPrompt?: string;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -287,69 +276,7 @@ function FooterPill({
           </span>
         </button>
 
-        {aiPrompt && <CopyPromptPill prompt={aiPrompt} />}
       </div>
     </div>
-  );
-}
-
-/** Footer pill that copies a "build this" prompt, with an inline confirm swap. */
-function CopyPromptPill({ prompt }: { prompt: string }) {
-  const prefersReducedMotion = useReducedMotion();
-  const [copied, setCopied] = useState(false);
-  const timerRef = useRef<number | null>(null);
-
-  useEffect(
-    () => () => {
-      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
-    },
-    [],
-  );
-
-  const handleCopy = async () => {
-    const ok = await writeToClipboard(prompt);
-    if (!ok) return;
-    setCopied(true);
-    if (timerRef.current !== null) window.clearTimeout(timerRef.current);
-    timerRef.current = window.setTimeout(() => {
-      setCopied(false);
-      timerRef.current = null;
-    }, 1600);
-  };
-
-  const swap = prefersReducedMotion
-    ? { initial: { opacity: 1 }, animate: { opacity: 1 }, exit: { opacity: 1 } }
-    : {
-        initial: { opacity: 0, scale: 0.85 },
-        animate: { opacity: 1, scale: 1 },
-        exit: { opacity: 0, scale: 0.85 },
-      };
-
-  return (
-    <button
-      type="button"
-      onClick={handleCopy}
-      aria-label={copied ? 'Prompt copied to clipboard' : 'Copy implementation prompt'}
-      title={copied ? 'Copied' : 'Copy a generic prompt to build this in your own app'}
-      className="flex items-center gap-1.5 rounded-full border px-3 py-1.5 shadow-lg backdrop-blur"
-      style={{ borderColor: 'var(--story-border)', backgroundColor: 'var(--story-surface)' }}
-    >
-      <span className="inline-flex size-[13px] items-center justify-center">
-        <AnimatePresence mode="wait" initial={false}>
-          {copied ? (
-            <motion.span key="check" {...swap} className="inline-flex" aria-hidden>
-              <Check size={13} style={{ color: 'var(--story-accent)' }} strokeWidth={3} />
-            </motion.span>
-          ) : (
-            <motion.span key="sparkles" {...swap} className="inline-flex" aria-hidden>
-              <SparklesFilled size={13} style={{ color: 'var(--story-accent)' }} />
-            </motion.span>
-          )}
-        </AnimatePresence>
-      </span>
-      <span className="text-[13px] font-medium text-[color:var(--story-ink)]">
-        {copied ? 'Copied' : 'Copy prompt'}
-      </span>
-    </button>
   );
 }

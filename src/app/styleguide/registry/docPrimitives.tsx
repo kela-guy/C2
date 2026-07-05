@@ -61,10 +61,21 @@ export function CopyButton({ text, label = 'Copy' }: { text: string; label?: str
  * rule in `styles/theme.css` neutralises shiki's inline background so the doc
  * surface shows through.
  */
-export function Code({ code, lang = 'tsx' }: { code: string; lang?: ShikiLang }) {
+export function Code({
+  code,
+  lang = 'tsx',
+  stripComments = true,
+}: {
+  code: string;
+  lang?: ShikiLang;
+  stripComments?: boolean;
+}) {
   // Styleguide previews show comment-free code so the snippet reads as the
   // API shape, not its inline narration.
-  const clean = useMemo(() => stripCodeComments(code, lang), [code, lang]);
+  const clean = useMemo(
+    () => (stripComments ? stripCodeComments(code, lang) : code),
+    [code, lang, stripComments],
+  );
   const html = useShikiHtml(clean, lang);
   if (html) {
     return (
@@ -116,15 +127,25 @@ export function ComponentPreview({
   lang = 'tsx',
   align = 'center',
   height,
+  stripComments = true,
 }: {
   render: () => React.ReactNode;
   code?: string;
   lang?: ShikiLang;
   align?: 'start' | 'center' | 'end';
   height?: number | string;
+  /**
+   * Styleguide docs strip comments so snippets read as the API shape. Pass
+   * `false` when the comments ARE the content (e.g. a handoff starter file
+   * whose comments carry the replace/keep instructions).
+   */
+  stripComments?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const cleanCode = useMemo(() => (code ? stripCodeComments(code, lang) : undefined), [code, lang]);
+  const cleanCode = useMemo(
+    () => (code && stripComments ? stripCodeComments(code, lang) : code),
+    [code, lang, stripComments],
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
   // Collapsing while the code is scrolled would otherwise leave the container's
   // retained scrollTop showing a mid-snippet slice under the "View Code" fade —
@@ -179,7 +200,7 @@ export function ComponentPreview({
             <CopyButton text={cleanCode ?? code} />
           </div>
           <div ref={scrollRef} className={cn('relative overflow-hidden', expanded ? 'max-h-[640px] overflow-auto' : 'max-h-40')}>
-            <Code code={code} lang={lang} />
+            <Code code={code} lang={lang} stripComments={stripComments} />
             {!expanded && (
               <div className="absolute inset-0 flex items-center justify-center pb-4">
                 <div
