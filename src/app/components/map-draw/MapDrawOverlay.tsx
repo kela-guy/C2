@@ -615,7 +615,6 @@ export function MapDrawOverlay({
     if (hoveredShapeId) ids.add(hoveredShapeId);
     if (focusedVertex) ids.add(focusedVertex.shapeId);
     if (draw.pendingShapeId) ids.add(draw.pendingShapeId);
-    if (ids.size === 0) return out;
     const r = el.getBoundingClientRect();
     for (const s of draw.shapes) {
       if (s.hidden || s.kind === 'point' || !ids.has(s.id)) continue;
@@ -642,8 +641,36 @@ export function MapDrawOverlay({
         });
       });
     }
+
+    // In-flight draft — surface a dot for every placed vertex so the user
+    // can see the shape's spine take form while they're still drawing.
+    // Geometry belongs to the engine during a draft (`draw.draft.points`
+    // is the source of truth) so these dots are click-only: they can't be
+    // dragged. Circles and points are skipped — circles are a two-corner
+    // rubber-band whose "shape" is the growing radius, and points commit
+    // instantly. The synthetic `__draft__` id matches the one the panel
+    // uses for its editor, so `focusedVertex` bridges the two surfaces.
+    const d = draw.draft;
+    if (
+      d &&
+      (d.kind === 'polygon' || d.kind === 'polyline' || d.kind === 'freehand')
+    ) {
+      d.points.forEach((p, i) => {
+        out.push({
+          draggable: false,
+          key: `__draft__-${i}`,
+          shapeId: '__draft__',
+          index: i,
+          left: p.x * r.width,
+          top: p.y * r.height,
+          active:
+            focusedVertex?.shapeId === '__draft__' && focusedVertex.index === i,
+        });
+      });
+    }
+
     return out;
-  }, [draw.shapes, draw.pendingShapeId, hoveredShapeId, focusedVertex]);
+  }, [draw.shapes, draw.draft, draw.pendingShapeId, hoveredShapeId, focusedVertex]);
 
   // Live distance / radius readout for the in-flight draft. Circles
   // show their radius (center -> cursor); polylines / arrows show the
@@ -1025,6 +1052,17 @@ export function MapDrawOverlay({
               ? undefined
               : (e) => {
                   e.stopPropagation();
+                  // Draft dots sit above the SVG and swallow clicks that
+                  // would otherwise hit the canvas close threshold. Tapping
+                  // the first vertex (polygon close) or the last vertex
+                  // (polyline finish) commits the draft immediately.
+                  if (dot.shapeId === '__draft__' && draw.draft) {
+                    const last = draw.draft.points.length - 1;
+                    if (dot.index === 0 || dot.index === last) {
+                      draw.finishDraft();
+                      return;
+                    }
+                  }
                   setFocusedVertex({ shapeId: dot.shapeId, index: dot.index });
                 }
           }

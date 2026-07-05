@@ -2371,7 +2371,7 @@ export const Dashboard = ({
             onClose={closeMapDrawPanel}
             tooltipSide={railTooltipSide}
             openLabel="Geo Entities"
-            closeLabel="Close Geo Entities"
+            closeLabel="Geo Entities"
           />
         </div>
 

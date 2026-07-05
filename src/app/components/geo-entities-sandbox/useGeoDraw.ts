@@ -172,6 +172,12 @@ export interface UseGeoDrawResult {
   /** Discard the pending shape entirely and clear the staging flag. */
   cancelPending: () => void;
   /**
+   * True while the panel's Save action is live — a brand-new shape awaiting
+   * its first save, or an existing shape with unsaved edits. The floating
+   * draw strip stays blocked until this clears (Save / Cancel).
+   */
+  requiresSaveBeforeDraw: boolean;
+  /**
    * Reopen a previously-saved shape in the panel's Draft-detail view
    * (Name / Type / Coordinates / Color editor + Save / Cancel footer).
    * Unlike a fresh draft, Cancel here is non-destructive: it only
@@ -228,6 +234,12 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
   // (Cancel just closes the editor). Always kept in sync with
   // `pendingShapeId`.
   const [pendingIsNew, setPendingIsNew] = useState(false);
+  // Tracks unsaved edits on a reopened existing shape (`pendingIsNew ===
+  // false`). Brand-new draws always require save via `pendingIsNew`; this
+  // flag mirrors the panel's dirty / Save-enabled state for layer edits.
+  const [pendingDirty, setPendingDirty] = useState(false);
+  const pendingShapeIdRef = useRef<string | null>(null);
+  pendingShapeIdRef.current = pendingShapeId;
   // Focus request bus — the panel's "center on map" action bumps this
   // and a Dashboard-mounted bridge forwards it to Cesium. Using an id
   // instead of just a shape id makes repeated requests idempotent: a
@@ -327,6 +339,7 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
   const updateShape = useCallback(
     (id: string, patch: Partial<GeoShape>) => {
       mutate((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+      if (pendingShapeIdRef.current === id) setPendingDirty(true);
     },
     [mutate],
   );
@@ -493,6 +506,7 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
       // `pendingIsNew` so Cancel hard-deletes them.
       setPendingShapeId(id);
       setPendingIsNew(true);
+      setPendingDirty(false);
     },
     [defaultName, mutate],
   );
@@ -503,6 +517,7 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
     // already in `shapes`.
     setPendingShapeId(null);
     setPendingIsNew(false);
+    setPendingDirty(false);
   }, []);
 
   const cancelPending = useCallback(() => {
@@ -530,6 +545,7 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
       return null;
     });
     setPendingIsNew(false);
+    setPendingDirty(false);
   }, [mutate, pendingIsNew]);
 
   const beginEditShape = useCallback((id: string) => {
@@ -538,6 +554,7 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
     // read/write window onto the live shape, not a staging buffer.
     setPendingShapeId(id);
     setPendingIsNew(false);
+    setPendingDirty(false);
     setSelectedId(id);
   }, []);
 
@@ -856,6 +873,14 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
   const isDraggingHandle =
     dragRef.current.kind === 'transform' && draggingTick >= 0;
 
+  const requiresSaveBeforeDraw = useMemo(() => {
+    if (!pendingShapeId) return false;
+    if (pendingIsNew) return true;
+    const shape = shapes.find((s) => s.id === pendingShapeId);
+    if (!shape || shape.locked) return false;
+    return pendingDirty;
+  }, [pendingShapeId, pendingIsNew, pendingDirty, shapes]);
+
   return {
     shapes,
     draft,
@@ -895,6 +920,7 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
 
     pendingShapeId,
     pendingIsNew,
+    requiresSaveBeforeDraw,
     savePending,
     cancelPending,
     beginEditShape,

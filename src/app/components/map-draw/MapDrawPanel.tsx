@@ -92,12 +92,6 @@ import { getZOrderActions, type ShapeAction } from './shapeActions';
 // Flow Builder): Heebo only, no mono / uppercase / letter-tracking.
 const TYPE_GROUP_TITLE = 'text-[11px] font-semibold text-zinc-400';
 
-// Neutral rail color painted on hidden layer rows so a hidden shape
-// reads consistently across all its cues (dimmed card + grey rail +
-// EyeOff icon). Kept alongside the panel constants so tweaking the
-// neutral tone is a single-line change.
-const HIDDEN_RAIL_COLOR = '#949494';
-
 /**
  * Visual variants of the panel — drives tool-button design, Tools-section
  * layout (static heading vs. collapsible dropdown), and Layers default
@@ -515,10 +509,14 @@ function DraftDetailView({
         aria-disabled={isLocked || undefined}
         tabIndex={isLocked ? -1 : undefined}
       >
-        {/* Type is now the FIRST field so users see the mandatory,
-            default-set-to-No-Fly-Zone dropdown at the top and can
-            change it before naming. Name follows and is fully
-            optional — Save no longer requires a description. */}
+        {/* Field order: Type, Name, Color / Line / Line thickness,
+            Coordinates. Type comes first (mandatory, default No-Fly-Zone)
+            so users pick it before naming; Name is fully optional; the
+            color/line block sits above Coordinates so styling happens
+            before the fine-grained vertex list — Coordinates is the
+            "detail" section that only some users edit. `ColorSection`
+            renders Color / Line style / Line thickness internally so
+            those three items stay grouped visually. */}
         <TypeField
           shape={shape}
           onPatch={patch}
@@ -531,13 +529,12 @@ function DraftDetailView({
           onPatch={patch}
           autoFocus={false}
         />
+        <ColorSection shape={shape} onPatch={patch} />
         <CoordinatesSection
           shape={shape}
           onPatch={patch}
           drafting={drafting}
         />
-        <hr className="border-t border-white/10" />
-        <ColorSection shape={shape} onPatch={patch} />
       </div>
 
       {/* Save / Cancel footer pinned to the panel bottom via the flex
@@ -561,7 +558,7 @@ function DraftDetailView({
                 ? 'Discard changes'
                 : 'No changes to cancel'
           }
-          className="rounded-md border border-white/10 bg-transparent px-3 py-1.5 text-[12px] font-medium text-zinc-200 transition-colors hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 disabled:cursor-not-allowed disabled:border-white/15 disabled:text-white/40 disabled:hover:bg-transparent disabled:hover:text-white/40"
+          className="rounded-[2px] border border-white/10 bg-transparent px-3 py-1.5 text-[12px] font-medium text-zinc-200 transition-colors hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 disabled:cursor-not-allowed disabled:border-white/15 disabled:text-white/40 disabled:hover:bg-transparent disabled:hover:text-white/40"
         >
           Cancel
         </button>
@@ -578,7 +575,7 @@ function DraftDetailView({
                   ? 'Save shape'
                   : 'No changes to save'
           }
-          className="rounded-md border border-transparent bg-white px-3 py-1.5 text-[12px] font-semibold text-black transition-colors hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 disabled:cursor-not-allowed disabled:border-white/15 disabled:bg-transparent disabled:text-white/40 disabled:hover:bg-transparent"
+          className="rounded-[2px] border border-transparent bg-white px-3 py-1.5 text-[12px] font-semibold text-black transition-colors hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 disabled:cursor-not-allowed disabled:border-white/15 disabled:bg-transparent disabled:text-white/40 disabled:hover:bg-transparent"
         >
           Save
         </button>
@@ -918,10 +915,6 @@ function LayerRow({
   const typeLabel = shape.zoneType
     ? ZONE_TYPE_BY_ID[shape.zoneType]?.label ?? ZONE_TYPE_BY_ID.noFly.label
     : ZONE_TYPE_BY_ID.noFly.label;
-  // Zone color drives the leading rail so the card carries the same
-  // signature hue as the shape on the map. Neutralized to grey when the
-  // layer is hidden, matching the dimmed card + EyeOff icon.
-  const railColor = shape.hidden ? HIDDEN_RAIL_COLOR : getZoneColor(shape.zoneType);
   // Bridge the row hover state to the shared map-draw context so the
   // overlay can paint a highlight halo on the matching shape. Keyboard
   // focus is also surfaced so tab-through the list highlights too.
@@ -976,15 +969,15 @@ function LayerRow({
           onFocus={() => setHoveredShapeId(shape.id)}
           onBlur={() => setHoveredShapeId(null)}
           className={`group flex cursor-pointer items-stretch overflow-hidden rounded-[2px] border transition-[background,border-color,opacity] duration-100 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
-            // Figma-style layer highlight — a subtle brand-blue tint
-            // that reads as "this is the row you're pointing at /
-            // hovering on the map" without shouting. Idle rows have a
-            // near-invisible fill; hover and map-hover both promote to
-            // the same blue-tinted state so pointing at a shape on
-            // either surface highlights the SAME visual pair.
+            // Standard white hover — subtle border + fill that reads as
+            // "this is the row you're pointing at / hovering on the map"
+            // without shouting. Idle rows have a near-invisible fill;
+            // hover and map-hover both promote to the same white-tinted
+            // state so pointing at a shape on either surface highlights
+            // the SAME visual pair.
             hovered
-              ? 'border-[#3B82F6]/35 bg-[#3B82F6]/[0.12]'
-              : 'border-transparent bg-white/[0.03] hover:border-[#3B82F6]/25 hover:bg-[#3B82F6]/[0.08]'
+              ? 'border-white/20 bg-white/[0.10]'
+              : 'border-transparent bg-white/[0.03] hover:border-white/15 hover:bg-white/[0.07]'
           } ${
             // Whole-card dim mirrors the "off the map" state. Icons and
             // text inherit this via `opacity` compounding so the row
@@ -992,14 +985,6 @@ function LayerRow({
             shape.hidden ? 'opacity-55' : ''
           }`}
         >
-          {/* Leading zone-color rail — the card's identity cue. Painted
-              in the shape's zone color at rest, neutralized to grey
-              when hidden. */}
-          <span
-            aria-hidden
-            className="w-[3px] shrink-0"
-            style={{ background: railColor }}
-          />
           <div className="flex min-w-0 flex-1 items-center gap-2 px-2.5 py-2">
             <span
               className="grid size-5 shrink-0 place-items-center text-white/70"
@@ -1008,16 +993,19 @@ function LayerRow({
               <ShapeKindIcon kind={shape.kind} tool={shape.tool} size={15} />
             </span>
             <span className="flex min-w-0 flex-1 items-baseline gap-1.5">
+              {/* Type is now the primary label — it's the mandatory,
+                  meaningful classification (No-Fly-Zone, Restricted, …).
+                  The shape's optional custom name follows as a muted
+                  suffix so lists remain scannable by zone type first. */}
               <span
                 className={`truncate text-[13px] font-medium leading-tight ${
                   shape.hidden ? 'text-white/60' : 'text-zinc-100'
                 }`}
               >
-                {shapeLabel(shape)}
+                {typeLabel}
               </span>
-              {/* Type sits inline as a muted suffix after the name. */}
               <span className="truncate text-[11px] leading-tight text-white/45">
-                · {typeLabel}
+                · {shapeLabel(shape)}
               </span>
             </span>
             {/* Three fixed action slots: Eye · Lock · Center. Each slot
@@ -1212,14 +1200,11 @@ function NameField({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoFocus]);
 
-  // Borderless, transparent name field — reads as "the title is right
-  // there, just click and type". No box, no ring: the caret +
-  // spell-check is the only chrome. (The old orange "needs attention"
-  // ring was removed — the empty state already reads as editable via
-  // the "Add name" placeholder.)
+  // Bordered field — same chrome and title-to-control rhythm as the
+  // Type select above (`space-y-2` + h-8 box).
   const baseClass =
-    'w-full rounded-md border border-transparent bg-transparent px-0 py-1 text-[13px] font-medium text-white placeholder:text-white/50 outline-none transition-colors';
-  const attentionClass = 'focus:bg-white/[0.04]';
+    'h-8 w-full rounded-[2px] border border-white/10 bg-white/[0.04] px-2.5 text-[12px] font-medium text-white placeholder:text-white/50 outline-none transition-colors hover:bg-white/[0.08] focus:border-white/30 focus:bg-white/[0.08]';
+  const attentionClass = '';
 
   return (
     <section className="space-y-2">
@@ -1427,6 +1412,9 @@ function CoordinatesSection({
               focusedVertex?.shapeId === shape.id &&
               focusedVertex.index === row.index
             }
+            onSelect={() =>
+              setFocusedVertex({ shapeId: shape.id, index: row.index })
+            }
             onRemove={
               !drafting && !isCircle && shape.points.length > 2
                 ? () => removePoint(row.index)
@@ -1472,6 +1460,7 @@ function CoordinateRow({
   onRemove,
   active = false,
   readOnly = false,
+  onSelect,
 }: {
   label: string;
   point: Vec2;
@@ -1484,6 +1473,11 @@ function CoordinateRow({
   /** When true, the input is a read-only readout (used while the
    *  shape is still being drafted — geometry is owned by the engine). */
   readOnly?: boolean;
+  /** Called when the row is clicked or its input receives focus — the
+   *  parent uses this to promote this row to the "active" vertex so the
+   *  matching dot on the map lights up (the reverse of the map -> row
+   *  highlight; makes the coordinate list a bidirectional locator). */
+  onSelect?: () => void;
 }) {
   const { lat, lng } = unproject(point, SANDBOX_BOUNDS);
   const display = formatPair(lat, lng);
@@ -1535,6 +1529,7 @@ function CoordinateRow({
   return (
     <li
       ref={rowRef}
+      onMouseDown={onSelect}
       className="group relative flex items-center rounded-[2px] transition-colors"
     >
       <input
@@ -1545,14 +1540,15 @@ function CoordinateRow({
         readOnly={readOnly}
         aria-label={`Coordinates ${label}`}
         onChange={readOnly ? undefined : (e) => setDraft(e.target.value)}
-        onFocus={
-          readOnly
-            ? undefined
-            : (e) => {
-                setFocused(true);
-                e.currentTarget.select();
-              }
-        }
+        onFocus={(e) => {
+          // Whether editable or not, focusing a row lights up the
+          // matching vertex dot on the map — the row -> dot direction of
+          // the coordinate locator.
+          onSelect?.();
+          if (readOnly) return;
+          setFocused(true);
+          e.currentTarget.select();
+        }}
         onBlur={
           readOnly
             ? undefined
@@ -2198,88 +2194,89 @@ function ColorSection({
   const weight = Math.min(shape.strokeWidth ?? STROKE_DEFAULT, maxWeight);
 
   return (
-    <section className="space-y-3">
-      <span className={`${TYPE_GROUP_TITLE} block`}>Color</span>
-
-      {/* Row 1 — Fill / Outline chips. Each writes ONLY its own field
-          (see comments below) so Fill / Outline stay independent. The
-          renderer-side fix in `MapDrawOverlay` (fill derived from
-          `shape.color`, not from stroke) closes the loop.
+    // Three uniform titled groups (Color, Line, Line thickness) stacked
+    // with the SAME `gap-5` the parent editor uses between its own
+    // sections — so this "one section" reads as three siblings in the
+    // outer rhythm, and every title-to-content gap (`space-y-2`) matches
+    // Type / Name / Coordinates exactly.
+    <section className="flex flex-col gap-5">
+      {/* Group 1 — Color: title + Fill / Outline chips. Each chip writes
+          ONLY its own field (see comments below) so Fill / Outline stay
+          independent. The renderer-side fix in `MapDrawOverlay` (fill
+          derived from `shape.color`, not from stroke) closes the loop.
 
           GUARD: at least one of fill / outline must stay visible —
           otherwise the shape paints nothing at all. We surface this by
           disabling the OTHER chip's "Transparent" option whenever the
           current chip is already transparent. */}
-      <div className="grid grid-cols-2 gap-2">
-        <ColorChip
-          label="Fill"
-          color={fillColor}
-          triggerRef={fillTriggerRef}
-          // Fill can only become Transparent if the outline still
-          // paints something — otherwise the shape would be invisible.
-          transparentAllowed={lineStyle !== 'none'}
-          onPick={(value) => {
-            if (value === null) {
-              onPatch({ fillMode: 'none' });
-              return;
-            }
-            onPatch({ color: value, fillMode: 'fill' });
-          }}
-        />
-        <ColorChip
-          label="Outline"
-          color={outlineColor}
-          // Mirror image: outline can only go Transparent if the fill
-          // is still being painted.
-          transparentAllowed={fillMode !== 'none'}
-          onPick={(value) => {
-            if (value === null) {
-              onPatch({ lineStyle: 'none' });
-              return;
-            }
-            // Picking an outline color implies the shape should have a
-            // stroke — flip back to solid if it was None.
-            onPatch({
-              strokeColor: value,
-              ...(lineStyle === 'none' ? { lineStyle: 'solid' } : null),
-            });
-          }}
-        />
+      <div className="space-y-2">
+        <span className={`${TYPE_GROUP_TITLE} block`}>Color</span>
+        <div className="grid grid-cols-2 gap-2">
+          <ColorChip
+            label="Fill"
+            color={fillColor}
+            triggerRef={fillTriggerRef}
+            // Fill can only become Transparent if the outline still
+            // paints something — otherwise the shape would be invisible.
+            transparentAllowed={lineStyle !== 'none'}
+            onPick={(value) => {
+              if (value === null) {
+                onPatch({ fillMode: 'none' });
+                return;
+              }
+              onPatch({ color: value, fillMode: 'fill' });
+            }}
+          />
+          <ColorChip
+            label="Outline"
+            color={outlineColor}
+            // Mirror image: outline can only go Transparent if the fill
+            // is still being painted.
+            transparentAllowed={fillMode !== 'none'}
+            onPick={(value) => {
+              if (value === null) {
+                onPatch({ lineStyle: 'none' });
+                return;
+              }
+              // Picking an outline color implies the shape should have a
+              // stroke — flip back to solid if it was None.
+              onPatch({
+                strokeColor: value,
+                ...(lineStyle === 'none' ? { lineStyle: 'solid' } : null),
+              });
+            }}
+          />
+        </div>
       </div>
 
-      {/* Divider between the color chips and the line controls. */}
-      <hr className="border-t border-white/10" />
+      {/* Group 2 — Line: style picker (Solid · Dashed). */}
+      <div className="space-y-2">
+        <span className={`${TYPE_GROUP_TITLE} block`}>Line</span>
+        <SegmentedControl>
+          {LINE_STYLES.map((mode) => (
+            <SegmentButton
+              key={mode.id}
+              active={lineStyle === mode.id}
+              onClick={() =>
+                // Switching to dashed clamps an over-thick line back to
+                // the cap so the dash rhythm stays legible after the swap.
+                onPatch(
+                  mode.id === 'dashed' && weight > STROKE_DASHED_MAX
+                    ? { lineStyle: mode.id, strokeWidth: STROKE_DASHED_MAX }
+                    : { lineStyle: mode.id },
+                )
+              }
+            >
+              <LineGlyph style={mode.id} />
+              {mode.label}
+            </SegmentButton>
+          ))}
+        </SegmentedControl>
+      </div>
 
-      {/* "Line" subheader introducing the style + thickness controls
-          (mirrors the top-of-section chips' Fill / Outline labels). */}
-      <span className={`${TYPE_GROUP_TITLE} block`}>Line</span>
-
-      {/* Row 2 — line style picker (Solid · Dashed · None). */}
-      <SegmentedControl>
-        {LINE_STYLES.map((mode) => (
-          <SegmentButton
-            key={mode.id}
-            active={lineStyle === mode.id}
-            onClick={() =>
-              // Switching to dashed clamps an over-thick line back to the cap
-              // so the dash rhythm stays legible after the swap.
-              onPatch(
-                mode.id === 'dashed' && weight > STROKE_DASHED_MAX
-                  ? { lineStyle: mode.id, strokeWidth: STROKE_DASHED_MAX }
-                  : { lineStyle: mode.id },
-              )
-            }
-          >
-            <LineGlyph style={mode.id} />
-            {mode.label}
-          </SegmentButton>
-        ))}
-      </SegmentedControl>
-
-      {/* Row 3 — thickness slider with a visible label so it reads as
-          "this is the thickness control" without hover-testing. */}
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between px-0.5">
+      {/* Group 3 — Line thickness: title + live weight readout + slider. */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
           <span className={TYPE_GROUP_TITLE}>Line thickness</span>
           <span
             className={`text-[11px] tabular-nums ${
@@ -2385,7 +2382,8 @@ const COLOR_PALETTE: { id: string; label: string; value: string }[] = [
  *
  * Picker contents: Transparent button -> palette grid -> native color
  * input + hex text input. `color === null` renders the crossed-out
- * circle treatment (the "none" / transparent state).
+ * rectangle swatches with 2 px corners (the "none" / transparent state
+ * keeps the diagonal-slash glyph inside the same rect frame).
  */
 function ColorChip({
   label,
@@ -2435,7 +2433,7 @@ function ColorChip({
           className="flex h-10 w-full items-center gap-2 rounded-[2px] border border-white/10 bg-white/[0.04] px-2 py-1.5 text-left transition-colors hover:border-white/20 hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
         >
           {color === null ? (
-            <span className="grid size-5 shrink-0 place-items-center rounded-full ring-1 ring-inset ring-white/30 text-zinc-300">
+            <span className="grid size-5 shrink-0 place-items-center rounded-[2px] ring-1 ring-inset ring-white/30 text-zinc-300">
               <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden>
                 <circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
                 <line x1="3.6" y1="12.4" x2="12.4" y2="3.6" stroke="currentColor" strokeWidth="1.5" />
@@ -2444,7 +2442,7 @@ function ColorChip({
           ) : (
             <span
               aria-hidden
-              className="size-5 shrink-0 rounded-full ring-1 ring-inset ring-white/15"
+              className="size-5 shrink-0 rounded-[2px] ring-1 ring-inset ring-white/15"
               style={{ background: color }}
             />
           )}
@@ -2492,7 +2490,7 @@ function ColorChip({
                   : `hover:bg-white/[0.08] ${color === null ? 'bg-white/[0.08] text-white' : 'text-white/75'}`
               }`}
             >
-              <span className="grid size-5 place-items-center rounded-full ring-1 ring-inset ring-white/30 text-zinc-300">
+              <span className="grid size-5 place-items-center rounded-[2px] ring-1 ring-inset ring-white/30 text-zinc-300">
                 <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden>
                   <circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
                   <line x1="3.6" y1="12.4" x2="12.4" y2="3.6" stroke="currentColor" strokeWidth="1.5" />
@@ -2513,7 +2511,7 @@ function ColorChip({
                 aria-label={sw.label}
                 title={sw.label}
                 onClick={() => onPick(sw.value)}
-                className={`size-7 rounded-full transition-[box-shadow,transform] active:scale-[0.94] focus-visible:outline-none ${
+                className={`size-7 rounded-[2px] transition-[box-shadow,transform] active:scale-[0.94] focus-visible:outline-none ${
                   active
                     ? 'ring-2 ring-white/85 ring-offset-2 ring-offset-[#1c1c1c]'
                     : 'ring-1 ring-inset ring-white/15 hover:ring-white/40'
@@ -2526,7 +2524,7 @@ function ColorChip({
 
         <div className="mt-3 flex items-center gap-2">
           <label
-            className="relative grid size-7 cursor-pointer place-items-center overflow-hidden rounded-full ring-1 ring-inset ring-white/15 hover:ring-white/40"
+            className="relative grid size-7 cursor-pointer place-items-center overflow-hidden rounded-[2px] ring-1 ring-inset ring-white/15 hover:ring-white/40"
             title="Pick a custom color"
             style={{ background: /^#[0-9a-fA-F]{6}$/.test(hex) ? hex : '#ffffff' }}
           >

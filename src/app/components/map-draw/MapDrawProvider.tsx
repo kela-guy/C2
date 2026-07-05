@@ -103,6 +103,14 @@ export function MapDrawProvider({ children }: { children: ReactNode }) {
       draw.setActiveTool('select');
       return;
     }
+    // Block arming a fresh tool only while Save is live in the panel —
+    // brand-new draws, or existing shapes with unsaved edits. Opening
+    // a layer row for read-only inspection keeps tools available.
+    if (draw.requiresSaveBeforeDraw) return;
+    // Read-only layer inspection (Save inactive) — dismiss the editor
+    // before arming a draw tool so the panel doesn't stay on the detail
+    // view while the user starts a fresh shape.
+    if (draw.pendingShapeId) draw.cancelPending();
     if (draw.draft && draw.activeToolId !== tool) draw.cancelDraft();
     draw.setActiveTool(tool);
     draw.setSelectedId(null);

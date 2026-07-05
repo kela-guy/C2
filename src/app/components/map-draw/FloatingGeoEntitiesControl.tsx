@@ -10,7 +10,7 @@
  *     affordance and the trigger that expands the strip. A fresh draft
  *     begins with whatever tool this chip currently shows — the "closed
  *     selected state" IS the tool you draw with.
- *   - OPEN: the SAME chip grows horizontally (`w-7` -> `w-28`) ON HOVER
+ *   - OPEN: the SAME chip grows horizontally (`w-7` -> `w-[106px]`) ON HOVER
  *     to reveal the three OTHER tools beside the selected one. One shared
  *     container (single background, border, shadow) holds flat icon
  *     glyphs — no per-icon chip. Hovering an icon paints a subtle
@@ -154,7 +154,10 @@ export function FloatingGeoEntitiesControl({
   // to leave. Arming does NOT close the docked panel — the MapDrawPanel
   // switches its render branch off `draw.draft` / `pendingShapeId`, so
   // dropping the first point transitions any open panel in-place.
+  const saveRequired = draw.requiresSaveBeforeDraw;
+
   const chooseTool = (id: DisplayToolId) => {
+    if (saveRequired) return;
     setFaceTool(id);
     setDrawTool(id);
     setOpen(false);
@@ -171,20 +174,20 @@ export function FloatingGeoEntitiesControl({
 
   const selectedTool = TOOLS.find((t) => t.id === faceTool) ?? TOOLS[0];
   const others = TOOLS.filter((t) => t.id !== faceTool);
-  // Whether the shown/selected tool is actually armed on the engine. When
-  // it is, the whole chip gets a brighter outline — this lives on the
-  // CONTAINER (the outer, non-clipped box) rather than the icon so the
-  // stroke reads as a clean rounded square like the Layers rail toggle,
-  // instead of an inset ring that `overflow-hidden` shaves on 3 sides.
+  // Whether the shown/selected tool is actually armed on the engine.
+  // Chosen-state chrome lives on the icon slot (full-cell fill + white
+  // glyph), not on the container border.
   const anchorArmed = drawTool === selectedTool.id;
 
   return (
     <TooltipProvider delayDuration={150}>
-      {/* Pin the control to LTR so `right-3` always anchors on the visual
-          right edge of the map regardless of the app's global RTL
-          direction — matches how the 2D/3D toggle is anchored on the
-          left. */}
-      <DirIsland direction="ltr">
+      {/* Pin to LTR so flex order + justify-end stay stable in the RTL
+          app shell. Physical `right-3` keeps the strip on the map's
+          visual top-right; extras clip from the left when collapsed. */}
+      <DirIsland
+        direction="ltr"
+        className="pointer-events-auto absolute top-3 right-3 z-40"
+      >
         <div
           ref={rootRef}
           role="toolbar"
@@ -197,21 +200,18 @@ export function FloatingGeoEntitiesControl({
           onMouseLeave={() => setOpen(false)}
           onFocusCapture={() => setOpen(true)}
           onBlur={handleBlur}
-          // `justify-end` + `overflow-hidden` = the other tools clip to
-          // the LEFT as the container narrows; the selected tool stays
-          // glued to the right edge. `transition-[width]` animates the
-          // reveal / collapse. The border brightens to white/25 while the
-          // shown tool is armed — the chip's "chosen" outline, painted on
-          // this outer box so it isn't clipped.
-          className={`pointer-events-auto absolute top-3 right-3 z-40 flex h-7 items-center justify-end overflow-hidden rounded-[2px] border bg-black/70 shadow-[0_4px_12px_rgba(0,0,0,0.45)] backdrop-blur-md transition-[width,border-color] duration-200 ease-out ${
-            open ? 'w-28' : 'w-7'
-          } ${anchorArmed ? 'border-white/25' : 'border-white/10'}`}
+          // `p-[2px]` + `gap-[2px]` = 2 px on every edge and between
+          // every cell. Open width = 2 + 4×24 + 3×2 + 2 = 106 px.
+          className={`flex h-7 items-center justify-end gap-[2px] overflow-hidden rounded-[2px] p-[2px] bg-black/70 shadow-[0_4px_12px_rgba(0,0,0,0.45)] ring-1 ring-inset ring-white/10 backdrop-blur-md transition-[width] duration-200 ease-out ${
+            open ? 'w-[106px]' : 'w-7'
+          }`}
         >
           {others.map((tool) => (
             <IconSlot
               key={tool.id}
               tool={tool}
               active={false}
+              blocked={saveRequired}
               onClick={() => chooseTool(tool.id)}
               reachable={open}
             />
@@ -222,6 +222,7 @@ export function FloatingGeoEntitiesControl({
             // armed state so the chip highlights only when the tool is
             // actually live. Clicking it re-arms the shown tool.
             active={anchorArmed}
+            pendingHint={saveRequired}
             onClick={() => chooseTool(selectedTool.id)}
             reachable
           />
@@ -232,41 +233,62 @@ export function FloatingGeoEntitiesControl({
 }
 
 /**
- * One flat icon inside the shared strip container. No background, border
- * or shadow of its own — just a hover fill and a stronger fill when
- * armed (`aria-pressed`). Clipped (unreachable) slots drop out of the
- * tab order and are hidden from assistive tech until the strip opens.
+ * One flat icon inside the shared strip container. Hover and chosen states
+ * paint the full 24×24 cell so edge padding matches inter-cell gaps; an
+ * extra inset frame made the right margin look wider than 2 px in RTL.
  */
 function IconSlot({
   tool,
   active,
+  blocked = false,
+  pendingHint = false,
   onClick,
   reachable,
   tooltipOverride,
 }: {
   tool: ToolEntry;
   active: boolean;
+  blocked?: boolean;
+  /** While a shape awaits Save/Cancel, only the anchor chip shows this hint. */
+  pendingHint?: boolean;
   onClick: () => void;
   reachable: boolean;
   tooltipOverride?: string;
 }) {
+  const tooltip = pendingHint
+    ? 'Save Changes'
+    : (tooltipOverride ?? tool.label);
+  // Blocked sibling tools stay inert with no tooltip; the anchor keeps
+  // hover + "Save Changes" so the user knows where to go next.
+  const showTooltip = !blocked || pendingHint;
+
+  const button = (
+    <button
+      type="button"
+      aria-pressed={active}
+      aria-disabled={blocked || pendingHint || undefined}
+      aria-label={pendingHint ? 'Save Changes' : tool.label}
+      aria-hidden={!reachable || undefined}
+      tabIndex={reachable && !blocked ? 0 : -1}
+      disabled={blocked}
+      onClick={onClick}
+      className={`grid h-6 w-6 shrink-0 place-items-center rounded-[2px] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-white/40 disabled:cursor-not-allowed disabled:opacity-40 ${
+        active
+          ? 'bg-white/[0.08] text-white'
+          : 'text-[#949494] hover:bg-white/[0.08] hover:text-white'
+      }`}
+    >
+      <tool.Icon size={16} />
+    </button>
+  );
+
+  if (!showTooltip) return button;
+
   return (
     <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          type="button"
-          aria-pressed={active}
-          aria-label={tool.label}
-          aria-hidden={!reachable || undefined}
-          tabIndex={reachable ? 0 : -1}
-          onClick={onClick}
-          className="grid h-7 w-7 shrink-0 place-items-center rounded-[2px] text-[#949494] transition-colors hover:bg-white/[0.08] hover:text-white aria-pressed:bg-white/[0.08] aria-pressed:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-white/40"
-        >
-          <tool.Icon size={16} />
-        </button>
-      </TooltipTrigger>
+      <TooltipTrigger asChild>{button}</TooltipTrigger>
       <TooltipContent side="bottom" sideOffset={6} className="text-[11px]">
-        {tooltipOverride ?? tool.label}
+        {tooltip}
       </TooltipContent>
     </Tooltip>
   );

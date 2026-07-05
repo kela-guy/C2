@@ -113,7 +113,7 @@ body {
   background: #1c1c20 !important;
   border: none !important;
   box-shadow: 0 0 0 1px rgba(255,255,255,0.10), 0 8px 30px rgba(0,0,0,0.5) !important;
-  border-radius: 8px !important;
+  border-radius: 2px !important;
 }
 
 [data-sonner-toast] [data-title] {
@@ -135,7 +135,7 @@ body {
 [data-sonner-toast] [data-button][data-cancel] {
   height: auto !important;
   padding: 6px 12px !important;
-  border-radius: 6px !important;
+  border-radius: 2px !important;
   border: 1px solid rgba(255, 255, 255, 0.10) !important;
   background: transparent !important;
   color: #e4e4e7 !important;

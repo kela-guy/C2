@@ -43,13 +43,13 @@ export function PolygonDrawIcon({ size = 20, ...rest }: DrawIconProps) {
 }
 
 /**
- * "Stacked layers" — two overlaid open diamond outlines. Rail glyph for
- * the Geo Entities panel trigger; the layered-stack semantic reads
- * better than the polygon-with-handles when the button's job is "open
- * the list of drawn layers" rather than "arm a draw tool". Stroke-only
- * so the glyph inherits the rail's color states (`currentColor`).
+ * "Geo shapes" — a small circle beside a triangle with a squiggly line
+ * connecting a distant point. Rail glyph for the Geo Entities panel
+ * trigger; the primitives-as-a-set semantic reads as "open the list of
+ * drawn shapes" better than a generic layer stack. Stroke-only so the
+ * glyph inherits the rail's color states (`currentColor`).
  */
-export function LayersStackIcon({ size = 20, ...rest }: DrawIconProps) {
+export function GeoShapesIcon({ size = 20, ...rest }: DrawIconProps) {
   return (
     <svg
       width={size}
@@ -61,7 +61,17 @@ export function LayersStackIcon({ size = 20, ...rest }: DrawIconProps) {
       {...rest}
     >
       <path
-        d="M8 12.2222L3 15L12 20L21 15L16 12.2222M12 4L3 9L12 14L21 9L12 4Z"
+        d="M11 12C11 13.933 9.433 15.5 7.5 15.5C5.567 15.5 4 13.933 4 12C4 10.067 5.567 8.5 7.5 8.5C9.433 8.5 11 10.067 11 12Z"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+      <path
+        d="M11 20L15 13.75L19 20H11Z"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+      <path
+        d="M11.5 5.81129C11.5 5.81129 14.5 3.10075 16 4.31129C18.2353 6.11523 13.5 8.31146 14 9.31129C14.5 10.3111 17.8431 8.15427 19.5 9.81113C20.5 10.8111 19.8661 12.2128 19.5 13.3111"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="square"
