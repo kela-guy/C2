@@ -71,6 +71,9 @@ export interface MapDrawContextValue {
 
 const MapDrawContext = createContext<MapDrawContextValue | null>(null);
 
+/** Read by Dashboard panel-switch handlers outside React context updates. */
+export const mapDrawPanelCloseBlockedRef = { current: false };
+
 function isMapDrawTool(id: string): id is MapDrawTool {
   return (
     id === 'polygon' ||
@@ -115,6 +118,8 @@ export function MapDrawProvider({ children }: { children: ReactNode }) {
     draw.setActiveTool(tool);
     draw.setSelectedId(null);
   };
+
+  mapDrawPanelCloseBlockedRef.current = draw.blocksPanelClose;
 
   return (
     <MapDrawContext.Provider

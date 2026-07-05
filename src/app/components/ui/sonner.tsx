@@ -27,6 +27,12 @@ const Toaster = ({ ...props }: ToasterProps) => {
           boxShadow: '0 0 0 1px rgba(255,255,255,0.10), 0 8px 30px rgba(0,0,0,0.5)',
           borderRadius: '2px',
         },
+        actionButtonStyle: {
+          borderRadius: '2px',
+        },
+        cancelButtonStyle: {
+          borderRadius: '2px',
+        },
       }}
       {...props}
     />

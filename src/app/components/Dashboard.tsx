@@ -27,7 +27,7 @@ import {
 } from './pathfinder/pathfinderState';
 import { CesiumErrorBoundary } from './CesiumErrorBoundary';
 import { MapDrawOverlay } from './map-draw/MapDrawOverlay';
-import { MapDrawProvider } from './map-draw/MapDrawProvider';
+import { MapDrawProvider, mapDrawPanelCloseBlockedRef } from './map-draw/MapDrawProvider';
 import { MapDrawPanel } from './map-draw/MapDrawPanel';
 import { FloatingGeoEntitiesControl } from './map-draw/FloatingGeoEntitiesControl';
 import { GeoEntitiesRailToggle } from './map-draw/GeoEntitiesRailToggle';
@@ -1754,6 +1754,7 @@ export const Dashboard = ({
   }, [gotchaUnits, handleDeviceFlyTo]);
 
   const openSystemsPanel = useCallback(() => {
+    if (mapDrawPanelOpen && mapDrawPanelCloseBlockedRef.current) return;
     if (devicesPanelOpen || simulationsPanelOpen || flowBuilderOpen || mapDrawPanelOpen)
       setPanelSwitching(true);
     setSidebarOpen(true);
@@ -1769,6 +1770,7 @@ export const Dashboard = ({
   }, []);
 
   const openDevicesPanel = useCallback(() => {
+    if (mapDrawPanelOpen && mapDrawPanelCloseBlockedRef.current) return;
     if (sidebarOpen || simulationsPanelOpen || flowBuilderOpen || mapDrawPanelOpen)
       setPanelSwitching(true);
     setSidebarOpen(false);
@@ -1784,6 +1786,7 @@ export const Dashboard = ({
   }, []);
 
   const openSimulationsPanel = useCallback(() => {
+    if (mapDrawPanelOpen && mapDrawPanelCloseBlockedRef.current) return;
     if (sidebarOpen || devicesPanelOpen || flowBuilderOpen || mapDrawPanelOpen)
       setPanelSwitching(true);
     setSidebarOpen(false);
@@ -1813,6 +1816,7 @@ export const Dashboard = ({
   }, [sidebarOpen, devicesPanelOpen, simulationsPanelOpen, flowBuilderOpen]);
 
   const closeMapDrawPanel = useCallback(() => {
+    if (mapDrawPanelCloseBlockedRef.current) return;
     setMapDrawPanelOpen(false);
   }, []);
 
@@ -1828,6 +1832,7 @@ export const Dashboard = ({
   // Flow Builder joins the right-side mutual-exclusion group: opening it
   // closes the queue / Devices / Simulations / Map-draw (and vice-versa, above).
   const openFlowBuilderPanel = useCallback(() => {
+    if (mapDrawPanelOpen && mapDrawPanelCloseBlockedRef.current) return;
     if (sidebarOpen || devicesPanelOpen || simulationsPanelOpen || mapDrawPanelOpen)
       setPanelSwitching(true);
     setSidebarOpen(false);

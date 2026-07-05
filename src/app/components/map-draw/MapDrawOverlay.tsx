@@ -52,6 +52,18 @@ import { useMapDraw } from './MapDrawProvider';
 import { getZOrderActions, type ShapeAction } from './shapeActions';
 import { ZONE_TYPE_BY_ID } from './zoneTypes';
 
+/** Matches auto names stamped on commit — e.g. "Polygon 1", "Circle 2". */
+const AUTO_SHAPE_NAME = /^(Polygon|Line|Arrow|Curve|Circle|Pin) \d+$/i;
+
+/** Custom user name for map hover — skips empty and auto-generated defaults. */
+function hoverShapeName(shape: GeoShape): string | null {
+  const custom = (shape.description ?? '').trim();
+  if (!custom) return null;
+  if (custom === (shape.name ?? '').trim()) return null;
+  if (AUTO_SHAPE_NAME.test(custom)) return null;
+  return custom;
+}
+
 export interface MapDrawOverlayProps {
   className?: string;
   /**
@@ -517,15 +529,13 @@ export function MapDrawOverlay({
     }
   };
 
-  // Centered name / type / status labels — rendered in HTML so the
-  // font matches the rest of the UI.
+  // Centered type / status / name chips — rendered in HTML so the font
+  // matches the rest of the UI. Custom names (Name field) appear on hover
+  // only when the user typed something other than an auto default like
+  // "Polygon 1". Editing stays in the panel — nothing is painted live.
   //
-  // Visibility rule (per spec): labels are hidden by default and only
-  // appear when the user actively engages the shape — on hover or
-  // while it's selected. This keeps the map clean when many shapes are
-  // present while still surfacing the shape's identity on demand. The
-  // selected shape's label is an editable input; hovered-only labels
-  // stay read-only.
+  // Visibility rule: chips are hidden by default and only appear when the
+  // user actively engages the shape — on hover or while it's selected.
   const labels = useMemo(() => {
     const el = svgRef.current;
     if (!el) return [];
@@ -539,10 +549,9 @@ export function MapDrawOverlay({
         const cy = (b.minY + b.maxY) / 2;
         return {
           id: s.id,
-          description: s.description ?? '',
           status: s.status,
           zoneType: s.zoneType,
-          editable: s.id === draw.selectedId,
+          hoverName: hoverShapeName(s),
           // The zone-type chip is hover-only: it shows while the pointer
           // is over the shape, but disappears for a merely-selected shape
           // so the map stays uncluttered during editing.
@@ -561,8 +570,8 @@ export function MapDrawOverlay({
 
   // Numbered vertex badges are intentionally never rendered on the map:
   // per the current spec, coordinates live only in the side panel's
-  // Coordinates list, and shape metadata (name / type / meters) is
-  // hover / selection-only. Kept as an empty memo so downstream code
+  // Coordinates list, and shape metadata (custom name / type / status /
+  // meters) is hover / selection-only. Kept as an empty memo so downstream
   // paths (map, key references) stay wired without adding conditionals.
   const vertexLabels = useMemo(
     () =>
@@ -934,7 +943,14 @@ export function MapDrawOverlay({
         )}
       </svg>
 
-      {labels.map((l) => (
+      {labels.map((l) => {
+        const zoneChip =
+          l.hovered && l.zoneType ? ZONE_TYPE_BY_ID[l.zoneType] : undefined;
+        const statusChip = l.status ? STATUS_TONE[l.status] : undefined;
+        const hoverName = l.hovered ? l.hoverName : null;
+        if (!zoneChip && !statusChip && !hoverName) return null;
+
+        return (
         <div
           key={l.id}
           className="absolute z-30"
@@ -945,64 +961,37 @@ export function MapDrawOverlay({
           }}
         >
           <div className="flex flex-col items-center gap-1">
-            {/* On-shape zone-type chip. "General" has been removed as
-                a type, so every shape with a `zoneType` gets a chip.
-                A small colored swatch mirrors the STATUS chip below —
-                the same swatch appears in the panel's Type Select, so
-                the two surfaces read consistently. Hover/selection-only
-                (the parent label pipeline already gates this). */}
-            {l.hovered && l.zoneType && ZONE_TYPE_BY_ID[l.zoneType] && (
+            {zoneChip && (
               <span className="pointer-events-none inline-flex items-center gap-1 rounded-full bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]">
                 <span
                   aria-hidden
                   className="size-1.5 rounded-full"
-                  style={{ background: ZONE_TYPE_BY_ID[l.zoneType].color }}
+                  style={{ background: zoneChip.color }}
                 />
-                {ZONE_TYPE_BY_ID[l.zoneType].label}
+                {zoneChip.label}
               </span>
             )}
-            {l.status && STATUS_TONE[l.status] && (
+            {hoverName && (
+              <span className="pointer-events-none max-w-44 truncate text-center text-[13px] font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.7)]">
+                {hoverName}
+              </span>
+            )}
+            {statusChip && (
               <span
                 className="pointer-events-none inline-flex items-center gap-1 rounded-full bg-black/45 px-1.5 py-0.5 text-[10px] font-semibold text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]"
               >
                 <span
                   aria-hidden
                   className="size-1.5 rounded-full"
-                  style={{ background: STATUS_TONE[l.status].tone }}
+                  style={{ background: statusChip.tone }}
                 />
-                {STATUS_TONE[l.status].label}
+                {statusChip.label}
               </span>
             )}
-            {/* On-shape name label.
-                Visibility rules (per user spec):
-                  - Empty description       -> render nothing at all.
-                    No "Add name" placeholder, no empty input — the
-                    panel's `NameField` is the exclusive surface for
-                    first-time naming, and only commits (Enter/blur)
-                    push the name onto the shape.
-                  - Non-empty + selected    -> editable inline input
-                    (live updates `description` per keystroke; this is
-                    the on-shape rename surface).
-                  - Non-empty + unselected  -> read-only text label. */}
-            {l.description.trim() &&
-              (l.editable ? (
-                <input
-                  value={l.description}
-                  onChange={(e) =>
-                    draw.updateShape(l.id, { description: e.target.value })
-                  }
-                  aria-label="Shape name"
-                  spellCheck={false}
-                  className="pointer-events-auto w-44 bg-transparent text-center text-[13px] font-semibold text-white caret-white outline-none [text-shadow:0_1px_3px_rgba(0,0,0,0.7)]"
-                />
-              ) : (
-                <span className="pointer-events-none text-balance text-center text-[13px] font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.7)]">
-                  {l.description}
-                </span>
-              ))}
           </div>
         </div>
-      ))}
+        );
+      })}
 
       {vertexLabels.map((v) => (
         <button

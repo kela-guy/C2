@@ -70,6 +70,11 @@ export function GeoEntitiesRailToggle({
     onOpen();
   };
 
+  const tryClosePanel = () => {
+    if (draw.blocksPanelClose) return;
+    onClose();
+  };
+
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -78,7 +83,7 @@ export function GeoEntitiesRailToggle({
           pressed={open}
           onPressedChange={(next) => {
             if (next) openLayersView();
-            else onClose();
+            else tryClosePanel();
           }}
           className="size-6 min-w-6 px-0 rounded-[2px] bg-transparent text-[#949494] aria-pressed:bg-white/[0.08] aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:bg-white/10 active:scale-[0.97] transition-[background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
           aria-label={open ? closeLabel : openLabel}
@@ -87,7 +92,11 @@ export function GeoEntitiesRailToggle({
         </Toggle>
       </TooltipTrigger>
       <TooltipContent side={tooltipSide} sideOffset={8}>
-        {open ? closeLabel : openLabel}
+        {open
+          ? draw.blocksPanelClose
+            ? 'Save or cancel your changes first'
+            : closeLabel
+          : openLabel}
       </TooltipContent>
     </Tooltip>
   );

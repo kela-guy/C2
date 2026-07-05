@@ -278,10 +278,18 @@ export function MapDrawPanel({
   // opened. The new flow forces the user to deliberately pick a tool
   // via the in-panel "Pick a tool" CTA, so we leave the tool null.
 
+  const blocksPanelClose = draw.blocksPanelClose;
+  const handleClose = () => {
+    if (blocksPanelClose) return;
+    onClose();
+  };
+
   return (
     <DockedPanel
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
+      closeDisabled={blocksPanelClose}
+      closeDisabledHint="Save or cancel your changes first"
       side="start"
       width={width}
       noTransition={noTransition}
@@ -304,10 +312,18 @@ export function MapDrawPanel({
             <span className="flex items-center gap-1.5">
               <button
                 type="button"
-                onClick={() => draw.cancelPending()}
+                onClick={() => {
+                  if (draw.blocksPanelClose) return;
+                  draw.cancelPending();
+                }}
+                disabled={draw.blocksPanelClose}
                 aria-label="Back to Geo Entities"
-                title="Back to Geo Entities"
-                className="-ms-1 grid size-6 shrink-0 place-items-center rounded text-zinc-300 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+                title={
+                  draw.blocksPanelClose
+                    ? 'Save or cancel your changes first'
+                    : 'Back to Geo Entities'
+                }
+                className="-ms-1 grid size-6 shrink-0 place-items-center rounded text-zinc-300 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 disabled:cursor-not-allowed disabled:text-zinc-600 disabled:hover:bg-transparent disabled:hover:text-zinc-600"
               >
                 <ChevronLeft size={16} />
               </button>

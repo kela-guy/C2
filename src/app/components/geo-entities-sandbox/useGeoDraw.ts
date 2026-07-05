@@ -178,6 +178,12 @@ export interface UseGeoDrawResult {
    */
   requiresSaveBeforeDraw: boolean;
   /**
+   * True while the docked panel must stay open — an in-flight draft on the
+   * map, or a pending shape with unsaved work. Close / rail-toggle / panel
+   * switches are blocked until the user Save or Cancel.
+   */
+  blocksPanelClose: boolean;
+  /**
    * Reopen a previously-saved shape in the panel's Draft-detail view
    * (Name / Type / Coordinates / Color editor + Save / Cancel footer).
    * Unlike a fresh draft, Cancel here is non-destructive: it only
@@ -881,6 +887,8 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
     return pendingDirty;
   }, [pendingShapeId, pendingIsNew, pendingDirty, shapes]);
 
+  const blocksPanelClose = !!draft || requiresSaveBeforeDraw;
+
   return {
     shapes,
     draft,
@@ -921,6 +929,7 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
     pendingShapeId,
     pendingIsNew,
     requiresSaveBeforeDraw,
+    blocksPanelClose,
     savePending,
     cancelPending,
     beginEditShape,
