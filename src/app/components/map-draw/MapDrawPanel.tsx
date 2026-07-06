@@ -799,7 +799,12 @@ function UploadFileButton({ onImport }: UploadFileButtonProps = {}) {
   );
 
   return (
-    <div className="space-y-1.5">
+    // `flex flex-col gap-1.5` instead of `space-y-1.5`: space-y margins
+    // apply to every child except the last, and the last child here is
+    // the hidden file input — leaving 6px of dead space under the button
+    // that pushed it off-center in the footer. Flex gaps skip
+    // `display: none` children entirely.
+    <div className="flex flex-col gap-1.5">
       <button
         type="button"
         onClick={() => fileInputRef.current?.click()}
