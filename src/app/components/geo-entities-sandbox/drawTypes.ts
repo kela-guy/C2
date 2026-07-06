@@ -77,6 +77,7 @@ export type GeoFillMode = 'fill' | 'transparent' | 'none';
  * schemas; this string is what's persisted on a shape.
  */
 export type GeoZoneType =
+  | 'general'
   | 'noFly'
   | 'restricted'
   | 'alarm'
@@ -153,6 +154,16 @@ export interface GeoShape {
   hidden?: boolean;
   /** Locked shapes can't be moved / scaled / rotated on the map. */
   locked?: boolean;
+  /**
+   * Lat/lng bounds the shape's normalized points were projected against
+   * at import time. Optional — only imported shapes carry it. The
+   * Coordinates section uses it (falling back to `SANDBOX_BOUNDS`) to
+   * un-project points back to the file's original lat/lng, so the
+   * panel shows the values the user actually uploaded instead of the
+   * sandbox-clamped equivalents. Shapes drawn on the map don't set
+   * this — they were born in normalized space over `SANDBOX_BOUNDS`.
+   */
+  sourceBounds?: GeoBounds;
 }
 
 /** In-progress draft while the user is mid-draw. */

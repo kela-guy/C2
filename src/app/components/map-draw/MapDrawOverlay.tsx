@@ -544,9 +544,12 @@ export function MapDrawOverlay({
       .filter((s) => !s.hidden && s.kind !== 'point')
       .filter((s) => s.id === draw.selectedId || s.id === hoveredShapeId)
       .map((s) => {
-        const b = bbox(s.points);
-        const cx = (b.minX + b.maxX) / 2;
-        const cy = (b.minY + b.maxY) / 2;
+        // Anchor the chip stack on the shape's *visual* center, not the
+        // bbox center — that way irregular polygons / freehand shapes
+        // and polylines never render the chip floating in empty space
+        // outside the body of the shape. Fallback to bbox center when
+        // the geometry is degenerate (see `visualCenter`).
+        const c = visualCenter(s);
         return {
           id: s.id,
           status: s.status,
@@ -561,8 +564,8 @@ export function MapDrawOverlay({
           // origin `r.left`/`r.top`). This keeps them inside the
           // overlay's stacking context + clip-path so they never paint
           // over the docked panel.
-          left: cx * r.width,
-          top: cy * r.height,
+          left: c.x * r.width,
+          top: c.y * r.height,
         };
       });
     // shapes drives the re-anchor so labels follow live during transforms.
@@ -1654,6 +1657,76 @@ function ellipseFromPoints(points: { x: number; y: number }[]): {
     rx: Math.abs(b.x - a.x) / 2,
     ry: Math.abs(b.y - a.y) / 2,
   };
+}
+
+/**
+ * Best on-shape center for the hover chip stack, so the label always
+ * reads as attached to the shape body — not floating in the empty
+ * space of a bounding box.
+ *
+ *   - circle: geometric center of the bbox-corner pair.
+ *   - polygon / freehand (closed area): area centroid (shoelace). Falls
+ *     back to the bbox center when the polygon is degenerate (zero
+ *     area, e.g. collinear / duplicate points).
+ *   - polyline / arrow (open path): midpoint along half of the total
+ *     path length so the chip sits directly on the drawn line, not in
+ *     the visual "empty" corner of its bounding box.
+ */
+function visualCenter(shape: GeoShape): Vec2 {
+  const pts = shape.points;
+  if (pts.length === 0) return { x: 0.5, y: 0.5 };
+
+  if (shape.kind === 'circle') {
+    const e = ellipseFromPoints(pts);
+    return { x: e.cx, y: e.cy };
+  }
+
+  if (shape.kind === 'polyline') {
+    if (pts.length === 1) return pts[0];
+    let total = 0;
+    for (let i = 1; i < pts.length; i++) {
+      const dx = pts[i].x - pts[i - 1].x;
+      const dy = pts[i].y - pts[i - 1].y;
+      total += Math.hypot(dx, dy);
+    }
+    if (total <= 0) return pts[0];
+    const target = total / 2;
+    let walked = 0;
+    for (let i = 1; i < pts.length; i++) {
+      const dx = pts[i].x - pts[i - 1].x;
+      const dy = pts[i].y - pts[i - 1].y;
+      const seg = Math.hypot(dx, dy);
+      if (walked + seg >= target) {
+        const t = seg === 0 ? 0 : (target - walked) / seg;
+        return { x: pts[i - 1].x + dx * t, y: pts[i - 1].y + dy * t };
+      }
+      walked += seg;
+    }
+    return pts[pts.length - 1];
+  }
+
+  // polygon / freehand: shoelace centroid, closed by wrapping the first
+  // vertex onto the end of the loop. Freehand paths are treated as
+  // filled areas the same way they render (closed with a fill mode).
+  if (pts.length >= 3) {
+    let area = 0;
+    let cx = 0;
+    let cy = 0;
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i];
+      const q = pts[(i + 1) % pts.length];
+      const cross = p.x * q.y - q.x * p.y;
+      area += cross;
+      cx += (p.x + q.x) * cross;
+      cy += (p.y + q.y) * cross;
+    }
+    area *= 0.5;
+    if (Math.abs(area) > 1e-9) {
+      return { x: cx / (6 * area), y: cy / (6 * area) };
+    }
+  }
+  const b = bbox(pts);
+  return bboxCenter(b);
 }
 
 /**

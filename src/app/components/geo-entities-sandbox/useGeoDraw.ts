@@ -24,10 +24,12 @@ import {
   translatePoints,
   type DraftShape,
   type GeoShape,
+  type GeoShapeKind,
   type GeoToolId,
   type HandleId,
   type Vec2,
 } from './drawTypes';
+import type { GeoBounds } from './types';
 import { toolById } from './drawTools';
 import {
   DEFAULT_ZONE_TYPE,
@@ -192,6 +194,23 @@ export interface UseGeoDrawResult {
    * through `updateShape`).
    */
   beginEditShape: (id: string) => void;
+
+  /**
+   * Push a fully-formed shape into the layer stack from an external
+   * source (KML/GeoJSON upload, paste, API). Points must already be
+   * projected into the engine's normalized `[0, 1]` space. When
+   * `stage` is `true` (default), the shape enters the Draft-detail
+   * Save/Cancel flow just like a freshly drawn shape; otherwise it
+   * lands directly as a committed layer. Returns the new shape id.
+   */
+  importShape: (params: {
+    tool: GeoToolId;
+    kind: GeoShapeKind;
+    points: Vec2[];
+    name?: string;
+    stage?: boolean;
+    sourceBounds?: GeoBounds;
+  }) => string;
 
   /**
    * Latest focus request emitted by `requestFocus`. The panel's "center
@@ -517,6 +536,71 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
     [defaultName, mutate],
   );
 
+  /**
+   * Import a fully-formed shape from an external source (KML / GeoJSON
+   * upload, paste, API). The shape's points must already be in the
+   * engine's normalized `[0, 1]` space over the sandbox bounds — the
+   * caller (parser) is responsible for projecting from lat/lng.
+   *
+   * Behaves like `commitDraft` in every other respect: default color /
+   * type / stroke are stamped from the current default zone, the shape
+   * is pushed into `shapes`, and (when `stage: true`) the two-phase
+   * Save/Cancel gate is entered so the user has to confirm the import.
+   * With `stage: false` the shape lands directly in the committed list
+   * (used for multi-feature imports where only the first goes into
+   * Draft-detail).
+   *
+   * Returns the new shape's id.
+   */
+  const importShape = useCallback(
+    (params: {
+      tool: GeoToolId;
+      kind: GeoShapeKind;
+      points: Vec2[];
+      /** Optional label from the imported file — falls back to the
+       *  engine's default `${tool.label} ${n}` name when omitted. */
+      name?: string;
+      /** When `true` (default), enter the Draft-detail Save/Cancel gate. */
+      stage?: boolean;
+      /** Lat/lng bounds the caller projected `points` against. Stored
+       *  on the shape so the panel's Coordinates section un-projects
+       *  against the same bounds and shows the file's true lat/lng. */
+      sourceBounds?: GeoBounds;
+    }): string => {
+      const stage = params.stage !== false;
+      const id = makeShapeId(params.tool);
+      const defaultTypeColor = getZoneColor(DEFAULT_ZONE_TYPE);
+      const shape: GeoShape = {
+        id,
+        tool: params.tool,
+        kind: params.kind,
+        name: params.name?.trim() || defaultName(params.tool),
+        description: '',
+        color: defaultTypeColor,
+        strokeColor: defaultTypeColor,
+        fillOpacity: 0.3,
+        strokeOpacity: 1,
+        points: params.points.map(clampPoint),
+        strokeWidth: 2,
+        lineStyle: 'solid',
+        zoneType: DEFAULT_ZONE_TYPE,
+        ...(params.sourceBounds ? { sourceBounds: params.sourceBounds } : {}),
+      };
+      mutate((prev) => [...prev, shape]);
+      setSelectedId(id);
+      setDraft(null);
+      setActiveToolId('select');
+      setLastCommittedId(id);
+      if (stage) {
+        setPendingShapeId(id);
+        setPendingIsNew(true);
+        setPendingDirty(false);
+      }
+      return id;
+    },
+    [defaultName, mutate],
+  );
+
   const savePending = useCallback(() => {
     // No-op on the underlying shape — Save just dismisses the staging
     // flag so the panel falls back to the Layers view. The shape is
@@ -695,11 +779,14 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
           s.id === drag.shapeId
             ? {
                 ...s,
-                // Circles snap to a perfect circle when Shift is held —
-                // matches the draft-time shift behaviour below. Pass the
-                // surface aspect ratio so the snap is round on screen.
+                // Circles are always kept as perfect circles — the
+                // Shift modifier used to gate this, but ovals were
+                // confusing and off-brand, so we enforce equal pixel
+                // radii on every resize. Pass the surface aspect ratio
+                // so the snap reads round on screen (not in normalized
+                // space, which is stretched to fit the canvas).
                 points: applyHandle(drag, point, {
-                  equalAspect: s.kind === 'circle' && shiftRef.current,
+                  equalAspect: s.kind === 'circle',
                   aspect: canvasAspectRef.current,
                 }),
               }
@@ -712,11 +799,12 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
     }
 
     // Polygon/polyline / circle draft: track the cursor for the
-    // rubber-band preview. For circle drafts, Shift snaps the cursor to a
-    // square offset from the center so the preview is a perfect circle.
+    // rubber-band preview. Circles are always constrained to a perfect
+    // circle — the previous Shift-only snap has been retired since ovals
+    // were confusing users.
     setDraft((prev) => {
       if (!prev) return prev;
-      if (drag.kind === 'circle' && shiftRef.current) {
+      if (drag.kind === 'circle') {
         const center = prev.points[0];
         const dx = point.x - center.x;
         const dy = point.y - center.y;
@@ -762,11 +850,11 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
           let rx = Math.abs(edge.x - center.x);
           let ry = Math.abs(edge.y - center.y);
           if (Math.max(rx, ry) < MIN_CIRCLE_RADIUS) return null;
-          // Shift constrains the commit to a perfect circle even if the
-          // pointer wasn't moved after the modifier was pressed. Equalize
-          // in pixel space (via the surface aspect ratio) so the stored
-          // ellipse renders as a round circle on screen.
-          if (shiftRef.current) {
+          // Every commit is forced to a perfect circle — equalize in
+          // pixel space (via the surface aspect ratio) so the stored
+          // ellipse renders as a round circle on screen. The old Shift-
+          // only gate has been removed: circles are never ovals.
+          {
             const aspect = canvasAspectRef.current;
             const m = Math.max(rx * aspect, ry);
             rx = m / aspect;
@@ -933,6 +1021,7 @@ export function useGeoDraw(initial: GeoShape[] = []): UseGeoDrawResult {
     savePending,
     cancelPending,
     beginEditShape,
+    importShape,
 
     focusRequest,
     requestFocus,
@@ -1019,15 +1108,28 @@ function applyHandle(
   const minScale = 0.05 / Math.min(width, height);
   sx = Math.max(minScale, sx);
   sy = Math.max(minScale, sy);
-  // Shift-snap (circles): make the resulting bbox square in *pixel*
+  // Circle equal-aspect: make the resulting bbox square in *pixel*
   // space so the rendered ellipse is a true circle on screen. The
-  // normalized X extent is `aspect`× wider in pixels, so we compare the
-  // scaled pixel half-extents and drive both back to the larger one.
+  // normalized X extent is `aspect`× wider in pixels, so we compare in
+  // pixel half-extents and drive both back to a common value.
+  //
+  // Corner handles fold both axes together via `max` so grabbing a
+  // corner still lets the user grow OR shrink freely. Edge handles
+  // only touch one axis (the perpendicular one is locked at scale=1),
+  // so `max` would pin the untouched axis and block shrinking — we
+  // instead mirror the dragged axis's pixel scale onto the other one.
   if (opts.equalAspect) {
     const aspect = opts.aspect ?? 1;
     const pxX = Math.abs(sx) * width * aspect;
     const pxY = Math.abs(sy) * height;
-    const m = Math.max(pxX, pxY);
+    let m: number;
+    if (handle === 'n' || handle === 's') {
+      m = pxY;
+    } else if (handle === 'e' || handle === 'w') {
+      m = pxX;
+    } else {
+      m = Math.max(pxX, pxY);
+    }
     sx = (sx < 0 ? -1 : 1) * (m / (width * aspect));
     sy = (sy < 0 ? -1 : 1) * (m / height);
   }

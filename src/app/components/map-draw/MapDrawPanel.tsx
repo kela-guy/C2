@@ -26,7 +26,6 @@ import {
   ChevronRight,
   ChevronLeft,
   Search,
-  Trash2,
   Plus,
   MapPin,
   X,
@@ -73,7 +72,9 @@ import {
   type GeoZoneType,
   type Vec2,
 } from '../geo-entities-sandbox/drawTypes';
+import type { GeoBounds } from '../geo-entities-sandbox/types';
 import { SANDBOX_BOUNDS } from '../geo-entities-sandbox/fixtures';
+import { parseImportFile, type ImportResult } from './imports';
 import {
   DEFAULT_ZONE_TYPE,
   getZoneColor,
@@ -335,10 +336,36 @@ export function MapDrawPanel({
         </DirIsland>
       }
       closeAriaLabel={closeLabel}
-      bodyClassName="px-4 py-3"
+      // `[&>div]:h-full` stretches the Radix ScrollArea's injected
+      // content wrapper (a `display: table` div with auto height) to
+      // the viewport's full height. Without it every `h-full` below
+      // collapses to content height, so the Layers empty state can't
+      // vertically center itself. `display: table` treats `height` as
+      // a minimum, so tall content still overflows and scrolls.
+      bodyClassName="px-4 py-3 [&>div]:h-full"
       // Raise above the screen-space drawing overlay (z-20) so the panel
       // and its tool buttons stay clickable and aren't covered by shapes.
       className="z-30"
+      // Panel actions live in the DockedPanel footer slot — a real
+      // `<footer>` below the scroll area — instead of faux footers
+      // inside the scrollable body. Which actions depends on the view:
+      // Save / Cancel while a shape editor is open (drafting or
+      // staged), the Upload-file affordance on the Layers view.
+      footer={
+        <DirIsland direction="ltr" className="block">
+          {(drafting && draftShape) || inspected ? (
+            <DraftDetailFooter
+              shape={(drafting ? draftShape : inspected)!}
+              draw={draw}
+              drafting={drafting}
+            />
+          ) : (
+            <div className="px-4 py-3">
+              <UploadFileButton />
+            </div>
+          )}
+        </DirIsland>
+      }
     >
       {/* All copy in the panel is English-only (section titles, field
           labels, layer names typed by users). Pin the entire body to LTR
@@ -417,11 +444,12 @@ export function MapDrawPanel({
 //
 // Shown while a shape is staged (`pendingShapeId` set on the draw
 // engine). Hosts the per-shape editor stack — Name, Type, Coordinates,
-// Color — and a sticky Save / Cancel footer. Save is gated on
-// `description.trim()` being non-empty so the user always commits a
-// named shape; Cancel discards the shape entirely (no undo toast).
-// The Layers list is intentionally not rendered here: the user is in
-// "finish this shape" mode, not "review the project" mode.
+// Color. The Save / Cancel actions live in `DraftDetailFooter`, which
+// MapDrawPanel renders into the DockedPanel `footer` slot (below the
+// scroll area) whenever this view is active. Cancel discards the shape
+// entirely (no undo toast). The Layers list is intentionally not
+// rendered here: the user is in "finish this shape" mode, not "review
+// the project" mode.
 // ---------------------------------------------------------------------------
 
 function DraftDetailView({
@@ -443,42 +471,12 @@ function DraftDetailView({
   /** Required when `drafting` is true; writes into the buffer. */
   onDraftPatch?: (patch: Partial<GeoShape>) => void;
 }) {
-  // Snapshot the shape as it looked when this editor opened (keyed by
-  // id so re-opening a different shape re-captures). Edits are applied
-  // live via `updateShape`, so we compare the current shape against the
-  // snapshot to know whether anything actually changed this session.
-  //
-  // While drafting, the synthetic shape's id is stable (`__draft__`)
-  // but its `points` update on every click. We ignore dirtiness here
-  // because Save is force-disabled in the drafting branch anyway.
-  const snapshotRef = useRef<{ id: string; json: string } | null>(null);
-  const currentJson = JSON.stringify(shape);
-  if (!snapshotRef.current || snapshotRef.current.id !== shape.id) {
-    snapshotRef.current = { id: shape.id, json: currentJson };
-  }
-  const dirty = snapshotRef.current.json !== currentJson;
-  // Save is enabled the moment the shape is finished. While drafting,
-  // Save stays disabled until the user closes the polygon / lifts the
-  // pointer on the circle. Once committed as a brand-new pending shape
-  // it goes active immediately (no need to type a name first) — the
-  // user just finished drawing and Save is the next action. Reopened
-  // existing shapes fall back to the "enabled only when dirty" rule.
-  const isFreshDraw = draw.pendingShapeId === shape.id && draw.pendingIsNew;
   // Locked shapes open in a read-only detail view: users can inspect
   // every field but not change anything (the whole editor is dimmed
   // and its pointer events are suppressed). Drafting is inherently
   // a "new shape" flow, so the lock check only applies to committed
-  // shapes. Save is force-disabled while locked so it can't fire even
-  // via keyboard.
+  // shapes.
   const isLocked = !drafting && !!shape.locked;
-  const canSave = drafting || isLocked ? false : isFreshDraw || dirty;
-  // Cancel mirrors Save's activation window, plus stays live during the
-  // in-progress draft so the user can always bail out of a half-drawn
-  // shape. For a re-opened committed shape, Cancel starts DISABLED and
-  // only lights up once the user actually edits something — matches
-  // Save so both footer actions appear in step: nothing to save →
-  // nothing to cancel.
-  const canCancel = !isLocked && (drafting || isFreshDraw || dirty);
 
   // Route every child's onPatch either to the live shape (post-commit)
   // or the parent's draftMeta buffer (during draft). Swallowed while
@@ -490,10 +488,10 @@ function DraftDetailView({
     else draw.updateShape(shape.id, p);
   };
   return (
-    // Full-height flex column — scrollable editor stack on top, pinned
-    // Save / Cancel footer at the bottom. The parent (panel body) hands
-    // us the full vertical space so the footer always sits flush
-    // against the panel's bottom edge.
+    // Full-height flex column for the scrollable editor stack. The
+    // Save / Cancel actions render separately in the DockedPanel
+    // footer slot (see `DraftDetailFooter`), so this view only owns
+    // the editor fields.
     <div className="flex h-full min-h-0 flex-col">
       {isLocked && (
         // Locked banner: reads as a small at-a-glance status chip so
@@ -552,50 +550,333 @@ function DraftDetailView({
           drafting={drafting}
         />
       </div>
+    </div>
+  );
+}
 
-      {/* Save / Cancel footer pinned to the panel bottom via the flex
-          layout above (not `sticky`). While drafting, Save is disabled
-          and Cancel drops the whole draft (`cancelDraft`) rather than
-          touching a committed pending shape. When the layer is locked
-          BOTH footer buttons are disabled — the only exit is the back
-          arrow next to the "Geo Entities" title (which is rendered
-          because `pendingIsNew === false` for an existing locked
-          shape). That keeps the destructive `cancelPending` off the
-          footer for something the user isn't allowed to mutate. */}
-      <div className="-mx-4 -mb-3 shrink-0 flex items-center justify-end gap-2 border-t border-white/10 bg-[#161616]/95 px-4 py-3 backdrop-blur-md">
-        <button
-          type="button"
-          disabled={!canCancel}
-          onClick={() => (drafting ? draw.cancelDraft() : draw.cancelPending())}
-          title={
-            isLocked
-              ? 'Locked — requires approval to edit'
-              : canCancel
-                ? 'Discard changes'
-                : 'No changes to cancel'
-          }
-          className="rounded-[2px] border border-white/10 bg-transparent px-3 py-1.5 text-[12px] font-medium text-zinc-200 transition-colors hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 disabled:cursor-not-allowed disabled:border-white/15 disabled:text-white/40 disabled:hover:bg-transparent disabled:hover:text-white/40"
+// ---------------------------------------------------------------------------
+// Draft detail footer — Save / Cancel
+//
+// Rendered by MapDrawPanel into the DockedPanel `footer` slot (a real
+// `<footer>` element below the scroll area) so the actions live in the
+// panel's chrome rather than a faux footer inside the scrollable body.
+// While drafting, Save is disabled and Cancel drops the whole draft
+// (`cancelDraft`) rather than touching a committed pending shape. When
+// the layer is locked BOTH buttons are disabled — the only exit is the
+// back arrow next to the "Geo Entities" title (rendered because
+// `pendingIsNew === false` for an existing locked shape). That keeps
+// the destructive `cancelPending` off the footer for something the
+// user isn't allowed to mutate.
+// ---------------------------------------------------------------------------
+
+function DraftDetailFooter({
+  shape,
+  draw,
+  drafting = false,
+}: {
+  shape: GeoShape;
+  draw: UseGeoDrawResult;
+  drafting?: boolean;
+}) {
+  // Snapshot the shape as it looked when this editor opened (keyed by
+  // id so re-opening a different shape re-captures). Edits are applied
+  // live via `updateShape`, so we compare the current shape against the
+  // snapshot to know whether anything actually changed this session.
+  //
+  // While drafting, the synthetic shape's id is stable (`__draft__`)
+  // but its `points` update on every click. We ignore dirtiness here
+  // because Save is force-disabled in the drafting branch anyway.
+  const snapshotRef = useRef<{ id: string; json: string } | null>(null);
+  const currentJson = JSON.stringify(shape);
+  if (!snapshotRef.current || snapshotRef.current.id !== shape.id) {
+    snapshotRef.current = { id: shape.id, json: currentJson };
+  }
+  const dirty = snapshotRef.current.json !== currentJson;
+  // Save is enabled the moment the shape is finished. While drafting,
+  // Save stays disabled until the user closes the polygon / lifts the
+  // pointer on the circle. Once committed as a brand-new pending shape
+  // it goes active immediately (no need to type a name first) — the
+  // user just finished drawing and Save is the next action. Reopened
+  // existing shapes fall back to the "enabled only when dirty" rule.
+  const isFreshDraw = draw.pendingShapeId === shape.id && draw.pendingIsNew;
+  const isLocked = !drafting && !!shape.locked;
+  const canSave = drafting || isLocked ? false : isFreshDraw || dirty;
+  // Cancel mirrors Save's activation window, plus stays live during the
+  // in-progress draft so the user can always bail out of a half-drawn
+  // shape. For a re-opened committed shape, Cancel starts DISABLED and
+  // only lights up once the user actually edits something — matches
+  // Save so both footer actions appear in step: nothing to save →
+  // nothing to cancel.
+  const canCancel = !isLocked && (drafting || isFreshDraw || dirty);
+
+  return (
+    <div className="flex items-center justify-end gap-2 px-4 py-3">
+      <button
+        type="button"
+        disabled={!canCancel}
+        onClick={() => (drafting ? draw.cancelDraft() : draw.cancelPending())}
+        title={
+          isLocked
+            ? 'Locked — requires approval to edit'
+            : canCancel
+              ? 'Discard changes'
+              : 'No changes to cancel'
+        }
+        className="min-w-[72px] rounded-[2px] border border-white/10 bg-transparent px-3 py-1.5 text-[12px] font-medium text-zinc-200 transition-colors hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 disabled:cursor-not-allowed disabled:border-white/15 disabled:text-white/40 disabled:hover:bg-transparent disabled:hover:text-white/40"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        disabled={!canSave}
+        onClick={() => draw.savePending()}
+        title={
+          isLocked
+            ? 'Locked — requires approval to edit'
+            : drafting
+              ? 'Finish the shape first (double-click to close)'
+              : canSave
+                ? 'Save shape'
+                : 'No changes to save'
+        }
+        className="min-w-[72px] rounded-[2px] border border-transparent bg-white px-3 py-1.5 text-[12px] font-semibold text-black transition-colors hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 disabled:cursor-not-allowed disabled:border-white/15 disabled:bg-transparent disabled:text-white/40 disabled:hover:bg-transparent"
+      >
+        Save
+      </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Upload file button
+//
+// Small self-contained "Upload file — KML or GeoJSON" button used in
+// two places today:
+//   1. Pinned to the footer of the Layers view (default behavior):
+//      importing a file creates a fresh shape via `draw.importShape`,
+//      the first shape stages into the Draft-detail Save/Cancel gate.
+//   2. Inside the Coordinates section of the shape inspector: the
+//      caller passes `onImport` to intercept the parsed result and
+//      merge it into the shape already being edited — replacing its
+//      points instead of creating a duplicate.
+//
+// The button owns the full flow: file picking, parsing, safe-area
+// projection (measured from the DOM at import time), and inline
+// success/error feedback.
+// ---------------------------------------------------------------------------
+
+interface UploadFileButtonProps {
+  /**
+   * When provided, the parsed {@link ImportResult} is handed off to
+   * this callback instead of being turned into a new shape via
+   * `draw.importShape`. Use this when the caller wants to merge the
+   * imported geometry into a shape that already exists (e.g. from
+   * the Coordinates section while editing).
+   *
+   * Throw a plain `Error` inside the callback to reject the import —
+   * the message surfaces in the button's inline error strip just
+   * like a parser error would.
+   */
+  onImport?: (result: ImportResult) => void;
+}
+
+function UploadFileButton({ onImport }: UploadFileButtonProps = {}) {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const { draw } = useMapDraw();
+  // Local feedback surface: parse errors / soft warnings render inline
+  // under the button until the user picks another file or clears them.
+  // There's no toast system in this sandbox, and swallowing errors on
+  // upload would leave the user staring at an unresponsive button.
+  const [feedback, setFeedback] = useState<
+    | { kind: 'error'; message: string }
+    | { kind: 'success'; imported: number; warnings: string[]; filename: string }
+    | null
+  >(null);
+
+  const handleFile = useCallback(
+    async (file: File) => {
+      setFeedback(null);
+      try {
+        // Measure the docked panel against the map overlay so the
+        // parser can carve out a "safe area" for the imported shape —
+        // otherwise a file whose bbox happens to project near the
+        // inline-start edge would land under the panel's clip-path
+        // (visible in the DOM but hidden from the user, with vertex
+        // handles trapped behind the panel and unclickable). The
+        // overlay is `position: absolute; inset: 0` inside the map
+        // container, so its bounding rect IS the map's dimensions;
+        // the docked panel floats above it (never resizes the map)
+        // at the current `sidebarWidth`.
+        const overlay = document.querySelector(
+          '[data-map-draw-overlay="true"]',
+        );
+        const panelEl = document.querySelector(
+          '[data-handoff-component="map-draw-panel"]',
+        );
+        const mapWidth = overlay?.getBoundingClientRect().width ?? 0;
+        const panelWidth = panelEl?.getBoundingClientRect().width ?? 0;
+        const isRtl =
+          typeof document !== 'undefined' &&
+          document.documentElement.getAttribute('dir') === 'rtl';
+        const panelInsetFraction =
+          mapWidth > 0
+            ? Math.min(0.5, Math.max(0, panelWidth / mapWidth))
+            : 0;
+
+        const result = await parseImportFile(file, {
+          panelInsetFraction,
+          isRtl,
+        });
+        if (result.shapes.length === 0) {
+          setFeedback({
+            kind: 'error',
+            message:
+              result.warnings[0] ??
+              'No supported geometry found in this file.',
+          });
+          return;
+        }
+        if (onImport) {
+          // Replace-mode: the caller (typically the Coordinates
+          // section while editing an existing shape) owns the merge.
+          // Only the first shape from a multi-feature file gets
+          // applied — the caller edits ONE shape, and silently
+          // dropping extras would be confusing, so we surface the
+          // count via a warning in the success chip.
+          // Callers can throw a plain Error inside `onImport` to
+          // reject the import — the message surfaces in the feedback
+          // area just like a parser error would.
+          onImport(result);
+          const extras = result.shapes.length - 1;
+          setFeedback({
+            kind: 'success',
+            imported: 1,
+            warnings:
+              extras > 0
+                ? [
+                    ...result.warnings,
+                    `Only the first shape was applied; ${extras} extra shape${extras === 1 ? '' : 's'} ignored.`,
+                  ]
+                : result.warnings,
+            filename: file.name,
+          });
+        } else {
+          // Default: create new shape(s). Multi-feature files
+          // only put the FIRST shape into the Draft-detail Save/
+          // Cancel gate — that keeps the "just click Save" UX intact
+          // for the common single-polygon case. Any extra shapes
+          // land as regular committed layers the user can review
+          // afterwards from the Layers list. All shapes share the
+          // same `sourceBounds` — the parser picked one projection
+          // window for the whole file so multi-feature imports stay
+          // coplanar.
+          result.shapes.forEach((s, i) => {
+            draw.importShape({
+              tool: s.tool,
+              kind: s.kind,
+              points: s.points,
+              name: s.name,
+              stage: i === 0,
+              sourceBounds: result.bounds,
+            });
+          });
+          setFeedback({
+            kind: 'success',
+            imported: result.shapes.length,
+            warnings: result.warnings,
+            filename: file.name,
+          });
+        }
+      } catch (err) {
+        setFeedback({
+          kind: 'error',
+          message:
+            (err as Error).message || 'Failed to read file.',
+        });
+      }
+    },
+    [draw, onImport],
+  );
+
+  return (
+    <div className="space-y-1.5">
+      <button
+        type="button"
+        onClick={() => fileInputRef.current?.click()}
+        // `h-8` pins the button to exactly 32px so the sub-pixel line-height
+        // wobble from `text-[12.5px]` doesn't drift the footer height.
+        className="flex h-8 w-full items-center justify-center gap-2 rounded-[2px] border border-white/15 bg-white/[0.04] px-3 py-1.5 text-[12.5px] font-medium text-white transition-colors hover:border-white/25 hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+      >
+        <UploadIcon size={14} />
+        <span>Upload file</span>
+        <span className="text-[11px] font-normal text-white/50">
+          KML or GeoJSON
+        </span>
+      </button>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".kml,.geojson,.json,application/geo+json,application/vnd.google-earth.kml+xml"
+        hidden
+        onChange={(e) => {
+          const file = e.target.files?.[0] ?? null;
+          // Reset the input so re-picking the same file still fires
+          // `change`. The captured `file` is what we operate on.
+          e.target.value = '';
+          if (file) void handleFile(file);
+        }}
+      />
+      {feedback?.kind === 'error' && (
+        <div
+          role="alert"
+          className="flex items-start gap-2 rounded-md border border-red-500/25 bg-red-500/[0.08] px-2 py-1 text-[11.5px] text-red-200"
         >
-          Cancel
-        </button>
-        <button
-          type="button"
-          disabled={!canSave}
-          onClick={() => draw.savePending()}
-          title={
-            isLocked
-              ? 'Locked — requires approval to edit'
-              : drafting
-                ? 'Finish the shape first (double-click to close)'
-                : canSave
-                  ? 'Save shape'
-                  : 'No changes to save'
-          }
-          className="rounded-[2px] border border-transparent bg-white px-3 py-1.5 text-[12px] font-semibold text-black transition-colors hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 disabled:cursor-not-allowed disabled:border-white/15 disabled:bg-transparent disabled:text-white/40 disabled:hover:bg-transparent"
+          <span className="min-w-0 flex-1 break-words">{feedback.message}</span>
+          <button
+            type="button"
+            onClick={() => setFeedback(null)}
+            aria-label="Dismiss import error"
+            title="Dismiss"
+            className="grid size-5 shrink-0 place-items-center rounded text-red-200/70 transition-colors hover:bg-red-500/15 hover:text-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+          >
+            <X size={11} />
+          </button>
+        </div>
+      )}
+      {feedback?.kind === 'success' && (
+        <div
+          role="status"
+          className="space-y-1 rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 text-[11.5px] text-white/80"
         >
-          Save
-        </button>
-      </div>
+          <div className="flex items-center gap-2">
+            <UploadIcon size={12} className="shrink-0 text-emerald-300" />
+            <span className="truncate" title={feedback.filename}>
+              {feedback.imported === 1
+                ? `Imported from ${feedback.filename}`
+                : `Imported ${feedback.imported} shapes from ${feedback.filename}`}
+            </span>
+            <button
+              type="button"
+              onClick={() => setFeedback(null)}
+              aria-label="Dismiss import status"
+              title="Dismiss"
+              className="ms-auto grid size-5 shrink-0 place-items-center rounded text-white/50 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+            >
+              <X size={11} />
+            </button>
+          </div>
+          {feedback.warnings.length > 0 && (
+            <ul className="ps-4 text-[11px] text-white/55 list-disc">
+              {feedback.warnings.slice(0, 3).map((w, i) => (
+                <li key={i}>{w}</li>
+              ))}
+              {feedback.warnings.length > 3 && (
+                <li>and {feedback.warnings.length - 3} more…</li>
+              )}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -619,9 +900,12 @@ function LayersView({ draw }: { draw: UseGeoDrawResult }) {
   const [query, setQuery] = useState('');
   return (
     // Full-height flex column so the list expands to fill the panel.
-    // The tool row that used to pin to the footer has been retired —
-    // the floating map control is now the sole entry point for arming
-    // a drawing tool, so the panel is a pure Layers view.
+    // The Upload affordance lives in the DockedPanel footer slot (see
+    // MapDrawPanel), so this view only owns the search input and the
+    // scrolling layers list. The tool row that used to pin here has
+    // been retired — the floating map control is now the sole entry
+    // point for arming a drawing tool, so the panel is a pure Layers
+    // view.
     <div className="flex h-full min-h-0 flex-col">
       <div className="mb-3 shrink-0">
         <div className="relative">
@@ -1292,14 +1576,6 @@ function CoordinatesSection({
     return () => setFocusedVertex(null);
   }, [shape.id, setFocusedVertex]);
 
-  // Uploaded file state — the button opens a native file picker with
-  // the accepted extensions preset. We keep the picked filename in
-  // component state as a lightweight "file received" cue; the actual
-  // file object is not persisted or parsed yet (see plan note: UI-only
-  // stub for this pass).
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-
   // Circles are stored as two bbox corners; their meaningful coordinate is
   // the center. Everything else exposes each vertex directly.
   const isCircle = shape.kind === 'circle';
@@ -1370,50 +1646,34 @@ function CoordinatesSection({
 
       {/* Upload / status stubs. Suppressed while drafting — the user
           is still placing points; import / edit affordances only make
-          sense after the shape is committed. */}
+          sense after the shape is committed. Here (inside the shape
+          inspector) uploading REPLACES the current shape's points
+          instead of creating a duplicate — the user is editing this
+          shape, so a coord file is understood as "these are the
+          coordinates for this shape". */}
       {!drafting && (
-        <div className="space-y-1.5">
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="flex w-full items-center justify-center gap-2 rounded-[2px] border border-white/15 bg-white/[0.04] px-3 py-1.5 text-[12.5px] font-medium text-[#3b82f6] transition-colors hover:border-white/25 hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
-          >
-            <UploadIcon size={14} />
-            <span>Upload file</span>
-            <span className="text-[11px] font-normal text-white/50">
-              KML or GeoJSON
-            </span>
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".kml,.geojson,.json,application/geo+json,application/vnd.google-earth.kml+xml"
-            hidden
-            onChange={(e) => {
-              const file = e.target.files?.[0] ?? null;
-              setUploadedFile(file);
-              e.target.value = '';
-            }}
-          />
-          {uploadedFile && (
-            <div
-              role="status"
-              className="flex items-center gap-2 rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 text-[11.5px] text-white/75"
-            >
-              <UploadIcon size={12} className="shrink-0 text-emerald-300" />
-              <span className="truncate">{uploadedFile.name}</span>
-              <button
-                type="button"
-                onClick={() => setUploadedFile(null)}
-                aria-label="Remove uploaded file"
-                title="Remove uploaded file"
-                className="ms-auto grid size-5 shrink-0 place-items-center rounded text-white/50 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
-              >
-                <Trash2 size={11} />
-              </button>
-            </div>
-          )}
-        </div>
+        <UploadFileButton
+          onImport={(result) => {
+            const first = result.shapes[0];
+            if (!first) return;
+            // Kind mismatch is refused: dropping a Polygon's ring
+            // onto a Polyline (or vice versa) would render as an
+            // open path with duplicated endpoints; imported points
+            // into a Circle would ignore all but the first two
+            // corners. The user should cancel and re-import as a
+            // new shape via the Layers footer button instead.
+            if (first.kind !== shape.kind) {
+              throw new Error(
+                `File contains a ${first.kind} but you're editing a ${shape.kind}. ` +
+                  `Cancel and use Upload from the Layers list to import as a new shape.`,
+              );
+            }
+            onPatch({
+              points: first.points,
+              sourceBounds: result.bounds,
+            });
+          }}
+        />
       )}
 
       <ul className="space-y-1.5">
@@ -1422,6 +1682,11 @@ function CoordinatesSection({
             key={row.index}
             label={row.label}
             point={row.point}
+            // Imported shapes carry the file's own lat/lng bounds so
+            // the displayed coordinates match what the user uploaded.
+            // Shapes drawn on the map have no `sourceBounds` and fall
+            // back to the sandbox AO for both display and re-projection.
+            bounds={shape.sourceBounds ?? SANDBOX_BOUNDS}
             onChange={drafting ? () => {} : row.onChange}
             readOnly={drafting}
             active={
@@ -1472,6 +1737,7 @@ const COORD_PAIR = /^\s*(-?\d+(?:\.\d+)?)\s*°?\s*,\s*(-?\d+(?:\.\d+)?)\s*°?\s*
 function CoordinateRow({
   label,
   point,
+  bounds,
   onChange,
   onRemove,
   active = false,
@@ -1480,6 +1746,10 @@ function CoordinateRow({
 }: {
   label: string;
   point: Vec2;
+  /** Lat/lng bounds the point's normalized components map back to. Owner
+   *  by the parent shape (imported shapes carry their file's bbox;
+   *  drawn shapes default to `SANDBOX_BOUNDS`). */
+  bounds: GeoBounds;
   onChange: (next: Vec2) => void;
   onRemove?: () => void;
   /** True when the matching vertex dot on the map has been clicked —
@@ -1495,7 +1765,7 @@ function CoordinateRow({
    *  highlight; makes the coordinate list a bidirectional locator). */
   onSelect?: () => void;
 }) {
-  const { lat, lng } = unproject(point, SANDBOX_BOUNDS);
+  const { lat, lng } = unproject(point, bounds);
   const display = formatPair(lat, lng);
 
   // Local draft so half-typed strings don't round-trip through
@@ -1539,7 +1809,7 @@ function CoordinateRow({
       setDraft(display);
       return;
     }
-    onChange(project({ lat: nextLat, lng: nextLng }, SANDBOX_BOUNDS));
+    onChange(project({ lat: nextLat, lng: nextLng }, bounds));
   };
 
   return (

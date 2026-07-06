@@ -1,16 +1,22 @@
 /**
- * Zone Type registry — the 4 semantic presets every drawn shape can be
+ * Zone Type registry — the semantic presets every drawn shape can be
  * tagged with. Picking a type stamps both the fill and the stroke color
  * of the shape to the type's signature hue, so on the map a shape's
  * color always reads as its type.
  *
- * "General" was removed: every new shape defaults to `noFly` (blue), and
- * the panel enforces that a type is always picked. Adding a 5th type is
- * a one-line entry here; the panel, the on-map type chip, and the layer
- * list all iterate this list.
+ * Every new shape defaults to `general` (grey) — a catch-all "General
+ * Annotation" type for shapes that don't need to declare a specific
+ * airspace meaning. The panel still enforces that a type is always
+ * picked. Adding a new type is a one-line entry here; the panel, the
+ * on-map type chip, and the layer list all iterate this list.
  */
 
-export type GeoZoneType = 'noFly' | 'restricted' | 'alarm' | 'silent';
+export type GeoZoneType =
+  | 'general'
+  | 'noFly'
+  | 'restricted'
+  | 'alarm'
+  | 'silent';
 
 export interface ZoneTypeMeta {
   id: GeoZoneType;
@@ -21,10 +27,16 @@ export interface ZoneTypeMeta {
   description: string;
 }
 
-// Ordered so `noFly` (the default) is first — matches the order in the
-// panel's Type dropdown. Palette matches the product spec (item 12):
-// noFly blue, alarm red, silent yellow, restricted purple.
+// Ordered so `general` (the new default) is first — matches the order
+// in the panel's Type dropdown. Palette: general grey, noFly blue,
+// alarm red, silent yellow, restricted purple.
 export const ZONE_TYPES: ZoneTypeMeta[] = [
+  {
+    id: 'general',
+    label: 'General',
+    color: '#9ca3af',
+    description: 'Generic annotation — no specific meaning',
+  },
   {
     id: 'noFly',
     label: 'No Fly Zone',
@@ -63,7 +75,7 @@ export const ZONE_TYPE_BY_ID: Record<GeoZoneType, ZoneTypeMeta> =
  * Type picker, and any downstream consumers all agree on the same
  * default without re-hardcoding the id.
  */
-export const DEFAULT_ZONE_TYPE: GeoZoneType = 'noFly';
+export const DEFAULT_ZONE_TYPE: GeoZoneType = 'general';
 
 /**
  * Convenience: the type colors as a flat array — used as the Color &
