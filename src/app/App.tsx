@@ -90,6 +90,22 @@ const FloatingPanelSandbox = import.meta.env.DEV
   ? lazy(() => import("./components/floating-panel-sandbox/FloatingPanelSandbox"))
   : null;
 
+// Theme Color Sandbox — dev-only surface for auditioning primary /
+// secondary / background colors against a lightweight replica of the
+// app shell. Writes CSS variables onto its own scoped root so picks
+// never leak into the rest of the app. Reach it at /theme-sandbox.
+const ThemeSandbox = import.meta.env.DEV
+  ? lazy(() => import("./components/theme-sandbox/ThemeSandbox"))
+  : null;
+
+// Tweakcn Orange Sandbox — dev-only twin of /theme-sandbox that boots
+// with the imported shadcn/tweakcn orange theme mapped onto the platform
+// tokens (see theme-sandbox-orange/presets.ts). Reach it at
+// /theme-orange-sandbox.
+const ThemeOrangeSandbox = import.meta.env.DEV
+  ? lazy(() => import("./components/theme-sandbox-orange/ThemeOrangeSandbox"))
+  : null;
+
 function PlaygroundFallback() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#09090b] text-sm text-neutral-400">
@@ -315,6 +331,37 @@ export default function App() {
                   element={
                     <Suspense fallback={<PlaygroundFallback />}>
                       <FloatingPanelSandbox />
+                    </Suspense>
+                  }
+                />
+              )}
+              {/*
+                Theme Color Sandbox — DEV-only. Live preview of primary /
+                secondary / background color picks against a lightweight
+                replica of the app shell. Reach it directly at
+                /theme-sandbox.
+              */}
+              {ThemeSandbox && (
+                <Route
+                  path="/theme-sandbox"
+                  element={
+                    <Suspense fallback={<PlaygroundFallback />}>
+                      <ThemeSandbox />
+                    </Suspense>
+                  }
+                />
+              )}
+              {/*
+                Tweakcn Orange Sandbox — DEV-only. Same shell as
+                /theme-sandbox but booted with the imported shadcn/tweakcn
+                orange theme. Reach it directly at /theme-orange-sandbox.
+              */}
+              {ThemeOrangeSandbox && (
+                <Route
+                  path="/theme-orange-sandbox"
+                  element={
+                    <Suspense fallback={<PlaygroundFallback />}>
+                      <ThemeOrangeSandbox />
                     </Suspense>
                   }
                 />
