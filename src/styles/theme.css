@@ -363,3 +363,11 @@
   background-color: transparent !important;
 }
 
+/*
+ * Cesium credit / attribution bar ("Upgrade for commercial use. Data
+ * attribution"). Hidden so the map reads clean to the container edge.
+ */
+.cesium-viewer-bottom {
+  display: none !important;
+}
+

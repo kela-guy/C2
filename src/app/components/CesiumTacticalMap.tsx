@@ -207,6 +207,13 @@ export interface CesiumTacticalMapProps {
    * production dashboard leaves it off for the full Bing imagery.
    */
   darkMonochromeMap?: boolean;
+  /**
+   * Continuous camera pan velocity forwarded to `CesiumMap`. Used for
+   * edge-panning while the operator is drafting a shape near the edge
+   * of the visible map area — Dashboard owns the state, the overlay
+   * publishes velocity changes, we just carry the prop through.
+   */
+  panVelocity?: { vx: number; vy: number } | null;
 }
 
 /**
@@ -529,6 +536,7 @@ function CesiumTacticalMapImpl({
   gotchaUnits,
   darkMonochromeMap,
   cameraLookAtRequest,
+  panVelocity,
   onMarkerClick,
   onAssetClick,
   onContextMenuAction,
@@ -1825,6 +1833,7 @@ function CesiumTacticalMapImpl({
         flyTo={flyTo}
         sceneMode={sceneMode}
         darkMonochromeMap={darkMonochromeMap}
+        panVelocity={panVelocity}
         onHtmlMarkerSectorClick={(_unitId, sectorId) => onAssetClickRef.current?.(sectorId)}
         className="absolute inset-0"
       />

@@ -65,7 +65,7 @@ const HEALTH_TONE: Record<DeviceHealth, { dot: string; badge: string | null; lab
  * that carries the textual detail (connection chip, error count, reason) so
  * the row name stays uncluttered.
  */
-function DeviceTile({ device }: { device: LabDevice }) {
+export function DeviceTile({ device }: { device: LabDevice }) {
   const health: DeviceHealth = device.health ?? (device.online ? 'ok' : 'offline');
   const connection: ConnectionState = device.connection ?? (device.online ? 'online' : 'offline');
   const visual = DEVICE_HEALTH_VISUAL[health];
@@ -135,7 +135,7 @@ function DeviceTile({ device }: { device: LabDevice }) {
   );
 }
 
-function NameBlock({ device }: { device: LabDevice }) {
+export function NameBlock({ device }: { device: LabDevice }) {
   return (
     <div className="min-w-0 flex-1 text-start">
       <div className="truncate text-sm font-medium text-zinc-300">{device.name}</div>
@@ -227,7 +227,7 @@ function PrimaryCluster({ device }: { device: LabDevice }) {
   );
 }
 
-function Telemetry({ device }: { device: LabDevice }) {
+export function Telemetry({ device }: { device: LabDevice }) {
   return (
     <div className="grid grid-cols-3 gap-x-4 gap-y-5 px-4 py-3">
       {device.stats.map((s) => (
@@ -243,7 +243,7 @@ function Telemetry({ device }: { device: LabDevice }) {
 }
 
 /** Camera preview placeholder — matches the production `DeviceRowDetails` hero. */
-function CameraHero() {
+export function CameraHero() {
   return (
     <div className="relative h-[200px] w-full overflow-hidden bg-black shadow-[0_0_0_1px_rgba(255,255,255,0.1)]">
       <div className="absolute inset-0 flex items-center justify-center">
@@ -263,7 +263,7 @@ function CameraHero() {
  * bottom hairline between rows, no rounded card, no chevron. The header is
  * the click target.
  */
-function CardShell({
+export function CardShell({
   open,
   onToggle,
   header,
@@ -305,7 +305,7 @@ function CardShell({
 }
 
 /** Bottom action bar shared by the variants. */
-function FooterBar({ children }: { children: ReactNode }) {
+export function FooterBar({ children }: { children: ReactNode }) {
   return (
     <div
       className="flex w-full flex-nowrap items-center gap-2 overflow-visible border-t border-white/[0.06] px-2 py-1.5"

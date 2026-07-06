@@ -50,6 +50,62 @@ const PathfinderSandbox = lazy(() => import("./components/pathfinder-sandbox/Pat
 // the Caveat/JetBrains fonts only load on this route.
 const PathfinderStory = lazy(() => import("./components/handoff-story/PathfinderStory"));
 
+// Geo Entities Sandbox — dev-only surface for iterating on how geographic
+// entities (targets, friendlies, sensors, zones, POIs) are projected, styled,
+// and selected before the work lands in the real Cesium/Mapbox map layers.
+// Guarded by `import.meta.env.DEV` so it tree-shakes out of production.
+const GeoEntitiesSandbox = import.meta.env.DEV
+  ? lazy(() => import("./components/geo-entities-sandbox/GeoEntitiesSandbox"))
+  : null;
+
+// Geo Entities Layers — dev-only surface that boots the live Dashboard
+// with the map-draw panel auto-opened and the 5 design variants of the
+// draw panel selectable from a tab row at the top.
+const GeoEntitiesLayersSandbox = import.meta.env.DEV
+  ? lazy(() => import("./components/geo-entities-sandbox/GeoEntitiesLayersSandbox"))
+  : null;
+
+// Geo Entities Type — dev-only surface that boots the live Dashboard with
+// the map-draw panel auto-opened and a 5-tab switcher at the top of the
+// panel that swaps the zone-type selector's layout (Opt 1..Opt 5).
+const GeoEntitiesTypeSandbox = import.meta.env.DEV
+  ? lazy(() => import("./components/geo-entities-sandbox/GeoEntitiesTypeSandbox"))
+  : null;
+
+// Geo Entities Card — dev-only side-by-side review of 5 candidate designs
+// for the Geo Entities LIST card (the LayerRow inside the map-draw panel).
+// Each design renders in a 367px mock panel column against a common set
+// of sample shapes so a reviewer can compare directions before we port a
+// winner into the real panel.
+const GeoEntitiesCardSandbox = import.meta.env.DEV
+  ? lazy(() => import("./components/geo-entities-sandbox/GeoEntitiesCardSandbox"))
+  : null;
+
+// Floating Panel Sandbox — dev-only review of horizontal-only floating
+// tool-strip variants (chip pill / segmented / labeled / grouped /
+// glass). Each variant renders on top of a mock map frame with a
+// shared anchor radio so the reviewer can preview placements before
+// we port a winner into `FloatingGeoEntitiesControl`.
+const FloatingPanelSandbox = import.meta.env.DEV
+  ? lazy(() => import("./components/floating-panel-sandbox/FloatingPanelSandbox"))
+  : null;
+
+// Theme Color Sandbox — dev-only surface for auditioning primary /
+// secondary / background colors against a lightweight replica of the
+// app shell. Writes CSS variables onto its own scoped root so picks
+// never leak into the rest of the app. Reach it at /theme-sandbox.
+const ThemeSandbox = import.meta.env.DEV
+  ? lazy(() => import("./components/theme-sandbox/ThemeSandbox"))
+  : null;
+
+// Tweakcn Orange Sandbox — dev-only twin of /theme-sandbox that boots
+// with the imported shadcn/tweakcn orange theme mapped onto the platform
+// tokens (see theme-sandbox-orange/presets.ts). Reach it at
+// /theme-orange-sandbox.
+const ThemeOrangeSandbox = import.meta.env.DEV
+  ? lazy(() => import("./components/theme-sandbox-orange/ThemeOrangeSandbox"))
+  : null;
+
 function PlaygroundFallback() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#09090b] text-sm text-neutral-400">
@@ -199,6 +255,117 @@ export default function App() {
                   </Suspense>
                 }
               />
+              {/*
+                Geo Entities Sandbox — dev-only sandbox for the tactical map's
+                geographic entity rendering. Not linked from the main UI;
+                reviewers open it directly. Compiles to nothing in production.
+              */}
+              {GeoEntitiesSandbox && (
+                <Route
+                  path="/geo-entities-sandbox"
+                  element={
+                    <Suspense fallback={<PlaygroundFallback />}>
+                      <GeoEntitiesSandbox />
+                    </Suspense>
+                  }
+                />
+              )}
+              {/*
+                Geo Entities Layers — DEV-only. Boots the live Dashboard
+                with the map-draw panel auto-opened and exposes the
+                5-tab design variant switcher at the top of the panel.
+                Reach it directly at /geo-entities-layers-sandbox.
+              */}
+              {GeoEntitiesLayersSandbox && (
+                <Route
+                  path="/geo-entities-layers-sandbox"
+                  element={
+                    <Suspense fallback={<PlaygroundFallback />}>
+                      <GeoEntitiesLayersSandbox />
+                    </Suspense>
+                  }
+                />
+              )}
+              {/*
+                Geo Entities Type — DEV-only. Boots the live Dashboard
+                with the map-draw panel auto-opened and exposes a 5-tab
+                switcher (Opt 1..Opt 5) at the top of the panel that
+                swaps the zone-type selector's layout.
+                Reach it directly at /geo-entities-type-sandbox.
+              */}
+              {GeoEntitiesTypeSandbox && (
+                <Route
+                  path="/geo-entities-type-sandbox"
+                  element={
+                    <Suspense fallback={<PlaygroundFallback />}>
+                      <GeoEntitiesTypeSandbox />
+                    </Suspense>
+                  }
+                />
+              )}
+              {/*
+                Geo Entities Card — DEV-only. Standalone review of 5
+                candidate designs for the LayerRow card, rendered side-by-
+                side in 367px mock panel columns. Reach it directly at
+                /geo-entities-card-sandbox.
+              */}
+              {GeoEntitiesCardSandbox && (
+                <Route
+                  path="/geo-entities-card-sandbox"
+                  element={
+                    <Suspense fallback={<PlaygroundFallback />}>
+                      <GeoEntitiesCardSandbox />
+                    </Suspense>
+                  }
+                />
+              )}
+              {/*
+                Floating Panel Sandbox — DEV-only. Reviews 5 horizontal
+                variants of the map's floating Geo Entities tool strip
+                against a mock map with a shared anchor radio. Reach
+                it directly at /floating-panel-sandbox.
+              */}
+              {FloatingPanelSandbox && (
+                <Route
+                  path="/floating-panel-sandbox"
+                  element={
+                    <Suspense fallback={<PlaygroundFallback />}>
+                      <FloatingPanelSandbox />
+                    </Suspense>
+                  }
+                />
+              )}
+              {/*
+                Theme Color Sandbox — DEV-only. Live preview of primary /
+                secondary / background color picks against a lightweight
+                replica of the app shell. Reach it directly at
+                /theme-sandbox.
+              */}
+              {ThemeSandbox && (
+                <Route
+                  path="/theme-sandbox"
+                  element={
+                    <Suspense fallback={<PlaygroundFallback />}>
+                      <ThemeSandbox />
+                    </Suspense>
+                  }
+                />
+              )}
+              {/*
+                Tweakcn Orange Sandbox — DEV-only. Same shell as
+                /theme-sandbox but booted with the imported shadcn/tweakcn
+                orange theme. Reach it directly at /theme-orange-sandbox.
+              */}
+              {ThemeOrangeSandbox && (
+                <Route
+                  path="/theme-orange-sandbox"
+                  element={
+                    <Suspense fallback={<PlaygroundFallback />}>
+                      <ThemeOrangeSandbox />
+                    </Suspense>
+                  }
+                />
+              )}
             </Routes>
             <ScopedHandoffInspector />
           </BrowserRouter>

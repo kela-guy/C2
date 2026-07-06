@@ -302,6 +302,24 @@ export interface CesiumMapProps {
   >;
   /** Optional className for the wrapping `<div>`. Set width + height here or via parent. */
   className?: string;
+  /**
+   * Continuous camera pan velocity. Set to non-null while some upstream
+   * gesture (e.g. edge-panning during a draw draft) wants the camera to
+   * slide, and back to null / zero-vector when it stops.
+   *
+   * Units are UNITLESS "screen widths per second" in the camera's local
+   * view plane. `vx = 1` pans one screen-width east / to the right per
+   * second; `vx = -1` pans left; `vy = 1` pans up; `vy = -1` down. The
+   * primitive converts to meters at run-time using the current camera
+   * height (see the effect below), so a given `{vx, vy}` feels the same
+   * whether the map is zoomed to a city or a country.
+   *
+   * Reads clamped to `-1..1`. Passing `{vx: 0, vy: 0}` is treated as
+   * null (no rAF loop). The prop is inspected via `useEffect`, so
+   * updating it starts / stops / re-parameterises the loop reactively;
+   * callers can setState freely.
+   */
+  panVelocity?: { vx: number; vy: number } | null;
 }
 
 /**
@@ -557,6 +575,7 @@ export function CesiumMap({
   onGroundClick,
   pickerRef,
   className = 'w-full h-full',
+  panVelocity = null,
 }: CesiumMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Cesium.Viewer | null>(null);
@@ -1127,6 +1146,50 @@ export function CesiumMap({
       }
     }
   }, [sceneMode]);
+
+  // ── Continuous camera pan (edge-panning source) ────────────────────────────
+  // Driven by the optional `panVelocity` prop. When non-null with any
+  // non-zero component, we spin a requestAnimationFrame loop that slides
+  // the camera each frame proportional to the elapsed dt (so it stays
+  // frame-rate independent). The velocity is in unitless "screen widths
+  // per second"; we multiply by the current camera height as a rough
+  // meters-per-screen conversion so the *visual* pan speed feels
+  // consistent across zoom levels (a city zoom pans slower in meters
+  // than a country zoom, but the same in screen widths).
+  //
+  // Cleanup runs when the prop clears or the component unmounts —
+  // otherwise flipping panVelocity between {vx: 0.5} and {vx: -0.5}
+  // would leak an rAF handle from the previous run. The effect's dep
+  // array intentionally reads BOTH components so a re-parameterisation
+  // (same non-null pointer, different values) still restarts the loop
+  // with the fresh numbers.
+  useEffect(() => {
+    if (!panVelocity) return;
+    const vx = Math.max(-1, Math.min(1, panVelocity.vx));
+    const vy = Math.max(-1, Math.min(1, panVelocity.vy));
+    if (vx === 0 && vy === 0) return;
+
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+
+    let raf = 0;
+    let lastTime = performance.now();
+    const step = (now: number) => {
+      const dt = Math.min(0.05, (now - lastTime) / 1000);
+      lastTime = now;
+      // Prefer the live camera height. `positionCartographic` is null
+      // during scene-mode transitions; fall back to a sensible middle
+      // ground so the loop doesn't NaN out.
+      const height = viewer.camera.positionCartographic?.height ?? 50_000;
+      const scale = Math.max(1_000, height);
+      viewer.camera.moveRight(vx * scale * dt);
+      viewer.camera.moveUp(vy * scale * dt);
+      viewer.scene.requestRender();
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [panVelocity]);
 
   // ── Markers + FOV + Coverage (rebuild on prop change) ──────────────────────
   useEffect(() => {
@@ -1891,7 +1954,16 @@ export function CesiumMap({
         context, so the per-marker `zIndex` values (10..60) only compete
         with each other instead of bubbling up to the document root.
       */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden z-[1]">
+      {/*
+        Elevated above the map-draw overlay (`z-20` in `MapDrawOverlay`)
+        so map icons stay visible AND clickable even when drawn
+        polygons sit on top of them — fills no longer occlude markers,
+        and clicks land on the icon rather than the polygon. The
+        on-shape label layer at `z-30` is still above, so polygon
+        names continue to float over icons (labels > icons > shapes >
+        basemap).
+      */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden z-[25]">
         {htmlMarkers?.map((m) => (
           <div
             key={m.id}

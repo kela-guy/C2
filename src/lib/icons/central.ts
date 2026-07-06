@@ -159,6 +159,10 @@ import IconCircleRaw from '@central-icons-react/round-filled-radius-0-stroke-2/I
 import IconCircleQuestionmarkRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconCircleQuestionmark';
 import IconSquareBehindSquare1Raw from '@central-icons-react/round-filled-radius-0-stroke-2/IconSquareBehindSquare1';
 import IconChatBubble7Raw from '@central-icons-react/round-filled-radius-0-stroke-2/IconChatBubble7';
+import IconFormPentagonRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconFormPentagon';
+import IconVectorAnchorPointStraightRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconVectorAnchorPointStraight';
+import IconBezierCurveRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconBezierCurve';
+import IconFloppyDisk1Raw from '@central-icons-react/round-filled-radius-0-stroke-2/IconFloppyDisk1';
 import IconPinFilledRaw from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconPin';
 import IconStopFilledRaw from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconStop';
 import IconSunFilledRaw from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconSun';
@@ -344,6 +348,19 @@ export const Zap = asIcon(IconLightningBoltRaw);
 
 // --- Shapes ---
 export const Circle = asIcon(IconCircleRaw);
+// `Polygon` reuses Central's pentagon form glyph — the closest neutral
+// polygon outline available. Used by the geo drawing sandbox tool picker.
+export const Polygon = asIcon(IconFormPentagonRaw);
+// Straight line segment with end-node markers — represents the "polyline"
+// drawing geometry in the geo sandbox.
+export const LineSegment = asIcon(IconVectorAnchorPointStraightRaw);
+// Bezier-style curve — represents the "freehand" drawing geometry in the
+// geo sandbox.
+export const Curve = asIcon(IconBezierCurveRaw);
+
+// --- Persistence ---
+// Classic floppy-disk Save glyph, used by the geo sandbox toolbar.
+export const Save = asIcon(IconFloppyDisk1Raw);
 
 // --- Devices / environment ---
 // `Droplets` drives the floodlight / water control on device cards.

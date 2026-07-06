@@ -18,6 +18,7 @@ import { DevicesPanel } from './devices-panel';
 import { MOCK_DEVICES } from './devices-panel-next/mockDevices';
 import { CardLayoutLab } from './devices-panel-next/lab/CardLayoutLab';
 import { GotchaCardLab } from './devices-panel-next/lab/GotchaCardLab';
+import { CardErrorOptionsLab } from './devices-panel-next/lab/CardErrorOptionsLab';
 import { DeviceTileStates } from './devices-panel-next/lab/DeviceTileStates';
 import { TooltipDesigns } from './devices-panel-next/lab/TooltipDesigns';
 import { FloodlightToggleLab } from './devices-panel-next/lab/FloodlightToggleLab';
@@ -117,6 +118,10 @@ export default function DevicesLabPage() {
 
           <div className="mt-6">
             <CardLayoutLab />
+          </div>
+
+          <div className="mt-10">
+            <CardErrorOptionsLab />
           </div>
 
           <div className="mt-12 border-t border-white/[0.06] pt-8">

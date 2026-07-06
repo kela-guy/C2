@@ -26,6 +26,12 @@ import {
   type PathfinderMapPhase,
 } from './pathfinder/pathfinderState';
 import { CesiumErrorBoundary } from './CesiumErrorBoundary';
+import { MapDrawOverlay } from './map-draw/MapDrawOverlay';
+import { MapDrawProvider, mapDrawPanelCloseBlockedRef } from './map-draw/MapDrawProvider';
+import { MapDrawPanel } from './map-draw/MapDrawPanel';
+import { FloatingGeoEntitiesControl } from './map-draw/FloatingGeoEntitiesControl';
+import { GeoEntitiesRailToggle } from './map-draw/GeoEntitiesRailToggle';
+import { MapFocusBridge } from './map-draw/MapFocusBridge';
 import { NotificationSystem, showTacticalNotification } from './NotificationSystem';
 import { NotificationCenter } from './NotificationCenter';
 import ListOfSystems from '@/imports/ListOfSystems';
@@ -268,9 +274,27 @@ interface DashboardProps {
    * branches on it today.
    */
   demoMode?: boolean;
+  /**
+   * "Geo Entities Layers" lab mode: opens the map-draw panel on mount
+   * and surfaces the panel-design variant switcher (Opt 1..4 + Original).
+   * Off (the default) keeps production behaviour. Used by the DEV-only
+   * `/geo-entities-layers-sandbox` route.
+   */
+  drawPanelLab?: boolean;
+  /**
+   * Lab mode for the Type section of the map-draw panel. Auto-opens the
+   * map-draw panel and surfaces a 5-tab switcher (Opt 1..Opt 5) that
+   * swaps the zone-type selector's layout. Used by the DEV-only
+   * `/geo-entities-type-sandbox` route.
+   */
+  typePanelLab?: boolean;
 }
 
-export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
+export const Dashboard = ({
+  demoMode = false,
+  drawPanelLab = false,
+  typePanelLab = false,
+}: DashboardProps = {}) => {
   const allDevices = useDevicesFromAssets();
   const { units: gotchaUnits } = useGotchaUnits();
   // Composite Gotcha effectors render through the shared DeviceRow like every
@@ -313,6 +337,22 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
   // (queue/devices) so launching a sim naturally "switches to the
   // target panel." Replaces the old CUAS dropdown menu.
   const [simulationsPanelOpen, setSimulationsPanelOpen] = useState(false);
+  // Map-draw panel — joins the inline-START mutual-exclusion group
+  // (sidebar / Devices / Simulations / Flow Builder). Opening it closes
+  // the others and vice-versa. The drawing engine itself lives inside
+  // `<MapDrawProvider>` so the panel and the screen-space overlay share
+  // selection / draft / tool state.
+  const [mapDrawPanelOpen, setMapDrawPanelOpen] = useState(false);
+  // Edge-pan velocity while the operator is drafting a geo shape near
+  // a map edge. Published by `<MapDrawOverlay>` (rounded to 0.1 to
+  // deduplicate churn), forwarded to `<CesiumTacticalMap>` which drives
+  // an rAF loop in the Cesium primitive. `null` = no pan; a state
+  // update fires only when the rounded velocity changes, so Dashboard
+  // re-renders stay in the low single digits per drag.
+  const [edgePanVelocity, setEdgePanVelocity] = useState<{
+    vx: number;
+    vy: number;
+  } | null>(null);
   // Saved flow presets are lifted here so BOTH the Flow Builder (author)
   // and the Simulations panel (run gallery) share one live list — a
   // save in the builder shows up as a card immediately, no reload.
@@ -1714,25 +1754,31 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
   }, [gotchaUnits, handleDeviceFlyTo]);
 
   const openSystemsPanel = useCallback(() => {
-    if (devicesPanelOpen || simulationsPanelOpen || flowBuilderOpen) setPanelSwitching(true);
+    if (mapDrawPanelOpen && mapDrawPanelCloseBlockedRef.current) return;
+    if (devicesPanelOpen || simulationsPanelOpen || flowBuilderOpen || mapDrawPanelOpen)
+      setPanelSwitching(true);
     setSidebarOpen(true);
     setDevicesPanelOpen(false);
     setSimulationsPanelOpen(false);
     setFlowBuilderOpen(false);
+    setMapDrawPanelOpen(false);
     setSelectedAssetId(null);
-  }, [devicesPanelOpen, simulationsPanelOpen, flowBuilderOpen]);
+  }, [devicesPanelOpen, simulationsPanelOpen, flowBuilderOpen, mapDrawPanelOpen]);
 
   const closeSystemsPanel = useCallback(() => {
     setSidebarOpen(false);
   }, []);
 
   const openDevicesPanel = useCallback(() => {
-    if (sidebarOpen || simulationsPanelOpen || flowBuilderOpen) setPanelSwitching(true);
+    if (mapDrawPanelOpen && mapDrawPanelCloseBlockedRef.current) return;
+    if (sidebarOpen || simulationsPanelOpen || flowBuilderOpen || mapDrawPanelOpen)
+      setPanelSwitching(true);
     setSidebarOpen(false);
     setSimulationsPanelOpen(false);
     setFlowBuilderOpen(false);
+    setMapDrawPanelOpen(false);
     setDevicesPanelOpen(true);
-  }, [sidebarOpen, simulationsPanelOpen, flowBuilderOpen]);
+  }, [sidebarOpen, simulationsPanelOpen, flowBuilderOpen, mapDrawPanelOpen]);
 
   const closeDevicesPanel = useCallback(() => {
     setDevicesPanelOpen(false);
@@ -1740,28 +1786,62 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
   }, []);
 
   const openSimulationsPanel = useCallback(() => {
-    if (sidebarOpen || devicesPanelOpen || flowBuilderOpen) setPanelSwitching(true);
+    if (mapDrawPanelOpen && mapDrawPanelCloseBlockedRef.current) return;
+    if (sidebarOpen || devicesPanelOpen || flowBuilderOpen || mapDrawPanelOpen)
+      setPanelSwitching(true);
     setSidebarOpen(false);
     setDevicesPanelOpen(false);
     setFlowBuilderOpen(false);
+    setMapDrawPanelOpen(false);
     setSelectedAssetId(null);
     setSimulationsPanelOpen(true);
-  }, [sidebarOpen, devicesPanelOpen, flowBuilderOpen]);
+  }, [sidebarOpen, devicesPanelOpen, flowBuilderOpen, mapDrawPanelOpen]);
 
   const closeSimulationsPanel = useCallback(() => {
     setSimulationsPanelOpen(false);
   }, []);
 
-  // Flow Builder joins the right-side mutual-exclusion group: opening it
-  // closes the queue / Devices / Simulations (and vice-versa, above).
-  const openFlowBuilderPanel = useCallback(() => {
-    if (sidebarOpen || devicesPanelOpen || simulationsPanelOpen) setPanelSwitching(true);
+  // Map-draw panel — same mutual-exclusion choreography. Opening drops
+  // the user into the panel-driven drawing flow; closing also drops out
+  // of any active draft (handled by the panel via `setDrawTool(null)`).
+  const openMapDrawPanel = useCallback(() => {
+    if (sidebarOpen || devicesPanelOpen || simulationsPanelOpen || flowBuilderOpen)
+      setPanelSwitching(true);
     setSidebarOpen(false);
     setDevicesPanelOpen(false);
     setSimulationsPanelOpen(false);
+    setFlowBuilderOpen(false);
+    setSelectedAssetId(null);
+    setMapDrawPanelOpen(true);
+  }, [sidebarOpen, devicesPanelOpen, simulationsPanelOpen, flowBuilderOpen]);
+
+  const closeMapDrawPanel = useCallback(() => {
+    if (mapDrawPanelCloseBlockedRef.current) return;
+    setMapDrawPanelOpen(false);
+  }, []);
+
+  // Lab mode: auto-open the map-draw panel once on mount so reviewers
+  // land directly on the drawing UI with the variant switcher visible.
+  // The empty dep array is intentional — only fire once per Dashboard
+  // mount; subsequent panel toggles are driven by the user as usual.
+  useEffect(() => {
+    if (drawPanelLab || typePanelLab) openMapDrawPanel();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Flow Builder joins the right-side mutual-exclusion group: opening it
+  // closes the queue / Devices / Simulations / Map-draw (and vice-versa, above).
+  const openFlowBuilderPanel = useCallback(() => {
+    if (mapDrawPanelOpen && mapDrawPanelCloseBlockedRef.current) return;
+    if (sidebarOpen || devicesPanelOpen || simulationsPanelOpen || mapDrawPanelOpen)
+      setPanelSwitching(true);
+    setSidebarOpen(false);
+    setDevicesPanelOpen(false);
+    setSimulationsPanelOpen(false);
+    setMapDrawPanelOpen(false);
     setSelectedAssetId(null);
     setFlowBuilderOpen(true);
-  }, [sidebarOpen, devicesPanelOpen, simulationsPanelOpen]);
+  }, [sidebarOpen, devicesPanelOpen, simulationsPanelOpen, mapDrawPanelOpen]);
 
   // ── Stable handler identities for child panels ─────────────────────
   //
@@ -2192,6 +2272,19 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
   );
 
   return (
+    <MapDrawProvider>
+    {/* Bridge the geo-drawing engine's per-shape "center on map"
+        requests to the Dashboard's existing map-focus state, which
+        already drives Cesium's smooth camera focus. Renders nothing;
+        acts purely as a side-effect wire. */}
+    <MapFocusBridge
+      onFocus={({ lat, lon }) => {
+        setMapFocusRequest({ lat, lon });
+        // Clear a moment later so re-focusing the same coord still
+        // fires (Cesium reads a null->value transition).
+        setTimeout(() => setMapFocusRequest(null), 100);
+      }}
+    />
     <div className="relative flex w-full h-screen overflow-hidden text-white font-sans selection:bg-red-500/30">
       {/* Minimal Left Nav */}
       <TooltipProvider>
@@ -2269,6 +2362,22 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
             </TooltipTrigger>
             <TooltipContent side={railTooltipSide} sideOffset={8}>{t.flowBuilder.simulations.title}</TooltipContent>
           </Tooltip>
+
+          {/* Geo Entities rail toggle — the "give me the layers list"
+              affordance. Extracted into its own component so it can
+              use `useMapDraw` and scrub any in-flight draft / pending
+              shape BEFORE the panel opens, guaranteeing the panel
+              lands on LayersView (not the Draft Detail editor). The
+              floating top-right control (`FloatingGeoEntitiesControl`)
+              remains the entry point for arming draw tools. */}
+          <GeoEntitiesRailToggle
+            open={mapDrawPanelOpen}
+            onOpen={openMapDrawPanel}
+            onClose={closeMapDrawPanel}
+            tooltipSide={railTooltipSide}
+            openLabel="Geo Entities"
+            closeLabel="Geo Entities"
+          />
         </div>
 
         <Separator className="bg-white/10" />
@@ -2409,8 +2518,37 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
                   flowPreview={flowPreview}
                   gotchaUnits={gotchaUnits}
                   cameraLookAtRequest={cameraLookAtRequest}
+                  panVelocity={edgePanVelocity}
                 />
               </CesiumErrorBoundary>
+              {/*
+                Map-draw screen-space overlay. Sits above the Cesium
+                canvas with `pointer-events: none` at rest so map pan /
+                zoom keep working; flips to `auto` while a draw tool is
+                active or a shape is selected. State (active tool /
+                selection / draft) is read from `<MapDrawProvider>`,
+                which the panel mutates in lockstep.
+              */}
+              <MapDrawOverlay
+                onSelect={(id) => {
+                  if (id && !mapDrawPanelOpen) openMapDrawPanel();
+                }}
+                panelOpen={mapDrawPanelOpen}
+                panelWidthPx={sidebarWidth}
+                onEdgePan={setEdgePanVelocity}
+              />
+              {/* Floating Geo Entities entry point (top-right).
+                  Collapsed = a single polygon glyph; expanded = a row
+                  of Line / Circle / POI buttons. Picking a tool closes
+                  the docked panel and arms the drawing engine; once
+                  the user commits a shape, the panel reopens for the
+                  Save / Cancel editor. Replaces the old left-rail
+                  "Geo Entities" Toggle. */}
+              <FloatingGeoEntitiesControl
+                panelOpen={mapDrawPanelOpen}
+                onOpenPanel={openMapDrawPanel}
+                onClosePanel={closeMapDrawPanel}
+              />
             </div>
           </ResizablePanel>
 
@@ -2567,6 +2705,22 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
           />
         )}
 
+        {mapDrawPanelOpen && (
+          <MapDrawPanel
+            open={mapDrawPanelOpen}
+            onClose={closeMapDrawPanel}
+            width={sidebarWidth}
+            noTransition={panelSwitching}
+            // Production default: Opt 5 (segmented tool bar inside a
+            // Tools dropdown opened by default, layers list open). The
+            // lab route keeps this as the initial variant but still lets
+            // reviewers flip between Opt 2 / Opt 3 / Opt 5 / Original.
+            variant="opt5"
+            lab={drawPanelLab}
+            typeLab={typePanelLab}
+          />
+        )}
+
         {devicesPanelOpen && (
           <DevicesPanel
             devices={devicesWithGotcha}
@@ -2602,5 +2756,6 @@ export const Dashboard = ({ demoMode = false }: DashboardProps = {}) => {
       <NotificationSystem />
       <CriticalAlertOverlay onBroadcast={handleGotchaBroadcast} onLocate={handleGotchaLocate} />
     </div>
+    </MapDrawProvider>
   );
 };

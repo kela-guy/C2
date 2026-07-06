@@ -41,8 +41,14 @@ export interface DockedPanelProps {
   dataHandoff?: string;
   /** Extra classes for the scrollable body wrapper. */
   bodyClassName?: string;
+  /** Extra classes merged onto the root `<aside>` (e.g. to raise z-index). */
+  className?: string;
   /** Close on Escape (ignored while typing in inputs/textareas). */
   closeOnEsc?: boolean;
+  /** When true, the header close control is inert (unsaved shape in editor). */
+  closeDisabled?: boolean;
+  /** Tooltip/title when `closeDisabled` — explains why close is blocked. */
+  closeDisabledHint?: string;
   children: React.ReactNode;
 }
 
@@ -58,11 +64,14 @@ export function DockedPanel({
   footer,
   dataHandoff,
   bodyClassName,
+  className,
   closeOnEsc,
+  closeDisabled = false,
+  closeDisabledHint,
   children,
 }: DockedPanelProps) {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
-    if (!closeOnEsc || e.key !== 'Escape') return;
+    if (!closeOnEsc || closeDisabled || e.key !== 'Escape') return;
     const target = e.target as HTMLElement | null;
     const tag = target?.tagName;
     // Don't hijack Escape while the user is editing a field — Radix
@@ -90,6 +99,7 @@ export function DockedPanel({
           ? ''
           : 'transition-transform duration-300 ease-out motion-reduce:transition-none',
         open ? 'translate-x-0' : `${closedTranslate} pointer-events-none`,
+        className,
       )}
       style={{
         width: width ?? LAYOUT_TOKENS.sidebarWidthPx,
@@ -105,7 +115,9 @@ export function DockedPanel({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 -m-1 rounded text-zinc-500 hover:text-zinc-200 hover:bg-white/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+            disabled={closeDisabled}
+            title={closeDisabled ? closeDisabledHint : undefined}
+            className="p-2 -m-1 rounded text-zinc-500 hover:text-zinc-200 hover:bg-white/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 disabled:cursor-not-allowed disabled:text-zinc-600 disabled:hover:bg-transparent disabled:hover:text-zinc-600"
             aria-label={closeAriaLabel}
           >
             <Close size={14} />
