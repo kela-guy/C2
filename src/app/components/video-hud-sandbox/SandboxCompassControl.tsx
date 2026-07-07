@@ -68,7 +68,7 @@ export function SandboxCompassControl({
       <Compass size={14} className="text-slate-11" aria-hidden />
       <label
         htmlFor={sliderId}
-        className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-9"
+        className="font-mono text-2xs uppercase tracking-[0.18em] text-slate-9"
       >
         BRG
       </label>
@@ -83,7 +83,7 @@ export function SandboxCompassControl({
         aria-label="Bearing"
         className="h-1 w-32 cursor-pointer appearance-none rounded-full bg-state-hover-strong accent-accent-info [&::-webkit-slider-thumb]:size-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-slate-12"
       />
-      <span className="min-w-[3ch] text-end font-mono text-[11px] tabular-nums text-slate-12">
+      <span className="min-w-[3ch] text-end font-mono text-xs-plus tabular-nums text-slate-12">
         {String(display).padStart(3, '0')}°
       </span>
       <button

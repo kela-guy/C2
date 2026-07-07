@@ -130,7 +130,7 @@ export function PathfinderLaunchToast({ sim, locale, onDismiss }: PathfinderLaun
             animate={{ opacity: 1, y: 0 }}
             exit={reduce ? { opacity: 0 } : { opacity: 0, y: -7 }}
             transition={reduce ? { duration: 0 } : spring.moderate}
-            className="absolute inset-0 flex items-center truncate text-[13px] font-medium"
+            className="absolute inset-0 flex items-center truncate text-sm-minus font-medium"
             style={{ color: isError ? ERROR : '#fafafa' }}
           >
             {label}
@@ -148,7 +148,7 @@ export function PathfinderLaunchToast({ sim, locale, onDismiss }: PathfinderLaun
             animate={{ opacity: 1, y: 0 }}
             exit={reduce ? { opacity: 0 } : { opacity: 0, y: -4 }}
             transition={reduce ? { duration: 0 } : spring.fast}
-            className="shrink-0 font-mono text-[11px] tabular-nums text-zinc-500"
+            className="shrink-0 font-mono text-xs-plus tabular-nums text-slate-9"
             style={{ color: isError ? ERROR : undefined }}
           >
             {counter}
@@ -212,7 +212,7 @@ function PrimaryButton({
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex h-7 items-center justify-center gap-1.5 rounded-[1px] bg-zinc-100 px-3 text-xs font-semibold text-zinc-900 transition-[background-color,transform] duration-150 hover:bg-white active:scale-95"
+      className="inline-flex h-7 items-center justify-center gap-1.5 rounded-[1px] bg-slate-12 px-3 text-xs font-semibold text-slate-2 transition-[background-color,transform] duration-150 hover:bg-white active:scale-95"
     >
       {icon}
       {children}
@@ -244,9 +244,9 @@ function GhostDismiss({ onClick, label }: { onClick: () => void; label: string }
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="grid size-6 place-items-center rounded-[1px] text-zinc-600 opacity-0 transition-[color,opacity] duration-150 hover:text-zinc-300 focus-visible:opacity-100 group-hover:opacity-100"
+      className="grid size-6 place-items-center rounded-[1px] text-slate-8 opacity-0 transition-[color,opacity] duration-150 hover:text-slate-11 focus-visible:opacity-100 group-hover:opacity-100"
     >
-      <span className="text-[15px] leading-none">×</span>
+      <span className="text-base leading-none">×</span>
     </button>
   );
 }

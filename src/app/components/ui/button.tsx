@@ -5,20 +5,24 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "./utils";
 
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded text-xs font-medium transition-[background-color,box-shadow,transform] duration-150 ease-out active:scale-[0.98] disabled:pointer-events-none disabled:opacity-45 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/30 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded text-xs font-medium transition-[background-color,box-shadow,transform] duration-150 ease-out active:scale-[0.98] disabled:pointer-events-none disabled:opacity-45 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-state-focus-ring [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
         default:
-          "bg-white/[0.08] text-zinc-200 hover:bg-white/[0.14] active:bg-white/[0.06]",
+          "bg-white/[0.08] text-slate-11 hover:bg-white/[0.14] active:bg-white/[0.06]",
+        primary:
+          "bg-slate-12 text-slate-1 font-semibold hover:bg-slate-12/90 active:bg-slate-11",
         destructive:
-          "bg-[oklch(0.435_0.151_25)] text-white hover:bg-[oklch(0.485_0.151_25)] active:bg-[oklch(0.385_0.151_25)]",
+          "bg-accent-danger-soft text-white hover:bg-accent-danger-soft-hover active:bg-accent-danger-soft-active",
+        warning:
+          "bg-accent-warning-soft text-white hover:bg-accent-warning-soft-hover active:bg-accent-warning-soft-active",
         outline:
-          "bg-white/[0.03] text-zinc-400 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] hover:bg-white/[0.06] active:bg-white/[0.02]",
+          "bg-white/[0.03] text-slate-10 shadow-[0_0_0_1px_var(--border-subtle)] hover:bg-state-hover-strong active:bg-white/[0.02]",
         secondary:
-          "bg-zinc-800 text-white hover:bg-zinc-700 active:bg-zinc-900",
-        ghost: "text-zinc-300 hover:bg-white/[0.08] active:bg-white/[0.06]",
-        link: "text-zinc-200 underline-offset-4 hover:underline",
+          "bg-slate-4 text-white hover:bg-slate-5 active:bg-slate-2",
+        ghost: "text-slate-11 hover:bg-state-hover-overlay active:bg-white/[0.06]",
+        link: "text-slate-11 underline-offset-4 hover:underline",
       },
       size: {
         default: "h-8 px-3 has-[>svg]:px-2.5",
@@ -34,25 +38,24 @@ const buttonVariants = cva(
   },
 );
 
-function Button({
-  className,
-  variant,
-  size,
-  asChild = false,
-  ...props
-}: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean;
-  }) {
+const Button = React.forwardRef<
+  HTMLButtonElement,
+  React.ComponentPropsWithoutRef<"button"> &
+    VariantProps<typeof buttonVariants> & {
+      asChild?: boolean;
+    }
+>(({ className, variant, size, asChild = false, ...props }, ref) => {
   const Comp = asChild ? Slot : "button";
 
   return (
     <Comp
+      ref={ref}
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />
   );
-}
+});
+Button.displayName = "Button";
 
 export { Button, buttonVariants };

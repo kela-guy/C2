@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { spring } from '@/lib/springs';
 import { Copy, Check } from '@/lib/icons/central';
+import { Button } from '@/shared/components/ui/button';
 import { cn } from '@/shared/components/ui/utils';
 
 export type CopyButtonSize = 'sm' | 'md';
@@ -59,6 +60,10 @@ const SIZES: Record<
 
 /**
  * Quiet, hover-revealed copy affordance for a single value.
+ *
+ * Composed on the ONE shadcn Button (`ui/button.tsx`) as
+ * `variant="ghost" size="icon"`, with the reveal/feedback treatment layered
+ * on top via className.
  *
  * Visibility model:
  *  - Hidden by default (`opacity-0`) so it never competes with the value.
@@ -129,8 +134,10 @@ export function CopyButton({
   const checkEnterTransition = prefersReducedMotion ? { duration: 0 } : spring.moderate;
 
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="icon"
       data-handoff-component="copy-button"
       onClick={handleCopy}
       disabled={!value}
@@ -138,17 +145,20 @@ export function CopyButton({
       title={copied ? copiedLabel : copyLabel}
       data-copied={copied || undefined}
       className={cn(
-        'relative shrink-0 inline-flex items-center justify-center',
+        // Quiet member of the family: keep the ghost surface transparent on
+        // hover (the reveal is the affordance), no press scale, tighter box.
+        'relative',
         sz.box,
         'rounded-md',
         'cursor-pointer',
-        'text-zinc-500 hover:text-zinc-200 focus-visible:text-zinc-200',
+        'hover:bg-transparent active:bg-transparent active:scale-100',
+        'text-slate-9 hover:text-slate-11 focus-visible:text-slate-11',
         // Confirmation lift: brighten one full step beyond the hover tint so
         // the Check reads as an active state, not just a passive icon swap.
         // Stays in the zinc family — semantic green is explicitly off the
         // table per the CardIdentity spec ("no green").
-        'data-[copied]:text-zinc-50',
-        'disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-zinc-500',
+        'data-[copied]:text-slate-12',
+        'disabled:pointer-events-auto disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-slate-9',
         // Expand hit target to ~40x40 without inflating the visible glyph.
         "before:absolute before:inset-[-8px] before:content-['']",
         // Reveal on row hover / keyboard focus only on hover-capable devices.
@@ -160,7 +170,7 @@ export function CopyButton({
         // Force visible (styleguide).
         alwaysVisible && 'opacity-100',
         // Focus ring stays subtle — single neutral accent.
-        'outline-none focus-visible:ring-1 focus-visible:ring-white/30',
+        'outline-none focus-visible:ring-1 focus-visible:ring-state-focus-ring',
         'transition-[opacity,color] duration-[var(--motion-fast)] ease-out',
         className,
       )}
@@ -195,7 +205,7 @@ export function CopyButton({
       <span className="sr-only" aria-live="polite">
         {copied ? copiedLabel : ''}
       </span>
-    </button>
+    </Button>
   );
 }
 

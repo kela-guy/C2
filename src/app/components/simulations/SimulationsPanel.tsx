@@ -39,9 +39,9 @@ import {
 
 // Shared type-scale + surface tokens (kept in step with FlowBuilderPanel,
 // Heebo-only, no mono/uppercase/tracking — Hebrew is the source language).
-const TYPE_GROUP_TITLE = 'text-[11px] font-semibold text-zinc-400';
-const TYPE_CARD_TITLE = 'text-sm font-semibold text-zinc-100';
-const TYPE_CARD_DESC = 'text-[11px] text-zinc-400 leading-snug';
+const TYPE_GROUP_TITLE = 'text-xs-plus font-semibold text-slate-10';
+const TYPE_CARD_TITLE = 'text-sm font-semibold text-slate-12';
+const TYPE_CARD_DESC = 'text-xs-plus text-slate-10 leading-snug';
 
 type EntityGlyph = (props: { size?: number }) => React.ReactNode;
 const ENTITY_GLYPH: Record<FlowEntity, EntityGlyph> = {
@@ -112,16 +112,16 @@ export function SimulationsPanel({
                 key={b.kind}
                 type="button"
                 onClick={() => onRunBuiltin(b.kind)}
-                className="group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+                className="group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-white/10 bg-white/[0.04] hover:bg-state-hover-overlay text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
               >
-                <span className="shrink-0 grid place-items-center size-9 rounded-md bg-white/[0.06] text-zinc-300" aria-hidden>
+                <span className="shrink-0 grid place-items-center size-9 rounded-md bg-white/[0.06] text-slate-11" aria-hidden>
                   {b.icon}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className={`block truncate ${TYPE_CARD_TITLE}`}>{b.title}</span>
                   <span className={`block ${TYPE_CARD_DESC}`}>{b.desc}</span>
                 </span>
-                <span className="shrink-0 grid place-items-center size-7 rounded-md text-zinc-400 group-hover:text-white" aria-hidden>
+                <span className="shrink-0 grid place-items-center size-7 rounded-md text-slate-10 group-hover:text-white" aria-hidden>
                   <Play size={14} />
                 </span>
               </button>
@@ -133,7 +133,7 @@ export function SimulationsPanel({
         <section className="space-y-2">
           <h3 className={TYPE_GROUP_TITLE}>{s.savedGroup}</h3>
           {presets.length === 0 ? (
-            <p className="text-[11px] text-zinc-500 leading-snug">{s.emptySaved}</p>
+            <p className="text-xs-plus text-slate-9 leading-snug">{s.emptySaved}</p>
           ) : (
             <div className="space-y-2">
               {presets.map((def) => (
@@ -159,15 +159,15 @@ export function SimulationsPanel({
 
       {/* ── Delete confirmation ──────────────────────────────────────── */}
       <AlertDialog open={pendingDelete !== null} onOpenChange={(o: boolean) => !o && setPendingDelete(null)}>
-        <AlertDialogContent className="border-white/10 bg-zinc-950 text-white">
+        <AlertDialogContent className="border-white/10 bg-slate-1 text-white">
           <AlertDialogHeader>
             <AlertDialogTitle>{s.deleteConfirm.title}</AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">
+            <AlertDialogDescription className="text-slate-10">
               {pendingDelete ? s.deleteConfirm.description(pendingDelete.name) : ''}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-white/10 bg-transparent text-zinc-200 hover:bg-white/10">
+            <AlertDialogCancel className="border-white/10 bg-transparent text-slate-11 hover:bg-state-hover-overlay">
               {s.deleteConfirm.cancel}
             </AlertDialogCancel>
             <AlertDialogAction
@@ -222,18 +222,18 @@ function SavedFlowCard({
       <button
         type="button"
         onClick={onRun}
-        className="group w-full flex items-center gap-3 px-3 py-2.5 text-start hover:bg-white/[0.04] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/25"
+        className="group w-full flex items-center gap-3 px-3 py-2.5 text-start hover:bg-state-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-state-focus-ring"
         aria-label={`${runLabel}: ${def.name}`}
       >
-        <span className="relative shrink-0 grid place-items-center size-9 rounded-md bg-white/[0.06] text-zinc-200" aria-hidden>
+        <span className="relative shrink-0 grid place-items-center size-9 rounded-md bg-white/[0.06] text-slate-11" aria-hidden>
           {Glyph({ size: 18 })}
-          <span className={`absolute -top-0.5 -end-0.5 size-2 rounded-full ring-2 ring-zinc-900 ${tw.bg}`} />
+          <span className={`absolute -top-0.5 -end-0.5 size-2 rounded-full ring-2 ring-slate-2 ${tw.bg}`} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-semibold text-zinc-100">{def.name}</span>
-          <span className="block truncate text-[11px] text-zinc-400">{summary}</span>
+          <span className="block truncate text-sm font-semibold text-slate-12">{def.name}</span>
+          <span className="block truncate text-xs-plus text-slate-10">{summary}</span>
         </span>
-        <span className="shrink-0 grid place-items-center size-7 rounded-md text-zinc-400 group-hover:text-white" aria-hidden>
+        <span className="shrink-0 grid place-items-center size-7 rounded-md text-slate-10 group-hover:text-white" aria-hidden>
           <Play size={14} />
         </span>
       </button>
@@ -243,7 +243,7 @@ function SavedFlowCard({
         <button
           type="button"
           onClick={onEdit}
-          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-medium text-zinc-300 hover:bg-white/[0.06] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/25"
+          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs-plus font-medium text-slate-11 hover:bg-state-hover-strong transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-state-focus-ring"
         >
           <Pencil size={12} />
           <span>{editLabel}</span>
@@ -251,7 +251,7 @@ function SavedFlowCard({
         <button
           type="button"
           onClick={onDelete}
-          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-medium text-red-300/80 hover:bg-red-500/10 hover:text-red-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/25"
+          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs-plus font-medium text-red-300/80 hover:bg-red-500/10 hover:text-red-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-state-focus-ring"
         >
           <Trash2 size={12} />
           <span>{deleteLabel}</span>

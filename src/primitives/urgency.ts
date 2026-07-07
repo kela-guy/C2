@@ -30,6 +30,7 @@
  */
 
 import type { Detection } from '@/imports/ListOfSystems';
+import { MARKER_HEX } from './accentHex';
 
 export type Severity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
@@ -70,10 +71,10 @@ export const SEVERITY_LABEL: Record<Severity, string> = {
  *     state already uses.
  */
 export const SEVERITY_COLOR: Record<Severity, string> = {
-  CRITICAL: '#ff3d40',
-  HIGH: '#ff3d40',
-  MEDIUM: '#ff9e3d',
-  LOW: '#71717a',
+  CRITICAL: MARKER_HEX.hostile,
+  HIGH: MARKER_HEX.hostile,
+  MEDIUM: MARKER_HEX.possibleThreat,
+  LOW: MARKER_HEX.lowGray,
 };
 
 /**
@@ -255,7 +256,7 @@ export function isReceding(target: Detection): boolean {
  * A bare sensor track tells us a location but not what the object is, so
  * the marker and card both render gray until a camera classifies it.
  */
-export const UNKNOWN_GRAY = '#9ca3af';
+export const UNKNOWN_GRAY = MARKER_HEX.unknownGray;
 
 /**
  * True for a raw sensor detection that has not been classified yet — no

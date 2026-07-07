@@ -1256,13 +1256,13 @@ export const TacticalMap = ({
           <div className="flex rounded overflow-hidden shadow-[0_0_0_1px_rgba(255,255,255,0.1)] text-xs font-medium">
             <button
               onClick={() => setMapStyleId('dark')}
-              className={`px-2.5 py-1.5 transition-colors ${mapStyleId === 'dark' ? 'bg-white/15 text-white' : 'bg-black/60 text-zinc-400 hover:text-zinc-200'}`}
+              className={`px-2.5 py-1.5 transition-colors ${mapStyleId === 'dark' ? 'bg-white/15 text-white' : 'bg-black/60 text-slate-10 hover:text-slate-11'}`}
             >
               Dark
             </button>
             <button
               onClick={() => setMapStyleId('satellite')}
-              className={`px-2.5 py-1.5 transition-colors border-l border-white/10 ${mapStyleId === 'satellite' ? 'bg-white/15 text-white' : 'bg-black/60 text-zinc-400 hover:text-zinc-200'}`}
+              className={`px-2.5 py-1.5 transition-colors border-l border-white/10 ${mapStyleId === 'satellite' ? 'bg-white/15 text-white' : 'bg-black/60 text-slate-10 hover:text-slate-11'}`}
             >
               Satellite
             </button>
@@ -1672,9 +1672,9 @@ export const TacticalMap = ({
                             ${isActive ? 'opacity-100' : 'opacity-0'}
                           `} style={{ left: '20px' }}>
                             {isExpiredCuas ? (
-                              <span className="text-zinc-300">נצפה לאחרונה — {target.lastSeenAt || target.timestamp}</span>
+                              <span className="text-slate-11">נצפה לאחרונה — {target.lastSeenAt || target.timestamp}</span>
                             ) : stage === 'raw_detection' ? (
-                              <span className="text-zinc-300">זיהוי לא ידוע</span>
+                              <span className="text-slate-11">זיהוי לא ידוע</span>
                             ) : (
                               <>
                                 {isCritical ? <ShieldAlert size={12} className="text-red-500" /> : <AlertTriangle size={12} className="text-amber-500" />}
@@ -2294,7 +2294,7 @@ export const TacticalMap = ({
                 <Marker latitude={midLat} longitude={midLon} anchor="center">
                   <div className={`${TELEMETRY_BASE} ${
                     activeDrone.phase === 'rtb'
-                      ? `${TELEMETRY_SHADOW_ZINC} text-zinc-300`
+                      ? `${TELEMETRY_SHADOW_ZINC} text-slate-11`
                       : `${TELEMETRY_SHADOW_CYAN} text-cyan-200`
                   }`}>
                     <span>{distKm < 1 ? `${Math.round(distM)}m` : `${distKm.toFixed(1)}km`}</span>

@@ -46,7 +46,7 @@ export function ToolbarGrouped({
         {grouped.map((group, gi) => (
           <div key={group.id} className="flex">
             <div className="flex flex-col gap-1">
-              <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-slate-9">
+              <span className="font-mono text-2xs uppercase tracking-[0.16em] text-slate-9">
                 {group.label}
               </span>
               <div className="flex items-center gap-0.5 rounded border border-border-subtle bg-surface-1 p-0.5">
@@ -58,7 +58,7 @@ export function ToolbarGrouped({
                       type="button"
                       aria-pressed={active}
                       onClick={() => onSelectTool(tool.id)}
-                      className={`flex items-center gap-1.5 rounded px-2 py-1 text-[11px] font-medium transition-colors ${
+                      className={`flex items-center gap-1.5 rounded px-2 py-1 text-xs-plus font-medium transition-colors ${
                         active
                           ? 'bg-state-hover-strong text-slate-12'
                           : 'text-slate-10 hover:bg-state-hover-strong hover:text-slate-12'
@@ -87,7 +87,7 @@ export function ToolbarGrouped({
             return (
               <div key={group.label} className="flex">
                 <div className="flex flex-col gap-1">
-                  <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-slate-9">
+                  <span className="font-mono text-2xs uppercase tracking-[0.16em] text-slate-9">
                     {group.label}
                   </span>
                   <div className="flex items-center gap-0.5 rounded border border-border-subtle bg-surface-1 p-0.5">
@@ -96,7 +96,7 @@ export function ToolbarGrouped({
                         key={a.id}
                         type="button"
                         onClick={() => onAction(a.id)}
-                        className={`flex items-center gap-1.5 rounded px-2 py-1 text-[11px] font-medium transition-colors ${
+                        className={`flex items-center gap-1.5 rounded px-2 py-1 text-xs-plus font-medium transition-colors ${
                           a.tone === 'caution'
                             ? 'text-rose-300 hover:bg-rose-500/15'
                             : 'text-slate-10 hover:bg-state-hover-strong hover:text-slate-12'

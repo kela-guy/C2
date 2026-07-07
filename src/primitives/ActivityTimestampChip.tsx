@@ -1,5 +1,6 @@
 import React from 'react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/shared/components/ui/tooltip';
+import { badgeVariants } from '@/shared/components/ui/badge';
 import { cn } from '@/shared/components/ui/utils';
 import { STATUS_CHIP_COLORS, type StatusChipColor } from './StatusChip';
 
@@ -49,7 +50,14 @@ export function ActivityTimestampChip({
           role="status"
           data-handoff-component="activity-timestamp-chip"
           aria-label={ariaLabel}
-          className={cn('inline-flex items-center gap-1.5 shrink-0', className)}
+          className={cn(
+            // Styled from the badge cva (ghost = no fill) rather than the
+            // Badge component so the TooltipTrigger ref lands on a plain span;
+            // the surface-less geometry overrides flatten it to dot + text.
+            badgeVariants({ variant: 'ghost' }),
+            'gap-1.5 rounded-none border-0 px-0 py-0',
+            className,
+          )}
         >
           <span
             className="size-1.5 rounded-full shrink-0"

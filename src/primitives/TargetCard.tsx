@@ -96,7 +96,7 @@ export function TargetCard({
         >
           <CollapsibleTrigger asChild>
             <div
-              className="transition-colors cursor-pointer hover:bg-white/[0.08] focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
+              className="transition-colors cursor-pointer hover:bg-state-hover-overlay focus-visible:ring-2 focus-visible:ring-state-focus-ring focus-visible:outline-none"
               style={{
                 padding: `${d.header.paddingY}px ${d.header.paddingX}px`,
                 backgroundColor: open

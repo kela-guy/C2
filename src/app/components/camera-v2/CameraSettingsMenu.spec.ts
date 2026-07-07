@@ -46,7 +46,7 @@ export const spec: ComponentSpec = {
       { name: 'popover-shadow', value: '0_0_0_1px_rgba(255,255,255,0.15)', usage: 'Inset hairline + drop shadow' },
       { name: 'section-divider', value: 'rgba(255,255,255,0.10)', usage: '1px between the three sections' },
       { name: 'section-title', value: 'rgba(255,255,255,0.55)', usage: 'Uppercase section heading' },
-      { name: 'switch-track-off', value: 'rgba(255,255,255,0.15)', usage: 'Tactical-readable Switch off-state track (against `bg-[#1a1a1a]/95` popover)' },
+      { name: 'switch-track-off', value: 'rgba(255,255,255,0.15)', usage: 'Tactical-readable Switch off-state track (against `bg-surface-2/95` popover)' },
       { name: 'switch-track-on', value: 'rgba(16,185,129,0.8)', usage: 'Emerald Switch on-state track' },
     ],
     typography: [
@@ -85,7 +85,7 @@ export const spec: ComponentSpec = {
   notes: [
     'About section is intentionally text-only - no edit handles - so the popover stays a fast settings switcher rather than a properties editor.',
     'When playbackEnabled flips on, `VideoPanel.handlePlaybackToggle` builds an open-state via `makeOpenPlaybackState` (rewinds 30s, paused).',
-    'The Switch primitive was retuned for this popover specifically: the off-state uses `bg-white/15` with an inset white/10 ring so it stays visible against `bg-[#1a1a1a]/95`, and both the track and thumb animate over 200ms ease-out so the flip never feels instant. The shadcn defaults read as invisible in our dark theme.',
+    'The Switch primitive was retuned for this popover specifically: the off-state uses `bg-white/15` with an inset white/10 ring so it stays visible against `bg-surface-2/95`, and both the track and thumb animate over 200ms ease-out so the flip never feels instant. The shadcn defaults read as invisible in our dark theme.',
     'The toggle is always enabled when a feed is mounted. There is no archive-availability gate; the previous "disabled with reason" copy was over-engineered for a prototype playground.',
     'The (P) shortcut hint next to the row label matches the tile-level `P` shortcut wired in `CameraFeedTile`.',
   ],

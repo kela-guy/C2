@@ -39,10 +39,10 @@
       "name": "Badge",
       "tier": "primitive",
       "group": "Indicators",
-      "description": "Compact label for status, counts, and metadata. Six variants on the C2 dark surface — translucent fills and layered rings, no hard borders.",
+      "description": "Compact label for status, counts, and metadata. Six variants on the C2 dark surface — translucent fills and layered rings, no hard borders. The single home for all status/indicator chips and dots: StatusChip, HealthStatus (StatusDot/HealthBadge), ActivityTimestampChip, and NewUpdatesPill are variants of this one Badge concept and are documented here.",
       "importPath": "@/shared/components/ui/badge",
       "registryName": "badge",
-      "handoffHints": ["badge", "status-chip"],
+      "handoffHints": ["badge", "status-chip", "activity-timestamp-chip", "new-updates"],
       "states": [
         { "id": "default", "label": "Default", "note": "Resting translucent white fill." },
         { "id": "hover", "label": "Hover", "note": "Brighter surface on interactive (link/asChild) badges." },
@@ -55,24 +55,14 @@
       ]
     },
     {
-      "id": "new-updates",
-      "name": "NewUpdatesPill",
-      "tier": "primitive",
-      "group": "Indicators",
-      "description": "Floating pill that surfaces new incoming detections above the list.",
-      "importPath": "@/primitives",
-      "registryName": "new-updates-pill",
-      "handoffHints": ["new-updates"]
-    },
-    {
       "id": "button",
       "name": "Button",
       "tier": "primitive",
       "group": "Actions",
-      "description": "The base button primitive — the father of the button family. Owns the variant + size token system rendered in the C2 design (layered white opacities, oklch destructive). ActionButton, SplitActionButton, and CameraToggleButton are presets/composites built on it.",
+      "description": "The one button foundation. Its buttonVariants cva owns every surface + size treatment in the C2 design — layered white opacities, oklch destructive; src/primitives/buttonTokens.ts is only an alias map onto it. ActionButton, SplitActionButton (Button + Button size=icon + DropdownMenu), and CopyButton (ghost icon Button) are compositions that render this foundation (documented here), not separate designs; CameraToggleButton lives on the Toggle primitive.",
       "importPath": "@/shared/components/ui/button",
       "registryName": "button",
-      "handoffHints": ["button"],
+      "handoffHints": ["button", "action-button", "split-action", "copy-button"],
       "states": [
         { "id": "default", "label": "Default", "note": "Resting fill surface." },
         { "id": "hover", "label": "Hover", "note": "Brighter white surface on pointer-over." },
@@ -89,56 +79,40 @@
       ]
     },
     {
-      "id": "action-button",
-      "name": "ActionButton",
+      "id": "toggle",
+      "name": "Toggle",
       "tier": "primitive",
       "group": "Actions",
-      "parentId": "button",
-      "description": "A preset of Button with the legacy action-button handoff stamp. Kept for back-compat across card action rows and toolbars; prefer Button in new code.",
-      "importPath": "@/primitives",
-      "registryName": "action-button",
-      "handoffHints": ["action-button"]
-    },
-    {
-      "id": "split-action",
-      "name": "SplitActionButton",
-      "tier": "primitive",
-      "group": "Actions",
-      "parentId": "button",
-      "description": "Two-segment composite: a primary Button action plus a dropdown menu of sub-options. Shares the base Button's variant + size tokens. Used for effector controls.",
-      "importPath": "@/primitives",
-      "registryName": "split-action-button",
-      "handoffHints": ["split-action"]
-    },
-    {
-      "id": "camera-toggle",
-      "name": "CameraToggleButton",
-      "tier": "primitive",
-      "group": "Actions",
-      "parentId": "button",
-      "description": "Single on/off camera control built on Button. Off invites \"point the camera\"; pressing slews (pending) and settles into a brighter pressed state.",
-      "importPath": "@/primitives",
-      "handoffHints": ["camera-toggle"]
-    },
-    {
-      "id": "copy-button",
-      "name": "CopyButton",
-      "tier": "primitive",
-      "group": "Actions",
-      "parentId": "button",
-      "description": "Quiet, hover-revealed icon button that copies a single value to the clipboard.",
-      "importPath": "@/primitives",
-      "handoffHints": ["copy-button"]
+      "description": "Two-state pressed/unpressed button built on Radix Toggle — real aria-pressed + data-state=on semantics. The domain CameraToggleButton is a composition on this primitive (documented here), wearing the button family's fill tokens.",
+      "importPath": "@/shared/components/ui/toggle",
+      "registryName": "toggle",
+      "handoffHints": ["toggle", "camera-toggle"],
+      "states": [
+        { "id": "off", "label": "Off", "note": "Transparent resting surface." },
+        { "id": "on", "label": "On", "note": "data-state=on accent fill; aria-pressed true." },
+        { "id": "hover", "label": "Hover", "note": "Muted surface on pointer-over." },
+        { "id": "focus", "label": "Focus-visible", "note": "Ring for keyboard nav." },
+        { "id": "disabled", "label": "Disabled", "note": "50% opacity, pointer-events none." }
+      ],
+      "props": [
+        { "name": "pressed", "type": "boolean", "description": "Controlled on/off state." },
+        { "name": "onPressedChange", "type": "(pressed: boolean) => void", "description": "Fires when the state flips." },
+        { "name": "defaultPressed", "type": "boolean", "default": "false", "description": "Uncontrolled initial state." },
+        { "name": "variant", "type": "'default' | 'outline'", "default": "'default'", "description": "Surface treatment." },
+        { "name": "size", "type": "'default' | 'sm' | 'lg'", "default": "'default'", "description": "Height + hit-target scale." },
+        { "name": "disabled", "type": "boolean", "default": "false", "description": "Non-interactive, dimmed." },
+        { "name": "className", "type": "string", "description": "Class overrides merged via cn()." }
+      ]
     },
     {
       "id": "accordion",
       "name": "Accordion",
       "tier": "primitive",
       "group": "Layout",
-      "description": "A vertically stacked set of collapsible sections, built on Radix. Each item animates its height open and closed; type single/multiple controls how many can be open.",
+      "description": "A vertically stacked set of collapsible sections, built on Radix. Each item animates its height open and closed; type single/multiple controls how many can be open. The card-internal AccordionSection (the TargetCard section grammar composed by CardDetails, CardIdentity, and CardLog) is documented here as the domain variant.",
       "importPath": "@/shared/components/ui/accordion",
       "registryName": "accordion",
-      "handoffHints": ["accordion", "accordion-item", "accordion-trigger", "accordion-content"],
+      "handoffHints": ["accordion", "accordion-item", "accordion-trigger", "accordion-content", "accordion-section"],
       "states": [
         { "id": "closed", "label": "Closed", "note": "Resting; chevron points down." },
         { "id": "open", "label": "Open", "note": "Body expands with the accordion-down height animation; chevron rotates 180deg." },
@@ -157,9 +131,242 @@
       ]
     },
     {
+      "id": "input",
+      "name": "Input",
+      "tier": "primitive",
+      "group": "Forms",
+      "description": "Single-line text field on the C2 dark surface — translucent input-background fill, layered focus ring, selection styled via tokens. The base of every search / form field.",
+      "importPath": "@/shared/components/ui/input",
+      "registryName": "input",
+      "handoffHints": ["input"],
+      "states": [
+        { "id": "default", "label": "Default", "note": "Translucent fill, subtle border." },
+        { "id": "focus", "label": "Focus-visible", "note": "Ring + border brighten for keyboard/caret focus." },
+        { "id": "invalid", "label": "Invalid", "note": "aria-invalid ring/border in the destructive tone." },
+        { "id": "disabled", "label": "Disabled", "note": "50% opacity, pointer-events none." }
+      ],
+      "props": [
+        { "name": "type", "type": "string", "default": "'text'", "description": "Native input type (text, search, number, password…)." },
+        { "name": "placeholder", "type": "string", "description": "Muted hint text." },
+        { "name": "disabled", "type": "boolean", "default": "false", "description": "Non-interactive, dimmed." },
+        { "name": "className", "type": "string", "description": "Class overrides merged via cn()." }
+      ]
+    },
+    {
+      "id": "textarea",
+      "name": "Textarea",
+      "tier": "primitive",
+      "group": "Forms",
+      "description": "Multi-line text field sharing Input's surface grammar — translucent fill, focus ring, min-height with free vertical resize.",
+      "importPath": "@/shared/components/ui/textarea",
+      "registryName": "textarea",
+      "handoffHints": ["textarea"],
+      "props": [
+        { "name": "placeholder", "type": "string", "description": "Muted hint text." },
+        { "name": "rows", "type": "number", "description": "Initial visible line count." },
+        { "name": "disabled", "type": "boolean", "default": "false", "description": "Non-interactive, dimmed." },
+        { "name": "className", "type": "string", "description": "Class overrides merged via cn()." }
+      ]
+    },
+    {
+      "id": "select",
+      "name": "Select",
+      "tier": "primitive",
+      "group": "Forms",
+      "description": "Radix-based dropdown picker: trigger reads like an Input, the popover panel floats on the overlay surface with check-marked items and scroll cues.",
+      "importPath": "@/shared/components/ui/select",
+      "registryName": "select",
+      "handoffHints": ["select", "select-trigger", "select-content", "select-item"],
+      "states": [
+        { "id": "closed", "label": "Closed", "note": "Trigger resting like an Input." },
+        { "id": "open", "label": "Open", "note": "Panel floats with the overlay motion; trigger keeps focus." },
+        { "id": "focus", "label": "Focus-visible", "note": "Ring on the trigger for keyboard nav." },
+        { "id": "disabled", "label": "Disabled", "note": "50% opacity trigger; items can disable individually." }
+      ],
+      "props": [
+        { "name": "value", "type": "string", "description": "Controlled selected value." },
+        { "name": "onValueChange", "type": "(value: string) => void", "description": "Fires when the selection changes." },
+        { "name": "defaultValue", "type": "string", "description": "Uncontrolled initial selection." },
+        { "name": "disabled", "type": "boolean", "default": "false", "description": "Disables the whole control (root) or one item." }
+      ]
+    },
+    {
+      "id": "checkbox",
+      "name": "Checkbox",
+      "tier": "primitive",
+      "group": "Forms",
+      "description": "Radix checkbox with checked / unchecked / indeterminate states — accent fill when checked, layered ring when idle. Pair with a label for the hit target.",
+      "importPath": "@/shared/components/ui/checkbox",
+      "registryName": "checkbox",
+      "handoffHints": ["checkbox"],
+      "states": [
+        { "id": "unchecked", "label": "Unchecked", "note": "Empty box with layered ring." },
+        { "id": "checked", "label": "Checked", "note": "Accent fill + check glyph; aria-checked true." },
+        { "id": "indeterminate", "label": "Indeterminate", "note": "Dash glyph for partial group selection." },
+        { "id": "focus", "label": "Focus-visible", "note": "Ring for keyboard nav." },
+        { "id": "disabled", "label": "Disabled", "note": "50% opacity, pointer-events none." }
+      ],
+      "props": [
+        { "name": "checked", "type": "boolean | 'indeterminate'", "description": "Controlled state." },
+        { "name": "onCheckedChange", "type": "(checked: boolean | 'indeterminate') => void", "description": "Fires when the state flips." },
+        { "name": "defaultChecked", "type": "boolean", "default": "false", "description": "Uncontrolled initial state." },
+        { "name": "disabled", "type": "boolean", "default": "false", "description": "Non-interactive, dimmed." }
+      ]
+    },
+    {
+      "id": "switch",
+      "name": "Switch",
+      "tier": "primitive",
+      "group": "Forms",
+      "description": "Radix on/off switch — a sliding thumb on a tinted track, accent fill when checked. For immediate-effect settings (arm, mute, auto-track), not form submission.",
+      "importPath": "@/shared/components/ui/switch",
+      "registryName": "switch",
+      "handoffHints": ["switch"],
+      "states": [
+        { "id": "off", "label": "Off", "note": "Muted track, thumb at inline-start." },
+        { "id": "on", "label": "On", "note": "Accent track, thumb slides to inline-end; aria-checked true." },
+        { "id": "focus", "label": "Focus-visible", "note": "Ring around the track." },
+        { "id": "disabled", "label": "Disabled", "note": "50% opacity, pointer-events none." }
+      ],
+      "props": [
+        { "name": "checked", "type": "boolean", "description": "Controlled state." },
+        { "name": "onCheckedChange", "type": "(checked: boolean) => void", "description": "Fires when the state flips." },
+        { "name": "defaultChecked", "type": "boolean", "default": "false", "description": "Uncontrolled initial state." },
+        { "name": "disabled", "type": "boolean", "default": "false", "description": "Non-interactive, dimmed." }
+      ]
+    },
+    {
+      "id": "slider",
+      "name": "Slider",
+      "tier": "primitive",
+      "group": "Forms",
+      "description": "Radix range slider — tinted track, accent range fill, and a grabbable thumb with a focus ring. Single- or multi-thumb; used for zoom, volume, and threshold controls.",
+      "importPath": "@/shared/components/ui/slider",
+      "registryName": "slider",
+      "handoffHints": ["slider"],
+      "props": [
+        { "name": "value", "type": "number[]", "description": "Controlled value(s) — one entry per thumb." },
+        { "name": "onValueChange", "type": "(value: number[]) => void", "description": "Fires continuously while dragging." },
+        { "name": "defaultValue", "type": "number[]", "description": "Uncontrolled initial value(s)." },
+        { "name": "min", "type": "number", "default": "0", "description": "Range start." },
+        { "name": "max", "type": "number", "default": "100", "description": "Range end." },
+        { "name": "step", "type": "number", "default": "1", "description": "Increment granularity." },
+        { "name": "disabled", "type": "boolean", "default": "false", "description": "Non-interactive, dimmed." }
+      ]
+    },
+    {
+      "id": "tabs",
+      "name": "Tabs",
+      "tier": "primitive",
+      "group": "Navigation",
+      "description": "Radix tabs — a muted list rail with an active-surface trigger and swappable panels. Arrow keys move between triggers; content mounts per tab.",
+      "importPath": "@/shared/components/ui/tabs",
+      "registryName": "tabs",
+      "handoffHints": ["tabs", "tabs-list", "tabs-trigger", "tabs-content"],
+      "states": [
+        { "id": "active", "label": "Active", "note": "Trigger lifts onto the active surface; aria-selected true." },
+        { "id": "inactive", "label": "Inactive", "note": "Muted text on the list rail." },
+        { "id": "focus", "label": "Focus-visible", "note": "Ring on the trigger for keyboard nav." },
+        { "id": "disabled", "label": "Disabled", "note": "50% opacity trigger." }
+      ],
+      "props": [
+        { "name": "value", "type": "string", "description": "Controlled active tab." },
+        { "name": "onValueChange", "type": "(value: string) => void", "description": "Fires when the active tab changes." },
+        { "name": "defaultValue", "type": "string", "description": "Uncontrolled initial tab." },
+        { "name": "disabled", "type": "boolean", "default": "false", "description": "On TabsTrigger: makes one tab non-interactive." }
+      ]
+    },
+    {
+      "id": "dialog",
+      "name": "Dialog",
+      "tier": "primitive",
+      "group": "Overlays",
+      "description": "Radix modal dialog — dimmed backdrop, centered overlay-surface panel with the overlay motion, focus trapped inside until dismissed. For confirmations and focused edit tasks.",
+      "importPath": "@/shared/components/ui/dialog",
+      "registryName": "dialog",
+      "handoffHints": ["dialog", "dialog-content", "dialog-trigger"],
+      "states": [
+        { "id": "closed", "label": "Closed", "note": "Only the trigger is rendered." },
+        { "id": "open", "label": "Open", "note": "Backdrop dims the app; panel scales in with the overlay motion; focus is trapped." }
+      ],
+      "props": [
+        { "name": "open", "type": "boolean", "description": "Controlled open state." },
+        { "name": "onOpenChange", "type": "(open: boolean) => void", "description": "Fires on open/close (Esc, backdrop, close button)." },
+        { "name": "defaultOpen", "type": "boolean", "default": "false", "description": "Uncontrolled initial state." }
+      ]
+    },
+    {
+      "id": "popover",
+      "name": "Popover",
+      "tier": "primitive",
+      "group": "Overlays",
+      "description": "Radix anchored popover — a floating overlay-surface panel positioned against its trigger, dismissed by outside click or Esc. Non-modal: the app stays interactive behind it.",
+      "importPath": "@/shared/components/ui/popover",
+      "registryName": "popover",
+      "handoffHints": ["popover", "popover-content", "popover-trigger"],
+      "props": [
+        { "name": "open", "type": "boolean", "description": "Controlled open state." },
+        { "name": "onOpenChange", "type": "(open: boolean) => void", "description": "Fires on open/close." },
+        { "name": "side", "type": "'top' | 'right' | 'bottom' | 'left'", "default": "'bottom'", "description": "On PopoverContent: preferred anchor side." },
+        { "name": "align", "type": "'start' | 'center' | 'end'", "default": "'center'", "description": "On PopoverContent: alignment along the side." }
+      ]
+    },
+    {
+      "id": "dropdown-menu",
+      "name": "DropdownMenu",
+      "tier": "primitive",
+      "group": "Overlays",
+      "description": "Radix action menu anchored to a trigger — items, checkbox/radio items, separators, and submenus on the overlay surface. Powers overflow (⋯) and split-button menus.",
+      "importPath": "@/shared/components/ui/dropdown-menu",
+      "registryName": "dropdown-menu",
+      "handoffHints": ["dropdown-menu", "dropdown-menu-content", "dropdown-menu-item", "dropdown-menu-trigger"],
+      "states": [
+        { "id": "closed", "label": "Closed", "note": "Only the trigger is rendered." },
+        { "id": "open", "label": "Open", "note": "Panel floats with the overlay motion; arrow keys walk items." },
+        { "id": "destructive", "label": "Destructive item", "note": "variant=\"destructive\" items read in the danger tone." },
+        { "id": "disabled", "label": "Disabled item", "note": "50% opacity, skipped by keyboard nav." }
+      ],
+      "props": [
+        { "name": "open", "type": "boolean", "description": "Controlled open state (root)." },
+        { "name": "onOpenChange", "type": "(open: boolean) => void", "description": "Fires on open/close." },
+        { "name": "onSelect", "type": "(event: Event) => void", "description": "On DropdownMenuItem: fires when the item is chosen." },
+        { "name": "variant", "type": "'default' | 'destructive'", "default": "'default'", "description": "On DropdownMenuItem: danger tone for irreversible actions." }
+      ]
+    },
+    {
+      "id": "tooltip",
+      "name": "Tooltip",
+      "tier": "primitive",
+      "group": "Overlays",
+      "description": "Radix hover/focus tooltip — a small inverted-surface label with an arrow, delayed in and instant between siblings. Requires the app-level TooltipProvider (already mounted).",
+      "importPath": "@/shared/components/ui/tooltip",
+      "registryName": "tooltip",
+      "handoffHints": ["tooltip", "tooltip-trigger", "tooltip-content"],
+      "props": [
+        { "name": "delayDuration", "type": "number", "default": "0", "description": "Hover delay before showing (root)." },
+        { "name": "side", "type": "'top' | 'right' | 'bottom' | 'left'", "default": "'top'", "description": "On TooltipContent: preferred anchor side." },
+        { "name": "sideOffset", "type": "number", "default": "0", "description": "On TooltipContent: gap from the trigger." }
+      ]
+    },
+    {
+      "id": "sonner",
+      "name": "Toasts (sonner)",
+      "tier": "primitive",
+      "group": "Feedback",
+      "description": "App-wide toast queue via sonner. The vendored Toaster wears the C2 surface (surface-3 fill, layered ring, 2px radius), follows the live text direction, and stacks top-center. Fire with toast() / toast.success() / toast.error().",
+      "importPath": "@/shared/components/ui/sonner",
+      "registryName": "sonner",
+      "handoffHints": ["sonner", "toaster"],
+      "props": [
+        { "name": "position", "type": "ToasterProps['position']", "default": "'top-center'", "description": "Screen anchor for the stack." },
+        { "name": "visibleToasts", "type": "number", "default": "4", "description": "Max toasts shown before collapsing." },
+        { "name": "expand", "type": "boolean", "default": "true", "description": "Expand the stack on hover." }
+      ]
+    },
+    {
       "id": "telemetry",
       "name": "TelemetryRow",
-      "tier": "primitive",
+      "tier": "block",
       "group": "Data",
       "description": "Single telemetry metric: icon, label, monospace value. Laid out in a 3-column grid that wraps by item count.",
       "importPath": "@/primitives",
@@ -183,10 +390,10 @@
       "name": "CardActions",
       "tier": "block",
       "group": "Card slots",
-      "description": "Action bar for a TargetCard. Composes ActionButton, SplitActionButton, and the confirm pattern.",
+      "description": "Action bar for a TargetCard. Composes Button presets (ActionButton, SplitActionButton), the Toggle-based CameraToggleButton, and the confirm pattern.",
       "importPath": "@/primitives",
       "registryName": "card-actions",
-      "anatomy": ["action-button", "split-action"],
+      "anatomy": ["button", "toggle"],
       "handoffHints": ["card-actions"]
     },
     {
@@ -241,6 +448,36 @@
       "importPath": "@/primitives",
       "registryName": "card-closure",
       "handoffHints": ["card-closure"]
+    },
+    {
+      "id": "card-identity",
+      "name": "CardIdentity",
+      "tier": "block",
+      "group": "Card slots",
+      "description": "Identity rows (name, model, serial) in a collapsible 2-col grid matching CardDetails, with a per-row hover-revealed CopyButton riding a gradient fade so long IDs dissolve cleanly under the icon.",
+      "importPath": "@/primitives",
+      "anatomy": ["accordion", "button"],
+      "handoffHints": ["card-identity"]
+    },
+    {
+      "id": "card-timeline",
+      "name": "CardTimeline",
+      "tier": "block",
+      "group": "Card slots",
+      "description": "Engagement progress steps — pending / active / complete / error — as a vertical checklist or a compact dot strip for collapsed headers.",
+      "importPath": "@/primitives",
+      "registryName": "card-timeline",
+      "handoffHints": ["card-timeline"]
+    },
+    {
+      "id": "card-footer-dock",
+      "name": "CardFooterDock",
+      "tier": "block",
+      "group": "Card slots",
+      "description": "Recessed action dock pinned to a TargetCard's bottom edge — equal-width quiet buttons on an inset-shadow strip, for secondary whole-card actions.",
+      "importPath": "@/primitives",
+      "registryName": "card-footer-dock",
+      "handoffHints": ["card-footer-dock"]
     },
 
     {
@@ -309,7 +546,22 @@
       "description": "Composable tactical marker: layered surface, ring, glyph, glow, and overlays, driven by resolveMarkerStyle().",
       "importPath": "@/primitives",
       "registryName": "map-marker",
+      "anatomy": ["map-icons"],
       "handoffHints": ["map-markers", "map-marker"]
+    },
+    {
+      "id": "map-icons",
+      "name": "MapIcons",
+      "tier": "block",
+      "group": "Tactical",
+      "description": "First-party tactical glyphs — drone, missile, car, tank, truck, human, unknown, jam wave. Each ships in two forms: the map variant (color prop + black legibility stroke for imagery) and the *CardIcon variant (stroke-free, rides currentColor for in-UI tiles).",
+      "importPath": "@/primitives",
+      "registryName": "map-icons",
+      "handoffHints": ["map-icons"],
+      "props": [
+        { "name": "size", "type": "number", "description": "Pixel size. Map variants default to 32, card variants to 15." },
+        { "name": "color", "type": "string", "description": "Map variants only: glyph fill (severity- or affiliation-driven). Card variants ride currentColor." }
+      ]
     }
   ]
 }

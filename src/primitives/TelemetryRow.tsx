@@ -12,10 +12,10 @@ export function TelemetryRow({ label, value, icon: Icon }: { label: string; valu
   return (
     <div className="w-full flex flex-col items-start justify-start py-1 gap-1">
       <div className="flex items-center gap-1.5 shrink-0">
-        {Icon && <Icon size={12} className="text-zinc-400" aria-hidden="true" />}
-        <span className="text-xs text-zinc-400">{label}</span>
+        {Icon && <Icon size={12} className="text-slate-10" aria-hidden="true" />}
+        <span className="text-xs text-slate-10">{label}</span>
       </div>
-      <Bdi className="text-sm text-zinc-200 font-mono tabular-nums truncate text-start" as="span">
+      <Bdi className="text-sm text-slate-11 font-mono tabular-nums truncate text-start" as="span">
         {value}
       </Bdi>
     </div>

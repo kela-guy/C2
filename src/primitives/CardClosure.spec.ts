@@ -34,7 +34,7 @@ export const spec: ComponentSpec = {
       trigger: 'outcome.icon is provided',
       description: 'Each button shows a 12px icon before the label',
       implementedInPrototype: true,
-      visualNotes: 'Icon rendered at 12px in text-zinc-500, shrink-0',
+      visualNotes: 'Icon rendered at 12px in text-slate-9, shrink-0',
     },
     {
       name: 'hover',
@@ -90,10 +90,10 @@ export const spec: ComponentSpec = {
 
   tokens: {
     colors: [
-      { name: 'title-icon', value: 'text-zinc-400', usage: 'CheckCircle2 icon color in section header' },
-      { name: 'title-text', value: 'text-zinc-300', usage: 'Section title text color' },
-      { name: 'button-text', value: 'text-zinc-300', usage: 'Outcome button label color' },
-      { name: 'button-icon', value: 'text-zinc-500', usage: 'Optional outcome icon color' },
+      { name: 'title-icon', value: 'text-slate-10', usage: 'CheckCircle2 icon color in section header' },
+      { name: 'title-text', value: 'text-slate-11', usage: 'Section title text color' },
+      { name: 'button-text', value: 'text-slate-11', usage: 'Outcome button label color' },
+      { name: 'button-icon', value: 'text-slate-9', usage: 'Optional outcome icon color' },
       { name: 'button-bg', value: 'CARD_TOKENS.surface.level3', usage: 'Outcome button background' },
       { name: 'button-ring', value: 'CARD_TOKENS.surface.level3', usage: 'Outcome button box-shadow ring' },
       { name: 'divider', value: 'CARD_TOKENS.surface.level2', usage: 'Inset top box-shadow separator' },

@@ -89,6 +89,25 @@
  */
 
 /* ── 1. Slate ramp (hue 256, dark-tuned) ───────────────────── */
+/*
+ * Step roles (Radix-style — same job per step in dark and light):
+ *
+ *   1      App background            (surface-1)
+ *   2      Subtle background         (surface-2: cards at rest)
+ *   3      UI element background     (surface-3: inputs, chips at rest)
+ *   4      Hovered UI element        (surface-4)
+ *   5      Active / selected element (surface-5)
+ *   6      Subtle borders, separators
+ *   7      UI element borders, focus outlines
+ *   8      Strong borders, DECORATIVE-ONLY foreground (icons/hairlines)
+ *   9      Muted / lowest-contrast readable text
+ *   10     Secondary body text
+ *   11     Primary body text, labels
+ *   12     High-contrast text, headings
+ *
+ * Steps 1–5 are backgrounds, 6–8 are borders, 9–12 are foregrounds.
+ * Contrast receipts for the text steps live in the header above.
+ */
 :root {
   --slate-1:  oklch(0.165 0.005 256);
   --slate-2:  oklch(0.205 0.006 256);
@@ -168,6 +187,16 @@
   --accent-historical-soft: oklch(0.58 0.19 275);
 
   /*
+   * Interaction tiers for the -soft CTA surfaces (buttons): hover lifts
+   * lightness by +0.05, active drops it by −0.05, chroma/hue unchanged so
+   * the state change reads as depth, not a hue shift.
+   */
+  --accent-danger-soft-hover:   oklch(0.445 0.110 27);
+  --accent-danger-soft-active:  oklch(0.345 0.110 27);
+  --accent-warning-soft-hover:  oklch(0.470 0.090 70);
+  --accent-warning-soft-active: oklch(0.370 0.090 70);
+
+  /*
    * Translucent "tint" overlays for highlight rows / pills.
    * Built with color-mix so they always read against the
    * substrate they're painted on top of.
@@ -176,6 +205,18 @@
   --accent-danger-tint:  color-mix(in oklch, var(--accent-danger)  11%, transparent);
   --accent-warning-tint: color-mix(in oklch, var(--accent-warning) 11%, transparent);
   --accent-info-tint:    color-mix(in oklch, var(--accent-info)    11%, transparent);
+
+  /*
+   * Accent text tier (Radix step-11 analogue) — lightened low-chroma
+   * twins for SMALL TEXT painted over the matching -tint fill or bare
+   * substrate, where the vivid accent falls short of body-text contrast
+   * (accent-danger on surface-3 is |Lc| 40 — icon/ring only). These sit
+   * at L ≈ 0.80–0.87 so 10–11px badge labels stay legible.
+   */
+  --accent-danger-text:  oklch(0.800 0.105 22);
+  --accent-warning-text: oklch(0.875 0.115 85);
+  --accent-success-text: oklch(0.870 0.115 155);
+  --accent-info-text:    oklch(0.870 0.090 230);
 }
 
 /* ── 3c. State overlays (interaction washes) ───────────────── */

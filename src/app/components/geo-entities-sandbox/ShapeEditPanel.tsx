@@ -90,7 +90,7 @@ export function ShapeEditPanel({
       style={style}
       role="dialog"
       aria-label={`Edit ${meta.label}`}
-      className="z-30 rounded-lg border border-border-strong bg-surface-2/95 p-3 text-[12px] text-slate-12 shadow-xl backdrop-blur-md"
+      className="z-30 rounded-lg border border-border-strong bg-surface-2/95 p-3 text-xs text-slate-12 shadow-xl backdrop-blur-md"
     >
       <header className="mb-3 flex items-center gap-2">
         <span
@@ -102,7 +102,7 @@ export function ShapeEditPanel({
         </span>
         <div className="min-w-0 flex-1">
           <p className="truncate font-medium text-slate-12">{meta.label}</p>
-          <p className="truncate font-mono text-[10px] uppercase tracking-[0.16em] text-slate-9">
+          <p className="truncate font-mono text-2xs uppercase tracking-[0.16em] text-slate-9">
             {shape.id}
           </p>
         </div>
@@ -124,7 +124,7 @@ export function ShapeEditPanel({
             onPatch({ name: e.target.value });
           }}
           placeholder={meta.label}
-          className="h-8 text-[12px]"
+          className="h-8 text-xs"
         />
       </Section>
 
@@ -137,7 +137,7 @@ export function ShapeEditPanel({
           }}
           placeholder="Add notes…"
           rows={2}
-          className="min-h-[52px] text-[12px]"
+          className="min-h-[52px] text-xs"
         />
       </Section>
 
@@ -177,7 +177,7 @@ export function ShapeEditPanel({
       )}
 
       <Section label={`Coordinates · ${shape.points.length}`}>
-        <ul className="space-y-0.5 font-mono text-[11px] tabular-nums text-slate-11">
+        <ul className="space-y-0.5 font-mono text-xs-plus tabular-nums text-slate-11">
           {coords.map((c, i) => (
             <li key={i} className="flex items-center justify-between gap-2">
               <span className="text-slate-9">{i + 1}.</span>
@@ -194,11 +194,11 @@ export function ShapeEditPanel({
         <button
           type="button"
           onClick={onDelete}
-          className="flex items-center gap-1.5 rounded border border-rose-500/30 bg-rose-500/10 px-2 py-1 text-[11px] font-medium text-rose-300 transition-colors hover:border-rose-500/50 hover:bg-rose-500/20"
+          className="flex items-center gap-1.5 rounded border border-rose-500/30 bg-rose-500/10 px-2 py-1 text-xs-plus font-medium text-rose-300 transition-colors hover:border-rose-500/50 hover:bg-rose-500/20"
         >
           <Trash2 size={12} /> Delete
         </button>
-        <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-slate-9">
+        <span className="font-mono text-2xs uppercase tracking-[0.16em] text-slate-9">
           drag handles to move · scale · rotate
         </span>
       </footer>
@@ -209,7 +209,7 @@ export function ShapeEditPanel({
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="mb-2.5">
-      <label className="mb-1 block font-mono text-[10px] uppercase tracking-[0.16em] text-slate-9">
+      <label className="mb-1 block font-mono text-2xs uppercase tracking-[0.16em] text-slate-9">
         {label}
       </label>
       {children}

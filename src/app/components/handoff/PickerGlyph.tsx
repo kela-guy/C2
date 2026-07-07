@@ -55,7 +55,7 @@ export function PickerGlyph({ mode, onTogglePicker, variant }: PickerGlyphProps)
         className={cn(
           'size-6 rounded flex items-center justify-center',
           'transition-[color,background-color,box-shadow] duration-150 ease-out',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring',
           'active:scale-[0.97]',
           active
             ? 'text-white bg-cyan-500/15 shadow-[inset_0_0_0_1px_rgba(34,184,207,0.35)]'

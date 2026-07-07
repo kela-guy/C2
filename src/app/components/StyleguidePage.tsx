@@ -26,6 +26,7 @@ import { stripCodeComments } from '@/app/styleguide/registry/stripCodeComments';
 import {
   CARD_TOKENS, ELEVATION, SURFACE, LAYOUT_TOKENS, surfaceAt, overlayAt,
   StatusChip, STATUS_CHIP_COLORS, type StatusChipColor,
+  HEALTH_DOT_CLASS, HEALTH_BADGE_CLASS,
   ActivityTimestampChip,
   ActionButton, ACTION_BUTTON_VARIANTS, ACTION_BUTTON_SIZES, type ActionButtonVariant,
   SplitActionButton, SPLIT_BUTTON_VARIANTS,
@@ -65,7 +66,6 @@ import {
   NotifyHeaderIndicator, NotifyCountdown,
   DEVICE_ACTION_TONES,
   DEVICE_HEALTH_VISUAL,
-  DEVICE_HEALTH_CRITICAL_PING,
   DEFAULT_SPEAKER_TRACKS,
   DEFAULT_DEVICE_PANEL_STRINGS,
   NOTIFY_WINDOW_S,
@@ -92,7 +92,7 @@ import type { Detection, RegulusEffector } from '@/imports/ListOfSystems';
 import { getActivityStatus, getCreatedAtMs, formatTimeSince } from '@/imports/useActivityStatus';
 
 import themeCssSrc from '@/styles/theme.css?raw';
-import indexCssSrc from '@/index.css?raw';
+import paletteCssSrc from '@/styles/palette.css?raw';
 
 import statusChipSrc from '@/primitives/StatusChip.tsx?raw';
 import actionButtonSrc from '@/primitives/ActionButton.tsx?raw';
@@ -712,7 +712,7 @@ function IconCatalogTile({ name, icon }: { name: string; icon: React.ReactNode }
           type="button"
           onClick={copySvg}
           aria-label={copied ? 'Copied' : 'Copy SVG'}
-          className="p-2.5 rounded-md text-n-120 hover:text-n-11 hover:bg-white/[0.08] active:scale-[0.98] transition-[color,background-color,transform] duration-150 ease-out cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+          className="p-2.5 rounded-md text-n-120 hover:text-n-11 hover:bg-state-hover-overlay active:scale-[0.98] transition-[color,background-color,transform] duration-150 ease-out cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
         >
           {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
         </button>
@@ -720,7 +720,7 @@ function IconCatalogTile({ name, icon }: { name: string; icon: React.ReactNode }
           href={downloadHref}
           download={`${name}.svg`}
           aria-label="Download SVG"
-          className="p-2.5 rounded-md text-n-120 hover:text-n-11 hover:bg-white/[0.08] active:scale-[0.98] transition-[color,background-color,transform] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+          className="p-2.5 rounded-md text-n-120 hover:text-n-11 hover:bg-state-hover-overlay active:scale-[0.98] transition-[color,background-color,transform] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
         >
           <Download size={14} />
         </a>
@@ -849,7 +849,7 @@ function GotchaCriticalAlertDemo() {
         <button
           type="button"
           onClick={() => fire(false)}
-          className="inline-flex items-center gap-2 rounded-md border border-white/15 bg-white/[0.04] px-3.5 py-2 text-sm font-medium text-n-10 transition-colors hover:bg-white/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+          className="inline-flex items-center gap-2 rounded-md border border-white/15 bg-white/[0.04] px-3.5 py-2 text-sm font-medium text-n-10 transition-colors hover:bg-state-hover-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
         >
           Without media
         </button>
@@ -884,7 +884,7 @@ function GotchaMapDemo() {
         <span className="text-xs font-mono text-n-9">GotchaIcon marker</span>
       </div>
       <div className="flex flex-col gap-3">
-        <span className="text-[10px] font-medium uppercase tracking-wide text-n-8">
+        <span className="text-2xs font-medium uppercase tracking-wide text-n-8">
           Sector colour (worst-wins health)
         </span>
         {GOTCHA_SECTOR_LEGEND.map(({ label, color, note }) => (
@@ -895,7 +895,7 @@ function GotchaMapDemo() {
               aria-hidden="true"
             />
             <span className="text-sm font-medium text-n-11">{label}</span>
-            <span className="font-mono text-[11px] text-n-9">{color}</span>
+            <span className="font-mono text-xs-plus text-n-9">{color}</span>
             <span className="text-xs text-n-120">{note}</span>
           </div>
         ))}
@@ -927,7 +927,7 @@ function CatalogSurface({ children }: { children: React.ReactNode }) {
 }
 
 function CatalogLabel({ children }: { children: React.ReactNode }) {
-  return <span className="text-[10px] font-medium uppercase tracking-wide text-n-8">{children}</span>;
+  return <span className="text-2xs font-medium uppercase tracking-wide text-n-8">{children}</span>;
 }
 
 /**
@@ -1049,7 +1049,7 @@ function DeviceElementsCatalog() {
       {/* ── DeviceAction primitive — tone x state ───────────── */}
       <ExampleBlock id="device-elements" title="DeviceAction — tone x state matrix">
         <CatalogSurface>
-          <div className="mb-4 flex flex-wrap items-center gap-6 text-[10px] text-n-8">
+          <div className="mb-4 flex flex-wrap items-center gap-6 text-2xs text-n-8">
             <span>Solid footer pills: Idle / Pressed / Loading / Disabled</span>
             <span>·</span>
             <span>Ghost header glyphs: Idle / Pressed / Disabled</span>
@@ -1060,7 +1060,7 @@ function DeviceElementsCatalog() {
                 key={tone}
                 className="flex flex-wrap items-center gap-3 border-b border-white/[0.06] pb-3 last:border-0"
               >
-                <div className="w-16 shrink-0 font-mono text-[10px] text-n-8">{tone}</div>
+                <div className="w-16 shrink-0 font-mono text-2xs text-n-8">{tone}</div>
                 <DeviceAction tone={tone} icon={<CameraIcon size={12} />} label="Idle" ariaLabel="Idle" onClick={noop} />
                 <DeviceAction tone={tone} pressed icon={<CameraIcon size={12} />} label="Pressed" ariaLabel="Pressed" onClick={noop} />
                 <DeviceAction tone={tone} loading icon={<CameraIcon size={12} />} label="Loading" ariaLabel="Loading" />
@@ -1096,18 +1096,18 @@ function DeviceElementsCatalog() {
                 >
                   <div className="w-36 shrink-0">
                     <div className="text-xs text-n-10">{label}</div>
-                    <div className="font-mono text-[10px] text-n-8">{kind}</div>
+                    <div className="font-mono text-2xs text-n-8">{kind}</div>
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <CatalogLabel>Header</CatalogLabel>
                     <div className="flex items-center gap-2">
-                      {header?.node ?? <span className="text-[10px] text-n-7">—</span>}
+                      {header?.node ?? <span className="text-2xs text-n-7">—</span>}
                     </div>
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <CatalogLabel>Footer</CatalogLabel>
                     <div className="flex items-start gap-2">
-                      {footer?.node ?? <span className="text-[10px] text-n-7">—</span>}
+                      {footer?.node ?? <span className="text-2xs text-n-7">—</span>}
                     </div>
                   </div>
                 </div>
@@ -1167,11 +1167,10 @@ function DeviceElementsCatalog() {
 
 /** Worst-wins tone palette, mirroring `DeviceRowHeader`'s `HEALTH_TONE`. */
 const STYLEGUIDE_HEALTH_TONE: Record<DeviceHealth, { dot: string; badge: string | null }> = {
-  critical: { dot: 'bg-red-400', badge: 'bg-red-500/20 text-red-300' },
-  error: { dot: 'bg-red-400', badge: 'bg-red-500/20 text-red-300' },
-  warning: { dot: 'bg-amber-400', badge: 'bg-amber-500/20 text-amber-300' },
-  offline: { dot: 'bg-zinc-500', badge: null },
-  ok: { dot: 'bg-emerald-400', badge: null },
+  error: { dot: HEALTH_DOT_CLASS.error, badge: HEALTH_BADGE_CLASS.error },
+  warning: { dot: HEALTH_DOT_CLASS.warning, badge: HEALTH_BADGE_CLASS.warning },
+  offline: { dot: HEALTH_DOT_CLASS.offline, badge: null },
+  ok: { dot: HEALTH_DOT_CLASS.ok, badge: null },
 };
 
 /**
@@ -1204,22 +1203,22 @@ function StyleguideHealthTooltip({
   return (
     <div
       dir={dir}
-      className="w-fit min-w-[184px] max-w-[260px] overflow-hidden rounded-none bg-zinc-800 text-xs text-zinc-300 shadow-[0_0_0_1px_rgba(255,255,255,0.1)]"
+      className="w-fit min-w-[184px] max-w-[260px] overflow-hidden rounded-none bg-slate-4 text-xs text-slate-11 shadow-[0_0_0_1px_rgba(255,255,255,0.1)]"
     >
       <div className="flex items-center justify-start gap-1.5 px-2.5 py-1.5">
         <span className={`size-1.5 shrink-0 rounded-full ${t.dot}`} />
-        <span className="w-full min-w-0 truncate text-xs font-semibold text-zinc-100">{severity}</span>
+        <span className="w-full min-w-0 truncate text-xs font-semibold text-slate-12">{severity}</span>
         {showBadge && (
-          <span className={`h-4 shrink-0 rounded-[2px] px-1.5 align-middle text-[10px] font-medium leading-4 tabular-nums ${t.badge}`}>
+          <span className={`h-4 shrink-0 rounded-[2px] px-1.5 align-middle text-2xs font-medium leading-4 tabular-nums ${t.badge}`}>
             {badgeLabel}
           </span>
         )}
       </div>
       {hasFence && (
         <div className="border-t border-white/10 px-2.5 py-1.5">
-          {reason != null && <div className="max-w-[220px] text-xs text-zinc-200">{reason}</div>}
+          {reason != null && <div className="max-w-[220px] text-xs text-slate-11">{reason}</div>}
           {connectionLabel != null && (
-            <div className="mt-0.5 text-[10px] text-white/50">{connectionLabel}</div>
+            <div className="mt-0.5 text-2xs text-white/50">{connectionLabel}</div>
           )}
         </div>
       )}
@@ -1241,7 +1240,7 @@ interface HealthTipScenario {
 const STYLEGUIDE_HEALTH_TIP_SCENARIOS: HealthTipScenario[] = [
   {
     label: 'Critical · 2 errors · reason + connection (canonical)',
-    tone: 'critical',
+    tone: 'error',
     errorCount: 2,
     connectionColor: 'orange',
     en: { severity: 'Critical', reason: 'Sensor fault', connection: 'Warning' },
@@ -1249,7 +1248,7 @@ const STYLEGUIDE_HEALTH_TIP_SCENARIOS: HealthTipScenario[] = [
   },
   {
     label: 'Critical · 99+ errors (count clamp)',
-    tone: 'critical',
+    tone: 'error',
     errorCount: 248,
     connectionColor: 'red',
     en: { severity: 'Critical', reason: 'Repeated command timeouts', connection: 'Error' },
@@ -1257,7 +1256,7 @@ const STYLEGUIDE_HEALTH_TIP_SCENARIOS: HealthTipScenario[] = [
   },
   {
     label: 'Critical · 1 error (singular count)',
-    tone: 'critical',
+    tone: 'error',
     errorCount: 1,
     connectionColor: 'red',
     en: { severity: 'Critical', reason: 'Motor stall', connection: 'Error' },
@@ -1265,7 +1264,7 @@ const STYLEGUIDE_HEALTH_TIP_SCENARIOS: HealthTipScenario[] = [
   },
   {
     label: 'Critical · 0 errors (badge hidden)',
-    tone: 'critical',
+    tone: 'error',
     errorCount: 0,
     en: { severity: 'Critical', reason: 'Malfunction' },
     he: { severity: 'קריטי', reason: 'תקלה' },
@@ -1293,7 +1292,7 @@ const STYLEGUIDE_HEALTH_TIP_SCENARIOS: HealthTipScenario[] = [
   },
   {
     label: 'Long reason (wrap test)',
-    tone: 'critical',
+    tone: 'error',
     errorCount: 7,
     connectionColor: 'red',
     en: {
@@ -1316,7 +1315,7 @@ const STYLEGUIDE_HEALTH_TIP_SCENARIOS: HealthTipScenario[] = [
   },
   {
     label: 'Long severity label vs badge (truncate test)',
-    tone: 'critical',
+    tone: 'error',
     errorCount: 12,
     connectionColor: 'red',
     en: { severity: 'Communications subsystem malfunction', reason: 'Link degraded', connection: 'Error' },
@@ -1332,7 +1331,7 @@ const STYLEGUIDE_HEALTH_TIP_SCENARIOS: HealthTipScenario[] = [
   },
   {
     label: 'Reason-only fence (online, no chip)',
-    tone: 'critical',
+    tone: 'error',
     errorCount: 2,
     en: { severity: 'Critical', reason: 'Sensor fault' },
     he: { severity: 'קריטי', reason: 'תקלת חיישן' },
@@ -1535,7 +1534,7 @@ function TargetCardFlows() {
             onMouseLeave={() => setFlow1Hovered(false)}
           >
             <div
-              className="transition-colors hover:bg-white/5"
+              className="transition-colors hover:bg-state-hover"
               style={{ padding: `${CARD_TOKENS.header.paddingY}px ${CARD_TOKENS.header.paddingX}px` }}
             >
               <CardHeader
@@ -1596,7 +1595,7 @@ function TargetCardFlows() {
             onClick={() => setFlow2Open(prev => !prev)}
           >
             <div
-              className="transition-colors hover:bg-white/5"
+              className="transition-colors hover:bg-state-hover"
               style={{
                 padding: `${CARD_TOKENS.header.paddingY}px ${CARD_TOKENS.header.paddingX}px`,
                 backgroundColor: flow2Open ? `rgba(255,255,255,${CARD_TOKENS.header.selectedBgOpacity})` : undefined,
@@ -2507,7 +2506,7 @@ function InlineCopyButton({ text }: { text: string }) {
     <button
       onClick={handleCopy}
       aria-label={copied ? 'Copied' : 'Copy code'}
-      className="p-1.5 rounded cursor-pointer text-n-7 hover:text-n-10 hover:bg-white/[0.08] active:scale-[0.98] transition-[color,background-color,transform] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+      className="p-1.5 rounded cursor-pointer text-n-7 hover:text-n-10 hover:bg-state-hover-overlay active:scale-[0.98] transition-[color,background-color,transform] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
     >
       {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
     </button>
@@ -2776,11 +2775,11 @@ function ClassNameRecipe({
         >
           <div className="w-36 shrink-0 pt-0.5">
             <div className="text-xs font-medium text-n-11">{e.label}</div>
-            {e.note && <div className="mt-0.5 text-[11px] leading-snug text-n-9">{e.note}</div>}
+            {e.note && <div className="mt-0.5 text-xs-plus leading-snug text-n-9">{e.note}</div>}
           </div>
           <code
             dir="ltr"
-            className="min-w-0 flex-1 whitespace-pre-wrap break-words font-mono text-[12px] leading-relaxed text-[rgba(158,158,158,0.8)]"
+            className="min-w-0 flex-1 whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-[rgba(158,158,158,0.8)]"
           >
             {e.className}
           </code>
@@ -2838,18 +2837,18 @@ function HudDeviceSelectSection() {
             label: 'Trigger pill',
             note: 'glass via inline style',
             className:
-              'group inline-flex h-8 items-center gap-1.5 rounded-full border border-border-default/45 ps-2.5 pe-2 text-[11px] text-slate-12',
+              'group inline-flex h-8 items-center gap-1.5 rounded-full border border-border-default/45 ps-2.5 pe-2 text-xs-plus text-slate-12',
           },
           {
             label: 'Menu content',
             className:
-              'min-w-[11rem] rounded border-none bg-[#1a1a1a]/95 p-1 text-slate-12 shadow-[0_20px_40px_-12px_rgba(0,0,0,0.6)]',
+              'min-w-[11rem] rounded border-none bg-surface-2/95 p-1 text-slate-12 shadow-[0_20px_40px_-12px_rgba(0,0,0,0.6)]',
           },
           {
             label: 'Radio item',
             note: 'drops the built-in dot',
             className:
-              'gap-2.5 rounded-md py-1.5 ps-2.5 pe-2.5 text-[12px] focus:bg-white/10 focus:text-slate-12 [&>span:first-child]:hidden',
+              'gap-2.5 rounded-md py-1.5 ps-2.5 pe-2.5 text-xs focus:bg-white/10 focus:text-slate-12 [&>span:first-child]:hidden',
           },
           { label: 'Focus ring', className: HUD_FOCUS_RING },
         ]}
@@ -2908,12 +2907,12 @@ function HudAngleToggleSection() {
           {
             label: 'Spring thumb',
             className:
-              'absolute left-0.5 top-0.5 flex h-[30px] items-center justify-center rounded-full bg-state-selected font-sans text-[12px] font-semibold tabular-nums text-slate-12',
+              'absolute left-0.5 top-0.5 flex h-[30px] items-center justify-center rounded-full bg-state-selected font-sans text-xs font-semibold tabular-nums text-slate-12',
           },
           {
             label: 'Segment',
             className:
-              'relative z-10 flex h-7 items-center justify-center rounded-full font-sans text-[12px] font-semibold tabular-nums transition-colors duration-150',
+              'relative z-10 flex h-7 items-center justify-center rounded-full font-sans text-xs font-semibold tabular-nums transition-colors duration-150',
           },
           { label: 'Focus ring', className: HUD_FOCUS_RING },
         ]}
@@ -2948,19 +2947,19 @@ function HudConnectivityBadgeSection() {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <HudStage height={110}>
             <DeviceConnectivityBadge source={{ id: 'CAM-01', short: 'EO/IR', name: 'CAM-01', role: 'EO/IR Camera', kind: 'camera', signalPct: 88, status: 'online' }} />
-            <span className="absolute bottom-2 left-3 text-[11px] text-white/45">Online</span>
+            <span className="absolute bottom-2 left-3 text-xs-plus text-white/45">Online</span>
           </HudStage>
           <HudStage height={110}>
             <DeviceConnectivityBadge source={{ id: 'CAM-01', short: 'EO/IR', name: 'CAM-01', role: 'EO/IR Camera', kind: 'camera', signalPct: 54, status: 'degraded' }} />
-            <span className="absolute bottom-2 left-3 text-[11px] text-white/45">Degraded</span>
+            <span className="absolute bottom-2 left-3 text-xs-plus text-white/45">Degraded</span>
           </HudStage>
           <HudStage height={110}>
             <DeviceConnectivityBadge source={{ id: 'CAM-01', short: 'EO/IR', name: 'CAM-01', role: 'EO/IR Camera', kind: 'camera', signalPct: 0, status: 'offline' }} />
-            <span className="absolute bottom-2 left-3 text-[11px] text-white/45">Offline</span>
+            <span className="absolute bottom-2 left-3 text-xs-plus text-white/45">Offline</span>
           </HudStage>
           <HudStage height={110}>
             <DeviceConnectivityBadge manual />
-            <span className="absolute bottom-2 left-3 text-[11px] text-white/45">Manual (control released)</span>
+            <span className="absolute bottom-2 left-3 text-xs-plus text-white/45">Manual (control released)</span>
           </HudStage>
         </div>
       </ExampleBlock>
@@ -2982,7 +2981,7 @@ function HudConnectivityBadgeSection() {
             label: 'Chip',
             note: 'glass via inline style',
             className:
-              'pointer-events-auto inline-flex h-8 items-center gap-1.5 rounded-full border border-border-default/45 px-2.5 text-[11px] text-slate-12',
+              'pointer-events-auto inline-flex h-8 items-center gap-1.5 rounded-full border border-border-default/45 px-2.5 text-xs-plus text-slate-12',
           },
           {
             label: 'Status dot',
@@ -3112,9 +3111,9 @@ function HudContextMenuSection() {
           {
             label: 'Coordinate item',
             note: 'click to copy "x / y | altitude"',
-            className: 'gap-2.5 text-[13px] font-mono tabular-nums',
+            className: 'gap-2.5 text-sm-minus font-mono tabular-nums',
           },
-          { label: 'Action item', className: 'gap-2.5 text-[13px]' },
+          { label: 'Action item', className: 'gap-2.5 text-sm-minus' },
         ]}
       />
     </ComponentSection>
@@ -3142,7 +3141,7 @@ function HudDemoSlider({
   onChange: (next: number) => void;
 }) {
   return (
-    <label dir="ltr" className="flex items-center gap-3 text-[12px]">
+    <label dir="ltr" className="flex items-center gap-3 text-xs">
       <span className="w-12 font-mono uppercase tracking-[0.12em] text-n-9">{label}</span>
       <input
         type="range"
@@ -3250,7 +3249,7 @@ function HudSetpointRailSection() {
             label: 'Idle read-out',
             note: 'collapsed value',
             className:
-              'mt-1.5 block whitespace-nowrap font-mono text-[20px] leading-none tabular-nums text-slate-12',
+              'mt-1.5 block whitespace-nowrap font-mono text-xl leading-none tabular-nums text-slate-12',
           },
           {
             label: 'Chevron stepper',
@@ -3426,7 +3425,7 @@ function HudAutoTrackSection() {
         <div className="flex h-full w-full flex-col space-y-4">
           <HudStage height={300} className="flex !max-w-none flex-col">
             <AutoTrackOverlay armed={armed} onReleased={() => setArmed(false)} />
-            <span className="pointer-events-none absolute bottom-2 left-3 text-[11px] text-white/45">
+            <span className="pointer-events-none absolute bottom-2 left-3 text-xs-plus text-white/45">
               Move cursor to hunt · click to lock · Esc to release
             </span>
           </HudStage>
@@ -3434,7 +3433,7 @@ function HudAutoTrackSection() {
             type="button"
             onClick={() => setArmed(true)}
             disabled={armed}
-            className="rounded border border-border-default bg-surface-2 px-2.5 py-1 text-[11px] text-slate-11 transition-colors hover:border-border-strong disabled:opacity-40"
+            className="rounded border border-border-default bg-surface-2 px-2.5 py-1 text-xs-plus text-slate-11 transition-colors hover:border-border-strong disabled:opacity-40"
           >
             {armed ? 'Armed' : 'Re-arm'}
           </button>
@@ -3465,7 +3464,7 @@ function HudAutoTrackSection() {
           {
             label: 'Lock label',
             className:
-              'absolute font-mono text-[9px] uppercase tracking-[0.18em] text-accent-success',
+              'absolute font-mono text-3xs uppercase tracking-[0.18em] text-accent-success',
           },
           {
             label: 'Release fade',
@@ -3828,8 +3827,8 @@ function CardStatePlayground() {
                     onClick={() => setActiveId(e.id)}
                     className={`flex items-center gap-1.5 h-7 px-2.5 rounded-md text-xs font-medium cursor-pointer transition-[color,background-color,box-shadow] duration-150 ease-out active:scale-[0.98] ${
                       isActive
-                        ? 'bg-white/[0.1] text-n-12 shadow-[0_0_0_1px_rgba(255,255,255,0.15)]'
-                        : 'text-n-120 hover:text-n-10 hover:bg-white/[0.04]'
+                        ? 'bg-state-selected text-n-12 shadow-[0_0_0_1px_rgba(255,255,255,0.15)]'
+                        : 'text-n-120 hover:text-n-10 hover:bg-state-hover'
                     }`}
                   >
                     <span
@@ -3871,7 +3870,7 @@ function CardStatePlayground() {
                 <td className="py-2 px-3">
                   <div className="flex items-center gap-2">
                     <div
-                      className="w-4 h-4 rounded shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
+                      className="w-4 h-4 rounded shadow-[0_0_0_1px_var(--border-subtle)]"
                       style={{ backgroundColor: SEVERITY_COLOR[slots.severity] }}
                     />
                     <span className="font-mono text-n-9 text-xs">{SEVERITY_COLOR[slots.severity]}</span>
@@ -3884,7 +3883,7 @@ function CardStatePlayground() {
                 <td className="py-2 px-3">
                   <div className="flex items-center gap-2">
                     <div
-                      className="w-4 h-4 rounded shadow-[0_0_0_1px_rgba(255,255,255,0.08)] opacity-60"
+                      className="w-4 h-4 rounded shadow-[0_0_0_1px_var(--border-subtle)] opacity-60"
                       style={{ backgroundColor: CARD_TOKENS.spine.colors[slots.accent] }}
                     />
                     <span className="font-mono text-n-9 text-xs">{CARD_TOKENS.spine.colors[slots.accent]}</span>
@@ -3927,7 +3926,7 @@ function CardStatePlayground() {
                   {slots.header.iconColor && (
                     <div className="flex items-center gap-2">
                       <div
-                        className="w-4 h-4 rounded shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
+                        className="w-4 h-4 rounded shadow-[0_0_0_1px_var(--border-subtle)]"
                         style={{ backgroundColor: slots.header.iconColor }}
                       />
                       <span className="font-mono text-n-9 text-xs">{slots.header.iconColor}</span>
@@ -4332,11 +4331,11 @@ export function DetectionRow() {
             <ComponentSection id="styling" name="Styling" description="Color tokens, elevation surfaces, and typography setup. Paste the theme CSS into your project to get the full design language.">
               <SectionHeading>Theme CSS</SectionHeading>
               <p className="text-base font-normal text-white/50 mb-4 leading-relaxed tracking-wide">
-                The design system uses two CSS files: <code className="text-sm font-mono text-n-10">theme.css</code> for semantic color tokens (light/dark) and Tailwind bindings, and <code className="text-sm font-mono text-n-10">index.css</code> for the neutral scale, tactical red palette, and global resets. Copy each into your project.
+                The design system uses two CSS files: <code className="text-sm font-mono text-n-10">palette.css</code> — the single source of truth for color (slate ramp, surface ladder, borders, state overlays, tactical accents) — and <code className="text-sm font-mono text-n-10">theme.css</code> for the shadcn semantic aliases and base typography. Copy each into your project.
               </p>
               <div className="space-y-6">
-                <CodePreviewBlock name="theme.css" description="Semantic color tokens, Tailwind @theme bindings, and base typography." code={themeCssSrc} />
-                <CodePreviewBlock name="index.css" description="Neutral scale, tactical red palette, custom theme colors, and global resets." code={indexCssSrc} />
+                <CodePreviewBlock name="palette.css" description="OKLCH slate ramp, surface + shadow ladder, borders, state overlays, and tactical accents." code={paletteCssSrc} />
+                <CodePreviewBlock name="theme.css" description="Semantic color tokens aliased onto palette.css, Tailwind @theme bindings, and base typography." code={themeCssSrc} />
               </div>
 
               <SectionHeading>Neutral Scale</SectionHeading>
@@ -4388,7 +4387,7 @@ export function DetectionRow() {
               </p>
               <PreviewPanel align="stretch" className="flex">
                 <div className="flex flex-wrap items-center gap-3" dir="ltr">
-                  <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium text-white/80 bg-white/[0.06] hover:bg-white/[0.1] active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out">
+                  <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium text-white/80 bg-white/[0.06] hover:bg-state-hover-overlay active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out">
                     Press me
                   </button>
                   <Button variant="secondary" size="sm" className="active:scale-[0.98] transition-[background-color,color,transform] duration-150 ease-out">
@@ -4454,7 +4453,7 @@ export function DetectionRow() {
                   {
                     label: 'Pill (Button)',
                     className:
-                      'h-8 gap-1.5 rounded-full border-0 bg-sky-500 px-3 text-xs font-semibold text-white shadow-[0_8px_24px_rgba(29,155,240,0.35),0_0_0_1px_rgba(255,255,255,0.1)] transition-[background-color,transform] duration-150 ease-out hover:bg-sky-400 focus-visible:border-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 active:scale-[0.98]',
+                      'h-8 gap-1.5 rounded-full border-0 bg-sky-500 px-3 text-xs font-semibold text-white shadow-[0_8px_24px_rgba(29,155,240,0.35),0_0_0_1px_rgba(255,255,255,0.1)] transition-[background-color,transform] duration-150 ease-out hover:bg-sky-400 focus-visible:border-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring active:scale-[0.98]',
                   },
                   { label: 'Arrow icon', note: 'strokeWidth 2.5', className: 'size-[13px]' },
                 ]}
@@ -4577,14 +4576,14 @@ export function DetectionRow() {
                 entries={[
                   {
                     label: 'Button base',
-                    note: 'height/type via BUTTON_SIZES[size]; surface via BUTTON_VARIANTS[variant]',
+                    note: 'surface + size from the ui/button buttonVariants cva; BUTTON_VARIANTS / BUTTON_SIZES are alias maps onto it',
                     className:
                       'inline-flex items-center justify-center gap-2 px-3 rounded overflow-hidden transition-[background-color,box-shadow,transform] duration-150 ease-out',
                   },
                   {
                     label: 'Focus ring',
                     className:
-                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/30',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-state-focus-ring',
                   },
                   { label: 'Press feedback', className: 'active:scale-[0.98] will-change-transform' },
                   { label: 'Disabled', className: 'opacity-45 pointer-events-none' },
@@ -4757,13 +4756,13 @@ export function DetectionRow() {
                   { label: 'Shell', className: 'flex w-full items-stretch gap-0.5 rounded' },
                   {
                     label: 'Primary segment',
-                    note: 'shares Button variant/size tokens',
+                    note: 'a ui Button — same buttonVariants cva as the base Button',
                     className:
                       'flex flex-1 items-center justify-center gap-2 px-3 min-w-0 overflow-hidden rounded-s-[4px]',
                   },
                   {
                     label: 'Chevron segment',
-                    note: 'width via BUTTON_SIZES[size].chevronMin',
+                    note: 'a ui Button size="icon" (the DropdownMenuTrigger); width via BUTTON_SIZES[size].chevronMin',
                     className: 'flex shrink-0 items-center justify-center px-2 rounded-e-[4px]',
                   },
                   {
@@ -4774,7 +4773,7 @@ export function DetectionRow() {
                   {
                     label: 'Menu item',
                     className:
-                      'flex w-full flex-row items-center justify-start gap-2 rounded-md px-2.5 py-2 text-xs text-zinc-200 cursor-pointer transition-[background-color,color] duration-150 ease-out hover:bg-white/[0.08] hover:text-white focus:bg-white/[0.08] focus:text-white',
+                      'flex w-full flex-row items-center justify-start gap-2 rounded-md px-2.5 py-2 text-xs text-slate-11 cursor-pointer transition-[background-color,color] duration-150 ease-out hover:bg-state-hover-overlay hover:text-white focus:bg-white/[0.08] focus:text-white',
                   },
                 ]}
               />
@@ -4810,12 +4809,12 @@ export function DetectionRow() {
                   {
                     label: 'Trigger',
                     className:
-                      'flex w-full cursor-pointer items-center justify-between rounded-none bg-white/[0.08] p-[8px] transition-colors hover:bg-white/[0.11] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25',
+                      'flex w-full cursor-pointer items-center justify-between rounded-none bg-white/[0.08] p-[8px] transition-colors hover:bg-state-hover-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring',
                   },
-                  { label: 'Title cluster', className: 'flex items-center gap-2 text-sm font-normal text-zinc-300' },
+                  { label: 'Title cluster', className: 'flex items-center gap-2 text-sm font-normal text-slate-11' },
                   {
                     label: 'Chevron',
-                    className: 'text-zinc-500 transition-transform duration-200 group-data-[state=open]:rotate-180',
+                    className: 'text-slate-9 transition-transform duration-200 group-data-[state=open]:rotate-180',
                   },
                   {
                     label: 'Content',
@@ -4899,8 +4898,8 @@ export function DetectionRow() {
                 entries={[
                   { label: 'Row', className: 'w-full flex flex-col items-start justify-start py-1 gap-1' },
                   { label: 'Label cluster', className: 'flex items-center gap-1.5 shrink-0' },
-                  { label: 'Label', className: 'text-xs text-zinc-400' },
-                  { label: 'Value', className: 'text-sm text-zinc-200 font-mono tabular-nums truncate text-start' },
+                  { label: 'Label', className: 'text-xs text-slate-10' },
+                  { label: 'Value', className: 'text-sm text-slate-11 font-mono tabular-nums truncate text-start' },
                 ]}
               />
             </ComponentSection>
@@ -4923,11 +4922,11 @@ export function DetectionRow() {
                     { label: 'Serial Number', value: 'f7k3c251f00cx623', copyLabel: 'Copy serial number' },
                   ].map((row) => (
                     <div key={row.label} className="group/copy w-full flex flex-col items-start py-1 gap-1">
-                      <span className="text-xs text-zinc-400">{row.label}</span>
+                      <span className="text-xs text-slate-10">{row.label}</span>
                       <div className="relative w-fit">
                         <span
                           dir="auto"
-                          className="block w-fit text-xs text-zinc-200 font-sans tabular-nums break-all text-end"
+                          className="block w-fit text-xs text-slate-11 font-sans tabular-nums break-all text-end"
                           style={{ unicodeBidi: 'isolate', fontVariantNumeric: 'tabular-nums slashed-zero' }}
                         >
                           {row.value}
@@ -4963,7 +4962,7 @@ export function DetectionRow() {
                       <ExampleBlock hideTitle title="Always visible (no group/copy parent)" tight>
                         <div className="max-w-sm rounded-lg p-3 flex items-center gap-2" style={{ backgroundColor: SURFACE.level1 }}>
                           <span
-                            className="flex-1 min-w-0 text-sm text-zinc-200 font-mono tabular-nums"
+                            className="flex-1 min-w-0 text-sm text-slate-11 font-mono tabular-nums"
                             style={{ fontVariantNumeric: 'tabular-nums slashed-zero' }}
                           >
                             f7k3c251f00cx623
@@ -4979,7 +4978,7 @@ export function DetectionRow() {
                     children: (
                       <ExampleBlock hideTitle title="Disabled (empty value)" tight>
                         <div className="max-w-sm rounded-lg p-3 flex items-center gap-2" style={{ backgroundColor: SURFACE.level1 }}>
-                          <span className="flex-1 min-w-0 text-sm text-zinc-500 italic">no value</span>
+                          <span className="flex-1 min-w-0 text-sm text-slate-9 italic">no value</span>
                           <CopyButton value="" copyLabel="Copy" copiedLabel="Copied" alwaysVisible />
                         </div>
                       </ExampleBlock>
@@ -4992,7 +4991,7 @@ export function DetectionRow() {
                       <ExampleBlock hideTitle title="Size: md" tight>
                         <div className="max-w-sm rounded-lg p-3 flex items-center gap-2" style={{ backgroundColor: SURFACE.level1 }}>
                           <span
-                            className="flex-1 min-w-0 text-sm text-zinc-200 font-mono tabular-nums"
+                            className="flex-1 min-w-0 text-sm text-slate-11 font-mono tabular-nums"
                             style={{ fontVariantNumeric: 'tabular-nums slashed-zero' }}
                           >
                             TGT-0042
@@ -5012,7 +5011,7 @@ export function DetectionRow() {
                     label: 'Button base',
                     note: 'box via SIZES[size].box (size-6 / size-7)',
                     className:
-                      'relative shrink-0 inline-flex items-center justify-center rounded-md cursor-pointer text-zinc-500 hover:text-zinc-200 focus-visible:text-zinc-200 data-[copied]:text-zinc-50',
+                      'relative shrink-0 inline-flex items-center justify-center rounded-md cursor-pointer text-slate-9 hover:text-slate-11 focus-visible:text-slate-11 data-[copied]:text-slate-12',
                   },
                   { label: 'Hit target', className: "before:absolute before:inset-[-8px] before:content-['']" },
                   {
@@ -5021,7 +5020,7 @@ export function DetectionRow() {
                     className:
                       'opacity-0 group-hover/copy:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 data-[copied]:opacity-100',
                   },
-                  { label: 'Focus ring', className: 'outline-none focus-visible:ring-1 focus-visible:ring-white/30' },
+                  { label: 'Focus ring', className: 'outline-none focus-visible:ring-1 focus-visible:ring-state-focus-ring' },
                   { label: 'Transition', className: 'transition-[opacity,color] duration-150 ease-out' },
                 ]}
               />
@@ -5115,7 +5114,7 @@ export function DetectionRow() {
                     className: 'text-xs font-mono truncate',
                   },
                   { label: 'Trailing cluster', className: 'flex gap-1.5 items-center shrink-0' },
-                  { label: 'Chevron', className: 'text-zinc-500 shrink-0 transition-transform duration-200' },
+                  { label: 'Chevron', className: 'text-slate-9 shrink-0 transition-transform duration-200' },
                 ]}
               />
             </ComponentSection>
@@ -5250,18 +5249,18 @@ export function DetectionRow() {
                   {
                     label: 'Status strip',
                     className:
-                      'w-full min-h-[30px] flex items-center justify-center gap-2 px-3 text-xs font-medium text-zinc-300 cursor-default select-none pointer-events-none',
+                      'w-full min-h-[30px] flex items-center justify-center gap-2 px-3 text-xs font-medium text-slate-11 cursor-default select-none pointer-events-none',
                   },
                   { label: 'Confirm panel', note: 'surface via CARD_TOKENS (inline)', className: 'mt-1 p-3 rounded' },
                   {
                     label: 'Confirm button',
                     className:
-                      'flex-1 h-8 rounded bg-[oklch(0.348_0.111_17)] hover:bg-[oklch(0.445_0.151_17)] active:bg-[oklch(0.295_0.082_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)] text-xs font-semibold transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25',
+                      'flex-1 h-8 rounded bg-[oklch(0.348_0.111_17)] hover:bg-[oklch(0.445_0.151_17)] active:bg-[oklch(0.295_0.082_17)] text-[oklch(0.927_0.062_17)] ring-1 ring-inset ring-[oklch(0.348_0.111_17_/_0.4)] text-xs font-semibold transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring',
                   },
                   {
                     label: 'Cancel button',
                     className:
-                      'flex-1 h-8 rounded bg-[oklch(0.302_0_0)] hover:bg-[oklch(0.388_0_0)] active:bg-[oklch(0.238_0_0)] text-white text-xs font-medium transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25',
+                      'flex-1 h-8 rounded bg-[oklch(0.302_0_0)] hover:bg-[oklch(0.388_0_0)] active:bg-[oklch(0.238_0_0)] text-white text-xs font-medium transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring',
                   },
                 ]}
               />
@@ -5330,11 +5329,11 @@ export function DetectionRow() {
                     note: 'group/copy scopes the copy reveal',
                     className: 'group/copy w-full flex flex-col items-start py-1 gap-1 min-w-0',
                   },
-                  { label: 'Label', className: 'text-xs text-zinc-400' },
+                  { label: 'Label', className: 'text-xs text-slate-10' },
                   {
                     label: 'Value',
                     note: 'tabular-nums slashed-zero (inline)',
-                    className: 'block w-fit text-xs text-zinc-200 font-sans tabular-nums break-all text-end',
+                    className: 'block w-fit text-xs text-slate-11 font-sans tabular-nums break-all text-end',
                   },
                   {
                     label: 'Fade overlay',
@@ -5378,15 +5377,15 @@ export function DetectionRow() {
                     label: 'Row',
                     note: 'row bg via CARD_TOKENS.surface.level4 (inline)',
                     className:
-                      'flex items-center gap-2 text-xs text-white hover:bg-white/[0.08] rounded px-2 py-1.5 transition-colors group/sensor relative w-full text-end',
+                      'flex items-center gap-2 text-xs text-white hover:bg-state-hover-overlay rounded px-2 py-1.5 transition-colors group/sensor relative w-full text-end',
                   },
                   {
                     label: 'Row (interactive)',
                     className:
-                      'cursor-pointer font-sans focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 active:bg-white/[0.04]',
+                      'cursor-pointer font-sans focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring active:bg-state-pressed',
                   },
                   { label: 'Timestamp', className: 'text-xs text-white font-mono tabular-nums' },
-                  { label: 'Distance', className: 'text-xs text-zinc-400 font-mono tabular-nums' },
+                  { label: 'Distance', className: 'text-xs text-slate-10 font-mono tabular-nums' },
                 ]}
               />
             </ComponentSection>
@@ -5413,11 +5412,11 @@ export function DetectionRow() {
                     note: 'bg via CARD_TOKENS.surface.level1 (inline)',
                     className: 'w-[11px] h-[11px] rounded-full shadow-[0_0_0_1px_rgba(255,255,255,0.2)] shrink-0 mt-0.5 z-[1]',
                   },
-                  { label: 'Label', className: 'text-xs text-zinc-300' },
+                  { label: 'Label', className: 'text-xs text-slate-11' },
                   { label: 'Time', className: 'text-xs text-white/50 font-mono shrink-0 tabular-nums leading-6 align-middle' },
                   {
                     label: 'Show more',
-                    className: 'w-full text-center text-xs text-white hover:text-zinc-300 transition-colors py-0.5',
+                    className: 'w-full text-center text-xs text-white hover:text-slate-11 transition-colors py-0.5',
                   },
                 ]}
               />
@@ -5445,13 +5444,13 @@ export function DetectionRow() {
                     className: 'p-3 space-y-2',
                   },
                   { label: 'Header', className: 'flex items-center gap-2' },
-                  { label: 'Title', className: 'text-xs font-bold text-zinc-300' },
+                  { label: 'Title', className: 'text-xs font-bold text-slate-11' },
                   { label: 'Outcome grid', className: 'grid grid-cols-2 gap-1.5' },
                   {
                     label: 'Outcome button',
                     note: 'surface via CARD_TOKENS.surface.level3 (inline)',
                     className:
-                      'h-auto min-h-0 w-full justify-start px-2.5 py-2 rounded text-zinc-300 transition-colors text-xs font-medium text-end gap-1.5 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 hover:bg-white/[0.08]',
+                      'h-auto min-h-0 w-full justify-start px-2.5 py-2 rounded text-slate-11 transition-colors text-xs font-medium text-end gap-1.5 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring hover:bg-state-hover-overlay',
                   },
                 ]}
               />
@@ -5476,7 +5475,7 @@ export function DetectionRow() {
                     label: 'Header (hover / selected / focus)',
                     note: 'selected bg + completed saturate/brightness are inline (CARD_TOKENS)',
                     className:
-                      'transition-colors cursor-pointer hover:bg-white/[0.08] focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none',
+                      'transition-colors cursor-pointer hover:bg-state-hover-overlay focus-visible:ring-2 focus-visible:ring-state-focus-ring focus-visible:outline-none',
                   },
                   {
                     label: 'Content reveal',
@@ -5541,7 +5540,7 @@ export function DetectionRow() {
                     label: 'Header trigger',
                     note: 'padding + selected bg via CARD_TOKENS (inline)',
                     className:
-                      'transition-colors cursor-pointer hover:bg-white/[0.08] focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none',
+                      'transition-colors cursor-pointer hover:bg-state-hover-overlay focus-visible:ring-2 focus-visible:ring-state-focus-ring focus-visible:outline-none',
                   },
                   {
                     label: 'Content',
@@ -5589,12 +5588,12 @@ export function DetectionRow() {
                   {
                     label: 'Search input',
                     className:
-                      'h-7 w-full rounded bg-white/[0.04] ps-7 pe-7 text-xs text-zinc-100 shadow-[0_0_0_1px_rgba(255,255,255,0.07)] placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sky-400/40 focus-visible:shadow-[0_0_0_1px_rgba(56,189,248,0.35)]',
+                      'h-7 w-full rounded bg-white/[0.04] ps-7 pe-7 text-xs text-slate-12 shadow-[0_0_0_1px_rgba(255,255,255,0.07)] placeholder:text-slate-9 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sky-400/40 focus-visible:shadow-[0_0_0_1px_rgba(56,189,248,0.35)]',
                   },
                   {
                     label: 'Reset button',
                     className:
-                      'inline-flex h-7 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded bg-white/[0.06] px-2 text-xs font-medium text-white transition-[background-color,transform] duration-150 hover:bg-white/[0.10] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 active:scale-[0.99]',
+                      'inline-flex h-7 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded bg-white/[0.06] px-2 text-xs font-medium text-white transition-[background-color,transform] duration-150 hover:bg-state-hover-overlay focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-state-focus-ring active:scale-[0.99]',
                   },
                   {
                     label: 'Filter row',
@@ -5605,7 +5604,7 @@ export function DetectionRow() {
                     label: 'Filter trigger',
                     note: 'active/open → bg-sky-500/[0.12]',
                     className:
-                      'inline-flex h-7 w-full cursor-pointer items-center justify-center gap-1.5 rounded px-2 text-xs font-medium text-white transition-[background-color,transform] duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 active:scale-[0.99]',
+                      'inline-flex h-7 w-full cursor-pointer items-center justify-center gap-1.5 rounded px-2 text-xs font-medium text-white transition-[background-color,transform] duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-state-focus-ring active:scale-[0.99]',
                   },
                   {
                     label: 'Popover',
@@ -5649,12 +5648,11 @@ export function DetectionRow() {
                 <div className="flex flex-col gap-6 w-full" dir="ltr">
                   <div className="flex flex-wrap items-start gap-8">
                     {[
-                      { key: 'ok', tile: DEVICE_HEALTH_VISUAL.ok.tile, iconFill: DEVICE_HEALTH_VISUAL.ok.iconFill, ping: false },
-                      { key: 'warning', tile: DEVICE_HEALTH_VISUAL.warning.tile, iconFill: DEVICE_HEALTH_VISUAL.warning.iconFill, ping: false },
-                      // error: same red as critical, but static (broken / already-known)
-                      { key: 'error', tile: DEVICE_HEALTH_VISUAL.critical.tile, iconFill: DEVICE_HEALTH_VISUAL.critical.iconFill, ping: false },
-                      { key: 'critical', tile: DEVICE_HEALTH_VISUAL.critical.tile, iconFill: DEVICE_HEALTH_VISUAL.critical.iconFill, ping: true },
-                      { key: 'offline', tile: DEVICE_HEALTH_VISUAL.offline.tile, iconFill: DEVICE_HEALTH_VISUAL.offline.iconFill, ping: false },
+                      { key: 'ok', tile: DEVICE_HEALTH_VISUAL.ok.tile, iconFill: DEVICE_HEALTH_VISUAL.ok.iconFill },
+                      { key: 'warning', tile: DEVICE_HEALTH_VISUAL.warning.tile, iconFill: DEVICE_HEALTH_VISUAL.warning.iconFill },
+                      // error is the top tier — no separate critical state
+                      { key: 'error', tile: DEVICE_HEALTH_VISUAL.error.tile, iconFill: DEVICE_HEALTH_VISUAL.error.iconFill },
+                      { key: 'offline', tile: DEVICE_HEALTH_VISUAL.offline.tile, iconFill: DEVICE_HEALTH_VISUAL.offline.iconFill },
                     ].map((s) => (
                       <div key={s.key} className="flex flex-col items-center gap-2">
                         <div
@@ -5662,9 +5660,6 @@ export function DetectionRow() {
                           data-handoff-component="device-icon"
                           data-health={s.key}
                         >
-                          {s.ping && (
-                            <span aria-hidden="true" className={`absolute inset-0 rounded ${DEVICE_HEALTH_CRITICAL_PING} animate-ping motion-reduce:hidden`} />
-                          )}
                           <CameraIcon size={20} fill={s.iconFill} />
                         </div>
                         <span className="text-xs font-mono text-n-9">{s.key}</span>
@@ -5690,10 +5685,10 @@ export function DetectionRow() {
                   <div className="grid gap-x-10 gap-y-8 lg:grid-cols-2">
                     {STYLEGUIDE_HEALTH_TIP_SCENARIOS.map((sc) => (
                       <div key={sc.label} className="flex flex-col gap-3">
-                        <div className="text-[11px] leading-snug text-n-9">{sc.label}</div>
+                        <div className="text-xs-plus leading-snug text-n-9">{sc.label}</div>
                         <div className="flex flex-wrap items-start gap-8">
                           <div className="flex flex-col gap-1.5">
-                            <span className="text-[10px] font-medium uppercase tracking-wide text-n-8">EN</span>
+                            <span className="text-2xs font-medium uppercase tracking-wide text-n-8">EN</span>
                             <StyleguideHealthTooltip
                               dir="ltr"
                               tone={sc.tone}
@@ -5705,7 +5700,7 @@ export function DetectionRow() {
                             />
                           </div>
                           <div className="flex flex-col gap-1.5">
-                            <span className="text-[10px] font-medium uppercase tracking-wide text-n-8">עברית</span>
+                            <span className="text-2xs font-medium uppercase tracking-wide text-n-8">עברית</span>
                             <StyleguideHealthTooltip
                               dir="rtl"
                               tone={sc.tone}
@@ -5888,7 +5883,7 @@ export function DetectionRow() {
                                 label: 'Group toggle (header)',
                                 note: 'summary chips while collapsed; chevron rotates -90deg collapsed',
                                 className:
-                                  'flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-start transition-colors duration-150 ease-out hover:bg-white/[0.04] active:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-white/25',
+                                  'flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-start transition-colors duration-150 ease-out hover:bg-state-hover active:bg-state-pressed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-state-focus-ring',
                               },
                               {
                                 label: 'Collapse track',
@@ -5900,7 +5895,7 @@ export function DetectionRow() {
                                 label: 'Child row (inset)',
                                 note: 'rounded; selected adds bg-white/[0.07]',
                                 className:
-                                  'group relative flex min-h-[40px] items-center gap-2.5 py-2 px-2 rounded text-end cursor-pointer transition-[background-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25 focus-visible:ring-inset',
+                                  'group relative flex min-h-[40px] items-center gap-2.5 py-2 px-2 rounded text-end cursor-pointer transition-[background-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-state-focus-ring focus-visible:ring-inset',
                               },
                             ]}
                           />
@@ -5950,16 +5945,16 @@ export function DetectionRow() {
                     label: 'Header row',
                     note: 'expanded → bg-white/[0.04]; idle → hover/active',
                     className:
-                      'flex items-center justify-center gap-2.5 px-4 py-2.5 text-end transition-[background-color,border-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25 border-b border-white/[0.06] cursor-pointer',
+                      'flex items-center justify-center gap-2.5 px-4 py-2.5 text-end transition-[background-color,border-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-state-focus-ring border-b border-white/[0.06] cursor-pointer',
                   },
                   {
                     label: 'Health tile',
-                    note: 'tint via DEVICE_HEALTH_VISUAL[health].tile; critical adds ping',
+                    note: 'tint via DEVICE_HEALTH_VISUAL[health].tile',
                     className:
                       'relative w-8 h-8 rounded flex items-center justify-center shrink-0 transition-[background-color,box-shadow] duration-150 ease-out',
                   },
                   { label: 'Name + metric', className: 'flex-1 min-w-0 text-start' },
-                  { label: 'Device name', className: 'text-sm font-medium truncate text-zinc-300 block' },
+                  { label: 'Device name', className: 'text-sm font-medium truncate text-slate-11 block' },
                   { label: 'Metric line', className: 'text-start text-xs font-mono tabular-nums text-white/50 truncate' },
                   { label: 'Primary cluster', className: 'flex shrink-0 items-center gap-0.5' },
                   { label: 'Expanded content', className: 'overflow-hidden animate-in fade-in-0 duration-200' },
@@ -5971,7 +5966,7 @@ export function DetectionRow() {
                     label: 'Action pill (DeviceAction)',
                     note: 'tone via DEVICE_ACTION_TONES[tone]; iconOnly → size-6 p-0, else px-2.5 py-1.5',
                     className:
-                      'inline-flex shrink-0 items-center justify-center gap-1.5 rounded text-xs font-medium transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25',
+                      'inline-flex shrink-0 items-center justify-center gap-1.5 rounded text-xs font-medium transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring',
                   },
                 ]}
               />
@@ -6043,7 +6038,7 @@ export function DetectionRow() {
                 <StyleguideDeviceTile label="Panel title with device count and close button.">
                   <div className="flex items-center justify-between px-4 pt-3 pb-2">
                     <h2 className="text-xs font-medium text-white uppercase tracking-wider">מכשירים (16)</h2>
-                    <button className="p-2 -m-1 rounded hover:bg-white/10 text-n-120 hover:text-n-10 transition-colors">
+                    <button className="p-2 -m-1 rounded hover:bg-state-hover-overlay text-n-120 hover:text-n-10 transition-colors">
                       <X size={14} />
                     </button>
                   </div>
@@ -6111,7 +6106,7 @@ export function DetectionRow() {
               <ExampleBlock id="devices-rows" title="Device row — collapsed states" tight>
                 <div className="space-y-4">
                   <StyleguideDeviceTile label="Normal — camera device with battery indicator.">
-                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right border-b border-white/[0.06] hover:bg-white/[0.04] cursor-grab">
+                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right border-b border-white/[0.06] hover:bg-state-hover cursor-grab">
                       <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-white/10">
                         <CameraIcon size={20} fill="white" />
                       </div>
@@ -6128,7 +6123,7 @@ export function DetectionRow() {
                   </StyleguideDeviceTile>
 
                   <StyleguideDeviceTile label="Malfunctioning — orange icon, warning triangle, connection dot.">
-                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right border-b border-white/[0.06] hover:bg-white/[0.04] cursor-pointer">
+                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right border-b border-white/[0.06] hover:bg-state-hover cursor-pointer">
                       <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-orange-900/40">
                         <SensorIcon size={20} fill="#f97316" />
                         <span className="absolute -bottom-0.5 -right-0.5 size-2 rounded-full ring-2 ring-n-1 bg-amber-400" />
@@ -6160,7 +6155,7 @@ export function DetectionRow() {
                   </StyleguideDeviceTile>
 
                   <StyleguideDeviceTile label="ECM row — jam button inline on the collapsed row.">
-                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right border-b border-white/[0.06] hover:bg-white/[0.04] cursor-pointer">
+                    <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 text-right border-b border-white/[0.06] hover:bg-state-hover cursor-pointer">
                       <div className="relative w-8 h-8 rounded flex items-center justify-center shrink-0 bg-white/10">
                         <SensorIcon size={20} fill="white" />
                       </div>
@@ -6265,11 +6260,11 @@ export function DetectionRow() {
                       ))}
                     </div>
                     <div className="flex items-center gap-2 px-2 py-1.5 border-t border-white/[0.06]">
-                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium text-white/70 bg-white/[0.06] hover:bg-white/10">
+                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium text-white/70 bg-white/[0.06] hover:bg-state-hover-overlay">
                         <MapPin size={12} />
                         מרכז במפה
                       </button>
-                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium text-white/70 bg-white/[0.06] hover:bg-white/10">
+                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium text-white/70 bg-white/[0.06] hover:bg-state-hover-overlay">
                         <BellOff size={12} />
                         השתק
                       </button>
@@ -6476,7 +6471,7 @@ export function DetectionRow() {
                         <div className="flex items-center gap-2 min-w-0 h-7 rounded bg-white/[0.05] text-white/[0.64]">
                           <button
                             type="button"
-                            className="inline-flex items-center justify-between gap-2 h-7 min-w-0 max-w-[160px] px-2 rounded text-xs font-medium text-white/[0.64] bg-transparent transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25"
+                            className="inline-flex items-center justify-between gap-2 h-7 min-w-0 max-w-[160px] px-2 rounded text-xs font-medium text-white/[0.64] bg-transparent transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-state-focus-ring"
                           >
                             <span className="truncate">אזעקת אש</span>
                             <ChevronsUpDown size={12} className="shrink-0 opacity-60" />
@@ -6583,11 +6578,11 @@ export function DetectionRow() {
                 <div className="space-y-4">
                   <StyleguideDeviceTile label="Default state — fly-to and mute buttons.">
                     <div className="flex items-center gap-2 px-2 py-1.5">
-                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90">
+                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium text-white/70 bg-white/[0.06] hover:bg-state-hover-overlay hover:text-white/90">
                         <MapPin size={12} />
                         מרכז במפה
                       </button>
-                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90">
+                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium text-white/70 bg-white/[0.06] hover:bg-state-hover-overlay hover:text-white/90">
                         <BellOff size={12} />
                         השתק
                       </button>
@@ -6596,7 +6591,7 @@ export function DetectionRow() {
 
                   <StyleguideDeviceTile label="Muted state — amber highlight on the mute button.">
                     <div className="flex items-center gap-2 px-2 py-1.5">
-                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90">
+                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium text-white/70 bg-white/[0.06] hover:bg-state-hover-overlay hover:text-white/90">
                         <MapPin size={12} />
                         מרכז במפה
                       </button>
@@ -6623,7 +6618,7 @@ export function DetectionRow() {
                       <PopoverTrigger asChild>
                         <button
                           type="button"
-                          className="inline-flex items-center justify-between gap-2 h-7 min-w-[160px] max-w-[220px] px-2 rounded text-xs font-medium text-white/[0.64] bg-white/[0.05] transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25"
+                          className="inline-flex items-center justify-between gap-2 h-7 min-w-[160px] max-w-[220px] px-2 rounded text-xs font-medium text-white/[0.64] bg-white/[0.05] transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-state-focus-ring"
                         >
                           <span className="truncate">
                             {DEFAULT_SPEAKER_TRACKS.find((t) => t.id === comboboxDemoTrack)?.label ?? 'Track'}
@@ -6690,7 +6685,7 @@ export function DetectionRow() {
                   {
                     label: 'Close button',
                     className:
-                      'p-2 -m-1 rounded hover:bg-white/10 text-zinc-500 hover:text-zinc-300 transition-[color,background-color,transform] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25',
+                      'p-2 -m-1 rounded hover:bg-state-hover-overlay text-slate-9 hover:text-slate-11 transition-[color,background-color,transform] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring',
                   },
                   { label: 'Scroll area', className: 'flex-1 overflow-y-auto' },
                   {
@@ -6698,7 +6693,7 @@ export function DetectionRow() {
                     className:
                       'px-4 py-1.5 text-xs font-normal uppercase tracking-wider text-white border-b border-white/5 bg-white/[0.08]',
                   },
-                  { label: 'Empty state', className: 'px-3 py-8 text-center text-xs text-zinc-600' },
+                  { label: 'Empty state', className: 'px-3 py-8 text-center text-xs text-slate-8' },
                 ]}
               />
             </ComponentSection>
@@ -6951,9 +6946,9 @@ export function DetectionRow() {
                         <MapMarker icon={<CarIcon color={color} />} style={style} surfaceSize={42} ringSize={34} />
                         <div className="flex flex-col items-center gap-0.5">
                           <span className="text-sm font-semibold text-n-11">{SEVERITY_LABEL[sev as Severity]}</span>
-                          <span className="font-mono text-[11px] text-n-9">{color}</span>
+                          <span className="font-mono text-xs-plus text-n-9">{color}</span>
                           {SEVERITY_PULSE[sev as Severity] && (
-                            <span className="text-[10px] uppercase tracking-wide text-n-9">pulses</span>
+                            <span className="text-2xs uppercase tracking-wide text-n-9">pulses</span>
                           )}
                         </div>
                       </div>
@@ -6976,8 +6971,8 @@ export function DetectionRow() {
                         <MapMarker icon={<UnknownIcon color={UNKNOWN_GRAY} />} style={style} surfaceSize={42} ringSize={34} />
                         <div className="flex flex-col items-center gap-0.5">
                           <span className="text-sm font-semibold text-n-11">Unclassified</span>
-                          <span className="font-mono text-[11px] text-n-9">{UNKNOWN_GRAY}</span>
-                          <span className="text-[10px] uppercase tracking-wide text-n-9">no ring</span>
+                          <span className="font-mono text-xs-plus text-n-9">{UNKNOWN_GRAY}</span>
+                          <span className="text-2xs uppercase tracking-wide text-n-9">no ring</span>
                         </div>
                       </div>
                     );
@@ -7004,7 +6999,7 @@ export function DetectionRow() {
                         className="flex flex-col items-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-4 text-center"
                       >
                         <div className="flex h-10 items-center justify-center">{el}</div>
-                        <span className="text-[11px] leading-tight text-n-9">{label}</span>
+                        <span className="text-xs-plus leading-tight text-n-9">{label}</span>
                       </div>
                     ))}
                   </div>
@@ -7084,7 +7079,7 @@ export function DetectionRow() {
                       href="/onboarding"
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-2 rounded-md bg-white/[0.08] px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-white/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+                      className="inline-flex items-center gap-2 rounded-md bg-white/[0.08] px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-white/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
                     >
                       Open /onboarding
                     </a>

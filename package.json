@@ -16,7 +16,7 @@
     "design-lint:update": "node scripts/design-lint.mjs --update",
     "lint": "eslint .",
     "lint:governance": "eslint -c eslint.governance.config.js .",
-    "design:check": "node scripts/styleguide-manifest.mjs --check && node scripts/design-lint.mjs && eslint -c eslint.governance.config.js ."
+    "design:check": "node scripts/styleguide-manifest.mjs --check && node scripts/design-lint.mjs && node scripts/accenthex-check.mjs && eslint -c eslint.governance.config.js ."
   },
   "dependencies": {
     "@central-icons-react/round-filled-radius-0-stroke-2": "^1.1.255",

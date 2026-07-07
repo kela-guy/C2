@@ -3,7 +3,7 @@ import type { ComponentSpec } from '@/specs/types';
 export const spec: ComponentSpec = {
   name: 'SplitActionButton',
   filePath: 'src/primitives/SplitActionButton.tsx',
-  purpose: 'Two-segment action button — primary action on the left with a dropdown chevron on the right for additional actions. Supports multiple color variants, sizes, loading states, and Radix dropdown menu.',
+  purpose: 'Two-segment action button — primary action with a dropdown chevron for additional actions. Composed as shadcn Button + Button size="icon" (the DropdownMenuTrigger) + DropdownMenu: both segments wear the one ui/button buttonVariants cva, and the joined shell is pure className composition. Supports multiple color variants, sizes, loading states.',
   location: 'Primitives',
   status: 'prototype',
 
@@ -122,7 +122,7 @@ export const spec: ComponentSpec = {
     colors: [
       { name: 'fill-bg', value: 'rgba(34,139,230,0.15)', usage: 'Fill variant base background' },
       { name: 'fill-text', value: '#74c0fc', usage: 'Fill variant text color' },
-      { name: 'ghost-bg', value: 'bg-zinc-800', usage: 'Ghost variant base background' },
+      { name: 'ghost-bg', value: 'bg-slate-4', usage: 'Ghost variant base background' },
       { name: 'danger-bg', value: 'oklch(0.348 0.111 17)', usage: 'Danger variant base background' },
       { name: 'danger-text', value: 'oklch(0.927 0.062 17)', usage: 'Danger variant text color' },
       { name: 'warning-bg', value: 'oklch(0.348 0.111 70)', usage: 'Warning variant base background' },
@@ -264,6 +264,7 @@ export const spec: ComponentSpec = {
   ],
 
   notes: [
+    'Both segments are real shadcn ui Buttons (primary = Button, chevron = Button size="icon" acting as the DropdownMenuTrigger), so their surfaces come from the one buttonVariants cva via the buttonTokens alias maps.',
     'The gap between segments (gap-0.5 = 2px) reveals the card surface behind, creating a visual divider without an explicit border.',
     'Label swap uses AnimatePresence with mode="popLayout" — old label exits downward, new label enters from above.',
     'stopPropagation is used on all click handlers to prevent card toggle from firing.',

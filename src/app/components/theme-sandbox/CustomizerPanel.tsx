@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ChevronDown, ChevronRight, ChevronsRight, RotateCcw } from 'lucide-react';
+import { ChevronDown, ChevronRight, ChevronsRight, RotateCcw } from '@/lib/icons/central';
 import {
   ACCENT_SWATCHES,
   BG_HUE_PRESETS,
@@ -73,13 +73,13 @@ export function CustomizerPanel({
             <ChevronsRight size={12} />
           </button>
         )}
-        <span className="flex-1 font-mono text-[11px] uppercase tracking-[0.18em] text-slate-9">
+        <span className="flex-1 font-mono text-xs-plus uppercase tracking-[0.18em] text-slate-9">
           Customizer
         </span>
         <button
           type="button"
           onClick={onReset}
-          className="flex items-center gap-1 rounded border border-border-default bg-surface-3 px-2 py-1 text-[10px] font-medium text-slate-11 transition-colors hover:border-border-strong hover:text-slate-12"
+          className="flex items-center gap-1 rounded border border-border-default bg-surface-3 px-2 py-1 text-2xs font-medium text-slate-11 transition-colors hover:border-border-strong hover:text-slate-12"
           title="Reset to production defaults"
         >
           <RotateCcw size={11} />
@@ -172,7 +172,7 @@ function BackgroundSection({
               type="button"
               onClick={() => onChange({ ...config, bgHue: p.hue })}
               className={
-                'flex items-center gap-1.5 rounded border px-2 py-1 text-[10px] font-medium transition-colors ' +
+                'flex items-center gap-1.5 rounded border px-2 py-1 text-2xs font-medium transition-colors ' +
                 (active
                   ? 'border-primary bg-primary-tint text-slate-12'
                   : 'border-border-subtle bg-surface-2 text-slate-11 hover:border-border-strong hover:text-slate-12')
@@ -357,7 +357,7 @@ function HexInput({
 
   return (
     <label className="flex items-center justify-between gap-2 pt-1">
-      <span className="text-[10px] uppercase tracking-[0.14em] text-slate-10">
+      <span className="text-2xs uppercase tracking-[0.14em] text-slate-10">
         Hex
       </span>
       <input
@@ -385,7 +385,7 @@ function HexInput({
         aria-label="Hex color"
         aria-invalid={invalid || undefined}
         className={
-          'w-28 rounded border bg-surface-2 px-2 py-1 text-right font-mono text-[11px] uppercase tracking-wider text-slate-12 outline-none transition-colors ' +
+          'w-28 rounded border bg-surface-2 px-2 py-1 text-right font-mono text-xs-plus uppercase tracking-wider text-slate-12 outline-none transition-colors ' +
           (invalid
             ? 'border-accent-danger focus:border-accent-danger'
             : 'border-border-subtle focus:border-primary')
@@ -476,12 +476,12 @@ function ImportPaletteSection({
           ) : (
             <ChevronRight size={12} className="text-slate-10" />
           )}
-          <span className="text-[13px] font-semibold text-slate-12">
+          <span className="text-sm-minus font-semibold text-slate-12">
             Import palette
           </span>
         </div>
         {active && (
-          <span className="rounded-full bg-primary-tint px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.14em] text-slate-12">
+          <span className="rounded-full bg-primary-tint px-1.5 py-0.5 font-mono text-3xs uppercase tracking-[0.14em] text-slate-12">
             Applied
           </span>
         )}
@@ -489,7 +489,7 @@ function ImportPaletteSection({
 
       {open && (
         <>
-          <p className="text-[11px] text-slate-10">
+          <p className="text-xs-plus text-slate-10">
             Paste a tweakcn / shadcn theme CSS block. Font, radius, shadow
             and tracking values are ignored — only colors are layered over
             the platform. The block matching the current mode ({mode}) is
@@ -500,13 +500,13 @@ function ImportPaletteSection({
             onChange={(e) => setText(e.target.value)}
             spellCheck={false}
             placeholder={`:root {\n  --background: oklch(...);\n  --primary: oklch(...);\n  ...\n}\n\n.dark {\n  --background: oklch(...);\n  ...\n}`}
-            className="min-h-[10rem] w-full resize-y rounded border border-border-subtle bg-surface-2 p-2 font-mono text-[10px] leading-relaxed text-slate-11 outline-none focus:border-primary"
+            className="min-h-[10rem] w-full resize-y rounded border border-border-subtle bg-surface-2 p-2 font-mono text-2xs leading-relaxed text-slate-11 outline-none focus:border-primary"
           />
           <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={handleApply}
-              className="flex-1 rounded border border-border-default bg-surface-4 px-2 py-1 text-[11px] font-medium text-slate-12 transition-colors hover:border-border-strong"
+              className="flex-1 rounded border border-border-default bg-surface-4 px-2 py-1 text-xs-plus font-medium text-slate-12 transition-colors hover:border-border-strong"
             >
               Apply
             </button>
@@ -514,18 +514,18 @@ function ImportPaletteSection({
               type="button"
               onClick={handleClear}
               disabled={!active}
-              className="rounded border border-border-default bg-surface-3 px-2 py-1 text-[11px] font-medium text-slate-11 transition-colors hover:border-border-strong hover:text-slate-12 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded border border-border-default bg-surface-3 px-2 py-1 text-xs-plus font-medium text-slate-11 transition-colors hover:border-border-strong hover:text-slate-12 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Clear
             </button>
           </div>
           {status.kind === 'ok' && (
-            <div className="rounded bg-accent-success-tint px-2 py-1 text-[10px] text-accent-success">
+            <div className="rounded bg-accent-success-tint px-2 py-1 text-2xs text-accent-success">
               Applied — {status.count} tokens layered over the platform.
             </div>
           )}
           {status.kind === 'error' && (
-            <div className="rounded bg-accent-danger-tint px-2 py-1 text-[10px] text-accent-danger">
+            <div className="rounded bg-accent-danger-tint px-2 py-1 text-2xs text-accent-danger">
               {status.message}
             </div>
           )}
@@ -550,8 +550,8 @@ function SectionHeader({
     <div className="flex items-start gap-2">
       {swatch}
       <div className="flex-1">
-        <div className="text-[13px] font-semibold text-slate-12">{title}</div>
-        <div className="text-[11px] text-slate-10">{hint}</div>
+        <div className="text-sm-minus font-semibold text-slate-12">{title}</div>
+        <div className="text-xs-plus text-slate-10">{hint}</div>
       </div>
     </div>
   );
@@ -585,7 +585,7 @@ function SliderRow({
 }) {
   return (
     <label className="flex flex-col gap-1">
-      <div className="flex items-center justify-between text-[10px]">
+      <div className="flex items-center justify-between text-2xs">
         <span className="uppercase tracking-[0.14em] text-slate-10">{label}</span>
         <span className="font-mono text-slate-11">{format(value)}</span>
       </div>

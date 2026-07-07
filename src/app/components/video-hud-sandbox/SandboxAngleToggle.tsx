@@ -92,7 +92,7 @@ export function SandboxAngleToggle({
     >
       <motion.span
         aria-hidden
-        className="absolute left-0.5 top-0.5 flex h-[30px] items-center justify-center rounded-full bg-state-selected font-sans text-[12px] font-semibold tabular-nums text-slate-12"
+        className="absolute left-0.5 top-0.5 flex h-[30px] items-center justify-center rounded-full bg-state-selected font-sans text-xs font-semibold tabular-nums text-slate-12"
         style={{ width: SEG }}
         animate={{ x: idx * SEG }}
         whileTap={disabled ? undefined : { scale: 0.94 }}
@@ -114,7 +114,7 @@ export function SandboxAngleToggle({
                 onClick={() => onChange(a)}
                 style={{ width: SEG }}
                 className={cn(
-                  'relative z-10 flex h-7 items-center justify-center rounded-full font-sans text-[12px] font-semibold tabular-nums transition-colors duration-150',
+                  'relative z-10 flex h-7 items-center justify-center rounded-full font-sans text-xs font-semibold tabular-nums transition-colors duration-150',
                   FOCUS_RING,
                   active ? 'text-transparent' : 'text-slate-12/45 hover:text-slate-12/70',
                 )}

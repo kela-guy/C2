@@ -20,12 +20,14 @@
  */
 
 import { useState, type ReactNode } from 'react';
-import IconCirclePlus from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconCirclePlus';
-import IconCircleCheck from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconCircleCheck';
-import IconCircleMinus from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconCircleMinus';
-import IconEyeOpen from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconEyeOpen';
-import IconEyeClosed from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconEyeClosed';
-import { PinFilled } from '@/lib/icons/central';
+import {
+  CirclePlusFilled as IconCirclePlus,
+  CircleCheckFilled as IconCircleCheck,
+  CircleMinusFilled as IconCircleMinus,
+  EyeFilled as IconEyeOpen,
+  EyeOffFilled as IconEyeClosed,
+  PinFilled,
+} from '@/lib/icons/central';
 import { cn } from '../../ui/utils';
 import { WatchStreamIcon } from '../../devices-panel/icons';
 
@@ -34,9 +36,9 @@ function Group({ title, note, children }: { title: string; note?: string; childr
     <div className="flex flex-col gap-3">
       <div>
         <div className="text-xs font-medium text-white/80">{title}</div>
-        {note && <div className="mt-0.5 text-[11px] leading-snug text-white/40">{note}</div>}
+        {note && <div className="mt-0.5 text-xs-plus leading-snug text-white/40">{note}</div>}
       </div>
-      <div className="flex flex-wrap items-center gap-x-10 gap-y-6 rounded-md border border-white/[0.06] bg-[#141414] p-4">
+      <div className="flex flex-wrap items-center gap-x-10 gap-y-6 rounded-md border border-white/[0.06] bg-surface-2 p-4">
         {children}
       </div>
     </div>
@@ -47,7 +49,7 @@ function Cell({ caption, children }: { caption: string; children: ReactNode }) {
   return (
     <div className="flex flex-col items-start gap-2">
       {children}
-      <span className="text-[10px] leading-tight text-white/45">{caption}</span>
+      <span className="text-2xs leading-tight text-white/45">{caption}</span>
     </div>
   );
 }
@@ -90,11 +92,11 @@ function FeedPinButton({ copy, inFeed, onToggle, disabled }: FeedPinButtonProps)
         'inline-flex shrink-0 items-center justify-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium',
         'min-w-[7.5rem]',
         'transition-[background-color,color,transform] duration-150 ease-out',
-        'active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25',
+        'active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring',
         'disabled:cursor-not-allowed disabled:opacity-50',
         inFeed
           ? 'text-white bg-white/15 hover:bg-white/20'
-          : 'text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90',
+          : 'text-white/70 bg-white/[0.06] hover:bg-state-hover-overlay hover:text-white/90',
       )}
     >
       {icon}

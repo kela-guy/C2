@@ -91,7 +91,7 @@ export function DeviceConnectivityBadge({
           <TooltipTrigger asChild>
             <div
               style={glassStyle(bgOpacity, blurPx)}
-              className="pointer-events-auto inline-flex h-8 items-center gap-1.5 rounded-full border border-border-default/45 px-2.5 text-[11px] text-slate-12"
+              className="pointer-events-auto inline-flex h-8 items-center gap-1.5 rounded-full border border-border-default/45 px-2.5 text-xs-plus text-slate-12"
             >
               <SourceChip source={source} manual={manual} />
               <span className="sr-only">{ariaText}</span>

@@ -52,10 +52,10 @@ export function StyleguideHeader({
             onClick={() => setDirection('rtl')}
             aria-pressed={direction === 'rtl'}
             title="Switch to Right-to-Left (Hebrew)"
-            className={`px-2 py-1 rounded-sm transition-[color,background-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
+            className={`px-2 py-1 rounded-sm transition-[color,background-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring ${
               direction === 'rtl'
                 ? 'bg-white/10 text-n-11'
-                : 'text-n-8 hover:text-n-10 hover:bg-white/[0.04]'
+                : 'text-n-8 hover:text-n-10 hover:bg-state-hover'
             }`}
           >
             עב
@@ -65,10 +65,10 @@ export function StyleguideHeader({
             onClick={() => setDirection('ltr')}
             aria-pressed={direction === 'ltr'}
             title="Switch to Left-to-Right (English)"
-            className={`px-2 py-1 rounded-sm transition-[color,background-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
+            className={`px-2 py-1 rounded-sm transition-[color,background-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring ${
               direction === 'ltr'
                 ? 'bg-white/10 text-n-11'
-                : 'text-n-8 hover:text-n-10 hover:bg-white/[0.04]'
+                : 'text-n-8 hover:text-n-10 hover:bg-state-hover'
             }`}
           >
             EN
@@ -78,7 +78,7 @@ export function StyleguideHeader({
         <button
           type="button"
           onClick={onSearchOpen}
-          className="flex items-center gap-2 rounded-md border border-white/[0.06] bg-white/[0.02] px-3 py-1.5 text-sm text-n-8 cursor-pointer transition-[border-color,background-color] duration-150 ease-out hover:bg-white/[0.04] hover:border-white/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+          className="flex items-center gap-2 rounded-md border border-white/[0.06] bg-white/[0.02] px-3 py-1.5 text-sm text-n-8 cursor-pointer transition-[border-color,background-color] duration-150 ease-out hover:bg-state-hover hover:border-white/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
         >
           <Search size={14} />
           <kbd className="text-xs font-mono text-n-7 bg-white/[0.06] rounded px-1.5 py-0.5">
@@ -88,7 +88,7 @@ export function StyleguideHeader({
 
         <a
           href="/"
-          className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-n-8 cursor-pointer transition-[color] duration-150 ease-out hover:text-n-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+          className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-n-8 cursor-pointer transition-[color] duration-150 ease-out hover:text-n-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
         >
           <span>App</span>
           <ExternalLink size={13} />

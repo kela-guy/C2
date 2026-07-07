@@ -157,7 +157,7 @@ export default function IconLibrary() {
               type="button"
               onClick={() => setQuery('')}
               aria-label="Clear search"
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-n-120 hover:text-n-11 hover:bg-white/[0.08] transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-n-120 hover:text-n-11 hover:bg-state-hover-overlay transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
             >
               <X size={12} />
             </button>
@@ -176,10 +176,10 @@ export default function IconLibrary() {
                   role="radio"
                   aria-checked={active}
                   onClick={() => setPreviewSize(size)}
-                  className={`px-2.5 py-1 text-xs font-mono rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25
+                  className={`px-2.5 py-1 text-xs font-mono rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring
                     ${active
-                      ? 'bg-white/[0.10] text-n-12 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]'
-                      : 'bg-white/[0.02] text-n-10 hover:bg-white/[0.06]'}`}
+                      ? 'bg-state-selected text-n-12 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]'
+                      : 'bg-white/[0.02] text-n-10 hover:bg-state-hover-strong'}`}
                 >
                   {size}
                 </button>
@@ -198,10 +198,10 @@ export default function IconLibrary() {
                   role="radio"
                   aria-checked={active}
                   onClick={() => setRenderMode(value)}
-                  className={`px-2.5 py-1 text-xs rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25
+                  className={`px-2.5 py-1 text-xs rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring
                     ${active
-                      ? 'bg-white/[0.10] text-n-12 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]'
-                      : 'bg-white/[0.02] text-n-10 hover:bg-white/[0.06]'}`}
+                      ? 'bg-state-selected text-n-12 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]'
+                      : 'bg-white/[0.02] text-n-10 hover:bg-state-hover-strong'}`}
                 >
                   {label}
                 </button>
@@ -220,10 +220,10 @@ export default function IconLibrary() {
               type="button"
               onClick={() => setFilter(f)}
               aria-pressed={active}
-              className={`px-2.5 py-1 text-xs rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25
+              className={`px-2.5 py-1 text-xs rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring
                 ${active
-                  ? 'bg-white/[0.10] text-n-12 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]'
-                  : 'bg-white/[0.02] text-n-10 hover:bg-white/[0.06]'}`}
+                  ? 'bg-state-selected text-n-12 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]'
+                  : 'bg-white/[0.02] text-n-10 hover:bg-state-hover-strong'}`}
             >
               {FILTER_LABELS[f]}
               <span className="ml-1.5 text-xs text-n-120">{counts[f]}</span>
@@ -311,10 +311,10 @@ const IconTile = memo(function IconTile({ entry, size, renderMode, selected, onS
           onClick={() => onSelect(entry.id)}
           aria-pressed={selected}
           title={entry.name}
-          className={`group flex flex-col items-center justify-between gap-2 aspect-[1/1] rounded-lg p-2 text-n-10 transition-[color,background-color,box-shadow] duration-150 ease-out cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25
+          className={`group flex flex-col items-center justify-between gap-2 aspect-[1/1] rounded-lg p-2 text-n-10 transition-[color,background-color,box-shadow] duration-150 ease-out cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring
             ${selected
               ? 'bg-white/[0.08] text-n-12 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.18)]'
-              : 'bg-white/[0.02] hover:bg-white/[0.05] hover:text-n-11 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]'}`}
+              : 'bg-white/[0.02] hover:bg-state-hover hover:text-n-11 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]'}`}
         >
           <div className="flex-1 flex items-center justify-center w-full text-white">
             {Component ? (
@@ -371,7 +371,7 @@ function EmptyState({ onReset }: EmptyStateProps) {
       <button
         type="button"
         onClick={onReset}
-        className="px-3 py-1.5 text-xs font-medium text-n-12 bg-white/[0.06] hover:bg-white/[0.10] rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+        className="px-3 py-1.5 text-xs font-medium text-n-12 bg-white/[0.06] hover:bg-state-hover-overlay rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
       >
         Reset filters
       </button>

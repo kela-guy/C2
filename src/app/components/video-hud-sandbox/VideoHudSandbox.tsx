@@ -261,10 +261,10 @@ export default function VideoHudSandbox() {
 
   return (
     <div className="min-h-screen w-full bg-surface-1 text-slate-12 flex flex-col">
-      <header className="flex flex-wrap items-center gap-3 border-b border-border-subtle px-4 py-2.5 text-[12px] shrink-0">
+      <header className="flex flex-wrap items-center gap-3 border-b border-border-subtle px-4 py-2.5 text-xs shrink-0">
         <a
           href="/demo"
-          className="rounded border border-border-default bg-surface-2 px-2 py-1 text-[11px] font-medium text-slate-11 transition-colors hover:border-border-strong hover:text-slate-12"
+          className="rounded border border-border-default bg-surface-2 px-2 py-1 text-xs-plus font-medium text-slate-11 transition-colors hover:border-border-strong hover:text-slate-12"
         >
           Open Demo →
         </a>
@@ -319,14 +319,14 @@ export default function VideoHudSandbox() {
           <button
             type="button"
             onClick={handlePulse}
-            className="bg-surface-2 border border-border-default rounded px-2 py-1 text-[11px] text-slate-11 hover:border-border-strong"
+            className="bg-surface-2 border border-border-default rounded px-2 py-1 text-xs-plus text-slate-11 hover:border-border-strong"
           >
             Pulse
           </button>
           <select
             value={assetType}
             onChange={(e) => handleAssetTypeChange(e.target.value as SandboxAssetType)}
-            className="bg-surface-2 border border-border-default rounded px-2 py-1 text-[11px] text-slate-11"
+            className="bg-surface-2 border border-border-default rounded px-2 py-1 text-xs-plus text-slate-11"
             aria-label="Asset type"
           >
             {ASSET_OPTIONS.map((o) => (
@@ -340,7 +340,7 @@ export default function VideoHudSandbox() {
             onBearingChange={setCommandedBearingDeg}
           />
           <label className="flex items-center gap-2 rounded-md border border-border-default bg-surface-2 px-2 py-1">
-            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-9">
+            <span className="font-mono text-2xs uppercase tracking-[0.18em] text-slate-9">
               DEP
             </span>
             <input
@@ -353,12 +353,12 @@ export default function VideoHudSandbox() {
               aria-label="Depression"
               className="h-1 w-28 cursor-pointer appearance-none rounded-full bg-state-hover-strong accent-accent-info [&::-webkit-slider-thumb]:size-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-slate-12"
             />
-            <span className="min-w-[4ch] text-end font-mono text-[11px] tabular-nums text-slate-12">
+            <span className="min-w-[4ch] text-end font-mono text-xs-plus tabular-nums text-slate-12">
               {Math.round(currentPitchDeg)}°
             </span>
           </label>
           <label className="flex items-center gap-2 rounded-md border border-border-default bg-surface-2 px-2 py-1">
-            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-9">
+            <span className="font-mono text-2xs uppercase tracking-[0.18em] text-slate-9">
               BG
             </span>
             <input
@@ -371,12 +371,12 @@ export default function VideoHudSandbox() {
               aria-label="HUD chip background opacity"
               className="h-1 w-24 cursor-pointer appearance-none rounded-full bg-state-hover-strong accent-accent-info [&::-webkit-slider-thumb]:size-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-slate-12"
             />
-            <span className="min-w-[4ch] text-end font-mono text-[11px] tabular-nums text-slate-12">
+            <span className="min-w-[4ch] text-end font-mono text-xs-plus tabular-nums text-slate-12">
               {Math.round(pillBgOpacity * 100)}%
             </span>
           </label>
           <label className="flex items-center gap-2 rounded-md border border-border-default bg-surface-2 px-2 py-1">
-            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-9">
+            <span className="font-mono text-2xs uppercase tracking-[0.18em] text-slate-9">
               BLUR
             </span>
             <input
@@ -389,7 +389,7 @@ export default function VideoHudSandbox() {
               aria-label="HUD chip backdrop blur"
               className="h-1 w-24 cursor-pointer appearance-none rounded-full bg-state-hover-strong accent-accent-info [&::-webkit-slider-thumb]:size-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-slate-12"
             />
-            <span className="min-w-[4ch] text-end font-mono text-[11px] tabular-nums text-slate-12">
+            <span className="min-w-[4ch] text-end font-mono text-xs-plus tabular-nums text-slate-12">
               {pillBlurPx}px
             </span>
           </label>

@@ -3,7 +3,7 @@ import type { ComponentSpec } from '@/specs/types';
 export const spec: ComponentSpec = {
   name: 'NewUpdatesPill',
   filePath: 'src/primitives/NewUpdatesPill.tsx',
-  purpose: 'Floating pill button that appears when new detections arrive — shows count, entity type icons, and scrolls the list to top on click.',
+  purpose: 'Floating pill button that appears when new detections arrive — the shadcn ui/badge Badge rendered asChild onto a real button, showing the count and scrolling the list to top on click.',
   location: 'Primitives',
   status: 'prototype',
 

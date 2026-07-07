@@ -272,10 +272,10 @@ function IconSlot({
       tabIndex={reachable && !blocked ? 0 : -1}
       disabled={blocked}
       onClick={onClick}
-      className={`grid h-6 w-6 shrink-0 place-items-center rounded-[2px] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-white/40 disabled:cursor-not-allowed disabled:opacity-40 ${
+      className={`grid h-6 w-6 shrink-0 place-items-center rounded-[2px] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-state-focus-ring disabled:cursor-not-allowed disabled:opacity-40 ${
         active
           ? 'bg-white/[0.08] text-white'
-          : 'text-[#949494] hover:bg-white/[0.08] hover:text-white'
+          : 'text-[#949494] hover:bg-state-hover-overlay hover:text-white'
       }`}
     >
       <tool.Icon size={16} />
@@ -287,7 +287,7 @@ function IconSlot({
   return (
     <Tooltip>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
-      <TooltipContent side="bottom" sideOffset={6} className="text-[11px]">
+      <TooltipContent side="bottom" sideOffset={6} className="text-xs-plus">
         {tooltip}
       </TooltipContent>
     </Tooltip>

@@ -3,7 +3,7 @@ import type { ComponentSpec } from '@/specs/types';
 export const spec: ComponentSpec = {
   name: 'Button',
   filePath: 'src/primitives/Button.tsx',
-  purpose: 'The base button primitive — the "father" of the button family. Owns the shared variant + size token system, the full state set, focus ring, press feedback, loading swap, and the animated icon+label. ActionButton, CameraToggleButton, and SplitActionButton are presets/composites built on top of it.',
+  purpose: 'The base button primitive — the "father" of the button family. A thin composition over the shadcn ui/button: the buttonVariants cva owns every surface + size treatment (buttonTokens.ts only aliases fill/ghost/outline/danger/warning and sm/md/lg onto it), while this layer adds the full state set, loading swap, and the animated icon+label. ActionButton and SplitActionButton are presets/composites built on top of it.',
   location: 'Primitives',
   status: 'prototype',
 
@@ -76,8 +76,8 @@ export const spec: ComponentSpec = {
   tasks: [],
 
   notes: [
-    'Promoted from the former ActionButton — the canonical base of the button family. Variant + size tokens live in buttonTokens.ts.',
-    'ActionButton is a back-compat preset (dataHandoff="action-button"); CameraToggleButton wraps Button; SplitActionButton shares its tokens.',
+    'Promoted from the former ActionButton — the canonical base of the button family. Renders the shadcn ui/button; buttonTokens.ts maps the domain variant/size vocabulary onto the buttonVariants cva (fill→default, ghost→secondary, outline→outline, danger→destructive, warning→warning; sm→sm, md→default, lg→lg).',
+    'ActionButton is a back-compat preset (dataHandoff="action-button"); SplitActionButton composes ui Buttons directly; CameraToggleButton wears the same cva over the shadcn Toggle.',
     'asChild (Radix Slot) renders the styling onto a child element for links/polymorphism — the child owns its content, so the animated icon+label is not used in that mode.',
   ],
 };

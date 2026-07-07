@@ -366,13 +366,13 @@ export function OnboardingFlow() {
             animate={{ opacity: 1, y: 0 }}
             exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="absolute bottom-6 start-1/2 z-30 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-white/10 bg-zinc-900/95 px-3.5 py-2 text-[12px] text-zinc-200 shadow-[0_8px_24px_rgba(0,0,0,0.5)] backdrop-blur-sm rtl:translate-x-1/2"
+            className="absolute bottom-6 start-1/2 z-30 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-white/10 bg-slate-2/95 px-3.5 py-2 text-xs text-slate-11 shadow-[0_8px_24px_rgba(0,0,0,0.5)] backdrop-blur-sm rtl:translate-x-1/2"
           >
             <span>{snack.message}</span>
             <button
               type="button"
               onClick={handleUndo}
-              className="rounded px-1.5 py-0.5 text-[12px] font-semibold text-cyan-300 transition-colors hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+              className="rounded px-1.5 py-0.5 text-xs font-semibold text-cyan-300 transition-colors hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
             >
               {t.onboarding.toast.undo}
             </button>

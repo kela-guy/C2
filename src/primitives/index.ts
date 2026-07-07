@@ -12,6 +12,15 @@ export {
   type Severity,
 } from './urgency';
 export { StatusChip, STATUS_CHIP_COLORS, type StatusChipColor } from './StatusChip';
+export {
+  StatusDot,
+  HealthBadge,
+  HEALTH_DOT_CLASS,
+  HEALTH_BADGE_CLASS,
+  HEALTH_TEXT_CLASS,
+  HEALTH_RING_CLASS,
+  type HealthTone,
+} from './HealthStatus';
 export { ActivityTimestampChip, type ActivityTimestampChipProps } from './ActivityTimestampChip';
 export { Button, BUTTON_VARIANTS, BUTTON_SIZES, type ButtonProps, type ButtonVariant, type ButtonSize } from './Button';
 export { ActionButton, ACTION_BUTTON_VARIANTS, ACTION_BUTTON_SIZES, type ActionButtonProps, type ActionButtonVariant, type ActionButtonSize } from './ActionButton';
@@ -70,12 +79,18 @@ export {
   type InteractionState,
   type MarkerStyle,
   type TargetMarkerInteraction,
+  type AssetHealth,
+  type AssetMarkerInteraction,
   INTERACTION_STATES,
   AFFILIATIONS,
   INTERACTION_STATE_LABELS,
   AFFILIATION_LABELS,
   AFFILIATION_PALETTES,
+  ASSET_HEALTHS,
+  ASSET_HEALTH_LABELS,
+  ASSET_HEALTH_RING_COLOR,
   resolveMarkerStyle,
   resolveTargetMarkerStyle,
+  resolveAssetMarkerStyle,
   headingToCompass,
 } from './markerStyles';

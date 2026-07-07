@@ -17,18 +17,18 @@
 
 import { memo, useMemo, useState } from 'react';
 import { ChevronDownFilled } from '@/lib/icons/central';
+import { HEALTH_BADGE_CLASS, HEALTH_DOT_CLASS } from '@/primitives/HealthStatus';
 import { getDeviceHealth, type DeviceHealth } from './deviceHealth';
 import { DEFAULT_CONNECTION_STATE_LABELS } from './constants';
 import { DeviceChildRow } from './DeviceChildRow';
 import type { ConnectionState, Device, DevicesPanelStrings } from './types';
 
-/** Severity dot + badge tone, mirroring `DeviceChildRow`'s `HEALTH_TONE`. */
+/** Severity dot + badge tone from the shared HealthStatus vocabulary. */
 const HEALTH_TONE: Record<DeviceHealth, { dot: string; badge: string }> = {
-  critical: { dot: 'bg-red-400', badge: 'bg-red-500/20 text-red-300' },
-  error: { dot: 'bg-red-400', badge: 'bg-red-500/20 text-red-300' },
-  warning: { dot: 'bg-amber-400', badge: 'bg-amber-500/20 text-amber-300' },
-  offline: { dot: 'bg-zinc-500', badge: 'bg-white/10 text-zinc-300' },
-  ok: { dot: 'bg-emerald-400', badge: 'bg-emerald-500/15 text-emerald-300' },
+  error: { dot: HEALTH_DOT_CLASS.error, badge: HEALTH_BADGE_CLASS.error },
+  warning: { dot: HEALTH_DOT_CLASS.warning, badge: HEALTH_BADGE_CLASS.warning },
+  offline: { dot: HEALTH_DOT_CLASS.offline, badge: HEALTH_BADGE_CLASS.offline },
+  ok: { dot: HEALTH_DOT_CLASS.ok, badge: HEALTH_BADGE_CLASS.ok },
 };
 
 /**
@@ -36,11 +36,10 @@ const HEALTH_TONE: Record<DeviceHealth, { dot: string; badge: string }> = {
  * omitted: the all-healthy state is the default, so a green "N ok" chip is
  * noise — the header only surfaces buckets that need attention.
  */
-const SUMMARY_ORDER: DeviceHealth[] = ['critical', 'error', 'warning', 'offline'];
+const SUMMARY_ORDER: DeviceHealth[] = ['error', 'warning', 'offline'];
 
 function healthLabel(health: DeviceHealth, strings: DevicesPanelStrings): string {
   return {
-    critical: strings.healthCritical,
     error: strings.healthError,
     warning: strings.healthWarning,
     offline: strings.healthOffline,
@@ -94,12 +93,12 @@ export const DeviceChildGroup = memo(function DeviceChildGroup({
           type="button"
           aria-expanded={open}
           onClick={() => setOpen((v) => !v)}
-          className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-start transition-colors duration-150 ease-out hover:bg-white/[0.04] active:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-white/25"
+          className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-start transition-colors duration-150 ease-out hover:bg-state-hover active:bg-state-pressed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-state-focus-ring"
         >
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-white/55">
+          <span className="text-xs-plus font-semibold uppercase tracking-wide text-white/55">
             {strings.sensorsGroupLabel}
           </span>
-          <span className="text-[11px] tabular-nums text-white/35">{children.length}</span>
+          <span className="text-xs-plus tabular-nums text-white/35">{children.length}</span>
           <span className="ms-auto flex items-center gap-1.5">
             {/* Summary chips carry the at-a-glance state while collapsed; once
                 open the rows below carry the detail, so the chips retire. */}
@@ -108,7 +107,7 @@ export const DeviceChildGroup = memo(function DeviceChildGroup({
                 {summaryChips.map(({ health, count }) => (
                   <span
                     key={health}
-                    className={`inline-flex h-4 items-center rounded-[2px] px-1.5 text-[10px] font-medium leading-4 tabular-nums ${HEALTH_TONE[health].badge}`}
+                    className={`inline-flex h-4 items-center rounded-[2px] px-1.5 text-2xs font-medium leading-4 tabular-nums ${HEALTH_TONE[health].badge}`}
                   >
                     {count} {healthLabel(health, strings)}
                   </span>

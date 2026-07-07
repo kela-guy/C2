@@ -49,7 +49,7 @@ function ThreatFindings({ zones }: { zones: ThreatZone[] }) {
   const axisFromZoneId = (id: string) => id.replace(/^zone-/, '');
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-1.5 text-[11px] font-medium text-red-300">
+      <div className="flex items-center gap-1.5 text-xs-plus font-medium text-red-300">
         <WarningTriangle size={13} className="shrink-0" aria-hidden="true" />
         <span>{t.onboarding.threats.found(zones.length)}</span>
       </div>
@@ -60,7 +60,7 @@ function ThreatFindings({ zones }: { zones: ThreatZone[] }) {
           return (
             <li
               key={z.id}
-              className="flex items-center gap-2 rounded-md bg-white/[0.04] px-2.5 py-1.5 text-[11px] text-zinc-300"
+              className="flex items-center gap-2 rounded-md bg-white/[0.04] px-2.5 py-1.5 text-xs-plus text-slate-11"
             >
               <span
                 className={cn(
@@ -69,8 +69,8 @@ function ThreatFindings({ zones }: { zones: ThreatZone[] }) {
                 )}
                 aria-hidden="true"
               />
-              <span className="font-medium text-zinc-200">{axisLabels[key] ?? key}</span>
-              <span className="ms-auto text-zinc-500">
+              <span className="font-medium text-slate-11">{axisLabels[key] ?? key}</span>
+              <span className="ms-auto text-slate-9">
                 {high ? t.onboarding.threats.riskHigh : t.onboarding.threats.riskMedium}
               </span>
             </li>
@@ -152,7 +152,7 @@ export function OnboardingPanel(props: OnboardingPanelProps) {
           <div className="truncate text-xs font-semibold uppercase tracking-wider text-white">
             {t.onboarding.title}
           </div>
-          <div className="truncate text-[11px] text-zinc-500">{t.onboarding.subtitle}</div>
+          <div className="truncate text-xs-plus text-slate-9">{t.onboarding.subtitle}</div>
         </div>
       }
       headerExtra={<StepDots step={step} />}
@@ -166,14 +166,14 @@ export function OnboardingPanel(props: OnboardingPanelProps) {
         transition={{ duration: 0.28, ease: 'easeOut' }}
         className="flex flex-col gap-1.5"
       >
-        <h2 className="text-sm font-semibold text-zinc-100">{stepCopy.title}</h2>
-        <p className="text-[11px] leading-relaxed text-zinc-400">{stepCopy.body}</p>
+        <h2 className="text-sm font-semibold text-slate-12">{stepCopy.title}</h2>
+        <p className="text-xs-plus leading-relaxed text-slate-10">{stepCopy.body}</p>
       </motion.div>
 
       {isScanning && (
         <div className="flex items-center gap-3 rounded-lg bg-white/[0.04] px-3 py-3">
           <AppLoader size={28} label={t.onboarding.scan.status} className="text-white/85" />
-          <span className="text-[11px] font-medium text-zinc-300">{t.onboarding.scan.status}</span>
+          <span className="text-xs-plus font-medium text-slate-11">{t.onboarding.scan.status}</span>
         </div>
       )}
 
@@ -190,7 +190,7 @@ export function OnboardingPanel(props: OnboardingPanelProps) {
             <button
               type="button"
               onClick={props.onReset}
-              className="inline-flex items-center gap-1.5 self-start rounded text-[11px] font-medium text-zinc-500 transition-colors hover:text-zinc-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+              className="inline-flex items-center gap-1.5 self-start rounded text-xs-plus font-medium text-slate-9 transition-colors hover:text-slate-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
             >
               <RotateCcwFilled size={12} aria-hidden="true" />
               {t.onboarding.cta.reset}

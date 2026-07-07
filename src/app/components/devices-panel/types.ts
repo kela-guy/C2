@@ -204,7 +204,6 @@ export interface DevicesPanelStrings {
   errorCopy: string;
   errorCopied: string;
   /** Worst-wins severity titles shown in the health-tile tooltip. */
-  healthCritical: string;
   healthError: string;
   healthWarning: string;
   healthOffline: string;

@@ -72,7 +72,7 @@ export const spec: ComponentSpec = {
       { name: 'value-text', value: 'zinc-200', usage: 'Value text color' },
     ],
     typography: [
-      { name: 'label', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '400', lineHeight: '1.4', usage: 'Label text (text-xs text-zinc-400)' },
+      { name: 'label', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '400', lineHeight: '1.4', usage: 'Label text (text-xs text-slate-10)' },
       { name: 'value', fontFamily: 'mono', fontSize: '14px', fontWeight: '400', lineHeight: '1.4', usage: 'Value text (text-sm font-mono tabular-nums)' },
     ],
     spacing: [

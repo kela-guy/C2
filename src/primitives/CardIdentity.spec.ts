@@ -106,8 +106,8 @@ export const spec: ComponentSpec = {
 
   tokens: {
     colors: [
-      { name: 'label', value: 'text-zinc-400 (#a1a1aa)', usage: 'Row label color' },
-      { name: 'value', value: 'text-zinc-200 (#e4e4e7)', usage: 'Row value color' },
+      { name: 'label', value: 'text-slate-10 (#a1a1aa)', usage: 'Row label color' },
+      { name: 'value', value: 'text-slate-11 (#e4e4e7)', usage: 'Row value color' },
       { name: 'fade-bg', value: 'SURFACE.level3 (≈ #2e2e2e)', usage: 'Gradient mask end-color behind the copy icon — matches the effective AccordionSection content surface (card content well SURFACE.level1 + rgba(255,255,255,0.11) overlay) so the tail of long values dissolves smoothly into the card backdrop' },
     ],
     typography: [

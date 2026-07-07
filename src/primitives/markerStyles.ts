@@ -6,6 +6,7 @@ import {
   SEVERITY_COLOR,
   SEVERITY_PULSE,
 } from './urgency';
+import { MARKER_HEX } from './accentHex';
 
 export type Affiliation = 'friendly' | 'hostile' | 'possibleThreat' | 'neutral' | 'unknown';
 
@@ -89,38 +90,38 @@ interface AffiliationPalette {
 
 export const AFFILIATION_PALETTES: Record<Affiliation, AffiliationPalette> = {
   friendly: {
-    glyph: '#ffffff',
-    surface: '#ffffff',
+    glyph: MARKER_HEX.white,
+    surface: MARKER_HEX.white,
     surfaceOpacity: 0.1,
-    ring: '#222222',
+    ring: MARKER_HEX.ringResting,
     ringOpacity: 1,
   },
   hostile: {
-    glyph: '#ff3d40',
-    surface: '#ffffff',
+    glyph: MARKER_HEX.hostile,
+    surface: MARKER_HEX.white,
     surfaceOpacity: 0.1,
-    ring: '#ff3d40',
+    ring: MARKER_HEX.hostile,
     ringOpacity: 1,
   },
   possibleThreat: {
-    glyph: '#ff9e3d',
-    surface: '#ffffff',
+    glyph: MARKER_HEX.possibleThreat,
+    surface: MARKER_HEX.white,
     surfaceOpacity: 0.1,
-    ring: '#ff9e3d',
+    ring: MARKER_HEX.possibleThreat,
     ringOpacity: 1,
   },
   neutral: {
-    glyph: '#4ade80',
-    surface: '#ffffff',
+    glyph: MARKER_HEX.friendly,
+    surface: MARKER_HEX.white,
     surfaceOpacity: 0.1,
-    ring: '#222222',
+    ring: MARKER_HEX.ringResting,
     ringOpacity: 1,
   },
   unknown: {
-    glyph: '#facc15',
-    surface: '#ffffff',
+    glyph: MARKER_HEX.unknownYellow,
+    surface: MARKER_HEX.white,
     surfaceOpacity: 0.1,
-    ring: '#222222',
+    ring: MARKER_HEX.ringResting,
     ringOpacity: 1,
   },
 };
@@ -149,7 +150,7 @@ const STATE_MATRIX: Record<InteractionState, (p: AffiliationPalette) => MarkerSt
     innerGlow: true,
     innerGlowColor: p.glyph,
     innerGlowOpacity: 0.4,
-    ringColor: '#ffffff',
+    ringColor: MARKER_HEX.white,
     ringWidth: 2,
     ringOpacity: 1,
     ringDash: 'solid',
@@ -165,7 +166,7 @@ const STATE_MATRIX: Record<InteractionState, (p: AffiliationPalette) => MarkerSt
     innerGlow: true,
     innerGlowColor: p.glyph,
     innerGlowOpacity: 0.4,
-    ringColor: '#ffffff',
+    ringColor: MARKER_HEX.white,
     ringWidth: 2,
     ringOpacity: 1,
     ringDash: 'solid',
@@ -181,7 +182,7 @@ const STATE_MATRIX: Record<InteractionState, (p: AffiliationPalette) => MarkerSt
     innerGlow: true,
     innerGlowColor: p.glyph,
     innerGlowOpacity: 0.4,
-    ringColor: '#ffffff',
+    ringColor: MARKER_HEX.white,
     ringWidth: 2,
     ringOpacity: 1,
     ringDash: 'solid',
@@ -195,14 +196,14 @@ const STATE_MATRIX: Record<InteractionState, (p: AffiliationPalette) => MarkerSt
     surfaceOpacity: p.surfaceOpacity,
     surfaceBlur: 1,
     innerGlow: false,
-    innerGlowColor: '#8c8c8c',
+    innerGlowColor: MARKER_HEX.disabledGray,
     innerGlowOpacity: 0,
-    ringColor: '#8c8c8c',
+    ringColor: MARKER_HEX.disabledGray,
     ringWidth: 2,
     ringOpacity: 1,
     ringDash: 'solid',
     ringPulse: false,
-    glyphColor: '#8c8c8c',
+    glyphColor: MARKER_HEX.disabledGray,
     glyphOpacity: 1,
     markerScale: 1,
   }),
@@ -211,14 +212,14 @@ const STATE_MATRIX: Record<InteractionState, (p: AffiliationPalette) => MarkerSt
     surfaceOpacity: Math.max(p.surfaceOpacity - 0.05, 0),
     surfaceBlur: 1,
     innerGlow: false,
-    innerGlowColor: '#52525b',
+    innerGlowColor: MARKER_HEX.expiredGlyph,
     innerGlowOpacity: 0,
-    ringColor: '#3f3f46',
+    ringColor: MARKER_HEX.expiredRing,
     ringWidth: 1,
     ringOpacity: 0.4,
     ringDash: 'dashed',
     ringPulse: false,
-    glyphColor: '#52525b',
+    glyphColor: MARKER_HEX.expiredGlyph,
     glyphOpacity: 0.4,
     markerScale: 1,
   }),
@@ -227,14 +228,14 @@ const STATE_MATRIX: Record<InteractionState, (p: AffiliationPalette) => MarkerSt
     surfaceOpacity: p.surfaceOpacity,
     surfaceBlur: 1,
     innerGlow: false,
-    innerGlowColor: '#ffffff',
+    innerGlowColor: MARKER_HEX.white,
     innerGlowOpacity: 0,
-    ringColor: '#ff3d40',
+    ringColor: MARKER_HEX.hostile,
     ringWidth: 2,
     ringOpacity: 1,
     ringDash: 'solid',
     ringPulse: true,
-    glyphColor: '#ffffff',
+    glyphColor: MARKER_HEX.white,
     glyphOpacity: 1,
     markerScale: 1,
   }),
@@ -243,46 +244,46 @@ const STATE_MATRIX: Record<InteractionState, (p: AffiliationPalette) => MarkerSt
     surfaceOpacity: p.surfaceOpacity,
     surfaceBlur: 1,
     innerGlow: false,
-    innerGlowColor: '#4ade80',
+    innerGlowColor: MARKER_HEX.friendly,
     innerGlowOpacity: 0,
-    ringColor: '#4ade80',
+    ringColor: MARKER_HEX.friendly,
     ringWidth: 2,
     ringOpacity: 1,
     ringDash: 'solid',
     ringPulse: true,
-    glyphColor: '#4ade80',
+    glyphColor: MARKER_HEX.friendly,
     glyphOpacity: 1,
     markerScale: 1,
   }),
   weaponPointing: () => ({
-    surfaceFill: '#ffffff',
+    surfaceFill: MARKER_HEX.white,
     surfaceOpacity: 0.1,
     surfaceBlur: 1,
     innerGlow: true,
-    innerGlowColor: '#f59e0b',
+    innerGlowColor: MARKER_HEX.weaponWarning,
     innerGlowOpacity: 0.4,
-    ringColor: '#f59e0b',
+    ringColor: MARKER_HEX.weaponWarning,
     ringWidth: 2,
     ringOpacity: 1,
     ringDash: 'solid',
     ringPulse: true,
-    glyphColor: '#f59e0b',
+    glyphColor: MARKER_HEX.weaponWarning,
     glyphOpacity: 1,
     markerScale: 1,
   }),
   weaponLocked: () => ({
-    surfaceFill: '#ffffff',
+    surfaceFill: MARKER_HEX.white,
     surfaceOpacity: 0.1,
     surfaceBlur: 1,
     innerGlow: true,
-    innerGlowColor: '#ef4444',
+    innerGlowColor: MARKER_HEX.hostile,
     innerGlowOpacity: 0.4,
-    ringColor: '#ef4444',
+    ringColor: MARKER_HEX.hostile,
     ringWidth: 2,
     ringOpacity: 1,
     ringDash: 'solid',
     ringPulse: false,
-    glyphColor: '#ef4444',
+    glyphColor: MARKER_HEX.hostile,
     glyphOpacity: 1,
     markerScale: 1,
   }),
@@ -397,6 +398,90 @@ export function resolveTargetMarkerStyle(
     // light it up); severity only picks the *color* that gets glowed.
     glyphColor: severityColor,
     innerGlowColor: severityColor,
+  };
+}
+
+/**
+ * Friendly-asset health — mirrors the devices panel's `DeviceHealth`
+ * (`deviceHealth.ts`) so the map marker and the panel tile always tell the
+ * same story about the same asset.
+ */
+export type AssetHealth = 'ok' | 'warning' | 'error' | 'offline';
+
+export const ASSET_HEALTHS: AssetHealth[] = ['ok', 'warning', 'error', 'offline'];
+
+export const ASSET_HEALTH_LABELS: Record<AssetHealth, string> = {
+  ok: 'OK',
+  warning: 'Warning',
+  error: 'Error',
+  offline: 'Offline',
+};
+
+/**
+ * Ring color per health tier. `ok` keeps the friendly palette's black ring;
+ * trouble tiers recolor the ring only — the glyph stays white so identity
+ * never changes, only the urgency channel.
+ *
+ *   warning  → amber (same family as the panel's warning tile / amber-400 dot)
+ *   error    → red (same red the target severity system speaks in `urgency.ts`)
+ *   offline  → desaturated gray, dashed — "known-absent", not alarmist
+ */
+export const ASSET_HEALTH_RING_COLOR: Record<AssetHealth, string> = {
+  ok: MARKER_HEX.ringResting,
+  warning: MARKER_HEX.weaponWarning,
+  error: MARKER_HEX.hostile,
+  offline: MARKER_HEX.disabledGray,
+};
+
+/** Interaction subset a friendly asset marker actually drives today. */
+export type AssetMarkerInteraction = 'default' | 'hovered' | 'selected' | 'active';
+
+/**
+ * Resolve a friendly-asset marker style under the health model. Health owns
+ * the ring at rest; the glyph stays white. Interaction wins the ring:
+ * hovered / selected / active flip it white (the standard friendly cue) and
+ * the health color returns on mouse-out — the glow emphasis still rides the
+ * health hue so the tier stays readable while interacted with.
+ *
+ * `offline` replaces the old all-gray `disabled` look: a dashed black ring
+ * (standard interaction colors), gray glyph at full opacity, and a nearly
+ * invisible surface — clearly absent without hiding what the asset is. (The
+ * map pairs this with the wifi-off corner badge; see `MarkerOfflineBadge`.)
+ */
+export function resolveAssetMarkerStyle(
+  health: AssetHealth = 'ok',
+  interaction: AssetMarkerInteraction = 'default',
+): MarkerStyle {
+  // The base interaction matrix already speaks the interaction ring language
+  // (black at rest, white while hovered/selected/active) — health only
+  // recolors the resting ring.
+  const base = resolveMarkerStyle(interaction, 'friendly');
+  if (health === 'ok') return base;
+
+  const ringColor = ASSET_HEALTH_RING_COLOR[health];
+  const interacting = interaction !== 'default';
+
+  if (health === 'offline') {
+    return {
+      ...base,
+      // Ring speaks the standard interaction language (black at rest, white
+      // while hovered/selected) — only the dash pattern and the gray glyph
+      // mark the marker as offline.
+      ringDash: 'dashed',
+      ringPulse: false,
+      surfaceOpacity: 0.04,
+      innerGlowColor: ringColor,
+      glyphColor: ringColor,
+    };
+  }
+
+  return {
+    ...base,
+    ringColor: interacting ? base.ringColor : ringColor,
+    // Glow emphasis (hover/selected) rides the health hue so the marker keeps
+    // reading as one tier while the ring itself flips white.
+    innerGlowColor: ringColor,
+    glyphColor: MARKER_HEX.white,
   };
 }
 

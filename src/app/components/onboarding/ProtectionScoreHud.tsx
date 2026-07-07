@@ -10,7 +10,6 @@
 
 import { useStrings } from '@/lib/intl';
 import { AlertTriangle, Check } from '@/lib/icons/central';
-import { SURFACE } from '@/primitives/tokens';
 import { cn } from '../ui/utils';
 import type { AxisScore, CoverageResult } from './coverageModel';
 
@@ -29,8 +28,8 @@ function SubBar({ label, value }: { label: string; value: number }) {
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[11px] font-medium text-zinc-400">{label}</span>
-        <span className={cn('text-[13px] font-semibold tabular-nums', t.text)}>{pct(value)}%</span>
+        <span className="text-xs-plus font-medium text-slate-10">{label}</span>
+        <span className={cn('text-sm-minus font-semibold tabular-nums', t.text)}>{pct(value)}%</span>
       </div>
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/[0.08]">
         <div
@@ -67,13 +66,13 @@ export function ProtectionScoreHud({ result, showOpenAxis = true, className }: P
         'w-[260px] rounded-lg p-3.5 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_8px_24px_rgba(0,0,0,0.45)]',
         className,
       )}
-      style={{ backgroundColor: SURFACE.level2 }}
+      style={{ backgroundColor: 'var(--surface-3)' }}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-400">
+        <span className="text-xs-plus font-medium uppercase tracking-wider text-slate-10">
           {t.onboarding.score.title}
         </span>
-        <span className="rounded bg-white/[0.08] px-1.5 py-0.5 text-[10px] font-medium text-zinc-400">
+        <span className="rounded bg-white/[0.08] px-1.5 py-0.5 text-2xs font-medium text-slate-10">
           {t.onboarding.estimateBadge}
         </span>
       </div>
@@ -82,8 +81,8 @@ export function ProtectionScoreHud({ result, showOpenAxis = true, className }: P
         <span className={cn('text-4xl font-semibold leading-none tabular-nums', headline.text)}>
           {pct(result.combined)}
         </span>
-        <span className="pb-1 text-lg font-medium text-zinc-500">%</span>
-        <span className="ms-auto pb-1 text-[11px] text-zinc-500">{t.onboarding.score.combined}</span>
+        <span className="pb-1 text-lg font-medium text-slate-9">%</span>
+        <span className="ms-auto pb-1 text-xs-plus text-slate-9">{t.onboarding.score.combined}</span>
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-3">
@@ -94,12 +93,12 @@ export function ProtectionScoreHud({ result, showOpenAxis = true, className }: P
       {showOpenAxis && (
       <div className="mt-3 border-t border-white/10 pt-2.5">
         {result.openAxes.length === 0 ? (
-          <div className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-300">
+          <div className="flex items-center gap-1.5 text-xs-plus font-medium text-emerald-300">
             <Check size={13} className="shrink-0" aria-hidden="true" />
             <span>{t.onboarding.score.openAxisNone}</span>
           </div>
         ) : (
-          <div className="flex items-center gap-1.5 text-[11px] font-medium text-red-400">
+          <div className="flex items-center gap-1.5 text-xs-plus font-medium text-red-400">
             <AlertTriangle size={13} className="shrink-0" aria-hidden="true" />
             <span className="truncate">
               {t.onboarding.score.openAxis}:{' '}
@@ -110,7 +109,7 @@ export function ProtectionScoreHud({ result, showOpenAxis = true, className }: P
       </div>
       )}
 
-      <p className="mt-2 text-[10px] leading-snug text-zinc-500">{t.onboarding.score.estimateNote}</p>
+      <p className="mt-2 text-2xs leading-snug text-slate-9">{t.onboarding.score.estimateNote}</p>
     </div>
   );
 }

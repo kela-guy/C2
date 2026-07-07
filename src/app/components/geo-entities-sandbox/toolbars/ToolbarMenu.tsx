@@ -38,7 +38,7 @@ export function ToolbarMenu({
             <button
               type="button"
               aria-haspopup="menu"
-              className={`flex items-center gap-1.5 rounded border px-2 py-1 text-[12px] font-medium transition-colors ${
+              className={`flex items-center gap-1.5 rounded border px-2 py-1 text-xs font-medium transition-colors ${
                 activeDrawable
                   ? 'border-border-strong bg-state-hover-strong text-slate-12'
                   : 'border-border-default text-slate-11 hover:border-border-strong hover:bg-state-hover-strong'
@@ -76,8 +76,8 @@ export function ToolbarMenu({
                   <tool.Icon size={14} />
                 </span>
                 <div className="flex flex-col">
-                  <span className="text-[12px]">{tool.label}</span>
-                  <span className="text-[10px] text-slate-9">{tool.description}</span>
+                  <span className="text-xs">{tool.label}</span>
+                  <span className="text-2xs text-slate-9">{tool.description}</span>
                 </div>
               </DropdownMenuItem>
             ))}
@@ -92,7 +92,7 @@ export function ToolbarMenu({
                 key={a.id}
                 type="button"
                 onClick={() => onAction(a.id)}
-                className={`flex items-center gap-1.5 rounded px-2 py-1 text-[11px] font-medium transition-colors ${
+                className={`flex items-center gap-1.5 rounded px-2 py-1 text-xs-plus font-medium transition-colors ${
                   a.tone === 'caution'
                     ? 'text-rose-300 hover:bg-rose-500/15'
                     : 'text-slate-10 hover:bg-state-hover-strong hover:text-slate-12'

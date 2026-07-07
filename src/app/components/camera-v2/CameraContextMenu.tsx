@@ -66,7 +66,7 @@ export function CameraContextMenu({
     <ContextMenu>
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
       <ContextMenuContent
-        className="min-w-[220px] rounded-none bg-[#1a1a1a]/95 backdrop-blur-xl shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_25px_50px_-12px_rgba(0,0,0,0.5)] border-none"
+        className="min-w-[220px] rounded-none bg-surface-2/95 backdrop-blur-xl shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_25px_50px_-12px_rgba(0,0,0,0.5)] border-none"
       >
         <ContextMenuItem
           onClick={onTakeRelease}
@@ -76,7 +76,7 @@ export function CameraContextMenu({
           {ownsControl ? (
             <LockOpen size={14} className="text-emerald-300" />
           ) : (
-            <Lock size={14} className={lockedByOther ? 'text-zinc-400' : 'text-white/80'} />
+            <Lock size={14} className={lockedByOther ? 'text-slate-10' : 'text-white/80'} />
           )}
           <span className="flex-1">
             {ownsControl

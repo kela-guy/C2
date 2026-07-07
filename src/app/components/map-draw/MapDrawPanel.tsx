@@ -39,6 +39,7 @@ import {
 import { useStrings } from '@/lib/intl';
 import { DockedPanel } from '@/app/components/DockedPanel';
 import { DirIsland } from '@/lib/direction/DirIsland';
+import { Button } from '@/app/components/ui/button';
 import {
   Tooltip,
   TooltipContent,
@@ -91,7 +92,7 @@ import { getZOrderActions, type ShapeAction } from './shapeActions';
 
 // Type scale kept in step with the sibling docked panels (Simulations /
 // Flow Builder): Heebo only, no mono / uppercase / letter-tracking.
-const TYPE_GROUP_TITLE = 'text-[11px] font-semibold text-zinc-400';
+const TYPE_GROUP_TITLE = 'text-xs-plus font-semibold text-slate-10';
 
 /**
  * Visual variants of the panel — drives tool-button design, Tools-section
@@ -324,7 +325,7 @@ export function MapDrawPanel({
                     ? 'Save or cancel your changes first'
                     : 'Back to Geo Entities'
                 }
-                className="-ms-1 grid size-6 shrink-0 place-items-center rounded text-zinc-300 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 disabled:cursor-not-allowed disabled:text-zinc-600 disabled:hover:bg-transparent disabled:hover:text-zinc-600"
+                className="-ms-1 grid size-6 shrink-0 place-items-center rounded text-slate-11 transition-colors hover:bg-state-hover-overlay hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring disabled:cursor-not-allowed disabled:text-slate-8 disabled:hover:bg-transparent disabled:hover:text-slate-8"
               >
                 <ChevronLeft size={16} />
               </button>
@@ -500,12 +501,12 @@ function DraftDetailView({
         // two surfaces speak with one voice.
         <div
           role="status"
-          className="mb-3 flex shrink-0 items-center gap-2 rounded-[2px] border border-white/10 bg-white/[0.04] px-2.5 py-2 text-[12px] text-white/75"
+          className="mb-3 flex shrink-0 items-center gap-2 rounded-[2px] border border-white/10 bg-white/[0.04] px-2.5 py-2 text-xs text-white/75"
         >
           <Lock size={14} className="shrink-0 text-white/85" />
           <span className="min-w-0 flex-1">
             <span className="block font-medium text-white">Locked layer</span>
-            <span className="block text-[11px] text-white/55">
+            <span className="block text-xs-plus text-white/55">
               Requires approval to edit.
             </span>
           </span>
@@ -611,8 +612,8 @@ function DraftDetailFooter({
 
   return (
     <div className="flex items-center justify-end gap-2 px-4 py-3">
-      <button
-        type="button"
+      <Button
+        variant="outline"
         disabled={!canCancel}
         onClick={() => (drafting ? draw.cancelDraft() : draw.cancelPending())}
         title={
@@ -622,12 +623,12 @@ function DraftDetailFooter({
               ? 'Discard changes'
               : 'No changes to cancel'
         }
-        className="min-w-[72px] rounded-[2px] border border-white/10 bg-transparent px-3 py-1.5 text-[12px] font-medium text-zinc-200 transition-colors hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 disabled:cursor-not-allowed disabled:border-white/15 disabled:text-white/40 disabled:hover:bg-transparent disabled:hover:text-white/40"
+        className="min-w-[72px]"
       >
         Cancel
-      </button>
-      <button
-        type="button"
+      </Button>
+      <Button
+        variant="primary"
         disabled={!canSave}
         onClick={() => draw.savePending()}
         title={
@@ -639,10 +640,10 @@ function DraftDetailFooter({
                 ? 'Save shape'
                 : 'No changes to save'
         }
-        className="min-w-[72px] rounded-[2px] border border-transparent bg-white px-3 py-1.5 text-[12px] font-semibold text-black transition-colors hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 disabled:cursor-not-allowed disabled:border-white/15 disabled:bg-transparent disabled:text-white/40 disabled:hover:bg-transparent"
+        className="min-w-[72px]"
       >
         Save
-      </button>
+      </Button>
     </div>
   );
 }
@@ -805,19 +806,17 @@ function UploadFileButton({ onImport }: UploadFileButtonProps = {}) {
     // that pushed it off-center in the footer. Flex gaps skip
     // `display: none` children entirely.
     <div className="flex flex-col gap-1.5">
-      <button
-        type="button"
+      <Button
+        variant="outline"
         onClick={() => fileInputRef.current?.click()}
-        // `h-8` pins the button to exactly 32px so the sub-pixel line-height
-        // wobble from `text-[12.5px]` doesn't drift the footer height.
-        className="flex h-8 w-full items-center justify-center gap-2 rounded-[2px] border border-white/15 bg-white/[0.04] px-3 py-1.5 text-[12.5px] font-medium text-white transition-colors hover:border-white/25 hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+        className="w-full text-sm-minus text-white"
       >
         <UploadIcon size={14} />
         <span>Upload file</span>
-        <span className="text-[11px] font-normal text-white/50">
+        <span className="text-xs-plus font-normal text-white/50">
           KML or GeoJSON
         </span>
-      </button>
+      </Button>
       <input
         ref={fileInputRef}
         type="file"
@@ -834,7 +833,7 @@ function UploadFileButton({ onImport }: UploadFileButtonProps = {}) {
       {feedback?.kind === 'error' && (
         <div
           role="alert"
-          className="flex items-start gap-2 rounded-md border border-red-500/25 bg-red-500/[0.08] px-2 py-1 text-[11.5px] text-red-200"
+          className="flex items-start gap-2 rounded-md border border-red-500/25 bg-red-500/[0.08] px-2 py-1 text-xs text-red-200"
         >
           <span className="min-w-0 flex-1 break-words">{feedback.message}</span>
           <button
@@ -842,7 +841,7 @@ function UploadFileButton({ onImport }: UploadFileButtonProps = {}) {
             onClick={() => setFeedback(null)}
             aria-label="Dismiss import error"
             title="Dismiss"
-            className="grid size-5 shrink-0 place-items-center rounded text-red-200/70 transition-colors hover:bg-red-500/15 hover:text-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+            className="grid size-5 shrink-0 place-items-center rounded text-red-200/70 transition-colors hover:bg-red-500/15 hover:text-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
           >
             <X size={11} />
           </button>
@@ -851,7 +850,7 @@ function UploadFileButton({ onImport }: UploadFileButtonProps = {}) {
       {feedback?.kind === 'success' && (
         <div
           role="status"
-          className="space-y-1 rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 text-[11.5px] text-white/80"
+          className="space-y-1 rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 text-xs text-white/80"
         >
           <div className="flex items-center gap-2">
             <UploadIcon size={12} className="shrink-0 text-emerald-300" />
@@ -865,13 +864,13 @@ function UploadFileButton({ onImport }: UploadFileButtonProps = {}) {
               onClick={() => setFeedback(null)}
               aria-label="Dismiss import status"
               title="Dismiss"
-              className="ms-auto grid size-5 shrink-0 place-items-center rounded text-white/50 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+              className="ms-auto grid size-5 shrink-0 place-items-center rounded text-white/50 transition-colors hover:bg-state-hover-overlay hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
             >
               <X size={11} />
             </button>
           </div>
           {feedback.warnings.length > 0 && (
-            <ul className="ps-4 text-[11px] text-white/55 list-disc">
+            <ul className="ps-4 text-xs-plus text-white/55 list-disc">
               {feedback.warnings.slice(0, 3).map((w, i) => (
                 <li key={i}>{w}</li>
               ))}
@@ -924,7 +923,7 @@ function LayersView({ draw }: { draw: UseGeoDrawResult }) {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by name or entity"
             aria-label="Search geo entities by name or entity"
-            className="w-full rounded-[2px] border border-white/10 bg-white/[0.04] py-1.5 ps-8 pe-2.5 text-[12.5px] text-white placeholder:text-white/40 outline-none focus:border-white/30 focus:bg-white/[0.08]"
+            className="w-full rounded-[2px] border border-white/10 bg-white/[0.04] py-1.5 ps-8 pe-2.5 text-sm-minus text-white placeholder:text-white/40 outline-none focus:border-white/30 focus:bg-white/[0.08]"
           />
         </div>
       </div>
@@ -968,10 +967,10 @@ function VariantSwitcher({
             role="tab"
             aria-selected={active}
             onClick={() => onChange(t.id)}
-            className={`flex-1 rounded px-1.5 py-1 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
+            className={`flex-1 rounded px-1.5 py-1 text-xs-plus font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring ${
               active
-                ? 'bg-white/[0.14] text-white ring-1 ring-inset ring-white/15'
-                : 'text-white/65 hover:bg-white/10 hover:text-white'
+                ? 'bg-state-selected text-white ring-1 ring-inset ring-white/15'
+                : 'text-white/65 hover:bg-state-hover-overlay hover:text-white'
             }`}
           >
             {t.label}
@@ -1016,10 +1015,10 @@ function TypePanelSwitcher({
             role="tab"
             aria-selected={active}
             onClick={() => onChange(t.id)}
-            className={`flex-1 rounded px-1.5 py-1 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
+            className={`flex-1 rounded px-1.5 py-1 text-xs-plus font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring ${
               active
-                ? 'bg-white/[0.14] text-white ring-1 ring-inset ring-white/15'
-                : 'text-white/65 hover:bg-white/10 hover:text-white'
+                ? 'bg-state-selected text-white ring-1 ring-inset ring-white/15'
+                : 'text-white/65 hover:bg-state-hover-overlay hover:text-white'
             }`}
           >
             {t.label}
@@ -1135,7 +1134,7 @@ function LayersSection({
     // as the next step.
     return (
       <div className="grid h-full place-items-center px-4 py-8 text-center">
-        <p className="max-w-[220px] text-[12px] leading-relaxed text-zinc-500">
+        <p className="max-w-[220px] text-xs leading-relaxed text-slate-9">
           No geo entities on the map yet.
         </p>
       </div>
@@ -1172,7 +1171,7 @@ function LayersSection({
     // section is just the list now.
     <ul ref={ulRef} className="space-y-1.5">
       {matches.length === 0 ? (
-        <li className="px-1 py-2 text-[12px] text-zinc-500">
+        <li className="px-1 py-2 text-xs text-slate-9">
           No entities match “{query}”.
         </li>
       ) : (
@@ -1273,7 +1272,7 @@ function LayerRow({
           onMouseLeave={() => setHoveredShapeId(null)}
           onFocus={() => setHoveredShapeId(shape.id)}
           onBlur={() => setHoveredShapeId(null)}
-          className={`group flex cursor-pointer items-stretch overflow-hidden rounded-[2px] border transition-[background,border-color,opacity] duration-100 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
+          className={`group flex cursor-pointer items-stretch overflow-hidden rounded-[2px] border transition-[background,border-color,opacity] duration-100 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring ${
             // Standard white hover — subtle border + fill that reads as
             // "this is the row you're pointing at / hovering on the map"
             // without shouting. Idle rows have a near-invisible fill;
@@ -1281,8 +1280,8 @@ function LayerRow({
             // state so pointing at a shape on either surface highlights
             // the SAME visual pair.
             hovered
-              ? 'border-white/20 bg-white/[0.10]'
-              : 'border-transparent bg-white/[0.03] hover:border-white/15 hover:bg-white/[0.07]'
+              ? 'border-white/20 bg-state-selected'
+              : 'border-transparent bg-white/[0.03] hover:border-white/15 hover:bg-state-hover-strong'
           } ${
             // Whole-card dim mirrors the "off the map" state. Icons and
             // text inherit this via `opacity` compounding so the row
@@ -1303,13 +1302,13 @@ function LayerRow({
                   The shape's optional custom name follows as a muted
                   suffix so lists remain scannable by zone type first. */}
               <span
-                className={`truncate text-[13px] font-medium leading-tight ${
-                  shape.hidden ? 'text-white/60' : 'text-zinc-100'
+                className={`truncate text-sm-minus font-medium leading-tight ${
+                  shape.hidden ? 'text-white/60' : 'text-slate-12'
                 }`}
               >
                 {typeLabel}
               </span>
-              <span className="truncate text-[11px] leading-tight text-white/45">
+              <span className="truncate text-xs-plus leading-tight text-white/45">
                 · {shapeLabel(shape)}
               </span>
             </span>
@@ -1344,10 +1343,10 @@ function LayerRow({
                   }}
                   aria-label={shape.hidden ? 'Show layer' : 'Hide layer'}
                   title={shape.hidden ? 'Show layer' : 'Hide layer'}
-                  className={`grid size-6 shrink-0 place-items-center rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
+                  className={`grid size-6 shrink-0 place-items-center rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring ${
                     shape.locked
                       ? 'cursor-default text-white/55 opacity-70'
-                      : 'text-white/55 hover:bg-white/10 hover:text-white'
+                      : 'text-white/55 hover:bg-state-hover-overlay hover:text-white'
                   }`}
                 >
                   {shape.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -1377,7 +1376,7 @@ function LayerRow({
                         }}
                         aria-label="Unlock layer"
                         aria-pressed
-                        className="grid size-6 shrink-0 place-items-center rounded text-white transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+                        className="grid size-6 shrink-0 place-items-center rounded text-white transition-colors hover:bg-state-hover-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
                       >
                         <Lock size={14} />
                       </button>
@@ -1385,7 +1384,7 @@ function LayerRow({
                     <TooltipContent
                       side="bottom"
                       sideOffset={6}
-                      className="text-[11px]"
+                      className="text-xs-plus"
                     >
                       Requires approval
                     </TooltipContent>
@@ -1400,7 +1399,7 @@ function LayerRow({
                     aria-label="Lock layer"
                     title="Lock layer"
                     aria-pressed={false}
-                    className="grid size-6 shrink-0 place-items-center rounded text-white/45 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+                    className="grid size-6 shrink-0 place-items-center rounded text-white/45 transition-colors hover:bg-state-hover-overlay hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
                   >
                     <LockOpen size={14} />
                   </button>
@@ -1417,10 +1416,10 @@ function LayerRow({
                   }}
                   aria-label="Center on map"
                   title="Center on map"
-                  className={`grid size-6 shrink-0 place-items-center rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
+                  className={`grid size-6 shrink-0 place-items-center rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring ${
                     shape.locked
                       ? 'cursor-default text-white/55 opacity-70'
-                      : 'text-white/55 hover:bg-white/10 hover:text-white'
+                      : 'text-white/55 hover:bg-state-hover-overlay hover:text-white'
                   }`}
                 >
                   <MapPin size={14} />
@@ -1508,7 +1507,7 @@ function NameField({
   // Bordered field — same chrome and title-to-control rhythm as the
   // Type select above (`space-y-2` + h-8 box).
   const baseClass =
-    'h-8 w-full rounded-[2px] border border-white/10 bg-white/[0.04] px-2.5 text-[12px] font-medium text-white placeholder:text-white/50 outline-none transition-colors hover:bg-white/[0.08] focus:border-white/30 focus:bg-white/[0.08]';
+    'h-8 w-full rounded-[2px] border border-white/10 bg-white/[0.04] px-2.5 text-xs font-medium text-white placeholder:text-white/50 outline-none transition-colors hover:bg-state-hover-overlay focus:border-white/30 focus:bg-white/[0.08]';
   const attentionClass = '';
 
   return (
@@ -1711,14 +1710,10 @@ function CoordinatesSection({
       </ul>
 
       {!drafting && canAddPoint && (
-        <button
-          type="button"
-          onClick={addPoint}
-          className="inline-flex w-full items-center justify-center gap-1.5 rounded-[2px] border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[12px] font-medium text-zinc-200 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
-        >
+        <Button variant="outline" onClick={addPoint} className="w-full gap-1.5">
           <Plus size={14} />
           Add coordinates
-        </button>
+        </Button>
       )}
     </section>
   );
@@ -1870,7 +1865,7 @@ function CoordinateRow({
         // Borderless: matches the panel's segmented-control chrome — just
         // the subtle fill, no stroke. The active-vertex highlight keeps a
         // ring (not a border) so a map-clicked dot still reads clearly.
-        className={`w-full rounded-[2px] bg-white/[0.04] py-1.5 ps-2.5 text-[12px] tabular-nums text-zinc-100 outline-none transition-colors ${
+        className={`w-full rounded-[2px] bg-white/[0.04] py-1.5 ps-2.5 text-xs tabular-nums text-slate-12 outline-none transition-colors ${
           onRemove ? 'pe-8' : 'pe-2.5'
         } ${
           active ? 'bg-sky-400/10 ring-1 ring-inset ring-sky-400/40' : ''
@@ -1884,7 +1879,7 @@ function CoordinateRow({
           onClick={onRemove}
           aria-label={`Remove point ${label}`}
           title="Remove point"
-          className="absolute end-1.5 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded-[2px] text-white/45 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+          className="absolute end-1.5 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded-[2px] text-white/45 transition-colors hover:bg-state-hover-overlay hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
         >
           <X size={13} />
         </button>
@@ -2004,10 +1999,10 @@ function TypeVariantTiles({
             aria-selected={active}
             title={`${t.label} — ${t.description}`}
             onClick={() => onPick(t.id, t.color)}
-            className={`flex min-w-0 flex-1 flex-col items-center gap-1.5 rounded-md border px-1.5 py-2 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
+            className={`flex min-w-0 flex-1 flex-col items-center gap-1.5 rounded-md border px-1.5 py-2 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring ${
               active
-                ? 'border-white/20 bg-white/[0.10]'
-                : 'border-white/10 bg-white/[0.04] hover:border-white/20 hover:bg-white/[0.08]'
+                ? 'border-white/20 bg-state-selected'
+                : 'border-white/10 bg-white/[0.04] hover:border-white/20 hover:bg-state-hover-overlay'
             }`}
           >
             <span
@@ -2016,8 +2011,8 @@ function TypeVariantTiles({
               style={{ background: t.color }}
             />
             <span
-              className={`w-full truncate text-[11px] font-medium ${
-                active ? 'text-white' : 'text-zinc-300'
+              className={`w-full truncate text-xs-plus font-medium ${
+                active ? 'text-white' : 'text-slate-11'
               }`}
             >
               {t.label}
@@ -2048,10 +2043,10 @@ function TypeVariantRadioList({
             role="radio"
             aria-checked={active}
             onClick={() => onPick(t.id, t.color)}
-            className={`flex w-full items-center gap-2.5 rounded-md border px-2 py-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
+            className={`flex w-full items-center gap-2.5 rounded-md border px-2 py-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring ${
               active
-                ? 'border-white/20 bg-white/[0.10]'
-                : 'border-white/10 bg-white/[0.04] hover:border-white/20 hover:bg-white/[0.08]'
+                ? 'border-white/20 bg-state-selected'
+                : 'border-white/10 bg-white/[0.04] hover:border-white/20 hover:bg-state-hover-overlay'
             }`}
           >
             <span
@@ -2061,13 +2056,13 @@ function TypeVariantRadioList({
             />
             <span className="min-w-0 flex-1">
               <span
-                className={`block truncate text-[12px] font-medium ${
-                  active ? 'text-white' : 'text-zinc-200'
+                className={`block truncate text-xs font-medium ${
+                  active ? 'text-white' : 'text-slate-11'
                 }`}
               >
                 {t.label}
               </span>
-              <span className="block truncate text-[11px] text-zinc-500">
+              <span className="block truncate text-xs-plus text-slate-9">
                 {t.description}
               </span>
             </span>
@@ -2105,8 +2100,8 @@ function TypeVariantSegmentedDots({
               aria-selected={isActive}
               title={`${t.label} — ${t.description}`}
               onClick={() => onPick(t.id, t.color)}
-              className={`grid h-7 flex-1 place-items-center rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
-                isActive ? 'bg-white/[0.10]' : 'hover:bg-white/[0.06]'
+              className={`grid h-7 flex-1 place-items-center rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring ${
+                isActive ? 'bg-state-selected' : 'hover:bg-state-hover-strong'
               }`}
             >
               <span
@@ -2123,11 +2118,11 @@ function TypeVariantSegmentedDots({
         })}
       </div>
       <div className="flex items-center justify-between px-0.5">
-        <span className="text-[12px] font-medium text-white">
+        <span className="text-xs font-medium text-white">
           {active ? active.label : 'No type selected'}
         </span>
         {active && (
-          <span className="truncate text-[11px] text-zinc-500">
+          <span className="truncate text-xs-plus text-slate-9">
             {active.description}
           </span>
         )}
@@ -2155,10 +2150,10 @@ function TypeVariantCards({
             role="option"
             aria-selected={active}
             onClick={() => onPick(t.id, t.color)}
-            className={`group flex items-stretch overflow-hidden rounded-md border text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
+            className={`group flex items-stretch overflow-hidden rounded-md border text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring ${
               active
-                ? 'border-white/25 bg-white/[0.10]'
-                : 'border-white/10 bg-white/[0.04] hover:border-white/20 hover:bg-white/[0.08]'
+                ? 'border-white/25 bg-state-selected'
+                : 'border-white/10 bg-white/[0.04] hover:border-white/20 hover:bg-state-hover-overlay'
             }`}
           >
             <span
@@ -2168,13 +2163,13 @@ function TypeVariantCards({
             />
             <span className="min-w-0 flex-1 px-2 py-1.5">
               <span
-                className={`block truncate text-[12px] font-semibold ${
-                  active ? 'text-white' : 'text-zinc-200'
+                className={`block truncate text-xs font-semibold ${
+                  active ? 'text-white' : 'text-slate-11'
                 }`}
               >
                 {t.label}
               </span>
-              <span className="block truncate text-[10.5px] text-zinc-500">
+              <span className="block truncate text-xs-plus text-slate-9">
                 {t.description}
               </span>
             </span>
@@ -2208,12 +2203,12 @@ function TypeVariantDropdown({
         onClick={() => setOpen((v) => !v)}
         // Minimal at rest (no border / bg / chevron); on hover, focus, or
         // when the menu is open the full trigger chrome and chevron appear.
-        className="flex w-full items-center gap-2 rounded-md border border-transparent bg-transparent px-2 py-1.5 text-left transition-colors group-hover:border-white/10 group-hover:bg-white/[0.04] group-focus-within:border-white/10 group-focus-within:bg-white/[0.04] aria-expanded:border-white/10 aria-expanded:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+        className="flex w-full items-center gap-2 rounded-md border border-transparent bg-transparent px-2 py-1.5 text-left transition-colors group-hover:border-white/10 group-hover:bg-state-hover group-focus-within:border-white/10 group-focus-within:bg-white/[0.04] aria-expanded:border-white/10 aria-expanded:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
       >
         {/* Color swatch removed — types no longer surface their signature
             color in the trigger; the label alone is the identity. */}
         {active ? (
-          <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-zinc-400">
+          <span className="min-w-0 flex-1 truncate text-sm-minus font-medium text-slate-10">
             {active.label}
           </span>
         ) : (
@@ -2222,10 +2217,10 @@ function TypeVariantDropdown({
           // chevron stays visible while `isMissing` (see below) so the
           // mandatory affordance still reads without a "Required" word.
           <span
-            className={`min-w-0 flex-1 truncate text-[12px] font-medium transition-colors ${
+            className={`min-w-0 flex-1 truncate text-xs font-medium transition-colors ${
               open
                 ? 'text-white'
-                : 'text-zinc-500 group-hover:text-white group-focus-within:text-white'
+                : 'text-slate-9 group-hover:text-white group-focus-within:text-white'
             }`}
           >
             Choose a zone type
@@ -2233,7 +2228,7 @@ function TypeVariantDropdown({
         )}
         <ChevronRight
           size={14}
-          className={`shrink-0 text-zinc-400 transition-[opacity,transform] ${
+          className={`shrink-0 text-slate-10 transition-[opacity,transform] ${
             // Keep the chevron visible when the field still needs an
             // answer so the affordance reads from the start; once a
             // type is set, fall back to the hover-only reveal.
@@ -2247,7 +2242,7 @@ function TypeVariantDropdown({
         <ul
           role="listbox"
           aria-label="Zone type"
-          className="absolute z-30 mt-1 w-full overflow-hidden rounded-md border border-white/10 bg-[#1a1a1a]/95 p-1 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_18px_40px_-12px_rgba(0,0,0,0.55)] backdrop-blur-xl"
+          className="absolute z-30 mt-1 w-full overflow-hidden rounded-md border border-white/10 bg-surface-2/95 p-1 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_18px_40px_-12px_rgba(0,0,0,0.55)] backdrop-blur-xl"
         >
           {ZONE_TYPES.map((t) => {
             const isActive = activeType === t.id;
@@ -2263,17 +2258,17 @@ function TypeVariantDropdown({
                   }}
                   className={`flex w-full items-center gap-2.5 rounded px-2 py-1.5 text-left transition-colors focus-visible:outline-none ${
                     isActive
-                      ? 'bg-white/[0.10] text-white'
-                      : 'text-zinc-200 hover:bg-white/[0.06] hover:text-white'
+                      ? 'bg-state-selected text-white'
+                      : 'text-slate-11 hover:bg-state-hover-strong hover:text-white'
                   }`}
                 >
                   {/* Per-option color swatch removed for the same reason as
                       the trigger swatch above. */}
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[12px] font-medium">
+                    <span className="block truncate text-xs font-medium">
                       {t.label}
                     </span>
-                    <span className="block truncate text-[11px] text-zinc-500">
+                    <span className="block truncate text-xs-plus text-slate-9">
                       {t.description}
                     </span>
                   </span>
@@ -2316,7 +2311,7 @@ function TypeVariantSelect({
       <SelectTrigger
         size="sm"
         aria-label="Zone type"
-        className="w-full rounded-[2px] border-white/10 bg-white/[0.04] text-[12px] text-white hover:bg-white/[0.08] focus-visible:ring-white/25"
+        className="w-full rounded-[2px] border-white/10 bg-white/[0.04] text-xs text-white hover:bg-state-hover-overlay focus-visible:ring-state-focus-ring"
       >
         <SelectValue placeholder="Choose a zone type">
           {active && (
@@ -2331,9 +2326,9 @@ function TypeVariantSelect({
           )}
         </SelectValue>
       </SelectTrigger>
-      <SelectContent className="border-white/10 bg-[#1a1a1a]/95 text-white backdrop-blur-xl">
+      <SelectContent className="border-white/10 bg-surface-2/95 text-white backdrop-blur-xl">
         {ZONE_TYPES.map((t) => (
-          <SelectItem key={t.id} value={t.id} className="text-[12px]">
+          <SelectItem key={t.id} value={t.id} className="text-xs">
             <span className="flex items-center gap-2">
               <span
                 aria-hidden
@@ -2416,7 +2411,7 @@ function CollapsibleSection({
             size={14}
             // Hover-only chevron: hidden at rest, fades in on hover or
             // keyboard focus, and stays visible once the section is open.
-            className={`shrink-0 text-zinc-500 transition-[opacity,transform] ${
+            className={`shrink-0 text-slate-9 transition-[opacity,transform] ${
               open
                 ? 'rotate-90 opacity-100'
                 : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
@@ -2559,8 +2554,8 @@ function ColorSection({
         <div className="flex items-center justify-between">
           <span className={TYPE_GROUP_TITLE}>Line Thickness</span>
           <span
-            className={`text-[11px] tabular-nums ${
-              disabled ? 'text-zinc-600' : 'text-zinc-400'
+            className={`text-xs-plus tabular-nums ${
+              disabled ? 'text-slate-8' : 'text-slate-10'
             }`}
           >
             {weight.toFixed(1)}
@@ -2603,10 +2598,10 @@ function SegmentButton({
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className={`flex flex-1 items-center justify-center gap-2 rounded-[2px] px-2 py-1 text-[12px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
+      className={`flex flex-1 items-center justify-center gap-2 rounded-[2px] px-2 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring ${
         active
-          ? 'bg-white/[0.12] text-white ring-1 ring-inset ring-white/15'
-          : 'text-white/65 hover:bg-white/10 hover:text-white'
+          ? 'bg-state-selected text-white ring-1 ring-inset ring-white/15'
+          : 'text-white/65 hover:bg-state-hover-overlay hover:text-white'
       }`}
     >
       {children}
@@ -2710,10 +2705,10 @@ function ColorChip({
         <button
           ref={triggerRef}
           type="button"
-          className="flex h-10 w-full items-center gap-2 rounded-[2px] border border-white/10 bg-white/[0.04] px-2 py-1.5 text-left transition-colors hover:border-white/20 hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+          className="flex h-10 w-full items-center gap-2 rounded-[2px] border border-white/10 bg-white/[0.04] px-2 py-1.5 text-left transition-colors hover:border-white/20 hover:bg-state-hover-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
         >
           {color === null ? (
-            <span className="grid size-5 shrink-0 place-items-center rounded-[2px] ring-1 ring-inset ring-white/30 text-zinc-300">
+            <span className="grid size-5 shrink-0 place-items-center rounded-[2px] ring-1 ring-inset ring-white/30 text-slate-11">
               <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden>
                 <circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
                 <line x1="3.6" y1="12.4" x2="12.4" y2="3.6" stroke="currentColor" strokeWidth="1.5" />
@@ -2727,10 +2722,10 @@ function ColorChip({
             />
           )}
           <span className="min-w-0 flex-1 truncate">
-            <span className="block text-[10px] uppercase tracking-wide text-zinc-500">
+            <span className="block text-2xs uppercase tracking-wide text-slate-9">
               {label}
             </span>
-            <span className="block text-[10px] font-medium text-[#949494] truncate">
+            <span className="block text-2xs font-medium text-[#949494] truncate">
               {color === null ? 'None' : color.toUpperCase()}
             </span>
           </span>
@@ -2764,13 +2759,13 @@ function ColorChip({
                   : undefined
               }
               aria-disabled={blockTransparent}
-              className={`mb-2 flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
+              className={`mb-2 flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring ${
                 blockTransparent
                   ? 'cursor-not-allowed text-white/30'
-                  : `hover:bg-white/[0.08] ${color === null ? 'bg-white/[0.08] text-white' : 'text-white/75'}`
+                  : `hover:bg-state-hover-overlay ${color === null ? 'bg-white/[0.08] text-white' : 'text-white/75'}`
               }`}
             >
-              <span className="grid size-5 place-items-center rounded-[2px] ring-1 ring-inset ring-white/30 text-zinc-300">
+              <span className="grid size-5 place-items-center rounded-[2px] ring-1 ring-inset ring-white/30 text-slate-11">
                 <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden>
                   <circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
                   <line x1="3.6" y1="12.4" x2="12.4" y2="3.6" stroke="currentColor" strokeWidth="1.5" />
@@ -2825,7 +2820,7 @@ function ColorChip({
             maxLength={7}
             aria-label="Hex color"
             placeholder="#000000"
-            className="min-w-0 flex-1 rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[12px] uppercase tracking-wider text-white outline-none placeholder:text-white/40 focus:border-white/30"
+            className="min-w-0 flex-1 rounded-md border border-white/10 bg-white/5 px-2 py-1 text-xs uppercase tracking-wider text-white outline-none placeholder:text-white/40 focus:border-white/30"
           />
         </div>
       </PopoverContent>

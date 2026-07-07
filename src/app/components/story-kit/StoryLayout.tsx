@@ -64,7 +64,7 @@ export function StoryLayout({
       <ScrollProgress />
 
       {/* Breadcrumb */}
-      <div className="fixed start-5 top-4 z-40 flex items-center gap-1.5 font-[family:var(--font-mono)] text-[12px] text-[color:var(--story-muted)]">
+      <div className="fixed start-5 top-4 z-40 flex items-center gap-1.5 font-[family:var(--font-mono)] text-xs text-[color:var(--story-muted)]">
         {kicker && <span className="opacity-70">{kicker}</span>}
         {kicker && <span className="opacity-40">·</span>}
         <span className="text-[color:var(--story-ink)]">{title}</span>
@@ -211,14 +211,14 @@ function FooterPill({
             <button
               type="button"
               onClick={onToggleMood}
-              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] text-[color:var(--story-ink)] hover:bg-[var(--story-surface)]"
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm-minus text-[color:var(--story-ink)] hover:bg-[var(--story-surface)]"
             >
               {mood === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
               Mood: {mood === 'dark' ? 'Light' : 'Dark'}
             </button>
             <a
               href={homeHref}
-              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] text-[color:var(--story-ink)] hover:bg-[var(--story-surface)]"
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm-minus text-[color:var(--story-ink)] hover:bg-[var(--story-surface)]"
             >
               <Home size={15} />
               Home
@@ -231,7 +231,7 @@ function FooterPill({
                   type="button"
                   onClick={() => jump(ch.id)}
                   className={cn(
-                    'flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-start text-[12px] hover:bg-[var(--story-surface)]',
+                    'flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-start text-xs hover:bg-[var(--story-surface)]',
                     ch.id === activeId
                       ? 'text-[color:var(--story-ink)]'
                       : 'text-[color:var(--story-muted)]',
@@ -254,7 +254,7 @@ function FooterPill({
           style={{ borderColor: 'var(--story-border)', backgroundColor: 'var(--story-surface)' }}
         >
           <Home size={13} style={{ color: 'var(--story-accent)' }} />
-          <span className="text-[13px] font-medium text-[color:var(--story-ink)]">Back to app</span>
+          <span className="text-sm-minus font-medium text-[color:var(--story-ink)]">Back to app</span>
         </a>
 
         <button
@@ -269,8 +269,8 @@ function FooterPill({
             className="size-2 rounded-full"
             style={{ backgroundColor: 'var(--story-accent)' }}
           />
-          <span className="text-[13px] font-medium text-[color:var(--story-ink)]">{title}</span>
-          <span className="ms-1 inline-flex items-center gap-1 text-[12px] text-[color:var(--story-muted)]">
+          <span className="text-sm-minus font-medium text-[color:var(--story-ink)]">{title}</span>
+          <span className="ms-1 inline-flex items-center gap-1 text-xs text-[color:var(--story-muted)]">
             <Settings size={13} />
             Settings
           </span>

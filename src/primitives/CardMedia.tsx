@@ -237,9 +237,9 @@ function LightboxVideo({ src, initialTime }: { src: string; initialTime: number 
         convention), the scrub bar uses pixel-space math, and the
         ArrowLeft/ArrowRight keys map to "back/forward in time".
       */}
-      <DirIsland direction="ltr" className="bg-zinc-950 px-4 py-3">
+      <DirIsland direction="ltr" className="bg-slate-1 px-4 py-3">
         <div
-          className="relative mb-3 h-1.5 w-full cursor-pointer rounded-full bg-white/15 group/scrub focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+          className="relative mb-3 h-1.5 w-full cursor-pointer rounded-full bg-white/15 group/scrub focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
           role="slider"
           tabIndex={0}
           aria-label="Video position"
@@ -277,7 +277,7 @@ function LightboxVideo({ src, initialTime }: { src: string; initialTime: number 
           <button onClick={skip(5)} className="text-white/60 hover:text-white transition-colors cursor-pointer" aria-label="Skip forward 5 seconds">
             <SkipForward size={14} aria-hidden="true" />
           </button>
-          <span className="text-xs text-zinc-400 font-mono tabular-nums ms-2">
+          <span className="text-xs text-slate-10 font-mono tabular-nums ms-2">
             {formatTime(progress)} / {formatTime(duration)}
           </span>
         </div>
@@ -357,7 +357,7 @@ const VideoWithControls = React.forwardRef<HTMLVideoElement, { src: string }>(
         {/* Same LTR-island convention as LightboxVideo above. */}
         <DirIsland direction="ltr" className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent pt-6 pb-1.5 px-2">
           <div
-            className="relative mb-1.5 h-1 w-full cursor-pointer rounded-full bg-white/15 group/scrub focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+            className="relative mb-1.5 h-1 w-full cursor-pointer rounded-full bg-white/15 group/scrub focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
             role="slider"
             tabIndex={0}
             aria-label="Video position"
@@ -395,7 +395,7 @@ const VideoWithControls = React.forwardRef<HTMLVideoElement, { src: string }>(
             <button onClick={skip(5)} className="text-white/60 hover:text-white transition-colors" aria-label="Skip forward 5 seconds">
               <SkipForward size={12} aria-hidden="true" />
             </button>
-            <span className="text-xs text-zinc-400 font-mono tabular-nums ms-2">
+            <span className="text-xs text-slate-10 font-mono tabular-nums ms-2">
               {formatTime(progress)} / {formatTime(duration)}
             </span>
           </div>

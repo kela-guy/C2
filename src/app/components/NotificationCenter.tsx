@@ -68,7 +68,7 @@ const getIcon = (type: NotificationType, priority: Priority) => {
 const NotificationRow = memo(({ item }: { item: NotificationItem }) => {
   return (
     <div className={`
-      group relative flex gap-4 p-4 hover:bg-white/[0.03] transition-colors cursor-pointer border-b border-border/30 last:border-0
+      group relative flex gap-4 p-4 hover:bg-state-hover transition-colors cursor-pointer border-b border-border/30 last:border-0
       ${!item.read ? 'bg-blue-500/[0.04]' : ''}
     `}>
       {!item.read && (
@@ -84,7 +84,7 @@ const NotificationRow = memo(({ item }: { item: NotificationItem }) => {
             item.priority === 'high' ? 'bg-orange-500/10 text-orange-500 shadow-[0_0_0_1px_rgba(249,115,22,0.2)]' :
             item.type === 'message' ? 'bg-blue-500/10 text-blue-400 shadow-[0_0_0_1px_rgba(59,130,246,0.2)]' :
             item.type === 'system' ? 'bg-purple-500/10 text-purple-400 shadow-[0_0_0_1px_rgba(168,85,247,0.2)]' :
-            'bg-zinc-900 text-gray-400 shadow-[0_0_0_1px_rgba(255,255,255,0.1)]'}
+            'bg-slate-2 text-gray-400 shadow-[0_0_0_1px_rgba(255,255,255,0.1)]'}
         `}>
           {getIcon(item.type, item.priority)}
         </div>
@@ -95,7 +95,7 @@ const NotificationRow = memo(({ item }: { item: NotificationItem }) => {
           <span className="text-xs font-medium uppercase tracking-wider text-white/70 group-hover:text-white/90 transition-colors">
             {item.sender}
           </span>
-          <span className="text-xs text-zinc-500 font-medium font-mono tabular-nums">
+          <span className="text-xs text-slate-9 font-medium font-mono tabular-nums">
             {item.time}
           </span>
         </div>
@@ -104,7 +104,7 @@ const NotificationRow = memo(({ item }: { item: NotificationItem }) => {
           {item.title}
         </h4>
 
-        <p className="text-xs leading-5 text-zinc-400 line-clamp-2 pe-1 font-light">
+        <p className="text-xs leading-5 text-slate-10 line-clamp-2 pe-1 font-light">
           {item.description}
         </p>
       </div>
@@ -167,7 +167,7 @@ export const NotificationCenter = ({ trigger: customTrigger }: NotificationCente
   };
 
   const badge = unreadCount > 0 ? (
-    <span className="absolute top-0 end-0 w-3 h-3 bg-red-500 rounded-full border border-zinc-950 flex items-center justify-center text-xs font-bold text-white tabular-nums shadow-sm pointer-events-none">
+    <span className="absolute top-0 end-0 w-3 h-3 bg-red-500 rounded-full border border-slate-1 flex items-center justify-center text-xs font-bold text-white tabular-nums shadow-sm pointer-events-none">
       {unreadCount > 9 ? '9+' : unreadCount}
     </span>
   ) : null;
@@ -187,10 +187,10 @@ export const NotificationCenter = ({ trigger: customTrigger }: NotificationCente
               className={`
                 relative w-10 h-10 rounded-full flex items-center justify-center
                 transition-colors duration-200 border
-                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring
                 ${isOpen
                   ? 'bg-blue-900/30 border-blue-500/50 text-blue-400'
-                  : 'bg-zinc-950 border-border text-zinc-300 hover:text-white hover:border-zinc-500'
+                  : 'bg-slate-1 border-border text-slate-11 hover:text-white hover:border-slate-9'
                 }
               `}
             >
@@ -202,34 +202,34 @@ export const NotificationCenter = ({ trigger: customTrigger }: NotificationCente
 
         <SheetContent
           side={sheetSide}
-          className="w-[380px] sm:max-w-[380px] p-0 gap-0 bg-zinc-950 border-border font-sans"
+          className="w-[380px] sm:max-w-[380px] p-0 gap-0 bg-slate-1 border-border font-sans"
         >
           <SheetHeader className="px-4 py-3 pe-10 border-b border-border flex-row justify-between items-center space-y-0">
             <div className="flex items-center gap-2">
               <SheetTitle className="text-sm font-bold text-gray-200 tracking-wide">
                 {nt.centerTitle}
               </SheetTitle>
-              <span className="text-xs bg-zinc-900 text-zinc-400 px-1.5 py-0.5 rounded ring-1 ring-white/10">
+              <span className="text-xs bg-slate-2 text-slate-10 px-1.5 py-0.5 rounded ring-1 ring-white/10">
                 beta
               </span>
             </div>
             <div className="flex gap-1">
               <button
                 onClick={markAllAsRead}
-                className="text-xs text-zinc-500 hover:text-blue-400 font-medium transition-colors px-2 py-1 rounded hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+                className="text-xs text-slate-9 hover:text-blue-400 font-medium transition-colors px-2 py-1 rounded hover:bg-state-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
               >
                 {nt.markAllRead}
               </button>
               <button
                 aria-label={nt.settingsAriaLabel}
-                className="text-zinc-500 hover:text-white transition-colors p-1.5 rounded hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+                className="text-slate-9 hover:text-white transition-colors p-1.5 rounded hover:bg-state-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
               >
                 <Settings size={14} />
               </button>
             </div>
           </SheetHeader>
 
-          <div className="flex items-center px-4 pt-2 border-b border-border bg-zinc-950">
+          <div className="flex items-center px-4 pt-2 border-b border-border bg-slate-1">
             <div className="flex gap-6">
               {(["all", "alerts", "unread"] as const).map((tab) => (
                 <button
@@ -237,16 +237,16 @@ export const NotificationCenter = ({ trigger: customTrigger }: NotificationCente
                   onClick={() => setActiveTab(tab)}
                   className={`
                     text-xs font-medium pb-2 border-b-[2px] transition-colors relative
-                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring
                     ${activeTab === tab
                       ? 'text-white border-blue-500'
-                      : 'text-zinc-500 border-transparent hover:text-zinc-400'
+                      : 'text-slate-9 border-transparent hover:text-slate-10'
                     }
                   `}
                 >
                   {tab === "all" ? nt.tabAll : tab === "alerts" ? nt.tabAlerts : nt.tabUnread}
                   {tab === "unread" && unreadCount > 0 && (
-                    <span className="me-1.5 text-xs bg-white/10 text-zinc-400 px-1 rounded-full tabular-nums">
+                    <span className="me-1.5 text-xs bg-white/10 text-slate-10 px-1 rounded-full tabular-nums">
                       {unreadCount}
                     </span>
                   )}
@@ -261,7 +261,7 @@ export const NotificationCenter = ({ trigger: customTrigger }: NotificationCente
               if (items.length === 0) return null;
               return (
                 <div key={category} className="flex flex-col">
-                  <div className="sticky top-0 z-10 bg-zinc-950/95 backdrop-blur-sm px-4 py-2 border-b border-border/30 flex items-center">
+                  <div className="sticky top-0 z-10 bg-slate-1/95 backdrop-blur-sm px-4 py-2 border-b border-border/30 flex items-center">
                     <span className="text-xs font-medium text-white/70 uppercase tracking-wider">
                       {category === "Today" ? nt.categoryToday :
                        category === "Yesterday" ? nt.categoryYesterday :
@@ -278,8 +278,8 @@ export const NotificationCenter = ({ trigger: customTrigger }: NotificationCente
             })}
 
             {filteredNotifications.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-20 text-zinc-600 gap-3">
-                <div className="w-12 h-12 rounded-full bg-zinc-950 flex items-center justify-center ring-1 ring-zinc-900">
+              <div className="flex flex-col items-center justify-center py-20 text-slate-8 gap-3">
+                <div className="w-12 h-12 rounded-full bg-slate-1 flex items-center justify-center ring-1 ring-slate-2">
                   <CheckCircle2 size={20} />
                 </div>
                 <span className="text-xs font-medium">{nt.emptyState}</span>
@@ -291,8 +291,8 @@ export const NotificationCenter = ({ trigger: customTrigger }: NotificationCente
             <ScrollEdgeCue edge="bottom" visible={listEdges.bottom} surfaceColor="#09090b" />
           </div>
 
-          <div className="p-2 border-t border-border bg-zinc-950 flex justify-center">
-            <button className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-white transition-colors py-1 px-3 rounded hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25">
+          <div className="p-2 border-t border-border bg-slate-1 flex justify-center">
+            <button className="flex items-center gap-1.5 text-xs text-slate-9 hover:text-white transition-colors py-1 px-3 rounded hover:bg-state-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring">
               <span>{nt.historyAll}</span>
               <ChevronDown size={12} className="rotate-[90deg]" />
             </button>

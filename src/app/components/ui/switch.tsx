@@ -18,7 +18,7 @@ function Switch({
     // and the drone HUD; see `src/lib/direction/DirIsland.tsx`.
     // Track + thumb are tuned for our dark tactical popovers. The
     // shadcn defaults (`bg-switch-background`, `transition-all` with no
-    // duration) read as invisible against `bg-[#1a1a1a]/95` and feel
+    // duration) read as invisible against `bg-surface-2/95` and feel
     // instant; explicit duration + a brighter unchecked state restore
     // the off→on motion.
     <SwitchPrimitive.Root
@@ -28,7 +28,7 @@ function Switch({
         "ring-1 ring-inset ring-white/10",
         "data-[state=unchecked]:bg-white/15 data-[state=checked]:bg-emerald-500/80",
         "transition-colors duration-[var(--motion-moderate)] ease-out",
-        "outline-none focus-visible:ring-2 focus-visible:ring-white/40",
+        "outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring",
         "disabled:cursor-not-allowed disabled:opacity-50",
         className,
       )}

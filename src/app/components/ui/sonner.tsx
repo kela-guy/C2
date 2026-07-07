@@ -22,9 +22,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
       style={{ zIndex: 60 }}
       toastOptions={{
         style: {
-          background: '#1c1c20',
+          background: 'var(--surface-3)',
           border: 'none',
-          boxShadow: '0 0 0 1px rgba(255,255,255,0.10), 0 8px 30px rgba(0,0,0,0.5)',
+          boxShadow: '0 0 0 1px var(--state-hover-overlay), var(--shadow-5)',
           borderRadius: '2px',
         },
         actionButtonStyle: {

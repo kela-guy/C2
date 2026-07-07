@@ -22,7 +22,7 @@
  *   - `--chart-*` tokens have no counterpart in the engine and are dropped.
  */
 
-import type { Mode, OkLch, ThemeConfig } from '../theme-sandbox/tokens';
+import type { Mode, OkLch, ThemeConfig } from './tokens';
 
 /** Per-mode primary from the source theme. */
 export const TWEAKCN_PRIMARY: Record<Mode, OkLch> = {

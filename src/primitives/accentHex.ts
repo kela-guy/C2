@@ -70,7 +70,44 @@ export const DISPOSITION_HEX = {
   neutral:       '#eb63c5',
 } as const;
 
+/*
+ * Marker/tactical tier — the map + SVG icon layer's named colors.
+ * Everything the marker system paints comes from here (or SLATE_HEX /
+ * ACCENT_HEX above) so map code never re-declares raw hex. Values that
+ * have a palette twin alias it; the rest are marker-only hues declared
+ * exactly once.
+ */
+export const MARKER_HEX = {
+  /** Hostile / CRITICAL / HIGH urgency — the palette danger red. */
+  hostile: ACCENT_HEX.danger,
+  /** MEDIUM / "ambiguous, review" orange (marker-only hue). */
+  possibleThreat: '#ff9e3d',
+  /** Friendly-adjacent green (neutral glyph, jammer ring). */
+  friendly: ACCENT_HEX.success,
+  /** Unclassified-identity yellow (marker-only hue). */
+  unknownYellow: '#facc15',
+  /** Weapon-pointing / asset-warning amber — the palette warning. */
+  weaponWarning: ACCENT_HEX.warning,
+  /** Raw-blip "no identity yet" gray. */
+  unknownGray: SLATE_HEX[10],
+  /** LOW severity / desaturated-complete gray. */
+  lowGray: SLATE_HEX[8],
+  /** Disabled / offline marker gray. */
+  disabledGray: SLATE_HEX[9],
+  /** Expired glyph / inner-glow gray. */
+  expiredGlyph: SLATE_HEX[6],
+  /** Expired ring gray. */
+  expiredRing: SLATE_HEX[5],
+  /** Resting ring on friendly/neutral/unknown markers (near-black). */
+  ringResting: SLATE_HEX[3],
+  /** Outline ink used by the SVG map glyphs (near-black stroke). */
+  ink: '#0a0a0a',
+  /** Pure white — glyphs / rings / surfaces on the dark map. */
+  white: '#ffffff',
+} as const;
+
 export type AccentName = keyof typeof ACCENT_HEX;
+export type MarkerColorName = keyof typeof MARKER_HEX;
 export type SlateStep = keyof typeof SLATE_HEX;
 export type SurfaceLevel = keyof typeof SURFACE_HEX;
 export type DispositionName = keyof typeof DISPOSITION_HEX;

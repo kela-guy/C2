@@ -42,7 +42,6 @@ export {
   getDeviceHealthReason,
   getDeviceErrorCount,
   DEVICE_HEALTH_VISUAL,
-  DEVICE_HEALTH_CRITICAL_PING,
   type DeviceHealth,
 } from './deviceHealth';
 

@@ -28,11 +28,11 @@ export function AccordionSection({
       className={["group", className].filter(Boolean).join(" ")}
     >
       <CollapsibleTrigger
-        className="flex w-full cursor-pointer items-center justify-between rounded-none bg-white/[0.08] p-[8px] transition-colors hover:bg-white/[0.11] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+        className="flex w-full cursor-pointer items-center justify-between rounded-none bg-white/[0.08] p-[8px] transition-colors hover:bg-state-hover-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
       >
-        <div className="flex items-center gap-2 text-sm font-normal text-zinc-300">
+        <div className="flex items-center gap-2 text-sm font-normal text-slate-11">
           {HeaderIcon && (
-            <HeaderIcon size={14} className="text-zinc-500" aria-hidden="true" />
+            <HeaderIcon size={14} className="text-slate-9" aria-hidden="true" />
           )}
           {title}
         </div>
@@ -40,7 +40,7 @@ export function AccordionSection({
         <div className="flex items-center gap-2">
           {headerAction}
           <div
-            className="text-zinc-500 transition-transform duration-200 group-data-[state=open]:rotate-180"
+            className="text-slate-9 transition-transform duration-200 group-data-[state=open]:rotate-180"
             aria-hidden="true"
           >
             <ChevronDown size={16} />

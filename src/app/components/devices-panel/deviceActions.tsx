@@ -379,7 +379,7 @@ export function resolveDeviceAction(
               <span className="inline-flex items-center gap-1.5">
                 {label}
                 {hasErrors && (
-                  <span className="flex h-fit w-fit flex-col items-center justify-center bg-red-500/20 px-1.5 py-0.5 text-[10px] font-medium text-red-300 tabular-nums">
+                  <span className="flex h-fit w-fit flex-col items-center justify-center bg-red-500/20 px-1.5 py-0.5 text-2xs font-medium text-red-300 tabular-nums">
                     {count > 99 ? '99+' : count}
                   </span>
                 )}

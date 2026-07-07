@@ -43,7 +43,7 @@ export function CardTimeline({ steps, compact, className = '', statusLabels: sta
                     ? 'bg-white animate-pulse motion-reduce:animate-none'
                     : step.status === 'error'
                       ? 'bg-red-500'
-                      : 'bg-zinc-600'
+                      : 'bg-slate-8'
               }`}
               style={{
                 width: step.status === 'active' ? d.activeDotSize : d.dotSize,
@@ -56,7 +56,7 @@ export function CardTimeline({ steps, compact, className = '', statusLabels: sta
             {idx < steps.length - 1 && (
               <div
                 className={`h-[1px] flex-1 min-w-[6px] ${
-                  step.status === 'complete' ? 'bg-emerald-500/40' : 'bg-zinc-700'
+                  step.status === 'complete' ? 'bg-emerald-500/40' : 'bg-slate-5'
                 }`}
               />
             )}

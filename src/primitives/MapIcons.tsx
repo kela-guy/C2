@@ -1,4 +1,5 @@
 import React from 'react';
+import { MARKER_HEX } from './accentHex';
 
 export const DRONE_PATH =
   'M23.334 15.7502L9.33696 0.583495L5.86139 4.0835L10.5007 11.0835L9.32456 15.7502L10.5007 20.4168L5.86139 27.4168L9.32456 30.6801L23.334 15.7502Z';
@@ -63,7 +64,7 @@ export const UNKNOWN_PATH =
 
 // Map marker: carries a black stroke for legibility over imagery, with
 // the fill driven by `color` (gray while unidentified — see UNKNOWN_GRAY).
-export const UnknownIcon = ({ color = '#9ca3af', size = 32 }: { color?: string; size?: number }) => (
+export const UnknownIcon = ({ color = MARKER_HEX.unknownGray, size = 32 }: { color?: string; size?: number }) => (
   <svg
     width={size}
     height={size}
@@ -73,7 +74,7 @@ export const UnknownIcon = ({ color = '#9ca3af', size = 32 }: { color?: string; 
     className="drop-shadow-lg"
     aria-hidden="true"
   >
-    <path d={UNKNOWN_PATH} fill={color} stroke="#0a0a0a" strokeWidth="1" strokeLinejoin="round" />
+    <path d={UNKNOWN_PATH} fill={color} stroke={MARKER_HEX.ink} strokeWidth="1" strokeLinejoin="round" />
   </svg>
 );
 
@@ -99,7 +100,7 @@ export const HUMAN_BODY_PATH =
   'M8 14.5H16C18.4853 14.5 20.5 16.5147 20.5 19V20.5H3.5V19C3.5 16.5147 5.51472 14.5 8 14.5Z';
 
 // Map marker: black stroke for legibility over imagery, fill driven by `color`.
-export const HumanIcon = ({ color = '#ffffff', size = 32 }: { color?: string; size?: number }) => (
+export const HumanIcon = ({ color = MARKER_HEX.white, size = 32 }: { color?: string; size?: number }) => (
   <svg
     width={size}
     height={size}
@@ -109,8 +110,8 @@ export const HumanIcon = ({ color = '#ffffff', size = 32 }: { color?: string; si
     className="drop-shadow-lg"
     aria-hidden="true"
   >
-    <path d={HUMAN_HEAD_PATH} fill={color} stroke="#0a0a0a" strokeWidth="1" strokeLinejoin="round" />
-    <path d={HUMAN_BODY_PATH} fill={color} stroke="#0a0a0a" strokeWidth="1" strokeLinejoin="round" />
+    <path d={HUMAN_HEAD_PATH} fill={color} stroke={MARKER_HEX.ink} strokeWidth="1" strokeLinejoin="round" />
+    <path d={HUMAN_BODY_PATH} fill={color} stroke={MARKER_HEX.ink} strokeWidth="1" strokeLinejoin="round" />
   </svg>
 );
 
@@ -132,7 +133,7 @@ export const HumanCardIcon = ({ size = 15 }: { size?: number }) => (
 export const CAR_PATH =
   'M19.5 17H21C21.5523 17 22 16.5523 22 16V10.8198C22 10.3431 21.6635 9.93271 21.1961 9.83922L17.3746 9.07493C17.1334 9.02668 16.9184 8.89118 16.7708 8.69435L14.3 5.4C14.1111 5.14819 13.8148 5 13.5 5H3C2.44771 5 2 5.44772 2 6V16C2 16.5523 2.44772 17 3 17H4.5';
 
-export const CarIcon = ({ color = '#ff3d40', size = 32 }: { color?: string; size?: number }) => (
+export const CarIcon = ({ color = MARKER_HEX.hostile, size = 32 }: { color?: string; size?: number }) => (
   <svg
     width={size}
     height={size}
@@ -142,8 +143,8 @@ export const CarIcon = ({ color = '#ff3d40', size = 32 }: { color?: string; size
     className="drop-shadow-lg"
     aria-hidden="true"
   >
-    <path d={CAR_PATH} fill={color} stroke="#0a0a0a" strokeWidth="1" strokeLinecap="round" />
-    <path d="M9.5 17H14.5" stroke="#0a0a0a" strokeWidth="1.5" strokeLinecap="round" />
+    <path d={CAR_PATH} fill={color} stroke={MARKER_HEX.ink} strokeWidth="1" strokeLinecap="round" />
+    <path d="M9.5 17H14.5" stroke={MARKER_HEX.ink} strokeWidth="1.5" strokeLinecap="round" />
     <circle cx="7" cy="16.75" r="2.25" fill={color} />
     <circle cx="17" cy="16.75" r="2.25" fill={color} />
   </svg>
@@ -175,14 +176,14 @@ const TANK_TREAD_PATH =
 
 const TANK_WHEELS = (
   <>
-    <circle cx="4.787" cy="17.166" r="1.928" fill="#0a0a0a" />
-    <circle cx="9.587" cy="17.166" r="1.928" fill="#0a0a0a" />
-    <circle cx="14.425" cy="17.166" r="1.928" fill="#0a0a0a" />
-    <circle cx="19.213" cy="17.166" r="1.928" fill="#0a0a0a" />
+    <circle cx="4.787" cy="17.166" r="1.928" fill={MARKER_HEX.ink} />
+    <circle cx="9.587" cy="17.166" r="1.928" fill={MARKER_HEX.ink} />
+    <circle cx="14.425" cy="17.166" r="1.928" fill={MARKER_HEX.ink} />
+    <circle cx="19.213" cy="17.166" r="1.928" fill={MARKER_HEX.ink} />
   </>
 );
 
-export const TankIcon = ({ color = '#ffffff', size = 32 }: { color?: string; size?: number }) => (
+export const TankIcon = ({ color = MARKER_HEX.white, size = 32 }: { color?: string; size?: number }) => (
   <svg
     width={size}
     height={size}
@@ -192,8 +193,8 @@ export const TankIcon = ({ color = '#ffffff', size = 32 }: { color?: string; siz
     className="drop-shadow-lg"
     aria-hidden="true"
   >
-    <path d={TANK_HULL_PATH} fill={color} stroke="#0a0a0a" strokeWidth="0.6" strokeLinejoin="round" />
-    <path d={TANK_TREAD_PATH} fill={color} stroke="#0a0a0a" strokeWidth="0.6" />
+    <path d={TANK_HULL_PATH} fill={color} stroke={MARKER_HEX.ink} strokeWidth="0.6" strokeLinejoin="round" />
+    <path d={TANK_TREAD_PATH} fill={color} stroke={MARKER_HEX.ink} strokeWidth="0.6" />
     {TANK_WHEELS}
   </svg>
 );
@@ -221,7 +222,7 @@ const TRUCK_TRAILER_PATH =
   'M22 16.5569H21.0483C20.715 16.4783 20.7355 16.1387 20.6651 15.866C20.1246 13.7704 17.146 13.5481 16.2401 15.4669C16.118 15.7043 16.0811 15.9666 16.0236 16.2241C15.9181 16.6948 15.037 16.619 15.037 16.619C15.0504 13.583 15.037 7.46114 15.037 7.46114C16.1443 7.45177 18.3878 7.47988 18.3878 7.47988C19.4839 8.7717 22 11.9337 22 11.9337V16.5569Z';
 const TRUCK_WINDOW_PATH = 'M17.914 8.3074L20.3289 11.1239H15.5886V8.29184L17.914 8.3074Z';
 
-export const TruckIcon = ({ color = '#ffffff', size = 32 }: { color?: string; size?: number }) => (
+export const TruckIcon = ({ color = MARKER_HEX.white, size = 32 }: { color?: string; size?: number }) => (
   <svg
     width={size}
     height={size}
@@ -231,13 +232,13 @@ export const TruckIcon = ({ color = '#ffffff', size = 32 }: { color?: string; si
     className="drop-shadow-lg"
     aria-hidden="true"
   >
-    <path d={TRUCK_CAB_PATH} fill={color} stroke="#0a0a0a" strokeWidth="0.6" strokeLinejoin="round" />
-    <path d={TRUCK_TRAILER_PATH} fill={color} stroke="#0a0a0a" strokeWidth="0.6" strokeLinejoin="round" />
-    <path d={TRUCK_WINDOW_PATH} fill="#0a0a0a" />
-    <circle cx="6.124" cy="16.475" r="2.04" fill={color} stroke="#0a0a0a" strokeWidth="0.6" />
-    <circle cx="18.379" cy="16.475" r="2.04" fill={color} stroke="#0a0a0a" strokeWidth="0.6" />
-    <circle cx="6.124" cy="16.475" r="0.9" fill="#0a0a0a" />
-    <circle cx="18.379" cy="16.475" r="0.9" fill="#0a0a0a" />
+    <path d={TRUCK_CAB_PATH} fill={color} stroke={MARKER_HEX.ink} strokeWidth="0.6" strokeLinejoin="round" />
+    <path d={TRUCK_TRAILER_PATH} fill={color} stroke={MARKER_HEX.ink} strokeWidth="0.6" strokeLinejoin="round" />
+    <path d={TRUCK_WINDOW_PATH} fill={MARKER_HEX.ink} />
+    <circle cx="6.124" cy="16.475" r="2.04" fill={color} stroke={MARKER_HEX.ink} strokeWidth="0.6" />
+    <circle cx="18.379" cy="16.475" r="2.04" fill={color} stroke={MARKER_HEX.ink} strokeWidth="0.6" />
+    <circle cx="6.124" cy="16.475" r="0.9" fill={MARKER_HEX.ink} />
+    <circle cx="18.379" cy="16.475" r="0.9" fill={MARKER_HEX.ink} />
   </svg>
 );
 

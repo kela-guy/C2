@@ -221,7 +221,9 @@ export function MapMarker({
       {/* Label/Tooltip — floats top-right of the marker */}
       {showLabel && label && (
         <div
-          className="absolute whitespace-nowrap pointer-events-none"
+          // z-[7] keeps the tooltip above corner badges (MarkerOfflineBadge
+          // rides at z-[6]) so the label never gets clipped by them.
+          className="absolute whitespace-nowrap pointer-events-none z-[7]"
           style={{
             left: outerSize / 2 + 6,
             bottom: outerSize / 2 + 2,

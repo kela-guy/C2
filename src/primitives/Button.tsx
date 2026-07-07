@@ -1,13 +1,14 @@
 import React from "react";
-import { Slot } from "@radix-ui/react-slot";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { spring, springExit } from "@/lib/springs";
 import { cn } from "@/shared/components/ui/utils";
+import { Button as UiButton } from "@/shared/components/ui/button";
 import { AppLoader } from "@/shared/components/ui/app-loader";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/shared/components/ui/tooltip";
 import {
   BUTTON_VARIANTS,
   BUTTON_SIZES,
+  BUTTON_PRESSED_CLASSES,
   type ButtonVariant,
   type ButtonSize,
 } from "./buttonTokens";
@@ -22,9 +23,9 @@ export interface ButtonProps {
   /** Optional trailing pill rendered after the label (e.g. a selected-track name). Hidden while `loading`. */
   badge?: string;
   onClick?: (e: React.MouseEvent) => void;
-  /** Surface treatment. Danger/warning use oklch. Defaults to `fill`. */
+  /** Surface treatment, aliased onto the ui/button cva. Defaults to `fill`. */
   variant?: ButtonVariant;
-  /** Height + type scale. Defaults to `md`. */
+  /** Height + type scale, aliased onto the ui/button cva. Defaults to `md`. */
   size?: ButtonSize;
   className?: string;
   disabled?: boolean;
@@ -56,12 +57,13 @@ export interface ButtonProps {
 /**
  * The base button primitive — the "father" of the button family.
  *
- * Owns the shared button DNA: the variant + size token system, the full state
- * set (default / hover / active / focus-visible / disabled / loading /
- * pressed), the focus ring, press feedback, the loading spinner swap, and the
- * animated icon+label. Every other button (ActionButton, CameraToggleButton,
- * SplitActionButton, …) is a preset or composite built on top of this or its
- * tokens, so the family stays visually unified.
+ * A thin composition over the ONE shadcn Button (`ui/button.tsx`): the cva
+ * there owns every surface + size treatment; this layer only maps the domain
+ * vocabulary (`fill/ghost/outline/danger/warning`, `sm/md/lg`) onto the cva
+ * via `buttonTokens.ts` and adds the domain behavior — the animated
+ * icon+label crossfade, the loading spinner swap, the badge pill, the tooltip
+ * wrapper, and the pressed (toggle-on) surface. ActionButton and
+ * SplitActionButton are presets/composites of the same foundation.
  */
 export function Button({
   label,
@@ -81,29 +83,29 @@ export function Button({
 }: ButtonProps) {
   const prefersReducedMotion = useReducedMotion();
   const isDisabled = disabled || loading;
-  const c = BUTTON_VARIANTS[variant];
   const sz = BUTTON_SIZES[size];
 
-  const Comp = asChild ? Slot : "button";
-
   const btn = (
-    <Comp
+    <UiButton
+      asChild={asChild}
       {...(asChild ? {} : { type: "button" as const })}
       data-handoff-component={dataHandoff}
       onClick={isDisabled ? undefined : onClick}
       disabled={asChild ? undefined : isDisabled}
       aria-pressed={pressed}
+      variant={BUTTON_VARIANTS[variant]}
+      size={BUTTON_SIZES[size].ui}
       className={cn(
-        'inline-flex items-center justify-center gap-2 px-3 rounded overflow-hidden',
-        sz.height, sz.text, sz.font, c.text,
-        c.base, c.hover, c.active,
-        'transition-[background-color,box-shadow,transform] duration-[var(--motion-fast)] ease-out',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/30',
-        !loading && 'active:scale-[0.98] will-change-transform',
+        'px-3 overflow-hidden',
+        'duration-[var(--motion-fast)]',
+        !loading && 'will-change-transform',
+        // asChild renders onto a non-button element, so the cva's disabled:
+        // pseudo-class styles never apply — mirror them as plain classes.
         isDisabled && !loading && 'opacity-45 pointer-events-none',
-        loading && 'cursor-wait',
-        pressed &&
-          'bg-white/[0.20] hover:bg-white/[0.24] active:bg-white/[0.16] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.22)]',
+        // Loading blocks input via the native disabled attribute but must not
+        // read as "unavailable": keep full opacity and show the wait cursor.
+        loading && 'cursor-wait disabled:pointer-events-auto disabled:opacity-100',
+        pressed && BUTTON_PRESSED_CLASSES,
         className,
       )}
       {...(loading ? { "aria-live": "polite" as const } : {})}
@@ -123,7 +125,9 @@ export function Button({
             {loading ? (
               <AppLoader size={sz.icon} label={label} className="shrink-0 opacity-90" />
             ) : (
-              Icon && <Icon size={sz.icon} className="shrink-0 opacity-95" aria-hidden="true" />
+              // The explicit size-* class keeps the glyph at the family's
+              // per-size scale (the cva would otherwise force svgs to size-4).
+              Icon && <Icon size={sz.icon} className={cn('shrink-0 opacity-95', sz.iconCls)} aria-hidden="true" />
             )}
             <span className="whitespace-nowrap">{label}</span>
             {badge && !loading && (
@@ -134,7 +138,7 @@ export function Button({
           </motion.span>
         </AnimatePresence>
       )}
-    </Comp>
+    </UiButton>
   );
 
   if (!title) return btn;

@@ -20,6 +20,7 @@ import { CardLayoutLab } from './devices-panel-next/lab/CardLayoutLab';
 import { GotchaCardLab } from './devices-panel-next/lab/GotchaCardLab';
 import { CardErrorOptionsLab } from './devices-panel-next/lab/CardErrorOptionsLab';
 import { DeviceTileStates } from './devices-panel-next/lab/DeviceTileStates';
+import { StateColorLab } from './devices-panel-next/lab/StateColorLab';
 import { TooltipDesigns } from './devices-panel-next/lab/TooltipDesigns';
 import { FloodlightToggleLab } from './devices-panel-next/lab/FloodlightToggleLab';
 import { FeedPinLab } from './devices-panel-next/lab/FeedPinLab';
@@ -128,6 +129,7 @@ export default function DevicesLabPage() {
             <Tabs defaultValue="gotcha" dir={dir} className="gap-8">
               <TabsList variant="line">
                 <TabsTrigger value="gotcha">Gotcha card</TabsTrigger>
+                <TabsTrigger value="stateColors">State colors</TabsTrigger>
                 <TabsTrigger value="tiles">Device tiles</TabsTrigger>
                 <TabsTrigger value="tooltips">Tooltips</TabsTrigger>
                 <TabsTrigger value="floodlight">Floodlight toggle</TabsTrigger>
@@ -136,6 +138,10 @@ export default function DevicesLabPage() {
 
               <TabsContent value="gotcha">
                 <GotchaCardLab />
+              </TabsContent>
+
+              <TabsContent value="stateColors">
+                <StateColorLab />
               </TabsContent>
 
               <TabsContent value="tiles">

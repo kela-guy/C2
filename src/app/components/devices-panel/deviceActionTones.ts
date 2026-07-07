@@ -22,21 +22,21 @@ export interface DeviceActionToneClasses {
   pressed: string;
 }
 
-const NEUTRAL_GHOST = 'text-white/70 hover:bg-white/10 hover:text-white/90';
+const NEUTRAL_GHOST = 'text-white/70 hover:bg-state-hover-overlay hover:text-white/90';
 
 export const DEVICE_ACTION_TONES: Record<DeviceActionTone, DeviceActionToneClasses> = {
   neutral: {
-    base: 'text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90',
+    base: 'text-white/70 bg-white/[0.06] hover:bg-state-hover-overlay hover:text-white/90',
     ghostBase: NEUTRAL_GHOST,
     pressed: 'text-white bg-white/15 hover:bg-white/20',
   },
   engaged: {
     base: 'text-sky-200 bg-sky-500/15 hover:bg-sky-500/25',
-    ghostBase: 'text-white/70 hover:bg-white/10 hover:text-white',
+    ghostBase: 'text-white/70 hover:bg-state-hover-overlay hover:text-white',
     pressed: 'text-sky-100 bg-sky-500/30 ring-1 ring-inset ring-sky-300/45 hover:bg-sky-500/40',
   },
   caution: {
-    base: 'text-white/70 bg-white/[0.06] hover:bg-white/10 hover:text-white/90',
+    base: 'text-white/70 bg-white/[0.06] hover:bg-state-hover-overlay hover:text-white/90',
     ghostBase: NEUTRAL_GHOST,
     pressed: 'text-amber-400 bg-amber-500/15 hover:bg-amber-500/25',
   },

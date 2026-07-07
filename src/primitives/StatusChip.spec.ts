@@ -3,7 +3,7 @@ import type { ComponentSpec } from '@/specs/types';
 export const spec: ComponentSpec = {
   name: 'StatusChip',
   filePath: 'src/primitives/StatusChip.tsx',
-  purpose: 'Colored label pill that communicates detection status at a glance (detection, threat, suspicion, unknown).',
+  purpose: 'Colored label pill that communicates detection status at a glance (detection, threat, suspicion, unknown) — the shadcn ui/badge Badge wearing the STATUS_CHIP_COLORS tone classes.',
   location: 'Primitives',
   status: 'prototype',
 

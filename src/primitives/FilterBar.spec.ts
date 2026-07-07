@@ -123,7 +123,7 @@ export const spec: ComponentSpec = {
       { name: 'search-bg', value: 'rgba(255,255,255,0.04)', usage: 'Search input background' },
       { name: 'search-ring', value: 'rgba(255,255,255,0.07)', usage: 'Search input border' },
       { name: 'search-focus-ring', value: 'rgba(56,189,248,0.35)', usage: 'Search input focus border (sky-400)' },
-      { name: 'search-icon', value: 'text-zinc-500', usage: 'Search and clear icons' },
+      { name: 'search-icon', value: 'text-slate-9', usage: 'Search and clear icons' },
       { name: 'button-bg', value: 'rgba(255,255,255,0.06)', usage: 'Filter button idle background' },
       { name: 'button-bg-hover', value: 'rgba(255,255,255,0.10)', usage: 'Filter button hover background' },
       { name: 'button-active', value: 'rgba(14,165,233,0.12)', usage: 'Active filter highlight (sky-500/12)' },

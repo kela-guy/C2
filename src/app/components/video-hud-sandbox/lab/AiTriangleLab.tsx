@@ -215,7 +215,7 @@ function VariantMarker({ variant, conf }: { variant: number; conf: number }) {
         <>
           {svg(baseOutline)}
           <span
-            className="absolute -translate-x-1/2 rounded-[3px] px-1.5 py-0.5 font-mono text-[9px] font-semibold leading-none tabular-nums text-surface-void shadow-sm"
+            className="absolute -translate-x-1/2 rounded-[3px] px-1.5 py-0.5 font-mono text-3xs font-semibold leading-none tabular-nums text-surface-void shadow-sm"
             style={{
               left: `${VTX.cx}%`,
               top: `${VTX.cy}%`,
@@ -340,7 +340,7 @@ function VariantTile({ variant }: { variant: Variant }) {
           <span className="font-mono text-slate-9">{String(variant.id).padStart(2, '0')}</span>{' '}
           {variant.name}
         </span>
-        <span className="text-[10px] text-slate-10">{variant.desc}</span>
+        <span className="text-2xs text-slate-10">{variant.desc}</span>
       </div>
       <div className="relative aspect-video w-full overflow-hidden rounded-md ring-1 ring-inset ring-white/10">
         <FauxScene />
@@ -367,7 +367,7 @@ export function AiTriangleLab() {
         <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-11">
           Design studies for the marker that highlights AI-detected objects on the feed. Each tile shows the variant over
           a faux night scene at two sizes. Pick a direction and we&apos;ll wire it into{' '}
-          <code className="rounded bg-black/40 px-1 py-px text-[11px] text-slate-12">AiDetectionTriangles</code>.
+          <code className="rounded bg-black/40 px-1 py-px text-xs-plus text-slate-12">AiDetectionTriangles</code>.
         </p>
       </div>
 

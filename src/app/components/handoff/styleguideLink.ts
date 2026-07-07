@@ -26,13 +26,11 @@
 import { GENERATED_SECTION_BY_HINT } from '@/app/styleguide/registry/styleguideSectionByHint.generated';
 
 const MANUAL_SECTION_BY_HINT: Record<string, string> = {
-  // Project-specific opt-ins map 1:1.
-  'status-chip': 'status-chip',
-  'action-button': 'action-button',
-  'split-action': 'split-action',
+  // Project-specific opt-ins map 1:1. (The former status-chip /
+  // action-button / split-action / new-updates sections folded into badge
+  // and button — those hints now resolve via the generated map.)
   accordion: 'accordion',
   telemetry: 'telemetry',
-  'copy-button': 'copy-button',
   'card-header': 'card-header',
   'card-media': 'card-media',
   'card-actions': 'card-actions',
@@ -44,7 +42,6 @@ const MANUAL_SECTION_BY_HINT: Record<string, string> = {
   'card-states': 'card-states',
   'target-card': 'target-card',
   'filter-bar': 'filter-bar',
-  'new-updates': 'new-updates',
 
   // Counter-drone Gotcha effector. The composite-unit child group + its rows
   // are the collapsible "Sensors" inset; both land on the Gotcha section's
@@ -97,8 +94,6 @@ const MANUAL_SECTION_BY_HINT: Record<string, string> = {
   // leave it to the `/styleguide#top` fallback so we don't ship a
   // misleading link.
   card: 'target-card',
-  badge: 'status-chip',
-  button: 'action-button',
   'accordion-item': 'accordion',
   'accordion-trigger': 'accordion',
   'accordion-content': 'accordion',

@@ -120,20 +120,20 @@ export function FilterBar({
     <div className="border-b border-white/5 px-2 py-1.5" data-handoff-component="filter-bar">
       <div className="flex items-center gap-1.5">
         <div className="relative flex-1">
-          <Search size={12} className="absolute start-2.5 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" aria-hidden="true" />
+          <Search size={12} className="absolute start-2.5 top-1/2 -translate-y-1/2 text-slate-9 pointer-events-none" aria-hidden="true" />
           <input
             type="text"
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder={searchPlaceholder}
             aria-label={searchAriaLabel}
-            className="h-7 w-full rounded bg-white/[0.04] ps-7 pe-7 text-xs text-zinc-100 shadow-[0_0_0_1px_rgba(255,255,255,0.07)] placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sky-400/40 focus-visible:shadow-[0_0_0_1px_rgba(56,189,248,0.35)]"
+            className="h-7 w-full rounded bg-white/[0.04] ps-7 pe-7 text-xs text-slate-12 shadow-[0_0_0_1px_rgba(255,255,255,0.07)] placeholder:text-slate-9 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sky-400/40 focus-visible:shadow-[0_0_0_1px_rgba(56,189,248,0.35)]"
           />
           {query && (
             <button
               type="button"
               onClick={() => onQueryChange('')}
-              className="absolute end-1.5 top-1/2 flex h-5 w-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded text-zinc-500 transition-colors duration-150 before:absolute before:-inset-2 before:content-[''] hover:bg-white/5 hover:text-zinc-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20"
+              className="absolute end-1.5 top-1/2 flex h-5 w-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded text-slate-9 transition-colors duration-150 before:absolute before:-inset-2 before:content-[''] hover:bg-state-hover hover:text-slate-11 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-state-focus-ring"
               aria-label={clearSearchAriaLabel}
             >
               <X size={10} aria-hidden="true" />
@@ -145,7 +145,7 @@ export function FilterBar({
           <button
             type="button"
             onClick={onReset}
-            className="inline-flex h-7 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded bg-white/[0.06] px-2 text-xs font-medium text-white transition-[background-color,transform] duration-150 hover:bg-white/[0.10] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 active:scale-[0.99] motion-reduce:active:scale-100 animate-in fade-in-0 zoom-in-95 motion-reduce:animate-none"
+            className="inline-flex h-7 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded bg-white/[0.06] px-2 text-xs font-medium text-white transition-[background-color,transform] duration-150 hover:bg-state-hover-overlay focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-state-focus-ring active:scale-[0.99] motion-reduce:active:scale-100 animate-in fade-in-0 zoom-in-95 motion-reduce:animate-none"
             aria-label={resetAriaLabel}
           >
             <ResetIcon size={11} className="shrink-0" />
@@ -157,7 +157,10 @@ export function FilterBar({
       {filters.length > 0 && (
         <div
           className="grid items-center gap-1.5 mt-1.5"
-          style={{ gridTemplateColumns: `repeat(${filters.length}, minmax(0, 1fr))` }}
+          // Columns cap at 8rem (128px) so a lone filter doesn't stretch its
+          // trigger across the whole panel; they still shrink evenly when the
+          // bar is narrower than the combined cap.
+          style={{ gridTemplateColumns: `repeat(${filters.length}, minmax(0, 8rem))` }}
         >
           {filters.map((def) => {
             const selected = selections[def.id] ?? [];
@@ -216,17 +219,17 @@ function FilterPopoverButton({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className={`inline-flex h-7 w-full cursor-pointer items-center justify-center gap-1.5 rounded px-2 text-xs font-medium text-white transition-[background-color,transform] duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 active:scale-[0.99] motion-reduce:active:scale-100 ${
+          className={`inline-flex h-7 w-full cursor-pointer items-center justify-center gap-1.5 rounded px-2 text-xs font-medium text-white transition-[background-color,transform] duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-state-focus-ring active:scale-[0.99] motion-reduce:active:scale-100 ${
             active || open
               ? 'bg-sky-500/[0.12]'
-              : 'bg-white/[0.06] hover:bg-white/[0.10]'
+              : 'bg-white/[0.06] hover:bg-state-hover-overlay'
           }`}
           aria-haspopup="dialog"
           aria-expanded={open}
           aria-label={label}
         >
           <span className="shrink-0">{label}</span>
-          <span className="flex-1 truncate text-end text-zinc-400 tabular-nums">{value}</span>
+          <span className="flex-1 truncate text-end text-slate-10 tabular-nums">{value}</span>
           <ChevronDown
             size={10}
             className={`ms-auto shrink-0 opacity-50 transition-transform duration-150 motion-reduce:transition-none ${open ? 'rotate-180' : ''}`}
@@ -274,7 +277,7 @@ function MultiSelectList({
 
   if (items.length === 0) {
     return (
-      <div className="px-3 py-4 text-center text-xs text-zinc-500">
+      <div className="px-3 py-4 text-center text-xs text-slate-9">
         {emptyLabel}
       </div>
     );
@@ -293,7 +296,7 @@ function MultiSelectList({
             className={`flex h-7 cursor-pointer items-center gap-2.5 rounded-md px-2.5 text-start text-xs transition-colors duration-150 focus-within:bg-white/10 focus-within:outline-none ${
               active
                 ? 'text-sky-100'
-                : 'text-zinc-300 hover:bg-white/[0.04] hover:text-white'
+                : 'text-slate-11 hover:bg-state-hover hover:text-white'
             }`}
           >
             <Checkbox

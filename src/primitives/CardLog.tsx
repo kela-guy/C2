@@ -52,7 +52,7 @@ export function CardLog({
             <div key={idx} className="flex items-center justify-center gap-2.5 mb-2 relative w-full">
               <div className="w-[11px] h-[11px] rounded-full shadow-[0_0_0_1px_rgba(255,255,255,0.2)] shrink-0 mt-0.5 z-[1]" style={{ backgroundColor: CARD_TOKENS.surface.level1 }} />
               <div className="flex-1 min-w-0 flex flex-col">
-                <span className="text-xs text-zinc-300">{entry.label}</span>
+                <span className="text-xs text-slate-11">{entry.label}</span>
               </div>
               <span className="text-xs text-white/50 font-mono shrink-0 tabular-nums leading-6 align-middle">
                 {entry.time}
@@ -67,7 +67,7 @@ export function CardLog({
               e.stopPropagation();
               setExpanded(true);
             }}
-            className="w-full text-center text-xs text-white hover:text-zinc-300 transition-colors py-0.5"
+            className="w-full text-center text-xs text-white hover:text-slate-11 transition-colors py-0.5"
           >
             {moreLabel(reversed.length - maxVisible)}
           </button>

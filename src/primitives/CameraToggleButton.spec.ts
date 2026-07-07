@@ -10,7 +10,7 @@ export const spec: ComponentSpec = {
   props: [
     { name: 'on', type: 'boolean', required: true, description: 'Whether the camera is currently live/locked on the target' },
     { name: 'pending', type: 'boolean', required: false, defaultValue: 'false', description: 'Transient slew phase between off and on — shows a spinner and is non-interactive' },
-    { name: 'size', type: "'sm' | 'md' | 'lg'", required: false, defaultValue: "'sm'", description: 'Button size, forwarded to the underlying ActionButton' },
+    { name: 'size', type: "'sm' | 'md' | 'lg'", required: false, defaultValue: "'sm'", description: 'Size tier — aliased through BUTTON_SIZES in buttonTokens onto the ui/button cva sizes' },
     { name: 'offLabel', type: 'string', required: true, description: 'Label in the off (idle) state, e.g. "Point camera"' },
     { name: 'onLabel', type: 'string', required: true, description: 'Label in the on (live) state, e.g. "Release camera"' },
     { name: 'pendingLabel', type: 'string', required: false, description: 'Label while slewing; falls back to onLabel' },
@@ -68,21 +68,21 @@ export const spec: ComponentSpec = {
     ],
     animations: [
       { name: 'state-transition', property: 'background-color, box-shadow, transform', duration: '150ms', easing: 'ease-out', usage: 'Off ⇄ on shell transition' },
-      { name: 'label-swap', property: 'opacity, y', duration: '0.3s', easing: 'spring(bounce:0)', usage: 'Label crossfade inherited from ActionButton (respects prefers-reduced-motion)' },
+      { name: 'label-swap', property: 'opacity, y', duration: '0.3s', easing: 'spring(bounce:0)', usage: 'Label crossfade shared with the button family (respects prefers-reduced-motion)' },
     ],
   },
 
   accessibility: {
     role: 'button',
     ariaAttributes: [
-      'aria-pressed reflects the on state (true while pending and on, false when off)',
-      'aria-busy while pending (via ActionButton loading)',
+      'aria-pressed reflects the on state via Radix Toggle (true while pending and on, false when off)',
+      'aria-busy while pending',
     ],
     keyboardNav: [
       'Tab: focuses the toggle (native)',
       'Enter/Space: toggles on/off (native button)',
     ],
-    focusManagement: 'Standard focus-visible ring inherited from ActionButton.',
+    focusManagement: 'Standard focus-visible inset ring shared with the button family.',
     screenReaderNotes: 'aria-pressed communicates toggle state; pending announces via aria-live polite.',
   },
 
@@ -101,7 +101,7 @@ export const spec: ComponentSpec = {
   tasks: [],
 
   notes: [
-    'Wraps ActionButton so motion, sizing, and focus rings stay consistent with other card actions.',
+    'Built on the vendored shadcn Toggle (Radix Toggle) for real aria-pressed / data-state=on toggle semantics; the shell wears the ui/button buttonVariants cva (fill variant + size scale via the buttonTokens alias maps) so visuals stay unified with the button family.',
     'Driven by data via CardAction.toggle in CardActions; emitted from useCardSlots for both the CUAS investigate flow and the jamming/BDA flow.',
     'The on state uses a brighter white fill so the toggle visibly "fills" when live; the on state reads the same idle or hovered.',
   ],

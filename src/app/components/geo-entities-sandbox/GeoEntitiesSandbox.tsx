@@ -174,7 +174,7 @@ export default function GeoEntitiesSandbox() {
               type="button"
               aria-pressed={active}
               onClick={() => setVariantId(v.id)}
-              className={`rounded px-2 py-1 text-[11px] font-medium transition-colors ${
+              className={`rounded px-2 py-1 text-xs-plus font-medium transition-colors ${
                 active
                   ? 'bg-state-hover-strong text-slate-12'
                   : 'text-slate-10 hover:bg-state-hover-strong hover:text-slate-12'
@@ -192,8 +192,8 @@ export default function GeoEntitiesSandbox() {
 
   return (
     <div className="min-h-screen w-full bg-surface-1 text-slate-12 flex flex-col">
-      <header className="flex flex-wrap items-center gap-3 border-b border-border-subtle px-4 py-2.5 text-[12px] shrink-0">
-        <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-slate-9">
+      <header className="flex flex-wrap items-center gap-3 border-b border-border-subtle px-4 py-2.5 text-xs shrink-0">
+        <span className="font-mono text-xs-plus uppercase tracking-[0.18em] text-slate-9">
           Geo Drawing Sandbox
         </span>
         <span className="hidden md:inline text-slate-9">·</span>
@@ -203,7 +203,7 @@ export default function GeoEntitiesSandbox() {
           {savedAt !== null && (
             <span
               role="status"
-              className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.18em] text-emerald-300"
+              className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 font-mono text-2xs uppercase tracking-[0.18em] text-emerald-300"
             >
               Saved
             </span>
@@ -241,7 +241,7 @@ export default function GeoEntitiesSandbox() {
           <button
             type="button"
             onClick={() => draw.clearAll()}
-            className="rounded border border-border-default bg-surface-2 px-2 py-1 text-[11px] font-medium text-slate-11 transition-colors hover:border-border-strong hover:text-slate-12"
+            className="rounded border border-border-default bg-surface-2 px-2 py-1 text-xs-plus font-medium text-slate-11 transition-colors hover:border-border-strong hover:text-slate-12"
           >
             Clear all
           </button>
@@ -292,7 +292,7 @@ export default function GeoEntitiesSandbox() {
                         draw.setActiveTool('select');
                         draw.setSelectedId(s.id);
                       }}
-                      className={`flex w-full items-center gap-2 rounded border px-2 py-1.5 text-start text-[12px] transition-colors ${
+                      className={`flex w-full items-center gap-2 rounded border px-2 py-1.5 text-start text-xs transition-colors ${
                         active
                           ? 'border-border-strong bg-state-hover-strong text-slate-12'
                           : 'border-border-default text-slate-11 hover:border-border-strong hover:bg-state-hover-strong'
@@ -306,7 +306,7 @@ export default function GeoEntitiesSandbox() {
                         <meta.Icon size={12} />
                       </span>
                       <span className="truncate">{s.name}</span>
-                      <span className="ms-auto font-mono text-[10px] text-slate-9">
+                      <span className="ms-auto font-mono text-2xs text-slate-9">
                         {s.points.length} pt{s.points.length === 1 ? '' : 's'}
                       </span>
                     </button>
@@ -315,7 +315,7 @@ export default function GeoEntitiesSandbox() {
               })}
             </ul>
           ) : (
-            <p className="text-center text-[12px] text-slate-9">
+            <p className="text-center text-xs text-slate-9">
               No shapes yet — pick a tool above and click on the canvas to start drawing.
             </p>
           )}

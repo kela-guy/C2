@@ -4,7 +4,7 @@ export const spec: ComponentSpec = {
   name: 'ActivityTimestampChip',
   filePath: 'src/primitives/ActivityTimestampChip.tsx',
   purpose:
-    'Combined activity + timestamp element for the card-header status slot. Merges the previously redundant timestamp subtitle and the textual activity StatusChip into one scannable element: a status-colored dot followed by the timestamp text. The activity status (active / recently active / timed out / handled / dismissed) is conveyed by the dot color; the status word is kept in the aria-label and the hover tooltip surfaces the relative time since detection.',
+    'Combined activity + timestamp element for the card-header status slot, styled from the ui/badge badgeVariants cva (ghost, flattened to dot + text). Merges the previously redundant timestamp subtitle and the textual activity StatusChip into one scannable element: a status-colored dot followed by the timestamp text. The activity status (active / recently active / timed out / handled / dismissed) is conveyed by the dot color; the status word is kept in the aria-label and the hover tooltip surfaces the relative time since detection.',
   location: 'Primitives',
   status: 'prototype',
 

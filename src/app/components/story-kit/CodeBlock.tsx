@@ -167,7 +167,7 @@ export function CodeBlock({ code, highlightLines = [], className }: CodeBlockPro
     >
       <pre
         data-prose
-        className="overflow-x-auto py-4 font-[family:var(--font-code)] text-[13px] leading-[1.5]"
+        className="overflow-x-auto py-4 font-[family:var(--font-code)] text-sm-minus leading-[1.5]"
       >
         <code className="block whitespace-pre">
           {lines.map((tokens, idx) => (

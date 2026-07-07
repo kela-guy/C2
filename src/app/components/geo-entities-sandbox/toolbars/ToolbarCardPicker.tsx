@@ -60,13 +60,13 @@ export function ToolbarCardPicker({
                 </span>
                 <div className="min-w-0 flex-1">
                   <p
-                    className={`truncate text-[12px] font-medium ${
+                    className={`truncate text-xs font-medium ${
                       active ? 'text-slate-12' : 'text-slate-11'
                     }`}
                   >
                     {tool.label}
                   </p>
-                  <p className="line-clamp-2 text-[10px] text-slate-9">
+                  <p className="line-clamp-2 text-2xs text-slate-9">
                     {tool.description}
                   </p>
                 </div>
@@ -83,7 +83,7 @@ export function ToolbarCardPicker({
               key={a.id}
               type="button"
               onClick={() => onAction(a.id)}
-              className={`flex items-center gap-1.5 rounded px-2 py-1 text-[11px] font-medium transition-colors ${
+              className={`flex items-center gap-1.5 rounded px-2 py-1 text-xs-plus font-medium transition-colors ${
                 a.tone === 'caution'
                   ? 'text-rose-300 hover:bg-rose-500/15'
                   : 'text-slate-10 hover:bg-state-hover-strong hover:text-slate-12'

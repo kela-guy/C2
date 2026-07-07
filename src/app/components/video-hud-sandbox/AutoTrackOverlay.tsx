@@ -355,7 +355,7 @@ function CornerBrackets({
       </svg>
       {label && variant === 'locked' && (
         <span
-          className="absolute font-mono text-[9px] uppercase tracking-[0.18em] text-accent-success"
+          className="absolute font-mono text-3xs uppercase tracking-[0.18em] text-accent-success"
           style={{
             left: 'calc(100% + 4px)',
             top: 'calc(100% + 2px)',

@@ -21,20 +21,19 @@ const ELEVATION = {
 
 type ElevationLevel = keyof typeof ELEVATION.overlay;
 
-function mixOverlay(base: string, opacity: number): string {
-  const r = parseInt(base.slice(1, 3), 16);
-  const g = parseInt(base.slice(3, 5), 16);
-  const b = parseInt(base.slice(5, 7), 16);
-  const mix = (c: number) => Math.round(c + (255 - c) * opacity);
-  return `#${[mix(r), mix(g), mix(b)].map(c => c.toString(16).padStart(2, '0')).join('')}`;
-}
-
+/*
+ * SURFACE.levelN is the JS-side hex mirror of palette.css --surface-(N+1).
+ * The old runtime white-overlay mixer is gone: levels come straight from
+ * tokens/core.json, whose surface steps are the palette slate ladder.
+ * Prefer `var(--surface-N)` in className/inline styles; use these only
+ * where a literal string is required (canvas, hex math via hexToRgba).
+ */
 const SURFACE: Record<ElevationLevel, string> = {
-  level0: ELEVATION.baseSurface,
-  level1: mixOverlay(ELEVATION.baseSurface, ELEVATION.overlay.level1),
-  level2: mixOverlay(ELEVATION.baseSurface, ELEVATION.overlay.level2),
-  level3: mixOverlay(ELEVATION.baseSurface, ELEVATION.overlay.level3),
-  level4: mixOverlay(ELEVATION.baseSurface, ELEVATION.overlay.level4),
+  level0: coreTokens.primitive.color.surface[0],
+  level1: coreTokens.primitive.color.surface[1],
+  level2: coreTokens.primitive.color.surface[2],
+  level3: coreTokens.primitive.color.surface[3],
+  level4: coreTokens.primitive.color.surface[4],
 };
 
 export { ELEVATION, SURFACE };

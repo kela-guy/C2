@@ -478,7 +478,7 @@ function LogsAction({ device }: ControlProps) {
         onClick={() => console.info('[layout-lab] logs', device.id)}
       />
       {hasErrors && (
-        <span className="pointer-events-none absolute -end-1 -top-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-semibold leading-none text-white ring-2 ring-[#141414]">
+        <span className="pointer-events-none absolute -end-1 -top-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-red-500 px-1 text-3xs font-semibold leading-none text-white ring-2 ring-[#141414]">
           {count}
         </span>
       )}
@@ -760,7 +760,7 @@ function JamAction({ device, iconOnly }: ControlProps) {
             e.stopPropagation();
             setState('idle');
           }}
-          className="rounded px-2 py-1.5 text-xs font-medium text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+          className="rounded px-2 py-1.5 text-xs font-medium text-white/60 hover:text-white hover:bg-state-hover-overlay transition-colors"
         >
           Cancel
         </button>
@@ -812,7 +812,7 @@ function JamAction({ device, iconOnly }: ControlProps) {
           <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} aria-hidden="true" />
           <div
             role="menu"
-            className="absolute end-0 top-full z-20 mt-1 flex min-w-[160px] flex-col gap-0.5 rounded-md border border-white/10 bg-zinc-900 p-1 shadow-[0_8px_24px_rgba(0,0,0,0.4)] animate-in fade-in-0 zoom-in-95 duration-150 motion-reduce:animate-none"
+            className="absolute end-0 top-full z-20 mt-1 flex min-w-[160px] flex-col gap-0.5 rounded-md border border-white/10 bg-slate-2 p-1 shadow-[0_8px_24px_rgba(0,0,0,0.4)] animate-in fade-in-0 zoom-in-95 duration-150 motion-reduce:animate-none"
           >
             <button
               type="button"
@@ -821,7 +821,7 @@ function JamAction({ device, iconOnly }: ControlProps) {
                 e.stopPropagation();
                 armConfirm('one');
               }}
-              className="flex items-center gap-2 rounded px-2 py-1.5 text-start text-xs text-white/80 hover:bg-white/10 [&_svg]:size-3"
+              className="flex items-center gap-2 rounded px-2 py-1.5 text-start text-xs text-white/80 hover:bg-state-hover-overlay [&_svg]:size-3"
             >
               <JamIcon size={ICON} />
               <span className="flex-1">Jam this jammer</span>
@@ -890,10 +890,10 @@ function AudioSelect({ device, iconOnly }: ControlProps) {
         }}
         // Fixed width so picking a longer/shorter track name never resizes
         // the control (same anti-jump rule as the toggles).
-        className={`inline-flex h-7 w-[150px] items-center justify-between gap-1.5 rounded px-2 text-xs font-medium transition-[background-color,color,transform] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 disabled:opacity-50 disabled:cursor-not-allowed ${
+        className={`inline-flex h-7 w-[150px] items-center justify-between gap-1.5 rounded px-2 text-xs font-medium transition-[background-color,color,transform] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-state-focus-ring disabled:opacity-50 disabled:cursor-not-allowed ${
           open
             ? 'text-white bg-white/[0.10]'
-            : 'text-white/[0.64] hover:text-white bg-white/[0.05] hover:bg-white/[0.10]'
+            : 'text-white/[0.64] hover:text-white bg-white/[0.05] hover:bg-state-hover-overlay'
         }`}
       >
         <Radio size={ICON} className="shrink-0 opacity-70" />
@@ -910,7 +910,7 @@ function AudioSelect({ device, iconOnly }: ControlProps) {
           <div
             role="listbox"
             aria-label="Audio tracks"
-            className="absolute start-0 top-full z-20 mt-1 flex min-w-[180px] flex-col gap-0.5 rounded-md border border-white/10 bg-zinc-900 p-1 shadow-[0_8px_24px_rgba(0,0,0,0.4)] animate-in fade-in-0 zoom-in-95 duration-150 motion-reduce:animate-none"
+            className="absolute start-0 top-full z-20 mt-1 flex min-w-[180px] flex-col gap-0.5 rounded-md border border-white/10 bg-slate-2 p-1 shadow-[0_8px_24px_rgba(0,0,0,0.4)] animate-in fade-in-0 zoom-in-95 duration-150 motion-reduce:animate-none"
           >
             {AUDIO_TRACKS.map((trackLabel, i) => {
               const selected = i === index;
@@ -925,7 +925,7 @@ function AudioSelect({ device, iconOnly }: ControlProps) {
                     select(i);
                   }}
                   className={`flex items-center gap-2 rounded px-2 py-1.5 text-start text-xs [&_svg]:size-3 ${
-                    selected ? 'bg-white/[0.08] text-white' : 'text-white/80 hover:bg-white/10'
+                    selected ? 'bg-white/[0.08] text-white' : 'text-white/80 hover:bg-state-hover-overlay'
                   }`}
                 >
                   <span className="flex w-3 shrink-0 items-center justify-center">

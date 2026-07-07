@@ -84,10 +84,10 @@ function SidebarItem({
           e.preventDefault();
           onSelectPage(item.id);
         }}
-        className={`block py-[5px] text-xs cursor-pointer transition-colors duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent rounded-md ${
+        className={`block py-[5px] text-xs cursor-pointer transition-colors duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring focus-visible:ring-offset-1 focus-visible:ring-offset-transparent rounded-md ${
           isActive
             ? 'text-white font-medium bg-white/[0.07] px-2.5 -mx-2.5'
-            : 'text-n-9 font-medium hover:text-n-11 hover:bg-white/[0.03] px-2.5 -mx-2.5'
+            : 'text-n-9 font-medium hover:text-n-11 hover:bg-state-hover px-2.5 -mx-2.5'
         }`}
       >
         {item.label}

@@ -5,7 +5,7 @@
  * no existing aggregation to reuse, so this is the (small) net-new helper
  * the plan calls for. Worst-child wins, with the SAME precedence
  * `getDeviceHealth` uses so the roll-up reads identically to a single
- * device tile: critical > error > warning > offline > ok.
+ * device tile: error > warning > offline > ok.
  */
 
 import type { DeviceHealth } from '../devices-panel/deviceHealth';
@@ -13,7 +13,6 @@ import type { GotchaUnit, SectorHealth } from './types';
 
 /** Worst-wins rank. Higher = more urgent. Mirrors `getDeviceHealth` order. */
 const HEALTH_RANK: Record<DeviceHealth, number> = {
-  critical: 4,
   error: 3,
   warning: 2,
   offline: 1,
@@ -38,7 +37,7 @@ export function getUnitHealth(unit: GotchaUnit): DeviceHealth {
 
 /**
  * Latency thresholds (ms). Assumption to confirm — at ~10 s the feed is
- * "almost worthless", so that's the critical floor; warning kicks in well
+ * "almost worthless", so that's the error floor; warning kicks in well
  * before. Returns the health a sensor's latency alone implies, or `ok`.
  */
 export const LATENCY_WARNING_MS = 4_000;
@@ -46,7 +45,7 @@ export const LATENCY_CRITICAL_MS = 10_000;
 
 export function latencyHealth(latencyMs: number | undefined): DeviceHealth {
   if (latencyMs == null) return 'ok';
-  if (latencyMs >= LATENCY_CRITICAL_MS) return 'critical';
+  if (latencyMs >= LATENCY_CRITICAL_MS) return 'error';
   if (latencyMs >= LATENCY_WARNING_MS) return 'warning';
   return 'ok';
 }

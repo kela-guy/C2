@@ -21,7 +21,7 @@ export function Eyebrow({
   return (
     <div
       className={cn(
-        'font-[family:var(--font-mono)] text-[14px] uppercase leading-5 tracking-[0.08em] text-[color:var(--story-muted)]',
+        'font-[family:var(--font-mono)] text-sm uppercase leading-5 tracking-[0.08em] text-[color:var(--story-muted)]',
         className,
       )}
     >
@@ -39,7 +39,7 @@ export function P({ children, className }: { children: ReactNode; className?: st
     <p
       data-prose
       className={cn(
-        'text-start text-[20px] font-medium leading-[38px] text-[color:var(--story-ink)]',
+        'text-start text-xl font-medium leading-[38px] text-[color:var(--story-ink)]',
         className,
       )}
     >
@@ -54,7 +54,7 @@ export function Lead({ children, className }: { children: ReactNode; className?:
     <p
       data-prose
       className={cn(
-        'text-start text-[24px] font-semibold leading-[40px] tracking-[-0.01em] text-[color:var(--story-ink)]',
+        'text-start text-2xl font-semibold leading-[40px] tracking-[-0.01em] text-[color:var(--story-ink)]',
         className,
       )}
     >
@@ -83,12 +83,12 @@ export function Takeaway({ children, className }: { children: ReactNode; classNa
     <div
       data-prose
       className={cn(
-        'mt-10 border-s-2 ps-4 text-[16px] leading-[28px] text-[color:var(--story-muted)]',
+        'mt-10 border-s-2 ps-4 text-base leading-[28px] text-[color:var(--story-muted)]',
         className,
       )}
       style={{ borderColor: 'var(--story-accent)' }}
     >
-      <span className="font-[family:var(--font-mono)] text-[11px] uppercase tracking-[0.14em] text-[color:var(--story-accent)]">
+      <span className="font-[family:var(--font-mono)] text-xs-plus uppercase tracking-[0.14em] text-[color:var(--story-accent)]">
         Takeaway
       </span>
       <div className="mt-1">{children}</div>

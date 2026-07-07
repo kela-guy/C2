@@ -3,6 +3,7 @@
  * from any handler, easy to unit-test.
  */
 
+import { HEALTH_TEXT_CLASS } from '@/primitives/HealthStatus';
 import { STATUS_SORT, TYPE_ORDER } from './constants';
 import type {
   ConnectionState,
@@ -92,14 +93,14 @@ export function getJamDisabledReason(
 
 /** Tailwind text color for the battery percentage cell. */
 export function getBatteryColor(pct: number): string {
-  if (pct <= 20) return 'text-red-400';
-  if (pct <= 40) return 'text-amber-400';
-  return 'text-emerald-400';
+  if (pct <= 20) return HEALTH_TEXT_CLASS.error;
+  if (pct <= 40) return HEALTH_TEXT_CLASS.warning;
+  return HEALTH_TEXT_CLASS.ok;
 }
 
 /** Tailwind text color for the operational-status cell. */
 export function getHealthColor(status: OperationalStatus): string {
-  return status === 'malfunctioning' ? 'text-orange-400' : 'text-emerald-400';
+  return status === 'malfunctioning' ? HEALTH_TEXT_CLASS.warning : HEALTH_TEXT_CLASS.ok;
 }
 
 export interface DeviceDetailRow {

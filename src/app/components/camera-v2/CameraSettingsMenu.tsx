@@ -81,11 +81,11 @@ export function CameraSettingsMenu({
               aria-label={t.settingsTriggerAriaLabel}
               aria-pressed={open}
               className={`p-2 rounded-full transition-colors duration-150 ease-out
-                focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none
+                focus-visible:ring-2 focus-visible:ring-state-focus-ring focus-visible:outline-none
                 active:scale-[0.97]
                 ${open
                   ? 'bg-white/15 text-white ring-1 ring-inset ring-white/20'
-                  : 'text-white/80 hover:text-white hover:bg-white/10'}`}
+                  : 'text-white/80 hover:text-white hover:bg-state-hover-overlay'}`}
             >
               <SettingsFilled size={14} />
             </button>
@@ -100,7 +100,7 @@ export function CameraSettingsMenu({
         side="top"
         align="end"
         sideOffset={8}
-        className="w-[280px] p-0 rounded-none bg-[#1a1a1a]/95 backdrop-blur-xl shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_25px_50px_-12px_rgba(0,0,0,0.5)] border-none"
+        className="w-[280px] p-0 rounded-none bg-surface-2/95 backdrop-blur-xl shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_25px_50px_-12px_rgba(0,0,0,0.5)] border-none"
       >
         <Section title={playbackSectionTitle} icon={<History size={11} />}>
           <Row

@@ -13,7 +13,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso';
 import { X } from '@/lib/icons/central';
-import { LAYOUT_TOKENS, SURFACE } from '@/primitives/tokens';
+import { LAYOUT_TOKENS } from '@/primitives/tokens';
 import { useScrollEdges } from '@/lib/scroll/useScrollEdges';
 import { ScrollEdgeCue } from '@/lib/scroll/ScrollEdgeCue';
 import { FilterBar, type FilterDef } from '@/primitives';
@@ -210,7 +210,7 @@ export function DevicesPanel({
       className={`absolute top-0 bottom-0 start-0 border-e border-white/10 flex flex-col z-10 font-sans ${
         noTransition ? '' : 'transition-transform duration-300 ease-out'
       } ${open ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full pointer-events-none'}`}
-      style={{ width: width ?? LAYOUT_TOKENS.sidebarWidthPx, backgroundColor: SURFACE.level1 }}
+      style={{ width: width ?? LAYOUT_TOKENS.sidebarWidthPx, backgroundColor: 'var(--surface-2)' }}
     >
       <div className="shrink-0">
         <div
@@ -222,7 +222,7 @@ export function DevicesPanel({
           </h2>
           <button
             onClick={onClose}
-            className="p-2 -m-1 rounded hover:bg-white/10 text-zinc-500 hover:text-zinc-300 transition-[color,background-color,transform] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+            className="p-2 -m-1 rounded hover:bg-state-hover-overlay text-slate-9 hover:text-slate-11 transition-[color,background-color,transform] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
             aria-label={closeAriaLabel}
           >
             <X size={14} />
@@ -252,7 +252,7 @@ export function DevicesPanel({
         className="h-full overflow-y-auto"
       >
         {rows.length === 0 ? (
-          <div className="px-3 py-8 text-center text-xs text-zinc-600">{strings.noMatches}</div>
+          <div className="px-3 py-8 text-center text-xs text-slate-8">{strings.noMatches}</div>
         ) : (
           <Virtuoso
             ref={virtuosoRef}

@@ -72,7 +72,7 @@ function SlowInFasterOut() {
             <AnimatePresence>
               {col.open && (
                 <motion.div
-                  className="flex size-20 items-center justify-center rounded-lg bg-white/15 text-center text-[10px] text-white/70"
+                  className="flex size-20 items-center justify-center rounded-lg bg-white/15 text-center text-2xs text-white/70"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1, transition: spring.slow }}
                   exit={{ opacity: 0, scale: 0.9, transition: col.exit }}

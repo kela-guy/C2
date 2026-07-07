@@ -35,7 +35,7 @@ export function NotifyCountdown({ remaining }: { remaining: number }) {
       className="inline-flex items-center justify-end gap-1.5 text-white"
       aria-label={`${formatHMS(remaining)} left`}
     >
-      <span className="min-w-[3.25rem] tabular-nums text-[10px] leading-none text-end">
+      <span className="min-w-[3.25rem] tabular-nums text-2xs leading-none text-end">
         {formatHMS(remaining)}
       </span>
       <span className="inline-flex size-3.5 shrink-0 items-center justify-center">
@@ -76,7 +76,7 @@ export function NotifyHeaderIndicator({
       className="inline-flex items-center gap-1.5 text-white"
       aria-label={`${ariaLabelPrefix} — ${formatHMS(remaining)} left`}
     >
-      <span className="tabular-nums text-[12px] leading-none">{formatHMS(remaining)}</span>
+      <span className="tabular-nums text-xs leading-none">{formatHMS(remaining)}</span>
       <NotifyBellIcon armed />
     </span>
   );

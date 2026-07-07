@@ -12,8 +12,7 @@
  */
 
 import { useState } from 'react';
-import IconDotGrid1x3Vertical from '@central-icons-react/square-filled-radius-0-stroke-2/IconDotGrid1x3Vertical';
-import { List } from '@/lib/icons/central';
+import { EllipsisVertical as IconDotGrid1x3Vertical, List } from '@/lib/icons/central';
 import type { DeviceActionContext } from '../deviceActions';
 import type { DeviceActionKind } from '../deviceRegistry';
 import { NotifyBellIcon, NotifyCountdown } from './notify';
@@ -38,7 +37,7 @@ export function DeviceOverflowMenu({ kinds, ctx }: DeviceOverflowMenuProps) {
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} aria-hidden="true" />
           <div
             role="menu"
-            className="absolute end-0 bottom-full z-30 mb-1 flex w-[180px] flex-col gap-0.5 rounded-md border border-white/10 bg-zinc-900 p-1 shadow-[0_8px_24px_rgba(0,0,0,0.4)] animate-in fade-in-0 zoom-in-95 duration-150 motion-reduce:animate-none"
+            className="absolute end-0 bottom-full z-30 mb-1 flex w-[180px] flex-col gap-0.5 rounded-md border border-white/10 bg-slate-2 p-1 shadow-[0_8px_24px_rgba(0,0,0,0.4)] animate-in fade-in-0 zoom-in-95 duration-150 motion-reduce:animate-none"
           >
             {kinds.map((kind) => {
               if (kind === 'notifications') return <NotificationsMenuItem key={kind} ctx={ctx} />;
@@ -63,7 +62,7 @@ function TriggerButton({ open, label, onClick }: { open: boolean; label: string;
         e.stopPropagation();
         onClick();
       }}
-      className={`inline-flex size-6 items-center justify-center rounded text-white/70 transition-colors duration-150 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 [&_svg]:size-3 ${
+      className={`inline-flex size-6 items-center justify-center rounded text-white/70 transition-colors duration-150 hover:bg-state-hover-overlay hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring [&_svg]:size-3 ${
         open ? 'bg-white/10 text-white' : ''
       }`}
     >
@@ -93,7 +92,7 @@ function NotificationsMenuItem({ ctx }: { ctx: DeviceActionContext }) {
         ctx.onToggleNotify();
       }}
       className={`flex w-full items-center gap-2 rounded px-2 py-1.5 text-start text-xs disabled:cursor-not-allowed disabled:opacity-50 ${
-        on ? 'bg-white/10 text-white' : 'text-white/80 hover:bg-white/10'
+        on ? 'bg-white/10 text-white' : 'text-white/80 hover:bg-state-hover-overlay'
       }`}
     >
       <span className={`inline-flex items-center ${on ? 'text-white' : 'text-white/60'}`}>
@@ -105,7 +104,7 @@ function NotificationsMenuItem({ ctx }: { ctx: DeviceActionContext }) {
           <NotifyCountdown remaining={ctx.notifyRemaining} />
         ) : (
           <span className="inline-flex items-center justify-end gap-1.5 opacity-0" aria-hidden>
-            <span className="min-w-[3.25rem] tabular-nums text-[10px] leading-none">00:00:30</span>
+            <span className="min-w-[3.25rem] tabular-nums text-2xs leading-none">00:00:30</span>
             <span className="size-3.5 shrink-0" />
           </span>
         )}
@@ -134,7 +133,7 @@ function LogsMenuItem({ ctx, onClose }: { ctx: DeviceActionContext; onClose: () 
         ctx.onOpenLogs();
       }}
       className={`flex items-center gap-2 rounded px-2 py-1.5 text-start text-xs [&_svg]:size-3 ${
-        hasErrors ? 'text-red-300 hover:bg-red-500/10' : 'text-white/80 hover:bg-white/10'
+        hasErrors ? 'text-red-300 hover:bg-red-500/10' : 'text-white/80 hover:bg-state-hover-overlay'
       }`}
     >
       <span className={`inline-flex items-center ${hasErrors ? 'text-red-300' : 'text-white/60'}`}>
@@ -142,7 +141,7 @@ function LogsMenuItem({ ctx, onClose }: { ctx: DeviceActionContext; onClose: () 
       </span>
       <span className="flex-1 leading-none">{label}</span>
       {hasErrors && (
-        <span className="rounded-full bg-red-500/20 px-1.5 text-[10px] font-medium text-red-300 tabular-nums">
+        <span className="rounded-full bg-red-500/20 px-1.5 text-2xs font-medium text-red-300 tabular-nums">
           {count > 99 ? '99+' : count}
         </span>
       )}

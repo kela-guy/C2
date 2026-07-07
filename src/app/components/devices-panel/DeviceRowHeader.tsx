@@ -2,8 +2,8 @@
  * Collapsed header for the device row.
  *
  * The icon tile is the single fast-scan health signal: a unified
- * worst-wins severity (`getDeviceHealth`) drives a faint tile tint (and a
- * critical-only pulse). Hovering the tile reveals a "titled" tooltip — a
+ * worst-wins severity (`getDeviceHealth`) drives a faint tile tint.
+ * Hovering the tile reveals a "titled" tooltip — a
  * severity dot + label, an optional error-count badge, and a hairline-
  * fenced reason / connection detail.
  *
@@ -17,12 +17,14 @@ import { memo, useEffect, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { spring } from '@/lib/springs';
 import { List } from '@/lib/icons/central';
+import { HEALTH_BADGE_CLASS, HEALTH_DOT_CLASS } from '@/primitives/HealthStatus';
 import { DotmSquare18 } from '@/app/components/ui/dotm-square-18';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import type { ConnectionState, Device } from './types';
 import { resolveDeviceAction, type DeviceActionContext } from './deviceActions';
 import type { DeviceTypeConfig } from './deviceRegistry';
-import { DEVICE_HEALTH_VISUAL, DEVICE_HEALTH_CRITICAL_PING, getDeviceHealth, getDeviceHealthReason, getEffectiveDeviceHealth, getUnhealthyChildCount, type DeviceHealth } from './deviceHealth';
+import { DEVICE_HEALTH_VISUAL, getDeviceHealth, getDeviceHealthReason, getEffectiveDeviceHealth, getUnhealthyChildCount, type DeviceHealth } from './deviceHealth';
+import { OfflineChip } from './OfflineBadge';
 import { NotifyHeaderIndicator } from './controls/notify';
 
 interface DeviceRowHeaderProps {
@@ -35,14 +37,14 @@ interface DeviceRowHeaderProps {
 /**
  * Tile-tooltip tone — severity dot + label, an optional count badge for
  * the trouble tones, and the worst-wins severity title. `offline` / `ok`
- * never carry a badge.
+ * never carry a badge. Colors come from the shared HealthStatus tone
+ * vocabulary (palette.css accents) — no local color decisions.
  */
 const HEALTH_TONE: Record<DeviceHealth, { dot: string; badge: string | null }> = {
-  critical: { dot: 'bg-red-400', badge: 'bg-red-500/20 text-red-300' },
-  error: { dot: 'bg-red-400', badge: 'bg-red-500/20 text-red-300' },
-  warning: { dot: 'bg-amber-400', badge: 'bg-amber-500/20 text-amber-300' },
-  offline: { dot: 'bg-zinc-500', badge: null },
-  ok: { dot: 'bg-emerald-400', badge: null },
+  error: { dot: HEALTH_DOT_CLASS.error, badge: HEALTH_BADGE_CLASS.error },
+  warning: { dot: HEALTH_DOT_CLASS.warning, badge: HEALTH_BADGE_CLASS.warning },
+  offline: { dot: HEALTH_DOT_CLASS.offline, badge: null },
+  ok: { dot: HEALTH_DOT_CLASS.ok, badge: null },
 };
 
 export const DeviceRowHeader = memo(function DeviceRowHeader({ device, cfg, ctx, connectionStateLabels }: DeviceRowHeaderProps) {
@@ -58,7 +60,6 @@ export const DeviceRowHeader = memo(function DeviceRowHeader({ device, cfg, ctx,
   const connectionLabel = connectionStateLabels[device.connectionState];
 
   const healthLabel = {
-    critical: strings.healthCritical,
     error: strings.healthError,
     warning: strings.healthWarning,
     offline: strings.healthOffline,
@@ -77,14 +78,14 @@ export const DeviceRowHeader = memo(function DeviceRowHeader({ device, cfg, ctx,
 
   // Header Logs button: composites roll their unhealthy children into one
   // count; flat devices keep their own open-error count. The button's tone
-  // follows the worst-wins severity (amber for warning, red for error /
-  // critical) so a degraded-but-not-broken unit still surfaces a channel.
+  // follows the worst-wins severity (amber for warning, red for error)
+  // so a degraded-but-not-broken unit still surfaces a channel.
   const issueCount = isComposite ? getUnhealthyChildCount(device) : ctx.errorCount;
   const logsTone: 'error' | 'warning' | null =
     issueCount > 0
       ? health === 'warning'
         ? 'warning'
-        : health === 'error' || health === 'critical'
+        : health === 'error'
           ? 'error'
           : null
       : null;
@@ -96,17 +97,13 @@ export const DeviceRowHeader = memo(function DeviceRowHeader({ device, cfg, ctx,
       data-health={health}
       {...(healthReason ? { role: 'status', 'aria-label': healthReason } : {})}
     >
-      {health === 'critical' && (
-        <span
-          aria-hidden="true"
-          className={`absolute inset-0 rounded ${DEVICE_HEALTH_CRITICAL_PING} animate-ping motion-reduce:hidden pointer-events-none`}
-        />
-      )}
       <device.Icon
         size={20}
         fill={healthVisual.iconFill}
         active={ctx.isFloodlightOn || ctx.isSpeakerPlaying}
       />
+      {/* No offline corner badge here — the OfflineChip in the actions
+          cluster already carries the offline cue for the parent row. */}
     </div>
   );
 
@@ -122,12 +119,12 @@ export const DeviceRowHeader = memo(function DeviceRowHeader({ device, cfg, ctx,
           >
             <div className="flex items-center justify-start gap-1.5 px-2.5 py-1.5">
               <span className={`size-1.5 shrink-0 rounded-full ${tone.dot}`} />
-              <span className="w-full min-w-0 truncate text-xs font-semibold text-zinc-100">
+              <span className="w-full min-w-0 truncate text-xs font-semibold text-slate-12">
                 {healthLabel}
               </span>
               {showBadge && (
                 <span
-                  className={`h-4 shrink-0 rounded-[2px] px-1.5 align-middle text-[10px] font-medium leading-4 tabular-nums ${tone.badge}`}
+                  className={`h-4 shrink-0 rounded-[2px] px-1.5 align-middle text-2xs font-medium leading-4 tabular-nums ${tone.badge}`}
                 >
                   {badgeLabel}
                 </span>
@@ -136,10 +133,10 @@ export const DeviceRowHeader = memo(function DeviceRowHeader({ device, cfg, ctx,
             {hasFence && (
               <div className="border-t border-white/10 px-2.5 py-1.5">
                 {reasonText != null && (
-                  <div className="max-w-[220px] text-xs text-zinc-200">{reasonText}</div>
+                  <div className="max-w-[220px] text-xs text-slate-11">{reasonText}</div>
                 )}
                 {fenceConnection != null && (
-                  <div className="mt-0.5 text-[10px] text-white/50">{fenceConnection}</div>
+                  <div className="mt-0.5 text-2xs text-white/50">{fenceConnection}</div>
                 )}
               </div>
             )}
@@ -150,10 +147,16 @@ export const DeviceRowHeader = memo(function DeviceRowHeader({ device, cfg, ctx,
       )}
 
       <div className="flex-1 min-w-0 text-start">
-        <span className="text-sm font-medium truncate text-zinc-300 block">{device.name}</span>
+        <span className="text-sm font-medium truncate text-slate-11 block">{device.name}</span>
       </div>
 
-      <PrimaryCluster cfg={cfg} ctx={ctx} logsTone={logsTone} logsCount={issueCount} />
+      <PrimaryCluster
+        cfg={cfg}
+        ctx={ctx}
+        logsTone={logsTone}
+        logsCount={issueCount}
+        offlineLabel={health === 'offline' ? strings.healthOffline : null}
+      />
     </>
   );
 });
@@ -169,13 +172,21 @@ function PrimaryCluster({
   ctx,
   logsTone,
   logsCount,
+  offlineLabel,
 }: {
   cfg: DeviceTypeConfig;
   ctx: DeviceActionContext;
   logsTone: 'error' | 'warning' | null;
   logsCount: number;
+  /** Non-null when the device is offline — renders the chip inline-start of Show-on-map. */
+  offlineLabel: string | null;
 }) {
-  const inboard = cfg.headerActions.filter((id) => id !== 'center');
+  // Offline rows keep only the channels that still make sense without a
+  // connection: Logs (read history) and Show-on-map (recenter). Interactive
+  // controls (floodlight toggle, speaker play, notify echo) are hidden —
+  // a device you can't reach shouldn't offer to act.
+  const offline = offlineLabel != null;
+  const inboard = offline ? [] : cfg.headerActions.filter((id) => id !== 'center');
   const center = cfg.headerActions.includes('center')
     ? resolveDeviceAction('center', ctx, 'header')
     : null;
@@ -191,16 +202,21 @@ function PrimaryCluster({
           onOpenErrors={ctx.onOpenErrors}
         />
       )}
-      <SpeakerNowPlaying ctx={ctx} />
+      {!offline && <SpeakerNowPlaying ctx={ctx} />}
       {inboard.map((id) => {
         const resolved = resolveDeviceAction(id, ctx, 'header');
         return resolved ? <span key={resolved.key}>{resolved.node}</span> : null;
       })}
-      <NotifyHeaderIndicator
-        armed={ctx.isNotifyOn}
-        remaining={ctx.notifyRemaining}
-        ariaLabelPrefix={ctx.strings.notificationsArmedAriaLabel}
-      />
+      {!offline && (
+        <NotifyHeaderIndicator
+          armed={ctx.isNotifyOn}
+          remaining={ctx.notifyRemaining}
+          ariaLabelPrefix={ctx.strings.notificationsArmedAriaLabel}
+        />
+      )}
+      {/* Offline chip sits just inboard of Show-on-map: left of the icon in
+          LTR, right of it in RTL (flex order follows the row direction). */}
+      {offlineLabel != null && <OfflineChip label={offlineLabel} />}
       {center?.node}
     </div>
   );

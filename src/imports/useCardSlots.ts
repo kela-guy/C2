@@ -1013,21 +1013,21 @@ function buildDetails(target: Detection, t: Strings): { rows: DetailRow[]; class
       tank: tl.tank, truck: tl.truck, unknown: tl.unknown,
     };
     const colorClasses: Record<string, string> = {
-      drone: 'text-red-400', bird: 'text-amber-400', aircraft: 'text-zinc-300', car: 'text-orange-400',
+      drone: 'text-red-400', bird: 'text-amber-400', aircraft: 'text-slate-11', car: 'text-orange-400',
       tank: 'text-orange-400', truck: 'text-orange-400',
     };
     classification = {
       type: target.classifiedType ?? 'unknown',
       typeLabel: typeLabels[target.classifiedType ?? 'unknown'] ?? tl.unknown,
       confidence: typeof target.confidence === 'number' ? target.confidence : undefined,
-      colorClass: colorClasses[target.classifiedType ?? ''] ?? 'text-zinc-300',
+      colorClass: colorClasses[target.classifiedType ?? ''] ?? 'text-slate-11',
     };
   } else if (target.entityStage === 'raw_detection') {
     classification = {
       type: 'unknown',
       typeLabel: tl.unknownDetection,
       confidence: typeof target.confidence === 'number' ? target.confidence : undefined,
-      colorClass: 'text-zinc-400',
+      colorClass: 'text-slate-10',
     };
   }
 

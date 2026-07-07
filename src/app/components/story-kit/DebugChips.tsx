@@ -121,13 +121,13 @@ export function DebugChips({
             type="button"
             onClick={() => trigger(chip)}
             className={cn(
-              'inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[12px] transition-colors',
+              'inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs transition-colors',
               'border-[color:var(--story-border)] bg-[var(--story-surface)] text-[color:var(--story-muted)] hover:text-[color:var(--story-ink)]',
               lit && 'text-[color:var(--story-ink)]',
             )}
             style={lit ? { borderColor: 'var(--story-accent)' } : undefined}
           >
-            <kbd className="grid h-4 min-w-4 place-items-center rounded border border-[color:var(--story-border)] px-1 font-[family:var(--font-mono)] text-[10px] uppercase">
+            <kbd className="grid h-4 min-w-4 place-items-center rounded border border-[color:var(--story-border)] px-1 font-[family:var(--font-mono)] text-2xs uppercase">
               {chip.shortcut}
             </kbd>
             {chip.label}

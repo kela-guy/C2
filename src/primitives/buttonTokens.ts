@@ -1,60 +1,59 @@
 /**
- * Single source of truth for the button family's surface + size tokens.
+ * Alias layer between the button family's domain vocabulary and the ONE
+ * shadcn `buttonVariants` cva in `@/shared/components/ui/button`.
  *
- * The base `Button` and every composite/preset built on it (ActionButton,
- * SplitActionButton, CameraToggleButton, …) read their variant treatments and
- * size scale from here, so the family can never drift apart the way the old
- * parallel `ACTION_BUTTON_VARIANTS` / `SPLIT_BUTTON_VARIANTS` copies did.
- *
- * `danger` / `warning` use oklch so they read correctly on the dark
- * control-room surface; the others are layered white opacities (one depth
- * strategy, no harsh borders).
+ * The cva is the single source of truth for every surface + size treatment.
+ * This module only maps the primitives' public prop vocabulary
+ * (`fill | ghost | outline | danger | warning`, `sm | md | lg`) onto the cva
+ * variant/size names, and carries the little layout data the cva has no home
+ * for (icon pixel sizes, the SplitActionButton chevron slot). No classes for
+ * surfaces live here anymore — restyle `ui/button.tsx` to retheme the family.
  */
 
+import type { VariantProps } from 'class-variance-authority';
+import type { buttonVariants } from '@/shared/components/ui/button';
+
+type UiButtonVariant = NonNullable<VariantProps<typeof buttonVariants>['variant']>;
+type UiButtonSize = NonNullable<VariantProps<typeof buttonVariants>['size']>;
+
+/**
+ * Domain variant → cva variant. The keys are the public API of the button
+ * family (`<Button variant="fill">` etc.); the values are the cva variants
+ * of `ui/button.tsx` that actually own the styling.
+ */
 export const BUTTON_VARIANTS = {
-  fill: {
-    base: 'bg-white/[0.08]',
-    hover: 'hover:bg-white/[0.14]',
-    active: 'active:bg-white/[0.06]',
-    text: 'text-zinc-200',
-  },
-  ghost: {
-    base: 'bg-zinc-800',
-    hover: 'hover:bg-zinc-700',
-    active: 'active:bg-zinc-900',
-    text: 'text-white',
-  },
-  outline: {
-    base: 'bg-white/[0.03] shadow-[0_0_0_1px_rgba(255,255,255,0.08)]',
-    hover: 'hover:bg-white/[0.06]',
-    active: 'active:bg-white/[0.02]',
-    text: 'text-zinc-400',
-  },
-  danger: {
-    base: 'bg-[oklch(0.435_0.151_25)]',
-    hover: 'hover:bg-[oklch(0.485_0.151_25)]',
-    active: 'active:bg-[oklch(0.385_0.151_25)]',
-    text: 'text-white',
-  },
-  warning: {
-    base: 'bg-[oklch(0.501_0.166_75)]',
-    hover: 'hover:bg-[oklch(0.551_0.166_75)]',
-    active: 'active:bg-[oklch(0.451_0.166_75)]',
-    text: 'text-white',
-  },
-} as const;
+  fill: 'default',
+  ghost: 'secondary',
+  outline: 'outline',
+  danger: 'destructive',
+  warning: 'warning',
+} as const satisfies Record<string, UiButtonVariant>;
 
 export type ButtonVariant = keyof typeof BUTTON_VARIANTS;
 
 /**
- * Height + type scale. `chevronMin` reserves a square trailing slot for the
- * SplitActionButton dropdown chevron so the two-segment shell keeps a stable
- * footprint across sizes.
+ * The brighter white "pressed / on" surface shared by toggle-capable members
+ * of the family — Button's `pressed` state and CameraToggleButton's live
+ * state render this same treatment so "on" always reads identically.
+ */
+export const BUTTON_PRESSED_CLASSES =
+  'bg-white/[0.20] hover:bg-white/[0.24] active:bg-white/[0.16] text-white ring-1 ring-inset ring-white/20';
+
+/**
+ * Domain size → cva size, plus per-size layout data the cva doesn't carry:
+ * `icon` is the icon glyph pixel size (`iconCls` is the same size as a class,
+ * which also opts the glyph out of the cva's default `svg → size-4` rule) and
+ * `chevronMin` reserves a square trailing slot for the SplitActionButton
+ * dropdown chevron so the two-segment shell keeps a stable footprint across
+ * sizes (`chevronCls` sizes the chevron glyph itself).
  */
 export const BUTTON_SIZES = {
-  sm: { height: 'min-h-[30px] h-[30px]', text: 'text-xs', icon: 11, font: 'font-medium', chevronMin: 'min-w-[30px] w-[30px]' },
-  md: { height: 'min-h-8 h-8', text: 'text-xs', icon: 14, font: 'font-medium', chevronMin: 'min-w-8 w-8' },
-  lg: { height: 'min-h-9 h-9', text: 'text-sm', icon: 16, font: 'font-semibold', chevronMin: 'min-w-9 w-9' },
-} as const;
+  sm: { ui: 'sm', icon: 11, iconCls: 'size-[11px]', chevronCls: 'size-2.5', chevronMin: 'min-w-[30px] w-[30px]' },
+  md: { ui: 'default', icon: 14, iconCls: 'size-3.5', chevronCls: 'size-3', chevronMin: 'min-w-8 w-8' },
+  lg: { ui: 'lg', icon: 16, iconCls: 'size-4', chevronCls: 'size-3.5', chevronMin: 'min-w-9 w-9' },
+} as const satisfies Record<
+  string,
+  { ui: UiButtonSize; icon: number; iconCls: string; chevronCls: string; chevronMin: string }
+>;
 
 export type ButtonSize = keyof typeof BUTTON_SIZES;

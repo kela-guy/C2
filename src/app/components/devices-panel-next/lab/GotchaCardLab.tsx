@@ -20,13 +20,18 @@ import { useState, type ReactNode } from 'react';
 import { Bell, ChevronDownFilled, List, MoreVertical } from '@/lib/icons/central';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import {
-  DEVICE_HEALTH_CRITICAL_PING,
   DEVICE_HEALTH_VISUAL,
   getDeviceHealth,
   getEffectiveDeviceHealth,
   getUnhealthyChildCount,
   type DeviceHealth,
 } from '../../devices-panel/deviceHealth';
+import {
+  HEALTH_BADGE_CLASS,
+  HEALTH_DOT_CLASS,
+  HEALTH_RING_CLASS,
+  HEALTH_TEXT_CLASS,
+} from '@/primitives/HealthStatus';
 import type { Device } from '../../devices-panel/types';
 import { splitFooterActions } from '../../devices-panel/footerOverflow';
 import { GOTCHA_UNITS } from '../../gotcha/gotchaAssets';
@@ -40,15 +45,14 @@ const HEALTH_TONE: Record<
   DeviceHealth,
   { dot: string; badge: string; ring: string; text: string; label: string }
 > = {
-  critical: { dot: 'bg-red-400', badge: 'bg-red-500/20 text-red-300', ring: 'ring-red-500/40', text: 'text-red-300', label: 'Critical' },
-  error: { dot: 'bg-red-400', badge: 'bg-red-500/20 text-red-300', ring: 'ring-red-500/40', text: 'text-red-300', label: 'Errors' },
-  warning: { dot: 'bg-amber-400', badge: 'bg-amber-500/20 text-amber-300', ring: 'ring-amber-500/40', text: 'text-amber-300', label: 'Warning' },
-  offline: { dot: 'bg-zinc-500', badge: 'bg-white/10 text-zinc-300', ring: 'ring-white/15', text: 'text-zinc-300', label: 'Offline' },
-  ok: { dot: 'bg-emerald-400', badge: 'bg-emerald-500/15 text-emerald-300', ring: 'ring-emerald-500/30', text: 'text-emerald-300', label: 'Healthy' },
+  error: { dot: HEALTH_DOT_CLASS.error, badge: HEALTH_BADGE_CLASS.error, ring: HEALTH_RING_CLASS.error, text: HEALTH_TEXT_CLASS.error, label: 'Errors' },
+  warning: { dot: HEALTH_DOT_CLASS.warning, badge: HEALTH_BADGE_CLASS.warning, ring: HEALTH_RING_CLASS.warning, text: HEALTH_TEXT_CLASS.warning, label: 'Warning' },
+  offline: { dot: HEALTH_DOT_CLASS.offline, badge: HEALTH_BADGE_CLASS.offline, ring: HEALTH_RING_CLASS.offline, text: HEALTH_TEXT_CLASS.offline, label: 'Offline' },
+  ok: { dot: HEALTH_DOT_CLASS.ok, badge: HEALTH_BADGE_CLASS.ok, ring: HEALTH_RING_CLASS.ok, text: HEALTH_TEXT_CLASS.ok, label: 'Healthy' },
 };
 
 /** Worst-tone-first ordering for the inset summary chips (V3). */
-const SUMMARY_ORDER: DeviceHealth[] = ['critical', 'error', 'warning', 'offline', 'ok'];
+const SUMMARY_ORDER: DeviceHealth[] = ['error', 'warning', 'offline', 'ok'];
 
 // ---------------------------------------------------------------------------
 // Seed data — the real effector, adapted through the production mapper
@@ -103,12 +107,6 @@ function HealthTile({ device, size = 'md' }: { device: Device; size?: 'sm' | 'md
           className={`relative flex ${dims} shrink-0 items-center justify-center rounded ${visual.tile}`}
           data-health={health}
         >
-          {health === 'critical' && (
-            <span
-              aria-hidden="true"
-              className={`pointer-events-none absolute inset-0 rounded ${DEVICE_HEALTH_CRITICAL_PING} animate-ping motion-reduce:hidden`}
-            />
-          )}
           <device.Icon size={icon} fill={visual.iconFill} />
         </div>
       </TooltipTrigger>
@@ -133,7 +131,7 @@ function HealthBadge({ health }: { health: DeviceHealth }) {
   const tone = HEALTH_TONE[health];
   return (
     <span
-      className={`inline-flex h-4 shrink-0 items-center gap-1 rounded-[2px] px-1.5 text-[10px] font-medium leading-4 tabular-nums ${tone.badge}`}
+      className={`inline-flex h-4 shrink-0 items-center gap-1 rounded-[2px] px-1.5 text-2xs font-medium leading-4 tabular-nums ${tone.badge}`}
     >
       <span className={`size-1.5 rounded-full ${tone.dot}`} aria-hidden="true" />
       {tone.label}
@@ -151,7 +149,7 @@ function ParentHeader({ device }: { device: Device }) {
     <div className="flex w-full items-center gap-2.5 bg-white/[0.04] px-4 py-2.5">
       <HealthTile device={device} size="lg" />
       <div className="min-w-0 flex-1 text-start">
-        <div className="truncate text-sm font-medium text-zinc-300">{device.name}</div>
+        <div className="truncate text-sm font-medium text-slate-11">{device.name}</div>
       </div>
       <ChevronDownFilled size={16} className="shrink-0 text-white/40" />
     </div>
@@ -188,8 +186,8 @@ function GhostButton({
       type="button"
       onClick={onClick}
       aria-pressed={onClick ? !!active : undefined}
-      className={`inline-flex cursor-pointer items-center gap-1.5 rounded px-2 py-1 text-xs font-medium transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
-        active ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'
+      className={`inline-flex cursor-pointer items-center gap-1.5 rounded px-2 py-1 text-xs font-medium transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring ${
+        active ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-state-hover-overlay hover:text-white'
       }`}
     >
       <span className={active ? 'text-white' : 'text-white/60'}>{icon}</span>
@@ -247,7 +245,7 @@ function FooterOverflowMenu({ actions }: { actions: FooterAction[] }) {
         aria-expanded={open}
         aria-label="More actions"
         onClick={() => setOpen((v) => !v)}
-        className={`inline-flex size-6 cursor-pointer items-center justify-center rounded text-white/60 transition-[background-color,color,transform] duration-150 ease-out active:scale-95 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
+        className={`inline-flex size-6 cursor-pointer items-center justify-center rounded text-white/60 transition-[background-color,color,transform] duration-150 ease-out active:scale-95 hover:bg-state-hover-overlay hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring ${
           open ? 'bg-white/10 text-white' : ''
         }`}
       >
@@ -258,7 +256,7 @@ function FooterOverflowMenu({ actions }: { actions: FooterAction[] }) {
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} aria-hidden="true" />
           <div
             role="menu"
-            className="absolute end-0 bottom-full z-30 mb-1 flex w-[180px] flex-col gap-0.5 rounded-md border border-white/10 bg-zinc-900 p-1 shadow-[0_8px_24px_rgba(0,0,0,0.4)] animate-in fade-in-0 zoom-in-95 duration-150 motion-reduce:animate-none"
+            className="absolute end-0 bottom-full z-30 mb-1 flex w-[180px] flex-col gap-0.5 rounded-md border border-white/10 bg-slate-2 p-1 shadow-[0_8px_24px_rgba(0,0,0,0.4)] animate-in fade-in-0 zoom-in-95 duration-150 motion-reduce:animate-none"
           >
             {actions.map((a) => (
               <button
@@ -271,7 +269,7 @@ function FooterOverflowMenu({ actions }: { actions: FooterAction[] }) {
                   setOpen(false);
                 }}
                 className={`flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-start text-xs transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.98] [&_svg]:size-3 ${
-                  a.active ? 'bg-white/10 text-white' : 'text-white/80 hover:bg-white/10'
+                  a.active ? 'bg-white/10 text-white' : 'text-white/80 hover:bg-state-hover-overlay'
                 }`}
               >
                 <span className={`inline-flex items-center ${a.active ? 'text-white' : 'text-white/60'}`}>
@@ -317,13 +315,13 @@ function SensorRow({
       }}
       onMouseEnter={() => onHover?.(device.id)}
       onMouseLeave={() => onHover?.(null)}
-      className={`flex min-h-[40px] cursor-pointer items-center gap-2.5 px-3 py-2 transition-colors duration-150 ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-white/25 ${
+      className={`flex min-h-[40px] cursor-pointer items-center gap-2.5 px-3 py-2 transition-colors duration-150 ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-state-focus-ring ${
         rounded ? 'rounded' : ''
-      } ${selected ? 'bg-white/[0.07]' : 'hover:bg-white/[0.04] active:bg-white/[0.06]'}`}
+      } ${selected ? 'bg-white/[0.07]' : 'hover:bg-state-hover active:bg-state-pressed'}`}
     >
       <HealthTile device={device} size="sm" />
       <div className="min-w-0 flex-1 text-start">
-        <div className="truncate text-xs font-medium text-zinc-300">{device.name}</div>
+        <div className="truncate text-xs font-medium text-slate-11">{device.name}</div>
       </div>
       <HealthBadge health={health} />
     </div>
@@ -346,12 +344,12 @@ function VariationFrame({
     <section className="flex w-full max-w-[360px] flex-col gap-3">
       <header className="flex flex-col gap-0.5">
         <div className="flex items-baseline gap-2">
-          <span className="text-[11px] font-semibold tabular-nums text-white/40">V{index}</span>
-          <h3 className="text-sm font-semibold text-zinc-200">{title}</h3>
+          <span className="text-xs-plus font-semibold tabular-nums text-white/40">V{index}</span>
+          <h3 className="text-sm font-semibold text-slate-11">{title}</h3>
         </div>
         <p className="text-xs leading-snug text-white/50">{rationale}</p>
       </header>
-      <div className="overflow-hidden rounded-lg border border-white/[0.06] bg-[#141414] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.6)]">
+      <div className="overflow-hidden rounded-lg border border-white/[0.06] bg-surface-2 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.6)]">
         {children}
       </div>
     </section>
@@ -380,8 +378,8 @@ function V2Spine({ device }: { device: Device }) {
           that carry it (the per-row badges below).
         */}
         <div className="flex items-center gap-2 px-4 pt-3 pb-1">
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-white/50">Sensors</span>
-          <span className="text-[11px] tabular-nums text-white/35">{children.length}</span>
+          <span className="text-xs-plus font-semibold uppercase tracking-wide text-white/50">Sensors</span>
+          <span className="text-xs-plus tabular-nums text-white/35">{children.length}</span>
         </div>
         <div className="ps-4 pe-2 pb-2">
           {children.map((child, i) => {
@@ -435,10 +433,10 @@ function V3Inset({ device }: { device: Device }) {
               type="button"
               aria-expanded={open}
               onClick={() => setOpen((v) => !v)}
-              className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-start transition-colors duration-150 ease-out hover:bg-white/[0.04] active:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-white/25"
+              className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-start transition-colors duration-150 ease-out hover:bg-state-hover active:bg-state-pressed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-state-focus-ring"
             >
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-white/55">Sensors</span>
-              <span className="text-[11px] tabular-nums text-white/35">{children.length}</span>
+              <span className="text-xs-plus font-semibold uppercase tracking-wide text-white/55">Sensors</span>
+              <span className="text-xs-plus tabular-nums text-white/35">{children.length}</span>
               <span className="ms-auto flex items-center gap-1.5">
                 {/* Summary chips carry the at-a-glance state while collapsed;
                     once open the rows below carry the detail, so the chips
@@ -448,7 +446,7 @@ function V3Inset({ device }: { device: Device }) {
                     {summaryChips.map((h) => (
                       <span
                         key={h}
-                        className={`inline-flex h-4 items-center gap-1 rounded-[2px] px-1.5 text-[10px] font-medium leading-4 tabular-nums ${HEALTH_TONE[h].badge}`}
+                        className={`inline-flex h-4 items-center gap-1 rounded-[2px] px-1.5 text-2xs font-medium leading-4 tabular-nums ${HEALTH_TONE[h].badge}`}
                       >
                         <span className={`size-1.5 rounded-full ${HEALTH_TONE[h].dot}`} aria-hidden="true" />
                         {counts[h]} {HEALTH_TONE[h].label}
@@ -533,17 +531,17 @@ function V4SpineCollapse({ device }: { device: Device }) {
           type="button"
           aria-expanded={open}
           onClick={() => setOpen((v) => !v)}
-          className="flex w-full cursor-pointer items-center gap-2 px-4 pt-3 pb-1 text-start transition-colors duration-150 ease-out hover:bg-white/[0.03] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-white/25"
+          className="flex w-full cursor-pointer items-center gap-2 px-4 pt-3 pb-1 text-start transition-colors duration-150 ease-out hover:bg-state-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-state-focus-ring"
         >
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-white/50">Sensors</span>
-          <span className="text-[11px] tabular-nums text-white/35">{children.length}</span>
+          <span className="text-xs-plus font-semibold uppercase tracking-wide text-white/50">Sensors</span>
+          <span className="text-xs-plus tabular-nums text-white/35">{children.length}</span>
           <span className="ms-auto flex items-center gap-1.5">
             {!open && summaryChips.length > 0 && (
               <span className="flex flex-wrap items-center justify-end gap-1">
                 {summaryChips.map((h) => (
                   <span
                     key={h}
-                    className={`inline-flex h-4 items-center gap-1 rounded-[2px] px-1.5 text-[10px] font-medium leading-4 tabular-nums ${HEALTH_TONE[h].badge}`}
+                    className={`inline-flex h-4 items-center gap-1 rounded-[2px] px-1.5 text-2xs font-medium leading-4 tabular-nums ${HEALTH_TONE[h].badge}`}
                   >
                     <span className={`size-1.5 rounded-full ${HEALTH_TONE[h].dot}`} aria-hidden="true" />
                     {counts[h]} {HEALTH_TONE[h].label}

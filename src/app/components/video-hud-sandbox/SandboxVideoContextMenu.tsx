@@ -62,7 +62,7 @@ export function SandboxVideoContextMenu({
             handleCopy();
             e.preventDefault();
           }}
-          className="gap-2.5 text-[13px] font-mono tabular-nums"
+          className="gap-2.5 text-sm-minus font-mono tabular-nums"
         >
           {copied ? (
             <Check className="text-emerald-300" />
@@ -79,7 +79,7 @@ export function SandboxVideoContextMenu({
 
         <ContextMenuItem
           onSelect={() => onLookAt?.()}
-          className="gap-2.5 text-[13px]"
+          className="gap-2.5 text-sm-minus"
         >
           <Crosshair />
           <span className="text-slate-12">{lookAtLabel}</span>
@@ -87,7 +87,7 @@ export function SandboxVideoContextMenu({
 
         <ContextMenuItem
           onSelect={() => onCreateTarget?.()}
-          className="gap-2.5 text-[13px]"
+          className="gap-2.5 text-sm-minus"
         >
           <Target />
           <span className="text-slate-12">{createTargetLabel}</span>

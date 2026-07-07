@@ -10,6 +10,28 @@
  * shadcn semantic theme in theme.css; colors only (fonts/radius unchanged).
  */
 @theme {
+  /*
+   * Type scale — the UI's real micro-density range (9–13px), declared as
+   * named steps so no call site sets a font size by hand:
+   *
+   *   text-3xs      9px   overline / tick labels
+   *   text-2xs     10px   captions, badges, dense metadata
+   *   text-xs-plus 11px   secondary labels, table cells
+   *   text-xs      12px   (Tailwind default) body in dense panels
+   *   text-sm-minus 13px  card titles, primary values
+   *   text-sm      14px   (Tailwind default) prose / forms
+   *
+   * Arbitrary `text-[Npx]` values are banned; extend this scale instead.
+   */
+  --text-3xs: 9px;
+  --text-3xs--line-height: 12px;
+  --text-2xs: 10px;
+  --text-2xs--line-height: 14px;
+  --text-xs-plus: 11px;
+  --text-xs-plus--line-height: 16px;
+  --text-sm-minus: 13px;
+  --text-sm-minus--line-height: 18px;
+
   /* Surfaces */
   --color-surface-void: var(--surface-void);
   --color-surface-1: var(--surface-1);
@@ -35,6 +57,25 @@
   --color-slate-11: var(--slate-11);
   --color-slate-12: var(--slate-12);
 
+  /*
+   * Neutral aliases (n-1..12) — legacy names from the retired root
+   * index.css, kept as aliases over the slate ramp so existing
+   * `text-n-*` / `bg-n-*` call sites (styleguide chrome) resolve to the
+   * one true ramp. Prefer slate-* in new code.
+   */
+  --color-n-1:  var(--slate-1);
+  --color-n-2:  var(--slate-2);
+  --color-n-3:  var(--slate-3);
+  --color-n-4:  var(--slate-4);
+  --color-n-5:  var(--slate-5);
+  --color-n-6:  var(--slate-6);
+  --color-n-7:  var(--slate-7);
+  --color-n-8:  var(--slate-8);
+  --color-n-9:  var(--slate-9);
+  --color-n-10: var(--slate-10);
+  --color-n-11: var(--slate-11);
+  --color-n-12: var(--slate-12);
+
   /* Tactical accents (vivid) */
   --color-accent-danger:     var(--accent-danger);
   --color-accent-warning:    var(--accent-warning);
@@ -48,12 +89,20 @@
   /* Tactical accents (soft + tints) */
   --color-accent-danger-soft:  var(--accent-danger-soft);
   --color-accent-warning-soft: var(--accent-warning-soft);
+  --color-accent-danger-soft-hover:   var(--accent-danger-soft-hover);
+  --color-accent-danger-soft-active:  var(--accent-danger-soft-active);
+  --color-accent-warning-soft-hover:  var(--accent-warning-soft-hover);
+  --color-accent-warning-soft-active: var(--accent-warning-soft-active);
   --color-accent-success-soft: var(--accent-success-soft);
   --color-accent-info-soft:    var(--accent-info-soft);
   --color-accent-success-tint: var(--accent-success-tint);
   --color-accent-danger-tint:  var(--accent-danger-tint);
   --color-accent-warning-tint: var(--accent-warning-tint);
   --color-accent-info-tint:    var(--accent-info-tint);
+  --color-accent-danger-text:  var(--accent-danger-text);
+  --color-accent-warning-text: var(--accent-warning-text);
+  --color-accent-success-text: var(--accent-success-text);
+  --color-accent-info-text:    var(--accent-info-text);
 
   /* Dispositions */
   --color-disposition-suspect:        var(--disposition-suspect);
@@ -71,6 +120,7 @@
   --color-state-hover-overlay: var(--state-hover-overlay);
   --color-state-pressed:       var(--state-pressed);
   --color-state-selected:      var(--state-selected);
+  --color-state-focus-ring:    var(--state-focus-ring);
 
   /* Text tiers (aliases over the slate ramp) */
   --color-ink:   var(--slate-12);

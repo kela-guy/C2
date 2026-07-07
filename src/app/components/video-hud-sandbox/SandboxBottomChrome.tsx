@@ -178,7 +178,7 @@ export function SandboxBottomChrome({
                   aria-label={takeReleaseLabel}
                   aria-pressed={owned}
                   onClick={onTakeRelease}
-                  className={`flex h-8 items-center gap-1.5 rounded-full border border-transparent px-2 text-[11px] transition-colors duration-150 focus-visible:border-border-strong focus-visible:outline-none ${
+                  className={`flex h-8 items-center gap-1.5 rounded-full border border-transparent px-2 text-xs-plus transition-colors duration-150 focus-visible:border-border-strong focus-visible:outline-none ${
                     owned
                       ? 'bg-state-selected text-slate-12'
                       : 'text-slate-12/85 hover:bg-state-hover-overlay hover:text-slate-12'
@@ -404,7 +404,7 @@ function SandboxZoomControl({
           id={readoutId}
           aria-live="polite"
           aria-atomic="true"
-          className="min-w-[2.25rem] shrink-0 font-mono text-[11px] leading-none tabular-nums text-slate-12/90"
+          className="min-w-[2.25rem] shrink-0 font-mono text-xs-plus leading-none tabular-nums text-slate-12/90"
         >
           {zoomLabel}
         </span>

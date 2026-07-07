@@ -60,7 +60,7 @@ export function ToolbarCommand({
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search drawing tools…"
-            className="w-32 bg-transparent text-[12px] text-slate-12 outline-none placeholder:text-slate-9"
+            className="w-32 bg-transparent text-xs text-slate-12 outline-none placeholder:text-slate-9"
             aria-label="Search drawing tools"
           />
           {query && (
@@ -81,7 +81,7 @@ export function ToolbarCommand({
         {/* Match chips. When the query is empty this acts as a quick-pick row. */}
         <div className="flex flex-wrap items-center gap-1">
           {matches.length === 0 ? (
-            <span className="text-[11px] text-slate-9">No tools match "{query}"</span>
+            <span className="text-xs-plus text-slate-9">No tools match "{query}"</span>
           ) : (
             matches.map((tool, i) => {
               const active = tool.id === activeToolId;
@@ -95,7 +95,7 @@ export function ToolbarCommand({
                     onSelectTool(tool.id);
                     setQuery('');
                   }}
-                  className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] font-medium transition-colors ${
+                  className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs-plus font-medium transition-colors ${
                     active
                       ? 'border-border-strong bg-state-hover-strong text-slate-12'
                       : isTopMatch
@@ -107,7 +107,7 @@ export function ToolbarCommand({
                   <tool.Icon size={12} />
                   <span>{tool.label}</span>
                   {isTopMatch && !active && (
-                    <span className="ms-0.5 rounded bg-surface-4 px-1 font-mono text-[9px] uppercase tracking-wide text-slate-9">
+                    <span className="ms-0.5 rounded bg-surface-4 px-1 font-mono text-3xs uppercase tracking-wide text-slate-9">
                       ↵
                     </span>
                   )}
@@ -125,7 +125,7 @@ export function ToolbarCommand({
               key={a.id}
               type="button"
               onClick={() => onAction(a.id)}
-              className={`flex items-center gap-1.5 rounded px-2 py-1 text-[11px] font-medium transition-colors ${
+              className={`flex items-center gap-1.5 rounded px-2 py-1 text-xs-plus font-medium transition-colors ${
                 a.tone === 'caution'
                   ? 'text-rose-300 hover:bg-rose-500/15'
                   : 'text-slate-10 hover:bg-state-hover-strong hover:text-slate-12'

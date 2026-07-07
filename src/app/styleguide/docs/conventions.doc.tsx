@@ -25,14 +25,14 @@ function RuleCard({ rule }: { rule: DesignRule }) {
     <div className="space-y-2 rounded-lg p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
       <div className="flex flex-wrap items-center gap-2">
         <span
-          className={`rounded px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${
+          className={`rounded px-2 py-0.5 text-xs-plus font-semibold uppercase tracking-wide ${
             SEVERITY_STYLE[rule.severity] ?? 'bg-white/10 text-white/70'
           }`}
         >
           {rule.severity}
         </span>
-        <code className="font-mono text-[13px] font-medium text-white/90">{rule.id}</code>
-        <span className="ml-auto rounded bg-white/[0.06] px-2 py-0.5 text-[11px] text-white/55">
+        <code className="font-mono text-sm-minus font-medium text-white/90">{rule.id}</code>
+        <span className="ml-auto rounded bg-white/[0.06] px-2 py-0.5 text-xs-plus text-white/55">
           {ENFORCEMENT_LABEL[rule.enforcement] ?? rule.enforcement}
         </span>
       </div>
@@ -42,7 +42,7 @@ function RuleCard({ rule }: { rule: DesignRule }) {
           <span className="font-medium text-emerald-300">Fix:</span> {rule.replacement}
         </p>
       )}
-      <code className="block font-mono text-[11px] text-white/35">{rule.target}</code>
+      <code className="block font-mono text-xs-plus text-white/35">{rule.target}</code>
     </div>
   );
 }

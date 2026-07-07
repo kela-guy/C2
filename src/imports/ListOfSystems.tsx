@@ -333,13 +333,13 @@ function UnifiedCardImpl({
       {slots.closureType && (
         <div className="px-2 pt-1.5 flex items-center gap-1">
           {slots.closureType === 'manual' ? (
-            <div className="flex items-center gap-1 text-xs text-zinc-500">
-              <Hand size={10} className="text-zinc-500" aria-hidden="true" />
+            <div className="flex items-center gap-1 text-xs text-slate-9">
+              <Hand size={10} className="text-slate-9" aria-hidden="true" />
               <span>{los.closeManual}</span>
             </div>
           ) : (
-            <div className="flex items-center gap-1 text-xs text-zinc-500">
-              <Zap size={10} className="text-zinc-500" aria-hidden="true" />
+            <div className="flex items-center gap-1 text-xs text-slate-9">
+              <Zap size={10} className="text-slate-9" aria-hidden="true" />
               <span>{los.closeAuto}</span>
             </div>
           )}
@@ -478,7 +478,7 @@ export function SystemCard({
 
 /** @deprecated Use UnifiedCard with useCardSlots instead */
 export function ExpandedTargetDetails({ target }: { target: Detection; [key: string]: any }) {
-  return <div className="p-2 text-xs text-zinc-400">Use ComposedCard instead</div>;
+  return <div className="p-2 text-xs text-slate-10">Use ComposedCard instead</div>;
 }
 
 // ─── List Component ─────────────────────────────────────────────────────────
@@ -958,7 +958,7 @@ function ListOfSystemsImpl({
 
   return (
     <div className={`w-full flex flex-col ${className}`}>
-      <div className="sticky top-0 z-10 bg-[#141414]">
+      <div className="sticky top-0 z-10 bg-surface-2">
         {/* Tab bar */}
         <div className="flex border-b border-white/10 px-1" role="tablist">
           <button
@@ -968,7 +968,7 @@ function ListOfSystemsImpl({
             aria-selected={activeTab === 'active'}
             aria-controls="tabpanel-active"
             className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold transition-colors border-b-2 ${
-              activeTab === 'active' ? 'border-white text-white' : 'border-transparent text-zinc-400 hover:text-zinc-300'
+              activeTab === 'active' ? 'border-white text-white' : 'border-transparent text-slate-10 hover:text-slate-11'
             }`}
           >
             {los.tabActive}
@@ -983,7 +983,7 @@ function ListOfSystemsImpl({
             aria-selected={activeTab === 'completed'}
             aria-controls="tabpanel-completed"
             className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold transition-colors border-b-2 ${
-              activeTab === 'completed' ? 'border-white text-white' : 'border-transparent text-zinc-400 hover:text-zinc-300'
+              activeTab === 'completed' ? 'border-white text-white' : 'border-transparent text-slate-10 hover:text-slate-11'
             }`}
           >
             {los.tabCompleted}

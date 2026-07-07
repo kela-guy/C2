@@ -70,14 +70,14 @@ export function ToolbarTabs({
                 role="tab"
                 aria-selected={isActive}
                 onClick={() => setActiveCategory(g.id)}
-                className={`relative px-3 py-1.5 text-[11px] font-medium transition-colors ${
+                className={`relative px-3 py-1.5 text-xs-plus font-medium transition-colors ${
                   isActive
                     ? 'text-slate-12'
                     : 'text-slate-9 hover:text-slate-11'
                 }`}
               >
                 {g.label}
-                <span className="ms-1 font-mono text-[10px] text-slate-9">
+                <span className="ms-1 font-mono text-2xs text-slate-9">
                   {g.tools.length}
                 </span>
                 {isActive && (
@@ -101,7 +101,7 @@ export function ToolbarTabs({
                 type="button"
                 aria-pressed={active}
                 onClick={() => onSelectTool(tool.id)}
-                className={`flex items-center gap-1.5 rounded px-2 py-1.5 text-[12px] font-medium transition-colors ${
+                className={`flex items-center gap-1.5 rounded px-2 py-1.5 text-xs font-medium transition-colors ${
                   active
                     ? 'bg-state-hover-strong text-slate-12'
                     : 'text-slate-10 hover:bg-state-hover-strong hover:text-slate-12'
@@ -123,7 +123,7 @@ export function ToolbarTabs({
               key={a.id}
               type="button"
               onClick={() => onAction(a.id)}
-              className={`flex items-center gap-1.5 rounded px-2 py-1 text-[11px] font-medium transition-colors ${
+              className={`flex items-center gap-1.5 rounded px-2 py-1 text-xs-plus font-medium transition-colors ${
                 a.tone === 'caution'
                   ? 'text-rose-300 hover:bg-rose-500/15'
                   : 'text-slate-10 hover:bg-state-hover-strong hover:text-slate-12'

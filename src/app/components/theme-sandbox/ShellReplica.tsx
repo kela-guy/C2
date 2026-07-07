@@ -7,7 +7,7 @@ import {
   Palette,
   Sparkles,
   Video,
-} from 'lucide-react';
+} from '@/lib/icons/central';
 import ListOfSystems, {
   type Detection,
   type RegulusEffector,
@@ -24,7 +24,7 @@ import {
   flow2_tracking,
 } from '@/test-utils/mockDetections';
 import { useStrings } from '@/lib/intl';
-import { LAYOUT_TOKENS, SURFACE } from '@/primitives/tokens';
+import { LAYOUT_TOKENS } from '@/primitives/tokens';
 import { useIsRtl } from '@/lib/direction';
 import { DevicesPanel } from '../devices-panel';
 import { MOCK_DEVICES } from '../devices-panel-next/mockDevices';
@@ -220,7 +220,7 @@ export function ShellReplica() {
           `}
           style={{
             width: sidebarWidth,
-            backgroundColor: SURFACE.level1,
+            backgroundColor: 'var(--surface-2)',
             ...(isDragging ? { transition: 'none', willChange: 'width' } : {}),
             ...(isSnapping ? { transition: 'width 200ms ease-out' } : {}),
           }}
@@ -228,7 +228,7 @@ export function ShellReplica() {
           {sidebarOpen && (
             <div
               onPointerDown={handleResizePointerDown}
-              className={`absolute end-0 top-0 bottom-0 w-1.5 z-20 cursor-col-resize transition-colors ${isDragging ? 'bg-white/20' : 'bg-transparent hover:bg-white/10'}`}
+              className={`absolute end-0 top-0 bottom-0 w-1.5 z-20 cursor-col-resize transition-colors ${isDragging ? 'bg-white/20' : 'bg-transparent hover:bg-state-hover-overlay'}`}
             />
           )}
           <div className="flex items-center px-4 h-9 border-b border-white/10">
@@ -463,7 +463,7 @@ function MapWell() {
 
       {/* Fake compass — top-right, nudged below the floating Geo Entities
           control so both fit without overlapping. */}
-      <div className="absolute end-3 top-12 flex size-10 items-center justify-center rounded-full border border-border-default bg-surface-2 font-mono text-[10px] font-semibold text-slate-11 shadow-[var(--shadow-3)]">
+      <div className="absolute end-3 top-12 flex size-10 items-center justify-center rounded-full border border-border-default bg-surface-2 font-mono text-2xs font-semibold text-slate-11 shadow-[var(--shadow-3)]">
         N
       </div>
 
@@ -473,7 +473,7 @@ function MapWell() {
       <SandboxFloatingGeoEntities />
 
       {/* Bottom coordinate strip */}
-      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between border-t border-border-subtle bg-surface-1/80 px-3 py-1.5 font-mono text-[10px] text-slate-10 backdrop-blur-sm">
+      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between border-t border-border-subtle bg-surface-1/80 px-3 py-1.5 font-mono text-2xs text-slate-10 backdrop-blur-sm">
         <span>32.0853° N · 34.7818° E</span>
         <span>ZOOM 14 · TILT 42°</span>
       </div>
@@ -484,7 +484,7 @@ function MapWell() {
 function ComponentStrip() {
   return (
     <div className="flex flex-col gap-3 border-t border-border-default bg-surface-2 px-4 py-3">
-      <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.18em] text-slate-9">
+      <div className="flex items-center gap-2 font-mono text-xs-plus uppercase tracking-[0.18em] text-slate-9">
         <span>Component preview</span>
         <span className="h-px flex-1 bg-border-subtle" />
       </div>
@@ -505,13 +505,13 @@ function ComponentStrip() {
 
       <div className="flex flex-wrap items-center gap-3">
         <label className="flex flex-1 min-w-[180px] flex-col gap-1">
-          <span className="text-[10px] uppercase tracking-[0.14em] text-slate-10">
+          <span className="text-2xs uppercase tracking-[0.14em] text-slate-10">
             Callsign
           </span>
           <input
             type="text"
             defaultValue="ATLAS-9"
-            className="h-8 rounded border border-border-default bg-surface-3 px-2.5 text-[12px] text-slate-12 outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/40"
+            className="h-8 rounded border border-border-default bg-surface-3 px-2.5 text-xs text-slate-12 outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/40"
           />
         </label>
         <DemoSwitch />
@@ -534,7 +534,7 @@ function DemoButton({
 }) {
   const base =
     'inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[var(--radius)] font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary/50 active:scale-[0.98]';
-  const sizeCls = size === 'sm' ? 'h-7 px-2.5 text-[11px]' : 'h-8 px-3 text-[12px]';
+  const sizeCls = size === 'sm' ? 'h-7 px-2.5 text-xs-plus' : 'h-8 px-3 text-xs';
   const variantCls: Record<typeof variant, string> = {
     primary:
       'bg-primary text-primary-foreground hover:opacity-90 active:opacity-100',
@@ -561,7 +561,7 @@ function DemoBadge({
   children: React.ReactNode;
 }) {
   const base =
-    'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em]';
+    'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-2xs font-medium uppercase tracking-[0.12em]';
   const variantCls: Record<typeof variant, string> = {
     primary: 'bg-primary-tint text-slate-12 ring-1 ring-inset ring-primary/40',
     secondary:
@@ -575,7 +575,7 @@ function DemoBadge({
 
 function DemoSwitch() {
   return (
-    <label className="flex cursor-pointer items-center gap-2 text-[12px] text-slate-11">
+    <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-11">
       <span
         aria-hidden
         className="relative inline-flex h-4 w-7 items-center rounded-full bg-primary ring-1 ring-inset ring-border-strong"
@@ -592,19 +592,19 @@ function DemoTabs() {
     <div className="inline-flex overflow-hidden rounded-[var(--radius)] border border-border-default bg-surface-3">
       <button
         type="button"
-        className="bg-primary px-2.5 py-1 text-[11px] font-medium text-primary-foreground"
+        className="bg-primary px-2.5 py-1 text-xs-plus font-medium text-primary-foreground"
       >
         Live
       </button>
       <button
         type="button"
-        className="px-2.5 py-1 text-[11px] text-slate-10 hover:bg-state-hover hover:text-slate-12"
+        className="px-2.5 py-1 text-xs-plus text-slate-10 hover:bg-state-hover hover:text-slate-12"
       >
         Historical
       </button>
       <button
         type="button"
-        className="px-2.5 py-1 text-[11px] text-slate-10 hover:bg-state-hover hover:text-slate-12"
+        className="px-2.5 py-1 text-xs-plus text-slate-10 hover:bg-state-hover hover:text-slate-12"
       >
         Simulation
       </button>

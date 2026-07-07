@@ -13,6 +13,7 @@
  */
 
 import type { ReactNode } from 'react';
+import { HEALTH_BADGE_CLASS, HEALTH_DOT_CLASS } from '@/primitives/HealthStatus';
 
 /** Worst-wins health tone, mirroring `deviceHealth.ts`. */
 type Tone = 'critical' | 'warning' | 'offline' | 'ok';
@@ -30,10 +31,10 @@ interface ToneStyle {
  * known-absent (not alarmist) and ok has nothing to count.
  */
 const TONES: Record<Tone, ToneStyle> = {
-  critical: { dot: 'bg-red-400', badge: 'bg-red-500/20 text-red-300' },
-  warning: { dot: 'bg-amber-400', badge: 'bg-amber-500/20 text-amber-300' },
-  offline: { dot: 'bg-zinc-500', badge: null },
-  ok: { dot: 'bg-emerald-400', badge: null },
+  critical: { dot: HEALTH_DOT_CLASS.error, badge: HEALTH_BADGE_CLASS.error },
+  warning: { dot: HEALTH_DOT_CLASS.warning, badge: HEALTH_BADGE_CLASS.warning },
+  offline: { dot: HEALTH_DOT_CLASS.offline, badge: null },
+  ok: { dot: HEALTH_DOT_CLASS.ok, badge: null },
 };
 
 /** Language-specific copy for a single tooltip. */
@@ -58,7 +59,7 @@ interface Scenario {
 function TipSurface({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
     <div
-      className={`overflow-hidden bg-zinc-800 text-xs text-zinc-300 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] ${className}`}
+      className={`overflow-hidden bg-slate-4 text-xs text-slate-11 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] ${className}`}
     >
       {children}
     </div>
@@ -85,12 +86,12 @@ function TitledTip({ tone, errors, content }: { tone: Tone; errors?: number; con
     <TipSurface className="min-w-[184px] max-w-[260px]">
       <div className="flex items-center justify-start gap-1.5 px-2.5 py-1.5">
         <span className={`size-1.5 shrink-0 rounded-full ${style.dot}`} />
-        <span className="w-full min-w-0 truncate text-xs font-semibold text-zinc-100">
+        <span className="w-full min-w-0 truncate text-xs font-semibold text-slate-12">
           {content.severity}
         </span>
         {showBadge && (
           <span
-            className={`h-4 shrink-0 rounded-[2px] px-1.5 align-middle text-[10px] font-medium leading-4 tabular-nums ${style.badge}`}
+            className={`h-4 shrink-0 rounded-[2px] px-1.5 align-middle text-2xs font-medium leading-4 tabular-nums ${style.badge}`}
           >
             {badgeLabel}
           </span>
@@ -99,9 +100,9 @@ function TitledTip({ tone, errors, content }: { tone: Tone; errors?: number; con
       {hasFence && (
         <div className="border-t border-white/10 px-2.5 py-1.5">
           {content.reason != null && (
-            <div className="max-w-[220px] text-xs text-zinc-200">{content.reason}</div>
+            <div className="max-w-[220px] text-xs text-slate-11">{content.reason}</div>
           )}
-          {hasFooter && <div className="mt-0.5 text-[10px] text-white/50">{footer}</div>}
+          {hasFooter && <div className="mt-0.5 text-2xs text-white/50">{footer}</div>}
         </div>
       )}
     </TipSurface>
@@ -218,7 +219,7 @@ function LangSample({
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <span className="text-[10px] font-medium uppercase tracking-wide text-white/35">{label}</span>
+      <span className="text-2xs font-medium uppercase tracking-wide text-white/35">{label}</span>
       <div dir={dir} className="flex">
         <TitledTip tone={tone} errors={errors} content={content} />
       </div>
@@ -239,7 +240,7 @@ export function TooltipDesigns() {
       <div className="grid gap-x-10 gap-y-9 lg:grid-cols-2">
         {SCENARIOS.map((sc) => (
           <div key={sc.label} className="flex flex-col gap-3">
-            <div className="text-[11px] leading-snug text-white/55">{sc.label}</div>
+            <div className="text-xs-plus leading-snug text-white/55">{sc.label}</div>
             <div className="flex flex-wrap items-start gap-8">
               <LangSample label="EN" dir="ltr" tone={sc.tone} errors={sc.errors} content={sc.en} />
               <LangSample label="עברית" dir="rtl" tone={sc.tone} errors={sc.errors} content={sc.he} />

@@ -136,7 +136,7 @@ export function JamSplitButton({ device, strings: s, iconOnly, onJamActivate }: 
             backgroundColor: `rgba(255,255,255,${CARD_TOKENS.elevation.overlay.level2})`,
           }}
         >
-          <div className="mb-2 text-xs font-semibold text-zinc-200">{armedTitle}</div>
+          <div className="mb-2 text-xs font-semibold text-slate-11">{armedTitle}</div>
           <div className="flex gap-2">
             <button
               type="button"
@@ -145,7 +145,7 @@ export function JamSplitButton({ device, strings: s, iconOnly, onJamActivate }: 
                 confirm();
               }}
               aria-label={s.jamConfirm}
-              className="h-8 flex-1 rounded bg-[oklch(0.348_0.111_17)] text-xs font-semibold text-[oklch(0.927_0.062_17)] transition-[background-color,transform] duration-150 ease-out hover:bg-[oklch(0.445_0.151_17)] active:scale-[0.98] active:bg-[oklch(0.295_0.082_17)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+              className="h-8 flex-1 rounded bg-[oklch(0.348_0.111_17)] text-xs font-semibold text-[oklch(0.927_0.062_17)] transition-[background-color,transform] duration-150 ease-out hover:bg-[oklch(0.445_0.151_17)] active:scale-[0.98] active:bg-[oklch(0.295_0.082_17)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
             >
               {s.jamConfirm}
             </button>
@@ -156,7 +156,7 @@ export function JamSplitButton({ device, strings: s, iconOnly, onJamActivate }: 
                 setState('idle');
               }}
               aria-label={s.jamCancel}
-              className="h-8 flex-1 rounded bg-[oklch(0.302_0_0)] text-xs font-medium text-white transition-[background-color,transform] duration-150 ease-out hover:bg-[oklch(0.388_0_0)] active:scale-[0.98] active:bg-[oklch(0.238_0_0)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+              className="h-8 flex-1 rounded bg-[oklch(0.302_0_0)] text-xs font-medium text-white transition-[background-color,transform] duration-150 ease-out hover:bg-[oklch(0.388_0_0)] active:scale-[0.98] active:bg-[oklch(0.238_0_0)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
             >
               {s.jamCancel}
             </button>

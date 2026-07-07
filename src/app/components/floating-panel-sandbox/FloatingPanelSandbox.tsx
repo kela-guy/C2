@@ -136,7 +136,7 @@ export default function FloatingPanelSandbox() {
           <h1 className="text-lg font-semibold">
             Floating Geo Entities Panel — V1
           </h1>
-          <p className="max-w-3xl text-[12.5px] text-white/55">
+          <p className="max-w-3xl text-sm-minus text-white/55">
             Two-stage strip. Closed = single chip showing the SELECTED
             tool (Polygon by default). Click it and the SAME chip widens
             to reveal the three OTHER tools beside it — one shared
@@ -149,7 +149,7 @@ export default function FloatingPanelSandbox() {
 
         <div className="mb-4 flex flex-wrap items-center gap-4">
           <AnchorRadio value={anchor} onChange={setAnchor} />
-          <span className="text-[12px] text-white/45">
+          <span className="text-xs text-white/45">
             State: <strong className="text-white/80">{open ? 'open' : 'closed'}</strong>
             <span className="mx-2 text-white/25">·</span>
             Selected: <strong className="text-white/80">{selected}</strong>
@@ -160,7 +160,7 @@ export default function FloatingPanelSandbox() {
               setSelected('polygon');
               setOpen(false);
             }}
-            className="ml-auto rounded-md border border-white/10 bg-transparent px-2.5 py-1 text-[11.5px] font-medium text-white/70 transition-colors hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+            className="ml-auto rounded-md border border-white/10 bg-transparent px-2.5 py-1 text-xs font-medium text-white/70 transition-colors hover:bg-state-hover-strong hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
           >
             Reset
           </button>
@@ -194,9 +194,9 @@ function AnchorRadio({
     <div
       role="radiogroup"
       aria-label="Placement"
-      className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-[#161616] p-1"
+      className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-surface-2 p-1"
     >
-      <span className="px-2 text-[11px] font-semibold uppercase tracking-wide text-white/50">
+      <span className="px-2 text-xs-plus font-semibold uppercase tracking-wide text-white/50">
         Anchor
       </span>
       {ANCHORS.map((a) => {
@@ -208,10 +208,10 @@ function AnchorRadio({
             role="radio"
             aria-checked={active}
             onClick={() => onChange(a.id)}
-            className={`rounded px-2.5 py-1 text-[12px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
+            className={`rounded px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring ${
               active
-                ? 'bg-white/[0.10] text-white ring-1 ring-inset ring-white/15'
-                : 'text-white/60 hover:bg-white/[0.05] hover:text-white'
+                ? 'bg-state-selected text-white ring-1 ring-inset ring-white/15'
+                : 'text-white/60 hover:bg-state-hover hover:text-white'
             }`}
           >
             {a.label}
@@ -276,7 +276,7 @@ function MapMockFrame({
           strip's real neighbours on the tactical map. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute bottom-3 left-3 grid h-7 w-7 place-items-center rounded-[2px] border border-white/10 bg-black/70 text-[11px] font-medium text-white/70 backdrop-blur-md"
+        className="pointer-events-none absolute bottom-3 left-3 grid h-7 w-7 place-items-center rounded-[2px] border border-white/10 bg-black/70 text-xs-plus font-medium text-white/70 backdrop-blur-md"
       >
         3D
       </div>
@@ -394,12 +394,12 @@ function IconSlot({
           aria-hidden={!reachable || undefined}
           tabIndex={reachable ? 0 : -1}
           onClick={onClick}
-          className="grid h-7 w-7 shrink-0 place-items-center rounded-[2px] text-[#949494] transition-colors hover:bg-white/[0.08] hover:text-white aria-pressed:bg-white/[0.14] aria-pressed:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-white/40"
+          className="grid h-7 w-7 shrink-0 place-items-center rounded-[2px] text-[#949494] transition-colors hover:bg-state-hover-overlay hover:text-white aria-pressed:bg-state-selected aria-pressed:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-state-focus-ring"
         >
           <tool.Icon size={16} />
         </button>
       </TooltipTrigger>
-      <TooltipContent side="bottom" sideOffset={6} className="text-[11px]">
+      <TooltipContent side="bottom" sideOffset={6} className="text-xs-plus">
         {tooltipOverride ?? tool.label}
       </TooltipContent>
     </Tooltip>

@@ -7,7 +7,6 @@ import { DialRoot } from "dialkit";
 import "dialkit/styles.css";
 import { Dashboard } from "./components/Dashboard";
 import FovTestPage from "./components/FovTestPage";
-import StyleguidePage from "./components/StyleguidePage";
 import UrgencyReviewPage from "./components/UrgencyReviewPage";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
 import { AppLoader } from "./components/ui/app-loader";
@@ -26,11 +25,16 @@ const DevicesLabPage = lazy(() => import("./components/DevicesLabPage"));
 // Code-split so the Cesium-heavy lab never enters other bundles.
 const OnboardingLabPage = lazy(() => import("./components/onboarding/OnboardingLabPage"));
 
-// Design System — the manifest-driven successor to `/styleguide`. Mounted on
-// its own route while the strangler migration runs; the legacy monolith stays
-// live at `/styleguide`. Code-split so its doc modules never enter other
-// bundles.
+// Design System — the manifest-driven styleguide, canonical at `/styleguide`
+// (also answers at `/design-system`). Code-split so its doc modules never
+// enter other bundles.
 const DesignSystemPage = lazy(() => import("./styleguide/registry/DesignSystem"));
+
+// Legacy styleguide monolith — superseded by the manifest-driven Design
+// System above. Kept reachable at `/styleguide-legacy` for the demo sections
+// not yet ported into the registry; deleted once the port completes.
+// Code-split so its 7k lines never enter the production bundle.
+const StyleguideLegacyPage = lazy(() => import("./components/StyleguidePage"));
 
 // Video HUD Sandbox — sandbox for the camera HUD chrome (setpoint rail,
 // bottom chrome, compass, connectivity, detections). Shipped in production
@@ -98,17 +102,12 @@ const ThemeSandbox = import.meta.env.DEV
   ? lazy(() => import("./components/theme-sandbox/ThemeSandbox"))
   : null;
 
-// Tweakcn Orange Sandbox — dev-only twin of /theme-sandbox that boots
-// with the imported shadcn/tweakcn orange theme mapped onto the platform
-// tokens (see theme-sandbox-orange/presets.ts). Reach it at
-// /theme-orange-sandbox.
-const ThemeOrangeSandbox = import.meta.env.DEV
-  ? lazy(() => import("./components/theme-sandbox-orange/ThemeOrangeSandbox"))
-  : null;
+// /theme-orange-sandbox is the same ThemeSandbox component booted with the
+// imported shadcn/tweakcn orange preset (see theme-sandbox/presets.ts).
 
 function PlaygroundFallback() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#09090b] text-sm text-neutral-400">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-surface-1 text-sm text-slate-10">
       <AppLoader size={108} label="Loading playground" />
       Loading playground…
     </div>
@@ -168,12 +167,27 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/fov-test" element={<FovTestPage />} />
-              <Route path="/styleguide" element={<StyleguidePage />} />
+              <Route
+                path="/styleguide"
+                element={
+                  <Suspense fallback={<PlaygroundFallback />}>
+                    <DesignSystemPage />
+                  </Suspense>
+                }
+              />
               <Route
                 path="/design-system"
                 element={
                   <Suspense fallback={<PlaygroundFallback />}>
                     <DesignSystemPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/styleguide-legacy"
+                element={
+                  <Suspense fallback={<PlaygroundFallback />}>
+                    <StyleguideLegacyPage />
                   </Suspense>
                 }
               />
@@ -352,16 +366,16 @@ export default function App() {
                 />
               )}
               {/*
-                Tweakcn Orange Sandbox — DEV-only. Same shell as
-                /theme-sandbox but booted with the imported shadcn/tweakcn
-                orange theme. Reach it directly at /theme-orange-sandbox.
+                Tweakcn Orange Sandbox — DEV-only. The same ThemeSandbox
+                booted with the imported shadcn/tweakcn orange preset.
+                Reach it directly at /theme-orange-sandbox.
               */}
-              {ThemeOrangeSandbox && (
+              {ThemeSandbox && (
                 <Route
                   path="/theme-orange-sandbox"
                   element={
                     <Suspense fallback={<PlaygroundFallback />}>
-                      <ThemeOrangeSandbox />
+                      <ThemeSandbox preset="tweakcn-orange" />
                     </Suspense>
                   }
                 />

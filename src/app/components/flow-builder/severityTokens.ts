@@ -41,9 +41,9 @@ export const SEVERITY_TW: Record<Severity, SeverityTw> = {
     chipBorder: 'border-orange-400/30',
   },
   LOW: {
-    bg: 'bg-zinc-500',
-    text: 'text-zinc-400',
-    chipBg: 'bg-zinc-500/10',
-    chipBorder: 'border-zinc-500/30',
+    bg: 'bg-slate-9',
+    text: 'text-slate-10',
+    chipBg: 'bg-slate-9/10',
+    chipBorder: 'border-slate-9/30',
   },
 };

@@ -168,7 +168,7 @@ function SeverityBadge({ severity }: { severity: Severity }) {
   const pulses = SEVERITY_PULSE[severity];
   return (
     <span
-      className="inline-flex items-center gap-1.5 font-['Heebo'] text-[12px] font-semibold tracking-normal text-white/90"
+      className="inline-flex items-center gap-1.5 font-['Heebo'] text-xs font-semibold tracking-normal text-white/90"
       data-handoff-component="severity-badge"
     >
       <span
@@ -192,7 +192,7 @@ const FRIENDLY_TEAL = '#2dd4bf';
 function FriendlyBadge() {
   return (
     <span
-      className="inline-flex items-center gap-1.5 font-['Heebo'] text-[12px] font-semibold tracking-normal text-white/90"
+      className="inline-flex items-center gap-1.5 font-['Heebo'] text-xs font-semibold tracking-normal text-white/90"
       data-handoff-component="affiliation-badge"
     >
       <span
@@ -215,7 +215,7 @@ function FriendlyBadge() {
 function UnknownBadge() {
   return (
     <span
-      className="inline-flex items-center gap-1.5 font-['Heebo'] text-[12px] font-semibold tracking-normal text-white/90"
+      className="inline-flex items-center gap-1.5 font-['Heebo'] text-xs font-semibold tracking-normal text-white/90"
       data-handoff-component="affiliation-badge"
     >
       <span
@@ -297,7 +297,7 @@ function HandshakeRow({
         <div className="flex flex-col gap-1">
           <SeverityBadge severity={severity} />
           {severity !== fixture.severity && (
-            <div className="font-['Heebo'] text-[11px] text-amber-400/90">
+            <div className="font-['Heebo'] text-xs-plus text-amber-400/90">
               ⚠ מסתכם ל־{SEVERITY_LABEL_HE[severity]}
             </div>
           )}
@@ -501,11 +501,11 @@ export default function UrgencyReviewPage() {
             >
               <SelectTrigger
                 size="sm"
-                className="w-[140px] border-white/10 bg-white/[0.03] text-xs text-white hover:bg-white/[0.06] focus-visible:ring-white/20"
+                className="w-[140px] border-white/10 bg-white/[0.03] text-xs text-white hover:bg-state-hover-strong focus-visible:ring-state-focus-ring"
               >
                 <SelectValue placeholder="ישות" />
               </SelectTrigger>
-              <SelectContent className="border-white/10 bg-zinc-900 text-white">
+              <SelectContent className="border-white/10 bg-slate-2 text-white">
                 {ENTITY_ORDER.map((key) => (
                   <SelectItem key={key} value={key} className="text-xs">
                     {ENTITY_OPTIONS[key].label}

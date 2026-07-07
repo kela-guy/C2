@@ -965,7 +965,7 @@ export function MapDrawOverlay({
         >
           <div className="flex flex-col items-center gap-1">
             {zoneChip && (
-              <span className="pointer-events-none inline-flex items-center gap-1 rounded-full bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]">
+              <span className="pointer-events-none inline-flex items-center gap-1 rounded-full bg-black/55 px-1.5 py-0.5 text-2xs font-semibold text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]">
                 <span
                   aria-hidden
                   className="size-1.5 rounded-full"
@@ -975,13 +975,13 @@ export function MapDrawOverlay({
               </span>
             )}
             {hoverName && (
-              <span className="pointer-events-none max-w-44 truncate text-center text-[13px] font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.7)]">
+              <span className="pointer-events-none max-w-44 truncate text-center text-sm-minus font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.7)]">
                 {hoverName}
               </span>
             )}
             {statusChip && (
               <span
-                className="pointer-events-none inline-flex items-center gap-1 rounded-full bg-black/45 px-1.5 py-0.5 text-[10px] font-semibold text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]"
+                className="pointer-events-none inline-flex items-center gap-1 rounded-full bg-black/45 px-1.5 py-0.5 text-2xs font-semibold text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]"
               >
                 <span
                   aria-hidden
@@ -1008,7 +1008,7 @@ export function MapDrawOverlay({
           onPointerCancel={endVertexDrag}
           // Fixed size = true circle (no width drift from variable-width
           // digit content). Numbers ≥10 stay legible at size-5.
-          className="pointer-events-auto absolute z-30 inline-flex size-5 cursor-grab touch-none items-center justify-center rounded-full bg-black/75 text-[10px] font-semibold leading-none text-white ring-1 ring-white/50 [text-shadow:0_1px_2px_rgba(0,0,0,0.6)] active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+          className="pointer-events-auto absolute z-30 inline-flex size-5 cursor-grab touch-none items-center justify-center rounded-full bg-black/75 text-2xs font-semibold leading-none text-white ring-1 ring-white/50 [text-shadow:0_1px_2px_rgba(0,0,0,0.6)] active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
           style={{
             left: v.left,
             top: v.top,
@@ -1087,7 +1087,7 @@ export function MapDrawOverlay({
       {draftMeterChip && (
         <div
           aria-hidden
-          className="pointer-events-none absolute z-30 rounded-md border border-white/15 bg-black/75 px-1.5 py-0.5 text-[11px] font-medium leading-tight tabular-nums text-white shadow-sm backdrop-blur-sm"
+          className="pointer-events-none absolute z-30 rounded-md border border-white/15 bg-black/75 px-1.5 py-0.5 text-xs-plus font-medium leading-tight tabular-nums text-white shadow-sm backdrop-blur-sm"
           style={{
             left: draftMeterChip.left + 12,
             top: draftMeterChip.top + 12,
@@ -1105,7 +1105,7 @@ export function MapDrawOverlay({
         <div
           key={chip.id}
           aria-hidden
-          className="pointer-events-none absolute z-30 rounded-md border border-white/15 bg-black/75 px-1.5 py-0.5 text-[11px] font-medium leading-tight tabular-nums text-white shadow-sm backdrop-blur-sm"
+          className="pointer-events-none absolute z-30 rounded-md border border-white/15 bg-black/75 px-1.5 py-0.5 text-xs-plus font-medium leading-tight tabular-nums text-white shadow-sm backdrop-blur-sm"
           style={{
             left: chip.left + 8,
             top: chip.top - 8,
@@ -1139,7 +1139,7 @@ export function MapDrawOverlay({
           />
           <div
             aria-hidden
-            className={`pointer-events-none absolute z-30 rounded border bg-black/75 px-1 py-[1px] font-mono text-[10px] leading-tight tabular-nums text-white/90 shadow-sm backdrop-blur-sm [text-shadow:0_1px_2px_rgba(0,0,0,0.7)] ${
+            className={`pointer-events-none absolute z-30 rounded border bg-black/75 px-1 py-[1px] font-mono text-2xs leading-tight tabular-nums text-white/90 shadow-sm backdrop-blur-sm [text-shadow:0_1px_2px_rgba(0,0,0,0.7)] ${
               dot.primary ? 'border-white/40' : 'border-white/10'
             }`}
             style={{
@@ -1278,7 +1278,7 @@ function ShapeContextMenu({
     <div
       ref={rootRef}
       role="menu"
-      className="pointer-events-auto fixed z-50 min-w-[10rem] overflow-hidden rounded-lg bg-[#1a1a1a]/95 p-1 shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_25px_50px_-12px_rgba(0,0,0,0.5)] backdrop-blur-xl"
+      className="pointer-events-auto fixed z-50 min-w-[10rem] overflow-hidden rounded-lg bg-surface-2/95 p-1 shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_25px_50px_-12px_rgba(0,0,0,0.5)] backdrop-blur-xl"
       style={{ top: y, left: x }}
     >
       {actions.map((a) => (
@@ -1295,12 +1295,12 @@ function ShapeContextMenu({
           className={`flex w-full items-center gap-2.5 rounded px-2.5 py-1.5 text-left text-xs transition-colors focus:outline-none ${
             a.destructive
               ? 'text-red-400 hover:bg-red-500/10 hover:text-red-300 disabled:hover:bg-transparent disabled:hover:text-red-400'
-              : 'text-zinc-300 hover:bg-white/5 hover:text-white disabled:hover:bg-transparent disabled:hover:text-zinc-300'
+              : 'text-slate-11 hover:bg-state-hover hover:text-white disabled:hover:bg-transparent disabled:hover:text-slate-11'
           } disabled:cursor-default disabled:opacity-40`}
         >
           <a.Icon
             size={14}
-            className={a.destructive ? 'text-red-400/70' : 'text-zinc-500'}
+            className={a.destructive ? 'text-red-400/70' : 'text-slate-9'}
           />
           {a.label}
         </button>

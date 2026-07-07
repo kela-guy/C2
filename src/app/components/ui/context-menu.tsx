@@ -66,14 +66,14 @@ function ContextMenuSubTrigger({
       data-slot="context-menu-sub-trigger"
       data-inset={inset}
       className={cn(
-        "flex cursor-default items-center rounded px-2.5 py-1.5 text-xs text-zinc-300 outline-hidden select-none focus:bg-white/5 focus:text-white data-[state=open]:bg-white/5 data-[inset]:ps-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "flex cursor-default items-center rounded px-2.5 py-1.5 text-xs text-slate-11 outline-hidden select-none focus:bg-white/5 focus:text-white data-[state=open]:bg-white/5 data-[inset]:ps-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       {...props}
     >
       {children}
       {/* Mirror the submenu pointer for RTL; Radix opens the submenu on the inline-end side. */}
-      <ChevronRightIcon className="ms-auto size-3.5 text-zinc-500 rtl:rotate-180" />
+      <ChevronRightIcon className="ms-auto size-3.5 text-slate-9 rtl:rotate-180" />
     </ContextMenuPrimitive.SubTrigger>
   );
 }
@@ -86,7 +86,7 @@ function ContextMenuSubContent({
     <ContextMenuPrimitive.SubContent
       data-slot="context-menu-sub-content"
       className={cn(
-        "z-50 min-w-[8rem] overflow-hidden rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_25px_50px_-12px_rgba(0,0,0,0.5)] bg-[#1a1a1a]/95 backdrop-blur-xl p-1 overlay-motion-moderate [&_svg]:stroke-[1] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+        "z-50 min-w-[8rem] overflow-hidden rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_25px_50px_-12px_rgba(0,0,0,0.5)] bg-surface-2/95 backdrop-blur-xl p-1 overlay-motion-moderate [&_svg]:stroke-[1] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
         className,
       )}
       {...props}
@@ -103,7 +103,7 @@ function ContextMenuContent({
       <ContextMenuPrimitive.Content
         data-slot="context-menu-content"
         className={cn(
-          "z-50 max-h-(--radix-context-menu-content-available-height) min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_25px_50px_-12px_rgba(0,0,0,0.5)] bg-[#1a1a1a]/95 backdrop-blur-xl p-1 overlay-motion-moderate [&_svg]:stroke-[1] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+          "z-50 max-h-(--radix-context-menu-content-available-height) min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-lg shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_25px_50px_-12px_rgba(0,0,0,0.5)] bg-surface-2/95 backdrop-blur-xl p-1 overlay-motion-moderate [&_svg]:stroke-[1] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
           className,
         )}
         {...props}
@@ -127,7 +127,7 @@ function ContextMenuItem({
       data-inset={inset}
       data-variant={variant}
       className={cn(
-        "relative flex cursor-default items-center gap-2.5 rounded px-2.5 py-1.5 text-xs text-zinc-300 outline-hidden select-none transition-colors focus:bg-white/5 focus:text-white data-[variant=destructive]:text-red-400 data-[variant=destructive]:focus:bg-red-500/10 data-[variant=destructive]:focus:text-red-300 data-[disabled]:pointer-events-none data-[disabled]:opacity-40 data-[inset]:ps-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg]:text-zinc-500 data-[variant=destructive]:[&_svg]:text-red-400/70",
+        "relative flex cursor-default items-center gap-2.5 rounded px-2.5 py-1.5 text-xs text-slate-11 outline-hidden select-none transition-colors focus:bg-white/5 focus:text-white data-[variant=destructive]:text-red-400 data-[variant=destructive]:focus:bg-red-500/10 data-[variant=destructive]:focus:text-red-300 data-[disabled]:pointer-events-none data-[disabled]:opacity-40 data-[inset]:ps-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg]:text-slate-9 data-[variant=destructive]:[&_svg]:text-red-400/70",
         className,
       )}
       {...props}
@@ -145,7 +145,7 @@ function ContextMenuCheckboxItem({
     <ContextMenuPrimitive.CheckboxItem
       data-slot="context-menu-checkbox-item"
       className={cn(
-        "relative flex cursor-default items-center gap-2.5 rounded py-1.5 pe-2.5 ps-8 text-xs text-zinc-300 outline-hidden select-none focus:bg-white/5 focus:text-white data-[disabled]:pointer-events-none data-[disabled]:opacity-40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "relative flex cursor-default items-center gap-2.5 rounded py-1.5 pe-2.5 ps-8 text-xs text-slate-11 outline-hidden select-none focus:bg-white/5 focus:text-white data-[disabled]:pointer-events-none data-[disabled]:opacity-40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       checked={checked}
@@ -153,7 +153,7 @@ function ContextMenuCheckboxItem({
     >
       <span className="pointer-events-none absolute start-2 flex size-3.5 items-center justify-center">
         <ContextMenuPrimitive.ItemIndicator>
-          <CheckIcon className="size-4 text-zinc-300" />
+          <CheckIcon className="size-4 text-slate-11" />
         </ContextMenuPrimitive.ItemIndicator>
       </span>
       {children}
@@ -170,14 +170,14 @@ function ContextMenuRadioItem({
     <ContextMenuPrimitive.RadioItem
       data-slot="context-menu-radio-item"
       className={cn(
-        "relative flex cursor-default items-center gap-2.5 rounded py-1.5 pe-2.5 ps-8 text-xs text-zinc-300 outline-hidden select-none focus:bg-white/5 focus:text-white data-[disabled]:pointer-events-none data-[disabled]:opacity-40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "relative flex cursor-default items-center gap-2.5 rounded py-1.5 pe-2.5 ps-8 text-xs text-slate-11 outline-hidden select-none focus:bg-white/5 focus:text-white data-[disabled]:pointer-events-none data-[disabled]:opacity-40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       {...props}
     >
       <span className="pointer-events-none absolute start-2 flex size-3.5 items-center justify-center">
         <ContextMenuPrimitive.ItemIndicator>
-          <CircleIcon className="size-2 fill-current text-zinc-300" />
+          <CircleIcon className="size-2 fill-current text-slate-11" />
         </ContextMenuPrimitive.ItemIndicator>
       </span>
       {children}
@@ -197,7 +197,7 @@ function ContextMenuLabel({
       data-slot="context-menu-label"
       data-inset={inset}
       className={cn(
-        "px-2.5 py-1.5 text-xs font-semibold text-zinc-400 uppercase tracking-wider data-[inset]:ps-8",
+        "px-2.5 py-1.5 text-xs font-semibold text-slate-10 uppercase tracking-wider data-[inset]:ps-8",
         className,
       )}
       {...props}
@@ -226,7 +226,7 @@ function ContextMenuShortcut({
     <span
       data-slot="context-menu-shortcut"
       className={cn(
-        "ms-auto text-xs tracking-widest text-zinc-600",
+        "ms-auto text-xs tracking-widest text-slate-8",
         className,
       )}
       {...props}

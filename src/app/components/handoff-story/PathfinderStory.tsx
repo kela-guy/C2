@@ -90,8 +90,8 @@ function GalleryStage() {
           {PATHFINDER_GALLERY.map((item) => (
             <div key={item.title} className="flex flex-col gap-2">
               <div>
-                <div className="text-[12px] font-medium text-[color:var(--story-ink)]">{item.title}</div>
-                <div className="text-[11px] text-[color:var(--story-muted)]">{item.note}</div>
+                <div className="text-xs font-medium text-[color:var(--story-ink)]">{item.title}</div>
+                <div className="text-xs-plus text-[color:var(--story-muted)]">{item.note}</div>
               </div>
               <StageFrame className="w-full" dots>
                 <PathfinderLaunchToast sim={item.sim} locale="en" />
@@ -110,10 +110,10 @@ function GalleryStage() {
 function SpecRow({ name, children }: { name: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-0.5 py-2 sm:flex-row sm:gap-4">
-      <code className="shrink-0 font-[family:var(--font-code)] text-[13px] text-[color:var(--story-ink)] sm:w-40">
+      <code className="shrink-0 font-[family:var(--font-code)] text-sm-minus text-[color:var(--story-ink)] sm:w-40">
         {name}
       </code>
-      <span className="text-[14px] leading-[24px] text-[color:var(--story-muted)]">{children}</span>
+      <span className="text-sm leading-[24px] text-[color:var(--story-muted)]">{children}</span>
     </div>
   );
 }
@@ -521,7 +521,7 @@ export default function PathfinderStory() {
             className="justify-start"
           />
           <div className="flex flex-wrap items-center gap-3">
-            <label className="flex items-center gap-2 text-[12px] text-[color:var(--story-muted)]">
+            <label className="flex items-center gap-2 text-xs text-[color:var(--story-muted)]">
               <span className="font-[family:var(--font-mono)] uppercase tracking-[0.12em]">Sim pace</span>
               <input
                 type="range"
@@ -545,7 +545,7 @@ export default function PathfinderStory() {
                 simDebug.restart();
               }}
               aria-label="Inject fault on step"
-              className="max-w-[200px] rounded-md border px-2 py-1 text-[12px]"
+              className="max-w-[200px] rounded-md border px-2 py-1 text-xs"
               style={{
                 borderColor: 'var(--story-border)',
                 backgroundColor: 'var(--story-surface)',
@@ -589,7 +589,7 @@ export default function PathfinderStory() {
             className="rounded-xl border p-4"
             style={{ borderColor: 'var(--story-border)', backgroundColor: 'var(--story-surface)' }}
           >
-            <div className="font-[family:var(--font-mono)] text-[11px] uppercase tracking-[0.14em] text-[color:var(--story-muted)]">
+            <div className="font-[family:var(--font-mono)] text-xs-plus uppercase tracking-[0.14em] text-[color:var(--story-muted)]">
               Props
             </div>
             <div className="mt-1 divide-y" style={{ borderColor: 'var(--story-border)' }}>
@@ -607,14 +607,14 @@ export default function PathfinderStory() {
               </SpecRow>
             </div>
 
-            <div className="mt-4 font-[family:var(--font-mono)] text-[11px] uppercase tracking-[0.14em] text-[color:var(--story-muted)]">
+            <div className="mt-4 font-[family:var(--font-mono)] text-xs-plus uppercase tracking-[0.14em] text-[color:var(--story-muted)]">
               Run states
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {['running', 'awaiting-takeoff', 'loiter', 'error', 'aborted', 'done'].map((s) => (
                 <code
                   key={s}
-                  className="rounded-md border px-2 py-0.5 font-[family:var(--font-code)] text-[12px] text-[color:var(--story-ink)]"
+                  className="rounded-md border px-2 py-0.5 font-[family:var(--font-code)] text-xs text-[color:var(--story-ink)]"
                   style={{ borderColor: 'var(--story-border)' }}
                 >
                   {s}
@@ -629,7 +629,7 @@ export default function PathfinderStory() {
             its own surface), animate it on first mount, or drive the pace from the
             client — that belongs to the backend.
           </P>
-          <P className="text-[16px] leading-[28px] text-[color:var(--story-muted)]">
+          <P className="text-base leading-[28px] text-[color:var(--story-muted)]">
             The full state set is on the right — the same gallery used to review the
             design, now the reference a dev builds against. The final chapter hands
             you the code itself.

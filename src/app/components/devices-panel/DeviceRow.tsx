@@ -173,8 +173,8 @@ export const DeviceRow = memo(function DeviceRow({
         onMouseEnter={() => onHover(device.id)}
         onMouseLeave={() => onHover(null)}
         data-handoff-component="device-row-header"
-        className={`flex items-center justify-center gap-2.5 px-4 py-2.5 text-end transition-[background-color,border-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25 border-b border-white/[0.06] ${
-          isExpanded ? 'bg-white/[0.04]' : 'hover:bg-white/[0.04] active:bg-white/[0.06]'
+        className={`flex items-center justify-center gap-2.5 px-4 py-2.5 text-end transition-[background-color,border-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-state-focus-ring border-b border-white/[0.06] ${
+          isExpanded ? 'bg-white/[0.04]' : 'hover:bg-state-hover active:bg-state-pressed'
         } cursor-pointer`}
       >
         <DeviceRowHeader

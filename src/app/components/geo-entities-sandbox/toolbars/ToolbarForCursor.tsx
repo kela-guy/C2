@@ -88,7 +88,7 @@ export function ToolbarForCursor({
               aria-expanded={expanded}
               aria-haspopup="true"
               onClick={handleTriggerClick}
-              className={`flex items-center gap-1.5 rounded px-2 py-1 text-[12px] font-medium transition-colors ${
+              className={`flex items-center gap-1.5 rounded px-2 py-1 text-xs font-medium transition-colors ${
                 isGeometryActive
                   ? 'bg-state-hover-strong text-slate-12'
                   : 'text-slate-11 hover:bg-state-hover-strong hover:text-slate-12'
@@ -122,7 +122,7 @@ export function ToolbarForCursor({
                     type="button"
                     aria-label={tool.label}
                     onClick={() => handlePick(tool.id)}
-                    className="flex items-center gap-1.5 rounded px-2 py-1 text-[12px] font-medium text-slate-10 transition-colors hover:bg-state-hover-strong hover:text-slate-12"
+                    className="flex items-center gap-1.5 rounded px-2 py-1 text-xs font-medium text-slate-10 transition-colors hover:bg-state-hover-strong hover:text-slate-12"
                   >
                     <tool.Icon size={16} />
                     <span>{tool.label}</span>
@@ -144,7 +144,7 @@ export function ToolbarForCursor({
                   type="button"
                   aria-label={a.label}
                   onClick={() => onAction(a.id)}
-                  className={`flex items-center gap-1.5 rounded px-2 py-1 text-[11px] font-medium transition-colors ${
+                  className={`flex items-center gap-1.5 rounded px-2 py-1 text-xs-plus font-medium transition-colors ${
                     a.tone === 'caution'
                       ? 'text-rose-300 hover:bg-rose-500/15'
                       : 'text-slate-10 hover:bg-state-hover-strong hover:text-slate-12'

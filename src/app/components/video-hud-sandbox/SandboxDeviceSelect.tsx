@@ -77,7 +77,7 @@ export function SandboxDeviceSelect({
           disabled={disabled}
           style={glassStyle(bgOpacity, blurPx)}
           className={cn(
-            'group inline-flex h-8 items-center gap-1.5 rounded-full border border-border-default/45 ps-2.5 pe-2 text-[11px] text-slate-12',
+            'group inline-flex h-8 items-center gap-1.5 rounded-full border border-border-default/45 ps-2.5 pe-2 text-xs-plus text-slate-12',
             'transition-[filter,box-shadow,transform] duration-150 ease-out hover:brightness-125 hover:ring-1 hover:ring-inset hover:ring-white/10 active:scale-[0.97]',
             'data-[state=open]:brightness-125 data-[state=open]:ring-1 data-[state=open]:ring-inset data-[state=open]:ring-white/20',
             FOCUS_RING,
@@ -104,7 +104,7 @@ export function SandboxDeviceSelect({
         // The menu is always anchored bottom/start (top-left) here, so pin the
         // origin to the top-left to match.
         style={{ transformOrigin: 'left top' }}
-        className="min-w-[11rem] rounded border-none bg-[#1a1a1a]/95 p-1 text-slate-12 shadow-[0_20px_40px_-12px_rgba(0,0,0,0.6)]"
+        className="min-w-[11rem] rounded border-none bg-surface-2/95 p-1 text-slate-12 shadow-[0_20px_40px_-12px_rgba(0,0,0,0.6)]"
       >
         <DropdownMenuRadioGroup value={value} onValueChange={onChange}>
           {devices.map((d) => {
@@ -117,7 +117,7 @@ export function SandboxDeviceSelect({
                 className={cn(
                   // Drop the built-in start-side radio dot (first child) and its
                   // reserved padding; the device glyph leads the row instead.
-                  'gap-2.5 rounded-md py-1.5 ps-2.5 pe-2.5 text-[12px] focus:bg-white/10 focus:text-slate-12 [&>span:first-child]:hidden',
+                  'gap-2.5 rounded-md py-1.5 ps-2.5 pe-2.5 text-xs focus:bg-white/10 focus:text-slate-12 [&>span:first-child]:hidden',
                   isActive ? 'text-slate-12' : 'text-slate-12/70',
                 )}
               >

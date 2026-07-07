@@ -64,16 +64,16 @@ const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
         <div className="py-3 px-3 flex gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-sm font-medium text-zinc-100 truncate">{data.title}</span>
+              <span className="text-sm font-medium text-slate-12 truncate">{data.title}</span>
               <button
                 onClick={(e) => { e.stopPropagation(); toast.dismiss(toastId); flushBatch(); }}
-                className="text-zinc-600 hover:text-zinc-400 transition-[color,opacity] duration-150 shrink-0 opacity-0 group-hover:opacity-100 p-1 -m-1"
+                className="text-slate-8 hover:text-slate-10 transition-[color,opacity] duration-150 shrink-0 opacity-0 group-hover:opacity-100 p-1 -m-1"
                 aria-label={nt.stackCloseAriaLabel}
               >
                 <X size={14} />
               </button>
             </div>
-            <p className="text-xs text-zinc-400 leading-relaxed mt-0.5 line-clamp-2">{data.message}</p>
+            <p className="text-xs text-slate-10 leading-relaxed mt-0.5 line-clamp-2">{data.message}</p>
           </div>
         </div>
       </div>
@@ -86,20 +86,20 @@ const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
     >
       <div className="py-3 px-3">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-zinc-100">
+          <span className="text-sm font-medium text-slate-12">
             {nt.stackNewCount(items.length)}
           </span>
           <div className="flex items-center gap-1.5">
             <button
               onClick={(e) => { e.stopPropagation(); setExpanded(prev => !prev); }}
-              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors px-2 py-1.5 rounded hover:bg-white/[0.04]"
+              className="text-xs text-slate-9 hover:text-slate-11 transition-colors px-2 py-1.5 rounded hover:bg-state-hover"
               aria-expanded={expanded}
             >
               {expanded ? nt.stackCollapse : nt.stackExpand}
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); toast.dismiss(toastId); flushBatch(); }}
-              className="text-zinc-600 hover:text-zinc-400 transition-colors p-1 -m-1"
+              className="text-slate-8 hover:text-slate-10 transition-colors p-1 -m-1"
               aria-label={nt.stackCloseAriaLabel}
             >
               <X size={14} />
@@ -108,7 +108,7 @@ const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
         </div>
 
         {!expanded && (
-          <p className="text-xs text-zinc-400 mt-1 truncate">
+          <p className="text-xs text-slate-10 mt-1 truncate">
             {items[items.length - 1]?.title}
             {items.length > 1 && nt.stackAndMore(items.length - 1)}
           </p>
@@ -121,7 +121,7 @@ const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
               return (
                 <div
                   key={`${item.code ?? item.title}-${item.timestamp}`}
-                  className="flex items-start gap-2.5 px-2 py-2 rounded-md hover:bg-white/[0.03] transition-colors cursor-pointer focus-visible:ring-1 focus-visible:ring-white/25 focus-visible:outline-none"
+                  className="flex items-start gap-2.5 px-2 py-2 rounded-md hover:bg-state-hover transition-colors cursor-pointer focus-visible:ring-1 focus-visible:ring-state-focus-ring focus-visible:outline-none"
                   role="button"
                   tabIndex={0}
                   onClick={(e) => {
@@ -143,10 +143,10 @@ const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
                     style={{ backgroundColor: itemAccent }}
                   />
                   <div className="flex-1 min-w-0">
-                    <span className="text-xs font-medium text-zinc-200 truncate block">{item.title}</span>
-                    <span className="text-xs text-zinc-500 truncate block">{item.message}</span>
+                    <span className="text-xs font-medium text-slate-11 truncate block">{item.title}</span>
+                    <span className="text-xs text-slate-9 truncate block">{item.message}</span>
                   </div>
-                  <span className="text-xs font-mono text-zinc-600 shrink-0 mt-0.5">{item.timestamp}</span>
+                  <span className="text-xs font-mono text-slate-8 shrink-0 mt-0.5">{item.timestamp}</span>
                 </div>
               );
             })}

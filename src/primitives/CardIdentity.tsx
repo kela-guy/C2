@@ -4,7 +4,6 @@ import { Bdi } from '@/lib/direction';
 import { cn } from '@/shared/components/ui/utils';
 import { AccordionSection } from './AccordionSection';
 import { CopyButton } from './CopyButton';
-import { SURFACE } from './tokens';
 
 export interface IdentityRow {
   label: string;
@@ -79,11 +78,11 @@ export function CardIdentity({
               key={idx}
               className="group/copy w-full flex flex-col items-start py-1 gap-1 min-w-0"
             >
-              <span className="text-xs text-zinc-400">{row.label}</span>
+              <span className="text-xs text-slate-10">{row.label}</span>
               <div className="relative w-fit">
                 <Bdi
                   as="span"
-                  className="block w-fit text-xs text-zinc-200 font-sans tabular-nums break-all text-end"
+                  className="block w-fit text-xs text-slate-11 font-sans tabular-nums break-all text-end"
                   style={{ fontVariantNumeric: 'tabular-nums slashed-zero' }}
                 >
                   {row.value}
@@ -120,7 +119,7 @@ export function CardIdentity({
                       // a flat surface here would produce a visible dark
                       // wash instead of a clean dissolve into the card
                       // backdrop.
-                      ['--card-fade-bg' as string]: SURFACE.level3,
+                      ['--card-fade-bg' as string]: 'var(--surface-4)',
                     } as React.CSSProperties
                   }
                 >

@@ -17,9 +17,13 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import IconDotGrid1x3Vertical from '@central-icons-react/square-filled-radius-0-stroke-2/IconDotGrid1x3Vertical';
-import IconBell from '@central-icons-react/round-filled-radius-0-stroke-2/IconBell';
-import { BellOffFilled, Camera } from '@/lib/icons/central';
+import {
+  Bell as IconBell,
+  BellOffFilled,
+  Camera,
+  EllipsisVertical as IconDotGrid1x3Vertical,
+} from '@/lib/icons/central';
+import { HEALTH_BADGE_CLASS, HEALTH_DOT_CLASS } from '@/primitives/HealthStatus';
 import { NotificationIcon, NotificationMutedIcon } from '../../devices-panel/icons';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import { DEFAULT_CONNECTION_STATE_LABELS } from '../../devices-panel/constants';
@@ -47,11 +51,10 @@ import { splitFooterActions } from '../../devices-panel/footerOverflow';
  * badge (offline is known-absent, ok has nothing to count).
  */
 const HEALTH_TONE: Record<DeviceHealth, { dot: string; badge: string | null; label: string }> = {
-  critical: { dot: 'bg-red-400', badge: 'bg-red-500/20 text-red-300', label: 'Critical' },
-  error: { dot: 'bg-red-400', badge: 'bg-red-500/20 text-red-300', label: 'Errors' },
-  warning: { dot: 'bg-amber-400', badge: 'bg-amber-500/20 text-amber-300', label: 'Warning' },
-  offline: { dot: 'bg-zinc-500', badge: null, label: 'Offline' },
-  ok: { dot: 'bg-emerald-400', badge: null, label: 'Healthy' },
+  error: { dot: HEALTH_DOT_CLASS.error, badge: HEALTH_BADGE_CLASS.error, label: 'Errors' },
+  warning: { dot: HEALTH_DOT_CLASS.warning, badge: HEALTH_BADGE_CLASS.warning, label: 'Warning' },
+  offline: { dot: HEALTH_DOT_CLASS.offline, badge: null, label: 'Offline' },
+  ok: { dot: HEALTH_DOT_CLASS.ok, badge: null, label: 'Healthy' },
 };
 
 // ---------------------------------------------------------------------------
@@ -60,8 +63,8 @@ const HEALTH_TONE: Record<DeviceHealth, { dot: string; badge: string | null; lab
 
 /**
  * Health-aware icon tile — the single fast-scan signal, mirroring the real
- * `DeviceRowHeader`: a worst-wins severity tint (`DEVICE_HEALTH_VISUAL`), a
- * critical-only ping, a connection dot when not online, and a hover tooltip
+ * `DeviceRowHeader`: a worst-wins severity tint (`DEVICE_HEALTH_VISUAL`),
+ * a connection dot when not online, and a hover tooltip
  * that carries the textual detail (connection chip, error count, reason) so
  * the row name stays uncluttered.
  */
@@ -76,12 +79,6 @@ export function DeviceTile({ device }: { device: LabDevice }) {
       className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded transition-[background-color,box-shadow] duration-150 ease-out ${visual.tile}`}
       data-health={health}
     >
-      {health === 'critical' && (
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 rounded bg-red-500/25 animate-ping motion-reduce:hidden"
-        />
-      )}
       <device.Icon size={20} fill={visual.iconFill} />
     </div>
   );
@@ -109,12 +106,12 @@ export function DeviceTile({ device }: { device: LabDevice }) {
       >
         <div className="flex items-center justify-start gap-1.5 px-2.5 py-1.5">
           <span className={`size-1.5 shrink-0 rounded-full ${tone.dot}`} />
-          <span className="w-full min-w-0 truncate text-xs font-semibold text-zinc-100">
+          <span className="w-full min-w-0 truncate text-xs font-semibold text-slate-12">
             {tone.label}
           </span>
           {showBadge && (
             <span
-              className={`h-4 shrink-0 rounded-[2px] px-1.5 align-middle text-[10px] font-medium leading-4 tabular-nums ${tone.badge}`}
+              className={`h-4 shrink-0 rounded-[2px] px-1.5 align-middle text-2xs font-medium leading-4 tabular-nums ${tone.badge}`}
             >
               {badgeLabel}
             </span>
@@ -123,10 +120,10 @@ export function DeviceTile({ device }: { device: LabDevice }) {
         {hasFence && (
           <div className="border-t border-white/10 px-2.5 py-1.5">
             {device.healthReason != null && (
-              <div className="max-w-[220px] text-xs text-zinc-200">{device.healthReason}</div>
+              <div className="max-w-[220px] text-xs text-slate-11">{device.healthReason}</div>
             )}
             {connectionLabel != null && (
-              <div className="mt-0.5 text-[10px] text-white/50">{connectionLabel}</div>
+              <div className="mt-0.5 text-2xs text-white/50">{connectionLabel}</div>
             )}
           </div>
         )}
@@ -138,7 +135,7 @@ export function DeviceTile({ device }: { device: LabDevice }) {
 export function NameBlock({ device }: { device: LabDevice }) {
   return (
     <div className="min-w-0 flex-1 text-start">
-      <div className="truncate text-sm font-medium text-zinc-300">{device.name}</div>
+      <div className="truncate text-sm font-medium text-slate-11">{device.name}</div>
     </div>
   );
 }
@@ -288,8 +285,8 @@ export function CardShell({
               onToggle();
             }
           }}
-          className={`flex w-full cursor-pointer items-center gap-2.5 px-4 py-2.5 transition-colors duration-150 ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-white/25 ${
-            open ? 'bg-white/[0.04]' : 'hover:bg-white/[0.04] active:bg-white/[0.06]'
+          className={`flex w-full cursor-pointer items-center gap-2.5 px-4 py-2.5 transition-colors duration-150 ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-state-focus-ring ${
+            open ? 'bg-white/[0.04]' : 'hover:bg-state-hover active:bg-state-pressed'
           }`}
         >
           {header}
@@ -359,7 +356,7 @@ function NotifyCountdown({ remaining }: { remaining: number }) {
       className="inline-flex items-center justify-end gap-1.5 text-white"
       aria-label={`${formatHMS(remaining)} left`}
     >
-      <span className="min-w-[3.25rem] tabular-nums text-[10px] leading-none text-end">
+      <span className="min-w-[3.25rem] tabular-nums text-2xs leading-none text-end">
         {formatHMS(remaining)}
       </span>
       <span className="inline-flex size-3.5 shrink-0 items-center justify-center">
@@ -394,7 +391,7 @@ function NotifyHeaderIndicator() {
       className="inline-flex items-center gap-1.5 text-white"
       aria-label={`Notifications armed — ${formatHMS(card.notifyRemaining)} left`}
     >
-      <span className="tabular-nums text-[12px] leading-none">
+      <span className="tabular-nums text-xs leading-none">
         {formatHMS(card.notifyRemaining)}
       </span>
       <NotifyBellIcon armed />
@@ -426,7 +423,7 @@ function NotificationsMenuItem({ device }: { device: LabDevice }) {
         card?.setNotifyOn(!on);
       }}
       className={`flex w-full items-center gap-2 rounded px-2 py-1.5 text-start text-xs disabled:cursor-not-allowed disabled:opacity-50 ${
-        on ? 'bg-white/10 text-white' : 'text-white/80 hover:bg-white/10'
+        on ? 'bg-white/10 text-white' : 'text-white/80 hover:bg-state-hover-overlay'
       }`}
     >
       <span className={`inline-flex items-center ${on ? 'text-white' : 'text-white/60'}`}>
@@ -438,7 +435,7 @@ function NotificationsMenuItem({ device }: { device: LabDevice }) {
           <NotifyCountdown remaining={remaining} />
         ) : (
           <span className="inline-flex items-center justify-end gap-1.5 opacity-0" aria-hidden>
-            <span className="min-w-[3.25rem] tabular-nums text-[10px] leading-none">00:00:30</span>
+            <span className="min-w-[3.25rem] tabular-nums text-2xs leading-none">00:00:30</span>
             <span className="size-3.5 shrink-0" />
           </span>
         )}
@@ -468,7 +465,7 @@ function MuteMenuItem({ device }: { device: LabDevice }) {
         card?.setMuted(!muted);
       }}
       className={`flex w-full items-center gap-2 rounded px-2 py-1.5 text-start text-xs disabled:cursor-not-allowed disabled:opacity-50 ${
-        muted ? 'bg-white/10 text-white' : 'text-white/80 hover:bg-white/10'
+        muted ? 'bg-white/10 text-white' : 'text-white/80 hover:bg-state-hover-overlay'
       }`}
     >
       <span
@@ -491,7 +488,7 @@ function OverflowMenu({ device, ids }: { device: LabDevice; ids: ActionId[] }) {
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} aria-hidden="true" />
           <div
             role="menu"
-            className="absolute end-0 bottom-full z-30 mb-1 flex w-[180px] flex-col gap-0.5 rounded-md border border-white/10 bg-zinc-900 p-1 shadow-[0_8px_24px_rgba(0,0,0,0.4)] animate-in fade-in-0 zoom-in-95 duration-150 motion-reduce:animate-none"
+            className="absolute end-0 bottom-full z-30 mb-1 flex w-[180px] flex-col gap-0.5 rounded-md border border-white/10 bg-slate-2 p-1 shadow-[0_8px_24px_rgba(0,0,0,0.4)] animate-in fade-in-0 zoom-in-95 duration-150 motion-reduce:animate-none"
           >
             {ids.map((id) => {
               // Notifications is an interactive timed toggle, not a navigate-away
@@ -521,7 +518,7 @@ function OverflowMenu({ device, ids }: { device: LabDevice; ids: ActionId[] }) {
                   className={`flex items-center gap-2 rounded px-2 py-1.5 text-start text-xs [&_svg]:size-3 ${
                     hasErrors
                       ? 'text-red-300 hover:bg-red-500/10'
-                      : 'text-white/80 hover:bg-white/10'
+                      : 'text-white/80 hover:bg-state-hover-overlay'
                   }`}
                 >
                   <span className={`inline-flex items-center ${hasErrors ? 'text-red-300' : 'text-white/60'}`}>
@@ -529,7 +526,7 @@ function OverflowMenu({ device, ids }: { device: LabDevice; ids: ActionId[] }) {
                   </span>
                   <span className="flex-1 leading-none">{label}</span>
                   {hasErrors && (
-                    <span className="rounded-full bg-red-500/20 px-1.5 text-[10px] font-medium text-red-300">
+                    <span className="rounded-full bg-red-500/20 px-1.5 text-2xs font-medium text-red-300">
                       {count}
                     </span>
                   )}
@@ -551,7 +548,7 @@ function ActionControlButton({ open, onClick }: { open: boolean; onClick: () => 
       aria-expanded={open}
       aria-label="More actions"
       onClick={onClick}
-      className={`inline-flex size-6 items-center justify-center rounded text-white/70 transition-colors duration-150 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 [&_svg]:size-3 ${
+      className={`inline-flex size-6 items-center justify-center rounded text-white/70 transition-colors duration-150 hover:bg-state-hover-overlay hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring [&_svg]:size-3 ${
         open ? 'bg-white/10 text-white' : ''
       }`}
     >
@@ -611,7 +608,7 @@ function DeviceCardRow({ device }: { device: LabDevice }) {
 export function CardLayoutLab() {
   return (
     <section>
-      <div className="w-full max-w-[380px] overflow-visible rounded-md border border-white/[0.06] bg-[#141414]">
+      <div className="w-full max-w-[380px] overflow-visible rounded-md border border-white/[0.06] bg-surface-2">
         {LAB_DEVICES.map((device) => (
           <DeviceCardRow key={device.id} device={device} />
         ))}

@@ -16,6 +16,7 @@
 import { useMemo, useState } from 'react';
 import { WarningTriangle } from '@/lib/icons/central';
 import { CopyButton } from '@/primitives/CopyButton';
+import { HEALTH_BADGE_CLASS, HEALTH_RING_CLASS, HEALTH_TEXT_CLASS } from '@/primitives/HealthStatus';
 import {
   Dialog,
   DialogContent,
@@ -35,8 +36,8 @@ interface DeviceErrorsDialogProps {
 type SeverityFilter = 'all' | DeviceError['severity'];
 
 const SEVERITY_COLOR: Record<DeviceError['severity'], string> = {
-  error: 'text-red-400',
-  warning: 'text-amber-400',
+  error: HEALTH_TEXT_CLASS.error,
+  warning: HEALTH_TEXT_CLASS.warning,
 };
 
 /**
@@ -59,17 +60,17 @@ function FilterBadge({
 }) {
   const activeClass =
     tone === 'error'
-      ? 'bg-red-500/15 text-red-300 ring-1 ring-inset ring-red-400/30'
+      ? `${HEALTH_BADGE_CLASS.error} ring-1 ring-inset ${HEALTH_RING_CLASS.error}`
       : tone === 'warning'
-        ? 'bg-amber-500/15 text-amber-300 ring-1 ring-inset ring-amber-400/30'
-        : 'bg-white/15 text-white';
+        ? `${HEALTH_BADGE_CLASS.warning} ring-1 ring-inset ${HEALTH_RING_CLASS.warning}`
+        : 'bg-state-selected text-slate-12';
   return (
     <button
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-[background-color,color,box-shadow,transform] duration-150 ease-out active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 motion-reduce:transition-none motion-reduce:active:scale-100 ${
-        active ? activeClass : 'bg-white/[0.04] text-white/60 hover:bg-white/[0.08] hover:text-white/80'
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-[background-color,color,box-shadow,transform] duration-150 ease-out active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring motion-reduce:transition-none motion-reduce:active:scale-100 ${
+        active ? activeClass : 'bg-white/[0.04] text-white/60 hover:bg-state-hover-overlay hover:text-white/80'
       }`}
     >
       <span>{label}</span>
@@ -112,10 +113,10 @@ export function DeviceErrorsDialog({ open, onOpenChange, device, strings }: Devi
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         data-handoff-component="device-errors-modal"
-        className="flex max-w-md flex-col gap-0 overflow-hidden border-white/10 bg-zinc-900 p-0 text-zinc-200"
+        className="flex max-w-md flex-col gap-0 overflow-hidden border-white/10 bg-slate-2 p-0 text-slate-11"
       >
         <DialogHeader className="shrink-0 border-b border-white/10 px-4 py-3 pe-10 text-start">
-          <DialogTitle className="truncate text-sm font-semibold text-zinc-100">
+          <DialogTitle className="truncate text-sm font-semibold text-slate-12">
             {strings.errorsModalTitle} · {device.name}
           </DialogTitle>
           <DialogDescription className="sr-only">
@@ -154,7 +155,7 @@ export function DeviceErrorsDialog({ open, onOpenChange, device, strings }: Devi
                 {visible.map((err, i) => (
                   <li
                     key={`${err.severity}-${i}-${err.message}`}
-                    className="group/copy flex items-start gap-2.5 px-4 py-2.5 transition-colors duration-100 hover:bg-white/[0.03]"
+                    className="group/copy flex items-start gap-2.5 px-4 py-2.5 transition-colors duration-100 hover:bg-state-hover"
                   >
                     <WarningTriangle
                       size={16}

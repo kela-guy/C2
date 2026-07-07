@@ -82,7 +82,7 @@ export function DeviceAction({
       className={cn(
         'inline-flex shrink-0 items-center justify-center gap-1.5 rounded text-xs font-medium',
         'transition-[background-color,color,transform] duration-150 ease-out',
-        'active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25',
+        'active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring',
         'disabled:cursor-not-allowed',
         // `loading` blocks input but should not read as "unavailable",
         // so only dim for a true disabled state.

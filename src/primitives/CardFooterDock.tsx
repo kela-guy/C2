@@ -41,17 +41,17 @@ export function CardFooterDock({ actions, className }: CardFooterDockProps) {
             className={cn(
               'flex flex-1 items-center justify-center gap-1.5',
               'h-8 rounded-[5px] px-3',
-              'text-xs font-medium text-zinc-300',
+              'text-xs font-medium text-slate-11',
               'bg-white/[0.08] border border-white/[0.06]',
               'transition-[background-color,border-color] duration-150 ease-out',
-              'hover:bg-white/[0.12] hover:border-white/[0.10]',
-              'active:bg-white/[0.06] active:scale-[0.98]',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25',
+              'hover:bg-state-hover-overlay hover:border-white/[0.10]',
+              'active:bg-state-pressed active:scale-[0.98]',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring',
               'disabled:opacity-40 disabled:pointer-events-none',
             )}
           >
             {action.loading ? (
-              <span className="w-3.5 h-3.5 border-2 border-zinc-500 border-t-zinc-200 rounded-full animate-spin" />
+              <span className="w-3.5 h-3.5 border-2 border-slate-9 border-t-slate-11 rounded-full animate-spin" />
             ) : Icon ? (
               <Icon size={14} className="shrink-0" aria-hidden="true" />
             ) : null}

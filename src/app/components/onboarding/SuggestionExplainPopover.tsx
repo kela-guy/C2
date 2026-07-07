@@ -50,19 +50,19 @@ export function SuggestionExplainPopover({ placement, onRemove }: SuggestionExpl
           <Icon size={16} aria-hidden="true" />
         </span>
         <div className="min-w-0">
-          <div className="truncate text-[13px] font-semibold text-zinc-100">
+          <div className="truncate text-sm-minus font-semibold text-slate-12">
             {t.onboarding.assetKinds[placement.kind]}
           </div>
-          <div className="truncate text-[10px] text-zinc-500">{sourceLabel}</div>
+          <div className="truncate text-2xs text-slate-9">{sourceLabel}</div>
         </div>
       </div>
 
       {reason && (
         <div className="mt-2.5">
-          <div className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">
+          <div className="text-2xs font-medium uppercase tracking-wide text-slate-9">
             {t.onboarding.explain.why}
           </div>
-          <p className="mt-0.5 text-[11px] leading-snug text-zinc-300">{reason}</p>
+          <p className="mt-0.5 text-xs-plus leading-snug text-slate-11">{reason}</p>
         </div>
       )}
 

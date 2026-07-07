@@ -210,14 +210,14 @@ export default function PathfinderSandbox() {
   return (
     <div className="min-h-screen w-full bg-surface-1 text-slate-12 flex flex-col">
       {/* Debug header */}
-      <header className="flex flex-wrap items-center gap-3 border-b border-border-subtle px-4 py-2.5 text-[12px] shrink-0">
+      <header className="flex flex-wrap items-center gap-3 border-b border-border-subtle px-4 py-2.5 text-xs shrink-0">
         <a
           href="/demo"
-          className="rounded border border-border-default bg-surface-2 px-2 py-1 text-[11px] font-medium text-slate-11 transition-colors hover:border-border-strong hover:text-slate-12"
+          className="rounded border border-border-default bg-surface-2 px-2 py-1 text-xs-plus font-medium text-slate-11 transition-colors hover:border-border-strong hover:text-slate-12"
         >
           Open Demo →
         </a>
-        <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-slate-9">
+        <span className="font-mono text-xs-plus uppercase tracking-[0.18em] text-slate-9">
           Pathfinder · Takeoff toast
         </span>
 
@@ -225,27 +225,27 @@ export default function PathfinderSandbox() {
           <button
             type="button"
             onClick={sim.paused ? sim.play : sim.pause}
-            className="rounded border border-border-default bg-surface-2 px-2 py-1 text-[11px] text-slate-11 hover:border-border-strong"
+            className="rounded border border-border-default bg-surface-2 px-2 py-1 text-xs-plus text-slate-11 hover:border-border-strong"
           >
             {sim.paused ? 'Play' : 'Pause'}
           </button>
           <button
             type="button"
             onClick={sim.stepForward}
-            className="rounded border border-border-default bg-surface-2 px-2 py-1 text-[11px] text-slate-11 hover:border-border-strong"
+            className="rounded border border-border-default bg-surface-2 px-2 py-1 text-xs-plus text-slate-11 hover:border-border-strong"
           >
             Step ▸
           </button>
           <button
             type="button"
             onClick={sim.restart}
-            className="rounded border border-border-default bg-surface-2 px-2 py-1 text-[11px] text-slate-11 hover:border-border-strong"
+            className="rounded border border-border-default bg-surface-2 px-2 py-1 text-xs-plus text-slate-11 hover:border-border-strong"
           >
             Restart
           </button>
 
           <label className="flex items-center gap-2 rounded-md border border-border-default bg-surface-2 px-2 py-1">
-            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-9">
+            <span className="font-mono text-2xs uppercase tracking-[0.18em] text-slate-9">
               Speed
             </span>
             <input
@@ -258,7 +258,7 @@ export default function PathfinderSandbox() {
               aria-label="Step speed (ms)"
               className="h-1 w-28 cursor-pointer appearance-none rounded-full bg-state-hover-strong accent-accent-info [&::-webkit-slider-thumb]:size-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-slate-12"
             />
-            <span className="min-w-[5ch] text-end font-mono text-[11px] tabular-nums text-slate-12">
+            <span className="min-w-[5ch] text-end font-mono text-xs-plus tabular-nums text-slate-12">
               {speedMs}ms
             </span>
           </label>
@@ -266,7 +266,7 @@ export default function PathfinderSandbox() {
           <select
             value={failStepId ?? ''}
             onChange={(e) => setFailStepId(e.target.value || null)}
-            className="max-w-[200px] rounded border border-border-default bg-surface-2 px-2 py-1 text-[11px] text-slate-11"
+            className="max-w-[200px] rounded border border-border-default bg-surface-2 px-2 py-1 text-xs-plus text-slate-11"
             aria-label="Inject fault on step"
           >
             <option value="">No fault</option>
@@ -280,7 +280,7 @@ export default function PathfinderSandbox() {
           <select
             value={locale}
             onChange={(e) => setLocale(e.target.value as Locale)}
-            className="rounded border border-border-default bg-surface-2 px-2 py-1 text-[11px] text-slate-11"
+            className="rounded border border-border-default bg-surface-2 px-2 py-1 text-xs-plus text-slate-11"
             aria-label="Locale / direction"
           >
             <option value="he">עברית (RTL)</option>
@@ -290,7 +290,7 @@ export default function PathfinderSandbox() {
           <button
             type="button"
             onClick={fireInSonner}
-            className="rounded border border-accent-info/40 bg-accent-info/10 px-2 py-1 text-[11px] font-medium text-slate-12 hover:bg-accent-info/20"
+            className="rounded border border-accent-info/40 bg-accent-info/10 px-2 py-1 text-xs-plus font-medium text-slate-12 hover:bg-accent-info/20"
           >
             Fire in Sonner ↑
           </button>
@@ -301,10 +301,10 @@ export default function PathfinderSandbox() {
       <main className="flex-1 overflow-auto">
         <section className="flex flex-col items-center justify-center gap-6 px-6 py-16">
           <div className="flex items-center gap-3">
-            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-slate-9">
+            <span className="font-mono text-2xs uppercase tracking-[0.2em] text-slate-9">
               Live canvas
             </span>
-            <span className="rounded-full bg-surface-3 px-2 py-0.5 font-mono text-[10px] text-slate-10">
+            <span className="rounded-full bg-surface-3 px-2 py-0.5 font-mono text-2xs text-slate-10">
               {sim.runState}
             </span>
           </div>
@@ -335,7 +335,7 @@ export default function PathfinderSandbox() {
         {/* Device card */}
         <section className="flex flex-col items-center gap-6 border-t border-border-subtle px-6 py-14">
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-slate-9">
+            <span className="font-mono text-2xs uppercase tracking-[0.2em] text-slate-9">
               Device card
             </span>
             <div className="flex items-center gap-1 rounded-md border border-border-default bg-surface-2 p-0.5">
@@ -344,7 +344,7 @@ export default function PathfinderSandbox() {
                   key={s}
                   type="button"
                   onClick={() => setFlightState(s)}
-                  className={`rounded px-2.5 py-1 text-[11px] capitalize transition-colors ${
+                  className={`rounded px-2.5 py-1 text-xs-plus capitalize transition-colors ${
                     flightState === s
                       ? 'bg-state-hover-strong text-slate-12'
                       : 'text-slate-10 hover:text-slate-12'
@@ -544,7 +544,7 @@ function FrozenCard({ item, locale }: { item: GalleryItem; locale: Locale }) {
     <div className="flex flex-col gap-3">
       <div>
         <div className="text-xs font-medium text-slate-11">{item.title}</div>
-        <div className="text-[11px] text-slate-9">{item.note}</div>
+        <div className="text-xs-plus text-slate-9">{item.note}</div>
       </div>
       <div className="flex justify-center rounded-xl border border-border-subtle bg-[#0c0c0e] p-6">
         <PathfinderLaunchToast sim={item.sim} locale={locale} />

@@ -239,7 +239,7 @@ export function CriticalAlertOverlay({
             type="button"
             onClick={() => setMuted((m) => !m)}
             aria-label={muted ? s.unmute : s.mute}
-            className="shrink-0 rounded p-1.5 text-red-200/70 hover:bg-white/10 hover:text-red-100 transition-colors"
+            className="shrink-0 rounded p-1.5 text-red-200/70 hover:bg-state-hover-overlay hover:text-red-100 transition-colors"
           >
             {muted ? <BellOff size={16} /> : <Bell size={16} />}
           </button>
@@ -247,7 +247,7 @@ export function CriticalAlertOverlay({
             type="button"
             onClick={close}
             aria-label={s.dismiss}
-            className="shrink-0 rounded p-1.5 text-red-200/70 hover:bg-white/10 hover:text-red-100 transition-colors"
+            className="shrink-0 rounded p-1.5 text-red-200/70 hover:bg-state-hover-overlay hover:text-red-100 transition-colors"
           >
             <X size={16} />
           </button>
@@ -265,7 +265,7 @@ export function CriticalAlertOverlay({
                 />
               </span>
               <div className="leading-tight">
-                <div className="text-[10px] uppercase tracking-wider text-red-200/60">{s.direction}</div>
+                <div className="text-2xs uppercase tracking-wider text-red-200/60">{s.direction}</div>
                 <div className="text-sm font-mono font-semibold text-red-50 tabular-nums">
                   {Math.round(alert.bearingDeg)}°
                 </div>
@@ -274,7 +274,7 @@ export function CriticalAlertOverlay({
           )}
           {alert.distanceM != null && (
             <div className="leading-tight">
-              <div className="text-[10px] uppercase tracking-wider text-red-200/60">{s.range}</div>
+              <div className="text-2xs uppercase tracking-wider text-red-200/60">{s.range}</div>
               <div className="text-sm font-mono font-semibold text-red-50 tabular-nums">
                 {alert.distanceM >= 1000
                   ? `${(alert.distanceM / 1000).toFixed(1)} km`
@@ -321,7 +321,7 @@ export function CriticalAlertOverlay({
           )}
         </div>
 
-        <div className="px-4 pb-3 -mt-1 text-center text-[11px] font-mono tabular-nums text-red-200/50">
+        <div className="px-4 pb-3 -mt-1 text-center text-xs-plus font-mono tabular-nums text-red-200/50">
           {s.autoDismissIn(remaining)}
         </div>
       </div>

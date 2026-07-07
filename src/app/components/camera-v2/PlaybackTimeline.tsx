@@ -157,11 +157,11 @@ function TransportButton({
           disabled={disabled}
           aria-label={label}
           className={`size-9 inline-flex items-center justify-center transition-colors duration-150 ease-out
-            focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none
+            focus-visible:ring-2 focus-visible:ring-state-focus-ring focus-visible:outline-none
             disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.97]
             ${primary
               ? 'text-white hover:bg-white/15'
-              : 'text-white/85 hover:text-white hover:bg-white/10'}`}
+              : 'text-white/85 hover:text-white hover:bg-state-hover-overlay'}`}
         >
           {children}
         </button>

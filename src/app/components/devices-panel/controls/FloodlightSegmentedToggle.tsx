@@ -34,7 +34,7 @@ function SlidingSegmented({ on, onToggle, disabled, slots, className }: Floodlig
   const segBase = cn(
     'relative z-10 inline-flex items-center justify-center gap-1.5 px-3 py-1 text-xs font-medium',
     'transition-colors duration-150 ease-out',
-    'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-white/30',
+    'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-state-focus-ring',
     'active:scale-[0.98] disabled:cursor-not-allowed',
     slots.seg,
   );
@@ -149,7 +149,7 @@ export function FloodlightSegmentedCompact(props: FloodlightSegmentedProps) {
       slots={iconSlots(props, {
         track: 'rounded-none bg-white/[0.08] p-px',
         thumb: 'start-px top-px bottom-px w-[calc(50%_-_1px)] rounded-none bg-white/[0.18]',
-        seg: 'min-w-0 rounded-none px-2 py-0.5 text-[11px] gap-1',
+        seg: 'min-w-0 rounded-none px-2 py-0.5 text-xs-plus gap-1',
         icon: { size: 12, cls: 'size-3 shrink-0' },
       })}
     />

@@ -87,7 +87,7 @@ export function IconDetailPanel({ entry, previewSize, renderMode, onClose }: Ico
           type="button"
           onClick={onClose}
           aria-label="Close details"
-          className="p-1.5 rounded-md text-n-120 hover:text-n-11 hover:bg-white/[0.08] transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+          className="p-1.5 rounded-md text-n-120 hover:text-n-11 hover:bg-state-hover-overlay transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
         >
           <X size={14} />
         </button>
@@ -188,10 +188,10 @@ export function IconDetailPanel({ entry, previewSize, renderMode, onClose }: Ico
                   role="radio"
                   aria-checked={active}
                   onClick={() => setPngSize(s)}
-                  className={`flex-1 px-2 py-1.5 text-xs font-mono rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25
+                  className={`flex-1 px-2 py-1.5 text-xs font-mono rounded-md transition-[color,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring
                     ${active
-                      ? 'bg-white/[0.10] text-n-12 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]'
-                      : 'bg-white/[0.02] text-n-10 hover:bg-white/[0.06]'}`}
+                      ? 'bg-state-selected text-n-12 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]'
+                      : 'bg-white/[0.02] text-n-10 hover:bg-state-hover-strong'}`}
                 >
                   {s}
                 </button>
@@ -223,7 +223,7 @@ function ActionButton({ label, tooltip, icon, onClick, busy }: ActionButtonProps
           onClick={onClick}
           disabled={busy}
           aria-label={tooltip}
-          className="flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-md text-xs font-medium text-n-11 bg-white/[0.04] hover:bg-white/[0.08] active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 transition-[color,background-color,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 cursor-pointer"
+          className="flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-md text-xs font-medium text-n-11 bg-white/[0.04] hover:bg-state-hover-overlay active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 transition-[color,background-color,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring cursor-pointer"
         >
           {icon}
           <span>{label}</span>

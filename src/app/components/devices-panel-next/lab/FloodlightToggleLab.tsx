@@ -21,9 +21,9 @@ function Group({ title, note, children }: { title: string; note?: string; childr
     <div className="flex flex-col gap-3">
       <div>
         <div className="text-xs font-medium text-white/80">{title}</div>
-        {note && <div className="mt-0.5 text-[11px] leading-snug text-white/40">{note}</div>}
+        {note && <div className="mt-0.5 text-xs-plus leading-snug text-white/40">{note}</div>}
       </div>
-      <div className="flex flex-wrap items-center gap-x-10 gap-y-6 rounded-md border border-white/[0.06] bg-[#141414] p-4">
+      <div className="flex flex-wrap items-center gap-x-10 gap-y-6 rounded-md border border-white/[0.06] bg-surface-2 p-4">
         {children}
       </div>
     </div>
@@ -34,7 +34,7 @@ function Cell({ caption, children }: { caption: string; children: ReactNode }) {
   return (
     <div className="flex flex-col items-start gap-2">
       {children}
-      <span className="text-[10px] leading-tight text-white/45">{caption}</span>
+      <span className="text-2xs leading-tight text-white/45">{caption}</span>
     </div>
   );
 }

@@ -1,62 +1,94 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from '@/lib/icons/central';
 import { Dashboard } from '../Dashboard';
 import { CustomizerPanel, PRODUCTION_DEFAULT } from './CustomizerPanel';
-import { compatStyles } from './compat';
 import {
   deriveTokens,
   MONO_DEFAULT,
   okStr,
   projectPaletteToSandbox,
+  type Mode,
   type ThemeConfig,
 } from './tokens';
+import { TWEAKCN_ORANGE } from './presets';
 
-const STORAGE_KEY = 'c2-theme-sandbox-config';
-const PALETTE_STORAGE_KEY = 'c2-theme-sandbox-palette';
+/**
+ * Named starting palettes. `production` boots from the live palette.css
+ * projection; `tweakcn-orange` boots from the imported shadcn/tweakcn
+ * orange theme (see ./presets.ts). Each preset persists to its own
+ * storage keys so switching routes never clobbers the other's state.
+ */
+export type ThemeSandboxPreset = 'production' | 'tweakcn-orange';
+
+interface PresetSpec {
+  storageKey: string;
+  paletteStorageKey: string;
+  defaultFor: (mode?: Mode) => ThemeConfig;
+}
+
+const PRESETS: Record<ThemeSandboxPreset, PresetSpec> = {
+  production: {
+    storageKey: 'c2-theme-sandbox-config',
+    paletteStorageKey: 'c2-theme-sandbox-palette',
+    defaultFor: () => PRODUCTION_DEFAULT,
+  },
+  'tweakcn-orange': {
+    storageKey: 'c2-theme-orange-sandbox-config',
+    paletteStorageKey: 'c2-theme-orange-sandbox-palette',
+    defaultFor: (mode) => TWEAKCN_ORANGE[mode === 'light' ? 'light' : 'dark'],
+  },
+};
 
 /**
  * Theme Color Sandbox.
  *
  * Mounts the real production `<Dashboard />` in a scoped root that also
- * hosts the customizer panel. The customizer writes CSS variables that
- * the sandbox scope + compat.ts stylesheet cascade into every hardcoded
- * color in the Dashboard, so palette picks re-skin the whole platform
- * live. The customizer collapses to a thin chevron tab so the Dashboard
- * can take the full viewport when the operator wants an unobstructed
- * view.
+ * hosts the customizer panel. The customizer writes the palette.css CSS
+ * variables inline on the scope; production components consume those
+ * tokens directly, so palette picks re-skin the whole platform live —
+ * no compat stylesheet needed. The customizer collapses to a thin
+ * chevron tab so the Dashboard can take the full viewport when the
+ * operator wants an unobstructed view.
  *
- * Reach it at `/theme-sandbox` in dev.
+ * One component serves every starting palette via the `preset` prop —
+ * `/theme-sandbox` (production) and `/theme-orange-sandbox`
+ * (tweakcn-orange) in dev.
  */
-export default function ThemeSandbox() {
-  const [config, setConfig] = useState<ThemeConfig>(() => loadConfig());
+export default function ThemeSandbox({
+  preset = 'production',
+}: {
+  preset?: ThemeSandboxPreset;
+}) {
+  const spec = PRESETS[preset];
+  const [config, setConfig] = useState<ThemeConfig>(() => loadConfig(spec));
   const [paletteOverride, setPaletteOverride] = useState<Record<
     string,
     string
-  > | null>(() => loadPalette());
+  > | null>(() => loadPalette(spec));
   const [customizerOpen, setCustomizerOpen] = useState(true);
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+      window.localStorage.setItem(spec.storageKey, JSON.stringify(config));
     } catch {
       // Storage may be unavailable in private/incognito — silently degrade.
     }
-  }, [config]);
+  }, [config, spec]);
 
   useEffect(() => {
     try {
       if (paletteOverride) {
         window.localStorage.setItem(
-          PALETTE_STORAGE_KEY,
+          spec.paletteStorageKey,
           JSON.stringify(paletteOverride),
         );
       } else {
-        window.localStorage.removeItem(PALETTE_STORAGE_KEY);
+        window.localStorage.removeItem(spec.paletteStorageKey);
       }
     } catch {
       // Storage may be unavailable — silently degrade.
     }
-  }, [paletteOverride]);
+  }, [paletteOverride, spec]);
 
   const inlineStyle = useMemo(
     () => buildInlineStyle(config, paletteOverride),
@@ -65,14 +97,14 @@ export default function ThemeSandbox() {
 
   const handleReset = useCallback(() => {
     try {
-      window.localStorage.removeItem(STORAGE_KEY);
-      window.localStorage.removeItem(PALETTE_STORAGE_KEY);
+      window.localStorage.removeItem(spec.storageKey);
+      window.localStorage.removeItem(spec.paletteStorageKey);
     } catch {
       // Storage may be unavailable — silently degrade.
     }
     setConfig(MONO_DEFAULT);
     setPaletteOverride(null);
-  }, []);
+  }, [spec]);
 
   const handleApplyPalette = useCallback(
     (parsed: Record<string, string>) => setPaletteOverride(parsed),
@@ -88,10 +120,9 @@ export default function ThemeSandbox() {
       style={inlineStyle}
     >
       <style>{sliderStyles}</style>
-      <style>{compatStyles}</style>
 
-      {/* Real production Dashboard — inherits the scoped tokens + compat
-          overrides so the whole platform repaints live from the customizer. */}
+      {/* Real production Dashboard — inherits the scoped tokens so the
+          whole platform repaints live from the customizer. */}
       <div className="flex min-w-0 flex-1 overflow-hidden">
         <Dashboard />
       </div>
@@ -131,27 +162,28 @@ export default function ThemeSandbox() {
   );
 }
 
-function loadConfig(): ThemeConfig {
-  if (typeof window === 'undefined') return PRODUCTION_DEFAULT;
+function loadConfig(spec: PresetSpec): ThemeConfig {
+  if (typeof window === 'undefined') return spec.defaultFor();
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return PRODUCTION_DEFAULT;
+    const raw = window.localStorage.getItem(spec.storageKey);
+    if (!raw) return spec.defaultFor();
     const parsed = JSON.parse(raw) as Partial<ThemeConfig>;
+    const base = spec.defaultFor(parsed.mode);
     return {
-      ...PRODUCTION_DEFAULT,
+      ...base,
       ...parsed,
-      primary: { ...PRODUCTION_DEFAULT.primary, ...parsed.primary },
-      secondary: { ...PRODUCTION_DEFAULT.secondary, ...parsed.secondary },
+      primary: { ...base.primary, ...parsed.primary },
+      secondary: { ...base.secondary, ...parsed.secondary },
     };
   } catch {
-    return PRODUCTION_DEFAULT;
+    return spec.defaultFor();
   }
 }
 
-function loadPalette(): Record<string, string> | null {
+function loadPalette(spec: PresetSpec): Record<string, string> | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = window.localStorage.getItem(PALETTE_STORAGE_KEY);
+    const raw = window.localStorage.getItem(spec.paletteStorageKey);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
@@ -207,8 +239,7 @@ function buildInlineStyle(
 //
 // Scoped so it only affects the sandbox's range inputs. Uses semantic
 // tokens so the slider itself repaints along with everything else when the
-// operator drags a picker. Exported so sibling sandboxes (e.g.
-// theme-sandbox-orange) can reuse the same paint job for CustomizerPanel.
+// operator drags a picker.
 
 export const sliderStyles = `
 .theme-sandbox-slider {

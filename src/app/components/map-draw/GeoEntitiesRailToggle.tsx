@@ -85,7 +85,7 @@ export function GeoEntitiesRailToggle({
             if (next) openLayersView();
             else tryClosePanel();
           }}
-          className="size-6 min-w-6 px-0 rounded-[2px] bg-transparent text-[#949494] aria-pressed:bg-white/[0.08] aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:bg-white/10 active:scale-[0.97] transition-[background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+          className="size-6 min-w-6 px-0 rounded-[2px] bg-transparent text-[#949494] aria-pressed:bg-white/[0.08] aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:bg-state-hover-overlay active:scale-[0.97] transition-[background-color] focus-visible:ring-2 focus-visible:ring-state-focus-ring focus-visible:outline-none"
           aria-label={open ? closeLabel : openLabel}
         >
           <GeoShapesIcon size={20} />

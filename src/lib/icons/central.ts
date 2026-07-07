@@ -163,7 +163,14 @@ import IconFormPentagonRaw from '@central-icons-react/round-filled-radius-0-stro
 import IconVectorAnchorPointStraightRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconVectorAnchorPointStraight';
 import IconBezierCurveRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconBezierCurve';
 import IconFloppyDisk1Raw from '@central-icons-react/round-filled-radius-0-stroke-2/IconFloppyDisk1';
+import IconLayersThreeRaw from '@central-icons-react/round-filled-radius-0-stroke-2/IconLayersThree';
+import IconDotGrid1x3VerticalRaw from '@central-icons-react/square-filled-radius-0-stroke-2/IconDotGrid1x3Vertical';
 import IconPinFilledRaw from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconPin';
+import IconCirclePlusFilledRaw from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconCirclePlus';
+import IconCircleCheckFilledRaw from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconCircleCheck';
+import IconCircleMinusFilledRaw from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconCircleMinus';
+import IconEyeOpenFilledRaw from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconEyeOpen';
+import IconEyeClosedFilledRaw from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconEyeClosed';
 import IconStopFilledRaw from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconStop';
 import IconSunFilledRaw from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconSun';
 import IconMoonFilledRaw from '@central-icons-react/round-filled-radius-1-stroke-1.5/IconMoon';
@@ -319,6 +326,12 @@ export const Sparkles = asIcon(IconSparkles3BoldRaw);
 
 // --- Layout / lists ---
 export const List = asIcon(IconListBulletsRaw);
+// Stacked layers (lucide `Layers` equivalent) — theme-sandbox shell rail.
+export const Layers = asIcon(IconLayersThreeRaw);
+// True vertical kebab (1×3 dot grid, square-filled set) — overflow menu
+// trigger on device rows and lab cards. Distinct from `MoreVertical`,
+// which maps to Central's dots-in-circle glyph.
+export const EllipsisVertical = asIcon(IconDotGrid1x3VerticalRaw);
 
 // --- Time ---
 export const History = asIcon(IconHistoryRaw);
@@ -397,6 +410,15 @@ export const PowerFilled = asIcon(IconEscFilledRaw);
 // solid glyphs are compared against the line set in context.
 export const SparklesFilled = asIcon(IconSparkles3BoldFilledRaw);
 export const RotateCcwFilled = asIcon(IconArrowRotateCCFilledRaw);
+
+// Filled circle-action twins + visibility pair (radius-1 / stroke-1.5) —
+// used by the devices feed-pin flow (add / added / remove states) and its
+// watch/unwatch visibility toggle.
+export const CirclePlusFilled = asIcon(IconCirclePlusFilledRaw);
+export const CircleCheckFilled = asIcon(IconCircleCheckFilledRaw);
+export const CircleMinusFilled = asIcon(IconCircleMinusFilledRaw);
+export const EyeFilled = asIcon(IconEyeOpenFilledRaw);
+export const EyeOffFilled = asIcon(IconEyeClosedFilledRaw);
 export const GaugeFilled = asIcon(IconGaugeFilledRaw);
 export const ZapFilled = asIcon(IconLightningBoltFilledRaw);
 export const SlidersHorizontalFilled = asIcon(IconSettingsSliderHorFilledRaw);

@@ -110,10 +110,10 @@ export const spec: ComponentSpec = {
     colors: [
       { name: 'dot-bg', value: 'CARD_TOKENS.surface.level1', usage: 'Timeline dot background color' },
       { name: 'dot-ring', value: 'rgba(255,255,255,0.2)', usage: 'Timeline dot outline ring (box-shadow)' },
-      { name: 'entry-text', value: 'text-zinc-300', usage: 'Log entry label text color' },
+      { name: 'entry-text', value: 'text-slate-11', usage: 'Log entry label text color' },
       { name: 'time-text', value: 'text-white/50', usage: 'Timestamp text color (50% opacity white)' },
-      { name: 'show-more', value: 'text-zinc-400', usage: '"Show more" button default color' },
-      { name: 'show-more-hover', value: 'text-zinc-300', usage: '"Show more" button hover color' },
+      { name: 'show-more', value: 'text-slate-10', usage: '"Show more" button default color' },
+      { name: 'show-more-hover', value: 'text-slate-11', usage: '"Show more" button hover color' },
     ],
     typography: [
       { name: 'entry-label', fontFamily: 'Heebo', fontSize: '12px', fontWeight: '400', lineHeight: '1.5', usage: 'Log entry text (text-xs)' },

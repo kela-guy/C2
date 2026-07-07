@@ -74,7 +74,7 @@ function AnatomySection({
             type="button"
             onClick={() => onNavigate?.(part.id)}
             className={cn(
-              'group inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25',
+              'group inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring',
               RING,
             )}
             style={{ backgroundColor: SURFACE.level1 }}
@@ -103,7 +103,7 @@ function ParentBacklink({
       type="button"
       onClick={() => onNavigate?.(parent.id)}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs text-n-9 transition-colors duration-150 hover:text-n-11 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25',
+        'inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs text-n-9 transition-colors duration-150 hover:text-n-11 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring',
         RING,
       )}
     >

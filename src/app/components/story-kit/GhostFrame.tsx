@@ -25,7 +25,7 @@ export function GhostFrame({ className, style, label }: GhostFrameProps) {
       style={{ borderColor: 'var(--story-annot)', ...style }}
     >
       {label && (
-        <span className="absolute -top-5 start-0 whitespace-nowrap font-[family:var(--font-handwriting)] text-[15px] text-[color:var(--story-annot)]">
+        <span className="absolute -top-5 start-0 whitespace-nowrap font-[family:var(--font-handwriting)] text-base text-[color:var(--story-annot)]">
           {label}
         </span>
       )}

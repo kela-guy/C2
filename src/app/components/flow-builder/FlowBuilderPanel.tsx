@@ -64,22 +64,22 @@ import { SEVERITY_TW } from './severityTokens';
 import { FlowBranchDiagram } from './FlowBranchDiagram';
 
 // ─── Type scale (Heebo only) ────────────────────────────────────────────
-const TYPE_SECTION_TITLE = 'text-xs font-semibold text-zinc-200';
-const TYPE_FIELD_LABEL = 'text-[11px] font-medium text-zinc-400';
-const TYPE_HINT = 'text-[11px] text-zinc-500 leading-snug';
-const TYPE_CHIP = 'text-[10px] font-semibold';
-const TYPE_GROUP_LABEL = 'text-[10px] font-medium text-zinc-500';
+const TYPE_SECTION_TITLE = 'text-xs font-semibold text-slate-11';
+const TYPE_FIELD_LABEL = 'text-xs-plus font-medium text-slate-10';
+const TYPE_HINT = 'text-xs-plus text-slate-9 leading-snug';
+const TYPE_CHIP = 'text-2xs font-semibold';
+const TYPE_GROUP_LABEL = 'text-2xs font-medium text-slate-9';
 const TYPE_BTN = 'text-xs font-medium';
 
 // Elevated surface fill for the remaining form controls (preset select +
 // inputs) so they read as a filled surface (≈ SURFACE.level2 opacity)
 // rather than a bare outline. Tailwind-only per the panel's guardrail.
-const SURFACE_CONTROL = 'bg-white/[0.08] hover:bg-white/[0.12] border border-white/5';
+const SURFACE_CONTROL = 'bg-white/[0.08] hover:bg-state-hover-overlay border border-white/5';
 
 // Selected / unselected chip-toggle treatment, shared by every
 // single-choice picker so they all read the same way.
 const CHIP_ON = 'border-white/30 bg-white/10 text-white';
-const CHIP_OFF = 'border-white/10 bg-white/[0.04] text-zinc-300 hover:bg-white/[0.08]';
+const CHIP_OFF = 'border-white/10 bg-white/[0.04] text-slate-11 hover:bg-state-hover-overlay';
 
 // ─── Constants / defaults ──────────────────────────────────────────────
 
@@ -308,8 +308,8 @@ export function FlowBuilderPanel({
         onClick={handleSave}
         className={[
           `w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded ${TYPE_BTN}`,
-          'bg-white text-zinc-900 hover:bg-zinc-200 transition-colors',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
+          'bg-white text-slate-2 hover:bg-slate-11 transition-colors',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring',
         ].join(' ')}
       >
         <Check size={14} />
@@ -320,7 +320,7 @@ export function FlowBuilderPanel({
 
   const title = (
     <div className="min-w-0">
-      <p className="text-[11px] text-zinc-500 leading-none">{t.panel.title}</p>
+      <p className="text-xs-plus text-slate-9 leading-none">{t.panel.title}</p>
       <h2 className="text-sm font-semibold text-white truncate mt-0.5">
         {draft.name.trim() || t.labels.newFlow}
       </h2>
@@ -331,7 +331,7 @@ export function FlowBuilderPanel({
     <button
       type="button"
       onClick={handleSave}
-      className={`${TYPE_CHIP} px-1.5 py-0.5 rounded border border-orange-400/40 bg-orange-400/10 text-orange-300 hover:bg-orange-400/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25`}
+      className={`${TYPE_CHIP} px-1.5 py-0.5 rounded border border-orange-400/40 bg-orange-400/10 text-orange-300 hover:bg-orange-400/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring`}
     >
       {t.panel.unsavedBadge}
     </button>
@@ -372,7 +372,7 @@ export function FlowBuilderPanel({
           value={draft.name}
           onChange={(e) => updateDraft({ name: e.target.value })}
           placeholder={t.labels.flowNamePlaceholder}
-          className={`w-full mt-2 rounded px-2 py-1.5 text-xs text-white placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${SURFACE_CONTROL}`}
+          className={`w-full mt-2 rounded px-2 py-1.5 text-xs text-white placeholder:text-slate-9 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring ${SURFACE_CONTROL}`}
           aria-label={t.labels.flowName}
         />
         {loadedPresetId && (
@@ -415,7 +415,7 @@ export function FlowBuilderPanel({
             <button
               type="button"
               onClick={handleAutoPickSensors}
-              className={`w-full px-2 py-1.5 rounded border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] ${TYPE_BTN} text-zinc-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25`}
+              className={`w-full px-2 py-1.5 rounded border border-white/10 bg-white/[0.04] hover:bg-state-hover-overlay ${TYPE_BTN} text-slate-11 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring`}
             >
               {t.labels.autoBySensors}
             </button>
@@ -446,7 +446,7 @@ export function FlowBuilderPanel({
               const n = Math.max(0, parseFloat(e.target.value) || 0);
               updateDraft({ timing: { ...draft.timing, classifyMs: Math.round(n * 1000) } });
             }}
-            className={`w-full rounded px-2 py-1.5 text-xs text-white tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${SURFACE_CONTROL}`}
+            className={`w-full rounded px-2 py-1.5 text-xs text-white tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring ${SURFACE_CONTROL}`}
           />
         </Field>
 
@@ -459,7 +459,7 @@ export function FlowBuilderPanel({
             })}
             className="size-3.5 accent-cyan-400"
           />
-          <span className="text-xs text-zinc-200">{t.labels.pointCamera}</span>
+          <span className="text-xs text-slate-11">{t.labels.pointCamera}</span>
         </label>
       </Section>
 
@@ -498,7 +498,7 @@ export function FlowBuilderPanel({
                     onClick={() => updateDraft({ playback: { mode: 'auto', speed: s } })}
                     className={[
                       'px-2 py-1.5 rounded border text-xs tabular-nums transition-colors',
-                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring',
                       active ? CHIP_ON : CHIP_OFF,
                     ].join(' ')}
                     aria-pressed={active}
@@ -514,15 +514,15 @@ export function FlowBuilderPanel({
 
       {/* ── Dirty-discard guard ──────────────────────────────────── */}
       <AlertDialog open={pendingPresetId !== null} onOpenChange={(o: boolean) => !o && setPendingPresetId(null)}>
-        <AlertDialogContent className="border-white/10 bg-zinc-950 text-white">
+        <AlertDialogContent className="border-white/10 bg-slate-1 text-white">
           <AlertDialogHeader>
             <AlertDialogTitle>{t.discardConfirm.title}</AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">
+            <AlertDialogDescription className="text-slate-10">
               {t.discardConfirm.description}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-white/10 bg-transparent text-zinc-200 hover:bg-white/10">
+            <AlertDialogCancel className="border-white/10 bg-transparent text-slate-11 hover:bg-state-hover-overlay">
               {t.discardConfirm.cancel}
             </AlertDialogCancel>
             <AlertDialogAction
@@ -540,15 +540,15 @@ export function FlowBuilderPanel({
 
       {/* ── Delete confirmation ──────────────────────────────────── */}
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-        <AlertDialogContent className="border-white/10 bg-zinc-950 text-white">
+        <AlertDialogContent className="border-white/10 bg-slate-1 text-white">
           <AlertDialogHeader>
             <AlertDialogTitle>{t.simulations.deleteConfirm.title}</AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">
+            <AlertDialogDescription className="text-slate-10">
               {loadedPreset ? t.simulations.deleteConfirm.description(loadedPreset.name) : ''}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-white/10 bg-transparent text-zinc-200 hover:bg-white/10">
+            <AlertDialogCancel className="border-white/10 bg-transparent text-slate-11 hover:bg-state-hover-overlay">
               {t.simulations.deleteConfirm.cancel}
             </AlertDialogCancel>
             <AlertDialogAction
@@ -613,14 +613,14 @@ function ToolbarButton({
   const toneClasses =
     tone === 'danger'
       ? [SEVERITY_TW.CRITICAL.chipBorder, SEVERITY_TW.CRITICAL.chipBg, SEVERITY_TW.CRITICAL.text, 'hover:bg-red-500/20'].join(' ')
-      : 'border-white/10 bg-white/[0.04] text-zinc-200 hover:bg-white/[0.1]';
+      : 'border-white/10 bg-white/[0.04] text-slate-11 hover:bg-state-hover-overlay';
   return (
     <button
       type="button"
       onClick={onClick}
       className={[
         `flex items-center gap-1 px-2 py-1 rounded border ${TYPE_BTN}`,
-        'transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25',
+        'transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring',
         toneClasses,
       ].join(' ')}
     >
@@ -651,7 +651,7 @@ function ChipGrid<T extends string>({
             onClick={() => onChange(o.value)}
             className={[
               'flex items-center gap-1.5 px-2 py-2 rounded border text-xs text-start transition-colors min-w-0',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring',
               active ? CHIP_ON : CHIP_OFF,
             ].join(' ')}
             aria-pressed={active}
@@ -693,10 +693,10 @@ function SensorGroup({
               onClick={() => onToggle(s.id)}
               className={[
                 'flex flex-col items-center justify-center gap-1 px-1.5 py-2 rounded border text-center min-w-0',
-                'transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25',
+                'transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring',
                 checked
                   ? 'border-cyan-500/40 bg-cyan-500/10 text-cyan-200'
-                  : 'border-white/10 bg-white/[0.04] text-zinc-300 hover:bg-white/[0.08]',
+                  : 'border-white/10 bg-white/[0.04] text-slate-11 hover:bg-state-hover-overlay',
               ].join(' ')}
               aria-pressed={checked}
               title={s.typeLabel}
@@ -704,7 +704,7 @@ function SensorGroup({
               <span className="shrink-0" aria-hidden>
                 {Icon({ size: 18, fill: 'currentColor' })}
               </span>
-              <span className="w-full min-w-0 truncate text-[10px] leading-tight">{s.typeLabel}</span>
+              <span className="w-full min-w-0 truncate text-2xs leading-tight">{s.typeLabel}</span>
             </button>
           );
         })}

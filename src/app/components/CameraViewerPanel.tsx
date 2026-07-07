@@ -37,7 +37,7 @@ function CameraPickerContent({
       side="bottom"
       align="start"
       sideOffset={6}
-      className="min-w-[180px] p-1 rounded-lg bg-[#1a1a1a]/95 backdrop-blur-xl shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_25px_50px_-12px_rgba(0,0,0,0.5)] border-none"
+      className="min-w-[180px] p-1 rounded-lg bg-surface-2/95 backdrop-blur-xl shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_25px_50px_-12px_rgba(0,0,0,0.5)] border-none"
     >
       {CAMERA_ASSETS.map(cam => {
         const inUse = usedIds.includes(cam.id);
@@ -45,10 +45,10 @@ function CameraPickerContent({
           <DropdownMenuItem
             key={cam.id}
             disabled={inUse}
-            className="flex items-center gap-2 px-2.5 py-2 rounded-md text-xs text-zinc-300 cursor-pointer hover:bg-white/10 hover:text-white transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex items-center gap-2 px-2.5 py-2 rounded-md text-xs text-slate-11 cursor-pointer hover:bg-state-hover-overlay hover:text-white transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40"
             onClick={() => onSelect(cam.id)}
           >
-            <Camera size={14} className="shrink-0 text-zinc-400" aria-hidden="true" />
+            <Camera size={14} className="shrink-0 text-slate-10" aria-hidden="true" />
             <span className="flex-1 text-start">{cam.typeLabel}</span>
           </DropdownMenuItem>
         );
@@ -103,12 +103,12 @@ function FeedSlot({
 
   if (!cameraId) {
     return (
-      <div ref={slotDropRef} className={`flex-1 min-h-0 relative flex items-center justify-center bg-[#141414] transition-[box-shadow] duration-200 ease-out ${isOverSlot ? 'shadow-[inset_0_0_0_2px_rgba(255,255,255,0.25)]' : ''}`}>
+      <div ref={slotDropRef} className={`flex-1 min-h-0 relative flex items-center justify-center bg-surface-1 transition-[box-shadow] duration-200 ease-out ${isOverSlot ? 'shadow-[inset_0_0_0_2px_rgba(255,255,255,0.25)]' : ''}`}>
         {onRemove && (
           <button
             type="button"
             onClick={onRemove}
-            className="absolute top-2 start-2 p-2.5 rounded text-white/30 hover:text-white hover:bg-red-500/30 transition-colors duration-150 ease-out active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none z-10"
+            className="absolute top-2 start-2 p-2.5 rounded text-white/30 hover:text-white hover:bg-red-500/30 transition-colors duration-150 ease-out active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-state-focus-ring focus-visible:outline-none z-10"
             title={t.removeWindow}
             aria-label={t.removeWindowAriaLabel}
           >
@@ -121,9 +121,9 @@ function FeedSlot({
               type="button"
               className="flex items-center gap-2 px-3 py-2 rounded-md
                          border border-dashed border-white/10
-                         cursor-pointer hover:border-white/20 hover:bg-white/[0.04]
+                         cursor-pointer hover:border-white/20 hover:bg-state-hover
                          transition-colors duration-150
-                         focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
+                         focus-visible:ring-2 focus-visible:ring-state-focus-ring focus-visible:outline-none"
             >
               <Plus size={14} className="text-white/40 shrink-0" aria-hidden="true" />
               <span className="text-xs text-white/50">{t.pickContent}</span>
@@ -134,7 +134,7 @@ function FeedSlot({
             side="bottom"
             align="center"
             sideOffset={6}
-            className="min-w-[180px] p-1 rounded-lg bg-[#1a1a1a]/95 backdrop-blur-xl shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_25px_50px_-12px_rgba(0,0,0,0.5)] border-none"
+            className="min-w-[180px] p-1 rounded-lg bg-surface-2/95 backdrop-blur-xl shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_25px_50px_-12px_rgba(0,0,0,0.5)] border-none"
           >
             {CAMERA_ASSETS.map(cam => {
               const inUse = usedIds.includes(cam.id);
@@ -142,19 +142,19 @@ function FeedSlot({
                 <DropdownMenuItem
                   key={cam.id}
                   disabled={inUse}
-                  className="flex items-center gap-2 px-2.5 py-2 rounded-md text-xs text-zinc-300 cursor-pointer hover:bg-white/10 hover:text-white transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="flex items-center gap-2 px-2.5 py-2 rounded-md text-xs text-slate-11 cursor-pointer hover:bg-state-hover-overlay hover:text-white transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40"
                   onClick={() => onSelect(cam.id)}
                 >
-                  <Camera size={14} className="shrink-0 text-zinc-400" aria-hidden="true" />
+                  <Camera size={14} className="shrink-0 text-slate-10" aria-hidden="true" />
                   <span className="flex-1 text-start">{cam.typeLabel}</span>
                 </DropdownMenuItem>
               );
             })}
             <DropdownMenuItem
               disabled
-              className="flex items-center gap-2 px-2.5 py-2 rounded-md text-xs text-zinc-300 cursor-pointer hover:bg-white/10 hover:text-white transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex items-center gap-2 px-2.5 py-2 rounded-md text-xs text-slate-11 cursor-pointer hover:bg-state-hover-overlay hover:text-white transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <Map size={14} className="shrink-0 text-zinc-400" aria-hidden="true" />
+              <Map size={14} className="shrink-0 text-slate-10" aria-hidden="true" />
               <span className="flex-1 text-start">{t.mapPickerOption}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -212,7 +212,7 @@ function FeedSlot({
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded bg-white/10 hover:bg-white/20 transition-colors duration-150 ease-out active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded bg-white/10 hover:bg-white/20 transition-colors duration-150 ease-out active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-state-focus-ring focus-visible:outline-none"
                   >
                     <span className="text-xs font-medium text-white/90 truncate max-w-[100px]">{label}</span>
                     <ChevronDown size={10} className="text-white/60 shrink-0" />
@@ -225,7 +225,7 @@ function FeedSlot({
                 <button
                   type="button"
                   onClick={onRemove}
-                  className="relative p-2 rounded text-white/40 hover:text-white hover:bg-red-500/30 transition-colors duration-150 ease-out active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none before:absolute before:inset-[-4px] before:content-['']"
+                  className="relative p-2 rounded text-white/40 hover:text-white hover:bg-red-500/30 transition-colors duration-150 ease-out active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-state-focus-ring focus-visible:outline-none before:absolute before:inset-[-4px] before:content-['']"
                   title={t.removeCamera}
                   aria-label={t.removeCameraAriaLabel}
                 >
@@ -346,7 +346,7 @@ export function CameraViewerPanel({ feeds, onFeedsChange, onCameraHover, weaponF
                        bg-[#0a0a0a]/90 backdrop-blur-sm
                        border-t border-dashed border-white/[0.08]
                        cursor-pointer hover:bg-[#0a0a0a]
-                       focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none"
+                       focus-visible:ring-2 focus-visible:ring-state-focus-ring focus-visible:outline-none"
             onFocus={() => setAddCamHovered(true)}
             onBlur={() => setAddCamHovered(false)}
             onClick={handleAddFeed}

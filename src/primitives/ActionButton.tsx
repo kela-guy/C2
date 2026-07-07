@@ -17,7 +17,8 @@ import {
   type ButtonSize,
 } from './buttonTokens';
 
-// Back-compat token aliases — the button family now reads from `buttonTokens`.
+// Back-compat aliases — `buttonTokens` maps the domain vocabulary onto the
+// ui/button `buttonVariants` cva, which owns all styling.
 export const ACTION_BUTTON_VARIANTS = BUTTON_VARIANTS;
 export const ACTION_BUTTON_SIZES = BUTTON_SIZES;
 export type ActionButtonVariant = ButtonVariant;

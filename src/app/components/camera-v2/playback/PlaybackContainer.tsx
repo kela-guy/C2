@@ -175,7 +175,7 @@ export function PlaybackContainer({ src, state, onPatch, onExit }: PlaybackConta
               type="button"
               onClick={onExit}
               aria-label={t.exitPlayback}
-              className="size-7 inline-flex items-center justify-center text-white/85 hover:text-white hover:bg-white/15 transition-colors duration-150 ease-out focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:outline-none active:scale-[0.97]"
+              className="size-7 inline-flex items-center justify-center text-white/85 hover:text-white hover:bg-white/15 transition-colors duration-150 ease-out focus-visible:ring-2 focus-visible:ring-state-focus-ring focus-visible:outline-none active:scale-[0.97]"
             >
               <X size={12} />
             </button>

@@ -36,7 +36,7 @@ export function CopyButton({ text, label = 'Copy' }: { text: string; label?: str
       type="button"
       onClick={onCopy}
       aria-label={copied ? 'Copied' : label}
-      className="flex size-8 items-center justify-center rounded-md text-white/50 transition-[color,background-color,transform] duration-150 ease-out hover:bg-white/[0.08] hover:text-white/90 active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+      className="flex size-8 items-center justify-center rounded-md text-white/50 transition-[color,background-color,transform] duration-150 ease-out hover:bg-state-hover-overlay hover:text-white/90 active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
     >
       <AnimatePresence mode="wait" initial={false}>
         <motion.span
@@ -192,7 +192,7 @@ export function ComponentPreview({
                 type="button"
                 onClick={handleCollapse}
                 aria-label="Collapse"
-                className="flex size-8 items-center justify-center rounded-md text-white/50 transition-[color,background-color,transform] duration-150 ease-out hover:bg-white/[0.08] hover:text-white/90 active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+                className="flex size-8 items-center justify-center rounded-md text-white/50 transition-[color,background-color,transform] duration-150 ease-out hover:bg-state-hover-overlay hover:text-white/90 active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
               >
                 <ChevronsDownUp size={14} aria-hidden="true" />
               </button>
@@ -213,7 +213,7 @@ export function ComponentPreview({
                   type="button"
                   onClick={() => setExpanded(true)}
                   className={cn(
-                    'relative z-10 inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-n-12 transition-[background-color,transform] duration-150 ease-out hover:bg-white/[0.06] active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30',
+                    'relative z-10 inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-n-12 transition-[background-color,transform] duration-150 ease-out hover:bg-state-hover-strong active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring',
                     RING,
                   )}
                   style={{ backgroundColor: SURFACE.level0 }}

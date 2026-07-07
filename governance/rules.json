@@ -6,14 +6,36 @@
       "severity": "error",
       "target": "src/**/*.{ts,tsx}",
       "enforcement": "eslint",
-      "message": "Do not hardcode hex color literals in app or component code. Colors live only in tokens/*.json and are consumed via a design token.",
-      "replacement": "Use a semantic token: the CSS var (e.g. var(--c2-color-surface-base)) or the matching @/primitives export (e.g. SURFACE.level1, CARD_TOKENS.spine.colors).",
+      "message": "Do not hardcode color literals (hex, oklch(), rgb()) in app or component code. Colors are authored once in src/styles/palette.css (and tokens/*.json) and consumed via tokens.",
+      "replacement": "Use a semantic token: a palette.css var (e.g. var(--surface-1), var(--accent-danger)), a tokenized Tailwind utility (bg-surface-*, text-slate-*, bg-state-*), or an @/primitives/accentHex export (ACCENT_HEX, SLATE_HEX, MARKER_HEX) where a literal string is required (Cesium, SVG, Canvas).",
       "exceptions": [
         "src/primitives/tokens.ts",
         "src/primitives/tokens.generated.ts",
+        "src/primitives/accentHex.ts",
         "src/styles/**",
         "scripts/**"
       ]
+    },
+    {
+      "id": "no-arbitrary-type-and-color-classes",
+      "severity": "error",
+      "target": "src/**/*.{ts,tsx}",
+      "enforcement": "eslint",
+      "message": "Do not use arbitrary Tailwind font sizes (text-[Npx]) or hex colors (-[#hex]). The type scale and color ramps are declared in src/styles/tailwind.css.",
+      "replacement": "Type: text-3xs / text-2xs / text-xs-plus / text-xs / text-sm-minus / text-sm. Color: bg-surface-*, text-slate-*, bg-accent-*-soft, bg-state-*.",
+      "exceptions": [
+        "src/app/components/ui/**",
+        "src/app/components/styleguide/**",
+        "src/app/styleguide/**"
+      ]
+    },
+    {
+      "id": "accenthex-generated",
+      "severity": "error",
+      "target": "src/primitives/accentHex.ts",
+      "enforcement": "scripts/accenthex-check.mjs",
+      "message": "accentHex.ts is a generated mirror of palette.css's oklch tokens — never hand-edit a hex value there without changing the palette first.",
+      "replacement": "Change the oklch value in src/styles/palette.css, then update the mirrored hex (the CI check converts oklch to hex and fails on drift)."
     },
     {
       "id": "icons-central-only",

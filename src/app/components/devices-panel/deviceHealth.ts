@@ -8,20 +8,18 @@
  * the connection chip kept as the textual detail.
  *
  * Severity precedence (worst wins):
- *   critical : malfunction | connection error | battery <= 20%  (pulses)
- *   error    : open errors (errorCount > 0)  — broken, already known (static red, no pulse)
+ *   error    : malfunction | connection error | battery <= 20% | open errors — the top tier (red)
  *   warning  : connection warning | battery <= 40%
  *   offline  : disconnected (known-absent, not alarmist)
  *   ok       : everything nominal
  *
- * `critical` and `error` share the same red tile; the difference is the
- * pulse — critical means "needs attention now" (pings), error means
- * "broken, already logged" (still).
+ * There is no separate `critical` tier — error is the top severity
+ * (decision locked in the `/devices-lab` state-color audition).
  */
 
 import type { ConnectionState, Device, DeviceError, DevicesPanelStrings } from './types';
 
-export type DeviceHealth = 'ok' | 'warning' | 'error' | 'critical' | 'offline';
+export type DeviceHealth = 'ok' | 'warning' | 'error' | 'offline';
 
 const BATTERY_CRITICAL_PCT = 20;
 const BATTERY_LOW_PCT = 40;
@@ -40,11 +38,9 @@ export function getDeviceHealth(device: Device): DeviceHealth {
   if (
     device.operationalStatus === 'malfunctioning' ||
     device.connectionState === 'error' ||
-    (batt != null && batt <= BATTERY_CRITICAL_PCT)
+    (batt != null && batt <= BATTERY_CRITICAL_PCT) ||
+    getDeviceErrorCount(device) > 0
   ) {
-    return 'critical';
-  }
-  if (getDeviceErrorCount(device) > 0) {
     return 'error';
   }
   if (device.connectionState === 'warning' || (batt != null && batt <= BATTERY_LOW_PCT)) {
@@ -59,7 +55,6 @@ export function getDeviceHealth(device: Device): DeviceHealth {
  * `getDeviceHealth` so a roll-up reads identically to a single tile.
  */
 const HEALTH_RANK: Record<DeviceHealth, number> = {
-  critical: 4,
   error: 3,
   warning: 2,
   offline: 1,
@@ -105,7 +100,7 @@ export function getCompositeErrorCount(device: Device): number {
 
 /**
  * A device's own open issues for the errors modal. Structured `errors[]` are
- * the source of truth when present; otherwise a warning / error / critical
+ * the source of truth when present; otherwise a warning / error
  * health is synthesized into a single entry from its human-readable reason, so
  * a degraded asset that carries no structured error (e.g. a connection warning)
  * still explains itself in the modal. `ok` / `offline` contribute nothing.
@@ -121,7 +116,7 @@ function getDeviceOwnIssues(
   if (health === 'warning') {
     return [{ severity: 'warning', message: reason ?? strings.healthWarning }];
   }
-  if (health === 'error' || health === 'critical') {
+  if (health === 'error') {
     return [{ severity: 'error', message: reason ?? strings.healthError }];
   }
   return [];
@@ -153,23 +148,20 @@ export interface DeviceHealthVisual {
   tile: string;
   /** Fill passed to the device glyph. Offline desaturates; issues keep the glyph legible. */
   iconFill: string;
+  /**
+   * Offline is the only tone that adds a structural cue on top of the tint:
+   * a wifi-off corner badge on the tile. Dimming alone was too easy to miss
+   * in a long list — the badge names the reason at a glance.
+   */
+  showOfflineBadge?: boolean;
 }
 
 export const DEVICE_HEALTH_VISUAL: Record<DeviceHealth, DeviceHealthVisual> = {
   ok: { tile: 'bg-white/10', iconFill: 'white' },
   warning: { tile: 'bg-[oklch(0.733_0.194_75_/_0.3)]', iconFill: 'white' },
-  // Same solid red as critical — the only difference is critical adds the ping.
   error: { tile: 'bg-[oklch(0.384_0.13_25)]', iconFill: 'white' },
-  critical: { tile: 'bg-[oklch(0.384_0.13_25)]', iconFill: 'white' },
-  offline: { tile: 'bg-white/[0.04]', iconFill: 'rgba(255,255,255,0.4)' },
+  offline: { tile: 'bg-white/[0.04]', iconFill: 'rgba(255,255,255,0.4)', showOfflineBadge: true },
 };
-
-/**
- * Critical-tile ping overlay — a brighter red than the solid `critical` tint so
- * the expanding ring stays legible as it animates over it (picked from the same
- * audition as the tile tints).
- */
-export const DEVICE_HEALTH_CRITICAL_PING = 'bg-[oklch(0.591_0.192_25_/_0.55)]';
 
 /**
  * Human-readable reason for the worst condition — drives the badge

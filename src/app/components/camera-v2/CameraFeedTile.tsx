@@ -205,7 +205,7 @@ export function CameraFeedTile({
     return (
       <div
         ref={dropRef}
-        className={`w-full h-full relative flex items-center justify-center bg-[#141414] transition-shadow duration-150 ease-out
+        className={`w-full h-full relative flex items-center justify-center bg-surface-1 transition-shadow duration-150 ease-out
           ${showDropAccent ? 'shadow-[inset_0_0_0_2px_rgba(56,189,248,0.6)]' : ''}`}
       >
         <div className="flex flex-col items-center gap-2 text-white/60">

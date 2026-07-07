@@ -19,7 +19,7 @@
  * Anything still pending is tracked in `docs/cesium-parity.md`.
  */
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { cloneElement, isValidElement, memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   CesiumMap,
   type CesiumHtmlMarker,
@@ -29,7 +29,9 @@ import {
   MapMarker,
   resolveMarkerStyle,
   resolveTargetMarkerStyle,
-  type Affiliation,
+  resolveAssetMarkerStyle,
+  type AssetHealth,
+  type AssetMarkerInteraction,
   type InteractionState,
   type TargetMarkerInteraction,
 } from '@/primitives';
@@ -61,6 +63,7 @@ import {
 import type { GotchaUnit } from './gotcha/types';
 import { effectiveSensorHealth, getUnitHealth } from './gotcha/gotchaHealth';
 import type { DeviceHealth } from './devices-panel/deviceHealth';
+import { MarkerOfflineBadge } from './devices-panel/OfflineBadge';
 import { CarIcon, TankIcon, TruckIcon, UnknownIcon } from '@/primitives/MapIcons';
 import { SEVERITY_COLOR, isUnclassifiedUnknown, UNKNOWN_GRAY, type Severity } from '@/primitives/urgency';
 import { Phone } from '@/lib/icons/central';
@@ -175,6 +178,12 @@ export interface CesiumTacticalMapProps {
   onAssetClick?: (assetId: string) => void;
   /** Asset IDs that are offline — show a gray badge on the map */
   offlineAssetIds?: string[];
+  /**
+   * Per-asset health (worst-wins, from the devices panel). Drives the marker
+   * ring color: black/ok, amber/warning, red/error,
+   * dashed gray/offline. Assets not in the map render as `ok`.
+   */
+  assetHealthById?: ReadonlyMap<string, AssetHealth>;
   /** Floodlight IDs currently lit — keeps their beam cone visible even at rest. */
   floodlightOnIds?: Set<string>;
   /** Speaker IDs currently broadcasting — energizes their marker (white ring + pulse). */
@@ -252,9 +261,8 @@ const TARGET_SURFACE = 32;
 const TARGET_RING = 26;
 /** Launcher marker glyph — bumped past the icon's 24 default to match the 32px floodlight/speaker glyphs. */
 const LAUNCHER_GLYPH = 32;
-/** Floodlight beam: a short, always-on amber wedge showing aim direction. */
+/** Floodlight beam: a short wedge showing aim direction, pinned on while lit. */
 const FLOODLIGHT_BEAM_M = 550;
-const FLOODLIGHT_BEAM_COLOR = '#f59e0b';
 /**
  * Directional cone width (degrees) drawn while a camera is slewed onto a
  * target. A pointing camera shows where it's *looking*, so the look-at wedge is
@@ -268,7 +276,7 @@ const CAMERA_LOOK_AT_FOV_DEG = 120;
  * Gotcha sector / ring colour from a worst-wins `DeviceHealth`. Reuses the
  * unified urgency palette (`SEVERITY_COLOR`) so the effector speaks the same
  * colour language as the threat markers: warning → MEDIUM amber,
- * error/critical → HIGH/CRITICAL red. Offline is the neutral LOW zinc
+ * error → HIGH red. Offline is the neutral LOW zinc
  * (known-absent, not alarmist); healthy sectors use the friendly cyan.
  */
 const GOTCHA_OK_COLOR = '#22b8cf';
@@ -277,7 +285,6 @@ function gotchaSectorColor(health: DeviceHealth): string {
     case 'warning':
       return SEVERITY_COLOR.MEDIUM;
     case 'error':
-    case 'critical':
       return SEVERITY_COLOR.HIGH;
     case 'offline':
       return SEVERITY_COLOR.LOW;
@@ -515,6 +522,7 @@ function CesiumTacticalMapImpl({
   flowPreview,
   selectedAssetId,
   offlineAssetIds,
+  assetHealthById,
   floodlightOnIds,
   speakerPlayingIds,
   regulusEffectors,
@@ -542,7 +550,17 @@ function CesiumTacticalMapImpl({
   onContextMenuAction,
 }: CesiumTacticalMapProps) {
   const t = useStrings().map;
-  const offlineSet = useMemo(() => new Set(offlineAssetIds ?? []), [offlineAssetIds]);
+  // Offline can arrive via the legacy id list or as `offline` health — union
+  // both so FOV suppression / kinematics behave the same either way.
+  const offlineSet = useMemo(() => {
+    const s = new Set(offlineAssetIds ?? []);
+    if (assetHealthById) {
+      for (const [id, health] of assetHealthById) {
+        if (health === 'offline') s.add(id);
+      }
+    }
+    return s;
+  }, [offlineAssetIds, assetHealthById]);
   const litFloodlightSet = useMemo(() => floodlightOnIds ?? new Set<string>(), [floodlightOnIds]);
   const playingSpeakerSet = useMemo(() => speakerPlayingIds ?? new Set<string>(), [speakerPlayingIds]);
   // The draft preview only shows while no real flow geometry exists; once
@@ -866,17 +884,17 @@ function CesiumTacticalMapImpl({
       const isHighlighted = highlightedSensorSet.has(id);
       const isHovered = isHoveredFromCard || isHoveredOnMap;
       const isActive = active && !isOffline;
-      const affiliation: Affiliation = 'friendly';
-      const state: InteractionState = isOffline
-        ? 'disabled'
-        : isHovered
-          ? 'hovered'
-          : isSelected
-            ? 'selected'
-            : isActive
-              ? 'active'
-              : 'default';
-      const style = resolveMarkerStyle(state, affiliation);
+      // Health owns the ring color (black/ok, amber/warning, red/error,
+      // dashed gray/offline); interaction only adds glow + emphasis on top.
+      const health: AssetHealth = isOffline ? 'offline' : (assetHealthById?.get(id) ?? 'ok');
+      const interaction: AssetMarkerInteraction = isHovered
+        ? 'hovered'
+        : isSelected
+          ? 'selected'
+          : isActive
+            ? 'active'
+            : 'default';
+      const style = resolveAssetMarkerStyle(health, interaction);
 
       // FOV cone appears only when the user is engaging with this sensor —
       // hovering it on the map, hovering it in the card sidebar, or seeing it
@@ -898,21 +916,31 @@ function CesiumTacticalMapImpl({
             : 0.4);
       const fovColor = fovOptions?.color ?? '#22b8cf';
 
+      // Icons arrive pre-built (`<CameraIcon outlined />`); inject the resolved
+      // glyph color so non-white treatments (offline dim) actually propagate —
+      // the tactical icons default to a hardcoded white fill otherwise.
+      const coloredIcon = isValidElement<{ fill?: string }>(icon)
+        ? cloneElement(icon, { fill: style.glyphColor })
+        : icon;
+
       return {
         id,
         lat,
         lon,
         zIndex: isHovered ? 40 : isSelected || isActive ? 30 : 10,
         content: (
-          <MapMarker
-            icon={icon}
-            style={style}
-            surfaceSize={surfaceSize}
-            ringSize={ringSize}
-            label={label}
-            showLabel={isHovered || isSelected || isActive}
-            pulse={isHovered || isSelected || isActive}
-          />
+          <div className="relative inline-flex">
+            <MapMarker
+              icon={coloredIcon}
+              style={style}
+              surfaceSize={surfaceSize}
+              ringSize={ringSize}
+              label={label}
+              showLabel={isHovered || isSelected || isActive}
+              pulse={isHovered || isSelected || isActive}
+            />
+            {isOffline && <MarkerOfflineBadge />}
+          </div>
         ),
         fov: fov && showFov
           ? { rangeM: fov.rangeM, bearingDeg: fov.bearingDeg, widthDeg: fov.widthDeg, color: fovColor, opacity: fovOpacity }
@@ -925,6 +953,7 @@ function CesiumTacticalMapImpl({
     },
     [
       offlineSet,
+      assetHealthById,
       selectedAssetId,
       hoveredSensorIdFromCard,
       hoveredMarkerId,
@@ -1014,7 +1043,7 @@ function CesiumTacticalMapImpl({
           SENSOR_RING,
           // Beam reads like a sensor FOV: shown on hover/select, plus
           // pinned on whenever the floodlight is lit.
-          { color: FLOODLIGHT_BEAM_COLOR, alwaysOn: litFloodlightSet.has(a.id) },
+          { alwaysOn: litFloodlightSet.has(a.id) },
           // Lit floodlight also energizes the marker itself: white ring + pulse.
           litFloodlightSet.has(a.id),
         ),
@@ -1172,14 +1201,13 @@ function CesiumTacticalMapImpl({
       const isHoveredFromCard = hoveredSensorIdFromCard === d.id;
       const isHoveredOnMap = hoveredMarkerId === d.id;
       const isHovered = isHoveredFromCard || isHoveredOnMap;
-      const state: InteractionState = isOffline
-        ? 'disabled'
-        : isSelected
-          ? 'selected'
-          : isHovered
-            ? 'hovered'
-            : 'default';
-      const style = resolveMarkerStyle(state, 'friendly');
+      const health: AssetHealth = isOffline ? 'offline' : (assetHealthById?.get(d.id) ?? 'ok');
+      const interaction: AssetMarkerInteraction = isSelected
+        ? 'selected'
+        : isHovered
+          ? 'hovered'
+          : 'default';
+      const style = resolveAssetMarkerStyle(health, interaction);
       const showFov = d.headingDeg != null && !isOffline && (isHovered || isSelected);
       out.push({
         id: d.id,
@@ -1187,22 +1215,24 @@ function CesiumTacticalMapImpl({
         lon: d.lon,
         zIndex: isHovered ? 40 : 25,
         content: (
-          <MapMarker
-            icon={
-              <DroneIcon
-                color={style.glyphColor}
-                disabled={isOffline}
-                rotationDeg={droneRotationFromHeading(d.headingDeg)}
-              />
-            }
-            style={style}
-            surfaceSize={SENSOR_SURFACE}
-            ringSize={SENSOR_RING}
-            heading={d.headingDeg}
-            label={d.name}
-            showLabel={isHovered || isSelected}
-            pulse={isHovered || isSelected}
-          />
+          <div className="relative inline-flex">
+            <MapMarker
+              icon={
+                <DroneIcon
+                  color={style.glyphColor}
+                  rotationDeg={droneRotationFromHeading(d.headingDeg)}
+                />
+              }
+              style={style}
+              surfaceSize={SENSOR_SURFACE}
+              ringSize={SENSOR_RING}
+              heading={d.headingDeg}
+              label={d.name}
+              showLabel={isHovered || isSelected}
+              pulse={isHovered || isSelected}
+            />
+            {isOffline && <MarkerOfflineBadge />}
+          </div>
         ),
         fov: showFov
           ? {
@@ -1220,7 +1250,7 @@ function CesiumTacticalMapImpl({
       });
     }
     return out;
-  }, [friendlyDrones, offlineSet, selectedAssetId, hoveredSensorIdFromCard, hoveredMarkerId]);
+  }, [friendlyDrones, offlineSet, assetHealthById, selectedAssetId, hoveredSensorIdFromCard, hoveredMarkerId]);
 
   /** Slice 5 — launcher effectors prop. */
   const launcherEffectorMarkers = useMemo<CesiumHtmlMarker[]>(() => {
@@ -1815,7 +1845,7 @@ function CesiumTacticalMapImpl({
   // panel even though the basemap it requests is fully fetchable.
   if (!CESIUM_ION_TOKEN && !darkMonochromeMap) {
     return (
-      <div className="absolute inset-0 flex items-center justify-center bg-zinc-950 text-zinc-300">
+      <div className="absolute inset-0 flex items-center justify-center bg-slate-1 text-slate-11">
         <div className="rounded-md bg-amber-500/10 px-4 py-3 text-sm shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
           <strong>Cesium token missing.</strong> Set <code className="font-mono">VITE_CESIUM_ION_TOKEN</code> in <code className="font-mono">.env.local</code> and restart the dev server.
         </div>
@@ -1849,7 +1879,7 @@ function CesiumTacticalMapImpl({
         onClick={() => setSceneMode((prev) => (prev === '3D' ? '2D' : '3D'))}
         aria-label={sceneMode === '3D' ? 'Switch to 2D map' : 'Switch to 3D map'}
         aria-pressed={sceneMode === '3D'}
-        className="absolute bottom-3 left-3 z-20 pointer-events-auto w-7 h-7 bg-zinc-900/80 backdrop-blur-md text-xs font-mono font-semibold tabular-nums text-zinc-100 shadow-[0_4px_12px_rgba(0,0,0,0.45)] hover:bg-zinc-800/90 active:bg-zinc-950/85 transition-colors flex items-center justify-center select-none"
+        className="absolute bottom-3 left-3 z-20 pointer-events-auto w-7 h-7 bg-slate-2/80 backdrop-blur-md text-xs font-mono font-semibold tabular-nums text-slate-12 shadow-[0_4px_12px_rgba(0,0,0,0.45)] hover:bg-slate-4/90 active:bg-slate-1/85 transition-colors flex items-center justify-center select-none"
       >
         {sceneMode === '3D' ? '2D' : '3D'}
       </button>
@@ -1939,7 +1969,7 @@ function CesiumContextMenu({
             type="button"
             role="menuitem"
             onClick={() => onAction(item.id)}
-            className="block w-full px-3 py-1.5 text-end text-xs hover:bg-white/[0.08] focus-visible:bg-white/[0.08] focus-visible:outline-none cursor-pointer"
+            className="block w-full px-3 py-1.5 text-end text-xs hover:bg-state-hover-overlay focus-visible:bg-white/[0.08] focus-visible:outline-none cursor-pointer"
           >
             {item.label}
           </button>

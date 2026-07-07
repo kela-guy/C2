@@ -94,16 +94,16 @@ export function MapDrawToolbar({ inlineStartOffset = 0 }: MapDrawToolbarProps) {
                       setDrawTool(active ? null : entry.id);
                     }
                   }}
-                  className={`grid size-8 place-items-center rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
+                  className={`grid size-8 place-items-center rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring ${
                     active
-                      ? 'bg-white/[0.16] text-white ring-1 ring-inset ring-white/25'
-                      : 'text-white/70 hover:bg-white/10 hover:text-white'
+                      ? 'bg-state-selected text-white ring-1 ring-inset ring-white/25'
+                      : 'text-white/70 hover:bg-state-hover-overlay hover:text-white'
                   }`}
                 >
                   <entry.Icon size={16} />
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="right" sideOffset={8} className="text-[11px]">
+              <TooltipContent side="right" sideOffset={8} className="text-xs-plus">
                 {entry.label}
               </TooltipContent>
             </Tooltip>

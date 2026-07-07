@@ -8,14 +8,12 @@
  * fields `getDeviceHealth` already reads (connection state / errors), so the
  * shared tile + roll-up reuse the existing derivation with no new vocabulary:
  *   warning  → connectionState 'warning'
- *   error    → an `errors[]` entry (static red, no pulse)
- *   critical → connectionState 'error' (pulsing red)
+ *   error    → an `errors[]` entry (red)
  *   offline  → connectionState 'offline'
  *   ok       → online
  */
 
 import type {
-  ConnectionState,
   Device,
   DeviceError,
   OperationalStatus,
@@ -34,8 +32,6 @@ type HealthFields = Pick<
 function healthToDeviceFields(health: DeviceHealth, faultMessage: string): HealthFields {
   const operationalStatus: OperationalStatus = 'operational';
   switch (health) {
-    case 'critical':
-      return { status: 'active', operationalStatus, connectionState: 'error' as ConnectionState };
     case 'error':
       return {
         status: 'active',

@@ -96,8 +96,8 @@ const DESIGN_TOKENS: Record<RailDesign, DesignTokens> = {
     lane: 'rounded-md bg-surface-2/85 backdrop-blur-md px-2 py-2 ring-1 ring-inset ring-border-default',
     chevron:
       'text-slate-11 hover:bg-state-hover hover:text-slate-12 rounded-sm',
-    valueButton: `rounded-[3px] text-[12px] ${FIELD_WELL}`,
-    valueInput: `rounded-[3px] text-[12px] ${FIELD_WELL_EDIT}`,
+    valueButton: `rounded-[3px] text-xs ${FIELD_WELL}`,
+    valueInput: `rounded-[3px] text-xs ${FIELD_WELL_EDIT}`,
     slider: SLIDER_HAIRLINE,
     liveDot: 'side-dot',
     liveDotClass: 'bg-slate-12/65',
@@ -106,8 +106,8 @@ const DESIGN_TOKENS: Record<RailDesign, DesignTokens> = {
   'glass-pills': {
     lane: '',
     chevron: `bg-surface-1/55 backdrop-blur-md ring-1 ring-inset ring-border-default text-slate-11 hover:bg-surface-1/70 hover:text-slate-12`,
-    valueButton: `rounded-full text-[12px] ${FIELD_WELL}`,
-    valueInput: `rounded-full text-[12px] ${FIELD_WELL_EDIT}`,
+    valueButton: `rounded-full text-xs ${FIELD_WELL}`,
+    valueInput: `rounded-full text-xs ${FIELD_WELL_EDIT}`,
     slider: SLIDER_GLASS,
     liveDot: 'side-dot',
     liveDotClass: 'bg-slate-12/85',
@@ -116,8 +116,8 @@ const DESIGN_TOKENS: Record<RailDesign, DesignTokens> = {
   'high-contrast': {
     lane: '',
     chevron: `rounded-sm text-slate-12 hover:bg-state-hover ${TEXT_SHADOW_STRONG}`,
-    valueButton: `rounded-[3px] text-[14px] font-medium ${FIELD_WELL}`,
-    valueInput: `rounded-[3px] text-[14px] font-medium ${FIELD_WELL_EDIT}`,
+    valueButton: `rounded-[3px] text-sm font-medium ${FIELD_WELL}`,
+    valueInput: `rounded-[3px] text-sm font-medium ${FIELD_WELL_EDIT}`,
     slider: SLIDER_BOLD,
     liveDot: 'side-dot-bold',
     liveDotClass: `bg-slate-12 ${DOT_HALO_SHADOW}`,
@@ -126,8 +126,8 @@ const DESIGN_TOKENS: Record<RailDesign, DesignTokens> = {
   'tube-chips': {
     lane: '',
     chevron: `rounded-[2px] bg-surface-1/45 ring-1 ring-inset ring-border-default text-slate-11 hover:bg-surface-1/65 hover:text-slate-12`,
-    valueButton: `rounded-[2px] text-[12px] ${FIELD_WELL}`,
-    valueInput: `rounded-[2px] text-[12px] ${FIELD_WELL_EDIT}`,
+    valueButton: `rounded-[2px] text-xs ${FIELD_WELL}`,
+    valueInput: `rounded-[2px] text-xs ${FIELD_WELL_EDIT}`,
     slider: SLIDER_TUBE,
     liveDot: 'tube-tick',
     liveDotClass: 'bg-slate-12/85',
@@ -137,8 +137,8 @@ const DESIGN_TOKENS: Record<RailDesign, DesignTokens> = {
     lane: '',
     chevron:
       'text-slate-11 hover:bg-state-hover hover:text-slate-12 rounded-sm',
-    valueButton: `rounded-[3px] text-[12px] ${FIELD_WELL}`,
-    valueInput: `rounded-[3px] text-[12px] ${FIELD_WELL_EDIT}`,
+    valueButton: `rounded-[3px] text-xs ${FIELD_WELL}`,
+    valueInput: `rounded-[3px] text-xs ${FIELD_WELL_EDIT}`,
     slider: SLIDER_HAIRLINE,
     liveDot: 'side-dot',
     liveDotClass: 'bg-slate-12/65',
@@ -336,15 +336,15 @@ function IdleRow({
     >
       <span className="mt-0.5 w-px shrink-0 bg-slate-12/40" aria-hidden />
       <div>
-        <div id={labelId} className="text-[12px] font-medium leading-none text-slate-11">
+        <div id={labelId} className="text-xs font-medium leading-none text-slate-11">
           {label}
         </div>
         <span
           id={valueId}
-          className={`mt-1.5 block whitespace-nowrap font-mono text-[20px] leading-none tabular-nums ${valueClass}`}
+          className={`mt-1.5 block whitespace-nowrap font-mono text-xl leading-none tabular-nums ${valueClass}`}
         >
           {value}
-          <span className="ms-0.5 text-[12px] text-slate-11">{unit}</span>
+          <span className="ms-0.5 text-xs text-slate-11">{unit}</span>
         </span>
       </div>
     </div>

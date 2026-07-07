@@ -4,7 +4,7 @@ export const spec: ComponentSpec = {
   name: 'CopyButton',
   filePath: 'src/primitives/CopyButton.tsx',
   purpose:
-    'Quiet, hover-revealed icon button that copies a single string to the clipboard. Designed to live inside a row marked `group/copy` so it only appears for the row the operator is pointing at — never as always-on chrome that competes with the value.',
+    'Quiet, hover-revealed icon button that copies a single string to the clipboard — the shadcn ui/button as variant="ghost" size="icon" with the reveal/feedback treatment layered on top. Designed to live inside a row marked `group/copy` so it only appears for the row the operator is pointing at — never as always-on chrome that competes with the value.',
   location: 'Primitives',
   status: 'prototype',
 
@@ -88,9 +88,9 @@ export const spec: ComponentSpec = {
 
   tokens: {
     colors: [
-      { name: 'icon-default', value: 'text-zinc-500 (#71717a)', usage: 'Icon color at rest' },
-      { name: 'icon-hover', value: 'text-zinc-200 (#e4e4e7)', usage: 'Icon color on hover / focus-visible' },
-      { name: 'icon-copied', value: 'text-zinc-50 (#fafafa)', usage: 'Icon color while the copied state is held — one zinc step brighter than the hover tint, so the Check has presence without leaving the neutral palette' },
+      { name: 'icon-default', value: 'text-slate-9 (#71717a)', usage: 'Icon color at rest' },
+      { name: 'icon-hover', value: 'text-slate-11 (#e4e4e7)', usage: 'Icon color on hover / focus-visible' },
+      { name: 'icon-copied', value: 'text-slate-12 (#fafafa)', usage: 'Icon color while the copied state is held — one zinc step brighter than the hover tint, so the Check has presence without leaving the neutral palette' },
       { name: 'focus-ring', value: 'ring-white/30', usage: 'Subtle 1px focus ring' },
     ],
     typography: [

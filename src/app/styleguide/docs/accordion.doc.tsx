@@ -1,8 +1,10 @@
 /**
- * Co-located doc module for the generic Accordion compound. Documents the
- * shadcn primitive (`@/shared/components/ui/accordion`) — a vertically stacked
- * set of collapsible sections — with neutral example content. Meta lives in
- * `registry/manifest.json`.
+ * Co-located doc module for the Accordion concept. Documents the shadcn
+ * primitive (`@/shared/components/ui/accordion`) — a vertically stacked set of
+ * collapsible sections — plus the domain variant AccordionSection, the
+ * card-internal collapsible grammar (white/8% trigger strip, leading icon,
+ * header action) that CardDetails, CardIdentity, and CardLog compose. Meta
+ * lives in `registry/manifest.json`.
  */
 import {
   Accordion,
@@ -10,7 +12,10 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/shared/components/ui/accordion';
+import { Eye, History, Info } from '@/lib/icons/central';
+import { AccordionSection, TelemetryRow } from '@/primitives';
 import accordionSrc from '@/shared/components/ui/accordion.tsx?raw';
+import accordionSectionSrc from '@/primitives/AccordionSection.tsx?raw';
 import type { ComponentDocModule } from '../registry/types';
 
 export const accordionDoc: ComponentDocModule = {
@@ -102,6 +107,63 @@ export const accordionDoc: ComponentDocModule = {
         </div>
       ),
     },
+    {
+      id: 'accordion-section',
+      title: 'Domain variant: AccordionSection',
+      description:
+        'The card-internal collapsible section — a Radix Collapsible wearing the TargetCard section grammar: white/8% trigger strip, optional leading icon, rotating chevron, and the collapsible height animation. Sections stack as independent Collapsibles, so any combination can be open at once (unlike the single-type Accordion above).',
+      code: `import { AccordionSection, TelemetryRow } from "@/primitives"
+import { Eye, Info, History } from "@/lib/icons/central"
+
+<AccordionSection title="מידע כללי" icon={Info}>…</AccordionSection>
+<AccordionSection title="טלמטריה" icon={Eye} defaultOpen>
+  <div className="w-full grid grid-cols-2 gap-x-8 gap-y-2 py-1">
+    <TelemetryRow label="גובה" value="120m" />
+    <TelemetryRow label="מהירות" value="45 km/h" />
+  </div>
+</AccordionSection>
+<AccordionSection title="יומן (3)" icon={History}>…</AccordionSection>`,
+      render: () => (
+        <div className="w-[320px]">
+          <AccordionSection title="מידע כללי" icon={Info}>
+            <div className="w-full py-2 text-xs text-slate-10">DJI Mavic 3 · SN 4X92-AA17</div>
+          </AccordionSection>
+          <AccordionSection title="טלמטריה" icon={Eye} defaultOpen>
+            <div className="grid w-full grid-cols-2 gap-x-8 gap-y-2 py-1">
+              <TelemetryRow label="גובה" value="120m" />
+              <TelemetryRow label="כיוון" value="270°" />
+            </div>
+          </AccordionSection>
+          <AccordionSection title="יומן (3)" icon={History}>
+            <div className="w-full py-2 text-xs text-slate-10">3 אירועים</div>
+          </AccordionSection>
+        </div>
+      ),
+    },
+    {
+      id: 'accordion-section-header-action',
+      title: 'AccordionSection: header action',
+      description:
+        'headerAction renders before the chevron — e.g. CardLog places its expand-all affordance there. Stop propagation inside the action so it does not toggle the section.',
+      code: `<AccordionSection
+  title="יומן (12)"
+  icon={History}
+  headerAction={<span className="text-2xs text-slate-9">הצג הכל</span>}
+>
+  …
+</AccordionSection>`,
+      render: () => (
+        <div className="w-[320px]">
+          <AccordionSection
+            title="יומן (12)"
+            icon={History}
+            headerAction={<span className="text-2xs text-slate-9">הצג הכל</span>}
+          >
+            <div className="w-full py-2 text-xs text-slate-10">12 אירועים</div>
+          </AccordionSection>
+        </div>
+      ),
+    },
   ],
   edgeCases: [
     {
@@ -177,5 +239,30 @@ export const accordionDoc: ComponentDocModule = {
         </div>
       ),
     },
+    {
+      id: 'section-long-title',
+      label: 'AccordionSection: long title',
+      note: 'The trigger keeps the chevron pinned at the inline-end; a long title pushes into the free space and wraps if needed.',
+      render: () => (
+        <div className="w-[240px]">
+          <AccordionSection title="כותרת ארוכה במיוחד שמתארת את התוכן בפירוט רב">
+            <div className="w-full py-2 text-xs text-slate-10">תוכן</div>
+          </AccordionSection>
+        </div>
+      ),
+    },
+    {
+      id: 'section-no-icon',
+      label: 'AccordionSection: no icon',
+      note: 'The icon is optional — without it the title aligns to the strip start.',
+      render: () => (
+        <div className="w-[240px]">
+          <AccordionSection title="ללא אייקון" defaultOpen>
+            <div className="w-full py-2 text-xs text-slate-10">תוכן</div>
+          </AccordionSection>
+        </div>
+      ),
+    },
   ],
+  relatedFiles: [{ file: 'src/primitives/AccordionSection.tsx', code: accordionSectionSrc }],
 };

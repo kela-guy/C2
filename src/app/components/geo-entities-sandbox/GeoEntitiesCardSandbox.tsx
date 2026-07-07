@@ -203,7 +203,7 @@ export default function GeoEntitiesCardSandbox() {
     >
       <header className="mb-6 flex flex-col gap-1">
         <h1 className="text-lg font-semibold">Geo Entities Card — 5 options</h1>
-        <p className="text-[12.5px] text-white/55">
+        <p className="text-sm-minus text-white/55">
           Standalone review of card designs for the map-draw panel's Layers
           list. Each column is 367px wide (matches the docked panel).
           Buttons are inert.
@@ -220,12 +220,12 @@ export default function GeoEntitiesCardSandbox() {
               aria-label={opt.label}
             >
               <div className="flex flex-col gap-0.5">
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-white/50">
+                <span className="text-xs-plus font-semibold uppercase tracking-wide text-white/50">
                   {opt.label}
                 </span>
-                <span className="text-[11px] text-white/40">{opt.summary}</span>
+                <span className="text-xs-plus text-white/40">{opt.summary}</span>
               </div>
-              <div className="rounded-md border border-white/5 bg-[#161616] p-3">
+              <div className="rounded-md border border-white/5 bg-surface-2 p-3">
                 <ul className="space-y-1.5">
                   {MOCK_SHAPES.map((shape) => (
                     <li key={shape.id} className="list-none">
@@ -252,7 +252,7 @@ function VisibilityToggle({ hidden }: { hidden?: boolean }) {
       type="button"
       aria-label={hidden ? 'Show layer' : 'Hide layer'}
       title={hidden ? 'Show layer' : 'Hide layer'}
-      className="grid size-6 shrink-0 place-items-center rounded text-white/55 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+      className="grid size-6 shrink-0 place-items-center rounded text-white/55 transition-colors hover:bg-state-hover-overlay hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
     >
       {hidden ? <EyeOff size={14} /> : <Eye size={14} />}
     </button>
@@ -285,12 +285,12 @@ function LockToggle({
             : 'Lock layer'
       }
       aria-pressed={!!locked}
-      className={`grid size-6 shrink-0 place-items-center rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
+      className={`grid size-6 shrink-0 place-items-center rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring ${
         locked ? 'text-white' : 'text-white/45'
       } ${
         disabled
           ? 'cursor-not-allowed opacity-70'
-          : 'hover:bg-white/10 hover:text-white'
+          : 'hover:bg-state-hover-overlay hover:text-white'
       }`}
     >
       {locked ? <Lock size={14} /> : <LockOpen size={14} />}
@@ -304,7 +304,7 @@ function CenterButton() {
       type="button"
       aria-label="Center on map"
       title="Center on map"
-      className="grid size-6 shrink-0 place-items-center rounded text-white/55 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+      className="grid size-6 shrink-0 place-items-center rounded text-white/55 transition-colors hover:bg-state-hover-overlay hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
     >
       <MapPin size={14} />
     </button>
@@ -317,7 +317,7 @@ function DeleteButton() {
       type="button"
       aria-label="Delete layer"
       title="Delete layer"
-      className="grid size-6 shrink-0 place-items-center rounded text-white/45 transition-colors hover:bg-rose-500/20 hover:text-rose-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+      className="grid size-6 shrink-0 place-items-center rounded text-white/45 transition-colors hover:bg-rose-500/20 hover:text-rose-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
     >
       <Trash2 size={14} />
     </button>
@@ -343,7 +343,7 @@ function StatusDot({ status }: { status?: GeoAreaStatus }) {
 
 function CardOpt1Baseline({ shape }: { shape: GeoShape }) {
   return (
-    <div className="group flex cursor-pointer flex-col gap-1.5 rounded-[2px] border border-transparent bg-white/[0.03] px-2.5 py-2 transition-colors hover:border-white/10 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25">
+    <div className="group flex cursor-pointer flex-col gap-1.5 rounded-[2px] border border-transparent bg-white/[0.03] px-2.5 py-2 transition-colors hover:border-white/10 hover:bg-state-hover-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring">
       <div className="flex items-center gap-2">
         <span
           className="grid size-5 shrink-0 place-items-center text-white/70"
@@ -353,13 +353,13 @@ function CardOpt1Baseline({ shape }: { shape: GeoShape }) {
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-1">
           <span
-            className={`truncate text-[13px] font-medium leading-tight ${
-              shape.hidden ? 'text-white/40' : 'text-zinc-100'
+            className={`truncate text-sm-minus font-medium leading-tight ${
+              shape.hidden ? 'text-white/40' : 'text-slate-12'
             }`}
           >
             {shapeLabel(shape)}
           </span>
-          <span className="truncate text-[11px] leading-tight text-white/45">
+          <span className="truncate text-xs-plus leading-tight text-white/45">
             {typeLabel(shape)}
           </span>
         </span>
@@ -381,7 +381,7 @@ function CardOpt1Baseline({ shape }: { shape: GeoShape }) {
 
 function CardOpt2Compact({ shape }: { shape: GeoShape }) {
   return (
-    <div className="group relative flex cursor-pointer items-center gap-2 overflow-hidden rounded-[2px] border border-transparent bg-white/[0.03] px-2.5 py-2 transition-colors hover:border-white/10 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25">
+    <div className="group relative flex cursor-pointer items-center gap-2 overflow-hidden rounded-[2px] border border-transparent bg-white/[0.03] px-2.5 py-2 transition-colors hover:border-white/10 hover:bg-state-hover-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring">
       {/* Leading accent — status color when set, otherwise a subtle
           transparent placeholder so all rows stay aligned. */}
       <span
@@ -399,13 +399,13 @@ function CardOpt2Compact({ shape }: { shape: GeoShape }) {
       </span>
       <span className="flex min-w-0 flex-1 items-baseline gap-1.5">
         <span
-          className={`truncate text-[13px] font-medium leading-tight ${
-            shape.hidden ? 'text-white/40' : 'text-zinc-100'
+          className={`truncate text-sm-minus font-medium leading-tight ${
+            shape.hidden ? 'text-white/40' : 'text-slate-12'
           }`}
         >
           {shapeLabel(shape)}
         </span>
-        <span className="truncate text-[11px] leading-tight text-white/45">
+        <span className="truncate text-xs-plus leading-tight text-white/45">
           · {typeLabel(shape)}
         </span>
       </span>
@@ -425,7 +425,7 @@ function CardOpt2Compact({ shape }: { shape: GeoShape }) {
 
 function CardOpt3Rail({ shape }: { shape: GeoShape }) {
   return (
-    <div className="group flex cursor-pointer items-stretch overflow-hidden rounded-[2px] border border-transparent bg-white/[0.03] transition-colors hover:border-white/10 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25">
+    <div className="group flex cursor-pointer items-stretch overflow-hidden rounded-[2px] border border-transparent bg-white/[0.03] transition-colors hover:border-white/10 hover:bg-state-hover-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring">
       <span
         aria-hidden
         className="w-[3px] shrink-0"
@@ -440,13 +440,13 @@ function CardOpt3Rail({ shape }: { shape: GeoShape }) {
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span
-            className={`truncate text-[13px] font-medium leading-tight ${
-              shape.hidden ? 'text-white/40' : 'text-zinc-100'
+            className={`truncate text-sm-minus font-medium leading-tight ${
+              shape.hidden ? 'text-white/40' : 'text-slate-12'
             }`}
           >
             {shapeLabel(shape)}
           </span>
-          <span className="truncate text-[11px] leading-tight text-white/45">
+          <span className="truncate text-xs-plus leading-tight text-white/45">
             {typeLabel(shape)}
           </span>
         </span>
@@ -468,7 +468,7 @@ function CardOpt3Rail({ shape }: { shape: GeoShape }) {
 function CardOpt4Pill({ shape }: { shape: GeoShape }) {
   const color = typeColor(shape);
   return (
-    <div className="group flex cursor-pointer flex-col gap-1.5 rounded-[2px] border border-transparent bg-white/[0.03] px-2.5 py-2 transition-colors hover:border-white/10 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25">
+    <div className="group flex cursor-pointer flex-col gap-1.5 rounded-[2px] border border-transparent bg-white/[0.03] px-2.5 py-2 transition-colors hover:border-white/10 hover:bg-state-hover-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring">
       <div className="flex items-center gap-2">
         <span
           className="grid size-5 shrink-0 place-items-center text-white/70"
@@ -477,8 +477,8 @@ function CardOpt4Pill({ shape }: { shape: GeoShape }) {
           <ShapeKindIcon kind={shape.kind} size={15} />
         </span>
         <span
-          className={`min-w-0 flex-1 truncate text-[13px] font-medium leading-tight ${
-            shape.hidden ? 'text-white/40' : 'text-zinc-100'
+          className={`min-w-0 flex-1 truncate text-sm-minus font-medium leading-tight ${
+            shape.hidden ? 'text-white/40' : 'text-slate-12'
           }`}
         >
           {shapeLabel(shape)}
@@ -488,7 +488,7 @@ function CardOpt4Pill({ shape }: { shape: GeoShape }) {
       </div>
       <div className="flex items-center gap-1.5">
         <span
-          className="inline-flex items-center gap-1.5 rounded-full border px-1.5 py-0.5 text-[10.5px] font-medium leading-none"
+          className="inline-flex items-center gap-1.5 rounded-full border px-1.5 py-0.5 text-xs-plus font-medium leading-none"
           style={{
             background: `${color}1f`,
             borderColor: `${color}66`,
@@ -519,7 +519,7 @@ function CardOpt4Pill({ shape }: { shape: GeoShape }) {
 function CardOpt5Kebab({ shape }: { shape: GeoShape }) {
   const color = typeColor(shape);
   return (
-    <div className="group flex cursor-pointer items-center gap-2.5 rounded-[2px] border border-transparent bg-white/[0.03] px-2 py-2 transition-colors hover:border-white/10 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25">
+    <div className="group flex cursor-pointer items-center gap-2.5 rounded-[2px] border border-transparent bg-white/[0.03] px-2 py-2 transition-colors hover:border-white/10 hover:bg-state-hover-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring">
       <span
         aria-hidden
         className="grid size-8 shrink-0 place-items-center rounded-[3px] ring-1 ring-inset"
@@ -536,13 +536,13 @@ function CardOpt5Kebab({ shape }: { shape: GeoShape }) {
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span
-          className={`truncate text-[13px] font-medium leading-tight ${
-            shape.hidden ? 'text-white/40' : 'text-zinc-100'
+          className={`truncate text-sm-minus font-medium leading-tight ${
+            shape.hidden ? 'text-white/40' : 'text-slate-12'
           }`}
         >
           {shapeLabel(shape)}
         </span>
-        <span className="flex items-center gap-1.5 text-[11px] leading-tight text-white/50">
+        <span className="flex items-center gap-1.5 text-xs-plus leading-tight text-white/50">
           <span className="truncate">{typeLabel(shape)}</span>
           {shape.hidden && (
             <span className="inline-flex items-center gap-1 text-white/40">
@@ -567,7 +567,7 @@ function CardOpt5Kebab({ shape }: { shape: GeoShape }) {
         type="button"
         aria-label="More actions"
         title="More actions"
-        className="grid size-7 shrink-0 place-items-center rounded text-white/55 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+        className="grid size-7 shrink-0 place-items-center rounded text-white/55 transition-colors hover:bg-state-hover-overlay hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
       >
         <MoreVertical size={15} />
       </button>
@@ -617,7 +617,7 @@ function CardOpt6CompactRail({ shape }: { shape: GeoShape }) {
           e.preventDefault();
         }
       }}
-      className={`group flex cursor-pointer items-stretch overflow-hidden rounded-[2px] border border-transparent bg-white/[0.03] transition-[background,border-color,opacity] hover:border-white/10 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 ${
+      className={`group flex cursor-pointer items-stretch overflow-hidden rounded-[2px] border border-transparent bg-white/[0.03] transition-[background,border-color,opacity] hover:border-white/10 hover:bg-state-hover-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring ${
         shape.hidden ? 'opacity-55' : ''
       }`}
     >
@@ -638,13 +638,13 @@ function CardOpt6CompactRail({ shape }: { shape: GeoShape }) {
         </span>
         <span className="flex min-w-0 flex-1 items-baseline gap-1.5">
           <span
-            className={`truncate text-[13px] font-medium leading-tight ${
-              shape.hidden ? 'text-white/60' : 'text-zinc-100'
+            className={`truncate text-sm-minus font-medium leading-tight ${
+              shape.hidden ? 'text-white/60' : 'text-slate-12'
             }`}
           >
             {shapeLabel(shape)}
           </span>
-          <span className="truncate text-[11px] leading-tight text-white/45">
+          <span className="truncate text-xs-plus leading-tight text-white/45">
             · {typeLabel(shape)}
           </span>
         </span>

@@ -83,7 +83,7 @@ export function Annotation({
   style,
 }: AnnotationProps) {
   const label = (
-    <span className="whitespace-nowrap font-[family:var(--font-handwriting)] text-[19px] font-bold leading-none">
+    <span className="whitespace-nowrap font-[family:var(--font-handwriting)] text-xl font-bold leading-none">
       {children}
     </span>
   );

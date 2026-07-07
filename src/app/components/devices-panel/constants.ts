@@ -6,6 +6,7 @@
  * of the component graph.
  */
 
+import { HEALTH_DOT_CLASS } from '@/primitives/HealthStatus';
 import type {
   ConnectionState,
   DeviceType,
@@ -156,7 +157,6 @@ export const DEFAULT_DEVICE_PANEL_STRINGS: DevicesPanelStrings = {
   errorsFilterNoMatch: 'No matching entries',
   errorCopy: 'Copy',
   errorCopied: 'Copied',
-  healthCritical: 'Critical',
   healthError: 'Errors',
   healthWarning: 'Malfunction',
   healthOffline: 'Offline',
@@ -166,10 +166,10 @@ export const DEFAULT_DEVICE_PANEL_STRINGS: DevicesPanelStrings = {
 
 /** Per-state dot colour used for the small status indicator in the row icon. */
 export const CONNECTION_STATE_COLORS: Record<ConnectionState, string> = {
-  online: 'bg-emerald-400',
-  offline: 'bg-zinc-500',
-  error: 'bg-red-400',
-  warning: 'bg-amber-400',
+  online: HEALTH_DOT_CLASS.ok,
+  offline: HEALTH_DOT_CLASS.offline,
+  error: HEALTH_DOT_CLASS.error,
+  warning: HEALTH_DOT_CLASS.warning,
 };
 
 /** Per-state chip palette used for the inline `StatusChip` next to the device name. */

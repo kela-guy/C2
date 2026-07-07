@@ -18,30 +18,42 @@ Key anchors: design-system.md sections "Component Registry", "Design Tokens", "C
 
 ### Primitives
 
-- **Badge** (`@/shared/components/ui/badge`) — Compact label for status, counts, and metadata. Six variants on the C2 dark surface — translucent fills and layered rings, no hard borders. Docs: https://c2-hub-three.vercel.app/design-system#badge · install: `npx shadcn@latest add @c2/badge`
-- **NewUpdatesPill** (`@/primitives`) — Floating pill that surfaces new incoming detections above the list. Docs: https://c2-hub-three.vercel.app/design-system#new-updates · install: `npx shadcn@latest add @c2/new-updates-pill`
-- **Button** (`@/shared/components/ui/button`) — The base button primitive — the father of the button family. Owns the variant + size token system rendered in the C2 design (layered white opacities, oklch destructive). ActionButton, SplitActionButton, and CameraToggleButton are presets/composites built on it. Docs: https://c2-hub-three.vercel.app/design-system#button · install: `npx shadcn@latest add @c2/button`
-- **ActionButton** (`@/primitives`) — A preset of Button with the legacy action-button handoff stamp. Kept for back-compat across card action rows and toolbars; prefer Button in new code. Docs: https://c2-hub-three.vercel.app/design-system#action-button · install: `npx shadcn@latest add @c2/action-button`
-- **SplitActionButton** (`@/primitives`) — Two-segment composite: a primary Button action plus a dropdown menu of sub-options. Shares the base Button's variant + size tokens. Used for effector controls. Docs: https://c2-hub-three.vercel.app/design-system#split-action · install: `npx shadcn@latest add @c2/split-action-button`
-- **CameraToggleButton** (`@/primitives`) — Single on/off camera control built on Button. Off invites "point the camera"; pressing slews (pending) and settles into a brighter pressed state. Docs: https://c2-hub-three.vercel.app/design-system#camera-toggle
-- **CopyButton** (`@/primitives`) — Quiet, hover-revealed icon button that copies a single value to the clipboard. Docs: https://c2-hub-three.vercel.app/design-system#copy-button
-- **Accordion** (`@/shared/components/ui/accordion`) — A vertically stacked set of collapsible sections, built on Radix. Each item animates its height open and closed; type single/multiple controls how many can be open. Docs: https://c2-hub-three.vercel.app/design-system#accordion · install: `npx shadcn@latest add @c2/accordion`
-- **TelemetryRow** (`@/primitives`) — Single telemetry metric: icon, label, monospace value. Laid out in a 3-column grid that wraps by item count. Docs: https://c2-hub-three.vercel.app/design-system#telemetry · install: `npx shadcn@latest add @c2/telemetry-row`
+- **Badge** (`@/shared/components/ui/badge`) — Compact label for status, counts, and metadata. Six variants on the C2 dark surface — translucent fills and layered rings, no hard borders. The single home for all status/indicator chips and dots: StatusChip, HealthStatus (StatusDot/HealthBadge), ActivityTimestampChip, and NewUpdatesPill are variants of this one Badge concept and are documented here. Docs: https://c2-hub-three.vercel.app/design-system#badge · install: `npx shadcn@latest add @c2/badge`
+- **Button** (`@/shared/components/ui/button`) — The one button foundation. Its buttonVariants cva owns every surface + size treatment in the C2 design — layered white opacities, oklch destructive; src/primitives/buttonTokens.ts is only an alias map onto it. ActionButton, SplitActionButton (Button + Button size=icon + DropdownMenu), and CopyButton (ghost icon Button) are compositions that render this foundation (documented here), not separate designs; CameraToggleButton lives on the Toggle primitive. Docs: https://c2-hub-three.vercel.app/design-system#button · install: `npx shadcn@latest add @c2/button`
+- **Toggle** (`@/shared/components/ui/toggle`) — Two-state pressed/unpressed button built on Radix Toggle — real aria-pressed + data-state=on semantics. The domain CameraToggleButton is a composition on this primitive (documented here), wearing the button family's fill tokens. Docs: https://c2-hub-three.vercel.app/design-system#toggle · install: `npx shadcn@latest add @c2/toggle`
+- **Accordion** (`@/shared/components/ui/accordion`) — A vertically stacked set of collapsible sections, built on Radix. Each item animates its height open and closed; type single/multiple controls how many can be open. The card-internal AccordionSection (the TargetCard section grammar composed by CardDetails, CardIdentity, and CardLog) is documented here as the domain variant. Docs: https://c2-hub-three.vercel.app/design-system#accordion · install: `npx shadcn@latest add @c2/accordion`
+- **Input** (`@/shared/components/ui/input`) — Single-line text field on the C2 dark surface — translucent input-background fill, layered focus ring, selection styled via tokens. The base of every search / form field. Docs: https://c2-hub-three.vercel.app/design-system#input · install: `npx shadcn@latest add @c2/input`
+- **Textarea** (`@/shared/components/ui/textarea`) — Multi-line text field sharing Input's surface grammar — translucent fill, focus ring, min-height with free vertical resize. Docs: https://c2-hub-three.vercel.app/design-system#textarea · install: `npx shadcn@latest add @c2/textarea`
+- **Select** (`@/shared/components/ui/select`) — Radix-based dropdown picker: trigger reads like an Input, the popover panel floats on the overlay surface with check-marked items and scroll cues. Docs: https://c2-hub-three.vercel.app/design-system#select · install: `npx shadcn@latest add @c2/select`
+- **Checkbox** (`@/shared/components/ui/checkbox`) — Radix checkbox with checked / unchecked / indeterminate states — accent fill when checked, layered ring when idle. Pair with a label for the hit target. Docs: https://c2-hub-three.vercel.app/design-system#checkbox · install: `npx shadcn@latest add @c2/checkbox`
+- **Switch** (`@/shared/components/ui/switch`) — Radix on/off switch — a sliding thumb on a tinted track, accent fill when checked. For immediate-effect settings (arm, mute, auto-track), not form submission. Docs: https://c2-hub-three.vercel.app/design-system#switch · install: `npx shadcn@latest add @c2/switch`
+- **Slider** (`@/shared/components/ui/slider`) — Radix range slider — tinted track, accent range fill, and a grabbable thumb with a focus ring. Single- or multi-thumb; used for zoom, volume, and threshold controls. Docs: https://c2-hub-three.vercel.app/design-system#slider · install: `npx shadcn@latest add @c2/slider`
+- **Tabs** (`@/shared/components/ui/tabs`) — Radix tabs — a muted list rail with an active-surface trigger and swappable panels. Arrow keys move between triggers; content mounts per tab. Docs: https://c2-hub-three.vercel.app/design-system#tabs · install: `npx shadcn@latest add @c2/tabs`
+- **Dialog** (`@/shared/components/ui/dialog`) — Radix modal dialog — dimmed backdrop, centered overlay-surface panel with the overlay motion, focus trapped inside until dismissed. For confirmations and focused edit tasks. Docs: https://c2-hub-three.vercel.app/design-system#dialog · install: `npx shadcn@latest add @c2/dialog`
+- **Popover** (`@/shared/components/ui/popover`) — Radix anchored popover — a floating overlay-surface panel positioned against its trigger, dismissed by outside click or Esc. Non-modal: the app stays interactive behind it. Docs: https://c2-hub-three.vercel.app/design-system#popover · install: `npx shadcn@latest add @c2/popover`
+- **DropdownMenu** (`@/shared/components/ui/dropdown-menu`) — Radix action menu anchored to a trigger — items, checkbox/radio items, separators, and submenus on the overlay surface. Powers overflow (⋯) and split-button menus. Docs: https://c2-hub-three.vercel.app/design-system#dropdown-menu · install: `npx shadcn@latest add @c2/dropdown-menu`
+- **Tooltip** (`@/shared/components/ui/tooltip`) — Radix hover/focus tooltip — a small inverted-surface label with an arrow, delayed in and instant between siblings. Requires the app-level TooltipProvider (already mounted). Docs: https://c2-hub-three.vercel.app/design-system#tooltip · install: `npx shadcn@latest add @c2/tooltip`
+- **Toasts (sonner)** (`@/shared/components/ui/sonner`) — App-wide toast queue via sonner. The vendored Toaster wears the C2 surface (surface-3 fill, layered ring, 2px radius), follows the live text direction, and stacks top-center. Fire with toast() / toast.success() / toast.error(). Docs: https://c2-hub-three.vercel.app/design-system#sonner · install: `npx shadcn@latest add @c2/sonner`
 
 ### Blocks
 
+- **TelemetryRow** (`@/primitives`) — Single telemetry metric: icon, label, monospace value. Laid out in a 3-column grid that wraps by item count. Docs: https://c2-hub-three.vercel.app/design-system#telemetry · install: `npx shadcn@latest add @c2/telemetry-row`
 - **CardHeader** (`@/primitives`) — Top row of a TargetCard — icon, title, subtitle, status chip, badge, and chevron. Docs: https://c2-hub-three.vercel.app/design-system#card-header · install: `npx shadcn@latest add @c2/card-header`
-- **CardActions** (`@/primitives`) — Action bar for a TargetCard. Composes ActionButton, SplitActionButton, and the confirm pattern. Docs: https://c2-hub-three.vercel.app/design-system#card-actions · install: `npx shadcn@latest add @c2/card-actions`
+- **CardActions** (`@/primitives`) — Action bar for a TargetCard. Composes Button presets (ActionButton, SplitActionButton), the Toggle-based CameraToggleButton, and the confirm pattern. Docs: https://c2-hub-three.vercel.app/design-system#card-actions · install: `npx shadcn@latest add @c2/card-actions`
 - **CardDetails** (`@/primitives`) — Collapsible telemetry accordion. Composes AccordionSection and TelemetryRow in a fixed grid. Docs: https://c2-hub-three.vercel.app/design-system#card-details · install: `npx shadcn@latest add @c2/card-details`
 - **CardSensors** (`@/primitives`) — Lists detecting sensors for a target with type, distance, and timestamp. Docs: https://c2-hub-three.vercel.app/design-system#card-sensors · install: `npx shadcn@latest add @c2/card-sensors`
 - **CardMedia** (`@/primitives`) — Image or video slot for a target surveillance feed. Supports live badge, playback, and lightbox. Docs: https://c2-hub-three.vercel.app/design-system#card-media · install: `npx shadcn@latest add @c2/card-media`
 - **CardLog** (`@/primitives`) — Chronological event log accordion with newest-first ordering and expand-all. Docs: https://c2-hub-three.vercel.app/design-system#card-log · install: `npx shadcn@latest add @c2/card-log`
 - **CardClosure** (`@/primitives`) — Outcome selection grid for closing a detection event. Docs: https://c2-hub-three.vercel.app/design-system#card-closure · install: `npx shadcn@latest add @c2/card-closure`
+- **CardIdentity** (`@/primitives`) — Identity rows (name, model, serial) in a collapsible 2-col grid matching CardDetails, with a per-row hover-revealed CopyButton riding a gradient fade so long IDs dissolve cleanly under the icon. Docs: https://c2-hub-three.vercel.app/design-system#card-identity
+- **CardTimeline** (`@/primitives`) — Engagement progress steps — pending / active / complete / error — as a vertical checklist or a compact dot strip for collapsed headers. Docs: https://c2-hub-three.vercel.app/design-system#card-timeline · install: `npx shadcn@latest add @c2/card-timeline`
+- **CardFooterDock** (`@/primitives`) — Recessed action dock pinned to a TargetCard's bottom edge — equal-width quiet buttons on an inset-shadow strip, for secondary whole-card actions. Docs: https://c2-hub-three.vercel.app/design-system#card-footer-dock · install: `npx shadcn@latest add @c2/card-footer-dock`
 - **TargetCard** (`@/primitives`) — The core card shell. Composes CardHeader with slot children via the useCardSlots hook. The single most important block in the system. Docs: https://c2-hub-three.vercel.app/design-system#target-card · install: `npx shadcn@latest add @c2/target-card`
 - **FilterBar** (`@/primitives`) — Search input plus data-driven filter dropdowns. Pass any number of filter dimensions as a FilterDef[]. Docs: https://c2-hub-three.vercel.app/design-system#filter-bar · install: `npx shadcn@latest add @c2/filter-bar`
 - **Device Card** (`@/shared/components/DevicesPanel`) — One collapsible row per field asset, registry-driven. Health tile, primary cluster, footer actions, and overflow. Docs: https://c2-hub-three.vercel.app/design-system#device-card
 - **DevicesPanel** (`@/shared/components/DevicesPanel`) — Right-hand sidebar listing connected field devices grouped by type, with search and type-filter isolation. Docs: https://c2-hub-three.vercel.app/design-system#devices-panel
 - **MapMarker** (`@/primitives`) — Composable tactical marker: layered surface, ring, glyph, glow, and overlays, driven by resolveMarkerStyle(). Docs: https://c2-hub-three.vercel.app/design-system#map-markers · install: `npx shadcn@latest add @c2/map-marker`
+- **MapIcons** (`@/primitives`) — First-party tactical glyphs — drone, missile, car, tank, truck, human, unknown, jam wave. Each ships in two forms: the map variant (color prop + black legibility stroke for imagery) and the *CardIcon variant (stroke-free, rides currentColor for in-UI tiles). Docs: https://c2-hub-three.vercel.app/design-system#map-icons · install: `npx shadcn@latest add @c2/map-icons`
 
 ## Design tokens (generated from tokens/*.json)
 
@@ -49,32 +61,32 @@ Use the CSS var or the `@/primitives` export — never the raw value.
 
 - `--c2-primitive-color-white` = `#ffffff` (core/primitive) — Pure white. Base for translucent surface overlays.
 - `--c2-primitive-color-black` = `#000000` (core/primitive) — Pure black. Base for the selection ring tint.
-- `--c2-primitive-color-surface-0` = `#141414` (core/primitive) — Base — page background and card content area.
-- `--c2-primitive-color-surface-1` = `#202020` (core/primitive) — Raised — card container and sidebar.
-- `--c2-primitive-color-surface-2` = `#272727` (core/primitive) — Overlay — borders and dividers, card container fill.
-- `--c2-primitive-color-surface-3` = `#2e2e2e` (core/primitive) — Inset — icon boxes and closure buttons.
-- `--c2-primitive-color-surface-4` = `#353535` (core/primitive) — Hover — sensor rows and hover states.
-- `--c2-primitive-color-neutral-200` = `#dee2e6` (core/primitive) — High-contrast text — titles, primary values.
-- `--c2-primitive-color-neutral-500` = `#999999` (core/primitive) — Low-contrast text — subtitles, captions, metadata.
-- `--c2-primitive-color-red-base` = `oklch(0.435 0.151 25)` (core/primitive) — Resting destructive fill.
-- `--c2-primitive-color-red-hover` = `oklch(0.485 0.151 25)` (core/primitive) — Destructive hover — one lightness step up.
-- `--c2-primitive-color-red-active` = `oklch(0.385 0.151 25)` (core/primitive) — Destructive pressed — one lightness step down.
-- `--c2-primitive-color-amber-base` = `oklch(0.501 0.166 75)` (core/primitive) — Resting warning fill.
-- `--c2-primitive-color-amber-hover` = `oklch(0.551 0.166 75)` (core/primitive) — Warning hover — one lightness step up.
-- `--c2-primitive-color-amber-active` = `oklch(0.451 0.166 75)` (core/primitive) — Warning pressed — one lightness step down.
-- `--c2-color-surface-base` = `#141414` (core/semantic) — Lowest surface — page and card-content background.
-- `--c2-color-surface-raised` = `#202020` (core/semantic) — Raised surface — cards, sidebar, code panels.
-- `--c2-color-surface-overlay` = `#272727` (core/semantic) — Container fill, borders, dividers.
-- `--c2-color-surface-inset` = `#2e2e2e` (core/semantic) — Recessed wells — icon boxes, closure buttons.
-- `--c2-color-surface-hover` = `#353535` (core/semantic) — Hover/active row surface.
-- `--c2-color-text-default` = `#dee2e6` (core/semantic) — Default high-contrast text.
-- `--c2-color-text-muted` = `#999999` (core/semantic) — Secondary, lower-emphasis text.
-- `--c2-color-action-danger-bg` = `oklch(0.435 0.151 25)` (core/semantic) — Destructive action background.
-- `--c2-color-action-danger-hover` = `oklch(0.485 0.151 25)` (core/semantic) — Destructive action hover.
-- `--c2-color-action-danger-active` = `oklch(0.385 0.151 25)` (core/semantic) — Destructive action pressed.
-- `--c2-color-action-warning-bg` = `oklch(0.501 0.166 75)` (core/semantic) — Warning action background.
-- `--c2-color-action-warning-hover` = `oklch(0.551 0.166 75)` (core/semantic) — Warning action hover.
-- `--c2-color-action-warning-active` = `oklch(0.451 0.166 75)` (core/semantic) — Warning action pressed.
+- `--c2-primitive-color-surface-0` = `#0d0e11` (core/primitive) — Base (= --surface-1) — page background and card content area.
+- `--c2-primitive-color-surface-1` = `#15171a` (core/primitive) — Raised (= --surface-2) — card container and sidebar.
+- `--c2-primitive-color-surface-2` = `#1e2124` (core/primitive) — Overlay (= --surface-3) — borders and dividers, card container fill.
+- `--c2-primitive-color-surface-3` = `#282c30` (core/primitive) — Inset (= --surface-4) — icon boxes and closure buttons.
+- `--c2-primitive-color-surface-4` = `#353a40` (core/primitive) — Hover (= --surface-5) — sensor rows and hover states.
+- `--c2-primitive-color-neutral-200` = `#ced5de` (core/primitive) — High-contrast text (= --slate-11) — titles, primary values.
+- `--c2-primitive-color-neutral-500` = `#8d949f` (core/primitive) — Low-contrast text (= --slate-9) — subtitles, captions, metadata.
+- `--c2-primitive-color-red-base` = `oklch(0.395 0.110 27)` (core/primitive) — Resting destructive fill (= --accent-danger-soft).
+- `--c2-primitive-color-red-hover` = `oklch(0.445 0.110 27)` (core/primitive) — Destructive hover — one lightness step up.
+- `--c2-primitive-color-red-active` = `oklch(0.345 0.110 27)` (core/primitive) — Destructive pressed — one lightness step down.
+- `--c2-primitive-color-amber-base` = `oklch(0.420 0.090 70)` (core/primitive) — Resting warning fill (= --accent-warning-soft).
+- `--c2-primitive-color-amber-hover` = `oklch(0.470 0.090 70)` (core/primitive) — Warning hover — one lightness step up.
+- `--c2-primitive-color-amber-active` = `oklch(0.370 0.090 70)` (core/primitive) — Warning pressed — one lightness step down.
+- `--c2-color-surface-base` = `#0d0e11` (core/semantic) — Lowest surface — page and card-content background.
+- `--c2-color-surface-raised` = `#15171a` (core/semantic) — Raised surface — cards, sidebar, code panels.
+- `--c2-color-surface-overlay` = `#1e2124` (core/semantic) — Container fill, borders, dividers.
+- `--c2-color-surface-inset` = `#282c30` (core/semantic) — Recessed wells — icon boxes, closure buttons.
+- `--c2-color-surface-hover` = `#353a40` (core/semantic) — Hover/active row surface.
+- `--c2-color-text-default` = `#ced5de` (core/semantic) — Default high-contrast text.
+- `--c2-color-text-muted` = `#8d949f` (core/semantic) — Secondary, lower-emphasis text.
+- `--c2-color-action-danger-bg` = `oklch(0.395 0.110 27)` (core/semantic) — Destructive action background.
+- `--c2-color-action-danger-hover` = `oklch(0.445 0.110 27)` (core/semantic) — Destructive action hover.
+- `--c2-color-action-danger-active` = `oklch(0.345 0.110 27)` (core/semantic) — Destructive action pressed.
+- `--c2-color-action-warning-bg` = `oklch(0.420 0.090 70)` (core/semantic) — Warning action background.
+- `--c2-color-action-warning-hover` = `oklch(0.470 0.090 70)` (core/semantic) — Warning action hover.
+- `--c2-color-action-warning-active` = `oklch(0.370 0.090 70)` (core/semantic) — Warning action pressed.
 - `--c2-color-focus-ring` = `#ffffff` (core/semantic) — Focus-visible ring color (applied at reduced opacity by components).
 - `--c2-color-selection-ring` = `#000000` (core/semantic) — Selected-card ring tint (applied at 15% opacity).
 - `--c2-radius-interactive` = `4px` (core/semantic) — Border radius for all interactive elements — buttons, badges, chips. The system's signature 4px corner.
@@ -89,7 +101,9 @@ Use the CSS var or the `@/primitives` export — never the raw value.
 
 ## Governance rules (generated from governance/rules.json)
 
-- **no-raw-hex** [error] — Do not hardcode hex color literals in app or component code. Colors live only in tokens/*.json and are consumed via a design token. Fix: Use a semantic token: the CSS var (e.g. var(--c2-color-surface-base)) or the matching @/primitives export (e.g. SURFACE.level1, CARD_TOKENS.spine.colors).
+- **no-raw-hex** [error] — Do not hardcode color literals (hex, oklch(), rgb()) in app or component code. Colors are authored once in src/styles/palette.css (and tokens/*.json) and consumed via tokens. Fix: Use a semantic token: a palette.css var (e.g. var(--surface-1), var(--accent-danger)), a tokenized Tailwind utility (bg-surface-*, text-slate-*, bg-state-*), or an @/primitives/accentHex export (ACCENT_HEX, SLATE_HEX, MARKER_HEX) where a literal string is required (Cesium, SVG, Canvas).
+- **no-arbitrary-type-and-color-classes** [error] — Do not use arbitrary Tailwind font sizes (text-[Npx]) or hex colors (-[#hex]). The type scale and color ramps are declared in src/styles/tailwind.css. Fix: Type: text-3xs / text-2xs / text-xs-plus / text-xs / text-sm-minus / text-sm. Color: bg-surface-*, text-slate-*, bg-accent-*-soft, bg-state-*.
+- **accenthex-generated** [error] — accentHex.ts is a generated mirror of palette.css's oklch tokens — never hand-edit a hex value there without changing the palette first. Fix: Change the oklch value in src/styles/palette.css, then update the mirrored hex (the CI check converts oklch to hex and fails on drift).
 - **icons-central-only** [error] — Import glyphs from @/lib/icons/central, never from lucide-react or @central-icons-react/* directly. The central wrapper is the only module allowed to know which icon library ships. Fix: import { IconName } from '@/lib/icons/central'. If the glyph is missing, add it to the wrapper (prefer a filled Central glyph).
 - **prefer-filled-icons** [warn] — Prefer the filled icon variant over the outlined/line variant whenever a filled twin exists. Fix: Use the *Filled export from @/lib/icons/central (e.g. BellFilled); add the filled export to central.ts if it is missing.
 - **interactive-radius** [warn] — Interactive elements (buttons, badges, chips) use the 4px 'rounded' radius — the system's signature corner. Fix: Apply rounded (4px) / var(--c2-radius-interactive); avoid ad-hoc rounded-md|lg|full on interactive controls.

@@ -1,13 +1,11 @@
 /**
  * Sandbox-only device fixtures for `/devices-lab`.
  *
- * Covers every `DeviceType`, but the severity is deliberately balanced so
- * the docked panel reads like a real fleet: exactly ONE `critical` tile
- * (the only one that pulses — needs attention now), with every other row
- * spread across the calmer scenarios we settled on in the lab — errored
- * asset (red Logs channel, no pulse), connection warning, low battery,
- * offline, and plain healthy. Production data still comes from
- * `useDevicesFromAssets`.
+ * Covers every `DeviceType`, spread across the state-color tiers settled in
+ * the lab — NO `critical` tier anymore (error is the top severity): errored
+ * asset (red tile + Logs channel), connection warning, low battery, offline
+ * (dim tile + wifi-off badge), and plain healthy. Production data still
+ * comes from `useDevicesFromAssets`.
  */
 
 import type { Device } from '../devices-panel/types';
@@ -48,10 +46,10 @@ export const MOCK_DEVICES: Device[] = [
     status: 'offline', operationalStatus: 'operational', connectionState: 'offline',
     fovDeg: 55, bearingDeg: 90, Icon: CameraIcon,
   },
-  // critical — the ONLY needs-attention-now tile (malfunction + connection error + open errors). Pulses.
+  // error — worst tier in the new model (open errors, red tile, no pulse)
   {
     id: 'RAD-01', name: 'Magos S', type: 'radar', lat: 32.822, lon: 35.013,
-    status: 'available', operationalStatus: 'malfunctioning', connectionState: 'error',
+    status: 'available', operationalStatus: 'operational', connectionState: 'online',
     fovDeg: 120, bearingDeg: 30,
     errors: [
       { severity: 'error', message: 'Antenna motor stalled — no rotation' },
@@ -59,6 +57,12 @@ export const MOCK_DEVICES: Device[] = [
       { severity: 'warning', message: 'Internal temperature above nominal (78°C)' },
     ],
     Icon: RadarIcon,
+  },
+  // warning — degraded connection only (amber tile, no open errors)
+  {
+    id: 'RAD-02', name: 'Magos N', type: 'radar', lat: 32.838, lon: 35.017,
+    status: 'available', operationalStatus: 'operational', connectionState: 'warning',
+    fovDeg: 120, bearingDeg: 210, batteryPct: 76, Icon: RadarIcon,
   },
   // ok
   {
@@ -79,6 +83,12 @@ export const MOCK_DEVICES: Device[] = [
     id: 'DRN-02', name: 'Observer-7', type: 'drone', lat: 32.766, lon: 34.971,
     status: 'active', operationalStatus: 'operational', connectionState: 'online',
     altitude: '90 m', batteryPct: 34, Icon: DroneDeviceIcon,
+  },
+  // offline — disconnected drone (dim tile + wifi-off badge in the drones group)
+  {
+    id: 'DRN-03', name: 'Scout-2', type: 'drone', lat: 32.759, lon: 35.018,
+    status: 'offline', operationalStatus: 'operational', connectionState: 'offline',
+    Icon: DroneDeviceIcon,
   },
   // errored asset — a deliberately busy log (30 entries) to exercise the
   // errors modal's inner scroll + severity filter badges.

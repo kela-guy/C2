@@ -4,6 +4,7 @@ import { spring } from '@/lib/springs';
 import { useDrop } from 'react-dnd';
 import { CAMERA_ASSETS, REGULUS_EFFECTORS, SPEAKER_ASSETS } from './tacticalAssets';
 import { DEFAULT_SPEAKER_TRACKS } from './devices-panel';
+import { getEffectiveDeviceHealth, type DeviceHealth } from './devices-panel/deviceHealth';
 import { bearingDegrees, haversineDistanceM } from '@/app/lib/mapGeo';
 import { LiveCesiumTacticalMap } from './LiveCesiumTacticalMap';
 import { useLiveMapStore } from './liveMapStore';
@@ -58,7 +59,7 @@ import { CriticalAlertOverlay, type CriticalDroneAlert } from './gotcha/Critical
 import { VideoHudPanel } from './video-hud-sandbox/VideoHudPanel';
 import type { VideoHudPanelFeed as CameraFeed } from './video-hud-sandbox/VideoHudPanel';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/shared/components/ui/resizable';
-import { LAYOUT_TOKENS, SURFACE } from '@/primitives/tokens';
+import { LAYOUT_TOKENS } from '@/primitives/tokens';
 import { toast } from 'sonner';
 import { getPriorityBaseline } from '@/imports/useActivityStatus';
 import { useDirection, useIsRtl, useLocale } from '@/lib/direction';
@@ -594,6 +595,17 @@ export const Dashboard = ({
     () => allDevices.filter((d) => d.connectionState === 'offline').map((d) => d.id),
     [allDevices],
   );
+  // Worst-wins health per asset — drives the map marker ring so the map and
+  // the devices panel speak the same health language (only non-ok entries are
+  // carried; markers default to `ok`).
+  const assetHealthById = useMemo(() => {
+    const m = new Map<string, DeviceHealth>();
+    for (const d of allDevices) {
+      const health = getEffectiveDeviceHealth(d);
+      if (health !== 'ok') m.set(d.id, health);
+    }
+    return m;
+  }, [allDevices]);
 
   const highlightedSensorIds = useMemo(() => {
     const ids = new Set<string>();
@@ -1908,7 +1920,7 @@ export const Dashboard = ({
   const sidebarStyle = useMemo<React.CSSProperties>(
     () => ({
       width: sidebarWidth,
-      backgroundColor: SURFACE.level1,
+      backgroundColor: 'var(--surface-2)',
       ...(isDragging ? { transition: 'none', willChange: 'width' } : {}),
       ...(isSnapping ? { transition: 'width 200ms ease-out' } : {}),
     }),
@@ -2288,7 +2300,7 @@ export const Dashboard = ({
     <div className="relative flex w-full h-screen overflow-hidden text-white font-sans selection:bg-red-500/30">
       {/* Minimal Left Nav */}
       <TooltipProvider>
-      <nav className="relative z-50 flex flex-col justify-start items-center w-8 flex-shrink-0 h-full bg-[#1a1a1a] border-e border-white/10">
+      <nav className="relative z-50 flex flex-col justify-start items-center w-8 flex-shrink-0 h-full bg-surface-2 border-e border-white/10">
         <div className="flex items-center justify-center h-9 w-full">
           <div className="text-white scale-75 origin-center">
             <C2Logo />
@@ -2303,7 +2315,7 @@ export const Dashboard = ({
                 size="sm"
                 pressed={sidebarOpen}
                 onPressedChange={handleSidebarPressedChange}
-                className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-state-hover-overlay active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-state-focus-ring focus-visible:outline-none"
                 aria-label={sidebarOpen ? t.dashboard.closeSidebar : t.dashboard.openSidebar}
               >
                 <List size={20} strokeWidth={1.5} />
@@ -2320,7 +2332,7 @@ export const Dashboard = ({
                 size="sm"
                 pressed={devicesPanelOpen}
                 onPressedChange={handleDevicesPressedChange}
-                className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-state-hover-overlay active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-state-focus-ring focus-visible:outline-none"
                 aria-label={devicesPanelOpen ? t.dashboard.closeDevices : t.dashboard.devices}
               >
                 <Devices size={20} strokeWidth={1.5} />
@@ -2337,7 +2349,7 @@ export const Dashboard = ({
                 size="sm"
                 pressed={isCameraViewerOpen}
                 onPressedChange={handleCameraPressedChange}
-                className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-state-hover-overlay active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-state-focus-ring focus-visible:outline-none"
                 aria-label={isCameraViewerOpen ? t.dashboard.closeCameras : t.dashboard.cameras}
               >
                 <Video size={20} strokeWidth={1.5} />
@@ -2354,7 +2366,7 @@ export const Dashboard = ({
                 size="sm"
                 pressed={simulationsPanelOpen}
                 onPressedChange={handleSimulationsPressedChange}
-                className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-state-hover-overlay active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-state-focus-ring focus-visible:outline-none"
                 aria-label={simulationsPanelOpen ? t.flowBuilder.simulations.close : t.flowBuilder.simulations.title}
               >
                 <Agents size={20} strokeWidth={1.5} />
@@ -2388,7 +2400,7 @@ export const Dashboard = ({
                 size="sm"
                 pressed={flowBuilderOpen}
                 onPressedChange={handleFlowBuilderPressedChange}
-                className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                className="size-6 min-w-6 px-0 rounded bg-transparent text-gray-400 aria-pressed:bg-white/[0.08] aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-white/15 hover:text-white hover:bg-state-hover-overlay active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-state-focus-ring focus-visible:outline-none"
                 aria-label={t.flowBuilder.panel.title}
               >
                 <Sparkles size={20} />
@@ -2414,7 +2426,7 @@ export const Dashboard = ({
             <TooltipTrigger asChild>
               <a
                 href="/styleguide"
-                className="size-6 rounded flex items-center justify-center text-gray-400 hover:text-amber-400 hover:bg-amber-500/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                className="size-6 rounded flex items-center justify-center text-gray-400 hover:text-amber-400 hover:bg-amber-500/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-state-focus-ring focus-visible:outline-none"
                 aria-label="Style Guide"
               >
                 <Palette size={20} strokeWidth={1.5} />
@@ -2438,7 +2450,7 @@ export const Dashboard = ({
                 type="button"
                 onClick={toggleDirection}
                 aria-label={isRtl ? t.dashboard.switchToEnglish : t.dashboard.switchToHebrew}
-                className="size-6 rounded flex items-center justify-center text-xs font-mono font-semibold text-gray-400 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                className="size-6 rounded flex items-center justify-center text-xs font-mono font-semibold text-gray-400 hover:text-white hover:bg-state-hover-overlay active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-state-focus-ring focus-visible:outline-none"
               >
                 {isRtl ? 'EN' : 'עב'}
               </button>
@@ -2453,7 +2465,7 @@ export const Dashboard = ({
                 <NotificationCenter
                   trigger={
                     <button
-                      className="size-6 rounded flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:outline-none"
+                      className="size-6 rounded flex items-center justify-center text-gray-400 hover:text-white hover:bg-state-hover-overlay active:scale-[0.97] transition-[color,background-color] focus-visible:ring-2 focus-visible:ring-state-focus-ring focus-visible:outline-none"
                       aria-label={t.dashboard.notificationsAriaLabel}
                     >
                       <Bell size={20} strokeWidth={1.5} />
@@ -2508,6 +2520,7 @@ export const Dashboard = ({
                   smoothFocusRequest={mapFocusRequest}
                   onAssetClick={handleAssetClick}
                   offlineAssetIds={offlineAssetIds}
+                  assetHealthById={assetHealthById}
                   floodlightOnIds={floodlightOnIds}
                   speakerPlayingIds={speakerPlayingIds}
                   selectedEffectorIds={selectedEffectorIds}
@@ -2582,7 +2595,7 @@ export const Dashboard = ({
           {sidebarOpen && (
             <div
               onPointerDown={handleResizePointerDown}
-              className={`absolute end-0 top-0 bottom-0 w-1.5 z-20 cursor-col-resize transition-colors ${isDragging ? 'bg-white/20' : 'bg-transparent hover:bg-white/10'}`}
+              className={`absolute end-0 top-0 bottom-0 w-1.5 z-20 cursor-col-resize transition-colors ${isDragging ? 'bg-white/20' : 'bg-transparent hover:bg-state-hover-overlay'}`}
             />
           )}
           <div className="flex items-center px-4 h-9 border-b border-white/10">

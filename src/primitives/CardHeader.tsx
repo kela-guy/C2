@@ -10,7 +10,7 @@ import { AFFILIATION_PALETTES, type Affiliation } from './markerStyles';
  * Central's outlined `IconChevronBottom` is too thin to read at the
  * 18px header size against the dark card surface — this chunkier filled
  * variant matches the header's visual weight. Uses `currentColor` so it
- * inherits the wrapper's `text-zinc-500`.
+ * inherits the wrapper's `text-slate-9`.
  */
 function CardChevronDown({ size = 18, ...rest }: { size?: number } & React.SVGAttributes<SVGSVGElement>) {
   return (
@@ -107,7 +107,7 @@ export function CardHeader({
 
   const iconBox = Icon ? (
     <div
-      className={`flex items-center justify-center shrink-0${iconBoxNeedsDefaultFg ? ' text-zinc-400' : ''}`}
+      className={`flex items-center justify-center shrink-0${iconBoxNeedsDefaultFg ? ' text-slate-10' : ''}`}
       style={{
         width: `${d.iconBox.size}px`,
         height: `${d.iconBox.size}px`,
@@ -171,7 +171,7 @@ export function CardHeader({
         {status}
 
         <div
-          className={`text-zinc-500 shrink-0 transition-transform duration-200${open ? ' rotate-180' : ''}`}
+          className={`text-slate-9 shrink-0 transition-transform duration-200${open ? ' rotate-180' : ''}`}
         >
           <CardChevronDown size={d.animation.chevronSize} aria-hidden="true" />
         </div>

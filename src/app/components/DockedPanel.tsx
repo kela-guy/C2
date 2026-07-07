@@ -17,7 +17,7 @@
  */
 
 import { Close } from '@/lib/icons/central';
-import { LAYOUT_TOKENS, SURFACE } from '@/primitives/tokens';
+import { LAYOUT_TOKENS } from '@/primitives/tokens';
 import { ScrollArea } from './ui/scroll-area';
 import { cn } from './ui/utils';
 
@@ -103,7 +103,7 @@ export function DockedPanel({
       )}
       style={{
         width: width ?? LAYOUT_TOKENS.sidebarWidthPx,
-        backgroundColor: SURFACE.level1,
+        backgroundColor: 'var(--surface-2)',
       }}
       aria-hidden={!open}
       onKeyDown={closeOnEsc ? handleKeyDown : undefined}
@@ -117,7 +117,7 @@ export function DockedPanel({
             onClick={onClose}
             disabled={closeDisabled}
             title={closeDisabled ? closeDisabledHint : undefined}
-            className="p-2 -m-1 rounded text-zinc-500 hover:text-zinc-200 hover:bg-white/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 disabled:cursor-not-allowed disabled:text-zinc-600 disabled:hover:bg-transparent disabled:hover:text-zinc-600"
+            className="p-2 -m-1 rounded text-slate-9 hover:text-slate-11 hover:bg-state-hover-overlay transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring disabled:cursor-not-allowed disabled:text-slate-8 disabled:hover:bg-transparent disabled:hover:text-slate-8"
             aria-label={closeAriaLabel}
           >
             <Close size={14} />
@@ -130,7 +130,7 @@ export function DockedPanel({
       </ScrollArea>
 
       {footer && (
-        <footer className="shrink-0 border-t border-white/10 bg-zinc-950/40">
+        <footer className="shrink-0 border-t border-white/10 bg-slate-1/40">
           {footer}
         </footer>
       )}
