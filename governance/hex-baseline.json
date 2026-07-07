@@ -9,7 +9,6 @@
     "src/app/components/CameraViewerPanel.tsx": 3,
     "src/app/components/CesiumTacticalMap.tsx": 13,
     "src/app/components/Dashboard.tsx": 2,
-    "src/app/components/devices-panel-next/lab/CardErrorOptionsLab.tsx": 1,
     "src/app/components/devices-panel-next/lab/presentationRules.tsx": 1,
     "src/app/components/devices-panel-next/lab/StateColorLab.tsx": 2,
     "src/app/components/DevicesLabPage.tsx": 1,

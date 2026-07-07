@@ -18,12 +18,12 @@ import { DevicesPanel } from './devices-panel';
 import { MOCK_DEVICES } from './devices-panel-next/mockDevices';
 import { CardLayoutLab } from './devices-panel-next/lab/CardLayoutLab';
 import { GotchaCardLab } from './devices-panel-next/lab/GotchaCardLab';
-import { CardErrorOptionsLab } from './devices-panel-next/lab/CardErrorOptionsLab';
 import { DeviceTileStates } from './devices-panel-next/lab/DeviceTileStates';
 import { StateColorLab } from './devices-panel-next/lab/StateColorLab';
 import { TooltipDesigns } from './devices-panel-next/lab/TooltipDesigns';
 import { FloodlightToggleLab } from './devices-panel-next/lab/FloodlightToggleLab';
 import { FeedPinLab } from './devices-panel-next/lab/FeedPinLab';
+import { OfflineEmphasisLab } from './devices-panel-next/lab/OfflineEmphasisLab';
 
 export default function DevicesLabPage() {
   const t = useStrings();
@@ -121,10 +121,6 @@ export default function DevicesLabPage() {
             <CardLayoutLab />
           </div>
 
-          <div className="mt-10">
-            <CardErrorOptionsLab />
-          </div>
-
           <div className="mt-12 border-t border-white/[0.06] pt-8">
             <Tabs defaultValue="gotcha" dir={dir} className="gap-8">
               <TabsList variant="line">
@@ -134,6 +130,7 @@ export default function DevicesLabPage() {
                 <TabsTrigger value="tooltips">Tooltips</TabsTrigger>
                 <TabsTrigger value="floodlight">Floodlight toggle</TabsTrigger>
                 <TabsTrigger value="feed">Add to feed</TabsTrigger>
+                <TabsTrigger value="offline">Offline emphasis</TabsTrigger>
               </TabsList>
 
               <TabsContent value="gotcha">
@@ -158,6 +155,10 @@ export default function DevicesLabPage() {
 
               <TabsContent value="feed">
                 <FeedPinLab />
+              </TabsContent>
+
+              <TabsContent value="offline">
+                <OfflineEmphasisLab />
               </TabsContent>
             </Tabs>
           </div>

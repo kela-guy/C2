@@ -21,7 +21,7 @@ import {
   type DeviceHealth,
 } from './deviceHealth';
 import { DEFAULT_CONNECTION_STATE_LABELS } from './constants';
-import { OfflineBadge } from './OfflineBadge';
+import { OfflineBadge, OfflineHatch } from './OfflineBadge';
 import type { ConnectionState, Device, DevicesPanelStrings } from './types';
 
 function healthLabel(health: DeviceHealth, strings: DevicesPanelStrings): string {
@@ -102,6 +102,8 @@ export const DeviceChildRow = memo(function DeviceChildRow({
         inset ? 'px-2 rounded' : 'ps-4 pe-4 border-b border-white/[0.04]'
       } ${selected ? 'bg-white/[0.07]' : 'hover:bg-state-hover active:bg-state-pressed'}`}
     >
+      {/* Offline children carry the same hatched surface as offline parents. */}
+      {health === 'offline' && <OfflineHatch />}
       <div
         className={`relative w-6 h-6 rounded flex items-center justify-center shrink-0 ${visual.tile}`}
         {...(reason ? { role: 'status', 'aria-label': reason } : {})}
@@ -111,7 +113,13 @@ export const DeviceChildRow = memo(function DeviceChildRow({
       </div>
 
       <div className="flex-1 min-w-0 text-start">
-        <span className="text-xs font-medium truncate text-slate-11 block">{device.name}</span>
+        <span
+          className={`text-xs font-medium truncate block ${
+            health === 'offline' ? 'text-white/55' : 'text-slate-11'
+          }`}
+        >
+          {device.name}
+        </span>
       </div>
 
       {health !== 'ok' && onOpenErrors && (

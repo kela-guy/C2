@@ -29,6 +29,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/
 import { DEFAULT_CONNECTION_STATE_LABELS } from '../../devices-panel/constants';
 import type { ConnectionState } from '../../devices-panel/types';
 import { DEVICE_HEALTH_VISUAL, type DeviceHealth } from '../../devices-panel/deviceHealth';
+import { OfflineChip, OfflineHatch } from '../../devices-panel/OfflineBadge';
 import { DotmSquare18 } from '@/app/components/ui/dotm-square-18';
 import { DotmCircular4 } from '@/app/components/ui/dotm-circular-4';
 import {
@@ -133,9 +134,16 @@ export function DeviceTile({ device }: { device: LabDevice }) {
 }
 
 export function NameBlock({ device }: { device: LabDevice }) {
+  // Offline rows dim the name — mirrors the shipped `DeviceRowHeader`.
   return (
     <div className="min-w-0 flex-1 text-start">
-      <div className="truncate text-sm font-medium text-slate-11">{device.name}</div>
+      <div
+        className={`truncate text-sm font-medium ${
+          device.online ? 'text-slate-11' : 'text-white/55'
+        }`}
+      >
+        {device.name}
+      </div>
     </div>
   );
 }
@@ -150,8 +158,12 @@ function PrimaryCluster({ device }: { device: LabDevice }) {
   const { primary } = DEVICE_ACTIONS[device.kind];
   const card = useCardState();
   const reduceMotion = useReducedMotion();
+  // Mirrors the real `DeviceRowHeader`: offline rows keep only Show-on-map
+  // (recentering doesn't need a link) + the offline chip; interactive
+  // controls are hidden — a device you can't reach shouldn't offer to act.
+  const offline = !device.online;
   // Show on map is pinned to the outer edge; everything else renders inboard.
-  const inboard = primary.filter((id) => id !== 'showOnMap');
+  const inboard = offline ? [] : primary.filter((id) => id !== 'showOnMap');
   // Only speakers carry the now-playing readout; the grid wrapper stays mounted
   // on those rows so the chip can animate open *and* closed as Play/Stop toggles.
   const isSpeaker = device.kind === 'ramcall';
@@ -216,7 +228,9 @@ function PrimaryCluster({ device }: { device: LabDevice }) {
       ))}
       {/* Armed-notifications echo: timer then bell, so the bell lands directly
           beside the Show-on-map glyph and the HH:MM:SS timer sits to its left. */}
-      <NotifyHeaderIndicator />
+      {!offline && <NotifyHeaderIndicator />}
+      {/* Offline chip sits just inboard of Show-on-map, same as the panel. */}
+      {offline && <OfflineChip label="Offline" />}
       {primary.includes('showOnMap') && (
         <ActionControl id="showOnMap" device={device} iconOnly />
       )}
@@ -265,11 +279,14 @@ export function CardShell({
   onToggle,
   header,
   children,
+  offline = false,
 }: {
   open: boolean;
   onToggle: () => void;
   header: ReactNode;
   children?: ReactNode;
+  /** Applies the shipped offline surface: the faint diagonal hatch. */
+  offline?: boolean;
 }) {
   return (
     <DeviceCardProvider>
@@ -285,10 +302,12 @@ export function CardShell({
               onToggle();
             }
           }}
-          className={`flex w-full cursor-pointer items-center gap-2.5 px-4 py-2.5 transition-colors duration-150 ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-state-focus-ring ${
+          className={`relative flex w-full cursor-pointer items-center gap-2.5 px-4 py-2.5 transition-colors duration-150 ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-state-focus-ring ${
             open ? 'bg-white/[0.04]' : 'hover:bg-state-hover active:bg-state-pressed'
           }`}
         >
+          {/* Offline surface — same hatch as the shipped `DeviceRow`. */}
+          {offline && <OfflineHatch />}
           {header}
         </div>
         {open && children && (
@@ -573,6 +592,7 @@ function DeviceCardRow({ device }: { device: LabDevice }) {
     <CardShell
       open={open}
       onToggle={toggle}
+      offline={!device.online}
       header={
         <>
           <DeviceTile device={device} />

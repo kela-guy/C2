@@ -37,16 +37,36 @@ export function WifiOffGlyph({ size = 11, className }: { size?: number; classNam
 }
 
 /**
- * Inline "offline" chip for the device row — the second half of the chosen
- * treatment (corner badge on the tile + this chip in the row). Rendered
- * immediately inline-start of the Show-on-map action, so it reads as part of
- * the row's persistent cluster in both LTR and RTL.
+ * Offline row surface — the faint diagonal hatch chosen in the
+ * `/devices-lab` offline-emphasis audition. Absolutely fills the nearest
+ * `relative` ancestor (the row), so a dead asset reads from the surface
+ * itself, not just its content. Pointer-transparent.
+ */
+export function OfflineHatch() {
+  return (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0"
+      style={{
+        backgroundImage:
+          'repeating-linear-gradient(-45deg, rgba(255,255,255,0.045) 0 5px, transparent 5px 12px)',
+      }}
+    />
+  );
+}
+
+/**
+ * Inline "offline" chip for the device row — the loud, high-contrast badge
+ * chosen in the `/devices-lab` offline-emphasis audition (paired with the
+ * hatched row surface in `DeviceRow`). Rendered immediately inline-start of
+ * the Show-on-map action, so it reads as part of the row's persistent
+ * cluster in both LTR and RTL.
  */
 export function OfflineChip({ label }: { label: string }) {
   return (
     <span
       data-handoff-component="device-offline-chip"
-      className="inline-flex h-4 shrink-0 items-center gap-1 rounded-[2px] bg-state-hover-strong px-1.5 text-2xs font-medium leading-4 text-slate-10"
+      className="inline-flex h-[18px] shrink-0 items-center gap-1 rounded-[2px] bg-white/15 px-1.5 text-2xs font-semibold uppercase tracking-wide leading-none text-white/90"
     >
       <WifiOffGlyph size={9} />
       {label}

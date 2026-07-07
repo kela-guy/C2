@@ -147,7 +147,15 @@ export const DeviceRowHeader = memo(function DeviceRowHeader({ device, cfg, ctx,
       )}
 
       <div className="flex-1 min-w-0 text-start">
-        <span className="text-sm font-medium truncate text-slate-11 block">{device.name}</span>
+        {/* Offline rows dim the name — part of the hatched-surface treatment,
+            so the dead row recedes while the chip + hatch carry the signal. */}
+        <span
+          className={`text-sm font-medium truncate block ${
+            health === 'offline' ? 'text-white/55' : 'text-slate-11'
+          }`}
+        >
+          {device.name}
+        </span>
       </div>
 
       <PrimaryCluster
