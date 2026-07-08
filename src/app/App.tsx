@@ -19,8 +19,6 @@ const DevicesLabPage = lazy(() => import("./components/DevicesLabPage"));
 
 // FOV Test — legacy Mapbox FOV playground. Code-split so the second map
 // stack (react-map-gl / mapbox-gl) never enters the production entry chunk.
-const FovTestPage = lazy(() => import("./components/FovTestPage"));
-
 // Urgency Review — TargetCard + MapMarker severity review surface.
 // Code-split so its fixtures stay out of the production entry chunk.
 const UrgencyReviewPage = lazy(() => import("./components/UrgencyReviewPage"));
@@ -172,14 +170,6 @@ export default function App() {
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Dashboard />} />
-              <Route
-                path="/fov-test"
-                element={
-                  <Suspense fallback={<PlaygroundFallback />}>
-                    <FovTestPage />
-                  </Suspense>
-                }
-              />
               <Route
                 path="/styleguide"
                 element={
