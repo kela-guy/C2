@@ -45,7 +45,6 @@ import {
   type FlowLocationPresetKey,
   type FlowPlayback,
   type FlowPlaybackSpeed,
-  DEFAULT_FLOW_TIMING,
   FLOW_LOCATION_PRESETS,
   deriveActForEntity,
   upsertFlowPreset,
@@ -107,30 +106,11 @@ const SENSOR_GROUPS: SensorGroupDef[] = [
   { key: 'lidar', assets: LIDAR_ASSETS, Icon: LidarIcon },
 ];
 
-function newDraftId(): string {
-  return `draft-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-}
-
-/** Build a fresh default flow draft. Exported so Dashboard can seed state. */
-export function defaultFlowDraft(): FlowDef {
-  return defaultDraft();
-}
-
-function defaultDraft(): FlowDef {
-  return {
-    id: newDraftId(),
-    name: '',
-    version: 1,
-    entity: 'drone',
-    affiliation: 'hostile',
-    sensorIds: ['RAD-NVT-RADA'],
-    location: { kind: 'preset', key: 'sector-north' },
-    investigation: { pointCamera: false },
-    act: deriveActForEntity('drone'),
-    timing: { ...DEFAULT_FLOW_TIMING },
-    playback: { mode: 'auto', speed: 1 },
-  };
-}
+// Draft factory lives in `./flowDefaults` (map-free module) so Dashboard
+// can seed state without statically importing this lazy-loaded panel.
+// Re-exported here for existing consumers.
+import { defaultFlowDraft } from './flowDefaults';
+export { defaultFlowDraft };
 
 function flowsEqual(a: FlowDef, b: FlowDef): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
@@ -203,7 +183,7 @@ export function FlowBuilderPanel({
   const [pendingPresetId, setPendingPresetId] = useState<string | null>(null);
   const applyPreset = useCallback((id: string) => {
     if (id === '__new__') {
-      setDraft(defaultDraft());
+      setDraft(defaultFlowDraft());
       setLoadedPresetId(null);
       return;
     }
@@ -254,7 +234,7 @@ export function FlowBuilderPanel({
     const removed = presets.find((p) => p.id === loadedPresetId);
     const after = deleteFlowPreset(loadedPresetId);
     setPresets(after);
-    setDraft(defaultDraft());
+    setDraft(defaultFlowDraft());
     setLoadedPresetId(null);
     if (removed) toast.success(t.toasts.deleted(removed.name));
   }, [loadedPresetId, presets, setDraft, setLoadedPresetId, setPresets, t]);
