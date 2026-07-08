@@ -639,7 +639,7 @@
       "name": "target-card",
       "type": "registry:ui",
       "title": "TargetCard",
-      "description": "Core detection card shell with accent spine, collapsible body, and slot composition.",
+      "description": "Core detection card shell with collapsible body and slot composition.",
       "categories": ["domain"],
       "registryDependencies": ["collapsible", "card", "utils", "tokens"],
       "files": [{ "path": "src/primitives/TargetCard.tsx", "type": "registry:component" }]
