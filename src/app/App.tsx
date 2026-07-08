@@ -6,8 +6,6 @@ import { HTML5Backend } from "react-dnd-html5-backend";
 import { DialRoot } from "dialkit";
 import "dialkit/styles.css";
 import { Dashboard } from "./components/Dashboard";
-import FovTestPage from "./components/FovTestPage";
-import UrgencyReviewPage from "./components/UrgencyReviewPage";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
 import { AppLoader } from "./components/ui/app-loader";
 import { DirectionProvider } from "@/lib/direction";
@@ -18,6 +16,14 @@ import { DirectionProvider } from "@/lib/direction";
 // Code-split so the mock fixtures + next-gen tree never enter the
 // production bundle.
 const DevicesLabPage = lazy(() => import("./components/DevicesLabPage"));
+
+// FOV Test — legacy Mapbox FOV playground. Code-split so the second map
+// stack (react-map-gl / mapbox-gl) never enters the production entry chunk.
+const FovTestPage = lazy(() => import("./components/FovTestPage"));
+
+// Urgency Review — TargetCard + MapMarker severity review surface.
+// Code-split so its fixtures stay out of the production entry chunk.
+const UrgencyReviewPage = lazy(() => import("./components/UrgencyReviewPage"));
 
 // Onboarding Lab — previewable auto-coverage onboarding experience
 // (`components/onboarding/`). First-run base-protection setup on the live 3D
@@ -166,7 +172,14 @@ export default function App() {
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/fov-test" element={<FovTestPage />} />
+              <Route
+                path="/fov-test"
+                element={
+                  <Suspense fallback={<PlaygroundFallback />}>
+                    <FovTestPage />
+                  </Suspense>
+                }
+              />
               <Route
                 path="/styleguide"
                 element={
@@ -198,7 +211,14 @@ export default function App() {
                 (see `docs/urgency-unification-plan.md`). Not linked
                 from the main UI — reviewers open the route directly.
               */}
-              <Route path="/urgency-review" element={<UrgencyReviewPage />} />
+              <Route
+                path="/urgency-review"
+                element={
+                  <Suspense fallback={<PlaygroundFallback />}>
+                    <UrgencyReviewPage />
+                  </Suspense>
+                }
+              />
               {/*
                 Marketing demo route — same Dashboard component as `/`,
                 served from a separate URL so we can iterate on demo-only
