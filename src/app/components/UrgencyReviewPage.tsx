@@ -53,7 +53,7 @@ import {
   SelectValue,
 } from './ui/select';
 import type { Detection } from '@/imports/ListOfSystems';
-import { DroneIcon } from './TacticalMap';
+import { DroneIcon } from './tacticalIcons';
 import { useCardSlots, type CardCallbacks } from '@/imports/useCardSlots';
 import { getCreatedAtMs } from '@/imports/useActivityStatus';
 import {
@@ -126,7 +126,7 @@ const ENTITY_OPTIONS: Record<EntityKey, EntityOption> = {
     key: 'drone',
     label: 'רחפן',
     cardIcon: DroneCardIcon,
-    renderMarker: (color) => <DroneIcon color={color} rotationDeg={0} />,
+    renderMarker: (color) => <DroneIcon color={color} rotationDeg={0} size={32} />,
     cardName: 'רחפן',
   },
   car: {

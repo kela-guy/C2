@@ -20,18 +20,25 @@ Add the `@c2` registry to the consuming project’s `components.json` (mirror [t
 
 ```bash
 npx shadcn@latest init
+npx shadcn@latest add @c2/base
 npx shadcn@latest add @c2/domain-primitives
 ```
 
 Already using shadcn:
 
 ```bash
+npx shadcn@latest add @c2/base
 npx shadcn@latest add @c2/domain-primitives
 ```
+
+Install `@c2/base` before any C2 component or bundle. It bootstraps the C2 registry, dependencies, Tailwind v4 theme partial, generated CSS variables, and the core primitive set that downstream components expect.
+
+C2 is dark by default. The base CSS includes a `.light` opt-in block for preview surfaces; wrap only intentional light-mode previews in `.light` instead of treating light mode as the app default.
 
 Full URL fallback (debugging or older tooling):
 
 ```bash
+npx shadcn@latest add https://c2-hub-three.vercel.app/r/base.json
 npx shadcn@latest add https://c2-hub-three.vercel.app/r/domain-primitives.json
 ```
 

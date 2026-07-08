@@ -24,7 +24,7 @@ The four lists that must agree but have no enforced link:
 | AI agents | Read a machine-readable manifest of props/anatomy/states to generate correct code. |
 | Stakeholders | Browse states/flows visually without reading code. |
 
-Out of scope: external/CLI registry consumers — no public install polish needed, which simplifies DX.
+Out of scope: external/CLI registry consumers — no public install polish needed, which simplifies DX. *(Superseded — see `registry-foundation-plan.md` §1: the distribution layer is now in scope for internal consumers.)*
 
 ## 3. Competitive teardown (reverse-engineered from live docs)
 

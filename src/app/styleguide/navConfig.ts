@@ -125,14 +125,6 @@ export const NAV: NavGroup[] = [
           { id: 'flow-hover-sensor', label: 'Hover Sensor' },
         ],
       },
-      {
-        id: 'engagement-line-flows',
-        label: 'Engagement Line',
-        children: [
-          { id: 'engagement-anatomy', label: 'Line Anatomy' },
-          { id: 'engagement-spec', label: 'Animation Spec' },
-        ],
-      },
     ],
   },
   {

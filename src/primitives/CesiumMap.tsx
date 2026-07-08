@@ -1175,6 +1175,7 @@ export function CesiumMap({
     let raf = 0;
     let lastTime = performance.now();
     const step = (now: number) => {
+      if (viewer.isDestroyed()) return;
       const dt = Math.min(0.05, (now - lastTime) / 1000);
       lastTime = now;
       // Prefer the live camera height. `positionCartographic` is null

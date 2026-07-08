@@ -5,10 +5,26 @@ C2 Hub tactical target management console UI (Vite + React). Original design at 
 
 ## Running the code
 
-```bash
-pnpm i
-pnpm dev
-```
+1. Export your Central Icons license key **before** install (see [`.env.example`](.env.example) for details):
+
+   ```bash
+   export CENTRAL_LICENSE_KEY="your-key-here"
+   ```
+
+2. Copy env template and fill the two `VITE_*` tokens:
+
+   ```bash
+   cp .env.example .env.local
+   ```
+
+3. Install and start the dev server:
+
+   ```bash
+   pnpm i
+   pnpm dev
+   ```
+
+Agents and new contributors should also read [`AGENTS.md`](AGENTS.md) for repo conventions and known baselines.
 
 ## Styleguide
 

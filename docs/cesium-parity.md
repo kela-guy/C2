@@ -146,13 +146,15 @@ Fixed by:
 |---|---|---|---|
 | Default flips to Cesium; toggle becomes `?map=mapbox` | ✓ | ✓ | Default in `src/lib/mapBackend.ts` flipped — unsuffixed URLs load Cesium; `?map=mapbox` is the opt-out for rollback during the bake-in release. |
 
-## Phase 9 — Mapbox removal
+## Phase 9 — Mapbox removal  *(complete)*
 
 | Capability | Status |
 |---|---|
-| Delete `TacticalMap.tsx` | ✗ |
-| Drop `mapbox-gl` dependency | ✗ |
-| Remove `VITE_MAPBOX_TOKEN` from `.env.example` | ✗ |
+| Delete `TacticalMap.tsx` | ✓ |
+| Drop `mapbox-gl` dependency | ✓ |
+| Remove `VITE_MAPBOX_TOKEN` from `.env.example` | ✓ |
+
+Removed in plan 012, 2026-07-08; rollback = pre-deletion commit `65a49393f3ed53f376399fc92af6577349823614` (there is no runtime toggle anymore — `?map=mapbox` no longer exists).
 
 ---
 
