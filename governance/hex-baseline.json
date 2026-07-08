@@ -1,7 +1,6 @@
 {
   "$description": "Ratchet baseline for the no-raw-hex governance rule. Per-file count of pre-existing raw hex literals. design-lint fails when a file exceeds its baseline. Regenerate with `node scripts/design-lint.mjs --update` (only after intentionally fixing or adding tokens).",
   "counts": {
-    "src/app/App.tsx": 1,
     "src/app/components/camera-v2/CameraCompassStrip.tsx": 4,
     "src/app/components/camera-v2/CameraDetectionsOverlay.tsx": 3,
     "src/app/components/camera-v2/DesignateTargetOverlay.tsx": 6,
@@ -13,8 +12,8 @@
     "src/app/components/devices-panel-next/lab/StateColorLab.tsx": 2,
     "src/app/components/DevicesLabPage.tsx": 1,
     "src/app/components/floating-panel-sandbox/FloatingPanelSandbox.tsx": 2,
-    "src/app/components/FovTestPage.tsx": 6,
     "src/app/components/geo-entities-sandbox/drawTools.ts": 20,
+    "src/app/components/geo-entities-sandbox/GeoAnchorSpike.tsx": 12,
     "src/app/components/geo-entities-sandbox/GeoDrawCanvas.tsx": 11,
     "src/app/components/geo-entities-sandbox/GeoEntitiesCardSandbox.tsx": 15,
     "src/app/components/geo-entities-sandbox/ShapeEditPanel.tsx": 1,
@@ -38,9 +37,8 @@
     "src/app/components/pathfinder/ProcessStatusToast.starter.tsx": 10,
     "src/app/components/story-kit/Fade.tsx": 2,
     "src/app/components/story-kit/palette.ts": 14,
-    "src/app/components/StyleguidePage.tsx": 36,
+    "src/app/components/StyleguidePage.tsx": 17,
     "src/app/components/tacticalIcons.tsx": 4,
-    "src/app/components/TacticalMap.tsx": 13,
     "src/app/components/UrgencyReviewPage.tsx": 2,
     "src/app/components/useDevicesFromAssets.tsx": 1,
     "src/imports/engagementFlows.ts": 16,
