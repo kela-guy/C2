@@ -173,8 +173,9 @@ undo/redo stacks, transaction depth, z-order) survives unchanged.
 
 - **Capture stays in screen space; commit converts to world space.**
   During a draft, pointer positions are picked to ground per placed vertex
-  (one `pickPosition`/`globe.pick` per click — cheap; observed
-  interactively without perceptible lag on all three scenes). Freehand is
+  (one `pickPosition`/`globe.pick` per click — the picks returned
+  synchronously per click on all three scenes; per-click latency was not
+  measurable in the throttled observation environment). Freehand is
   the one tool that picks per pointer-move; if that proves costly on
   photoreal tiles, capture freehand in screen space and batch-convert on
   pointer-up (N picks once). [observed for click-tools; freehand cost is
