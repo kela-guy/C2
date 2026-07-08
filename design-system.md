@@ -16,6 +16,8 @@ Live styleguide: [c2-hub-three.vercel.app/styleguide](https://c2-hub-three.verce
 
 ### Quick start
 
+> **Heads-up:** Installed components depend on C2 token CSS (`--surface-*`, `--slate-*`, etc.) that is **not yet distributed** via the registry. Until `@c2/base` ships ([registry foundation plan](docs/registry-foundation-plan.md) Phase 1), copy `src/styles/palette.css` and `src/styles/theme.css` into your consumer app manually or components will render without correct colors.
+
 Add the `@c2` registry to the consuming project’s `components.json` (mirror [this repo](components.json)):
 
 ```bash
