@@ -10,12 +10,19 @@ import { TooltipProvider } from "@/shared/components/ui/tooltip";
 import { AppLoader } from "./components/ui/app-loader";
 import { DirectionProvider } from "@/lib/direction";
 
+// Lab/review surfaces ship only when explicitly enabled: always in local
+// dev, and on deployments that set VITE_SHOW_LABS=1 (preview envs).
+// Production operator builds leave the flag unset and drop these routes.
+const SHOW_LABS = import.meta.env.DEV || import.meta.env.VITE_SHOW_LABS === "1";
+
 // Devices Lab — sandbox for the rebuilt, registry-driven device panel
 // (`devices-panel-next/`). Lives on its own route while the design is
 // validated; once approved it replaces the panel inside Dashboard.
 // Code-split so the mock fixtures + next-gen tree never enter the
 // production bundle.
-const DevicesLabPage = lazy(() => import("./components/DevicesLabPage"));
+const DevicesLabPage = SHOW_LABS
+  ? lazy(() => import("./components/DevicesLabPage"))
+  : null;
 
 // Urgency Review — TargetCard + MapMarker severity review surface.
 // Code-split so its fixtures stay out of the production entry chunk.
@@ -25,7 +32,9 @@ const UrgencyReviewPage = lazy(() => import("./components/UrgencyReviewPage"));
 // (`components/onboarding/`). First-run base-protection setup on the live 3D
 // map. Not wired into production gating yet; reviewers open it directly.
 // Code-split so the Cesium-heavy lab never enters other bundles.
-const OnboardingLabPage = lazy(() => import("./components/onboarding/OnboardingLabPage"));
+const OnboardingLabPage = SHOW_LABS
+  ? lazy(() => import("./components/onboarding/OnboardingLabPage"))
+  : null;
 
 // Design System — the manifest-driven styleguide, canonical at `/styleguide`
 // (also answers at `/design-system`). Code-split so its doc modules never
@@ -36,25 +45,33 @@ const DesignSystemPage = lazy(() => import("./styleguide/registry/DesignSystem")
 // System above. Kept reachable at `/styleguide-legacy` for the demo sections
 // not yet ported into the registry; deleted once the port completes.
 // Code-split so its 7k lines never enter the production bundle.
-const StyleguideLegacyPage = lazy(() => import("./components/StyleguidePage"));
+const StyleguideLegacyPage = SHOW_LABS
+  ? lazy(() => import("./components/StyleguidePage"))
+  : null;
 
 // Video HUD Sandbox — sandbox for the camera HUD chrome (setpoint rail,
 // bottom chrome, compass, connectivity, detections). Shipped in production
 // on its own route; not linked from the main UI — reviewers open it directly.
 // Code-split so its assets never enter other bundles.
-const VideoHudSandbox = lazy(() => import("./components/video-hud-sandbox/VideoHudSandbox"));
+const VideoHudSandbox = SHOW_LABS
+  ? lazy(() => import("./components/video-hud-sandbox/VideoHudSandbox"))
+  : null;
 
 // Pathfinder Sandbox — design surface for the multi-step takeoff toast
 // (prepare → takeoff → loiter → return). Not linked from the main UI;
 // reviewers open it directly. Code-split so it never enters other bundles.
-const PathfinderSandbox = lazy(() => import("./components/pathfinder-sandbox/PathfinderSandbox"));
+const PathfinderSandbox = SHOW_LABS
+  ? lazy(() => import("./components/pathfinder-sandbox/PathfinderSandbox"))
+  : null;
 
 // Handoff Stories — scrollytelling interaction handoff for the Pathfinder
 // launch toast (`components/handoff-story/`). A devouringdetails-style narrated
 // walkthrough: prose + sticky live stage + debug console + spec contract. Not
 // linked from the main UI; reviewers open it directly. Code-split so the kit and
 // the Caveat/JetBrains fonts only load on this route.
-const PathfinderStory = lazy(() => import("./components/handoff-story/PathfinderStory"));
+const PathfinderStory = SHOW_LABS
+  ? lazy(() => import("./components/handoff-story/PathfinderStory"))
+  : null;
 
 // Geo Entities Sandbox — dev-only surface for iterating on how geographic
 // entities (targets, friendlies, sensors, zones, POIs) are projected, styled,
@@ -184,14 +201,16 @@ export default function App() {
                   </Suspense>
                 }
               />
-              <Route
-                path="/styleguide-legacy"
-                element={
-                  <Suspense fallback={<PlaygroundFallback />}>
-                    <StyleguideLegacyPage />
-                  </Suspense>
-                }
-              />
+              {StyleguideLegacyPage && (
+                <Route
+                  path="/styleguide-legacy"
+                  element={
+                    <Suspense fallback={<PlaygroundFallback />}>
+                      <StyleguideLegacyPage />
+                    </Suspense>
+                  }
+                />
+              )}
               {/*
                 Urgency review — dedicated surface for inspecting every
                 TargetCard + MapMarker variant against the unified
@@ -219,64 +238,74 @@ export default function App() {
                 device panel rebuild. Not linked from the main UI;
                 reviewers open it directly. Removed at promotion.
               */}
-              <Route
-                path="/devices-lab"
-                element={
-                  <Suspense fallback={<PlaygroundFallback />}>
-                    <DevicesLabPage />
-                  </Suspense>
-                }
-              />
+              {DevicesLabPage && (
+                <Route
+                  path="/devices-lab"
+                  element={
+                    <Suspense fallback={<PlaygroundFallback />}>
+                      <DevicesLabPage />
+                    </Suspense>
+                  }
+                />
+              )}
               {/*
                 Onboarding Lab — auto-coverage first-run setup on the live 3D
                 map. Not linked from the main UI; reviewers open it directly.
               */}
-              <Route
-                path="/onboarding"
-                element={
-                  <Suspense fallback={<PlaygroundFallback />}>
-                    <OnboardingLabPage />
-                  </Suspense>
-                }
-              />
+              {OnboardingLabPage && (
+                <Route
+                  path="/onboarding"
+                  element={
+                    <Suspense fallback={<PlaygroundFallback />}>
+                      <OnboardingLabPage />
+                    </Suspense>
+                  }
+                />
+              )}
               {/*
                 Video HUD Sandbox — camera HUD chrome sandbox. Shipped in
                 production on its own route; not linked from the main UI —
                 reviewers open it directly.
               */}
-              <Route
-                path="/video-hud-sandbox"
-                element={
-                  <Suspense fallback={<PlaygroundFallback />}>
-                    <VideoHudSandbox />
-                  </Suspense>
-                }
-              />
+              {VideoHudSandbox && (
+                <Route
+                  path="/video-hud-sandbox"
+                  element={
+                    <Suspense fallback={<PlaygroundFallback />}>
+                      <VideoHudSandbox />
+                    </Suspense>
+                  }
+                />
+              )}
               {/*
                 Pathfinder Sandbox — multi-step takeoff toast design surface.
                 Not linked from the main UI; reviewers open it directly.
               */}
-              <Route
-                path="/pathfinder-sandbox"
-                element={
-                  <Suspense fallback={<PlaygroundFallback />}>
-                    <PathfinderSandbox />
-                  </Suspense>
-                }
-              />
+              {PathfinderSandbox && (
+                <Route
+                  path="/pathfinder-sandbox"
+                  element={
+                    <Suspense fallback={<PlaygroundFallback />}>
+                      <PathfinderSandbox />
+                    </Suspense>
+                  }
+                />
+              )}
               {/*
                 Handoff Stories — narrated interaction walkthrough for the
                 Pathfinder launch toast. Not linked from the main UI; reviewers
                 open it directly.
               */}
-              <Route
-                path="/handoff"
-                element={
-                  <Suspense fallback={<PlaygroundFallback />}>
-                    <PathfinderStory />
-                  </Suspense>
-                }
-              />
+              {PathfinderStory && (
+                <Route
+                  path="/handoff"
+                  element={
+                    <Suspense fallback={<PlaygroundFallback />}>
+                      <PathfinderStory />
+                    </Suspense>
+                  }
+                />
+              )}
               {/*
                 Geo Entities Sandbox — dev-only sandbox for the tactical map's
                 geographic entity rendering. Not linked from the main UI;
