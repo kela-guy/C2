@@ -429,6 +429,19 @@ export const Dashboard = ({
   const pathfinderReturnRef = useRef<{ from: [number, number]; start: number } | null>(null);
   const pathfinderPosRef = useRef<[number, number]>(PATHFINDER_HOME);
   const pathfinderTrailRef = useRef<[number, number][]>([]);
+  // Tracks bare `setTimeout` calls scheduled outside the main timer refs so we
+  // can clear them on unmount (CUAS spawn, mitigation cascades, focus resets).
+  const pendingTimeoutsRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+  // Schedule a timeout that is auto-cleared on Dashboard unmount. Use this
+  // for every fire-and-forget delay; long-lived named timers keep their own refs.
+  const scheduleTimeout = useCallback((fn: () => void, ms: number) => {
+    const id = setTimeout(() => {
+      pendingTimeoutsRef.current.delete(id);
+      fn();
+    }, ms);
+    pendingTimeoutsRef.current.add(id);
+    return id;
+  }, []);
   const pathfinderLabelRef = useRef({
     name: t.simulation.friendlyDrones.pathfinder.name,
     altitude: t.simulation.friendlyDrones.pathfinder.altitude,
@@ -502,8 +515,8 @@ export const Dashboard = ({
       );
     const sinceClose = Date.now() - pathfinderToastClosedAtRef.current;
     if (sinceClose >= PATHFINDER_TOAST_EXIT_MS) show();
-    else window.setTimeout(show, PATHFINDER_TOAST_EXIT_MS - sinceClose);
-  }, [locale, closePathfinderToast, handlePathfinderSimChange]);
+    else scheduleTimeout(show, PATHFINDER_TOAST_EXIT_MS - sinceClose);
+  }, [locale, closePathfinderToast, handlePathfinderSimChange, scheduleTimeout]);
 
   const handlePathfinderLaunch = useCallback(() => {
     pathfinderMapPhaseRef.current = 'launching';
@@ -622,9 +635,6 @@ export const Dashboard = ({
   const cuasIntervalRef3 = useRef<NodeJS.Timeout | null>(null);
   const cuasIntervalRef4 = useRef<NodeJS.Timeout | null>(null);
   const cuasMassRefs = useRef<NodeJS.Timeout[]>([]);
-  // Tracks bare `setTimeout` calls scheduled outside the main timer refs so we
-  // can clear them on unmount (CUAS spawn, mitigation cascades, focus resets).
-  const pendingTimeoutsRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
 
   // Master unmount cleanup for every long-lived timer the dashboard owns.
   // Component unmount only happens on full route changes today, but it's the
@@ -695,7 +705,8 @@ export const Dashboard = ({
       setCameraControlRequest(prev => {
         if (!prev) return null;
         if (prev.countdown <= 1) {
-          const tgt = targets.find(t => t.id === prev.targetId);
+          // Use the established fresh-target ref pattern for interval callbacks.
+          const tgt = targetsRef.current.find(t => t.id === prev.targetId);
           if (tgt) {
             const [lat, lon] = tgt.coordinates.split(',').map(s => parseFloat(s.trim()));
             const nearest = CAMERA_ASSETS
@@ -713,7 +724,7 @@ export const Dashboard = ({
       });
     }, 1000);
     return () => clearInterval(iv);
-  }, [cameraControlRequest?.targetId, targets, t]);
+  }, [cameraControlRequest?.targetId, t]);
 
   // --- Friendly drone patrol simulation ---
   // Sims can be disabled via `?sim=off` for perf-sensitive sessions
@@ -748,9 +759,9 @@ export const Dashboard = ({
       trailTickRef.current += 1;
       const sampleTrail = trailTickRef.current % TRAIL_SAMPLE_EVERY === 0;
 
-      patrolProgressRef.current = patrolProgressRef.current.map((p) => {
+      patrolProgressRef.current = patrolProgressRef.current.map((p, i) => {
         const next = p + PATROL_SPEED;
-        return next >= friendlyPatrolRoutes[0].waypoints.length ? 0 : next;
+        return next >= friendlyPatrolRoutes[i].waypoints.length ? 0 : next;
       });
 
       const drones: FriendlyDrone[] = friendlyPatrolRoutes.map((route, i) => {
@@ -1160,7 +1171,7 @@ export const Dashboard = ({
           updated.status = 'detection';
           updated.priority = getPriorityBaseline(updated);
           updated.actionLog = [...(updated.actionLog || []), { time: tnow, label: classifiedLogByEntity[entity] }];
-          setTimeout(() => {
+          scheduleTimeout(() => {
             showTacticalNotification({
               title: notif.newDetectionTitle(updated.name ?? ''),
               message: isBird
@@ -1188,7 +1199,7 @@ export const Dashboard = ({
     }, 2000);
 
     return targetId;
-  }, [activeTargetId, t]);
+  }, [activeTargetId, t, scheduleTimeout]);
 
   // --- CUAS Simulation Flows ---
   const handleCUASFlow = useCallback(() => {
@@ -1228,9 +1239,9 @@ export const Dashboard = ({
         entity,
       });
       if (route.delay === 0) spawn();
-      else setTimeout(spawn, route.delay);
+      else scheduleTimeout(spawn, route.delay);
     });
-  }, [devicesPanelOpen, spawnCuasTarget]);
+  }, [devicesPanelOpen, spawnCuasTarget, scheduleTimeout]);
 
   const handleCUASSingle = useCallback(() => {
     if (devicesPanelOpen) setPanelSwitching(true);
@@ -1281,7 +1292,7 @@ export const Dashboard = ({
         ? startLon + (baseLon - startLon) * 0.3
         : baseLon + (Math.random() - 0.5) * endOffset;
 
-      setTimeout(() => {
+      scheduleTimeout(() => {
         const ref: React.MutableRefObject<NodeJS.Timeout | null> = { current: null };
         spawnCuasTarget({
           startLat, startLon, endLat, endLon,
@@ -1294,7 +1305,7 @@ export const Dashboard = ({
       }, delay);
     }
 
-    setTimeout(() => {
+    scheduleTimeout(() => {
       showTacticalNotification({
         title: t.notifications.swarmAlertTitle,
         message: t.notifications.swarmAlertMessage(count),
@@ -1302,7 +1313,7 @@ export const Dashboard = ({
         level: 'critical',
       });
     }, 300);
-  }, [devicesPanelOpen, spawnCuasTarget, t]);
+  }, [devicesPanelOpen, spawnCuasTarget, t, scheduleTimeout]);
 
   const handleEffectorSelect = useCallback((targetId: string, effectorId: string) => {
     setSelectedEffectorIds(prev => new Map(prev).set(targetId, effectorId));
@@ -1329,13 +1340,13 @@ export const Dashboard = ({
     setTargets(prev => appendLog(prev, targetId, `${t.actionLog.gotchaStart} — ${gotchaId}`).map(tg =>
       tg.id === targetId ? { ...tg, gotchaStatus: 'engaging' as const, engagingGotchaId: gotchaId } : tg
     ));
-    setTimeout(() => {
+    scheduleTimeout(() => {
       setTargets(prev => appendLog(prev, targetId, t.actionLog.gotchaEnd).map(tg =>
         tg.id === targetId ? { ...tg, gotchaStatus: 'engaged' as const } : tg
       ));
       toast.success(t.toasts.gotchaEngaged);
     }, 3000);
-  }, [t]);
+  }, [t, scheduleTimeout]);
 
   // --- CUAS Mitigation Handlers ---
   /**
@@ -1365,7 +1376,7 @@ export const Dashboard = ({
       setTargets(prev => appendLog(prev, targetId, `${config.startLog} — ${assetId}`).map(t =>
         t.id === targetId ? { ...t, [config.targetStatusField]: config.startStatus, [config.targetAssetIdField]: assetId } : t
       ));
-      setTimeout(() => {
+      scheduleTimeout(() => {
         setTargets(prev => appendLog(prev, targetId, config.endLog).map(t =>
           t.id === targetId ? { ...t, [config.targetStatusField]: config.endStatus, ...config.extraEndTargetFields } : t
         ));
@@ -1393,7 +1404,7 @@ export const Dashboard = ({
     endAssetStatus: 'available',
     extraEndTargetFields: { missionType: 'jamming', missionStatus: 'waiting_confirmation' },
     delayMs: 3000,
-  }), [t]);
+  }), [t, scheduleTimeout]);
 
   const JAMMABLE_STATUSES = new Set(['suspicion', 'detection', 'tracking', 'event']);
 
@@ -1415,7 +1426,7 @@ export const Dashboard = ({
       });
     });
 
-    setTimeout(() => {
+    scheduleTimeout(() => {
       setTargets(prev => {
         const logged = targetId ? appendLog(prev, targetId, t.actionLog.jamGlobalEnd) : prev;
         return logged.map(tgt =>
@@ -1432,7 +1443,7 @@ export const Dashboard = ({
       setRegulusEffectors(prev => prev.map(r => ({ ...r, status: 'available' as const, activeTargetId: undefined })));
       toast.success(t.toasts.jamEndedAwaitVerify);
     }, 3000);
-  }, [regulusEffectors, t]);
+  }, [regulusEffectors, t, scheduleTimeout]);
 
   // --- Ground Vehicle Weapon Pointing Handlers ---
   const handleLauncherSelect = useCallback((targetId: string, launcherId: string) => {
@@ -1451,14 +1462,14 @@ export const Dashboard = ({
     endLog: t.actionLog.weaponEnd,
     endToast: t.toasts.weaponPointed,
     delayMs: 3000,
-  }), [t]);
+  }), [t, scheduleTimeout]);
 
   const handleLockWeapon = useCallback((targetId: string) => {
     setTargets(prev => appendLog(prev, targetId, t.actionLog.locking).map(tgt =>
       tgt.id === targetId ? { ...tgt, weaponPointingStatus: 'locking' as const } : tgt
     ));
 
-    setTimeout(() => {
+    scheduleTimeout(() => {
       setTargets(prev => {
         const tgt = prev.find(tg => tg.id === targetId);
         const launcherId = tgt?.pointingLauncherId;
@@ -1473,7 +1484,7 @@ export const Dashboard = ({
       });
       toast.success(t.toasts.lockedReadyForFire);
     }, 1500);
-  }, [t]);
+  }, [t, scheduleTimeout]);
 
   const handleDismissLock = useCallback((targetId: string) => {
     const target = targets.find(tg => tg.id === targetId);
@@ -1584,17 +1595,17 @@ export const Dashboard = ({
       }
     }
 
-    setTimeout(() => {
+    scheduleTimeout(() => {
       setTargets(prev => appendLog(prev, targetId, t.actionLog.bdaInProgress).map(tg =>
         tg.id === targetId ? { ...tg, bdaStatus: 'stabilizing' as const } : tg
       ));
     }, 2000);
-    setTimeout(() => {
+    scheduleTimeout(() => {
       setTargets(prev => appendLog(prev, targetId, t.actionLog.bdaObserving).map(tg =>
         tg.id === targetId ? { ...tg, bdaStatus: 'observing' as const } : tg
       ));
     }, 5000);
-  }, [targets, t]);
+  }, [targets, t, scheduleTimeout]);
 
   const handleBdaOutcome = useCallback((targetId: string, outcome: 'neutralized' | 'active' | 'lost') => {
     if (outcome === 'neutralized') {
@@ -1658,8 +1669,8 @@ export const Dashboard = ({
   // object/array/closure literals every render and defeat its React.memo.
   const handleSensorFocus = useCallback((sensorId: string) => {
     setSensorFocusId(sensorId);
-    setTimeout(() => setSensorFocusId(null), 2000);
-  }, []);
+    scheduleTimeout(() => setSensorFocusId(null), 2000);
+  }, [scheduleTimeout]);
 
   const flowAssets = useMemo(
     () => ({ regulusEffectors, launcherEffectors, gotchaEffectors }),
@@ -1706,13 +1717,13 @@ export const Dashboard = ({
     const [lat, lon] = target.coordinates.split(',').map(c => parseFloat(c.trim()));
     if (isNaN(lat) || isNaN(lon)) return;
     setMapFocusRequest({ lat, lon });
-    setTimeout(() => setMapFocusRequest(null), 100);
-  }, [targets]);
+    scheduleTimeout(() => setMapFocusRequest(null), 100);
+  }, [targets, scheduleTimeout]);
 
   const handleDeviceFlyTo = useCallback((lat: number, lon: number) => {
     setMapFocusRequest({ lat, lon });
-    setTimeout(() => setMapFocusRequest(null), 100);
-  }, []);
+    scheduleTimeout(() => setMapFocusRequest(null), 100);
+  }, [scheduleTimeout]);
 
   // One-click PA broadcast (כריזה) from the critical drone takeover —
   // lights up every PA speaker (mirrors `onSpeakerToggle` for each) and
@@ -1967,8 +1978,8 @@ export const Dashboard = ({
           // delays so the player's closure mutation lands on top of a
           // fully-driven engagement (matching what the operator sees
           // when clicking through manually).
-          setTimeout(() => handleLockWeapon(targetId), 3200);
-          setTimeout(() => handleCompleteMission(targetId), 5200);
+          scheduleTimeout(() => handleLockWeapon(targetId), 3200);
+          scheduleTimeout(() => handleCompleteMission(targetId), 5200);
         }
         return;
       }
@@ -2033,7 +2044,7 @@ export const Dashboard = ({
         const [lat, lon] = (det.coordinates ?? '').split(',').map((s) => parseFloat(s.trim()));
         if (Number.isFinite(lat) && Number.isFinite(lon)) {
           setMapFocusRequest({ lat, lon });
-          setTimeout(() => setMapFocusRequest(null), 100);
+          scheduleTimeout(() => setMapFocusRequest(null), 100);
         }
         flowEscalationRef.current = det.id;
       }
@@ -2052,6 +2063,7 @@ export const Dashboard = ({
     handleCompleteMission,
     handleDismiss,
     t,
+    scheduleTimeout,
   ]);
 
   const flowPlayer = useFlowPlayer({ ops: flowOps, nowLabel: nowLocaleTime });
@@ -2110,10 +2122,10 @@ export const Dashboard = ({
       const [lat, lon] = (det.coordinates ?? '').split(',').map((s) => parseFloat(s.trim()));
       if (Number.isFinite(lat) && Number.isFinite(lon)) {
         setMapFocusRequest({ lat, lon });
-        setTimeout(() => setMapFocusRequest(null), 100);
+        scheduleTimeout(() => setMapFocusRequest(null), 100);
       }
     }
-  }, [activeFlowDetectionId, targets]);
+  }, [activeFlowDetectionId, targets, scheduleTimeout]);
 
   // ── Simulations panel — run / edit / delete ────────────────────────
   const handleRunBuiltin = useCallback((kind: BuiltinKind) => {
@@ -2154,8 +2166,8 @@ export const Dashboard = ({
     openDevicesPanel();
     setFocusedDeviceId(assetId);
     setSelectedAssetId(assetId);
-    setTimeout(() => setFocusedDeviceId(null), 500);
-  }, [openDevicesPanel]);
+    scheduleTimeout(() => setFocusedDeviceId(null), 500);
+  }, [openDevicesPanel, scheduleTimeout]);
 
   // Throttle the global `resize` dispatch fired on every ResizablePanel
   // tick. The map listens for `resize` and triggers a Cesium re-render,
@@ -2234,7 +2246,7 @@ export const Dashboard = ({
       });
       setIsSnapping(true);
       setIsDragging(false);
-      setTimeout(() => setIsSnapping(false), 200);
+      scheduleTimeout(() => setIsSnapping(false), 200);
     };
 
     try {
@@ -2247,7 +2259,7 @@ export const Dashboard = ({
     target.addEventListener('pointerup', onUp);
     target.addEventListener('pointercancel', onUp);
     target.addEventListener('lostpointercapture', onUp);
-  }, [isRtl]);
+  }, [isRtl, scheduleTimeout]);
 
   // Stable handlers for the map. CesiumTacticalMap stores callbacks in refs
   // internally, but useCallback keeps deps stable in case we wrap it in
@@ -2294,7 +2306,7 @@ export const Dashboard = ({
         setMapFocusRequest({ lat, lon });
         // Clear a moment later so re-focusing the same coord still
         // fires (Cesium reads a null->value transition).
-        setTimeout(() => setMapFocusRequest(null), 100);
+        scheduleTimeout(() => setMapFocusRequest(null), 100);
       }}
     />
     <div className="relative flex w-full h-screen overflow-hidden text-white font-sans selection:bg-red-500/30">
