@@ -41,10 +41,15 @@ export function tryMapOp<T>(context: string, fn: () => T): T | undefined {
 }
 
 /**
- * Mapbox access token. Set VITE_MAPBOX_TOKEN in .env.local.
- * Falls back to a public token for local development so nothing breaks immediately,
- * but production builds should always have the env var set.
+ * Mapbox access token. Set VITE_MAPBOX_TOKEN in .env.local (see .env.example).
+ * There is intentionally no fallback: a missing token must fail loudly
+ * instead of silently billing a shared account.
  */
 export const MAPBOX_TOKEN: string =
-  (import.meta.env.VITE_MAPBOX_TOKEN as string | undefined) ??
-  'pk.eyJ1IjoiZ3V5c2hhIiwiYSI6ImNtZ3htODN0dTE2dGMybXFrYWRlZmN5MGMifQ.dIQzO3kIdQaES0pfedlRvA';
+  (import.meta.env.VITE_MAPBOX_TOKEN as string | undefined) ?? '';
+
+if (!MAPBOX_TOKEN && import.meta.env.DEV) {
+  console.error(
+    '[mapUtils] VITE_MAPBOX_TOKEN is not set — Mapbox surfaces (/fov-test, legacy map) will not render. See .env.example.',
+  );
+}
