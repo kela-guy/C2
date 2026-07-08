@@ -81,6 +81,15 @@ const GeoEntitiesSandbox = import.meta.env.DEV
   ? lazy(() => import("./components/geo-entities-sandbox/GeoEntitiesSandbox"))
   : null;
 
+// Geo Anchor Spike — dev-only THROWAWAY prototype for plan 014
+// (world-space anchoring of map-draw shapes). Compares native clamped
+// Cesium entities vs a screen-space SVG overlay re-projected on
+// `camera.changed`, and logs the three pointer→ground pickers side by
+// side. Deleted after the findings doc is reviewed.
+const GeoAnchorSpike = import.meta.env.DEV
+  ? lazy(() => import("./components/geo-entities-sandbox/GeoAnchorSpike"))
+  : null;
+
 // Geo Entities Layers — dev-only surface that boots the live Dashboard
 // with the map-draw panel auto-opened and the 5 design variants of the
 // draw panel selectable from a tab row at the top.
@@ -317,6 +326,21 @@ export default function App() {
                   element={
                     <Suspense fallback={<PlaygroundFallback />}>
                       <GeoEntitiesSandbox />
+                    </Suspense>
+                  }
+                />
+              )}
+              {/*
+                Geo Anchor Spike — DEV-only. Throwaway prototype for the
+                world-space anchoring spike (plan 014). Reach it directly
+                at /geo-anchor-spike. Compiles to nothing in production.
+              */}
+              {GeoAnchorSpike && (
+                <Route
+                  path="/geo-anchor-spike"
+                  element={
+                    <Suspense fallback={<PlaygroundFallback />}>
+                      <GeoAnchorSpike />
                     </Suspense>
                   }
                 />
