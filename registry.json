@@ -4,31 +4,600 @@
   "homepage": "https://c2-hub-three.vercel.app",
   "items": [
     {
+      "name": "base",
+      "type": "registry:base",
+      "title": "C2 Base",
+      "description": "Dark-default C2 design-system bootstrap: tokens, Tailwind v4 theme CSS, dependencies, aliases, and core primitives.",
+      "categories": [
+        "core",
+        "tokens"
+      ],
+      "config": {
+        "style": "c2",
+        "iconLibrary": "lucide",
+        "rtl": true,
+        "tsx": true,
+        "rsc": false,
+        "tailwind": {
+          "baseColor": "neutral",
+          "cssVariables": true
+        },
+        "aliases": {
+          "components": "@/components",
+          "ui": "@/components/ui",
+          "lib": "@/lib",
+          "hooks": "@/hooks",
+          "utils": "@/lib/utils"
+        },
+        "registries": {
+          "@c2": "https://c2-hub-three.vercel.app/r/{name}.json"
+        }
+      },
+      "dependencies": [
+        "class-variance-authority",
+        "clsx",
+        "tailwind-merge",
+        "tw-animate-css",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils",
+        "button",
+        "input",
+        "card",
+        "dialog",
+        "select",
+        "dropdown-menu",
+        "popover",
+        "tooltip",
+        "badge",
+        "separator",
+        "tabs",
+        "label"
+      ],
+      "cssVars": {
+        "light": {
+          "slate-1": "oklch(0.165 0.005 256)",
+          "slate-2": "oklch(0.205 0.006 256)",
+          "slate-3": "oklch(0.245 0.008 256)",
+          "slate-4": "oklch(0.290 0.010 256)",
+          "slate-5": "oklch(0.345 0.012 256)",
+          "slate-6": "oklch(0.410 0.014 256)",
+          "slate-7": "oklch(0.490 0.016 256)",
+          "slate-8": "oklch(0.580 0.018 256)",
+          "slate-9": "oklch(0.665 0.018 256)",
+          "slate-10": "oklch(0.760 0.018 256)",
+          "slate-11": "oklch(0.870 0.014 256)",
+          "slate-12": "oklch(0.965 0.010 256)",
+          "surface-void": "oklch(0.06 0 0)",
+          "surface-1": "var(--slate-1)",
+          "surface-2": "var(--slate-2)",
+          "surface-3": "var(--slate-3)",
+          "surface-4": "var(--slate-4)",
+          "surface-5": "var(--slate-5)",
+          "surface-6": "var(--slate-6)",
+          "surface-7": "var(--slate-7)",
+          "surface-8": "var(--slate-8)",
+          "shadow-1": "none",
+          "shadow-2": "0 1px 2px rgb(0 0 0 / 0.30)",
+          "shadow-3": "0 2px 4px rgb(0 0 0 / 0.45), 0 1px 2px rgb(0 0 0 / 0.35)",
+          "shadow-4": "0 4px 8px rgb(0 0 0 / 0.55), 0 2px 4px rgb(0 0 0 / 0.40)",
+          "shadow-5": "0 8px 16px rgb(0 0 0 / 0.60), 0 4px 8px rgb(0 0 0 / 0.45)",
+          "shadow-6": "0 12px 24px rgb(0 0 0 / 0.65), 0 6px 12px rgb(0 0 0 / 0.50)",
+          "shadow-7": "0 16px 32px rgb(0 0 0 / 0.70), 0 8px 16px rgb(0 0 0 / 0.55)",
+          "shadow-8": "0 24px 48px rgb(0 0 0 / 0.75), 0 12px 24px rgb(0 0 0 / 0.60)",
+          "border-default": "oklch(0.490 0.016 256 / 0.55)",
+          "border-strong": "oklch(0.580 0.018 256 / 0.80)",
+          "border-subtle": "oklch(0.345 0.012 256 / 0.60)",
+          "accent-danger": "oklch(0.660 0.220 27)",
+          "accent-warning": "oklch(0.770 0.170 70)",
+          "accent-tracking": "oklch(0.715 0.180 50)",
+          "accent-success": "oklch(0.790 0.180 145)",
+          "accent-info": "oklch(0.790 0.140 230)",
+          "accent-historical": "oklch(0.720 0.160 280)",
+          "accent-cyan": "oklch(0.790 0.130 200)",
+          "accent-magenta": "oklch(0.700 0.200 340)",
+          "accent-danger-soft": "oklch(0.395 0.110 27)",
+          "accent-warning-soft": "oklch(0.420 0.090 70)",
+          "accent-success-soft": "oklch(0.430 0.090 145)",
+          "accent-info-soft": "oklch(0.430 0.070 230)",
+          "accent-historical-soft": "oklch(0.58 0.19 275)",
+          "accent-danger-soft-hover": "oklch(0.445 0.110 27)",
+          "accent-danger-soft-active": "oklch(0.345 0.110 27)",
+          "accent-warning-soft-hover": "oklch(0.470 0.090 70)",
+          "accent-warning-soft-active": "oklch(0.370 0.090 70)",
+          "accent-success-tint": "color-mix(in oklch, var(--accent-success) 11%, transparent)",
+          "accent-danger-tint": "color-mix(in oklch, var(--accent-danger)  11%, transparent)",
+          "accent-warning-tint": "color-mix(in oklch, var(--accent-warning) 11%, transparent)",
+          "accent-info-tint": "color-mix(in oklch, var(--accent-info)    11%, transparent)",
+          "accent-danger-text": "oklch(0.800 0.105 22)",
+          "accent-warning-text": "oklch(0.875 0.115 85)",
+          "accent-success-text": "oklch(0.870 0.115 155)",
+          "accent-info-text": "oklch(0.870 0.090 230)",
+          "state-hover": "color-mix(in oklch, var(--slate-12) 4%,  transparent)",
+          "state-hover-strong": "color-mix(in oklch, var(--slate-12) 6%,  transparent)",
+          "state-hover-overlay": "color-mix(in oklch, var(--slate-12) 10%, transparent)",
+          "state-pressed": "color-mix(in oklch, var(--slate-12) 8%,  transparent)",
+          "state-selected": "color-mix(in oklch, var(--slate-12) 12%, transparent)",
+          "state-focus-ring": "var(--accent-info)",
+          "disposition-suspect": "oklch(0.745 0.180 60)",
+          "disposition-assumed-friend": "oklch(0.790 0.180 145)",
+          "disposition-neutral": "oklch(0.700 0.200 340)",
+          "font-size": "16px",
+          "background": "var(--surface-1)",
+          "foreground": "var(--slate-12)",
+          "card": "var(--surface-2)",
+          "card-foreground": "var(--slate-12)",
+          "popover": "var(--surface-3)",
+          "popover-foreground": "var(--slate-12)",
+          "primary": "var(--slate-12)",
+          "primary-foreground": "var(--slate-1)",
+          "secondary": "var(--surface-4)",
+          "secondary-foreground": "var(--slate-12)",
+          "muted": "var(--surface-3)",
+          "muted-foreground": "var(--slate-10)",
+          "accent": "var(--surface-4)",
+          "accent-foreground": "var(--slate-12)",
+          "destructive": "var(--accent-danger)",
+          "destructive-foreground": "var(--slate-1)",
+          "border": "var(--border-default)",
+          "input": "var(--surface-3)",
+          "input-background": "var(--surface-3)",
+          "switch-background": "var(--surface-4)",
+          "font-weight-medium": "500",
+          "font-weight-normal": "400",
+          "ring": "var(--slate-7)",
+          "chart-1": "var(--accent-info)",
+          "chart-2": "var(--accent-success)",
+          "chart-3": "var(--accent-warning)",
+          "chart-4": "var(--accent-historical)",
+          "chart-5": "var(--accent-danger)",
+          "radius": "0.625rem",
+          "sidebar": "var(--surface-2)",
+          "sidebar-foreground": "var(--slate-12)",
+          "sidebar-primary": "var(--slate-12)",
+          "sidebar-primary-foreground": "var(--slate-1)",
+          "sidebar-accent": "var(--surface-3)",
+          "sidebar-accent-foreground": "var(--slate-12)",
+          "sidebar-border": "var(--border-default)",
+          "sidebar-ring": "var(--slate-7)",
+          "color-dot-on": "var(--slate-12)",
+          "motion-fast": "80ms",
+          "motion-moderate": "160ms",
+          "motion-slow": "240ms",
+          "motion-fast-exit": "60ms",
+          "motion-moderate-exit": "120ms",
+          "motion-slow-exit": "160ms",
+          "ease-bounce": "cubic-bezier(0.22, 1, 0.36, 1)",
+          "ease-exit": "cubic-bezier(0.4, 0, 1, 1)"
+        },
+        "dark": {
+          "slate-1": "oklch(0.165 0.005 256)",
+          "slate-2": "oklch(0.205 0.006 256)",
+          "slate-3": "oklch(0.245 0.008 256)",
+          "slate-4": "oklch(0.290 0.010 256)",
+          "slate-5": "oklch(0.345 0.012 256)",
+          "slate-6": "oklch(0.410 0.014 256)",
+          "slate-7": "oklch(0.490 0.016 256)",
+          "slate-8": "oklch(0.580 0.018 256)",
+          "slate-9": "oklch(0.665 0.018 256)",
+          "slate-10": "oklch(0.760 0.018 256)",
+          "slate-11": "oklch(0.870 0.014 256)",
+          "slate-12": "oklch(0.965 0.010 256)",
+          "surface-void": "oklch(0.06 0 0)",
+          "surface-1": "var(--slate-1)",
+          "surface-2": "var(--slate-2)",
+          "surface-3": "var(--slate-3)",
+          "surface-4": "var(--slate-4)",
+          "surface-5": "var(--slate-5)",
+          "surface-6": "var(--slate-6)",
+          "surface-7": "var(--slate-7)",
+          "surface-8": "var(--slate-8)",
+          "shadow-1": "none",
+          "shadow-2": "0 1px 2px rgb(0 0 0 / 0.30)",
+          "shadow-3": "0 2px 4px rgb(0 0 0 / 0.45), 0 1px 2px rgb(0 0 0 / 0.35)",
+          "shadow-4": "0 4px 8px rgb(0 0 0 / 0.55), 0 2px 4px rgb(0 0 0 / 0.40)",
+          "shadow-5": "0 8px 16px rgb(0 0 0 / 0.60), 0 4px 8px rgb(0 0 0 / 0.45)",
+          "shadow-6": "0 12px 24px rgb(0 0 0 / 0.65), 0 6px 12px rgb(0 0 0 / 0.50)",
+          "shadow-7": "0 16px 32px rgb(0 0 0 / 0.70), 0 8px 16px rgb(0 0 0 / 0.55)",
+          "shadow-8": "0 24px 48px rgb(0 0 0 / 0.75), 0 12px 24px rgb(0 0 0 / 0.60)",
+          "border-default": "oklch(0.490 0.016 256 / 0.55)",
+          "border-strong": "oklch(0.580 0.018 256 / 0.80)",
+          "border-subtle": "oklch(0.345 0.012 256 / 0.60)",
+          "accent-danger": "oklch(0.660 0.220 27)",
+          "accent-warning": "oklch(0.770 0.170 70)",
+          "accent-tracking": "oklch(0.715 0.180 50)",
+          "accent-success": "oklch(0.790 0.180 145)",
+          "accent-info": "oklch(0.790 0.140 230)",
+          "accent-historical": "oklch(0.720 0.160 280)",
+          "accent-cyan": "oklch(0.790 0.130 200)",
+          "accent-magenta": "oklch(0.700 0.200 340)",
+          "accent-danger-soft": "oklch(0.395 0.110 27)",
+          "accent-warning-soft": "oklch(0.420 0.090 70)",
+          "accent-success-soft": "oklch(0.430 0.090 145)",
+          "accent-info-soft": "oklch(0.430 0.070 230)",
+          "accent-historical-soft": "oklch(0.58 0.19 275)",
+          "accent-danger-soft-hover": "oklch(0.445 0.110 27)",
+          "accent-danger-soft-active": "oklch(0.345 0.110 27)",
+          "accent-warning-soft-hover": "oklch(0.470 0.090 70)",
+          "accent-warning-soft-active": "oklch(0.370 0.090 70)",
+          "accent-success-tint": "color-mix(in oklch, var(--accent-success) 11%, transparent)",
+          "accent-danger-tint": "color-mix(in oklch, var(--accent-danger)  11%, transparent)",
+          "accent-warning-tint": "color-mix(in oklch, var(--accent-warning) 11%, transparent)",
+          "accent-info-tint": "color-mix(in oklch, var(--accent-info)    11%, transparent)",
+          "accent-danger-text": "oklch(0.800 0.105 22)",
+          "accent-warning-text": "oklch(0.875 0.115 85)",
+          "accent-success-text": "oklch(0.870 0.115 155)",
+          "accent-info-text": "oklch(0.870 0.090 230)",
+          "state-hover": "color-mix(in oklch, var(--slate-12) 4%,  transparent)",
+          "state-hover-strong": "color-mix(in oklch, var(--slate-12) 6%,  transparent)",
+          "state-hover-overlay": "color-mix(in oklch, var(--slate-12) 10%, transparent)",
+          "state-pressed": "color-mix(in oklch, var(--slate-12) 8%,  transparent)",
+          "state-selected": "color-mix(in oklch, var(--slate-12) 12%, transparent)",
+          "state-focus-ring": "var(--accent-info)",
+          "disposition-suspect": "oklch(0.745 0.180 60)",
+          "disposition-assumed-friend": "oklch(0.790 0.180 145)",
+          "disposition-neutral": "oklch(0.700 0.200 340)",
+          "font-size": "16px",
+          "background": "var(--surface-1)",
+          "foreground": "var(--slate-12)",
+          "card": "var(--surface-2)",
+          "card-foreground": "var(--slate-12)",
+          "popover": "var(--surface-3)",
+          "popover-foreground": "var(--slate-12)",
+          "primary": "var(--slate-12)",
+          "primary-foreground": "var(--slate-1)",
+          "secondary": "var(--surface-4)",
+          "secondary-foreground": "var(--slate-12)",
+          "muted": "var(--surface-3)",
+          "muted-foreground": "var(--slate-10)",
+          "accent": "var(--surface-4)",
+          "accent-foreground": "var(--slate-12)",
+          "destructive": "var(--accent-danger)",
+          "destructive-foreground": "var(--slate-1)",
+          "border": "var(--border-default)",
+          "input": "var(--surface-3)",
+          "input-background": "var(--surface-3)",
+          "switch-background": "var(--surface-4)",
+          "font-weight-medium": "500",
+          "font-weight-normal": "400",
+          "ring": "var(--slate-7)",
+          "chart-1": "var(--accent-info)",
+          "chart-2": "var(--accent-success)",
+          "chart-3": "var(--accent-warning)",
+          "chart-4": "var(--accent-historical)",
+          "chart-5": "var(--accent-danger)",
+          "radius": "0.625rem",
+          "sidebar": "var(--surface-2)",
+          "sidebar-foreground": "var(--slate-12)",
+          "sidebar-primary": "var(--slate-12)",
+          "sidebar-primary-foreground": "var(--slate-1)",
+          "sidebar-accent": "var(--surface-3)",
+          "sidebar-accent-foreground": "var(--slate-12)",
+          "sidebar-border": "var(--border-default)",
+          "sidebar-ring": "var(--slate-7)",
+          "color-dot-on": "var(--slate-12)",
+          "motion-fast": "80ms",
+          "motion-moderate": "160ms",
+          "motion-slow": "240ms",
+          "motion-fast-exit": "60ms",
+          "motion-moderate-exit": "120ms",
+          "motion-slow-exit": "160ms",
+          "ease-bounce": "cubic-bezier(0.22, 1, 0.36, 1)",
+          "ease-exit": "cubic-bezier(0.4, 0, 1, 1)"
+        }
+      },
+      "css": {
+        "@import \"./styles/c2-theme.css\"": {}
+      },
+      "files": [
+        {
+          "path": "src/registry/c2-theme.css",
+          "type": "registry:file",
+          "target": "~/src/styles/c2-theme.css"
+        },
+        {
+          "path": "src/app/components/ui/utils.ts",
+          "type": "registry:file",
+          "target": "@ui/utils.ts"
+        }
+      ],
+      "docs": "C2 is dark by default. The generated CSS partial includes a .light opt-in block; add class=\"light\" only around preview surfaces that intentionally need it."
+    },
+    {
+      "name": "theme",
+      "type": "registry:theme",
+      "title": "C2 Theme",
+      "description": "Thin C2 token theme for apps that already have their own shadcn base setup. For new apps, install @c2/base instead.",
+      "categories": [
+        "core",
+        "tokens"
+      ],
+      "cssVars": {
+        "light": {
+          "slate-1": "oklch(0.165 0.005 256)",
+          "slate-2": "oklch(0.205 0.006 256)",
+          "slate-3": "oklch(0.245 0.008 256)",
+          "slate-4": "oklch(0.290 0.010 256)",
+          "slate-5": "oklch(0.345 0.012 256)",
+          "slate-6": "oklch(0.410 0.014 256)",
+          "slate-7": "oklch(0.490 0.016 256)",
+          "slate-8": "oklch(0.580 0.018 256)",
+          "slate-9": "oklch(0.665 0.018 256)",
+          "slate-10": "oklch(0.760 0.018 256)",
+          "slate-11": "oklch(0.870 0.014 256)",
+          "slate-12": "oklch(0.965 0.010 256)",
+          "surface-void": "oklch(0.06 0 0)",
+          "surface-1": "var(--slate-1)",
+          "surface-2": "var(--slate-2)",
+          "surface-3": "var(--slate-3)",
+          "surface-4": "var(--slate-4)",
+          "surface-5": "var(--slate-5)",
+          "surface-6": "var(--slate-6)",
+          "surface-7": "var(--slate-7)",
+          "surface-8": "var(--slate-8)",
+          "shadow-1": "none",
+          "shadow-2": "0 1px 2px rgb(0 0 0 / 0.30)",
+          "shadow-3": "0 2px 4px rgb(0 0 0 / 0.45), 0 1px 2px rgb(0 0 0 / 0.35)",
+          "shadow-4": "0 4px 8px rgb(0 0 0 / 0.55), 0 2px 4px rgb(0 0 0 / 0.40)",
+          "shadow-5": "0 8px 16px rgb(0 0 0 / 0.60), 0 4px 8px rgb(0 0 0 / 0.45)",
+          "shadow-6": "0 12px 24px rgb(0 0 0 / 0.65), 0 6px 12px rgb(0 0 0 / 0.50)",
+          "shadow-7": "0 16px 32px rgb(0 0 0 / 0.70), 0 8px 16px rgb(0 0 0 / 0.55)",
+          "shadow-8": "0 24px 48px rgb(0 0 0 / 0.75), 0 12px 24px rgb(0 0 0 / 0.60)",
+          "border-default": "oklch(0.490 0.016 256 / 0.55)",
+          "border-strong": "oklch(0.580 0.018 256 / 0.80)",
+          "border-subtle": "oklch(0.345 0.012 256 / 0.60)",
+          "accent-danger": "oklch(0.660 0.220 27)",
+          "accent-warning": "oklch(0.770 0.170 70)",
+          "accent-tracking": "oklch(0.715 0.180 50)",
+          "accent-success": "oklch(0.790 0.180 145)",
+          "accent-info": "oklch(0.790 0.140 230)",
+          "accent-historical": "oklch(0.720 0.160 280)",
+          "accent-cyan": "oklch(0.790 0.130 200)",
+          "accent-magenta": "oklch(0.700 0.200 340)",
+          "accent-danger-soft": "oklch(0.395 0.110 27)",
+          "accent-warning-soft": "oklch(0.420 0.090 70)",
+          "accent-success-soft": "oklch(0.430 0.090 145)",
+          "accent-info-soft": "oklch(0.430 0.070 230)",
+          "accent-historical-soft": "oklch(0.58 0.19 275)",
+          "accent-danger-soft-hover": "oklch(0.445 0.110 27)",
+          "accent-danger-soft-active": "oklch(0.345 0.110 27)",
+          "accent-warning-soft-hover": "oklch(0.470 0.090 70)",
+          "accent-warning-soft-active": "oklch(0.370 0.090 70)",
+          "accent-success-tint": "color-mix(in oklch, var(--accent-success) 11%, transparent)",
+          "accent-danger-tint": "color-mix(in oklch, var(--accent-danger)  11%, transparent)",
+          "accent-warning-tint": "color-mix(in oklch, var(--accent-warning) 11%, transparent)",
+          "accent-info-tint": "color-mix(in oklch, var(--accent-info)    11%, transparent)",
+          "accent-danger-text": "oklch(0.800 0.105 22)",
+          "accent-warning-text": "oklch(0.875 0.115 85)",
+          "accent-success-text": "oklch(0.870 0.115 155)",
+          "accent-info-text": "oklch(0.870 0.090 230)",
+          "state-hover": "color-mix(in oklch, var(--slate-12) 4%,  transparent)",
+          "state-hover-strong": "color-mix(in oklch, var(--slate-12) 6%,  transparent)",
+          "state-hover-overlay": "color-mix(in oklch, var(--slate-12) 10%, transparent)",
+          "state-pressed": "color-mix(in oklch, var(--slate-12) 8%,  transparent)",
+          "state-selected": "color-mix(in oklch, var(--slate-12) 12%, transparent)",
+          "state-focus-ring": "var(--accent-info)",
+          "disposition-suspect": "oklch(0.745 0.180 60)",
+          "disposition-assumed-friend": "oklch(0.790 0.180 145)",
+          "disposition-neutral": "oklch(0.700 0.200 340)",
+          "font-size": "16px",
+          "background": "var(--surface-1)",
+          "foreground": "var(--slate-12)",
+          "card": "var(--surface-2)",
+          "card-foreground": "var(--slate-12)",
+          "popover": "var(--surface-3)",
+          "popover-foreground": "var(--slate-12)",
+          "primary": "var(--slate-12)",
+          "primary-foreground": "var(--slate-1)",
+          "secondary": "var(--surface-4)",
+          "secondary-foreground": "var(--slate-12)",
+          "muted": "var(--surface-3)",
+          "muted-foreground": "var(--slate-10)",
+          "accent": "var(--surface-4)",
+          "accent-foreground": "var(--slate-12)",
+          "destructive": "var(--accent-danger)",
+          "destructive-foreground": "var(--slate-1)",
+          "border": "var(--border-default)",
+          "input": "var(--surface-3)",
+          "input-background": "var(--surface-3)",
+          "switch-background": "var(--surface-4)",
+          "font-weight-medium": "500",
+          "font-weight-normal": "400",
+          "ring": "var(--slate-7)",
+          "chart-1": "var(--accent-info)",
+          "chart-2": "var(--accent-success)",
+          "chart-3": "var(--accent-warning)",
+          "chart-4": "var(--accent-historical)",
+          "chart-5": "var(--accent-danger)",
+          "radius": "0.625rem",
+          "sidebar": "var(--surface-2)",
+          "sidebar-foreground": "var(--slate-12)",
+          "sidebar-primary": "var(--slate-12)",
+          "sidebar-primary-foreground": "var(--slate-1)",
+          "sidebar-accent": "var(--surface-3)",
+          "sidebar-accent-foreground": "var(--slate-12)",
+          "sidebar-border": "var(--border-default)",
+          "sidebar-ring": "var(--slate-7)",
+          "color-dot-on": "var(--slate-12)",
+          "motion-fast": "80ms",
+          "motion-moderate": "160ms",
+          "motion-slow": "240ms",
+          "motion-fast-exit": "60ms",
+          "motion-moderate-exit": "120ms",
+          "motion-slow-exit": "160ms",
+          "ease-bounce": "cubic-bezier(0.22, 1, 0.36, 1)",
+          "ease-exit": "cubic-bezier(0.4, 0, 1, 1)"
+        },
+        "dark": {
+          "slate-1": "oklch(0.165 0.005 256)",
+          "slate-2": "oklch(0.205 0.006 256)",
+          "slate-3": "oklch(0.245 0.008 256)",
+          "slate-4": "oklch(0.290 0.010 256)",
+          "slate-5": "oklch(0.345 0.012 256)",
+          "slate-6": "oklch(0.410 0.014 256)",
+          "slate-7": "oklch(0.490 0.016 256)",
+          "slate-8": "oklch(0.580 0.018 256)",
+          "slate-9": "oklch(0.665 0.018 256)",
+          "slate-10": "oklch(0.760 0.018 256)",
+          "slate-11": "oklch(0.870 0.014 256)",
+          "slate-12": "oklch(0.965 0.010 256)",
+          "surface-void": "oklch(0.06 0 0)",
+          "surface-1": "var(--slate-1)",
+          "surface-2": "var(--slate-2)",
+          "surface-3": "var(--slate-3)",
+          "surface-4": "var(--slate-4)",
+          "surface-5": "var(--slate-5)",
+          "surface-6": "var(--slate-6)",
+          "surface-7": "var(--slate-7)",
+          "surface-8": "var(--slate-8)",
+          "shadow-1": "none",
+          "shadow-2": "0 1px 2px rgb(0 0 0 / 0.30)",
+          "shadow-3": "0 2px 4px rgb(0 0 0 / 0.45), 0 1px 2px rgb(0 0 0 / 0.35)",
+          "shadow-4": "0 4px 8px rgb(0 0 0 / 0.55), 0 2px 4px rgb(0 0 0 / 0.40)",
+          "shadow-5": "0 8px 16px rgb(0 0 0 / 0.60), 0 4px 8px rgb(0 0 0 / 0.45)",
+          "shadow-6": "0 12px 24px rgb(0 0 0 / 0.65), 0 6px 12px rgb(0 0 0 / 0.50)",
+          "shadow-7": "0 16px 32px rgb(0 0 0 / 0.70), 0 8px 16px rgb(0 0 0 / 0.55)",
+          "shadow-8": "0 24px 48px rgb(0 0 0 / 0.75), 0 12px 24px rgb(0 0 0 / 0.60)",
+          "border-default": "oklch(0.490 0.016 256 / 0.55)",
+          "border-strong": "oklch(0.580 0.018 256 / 0.80)",
+          "border-subtle": "oklch(0.345 0.012 256 / 0.60)",
+          "accent-danger": "oklch(0.660 0.220 27)",
+          "accent-warning": "oklch(0.770 0.170 70)",
+          "accent-tracking": "oklch(0.715 0.180 50)",
+          "accent-success": "oklch(0.790 0.180 145)",
+          "accent-info": "oklch(0.790 0.140 230)",
+          "accent-historical": "oklch(0.720 0.160 280)",
+          "accent-cyan": "oklch(0.790 0.130 200)",
+          "accent-magenta": "oklch(0.700 0.200 340)",
+          "accent-danger-soft": "oklch(0.395 0.110 27)",
+          "accent-warning-soft": "oklch(0.420 0.090 70)",
+          "accent-success-soft": "oklch(0.430 0.090 145)",
+          "accent-info-soft": "oklch(0.430 0.070 230)",
+          "accent-historical-soft": "oklch(0.58 0.19 275)",
+          "accent-danger-soft-hover": "oklch(0.445 0.110 27)",
+          "accent-danger-soft-active": "oklch(0.345 0.110 27)",
+          "accent-warning-soft-hover": "oklch(0.470 0.090 70)",
+          "accent-warning-soft-active": "oklch(0.370 0.090 70)",
+          "accent-success-tint": "color-mix(in oklch, var(--accent-success) 11%, transparent)",
+          "accent-danger-tint": "color-mix(in oklch, var(--accent-danger)  11%, transparent)",
+          "accent-warning-tint": "color-mix(in oklch, var(--accent-warning) 11%, transparent)",
+          "accent-info-tint": "color-mix(in oklch, var(--accent-info)    11%, transparent)",
+          "accent-danger-text": "oklch(0.800 0.105 22)",
+          "accent-warning-text": "oklch(0.875 0.115 85)",
+          "accent-success-text": "oklch(0.870 0.115 155)",
+          "accent-info-text": "oklch(0.870 0.090 230)",
+          "state-hover": "color-mix(in oklch, var(--slate-12) 4%,  transparent)",
+          "state-hover-strong": "color-mix(in oklch, var(--slate-12) 6%,  transparent)",
+          "state-hover-overlay": "color-mix(in oklch, var(--slate-12) 10%, transparent)",
+          "state-pressed": "color-mix(in oklch, var(--slate-12) 8%,  transparent)",
+          "state-selected": "color-mix(in oklch, var(--slate-12) 12%, transparent)",
+          "state-focus-ring": "var(--accent-info)",
+          "disposition-suspect": "oklch(0.745 0.180 60)",
+          "disposition-assumed-friend": "oklch(0.790 0.180 145)",
+          "disposition-neutral": "oklch(0.700 0.200 340)",
+          "font-size": "16px",
+          "background": "var(--surface-1)",
+          "foreground": "var(--slate-12)",
+          "card": "var(--surface-2)",
+          "card-foreground": "var(--slate-12)",
+          "popover": "var(--surface-3)",
+          "popover-foreground": "var(--slate-12)",
+          "primary": "var(--slate-12)",
+          "primary-foreground": "var(--slate-1)",
+          "secondary": "var(--surface-4)",
+          "secondary-foreground": "var(--slate-12)",
+          "muted": "var(--surface-3)",
+          "muted-foreground": "var(--slate-10)",
+          "accent": "var(--surface-4)",
+          "accent-foreground": "var(--slate-12)",
+          "destructive": "var(--accent-danger)",
+          "destructive-foreground": "var(--slate-1)",
+          "border": "var(--border-default)",
+          "input": "var(--surface-3)",
+          "input-background": "var(--surface-3)",
+          "switch-background": "var(--surface-4)",
+          "font-weight-medium": "500",
+          "font-weight-normal": "400",
+          "ring": "var(--slate-7)",
+          "chart-1": "var(--accent-info)",
+          "chart-2": "var(--accent-success)",
+          "chart-3": "var(--accent-warning)",
+          "chart-4": "var(--accent-historical)",
+          "chart-5": "var(--accent-danger)",
+          "radius": "0.625rem",
+          "sidebar": "var(--surface-2)",
+          "sidebar-foreground": "var(--slate-12)",
+          "sidebar-primary": "var(--slate-12)",
+          "sidebar-primary-foreground": "var(--slate-1)",
+          "sidebar-accent": "var(--surface-3)",
+          "sidebar-accent-foreground": "var(--slate-12)",
+          "sidebar-border": "var(--border-default)",
+          "sidebar-ring": "var(--slate-7)",
+          "color-dot-on": "var(--slate-12)",
+          "motion-fast": "80ms",
+          "motion-moderate": "160ms",
+          "motion-slow": "240ms",
+          "motion-fast-exit": "60ms",
+          "motion-moderate-exit": "120ms",
+          "motion-slow-exit": "160ms",
+          "ease-bounce": "cubic-bezier(0.22, 1, 0.36, 1)",
+          "ease-exit": "cubic-bezier(0.4, 0, 1, 1)"
+        }
+      }
+    },
+    {
       "name": "utils",
       "type": "registry:lib",
       "title": "cn()",
       "description": "Tailwind class-merge helper (clsx + tailwind-merge). The foundation every C2 component imports.",
-      "categories": ["core"],
-      "dependencies": ["clsx", "tailwind-merge"],
-      "files": [{ "path": "src/app/components/ui/utils.ts", "type": "registry:lib" }]
+      "categories": [
+        "core"
+      ],
+      "dependencies": [
+        "clsx",
+        "tailwind-merge"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/utils.ts",
+          "type": "registry:lib"
+        }
+      ]
     },
     {
       "name": "use-mobile",
       "type": "registry:hook",
       "title": "useIsMobile",
       "description": "Hook that detects mobile viewport via matchMedia.",
-      "categories": ["core"],
-      "files": [{ "path": "src/app/components/ui/use-mobile.ts", "type": "registry:hook" }]
+      "categories": [
+        "core"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/use-mobile.ts",
+          "type": "registry:hook"
+        }
+      ]
     },
     {
       "name": "tokens",
       "type": "registry:lib",
       "title": "Design Tokens",
       "description": "CORE surface/elevation/text/action tokens plus the C2 threat-accent domain tokens. Generated from tokens/*.json; the single source of color truth.",
-      "categories": ["core", "tokens"],
+      "categories": [
+        "core",
+        "tokens"
+      ],
       "files": [
-        { "path": "src/primitives/tokens.ts", "type": "registry:lib" },
-        { "path": "src/primitives/tokens.generated.ts", "type": "registry:lib" }
+        {
+          "path": "src/primitives/tokens.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/primitives/tokens.generated.ts",
+          "type": "registry:lib"
+        }
       ]
     },
     {
@@ -36,637 +605,1420 @@
       "type": "registry:ui",
       "title": "Accordion",
       "description": "Vertically collapsing content panels.",
-      "categories": ["core", "ui"],
-      "dependencies": ["@radix-ui/react-accordion", "lucide-react"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/accordion.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "@radix-ui/react-accordion",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/accordion.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "alert",
       "type": "registry:ui",
       "title": "Alert",
       "description": "Callout for important messages.",
-      "categories": ["core", "ui"],
-      "dependencies": ["class-variance-authority"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/alert.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/alert.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "alert-dialog",
       "type": "registry:ui",
       "title": "AlertDialog",
       "description": "Modal dialog for destructive or irreversible actions.",
-      "categories": ["core", "ui"],
-      "dependencies": ["@radix-ui/react-alert-dialog"],
-      "registryDependencies": ["utils", "button"],
-      "files": [{ "path": "src/app/components/ui/alert-dialog.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "@radix-ui/react-alert-dialog"
+      ],
+      "registryDependencies": [
+        "utils",
+        "button"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/alert-dialog.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "aspect-ratio",
       "type": "registry:ui",
       "title": "AspectRatio",
       "description": "Constrains content to a given aspect ratio.",
-      "categories": ["core", "ui"],
-      "dependencies": ["@radix-ui/react-aspect-ratio"],
-      "files": [{ "path": "src/app/components/ui/aspect-ratio.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "@radix-ui/react-aspect-ratio"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/aspect-ratio.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "avatar",
       "type": "registry:ui",
       "title": "Avatar",
       "description": "User or entity avatar with fallback.",
-      "categories": ["core", "ui"],
-      "dependencies": ["@radix-ui/react-avatar"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/avatar.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "@radix-ui/react-avatar"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/avatar.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "badge",
       "type": "registry:ui",
       "title": "Badge",
       "description": "Small label for status, category, or count.",
-      "categories": ["core", "ui"],
-      "dependencies": ["@radix-ui/react-slot", "class-variance-authority"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/badge.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "@radix-ui/react-slot",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/badge.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "breadcrumb",
       "type": "registry:ui",
       "title": "Breadcrumb",
       "description": "Navigation breadcrumb trail.",
-      "categories": ["core", "ui"],
-      "dependencies": ["@radix-ui/react-slot", "lucide-react"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/breadcrumb.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "@radix-ui/react-slot",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/breadcrumb.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "button",
       "type": "registry:ui",
       "title": "Button",
       "description": "Primary action button with multiple variants and sizes.",
-      "categories": ["core", "ui"],
-      "dependencies": ["@radix-ui/react-slot", "class-variance-authority"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/button.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "@radix-ui/react-slot",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/button.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "calendar",
       "type": "registry:ui",
       "title": "Calendar",
       "description": "Date picker calendar component.",
-      "categories": ["core", "ui"],
-      "dependencies": ["react-day-picker", "lucide-react"],
-      "registryDependencies": ["utils", "button"],
-      "files": [{ "path": "src/app/components/ui/calendar.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "react-day-picker",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils",
+        "button"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/calendar.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "card",
       "type": "registry:ui",
       "title": "Card",
       "description": "Container for grouped content with header, body, and footer.",
-      "categories": ["core", "ui"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/card.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/card.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "carousel",
       "type": "registry:ui",
       "title": "Carousel",
       "description": "Scrollable carousel with navigation controls.",
-      "categories": ["core", "ui"],
-      "dependencies": ["embla-carousel-react", "lucide-react"],
-      "registryDependencies": ["utils", "button"],
-      "files": [{ "path": "src/app/components/ui/carousel.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "embla-carousel-react",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils",
+        "button"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/carousel.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "chart",
       "type": "registry:ui",
       "title": "Chart",
       "description": "Chart container with theme-aware tooltip and legend.",
-      "categories": ["core", "ui"],
-      "dependencies": ["recharts"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/chart.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "recharts"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/chart.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "checkbox",
       "type": "registry:ui",
       "title": "Checkbox",
       "description": "Toggle checkbox control.",
-      "categories": ["core", "ui"],
-      "dependencies": ["@radix-ui/react-checkbox", "lucide-react"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/checkbox.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "@radix-ui/react-checkbox",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/checkbox.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "collapsible",
       "type": "registry:ui",
       "title": "Collapsible",
       "description": "Expandable/collapsible content section.",
-      "categories": ["core", "ui"],
-      "dependencies": ["@radix-ui/react-collapsible"],
-      "files": [{ "path": "src/app/components/ui/collapsible.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "@radix-ui/react-collapsible"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/collapsible.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "command",
       "type": "registry:ui",
       "title": "Command",
       "description": "Command palette with search and keyboard navigation.",
-      "categories": ["core", "ui"],
-      "dependencies": ["cmdk", "lucide-react"],
-      "registryDependencies": ["utils", "dialog"],
-      "files": [{ "path": "src/app/components/ui/command.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "cmdk",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils",
+        "dialog"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/command.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "context-menu",
       "type": "registry:ui",
       "title": "ContextMenu",
       "description": "Right-click context menu.",
-      "categories": ["core", "ui"],
-      "dependencies": ["@radix-ui/react-context-menu", "lucide-react"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/context-menu.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "@radix-ui/react-context-menu",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/context-menu.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "dialog",
       "type": "registry:ui",
       "title": "Dialog",
       "description": "Modal dialog overlay.",
-      "categories": ["core", "ui"],
-      "dependencies": ["@radix-ui/react-dialog", "lucide-react"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/dialog.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "@radix-ui/react-dialog",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/dialog.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "drawer",
       "type": "registry:ui",
       "title": "Drawer",
       "description": "Slide-out drawer panel.",
-      "categories": ["core", "ui"],
-      "dependencies": ["vaul"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/drawer.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "vaul"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/drawer.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "dropdown-menu",
       "type": "registry:ui",
       "title": "DropdownMenu",
       "description": "Dropdown menu triggered by a button.",
-      "categories": ["core", "ui"],
-      "dependencies": ["@radix-ui/react-dropdown-menu", "lucide-react"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/dropdown-menu.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "@radix-ui/react-dropdown-menu",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/dropdown-menu.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "form",
       "type": "registry:ui",
       "title": "Form",
       "description": "Form primitives with react-hook-form integration.",
-      "categories": ["core", "ui"],
-      "dependencies": ["@radix-ui/react-label", "@radix-ui/react-slot", "react-hook-form"],
-      "registryDependencies": ["utils", "label"],
-      "files": [{ "path": "src/app/components/ui/form.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "@radix-ui/react-label",
+        "@radix-ui/react-slot",
+        "react-hook-form"
+      ],
+      "registryDependencies": [
+        "utils",
+        "label"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/form.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "hover-card",
       "type": "registry:ui",
       "title": "HoverCard",
       "description": "Card that appears on hover.",
-      "categories": ["core", "ui"],
-      "dependencies": ["@radix-ui/react-hover-card"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/hover-card.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "@radix-ui/react-hover-card"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/hover-card.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "input",
       "type": "registry:ui",
       "title": "Input",
       "description": "Text input field.",
-      "categories": ["core", "ui"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/input.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/input.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "input-otp",
       "type": "registry:ui",
       "title": "InputOTP",
       "description": "One-time password input with slots.",
-      "categories": ["core", "ui"],
-      "dependencies": ["input-otp", "lucide-react"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/input-otp.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "input-otp",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/input-otp.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "label",
       "type": "registry:ui",
       "title": "Label",
       "description": "Accessible form label.",
-      "categories": ["core", "ui"],
-      "dependencies": ["@radix-ui/react-label"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/label.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "@radix-ui/react-label"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/label.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "menubar",
       "type": "registry:ui",
       "title": "Menubar",
       "description": "Horizontal menu bar with submenus.",
-      "categories": ["core", "ui"],
-      "dependencies": ["@radix-ui/react-menubar", "lucide-react"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/menubar.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "@radix-ui/react-menubar",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/menubar.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "pagination",
       "type": "registry:ui",
       "title": "Pagination",
       "description": "Page navigation controls.",
-      "categories": ["core", "ui"],
-      "registryDependencies": ["utils", "button"],
-      "files": [{ "path": "src/app/components/ui/pagination.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "registryDependencies": [
+        "utils",
+        "button"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/pagination.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "popover",
       "type": "registry:ui",
       "title": "Popover",
       "description": "Floating popover anchored to a trigger.",
-      "categories": ["core", "ui"],
-      "dependencies": ["@radix-ui/react-popover"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/popover.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "@radix-ui/react-popover"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/popover.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "progress",
       "type": "registry:ui",
       "title": "Progress",
       "description": "Horizontal progress bar.",
-      "categories": ["core", "ui"],
-      "dependencies": ["@radix-ui/react-progress"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/progress.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "@radix-ui/react-progress"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/progress.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "radio-group",
       "type": "registry:ui",
       "title": "RadioGroup",
       "description": "Radio button group for single selection.",
-      "categories": ["core", "ui"],
-      "dependencies": ["@radix-ui/react-radio-group", "lucide-react"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/radio-group.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "@radix-ui/react-radio-group",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/radio-group.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "resizable",
       "type": "registry:ui",
       "title": "Resizable",
       "description": "Resizable panel layout.",
-      "categories": ["core", "ui"],
-      "dependencies": ["react-resizable-panels", "lucide-react"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/resizable.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "react-resizable-panels",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/resizable.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "scroll-area",
       "type": "registry:ui",
       "title": "ScrollArea",
       "description": "Custom scrollbar container.",
-      "categories": ["core", "ui"],
-      "dependencies": ["@radix-ui/react-scroll-area"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/scroll-area.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "@radix-ui/react-scroll-area"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/scroll-area.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "select",
       "type": "registry:ui",
       "title": "Select",
       "description": "Dropdown select menu.",
-      "categories": ["core", "ui"],
-      "dependencies": ["@radix-ui/react-select", "lucide-react"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/select.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "@radix-ui/react-select",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/select.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "separator",
       "type": "registry:ui",
       "title": "Separator",
       "description": "Visual divider between sections.",
-      "categories": ["core", "ui"],
-      "dependencies": ["@radix-ui/react-separator"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/separator.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "@radix-ui/react-separator"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/separator.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "sheet",
       "type": "registry:ui",
       "title": "Sheet",
       "description": "Slide-over panel from the edge of the screen.",
-      "categories": ["core", "ui"],
-      "dependencies": ["@radix-ui/react-dialog", "lucide-react"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/sheet.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "@radix-ui/react-dialog",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/sheet.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "sidebar",
       "type": "registry:ui",
       "title": "Sidebar",
       "description": "Application sidebar with responsive mobile drawer.",
-      "categories": ["core", "ui"],
-      "dependencies": ["@radix-ui/react-slot", "class-variance-authority", "lucide-react"],
-      "registryDependencies": ["utils", "use-mobile", "button", "input", "separator", "sheet", "skeleton", "tooltip"],
-      "files": [{ "path": "src/app/components/ui/sidebar.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "@radix-ui/react-slot",
+        "class-variance-authority",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "utils",
+        "use-mobile",
+        "button",
+        "input",
+        "separator",
+        "sheet",
+        "skeleton",
+        "tooltip"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/sidebar.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "skeleton",
       "type": "registry:ui",
       "title": "Skeleton",
       "description": "Loading placeholder animation.",
-      "categories": ["core", "ui"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/skeleton.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/skeleton.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "slider",
       "type": "registry:ui",
       "title": "Slider",
       "description": "Range slider input.",
-      "categories": ["core", "ui"],
-      "dependencies": ["@radix-ui/react-slider"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/slider.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "@radix-ui/react-slider"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/slider.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "sonner",
       "type": "registry:ui",
       "title": "Sonner",
       "description": "Toast notification system.",
-      "categories": ["core", "ui"],
-      "dependencies": ["sonner"],
-      "files": [{ "path": "src/app/components/ui/sonner.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "sonner"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/sonner.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "switch",
       "type": "registry:ui",
       "title": "Switch",
       "description": "Toggle switch control.",
-      "categories": ["core", "ui"],
-      "dependencies": ["@radix-ui/react-switch"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/switch.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "@radix-ui/react-switch"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/switch.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "table",
       "type": "registry:ui",
       "title": "Table",
       "description": "Data table with header, body, and footer.",
-      "categories": ["core", "ui"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/table.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/table.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "tabs",
       "type": "registry:ui",
       "title": "Tabs",
       "description": "Tabbed content switcher.",
-      "categories": ["core", "ui"],
-      "dependencies": ["@radix-ui/react-tabs"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/tabs.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "@radix-ui/react-tabs"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/tabs.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "textarea",
       "type": "registry:ui",
       "title": "Textarea",
       "description": "Multi-line text input.",
-      "categories": ["core", "ui"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/textarea.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/textarea.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "toggle",
       "type": "registry:ui",
       "title": "Toggle",
       "description": "Two-state toggle button.",
-      "categories": ["core", "ui"],
-      "dependencies": ["@radix-ui/react-toggle", "class-variance-authority"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/toggle.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "@radix-ui/react-toggle",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/toggle.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "toggle-group",
       "type": "registry:ui",
       "title": "ToggleGroup",
       "description": "Group of toggle buttons with single or multi selection.",
-      "categories": ["core", "ui"],
-      "dependencies": ["@radix-ui/react-toggle-group", "class-variance-authority"],
-      "registryDependencies": ["utils", "toggle"],
-      "files": [{ "path": "src/app/components/ui/toggle-group.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "@radix-ui/react-toggle-group",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "utils",
+        "toggle"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/toggle-group.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "tooltip",
       "type": "registry:ui",
       "title": "Tooltip",
       "description": "Informational popup on hover.",
-      "categories": ["core", "ui"],
-      "dependencies": ["@radix-ui/react-tooltip"],
-      "registryDependencies": ["utils"],
-      "files": [{ "path": "src/app/components/ui/tooltip.tsx", "type": "registry:component" }]
+      "categories": [
+        "core",
+        "ui"
+      ],
+      "dependencies": [
+        "@radix-ui/react-tooltip"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/app/components/ui/tooltip.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "map-marker-states",
       "type": "registry:lib",
       "title": "Map Marker States",
       "description": "Affiliation palettes, interaction states, and marker style resolver for tactical map markers.",
-      "categories": ["domain", "map"],
-      "files": [{ "path": "src/primitives/markerStyles.ts", "type": "registry:lib" }]
+      "categories": [
+        "domain",
+        "map"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/markerStyles.ts",
+          "type": "registry:lib"
+        }
+      ]
     },
     {
       "name": "status-chip",
       "type": "registry:ui",
       "title": "StatusChip",
       "description": "Activity status indicator chip with semantic color coding.",
-      "categories": ["domain"],
-      "registryDependencies": ["utils", "badge"],
-      "files": [{ "path": "src/primitives/StatusChip.tsx", "type": "registry:component" }]
+      "categories": [
+        "domain"
+      ],
+      "registryDependencies": [
+        "utils",
+        "badge"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/StatusChip.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "action-button",
       "type": "registry:ui",
       "title": "ActionButton",
       "description": "Primary action trigger with icon, loading spinner, tooltip, and variant support.",
-      "categories": ["domain"],
-      "dependencies": ["lucide-react", "framer-motion"],
-      "registryDependencies": ["utils", "tooltip"],
-      "files": [{ "path": "src/primitives/ActionButton.tsx", "type": "registry:component" }]
+      "categories": [
+        "domain"
+      ],
+      "dependencies": [
+        "lucide-react",
+        "framer-motion"
+      ],
+      "registryDependencies": [
+        "utils",
+        "tooltip"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/ActionButton.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "split-action-button",
       "type": "registry:ui",
       "title": "SplitActionButton",
       "description": "Two-segment button — primary action + dropdown menu for effector controls.",
-      "categories": ["domain"],
-      "dependencies": ["lucide-react", "framer-motion"],
-      "registryDependencies": ["utils", "dropdown-menu"],
-      "files": [{ "path": "src/primitives/SplitActionButton.tsx", "type": "registry:component" }]
+      "categories": [
+        "domain"
+      ],
+      "dependencies": [
+        "lucide-react",
+        "framer-motion"
+      ],
+      "registryDependencies": [
+        "utils",
+        "dropdown-menu"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/SplitActionButton.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "accordion-section",
       "type": "registry:ui",
       "title": "AccordionSection",
       "description": "Collapsible section with animated expand/collapse for card interiors.",
-      "categories": ["domain"],
-      "dependencies": ["lucide-react"],
-      "registryDependencies": ["collapsible", "tokens"],
-      "files": [{ "path": "src/primitives/AccordionSection.tsx", "type": "registry:component" }]
+      "categories": [
+        "domain"
+      ],
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "collapsible",
+        "tokens"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/AccordionSection.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "telemetry-row",
       "type": "registry:ui",
       "title": "TelemetryRow",
       "description": "Single telemetry metric row with icon, label, and monospace value.",
-      "categories": ["domain"],
-      "files": [{ "path": "src/primitives/TelemetryRow.tsx", "type": "registry:component" }]
+      "categories": [
+        "domain"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/TelemetryRow.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "new-updates-pill",
       "type": "registry:ui",
       "title": "NewUpdatesPill",
       "description": "Floating pill that surfaces new incoming detection count.",
-      "categories": ["domain"],
-      "dependencies": ["framer-motion", "lucide-react"],
-      "registryDependencies": ["button", "utils"],
-      "files": [{ "path": "src/primitives/NewUpdatesPill.tsx", "type": "registry:component" }]
+      "categories": [
+        "domain"
+      ],
+      "dependencies": [
+        "framer-motion",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "button",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/NewUpdatesPill.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "filter-bar",
       "type": "registry:ui",
       "title": "FilterBar",
       "description": "Search, sort, and multi-select filter controls. Requires domain types (ActivityStatus, FilterState) from consumer app.",
-      "categories": ["domain"],
-      "dependencies": ["lucide-react"],
-      "registryDependencies": ["checkbox", "popover"],
-      "files": [{ "path": "src/primitives/FilterBar.tsx", "type": "registry:component" }]
+      "categories": [
+        "domain"
+      ],
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "checkbox",
+        "popover"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/FilterBar.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "card-header",
       "type": "registry:ui",
       "title": "CardHeader",
       "description": "Target card header with icon, title, subtitle, status badge, and collapse chevron.",
-      "categories": ["domain"],
-      "dependencies": ["lucide-react"],
-      "registryDependencies": ["tokens", "badge"],
-      "files": [{ "path": "src/primitives/CardHeader.tsx", "type": "registry:component" }]
+      "categories": [
+        "domain"
+      ],
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "tokens",
+        "badge"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/CardHeader.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "card-actions",
       "type": "registry:ui",
       "title": "CardActions",
       "description": "Action bar with grouped effector/investigation layout and confirm dialogs.",
-      "categories": ["domain"],
-      "dependencies": ["framer-motion"],
-      "registryDependencies": ["action-button", "split-action-button", "tokens"],
-      "files": [{ "path": "src/primitives/CardActions.tsx", "type": "registry:component" }]
+      "categories": [
+        "domain"
+      ],
+      "dependencies": [
+        "framer-motion"
+      ],
+      "registryDependencies": [
+        "action-button",
+        "split-action-button",
+        "tokens"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/CardActions.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "card-details",
       "type": "registry:ui",
       "title": "CardDetails",
       "description": "Collapsible telemetry accordion with copy-all and 3-column grid layout.",
-      "categories": ["domain"],
-      "dependencies": ["lucide-react"],
-      "registryDependencies": ["accordion-section", "telemetry-row"],
-      "files": [{ "path": "src/primitives/CardDetails.tsx", "type": "registry:component" }]
+      "categories": [
+        "domain"
+      ],
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "accordion-section",
+        "telemetry-row"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/CardDetails.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "card-sensors",
       "type": "registry:ui",
       "title": "CardSensors",
       "description": "Sensor list with type, distance, and timestamp for each detecting sensor.",
-      "categories": ["domain"],
-      "registryDependencies": ["tokens"],
-      "files": [{ "path": "src/primitives/CardSensors.tsx", "type": "registry:component" }]
+      "categories": [
+        "domain"
+      ],
+      "registryDependencies": [
+        "tokens"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/CardSensors.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "card-media",
       "type": "registry:ui",
       "title": "CardMedia",
       "description": "Image/video slot for surveillance feed with live badge, playback controls, and lightbox.",
-      "categories": ["domain"],
-      "dependencies": ["lucide-react"],
-      "registryDependencies": ["dialog", "utils"],
-      "files": [{ "path": "src/primitives/CardMedia.tsx", "type": "registry:component" }]
+      "categories": [
+        "domain"
+      ],
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "dialog",
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/CardMedia.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "card-log",
       "type": "registry:ui",
       "title": "CardLog",
       "description": "Chronological event log accordion with expand-all.",
-      "categories": ["domain"],
-      "dependencies": ["lucide-react"],
-      "registryDependencies": ["accordion-section", "tokens"],
-      "files": [{ "path": "src/primitives/CardLog.tsx", "type": "registry:component" }]
+      "categories": [
+        "domain"
+      ],
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "accordion-section",
+        "tokens"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/CardLog.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "card-closure",
       "type": "registry:ui",
       "title": "CardClosure",
       "description": "Outcome selection grid for closing a detection event.",
-      "categories": ["domain"],
-      "dependencies": ["lucide-react"],
-      "registryDependencies": ["button", "tokens"],
-      "files": [{ "path": "src/primitives/CardClosure.tsx", "type": "registry:component" }]
+      "categories": [
+        "domain"
+      ],
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "button",
+        "tokens"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/CardClosure.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "card-timeline",
       "type": "registry:ui",
       "title": "CardTimeline",
       "description": "Vertical step timeline showing detection lifecycle stages.",
-      "categories": ["domain"],
-      "dependencies": ["lucide-react"],
-      "registryDependencies": ["tokens"],
-      "files": [{ "path": "src/primitives/CardTimeline.tsx", "type": "registry:component" }]
+      "categories": [
+        "domain"
+      ],
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "tokens"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/CardTimeline.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "card-footer-dock",
       "type": "registry:ui",
       "title": "CardFooterDock",
       "description": "Sticky footer action dock for card bottom actions.",
-      "categories": ["domain"],
-      "registryDependencies": ["utils", "tokens"],
-      "files": [{ "path": "src/primitives/CardFooterDock.tsx", "type": "registry:component" }]
+      "categories": [
+        "domain"
+      ],
+      "registryDependencies": [
+        "utils",
+        "tokens"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/CardFooterDock.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "target-card",
       "type": "registry:ui",
       "title": "TargetCard",
       "description": "Core detection card shell with collapsible body and slot composition.",
-      "categories": ["domain"],
-      "registryDependencies": ["collapsible", "card", "utils", "tokens"],
-      "files": [{ "path": "src/primitives/TargetCard.tsx", "type": "registry:component" }]
+      "categories": [
+        "domain"
+      ],
+      "registryDependencies": [
+        "collapsible",
+        "card",
+        "utils",
+        "tokens"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/TargetCard.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "map-marker",
       "type": "registry:ui",
       "title": "MapMarker",
       "description": "Tactical map marker with affiliation colors, heading indicator, and interaction states.",
-      "categories": ["domain", "map"],
-      "registryDependencies": ["map-marker-states"],
-      "files": [{ "path": "src/primitives/MapMarker.tsx", "type": "registry:component" }]
+      "categories": [
+        "domain",
+        "map"
+      ],
+      "registryDependencies": [
+        "map-marker-states"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/MapMarker.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "map-icons",
       "type": "registry:ui",
       "title": "MapIcons",
       "description": "SVG icons for card headers — DroneCardIcon, MissileCardIcon, JamWaveIcon.",
-      "categories": ["domain", "map"],
-      "files": [{ "path": "src/primitives/MapIcons.tsx", "type": "registry:component" }]
+      "categories": [
+        "domain",
+        "map"
+      ],
+      "files": [
+        {
+          "path": "src/primitives/MapIcons.tsx",
+          "type": "registry:component"
+        }
+      ]
     },
     {
       "name": "core",
       "type": "registry:ui",
       "title": "Core bundle",
       "description": "Brand-agnostic foundation — cn() helper, design tokens, and the full generic shadcn UI set. No C2 tactical domain. Theme by swapping token primitives.",
-      "categories": ["bundle", "core"],
+      "categories": [
+        "bundle",
+        "core"
+      ],
       "registryDependencies": [
         "utils",
         "use-mobile",
@@ -724,7 +2076,10 @@
       "type": "registry:ui",
       "title": "Domain primitives",
       "description": "Default C2 bundle — design tokens, card building blocks, tactical primitives, and map markers (excludes generic shadcn UI and FilterBar).",
-      "categories": ["bundle", "domain"],
+      "categories": [
+        "bundle",
+        "domain"
+      ],
       "registryDependencies": [
         "utils",
         "tokens",
@@ -755,8 +2110,18 @@
       "type": "registry:ui",
       "title": "Map kit",
       "description": "Map visualization only — marker state tokens, MapMarker, and MapIcons.",
-      "categories": ["bundle", "domain", "map"],
-      "registryDependencies": ["utils", "tokens", "map-marker-states", "map-marker", "map-icons"],
+      "categories": [
+        "bundle",
+        "domain",
+        "map"
+      ],
+      "registryDependencies": [
+        "utils",
+        "tokens",
+        "map-marker-states",
+        "map-marker",
+        "map-icons"
+      ],
       "files": []
     },
     {
@@ -764,8 +2129,14 @@
       "type": "registry:ui",
       "title": "All Components",
       "description": "Meta-package that installs everything — the core bundle plus all C2 tactical domain primitives.",
-      "categories": ["bundle"],
-      "registryDependencies": ["core", "domain-primitives", "filter-bar"],
+      "categories": [
+        "bundle"
+      ],
+      "registryDependencies": [
+        "core",
+        "domain-primitives",
+        "filter-bar"
+      ],
       "files": []
     }
   ]
