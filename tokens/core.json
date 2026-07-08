@@ -1,35 +1,35 @@
 {
   "$schema": "https://design-tokens.github.io/community-group/format/",
-  "$description": "C2 CORE tokens — brand- and domain-agnostic. Three tiers: primitive (raw values, no intent), semantic (intent-named aliases of primitives), and dimension (radius/space). A consuming product themes the system by swapping primitives only; semantic names never change. CORE must never reference c2-domain values.",
+  "$description": "C2 CORE tokens — brand- and domain-agnostic. Three tiers: primitive (raw values, no intent), semantic (intent-named aliases of primitives), and dimension (radius/space). Primitives may reference `{palette.*}` — variables in src/styles/palette.css, the hand-authored value master for color — which scripts/styleguide-manifest.mjs resolves at build time. A consuming product themes the system by swapping primitives only; semantic names never change. CORE must never reference c2-domain values.",
   "primitive": {
-    "$description": "Tier 1 — raw values with no intent. Never reference these directly in app code; reach for a semantic token instead.",
+    "$description": "Tier 1 — raw values with no intent. Never reference these directly in app code; reach for a semantic token instead. A primitive that shadows a palette.css value MUST be a `{palette.*}` reference, never a copied literal.",
     "color": {
       "white": { "$type": "color", "$value": "#ffffff", "$description": "Pure white. Base for translucent surface overlays." },
       "black": { "$type": "color", "$value": "#000000", "$description": "Pure black. Base for the selection ring tint." },
       "surface": {
-        "$description": "The dark control-room elevation ramp — hex mirrors of palette.css --surface-1..5 (the OKLCH slate ladder, see src/primitives/accentHex.ts). One surface system: these steps ARE the palette steps.",
-        "0": { "$type": "color", "$value": "#0d0e11", "$description": "Base (= --surface-1) — page background and card content area." },
-        "1": { "$type": "color", "$value": "#15171a", "$description": "Raised (= --surface-2) — card container and sidebar." },
-        "2": { "$type": "color", "$value": "#1e2124", "$description": "Overlay (= --surface-3) — borders and dividers, card container fill." },
-        "3": { "$type": "color", "$value": "#282c30", "$description": "Inset (= --surface-4) — icon boxes and closure buttons." },
-        "4": { "$type": "color", "$value": "#353a40", "$description": "Hover (= --surface-5) — sensor rows and hover states." }
+        "$description": "The dark control-room elevation ramp — palette.css --surface-1..5 (the OKLCH slate ladder). One surface system: these steps ARE the palette steps.",
+        "0": { "$type": "color", "$value": "{palette.surface-1}", "$description": "Base — page background and card content area." },
+        "1": { "$type": "color", "$value": "{palette.surface-2}", "$description": "Raised — card container and sidebar." },
+        "2": { "$type": "color", "$value": "{palette.surface-3}", "$description": "Overlay — borders and dividers, card container fill." },
+        "3": { "$type": "color", "$value": "{palette.surface-4}", "$description": "Inset — icon boxes and closure buttons." },
+        "4": { "$type": "color", "$value": "{palette.surface-5}", "$description": "Hover — sensor rows and hover states." }
       },
       "neutral": {
-        "$description": "Foreground greys — hex mirrors of the palette.css slate text tiers.",
-        "200": { "$type": "color", "$value": "#ced5de", "$description": "High-contrast text (= --slate-11) — titles, primary values." },
-        "500": { "$type": "color", "$value": "#8d949f", "$description": "Low-contrast text (= --slate-9) — subtitles, captions, metadata." }
+        "$description": "Foreground greys — the palette.css slate text tiers.",
+        "200": { "$type": "color", "$value": "{palette.slate-11}", "$description": "High-contrast text — titles, primary values." },
+        "500": { "$type": "color", "$value": "{palette.slate-9}", "$description": "Low-contrast text — subtitles, captions, metadata." }
       },
       "red": {
-        "$description": "Destructive-action ramp anchored on palette.css --accent-danger-soft, with ±0.05 L hover/pressed steps.",
-        "base": { "$type": "color", "$value": "oklch(0.395 0.110 27)", "$description": "Resting destructive fill (= --accent-danger-soft)." },
-        "hover": { "$type": "color", "$value": "oklch(0.445 0.110 27)", "$description": "Destructive hover — one lightness step up." },
-        "active": { "$type": "color", "$value": "oklch(0.345 0.110 27)", "$description": "Destructive pressed — one lightness step down." }
+        "$description": "Destructive-action ramp — palette.css --accent-danger-soft with its ±0.05 L hover/pressed steps.",
+        "base": { "$type": "color", "$value": "{palette.accent-danger-soft}", "$description": "Resting destructive fill." },
+        "hover": { "$type": "color", "$value": "{palette.accent-danger-soft-hover}", "$description": "Destructive hover — one lightness step up." },
+        "active": { "$type": "color", "$value": "{palette.accent-danger-soft-active}", "$description": "Destructive pressed — one lightness step down." }
       },
       "amber": {
-        "$description": "Warning-action ramp anchored on palette.css --accent-warning-soft, with ±0.05 L hover/pressed steps.",
-        "base": { "$type": "color", "$value": "oklch(0.420 0.090 70)", "$description": "Resting warning fill (= --accent-warning-soft)." },
-        "hover": { "$type": "color", "$value": "oklch(0.470 0.090 70)", "$description": "Warning hover — one lightness step up." },
-        "active": { "$type": "color", "$value": "oklch(0.370 0.090 70)", "$description": "Warning pressed — one lightness step down." }
+        "$description": "Warning-action ramp — palette.css --accent-warning-soft with its ±0.05 L hover/pressed steps.",
+        "base": { "$type": "color", "$value": "{palette.accent-warning-soft}", "$description": "Resting warning fill." },
+        "hover": { "$type": "color", "$value": "{palette.accent-warning-soft-hover}", "$description": "Warning hover — one lightness step up." },
+        "active": { "$type": "color", "$value": "{palette.accent-warning-soft-active}", "$description": "Warning pressed — one lightness step down." }
       }
     }
   },

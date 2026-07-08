@@ -4,6 +4,13 @@
  *
  * Single source of truth for color in the C2 Hub.
  *
+ * The DTCG token library (tokens/core.json) references these variables
+ * as `{palette.surface-1}`-style aliases; scripts/styleguide-manifest.mjs
+ * parses this file at build time and resolves them into the generated
+ * artifacts (tokens.generated.css/ts, DESIGN_CONTEXT.md, llms.txt).
+ * After editing values here, run `pnpm tokens:build` to refresh them —
+ * CI's `pnpm design:check` fails if you forget.
+ *
  * Four layers, top → bottom:
  *
  *   1. Slate ramp (--slate-1..12)

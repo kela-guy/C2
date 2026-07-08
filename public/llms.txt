@@ -61,32 +61,32 @@ Use the CSS var or the `@/primitives` export — never the raw value.
 
 - `--c2-primitive-color-white` = `#ffffff` (core/primitive) — Pure white. Base for translucent surface overlays.
 - `--c2-primitive-color-black` = `#000000` (core/primitive) — Pure black. Base for the selection ring tint.
-- `--c2-primitive-color-surface-0` = `#0d0e11` (core/primitive) — Base (= --surface-1) — page background and card content area.
-- `--c2-primitive-color-surface-1` = `#15171a` (core/primitive) — Raised (= --surface-2) — card container and sidebar.
-- `--c2-primitive-color-surface-2` = `#1e2124` (core/primitive) — Overlay (= --surface-3) — borders and dividers, card container fill.
-- `--c2-primitive-color-surface-3` = `#282c30` (core/primitive) — Inset (= --surface-4) — icon boxes and closure buttons.
-- `--c2-primitive-color-surface-4` = `#353a40` (core/primitive) — Hover (= --surface-5) — sensor rows and hover states.
-- `--c2-primitive-color-neutral-200` = `#ced5de` (core/primitive) — High-contrast text (= --slate-11) — titles, primary values.
-- `--c2-primitive-color-neutral-500` = `#8d949f` (core/primitive) — Low-contrast text (= --slate-9) — subtitles, captions, metadata.
-- `--c2-primitive-color-red-base` = `oklch(0.395 0.110 27)` (core/primitive) — Resting destructive fill (= --accent-danger-soft).
-- `--c2-primitive-color-red-hover` = `oklch(0.445 0.110 27)` (core/primitive) — Destructive hover — one lightness step up.
-- `--c2-primitive-color-red-active` = `oklch(0.345 0.110 27)` (core/primitive) — Destructive pressed — one lightness step down.
-- `--c2-primitive-color-amber-base` = `oklch(0.420 0.090 70)` (core/primitive) — Resting warning fill (= --accent-warning-soft).
-- `--c2-primitive-color-amber-hover` = `oklch(0.470 0.090 70)` (core/primitive) — Warning hover — one lightness step up.
-- `--c2-primitive-color-amber-active` = `oklch(0.370 0.090 70)` (core/primitive) — Warning pressed — one lightness step down.
-- `--c2-color-surface-base` = `#0d0e11` (core/semantic) — Lowest surface — page and card-content background.
-- `--c2-color-surface-raised` = `#15171a` (core/semantic) — Raised surface — cards, sidebar, code panels.
-- `--c2-color-surface-overlay` = `#1e2124` (core/semantic) — Container fill, borders, dividers.
-- `--c2-color-surface-inset` = `#282c30` (core/semantic) — Recessed wells — icon boxes, closure buttons.
-- `--c2-color-surface-hover` = `#353a40` (core/semantic) — Hover/active row surface.
-- `--c2-color-text-default` = `#ced5de` (core/semantic) — Default high-contrast text.
-- `--c2-color-text-muted` = `#8d949f` (core/semantic) — Secondary, lower-emphasis text.
-- `--c2-color-action-danger-bg` = `oklch(0.395 0.110 27)` (core/semantic) — Destructive action background.
-- `--c2-color-action-danger-hover` = `oklch(0.445 0.110 27)` (core/semantic) — Destructive action hover.
-- `--c2-color-action-danger-active` = `oklch(0.345 0.110 27)` (core/semantic) — Destructive action pressed.
-- `--c2-color-action-warning-bg` = `oklch(0.420 0.090 70)` (core/semantic) — Warning action background.
-- `--c2-color-action-warning-hover` = `oklch(0.470 0.090 70)` (core/semantic) — Warning action hover.
-- `--c2-color-action-warning-active` = `oklch(0.370 0.090 70)` (core/semantic) — Warning action pressed.
+- `--c2-primitive-color-surface-0` = `#0d0e11` (= `--surface-1`) (core/primitive) — Base — page background and card content area.
+- `--c2-primitive-color-surface-1` = `#15171a` (= `--surface-2`) (core/primitive) — Raised — card container and sidebar.
+- `--c2-primitive-color-surface-2` = `#1e2124` (= `--surface-3`) (core/primitive) — Overlay — borders and dividers, card container fill.
+- `--c2-primitive-color-surface-3` = `#282c30` (= `--surface-4`) (core/primitive) — Inset — icon boxes and closure buttons.
+- `--c2-primitive-color-surface-4` = `#353a40` (= `--surface-5`) (core/primitive) — Hover — sensor rows and hover states.
+- `--c2-primitive-color-neutral-200` = `#ced5de` (= `--slate-11`) (core/primitive) — High-contrast text — titles, primary values.
+- `--c2-primitive-color-neutral-500` = `#8d949f` (= `--slate-9`) (core/primitive) — Low-contrast text — subtitles, captions, metadata.
+- `--c2-primitive-color-red-base` = `#762924` (= `--accent-danger-soft`) (core/primitive) — Resting destructive fill.
+- `--c2-primitive-color-red-hover` = `#863731` (= `--accent-danger-soft-hover`) (core/primitive) — Destructive hover — one lightness step up.
+- `--c2-primitive-color-red-active` = `#671a17` (= `--accent-danger-soft-active`) (core/primitive) — Destructive pressed — one lightness step down.
+- `--c2-primitive-color-amber-base` = `#6c4302` (= `--accent-warning-soft`) (core/primitive) — Resting warning fill.
+- `--c2-primitive-color-amber-hover` = `#7b5117` (= `--accent-warning-soft-hover`) (core/primitive) — Warning hover — one lightness step up.
+- `--c2-primitive-color-amber-active` = `#5d3500` (= `--accent-warning-soft-active`) (core/primitive) — Warning pressed — one lightness step down.
+- `--c2-color-surface-base` = `#0d0e11` (= `--surface-1`) (core/semantic) — Lowest surface — page and card-content background.
+- `--c2-color-surface-raised` = `#15171a` (= `--surface-2`) (core/semantic) — Raised surface — cards, sidebar, code panels.
+- `--c2-color-surface-overlay` = `#1e2124` (= `--surface-3`) (core/semantic) — Container fill, borders, dividers.
+- `--c2-color-surface-inset` = `#282c30` (= `--surface-4`) (core/semantic) — Recessed wells — icon boxes, closure buttons.
+- `--c2-color-surface-hover` = `#353a40` (= `--surface-5`) (core/semantic) — Hover/active row surface.
+- `--c2-color-text-default` = `#ced5de` (= `--slate-11`) (core/semantic) — Default high-contrast text.
+- `--c2-color-text-muted` = `#8d949f` (= `--slate-9`) (core/semantic) — Secondary, lower-emphasis text.
+- `--c2-color-action-danger-bg` = `#762924` (= `--accent-danger-soft`) (core/semantic) — Destructive action background.
+- `--c2-color-action-danger-hover` = `#863731` (= `--accent-danger-soft-hover`) (core/semantic) — Destructive action hover.
+- `--c2-color-action-danger-active` = `#671a17` (= `--accent-danger-soft-active`) (core/semantic) — Destructive action pressed.
+- `--c2-color-action-warning-bg` = `#6c4302` (= `--accent-warning-soft`) (core/semantic) — Warning action background.
+- `--c2-color-action-warning-hover` = `#7b5117` (= `--accent-warning-soft-hover`) (core/semantic) — Warning action hover.
+- `--c2-color-action-warning-active` = `#5d3500` (= `--accent-warning-soft-active`) (core/semantic) — Warning action pressed.
 - `--c2-color-focus-ring` = `#ffffff` (core/semantic) — Focus-visible ring color (applied at reduced opacity by components).
 - `--c2-color-selection-ring` = `#000000` (core/semantic) — Selected-card ring tint (applied at 15% opacity).
 - `--c2-radius-interactive` = `4px` (core/semantic) — Border radius for all interactive elements — buttons, badges, chips. The system's signature 4px corner.

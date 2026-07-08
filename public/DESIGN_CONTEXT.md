@@ -13,32 +13,32 @@ Use the CSS custom property (or the matching `@/primitives` export). Never hardc
 | --- | --- | --- | --- |
 | `core.primitive.color.white` | `--c2-primitive-color-white` | `#ffffff` | Pure white. Base for translucent surface overlays. |
 | `core.primitive.color.black` | `--c2-primitive-color-black` | `#000000` | Pure black. Base for the selection ring tint. |
-| `core.primitive.color.surface.0` | `--c2-primitive-color-surface-0` | `#0d0e11` | Base (= --surface-1) — page background and card content area. |
-| `core.primitive.color.surface.1` | `--c2-primitive-color-surface-1` | `#15171a` | Raised (= --surface-2) — card container and sidebar. |
-| `core.primitive.color.surface.2` | `--c2-primitive-color-surface-2` | `#1e2124` | Overlay (= --surface-3) — borders and dividers, card container fill. |
-| `core.primitive.color.surface.3` | `--c2-primitive-color-surface-3` | `#282c30` | Inset (= --surface-4) — icon boxes and closure buttons. |
-| `core.primitive.color.surface.4` | `--c2-primitive-color-surface-4` | `#353a40` | Hover (= --surface-5) — sensor rows and hover states. |
-| `core.primitive.color.neutral.200` | `--c2-primitive-color-neutral-200` | `#ced5de` | High-contrast text (= --slate-11) — titles, primary values. |
-| `core.primitive.color.neutral.500` | `--c2-primitive-color-neutral-500` | `#8d949f` | Low-contrast text (= --slate-9) — subtitles, captions, metadata. |
-| `core.primitive.color.red.base` | `--c2-primitive-color-red-base` | `oklch(0.395 0.110 27)` | Resting destructive fill (= --accent-danger-soft). |
-| `core.primitive.color.red.hover` | `--c2-primitive-color-red-hover` | `oklch(0.445 0.110 27)` | Destructive hover — one lightness step up. |
-| `core.primitive.color.red.active` | `--c2-primitive-color-red-active` | `oklch(0.345 0.110 27)` | Destructive pressed — one lightness step down. |
-| `core.primitive.color.amber.base` | `--c2-primitive-color-amber-base` | `oklch(0.420 0.090 70)` | Resting warning fill (= --accent-warning-soft). |
-| `core.primitive.color.amber.hover` | `--c2-primitive-color-amber-hover` | `oklch(0.470 0.090 70)` | Warning hover — one lightness step up. |
-| `core.primitive.color.amber.active` | `--c2-primitive-color-amber-active` | `oklch(0.370 0.090 70)` | Warning pressed — one lightness step down. |
-| `core.semantic.color.surface.base` | `--c2-color-surface-base` | `#0d0e11` | Lowest surface — page and card-content background. |
-| `core.semantic.color.surface.raised` | `--c2-color-surface-raised` | `#15171a` | Raised surface — cards, sidebar, code panels. |
-| `core.semantic.color.surface.overlay` | `--c2-color-surface-overlay` | `#1e2124` | Container fill, borders, dividers. |
-| `core.semantic.color.surface.inset` | `--c2-color-surface-inset` | `#282c30` | Recessed wells — icon boxes, closure buttons. |
-| `core.semantic.color.surface.hover` | `--c2-color-surface-hover` | `#353a40` | Hover/active row surface. |
-| `core.semantic.color.text.default` | `--c2-color-text-default` | `#ced5de` | Default high-contrast text. |
-| `core.semantic.color.text.muted` | `--c2-color-text-muted` | `#8d949f` | Secondary, lower-emphasis text. |
-| `core.semantic.color.action.danger.bg` | `--c2-color-action-danger-bg` | `oklch(0.395 0.110 27)` | Destructive action background. |
-| `core.semantic.color.action.danger.hover` | `--c2-color-action-danger-hover` | `oklch(0.445 0.110 27)` | Destructive action hover. |
-| `core.semantic.color.action.danger.active` | `--c2-color-action-danger-active` | `oklch(0.345 0.110 27)` | Destructive action pressed. |
-| `core.semantic.color.action.warning.bg` | `--c2-color-action-warning-bg` | `oklch(0.420 0.090 70)` | Warning action background. |
-| `core.semantic.color.action.warning.hover` | `--c2-color-action-warning-hover` | `oklch(0.470 0.090 70)` | Warning action hover. |
-| `core.semantic.color.action.warning.active` | `--c2-color-action-warning-active` | `oklch(0.370 0.090 70)` | Warning action pressed. |
+| `core.primitive.color.surface.0` | `--c2-primitive-color-surface-0` | `#0d0e11` (= `--surface-1`) | Base — page background and card content area. |
+| `core.primitive.color.surface.1` | `--c2-primitive-color-surface-1` | `#15171a` (= `--surface-2`) | Raised — card container and sidebar. |
+| `core.primitive.color.surface.2` | `--c2-primitive-color-surface-2` | `#1e2124` (= `--surface-3`) | Overlay — borders and dividers, card container fill. |
+| `core.primitive.color.surface.3` | `--c2-primitive-color-surface-3` | `#282c30` (= `--surface-4`) | Inset — icon boxes and closure buttons. |
+| `core.primitive.color.surface.4` | `--c2-primitive-color-surface-4` | `#353a40` (= `--surface-5`) | Hover — sensor rows and hover states. |
+| `core.primitive.color.neutral.200` | `--c2-primitive-color-neutral-200` | `#ced5de` (= `--slate-11`) | High-contrast text — titles, primary values. |
+| `core.primitive.color.neutral.500` | `--c2-primitive-color-neutral-500` | `#8d949f` (= `--slate-9`) | Low-contrast text — subtitles, captions, metadata. |
+| `core.primitive.color.red.base` | `--c2-primitive-color-red-base` | `#762924` (= `--accent-danger-soft`) | Resting destructive fill. |
+| `core.primitive.color.red.hover` | `--c2-primitive-color-red-hover` | `#863731` (= `--accent-danger-soft-hover`) | Destructive hover — one lightness step up. |
+| `core.primitive.color.red.active` | `--c2-primitive-color-red-active` | `#671a17` (= `--accent-danger-soft-active`) | Destructive pressed — one lightness step down. |
+| `core.primitive.color.amber.base` | `--c2-primitive-color-amber-base` | `#6c4302` (= `--accent-warning-soft`) | Resting warning fill. |
+| `core.primitive.color.amber.hover` | `--c2-primitive-color-amber-hover` | `#7b5117` (= `--accent-warning-soft-hover`) | Warning hover — one lightness step up. |
+| `core.primitive.color.amber.active` | `--c2-primitive-color-amber-active` | `#5d3500` (= `--accent-warning-soft-active`) | Warning pressed — one lightness step down. |
+| `core.semantic.color.surface.base` | `--c2-color-surface-base` | `#0d0e11` (= `--surface-1`) | Lowest surface — page and card-content background. |
+| `core.semantic.color.surface.raised` | `--c2-color-surface-raised` | `#15171a` (= `--surface-2`) | Raised surface — cards, sidebar, code panels. |
+| `core.semantic.color.surface.overlay` | `--c2-color-surface-overlay` | `#1e2124` (= `--surface-3`) | Container fill, borders, dividers. |
+| `core.semantic.color.surface.inset` | `--c2-color-surface-inset` | `#282c30` (= `--surface-4`) | Recessed wells — icon boxes, closure buttons. |
+| `core.semantic.color.surface.hover` | `--c2-color-surface-hover` | `#353a40` (= `--surface-5`) | Hover/active row surface. |
+| `core.semantic.color.text.default` | `--c2-color-text-default` | `#ced5de` (= `--slate-11`) | Default high-contrast text. |
+| `core.semantic.color.text.muted` | `--c2-color-text-muted` | `#8d949f` (= `--slate-9`) | Secondary, lower-emphasis text. |
+| `core.semantic.color.action.danger.bg` | `--c2-color-action-danger-bg` | `#762924` (= `--accent-danger-soft`) | Destructive action background. |
+| `core.semantic.color.action.danger.hover` | `--c2-color-action-danger-hover` | `#863731` (= `--accent-danger-soft-hover`) | Destructive action hover. |
+| `core.semantic.color.action.danger.active` | `--c2-color-action-danger-active` | `#671a17` (= `--accent-danger-soft-active`) | Destructive action pressed. |
+| `core.semantic.color.action.warning.bg` | `--c2-color-action-warning-bg` | `#6c4302` (= `--accent-warning-soft`) | Warning action background. |
+| `core.semantic.color.action.warning.hover` | `--c2-color-action-warning-hover` | `#7b5117` (= `--accent-warning-soft-hover`) | Warning action hover. |
+| `core.semantic.color.action.warning.active` | `--c2-color-action-warning-active` | `#5d3500` (= `--accent-warning-soft-active`) | Warning action pressed. |
 | `core.semantic.color.focus.ring` | `--c2-color-focus-ring` | `#ffffff` | Focus-visible ring color (applied at reduced opacity by components). |
 | `core.semantic.color.selection.ring` | `--c2-color-selection-ring` | `#000000` | Selected-card ring tint (applied at 15% opacity). |
 | `core.semantic.radius.interactive` | `--c2-radius-interactive` | `4px` | Border radius for all interactive elements — buttons, badges, chips. The system's signature 4px corner. |

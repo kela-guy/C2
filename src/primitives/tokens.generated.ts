@@ -28,19 +28,19 @@ export interface DesignTokenMeta {
 export const DESIGN_TOKENS: DesignTokenMeta[] = [
   { id: "core.primitive.color.white", cssVar: "--c2-primitive-color-white", value: "#ffffff", type: "color", tier: "primitive", layer: "core", description: "Pure white. Base for translucent surface overlays." },
   { id: "core.primitive.color.black", cssVar: "--c2-primitive-color-black", value: "#000000", type: "color", tier: "primitive", layer: "core", description: "Pure black. Base for the selection ring tint." },
-  { id: "core.primitive.color.surface.0", cssVar: "--c2-primitive-color-surface-0", value: "#0d0e11", type: "color", tier: "primitive", layer: "core", description: "Base (= --surface-1) — page background and card content area." },
-  { id: "core.primitive.color.surface.1", cssVar: "--c2-primitive-color-surface-1", value: "#15171a", type: "color", tier: "primitive", layer: "core", description: "Raised (= --surface-2) — card container and sidebar." },
-  { id: "core.primitive.color.surface.2", cssVar: "--c2-primitive-color-surface-2", value: "#1e2124", type: "color", tier: "primitive", layer: "core", description: "Overlay (= --surface-3) — borders and dividers, card container fill." },
-  { id: "core.primitive.color.surface.3", cssVar: "--c2-primitive-color-surface-3", value: "#282c30", type: "color", tier: "primitive", layer: "core", description: "Inset (= --surface-4) — icon boxes and closure buttons." },
-  { id: "core.primitive.color.surface.4", cssVar: "--c2-primitive-color-surface-4", value: "#353a40", type: "color", tier: "primitive", layer: "core", description: "Hover (= --surface-5) — sensor rows and hover states." },
-  { id: "core.primitive.color.neutral.200", cssVar: "--c2-primitive-color-neutral-200", value: "#ced5de", type: "color", tier: "primitive", layer: "core", description: "High-contrast text (= --slate-11) — titles, primary values." },
-  { id: "core.primitive.color.neutral.500", cssVar: "--c2-primitive-color-neutral-500", value: "#8d949f", type: "color", tier: "primitive", layer: "core", description: "Low-contrast text (= --slate-9) — subtitles, captions, metadata." },
-  { id: "core.primitive.color.red.base", cssVar: "--c2-primitive-color-red-base", value: "oklch(0.395 0.110 27)", type: "color", tier: "primitive", layer: "core", description: "Resting destructive fill (= --accent-danger-soft)." },
-  { id: "core.primitive.color.red.hover", cssVar: "--c2-primitive-color-red-hover", value: "oklch(0.445 0.110 27)", type: "color", tier: "primitive", layer: "core", description: "Destructive hover — one lightness step up." },
-  { id: "core.primitive.color.red.active", cssVar: "--c2-primitive-color-red-active", value: "oklch(0.345 0.110 27)", type: "color", tier: "primitive", layer: "core", description: "Destructive pressed — one lightness step down." },
-  { id: "core.primitive.color.amber.base", cssVar: "--c2-primitive-color-amber-base", value: "oklch(0.420 0.090 70)", type: "color", tier: "primitive", layer: "core", description: "Resting warning fill (= --accent-warning-soft)." },
-  { id: "core.primitive.color.amber.hover", cssVar: "--c2-primitive-color-amber-hover", value: "oklch(0.470 0.090 70)", type: "color", tier: "primitive", layer: "core", description: "Warning hover — one lightness step up." },
-  { id: "core.primitive.color.amber.active", cssVar: "--c2-primitive-color-amber-active", value: "oklch(0.370 0.090 70)", type: "color", tier: "primitive", layer: "core", description: "Warning pressed — one lightness step down." },
+  { id: "core.primitive.color.surface.0", cssVar: "--c2-primitive-color-surface-0", value: "#0d0e11", type: "color", tier: "primitive", layer: "core", description: "Base — page background and card content area." },
+  { id: "core.primitive.color.surface.1", cssVar: "--c2-primitive-color-surface-1", value: "#15171a", type: "color", tier: "primitive", layer: "core", description: "Raised — card container and sidebar." },
+  { id: "core.primitive.color.surface.2", cssVar: "--c2-primitive-color-surface-2", value: "#1e2124", type: "color", tier: "primitive", layer: "core", description: "Overlay — borders and dividers, card container fill." },
+  { id: "core.primitive.color.surface.3", cssVar: "--c2-primitive-color-surface-3", value: "#282c30", type: "color", tier: "primitive", layer: "core", description: "Inset — icon boxes and closure buttons." },
+  { id: "core.primitive.color.surface.4", cssVar: "--c2-primitive-color-surface-4", value: "#353a40", type: "color", tier: "primitive", layer: "core", description: "Hover — sensor rows and hover states." },
+  { id: "core.primitive.color.neutral.200", cssVar: "--c2-primitive-color-neutral-200", value: "#ced5de", type: "color", tier: "primitive", layer: "core", description: "High-contrast text — titles, primary values." },
+  { id: "core.primitive.color.neutral.500", cssVar: "--c2-primitive-color-neutral-500", value: "#8d949f", type: "color", tier: "primitive", layer: "core", description: "Low-contrast text — subtitles, captions, metadata." },
+  { id: "core.primitive.color.red.base", cssVar: "--c2-primitive-color-red-base", value: "#762924", type: "color", tier: "primitive", layer: "core", description: "Resting destructive fill." },
+  { id: "core.primitive.color.red.hover", cssVar: "--c2-primitive-color-red-hover", value: "#863731", type: "color", tier: "primitive", layer: "core", description: "Destructive hover — one lightness step up." },
+  { id: "core.primitive.color.red.active", cssVar: "--c2-primitive-color-red-active", value: "#671a17", type: "color", tier: "primitive", layer: "core", description: "Destructive pressed — one lightness step down." },
+  { id: "core.primitive.color.amber.base", cssVar: "--c2-primitive-color-amber-base", value: "#6c4302", type: "color", tier: "primitive", layer: "core", description: "Resting warning fill." },
+  { id: "core.primitive.color.amber.hover", cssVar: "--c2-primitive-color-amber-hover", value: "#7b5117", type: "color", tier: "primitive", layer: "core", description: "Warning hover — one lightness step up." },
+  { id: "core.primitive.color.amber.active", cssVar: "--c2-primitive-color-amber-active", value: "#5d3500", type: "color", tier: "primitive", layer: "core", description: "Warning pressed — one lightness step down." },
   { id: "core.semantic.color.surface.base", cssVar: "--c2-color-surface-base", value: "#0d0e11", type: "color", tier: "semantic", layer: "core", description: "Lowest surface — page and card-content background." },
   { id: "core.semantic.color.surface.raised", cssVar: "--c2-color-surface-raised", value: "#15171a", type: "color", tier: "semantic", layer: "core", description: "Raised surface — cards, sidebar, code panels." },
   { id: "core.semantic.color.surface.overlay", cssVar: "--c2-color-surface-overlay", value: "#1e2124", type: "color", tier: "semantic", layer: "core", description: "Container fill, borders, dividers." },
@@ -48,12 +48,12 @@ export const DESIGN_TOKENS: DesignTokenMeta[] = [
   { id: "core.semantic.color.surface.hover", cssVar: "--c2-color-surface-hover", value: "#353a40", type: "color", tier: "semantic", layer: "core", description: "Hover/active row surface." },
   { id: "core.semantic.color.text.default", cssVar: "--c2-color-text-default", value: "#ced5de", type: "color", tier: "semantic", layer: "core", description: "Default high-contrast text." },
   { id: "core.semantic.color.text.muted", cssVar: "--c2-color-text-muted", value: "#8d949f", type: "color", tier: "semantic", layer: "core", description: "Secondary, lower-emphasis text." },
-  { id: "core.semantic.color.action.danger.bg", cssVar: "--c2-color-action-danger-bg", value: "oklch(0.395 0.110 27)", type: "color", tier: "semantic", layer: "core", description: "Destructive action background." },
-  { id: "core.semantic.color.action.danger.hover", cssVar: "--c2-color-action-danger-hover", value: "oklch(0.445 0.110 27)", type: "color", tier: "semantic", layer: "core", description: "Destructive action hover." },
-  { id: "core.semantic.color.action.danger.active", cssVar: "--c2-color-action-danger-active", value: "oklch(0.345 0.110 27)", type: "color", tier: "semantic", layer: "core", description: "Destructive action pressed." },
-  { id: "core.semantic.color.action.warning.bg", cssVar: "--c2-color-action-warning-bg", value: "oklch(0.420 0.090 70)", type: "color", tier: "semantic", layer: "core", description: "Warning action background." },
-  { id: "core.semantic.color.action.warning.hover", cssVar: "--c2-color-action-warning-hover", value: "oklch(0.470 0.090 70)", type: "color", tier: "semantic", layer: "core", description: "Warning action hover." },
-  { id: "core.semantic.color.action.warning.active", cssVar: "--c2-color-action-warning-active", value: "oklch(0.370 0.090 70)", type: "color", tier: "semantic", layer: "core", description: "Warning action pressed." },
+  { id: "core.semantic.color.action.danger.bg", cssVar: "--c2-color-action-danger-bg", value: "#762924", type: "color", tier: "semantic", layer: "core", description: "Destructive action background." },
+  { id: "core.semantic.color.action.danger.hover", cssVar: "--c2-color-action-danger-hover", value: "#863731", type: "color", tier: "semantic", layer: "core", description: "Destructive action hover." },
+  { id: "core.semantic.color.action.danger.active", cssVar: "--c2-color-action-danger-active", value: "#671a17", type: "color", tier: "semantic", layer: "core", description: "Destructive action pressed." },
+  { id: "core.semantic.color.action.warning.bg", cssVar: "--c2-color-action-warning-bg", value: "#6c4302", type: "color", tier: "semantic", layer: "core", description: "Warning action background." },
+  { id: "core.semantic.color.action.warning.hover", cssVar: "--c2-color-action-warning-hover", value: "#7b5117", type: "color", tier: "semantic", layer: "core", description: "Warning action hover." },
+  { id: "core.semantic.color.action.warning.active", cssVar: "--c2-color-action-warning-active", value: "#5d3500", type: "color", tier: "semantic", layer: "core", description: "Warning action pressed." },
   { id: "core.semantic.color.focus.ring", cssVar: "--c2-color-focus-ring", value: "#ffffff", type: "color", tier: "semantic", layer: "core", description: "Focus-visible ring color (applied at reduced opacity by components)." },
   { id: "core.semantic.color.selection.ring", cssVar: "--c2-color-selection-ring", value: "#000000", type: "color", tier: "semantic", layer: "core", description: "Selected-card ring tint (applied at 15% opacity)." },
   { id: "core.semantic.radius.interactive", cssVar: "--c2-radius-interactive", value: "4px", type: "dimension", tier: "semantic", layer: "core", description: "Border radius for all interactive elements — buttons, badges, chips. The system's signature 4px corner." },
@@ -85,14 +85,14 @@ export const coreTokens = {
         "500": "#8d949f"
       },
       "red": {
-        "base": "oklch(0.395 0.110 27)",
-        "hover": "oklch(0.445 0.110 27)",
-        "active": "oklch(0.345 0.110 27)"
+        "base": "#762924",
+        "hover": "#863731",
+        "active": "#671a17"
       },
       "amber": {
-        "base": "oklch(0.420 0.090 70)",
-        "hover": "oklch(0.470 0.090 70)",
-        "active": "oklch(0.370 0.090 70)"
+        "base": "#6c4302",
+        "hover": "#7b5117",
+        "active": "#5d3500"
       }
     }
   },
@@ -111,14 +111,14 @@ export const coreTokens = {
       },
       "action": {
         "danger": {
-          "bg": "oklch(0.395 0.110 27)",
-          "hover": "oklch(0.445 0.110 27)",
-          "active": "oklch(0.345 0.110 27)"
+          "bg": "#762924",
+          "hover": "#863731",
+          "active": "#671a17"
         },
         "warning": {
-          "bg": "oklch(0.420 0.090 70)",
-          "hover": "oklch(0.470 0.090 70)",
-          "active": "oklch(0.370 0.090 70)"
+          "bg": "#6c4302",
+          "hover": "#7b5117",
+          "active": "#5d3500"
         }
       },
       "focus": {
