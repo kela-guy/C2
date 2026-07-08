@@ -6508,7 +6508,7 @@ export function DetectionRow() {
                     {INTERACTION_STATES.length} interaction states &times; {AFFILIATIONS.length} affiliations = {INTERACTION_STATES.length * AFFILIATIONS.length} visual combinations. Hover a state card to preview it. Click an affiliation dot to change the hero.
                   </p>
                   <p className="text-sm leading-relaxed text-white/40">
-                    Note: <code className="text-n-10">alert</code>, <code className="text-n-10">weaponPointing</code>, and <code className="text-n-10">weaponLocked</code> are legacy states wired only in the Mapbox <code className="text-n-10">TacticalMap</code>. The production Cesium map does not drive them today — they are shown here to document the full design intent.
+                    Note: <code className="text-n-10">alert</code>, <code className="text-n-10">weaponPointing</code>, and <code className="text-n-10">weaponLocked</code> are legacy states from the removed Mapbox <code className="text-n-10">TacticalMap</code>. The production Cesium map does not drive them today — they are shown here to document the full design intent.
                   </p>
                 </div>
                 <div className="flex gap-6">
@@ -6686,7 +6686,7 @@ export function DetectionRow() {
                 <div className="space-y-2">
                   <h3 className="text-lg font-semibold text-n-12">Icon Catalog</h3>
                   <p className="text-base font-normal leading-relaxed text-white/50 tracking-wide">
-                    Tactical SVG icons used inside map markers on the Mapbox canvas. Each icon accepts a <code className="text-n-10">fill</code> prop.
+                    Tactical SVG icons used inside markers on the tactical map. Each icon accepts a <code className="text-n-10">fill</code> prop.
                   </p>
                   <a
                     href="#icon-library"

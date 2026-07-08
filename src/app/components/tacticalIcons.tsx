@@ -2,11 +2,9 @@
  * Tactical SVG icons for assets, drones, and effectors.
  *
  * Canonical, map-free source of truth for the tactical glyphs. Consumers
- * (Cesium map, device list, styleguide) import from here so they don't drag
- * `react-map-gl` / `mapbox-gl` into the bundle. The legacy Mapbox
- * `TacticalMap.tsx` re-uses these via thin always-stroked wrappers; only its
- * genuinely divergent glyphs (Camera/Floodlight/Speaker) and the Mapbox-only
- * `DroneIcon`/`MissileIcon` size variants remain defined there.
+ * (Cesium map, device list, styleguide) import from here. The legacy Mapbox
+ * `TacticalMap.tsx` that once carried divergent size variants was deleted in
+ * cesium-parity Phase 9.
  */
 
 import { DRONE_PATH, MISSILE_PATH } from '@/primitives/MapIcons';
@@ -184,8 +182,7 @@ export const LauncherIcon = ({
  * Floodlight tactical icon. `active` is accepted for API parity with
  * other toggleable icons but renders identically — operators read on/off
  * via the device card Switch, not the glyph. Kept here (map-free) so the
- * Cesium map + device list can use it without importing the legacy
- * Mapbox `TacticalMap` module.
+ * Cesium map + device list can use it.
  */
 export const FloodlightIcon = ({
   size = 24,

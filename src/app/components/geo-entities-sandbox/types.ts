@@ -33,7 +33,7 @@ export interface GeoEntity {
 
 /**
  * Normalized viewport bounds the sandbox projects entities into. Real map
- * layers use Cesium/Mapbox; the sandbox uses a flat equirectangular projection
+ * layers use Cesium; the sandbox uses a flat equirectangular projection
  * over these bounds so it has zero map-engine dependencies.
  */
 export interface GeoBounds {

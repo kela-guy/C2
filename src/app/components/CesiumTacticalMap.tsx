@@ -1,8 +1,8 @@
 /**
- * CesiumTacticalMap — drop-in replacement for `TacticalMap` powered by CesiumJS.
+ * CesiumTacticalMap — the production tactical map, powered by CesiumJS.
  *
- * Mounts in `Dashboard` when the URL contains `?map=cesium`. Default is still
- * Mapbox (`TacticalMap`).
+ * Mounted unconditionally by `Dashboard`. (The legacy Mapbox `TacticalMap`
+ * it replaced was deleted in cesium-parity Phase 9.)
  *
  * **Batch 2 (this revision) — Phases 4 → 6:**
  *   - Phase 4: terrain-clamped FOV cones for cameras / radars / lidars and

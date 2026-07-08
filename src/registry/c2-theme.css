@@ -611,11 +611,6 @@
   animation: jam-confirm-blink 0.7s ease-in-out;
 }
 
-/* Ensure map markers render above the FOV SVG overlay (z-index: 0) */
-.mapboxgl-marker {
-  z-index: 2 !important;
-}
-
 /*
  * Sonner toasts — unify built-in toasts with the tactical design
  * language. All values route through palette.css tokens; the 2px corner
