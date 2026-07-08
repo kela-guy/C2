@@ -25,9 +25,11 @@
  */
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { oklchToHex, rgbToHexString, parsePalette } from './lib/palette.mjs';
 
 const ROOT = join(import.meta.dirname, '..');
 const MANIFEST_PATH = join(ROOT, 'src/app/styleguide/registry/manifest.json');
+const PALETTE_PATH = join(ROOT, 'src/styles/palette.css');
 const REGISTRY_PATH = join(ROOT, 'registry.json');
 const CORE_TOKENS_PATH = join(ROOT, 'tokens/core.json');
 const DOMAIN_TOKENS_PATH = join(ROOT, 'tokens/c2-domain.json');
@@ -148,34 +150,74 @@ function tokenId(leaf) {
   return `${leaf.layer}.${leaf.path.join('.')}`;
 }
 
-function buildTokenModel(coreJson, domainJson) {
+/**
+ * Flatten both token files and index raw values by dot-path (no layer
+ * prefix) so `{primitive.color...}` references resolve regardless of which
+ * file declared them. palette.css variables are injected under a `palette.`
+ * namespace — resolved to hex via the shared OKLCH math — so DTCG
+ * references like `{palette.surface-1}` resolve like any other. palette.css
+ * stays the hand-authored value master; the JSON only names and aliases.
+ */
+function buildRawIndex(coreJson, domainJson, palette) {
   const leaves = [];
   flattenTokens(coreJson, 'core', [], leaves);
   flattenTokens(domainJson, 'domain', [], leaves);
 
-  // Raw index keyed by dot-path (no layer prefix) so `{primitive.color...}`
-  // references resolve regardless of which file declared them.
   const rawIndex = {};
+  for (const [name, entry] of palette) {
+    rawIndex[`palette.${name}`] = rgbToHexString(oklchToHex(...entry.oklch));
+  }
   for (const leaf of leaves) rawIndex[leaf.path.join('.')] = leaf.rawValue;
+  return { leaves, rawIndex };
+}
 
-  const tokens = leaves.map((leaf) => {
+/**
+ * Follow a leaf's reference chain and return the palette CSS var
+ * (`--surface-1`) it ultimately resolves through, or null when the chain
+ * ends in a plain literal. Lets the CSS artifact emit live `var()`
+ * references while the TS artifact keeps resolved hex literals.
+ */
+function paletteVarFor(rawValue, rawIndex) {
+  let cur = rawValue;
+  const seen = new Set();
+  while (typeof cur === 'string') {
+    const ref = cur.match(/^\{([^}]+)\}$/);
+    if (!ref) return null;
+    const target = ref[1];
+    if (target.startsWith('palette.')) return `--${target.slice('palette.'.length)}`;
+    if (seen.has(target) || !(target in rawIndex)) return null;
+    seen.add(target);
+    cur = rawIndex[target];
+  }
+  return null;
+}
+
+function buildTokenModel(leaves, rawIndex) {
+  return leaves.map((leaf) => {
     const tier =
       leaf.layer === 'domain'
         ? 'domain'
         : TIER_BY_TOP[leaf.path[0]] ?? (leaf.type === 'dimension' ? 'dimension' : 'semantic');
+    let value;
+    try {
+      value = resolveValue(leaf.rawValue, rawIndex);
+    } catch (err) {
+      throw new Error(`token ${tokenId(leaf)}: ${err.message}`);
+    }
     return {
       id: tokenId(leaf),
       cssVar: cssVarName(leaf),
-      value: resolveValue(leaf.rawValue, rawIndex),
+      value,
       rawValue: leaf.rawValue,
       type: leaf.type,
       tier,
       layer: leaf.layer,
       description: leaf.description,
       path: leaf.path,
+      /** `--surface-1`-style palette var this token resolves through, or null. */
+      paletteVar: paletteVarFor(leaf.rawValue, rawIndex),
     };
   });
-  return tokens;
 }
 
 /** Rebuild a resolved nested object (sans $-metadata) for typed TS consumption. */
@@ -246,10 +288,17 @@ export const domainTokens = ${JSON.stringify(domainTree, null, 2)} as const;
 }
 
 function renderTokensCss(tokens) {
+  // Palette-backed tokens emit live `var()` references so the cascade
+  // (including the styleguide's `.light` preview) keeps working; the
+  // resolved hex stays in the comment for grep-ability.
+  const row = (t) =>
+    t.paletteVar
+      ? `  ${t.cssVar}: var(${t.paletteVar}); /* ${t.description} (resolved: ${t.value}) */`
+      : `  ${t.cssVar}: ${t.value}; /* ${t.description} */`;
   const section = (label, layer, tier) => {
     const rows = tokens
       .filter((t) => (layer ? t.layer === layer : true) && (tier ? t.tier === tier : true))
-      .map((t) => `  ${t.cssVar}: ${t.value}; /* ${t.description} */`)
+      .map(row)
       .join('\n');
     return rows ? `  /* ${label} */\n${rows}\n` : '';
   };
@@ -333,7 +382,8 @@ function renderDesignContext(components, tokens, rules) {
     lines.push('| Token | CSS var | Value | Use |');
     lines.push('| --- | --- | --- | --- |');
     for (const t of inLayer) {
-      lines.push(`| \`${t.id}\` | \`${t.cssVar}\` | \`${t.value}\` | ${t.description} |`);
+      const value = t.paletteVar ? `\`${t.value}\` (= \`${t.paletteVar}\`)` : `\`${t.value}\``;
+      lines.push(`| \`${t.id}\` | \`${t.cssVar}\` | ${value} | ${t.description} |`);
     }
     lines.push('');
   }
@@ -402,7 +452,8 @@ function renderLlmsBlock(components, tokens, rules) {
   lines.push('## Design tokens (generated from tokens/*.json)', '');
   lines.push('Use the CSS var or the `@/primitives` export — never the raw value.', '');
   for (const t of tokens) {
-    lines.push(`- \`${t.cssVar}\` = \`${t.value}\` (${t.layer}/${t.tier}) — ${t.description}`);
+    const source = t.paletteVar ? ` (= \`${t.paletteVar}\`)` : '';
+    lines.push(`- \`${t.cssVar}\` = \`${t.value}\`${source} (${t.layer}/${t.tier}) — ${t.description}`);
   }
   lines.push('');
 
@@ -432,6 +483,7 @@ async function main() {
   const registry = await readJson(REGISTRY_PATH);
   const coreJson = await readJson(CORE_TOKENS_PATH);
   const domainJson = await readJson(DOMAIN_TOKENS_PATH);
+  const palette = parsePalette(await readFile(PALETTE_PATH, 'utf-8'));
   const rulesFile = await readJson(RULES_PATH);
   const components = manifest.components ?? [];
   const rules = rulesFile.rules ?? [];
@@ -455,13 +507,9 @@ async function main() {
     process.exit(1);
   }
 
-  // Token graph (resolved).
-  const rawIndex = {};
-  const tmp = [];
-  flattenTokens(coreJson, 'core', [], tmp);
-  flattenTokens(domainJson, 'domain', [], tmp);
-  for (const leaf of tmp) rawIndex[leaf.path.join('.')] = leaf.rawValue;
-  const tokens = buildTokenModel(coreJson, domainJson);
+  // Token graph (resolved; `{palette.*}` references resolve to hex).
+  const { leaves, rawIndex } = buildRawIndex(coreJson, domainJson, palette);
+  const tokens = buildTokenModel(leaves, rawIndex);
   const coreTree = resolvedTree(coreJson, rawIndex);
   const domainTree = resolvedTree(domainJson, rawIndex);
 
