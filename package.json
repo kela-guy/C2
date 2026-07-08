@@ -8,7 +8,7 @@
     "build": "vite build",
     "build:analyze": "ANALYZE=1 vite build",
     "dev": "vite",
-    "registry:build": "shadcn build",
+    "registry:build": "node scripts/registry-theme.mjs && shadcn build",
     "styleguide:manifest": "node scripts/styleguide-manifest.mjs",
     "styleguide:check": "node scripts/styleguide-manifest.mjs --check",
     "tokens:build": "node scripts/styleguide-manifest.mjs",
