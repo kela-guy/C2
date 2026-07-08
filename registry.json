@@ -846,28 +846,6 @@
       ]
     },
     {
-      "name": "chart",
-      "type": "registry:ui",
-      "title": "Chart",
-      "description": "Chart container with theme-aware tooltip and legend.",
-      "categories": [
-        "core",
-        "ui"
-      ],
-      "dependencies": [
-        "recharts"
-      ],
-      "registryDependencies": [
-        "utils"
-      ],
-      "files": [
-        {
-          "path": "src/app/components/ui/chart.tsx",
-          "type": "registry:component"
-        }
-      ]
-    },
-    {
       "name": "checkbox",
       "type": "registry:ui",
       "title": "Checkbox",
@@ -2034,7 +2012,6 @@
         "calendar",
         "card",
         "carousel",
-        "chart",
         "checkbox",
         "collapsible",
         "command",
