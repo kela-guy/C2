@@ -89,7 +89,6 @@ export default defineConfig(({ mode }) => {
             // globe; shiki is the 9.6 MB highlighter behind /styleguide. Both
             // earn dedicated long-lived cache entries.
             if (id.includes('cesium')) return 'cesium';
-            if (id.includes('react-joyride') || id.includes('react-floater')) return 'tour';
             if (id.includes('shiki')) return 'shiki';
             if (id.includes('framer-motion') || id.includes('motion-dom') || id.includes('motion-utils')) return 'motion';
             if (id.includes('lucide-react')) return 'icons';

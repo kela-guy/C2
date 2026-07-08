@@ -28,7 +28,7 @@ export interface LiveMapStore {
   setHoveredTargetId: (id: string | null) => void;
 }
 
-function createLiveMapStore(initial: LiveMapSnapshot): LiveMapStore {
+export function createLiveMapStore(initial: LiveMapSnapshot): LiveMapStore {
   let snapshot = initial;
   const listeners = new Set<() => void>();
   const emit = () => {

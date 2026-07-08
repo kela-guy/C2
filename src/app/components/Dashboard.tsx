@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { spring } from '@/lib/springs';
 import { useDrop } from 'react-dnd';
@@ -29,7 +29,12 @@ import {
 import { CesiumErrorBoundary } from './CesiumErrorBoundary';
 import { MapDrawOverlay } from './map-draw/MapDrawOverlay';
 import { MapDrawProvider, mapDrawPanelCloseBlockedRef } from './map-draw/MapDrawProvider';
-import { MapDrawPanel } from './map-draw/MapDrawPanel';
+// The three dockable panels below render only when opened, so they are
+// lazy-loaded to keep their code (MapDrawPanel alone is ~2.8k lines) out
+// of the entry chunk. Named exports need the `.then` default-shim.
+const MapDrawPanel = lazy(() =>
+  import('./map-draw/MapDrawPanel').then((m) => ({ default: m.MapDrawPanel })),
+);
 import { FloatingGeoEntitiesControl } from './map-draw/FloatingGeoEntitiesControl';
 import { GeoEntitiesRailToggle } from './map-draw/GeoEntitiesRailToggle';
 import { MapFocusBridge } from './map-draw/MapFocusBridge';
@@ -38,13 +43,19 @@ import { NotificationCenter } from './NotificationCenter';
 import ListOfSystems from '@/imports/ListOfSystems';
 import type { Detection, RegulusEffector, LauncherEffector } from '@/imports/ListOfSystems';
 import { List, Bell, Palette, Video, Sparkles, Devices, Agents } from '@/lib/icons/central';
-import { FlowBuilderPanel, defaultFlowDraft } from './flow-builder/FlowBuilderPanel';
+import { defaultFlowDraft } from './flow-builder/flowDefaults';
+const FlowBuilderPanel = lazy(() =>
+  import('./flow-builder/FlowBuilderPanel').then((m) => ({ default: m.FlowBuilderPanel })),
+);
 import { useFlowPlayer, type FlowPlayerOps } from './flow-builder/useFlowPlayer';
 import type { FlowPreview, SensorDetectionLink } from './CesiumTacticalMap';
 import type { FlowDef } from '@/lib/flowBuilder';
 import { readFlowPresets, deleteFlowPreset, FLOW_LOCATION_PRESETS } from '@/lib/flowBuilder';
 import { computeSeverityTrajectory } from './flow-builder/flowSeverity';
-import { SimulationsPanel, type BuiltinKind } from './simulations/SimulationsPanel';
+import type { BuiltinKind } from './simulations/SimulationsPanel';
+const SimulationsPanel = lazy(() =>
+  import('./simulations/SimulationsPanel').then((m) => ({ default: m.SimulationsPanel })),
+);
 import { resolveTargetSeverity } from '@/primitives/urgency';
 import { Toggle } from '@/shared/components/ui/toggle';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/shared/components/ui/tooltip';
@@ -2690,48 +2701,54 @@ export const Dashboard = ({
           * render. We trade the slide-out animation for a tighter render budget.
           */}
         {flowBuilderOpen && (
-          <FlowBuilderPanel
-            open={flowBuilderOpen}
-            onClose={handleFlowBuilderClose}
-            width={sidebarWidth}
-            noTransition={panelSwitching}
-            draft={flowDraft}
-            onDraftChange={setFlowDraft}
-            presets={flowPresets}
-            onPresetsChange={setFlowPresets}
-            loadedPresetId={flowLoadedPresetId}
-            onLoadedPresetIdChange={setFlowLoadedPresetId}
-          />
+          <Suspense fallback={null}>
+            <FlowBuilderPanel
+              open={flowBuilderOpen}
+              onClose={handleFlowBuilderClose}
+              width={sidebarWidth}
+              noTransition={panelSwitching}
+              draft={flowDraft}
+              onDraftChange={setFlowDraft}
+              presets={flowPresets}
+              onPresetsChange={setFlowPresets}
+              loadedPresetId={flowLoadedPresetId}
+              onLoadedPresetIdChange={setFlowLoadedPresetId}
+            />
+          </Suspense>
         )}
 
         {simulationsPanelOpen && (
-          <SimulationsPanel
-            open={simulationsPanelOpen}
-            onClose={closeSimulationsPanel}
-            width={sidebarWidth}
-            noTransition={panelSwitching}
-            presets={flowPresets}
-            onRunBuiltin={handleRunBuiltin}
-            onRunFlow={handleRunFlow}
-            onEditFlow={handleEditFlow}
-            onDeleteFlow={handleDeleteFlow}
-          />
+          <Suspense fallback={null}>
+            <SimulationsPanel
+              open={simulationsPanelOpen}
+              onClose={closeSimulationsPanel}
+              width={sidebarWidth}
+              noTransition={panelSwitching}
+              presets={flowPresets}
+              onRunBuiltin={handleRunBuiltin}
+              onRunFlow={handleRunFlow}
+              onEditFlow={handleEditFlow}
+              onDeleteFlow={handleDeleteFlow}
+            />
+          </Suspense>
         )}
 
         {mapDrawPanelOpen && (
-          <MapDrawPanel
-            open={mapDrawPanelOpen}
-            onClose={closeMapDrawPanel}
-            width={sidebarWidth}
-            noTransition={panelSwitching}
-            // Production default: Opt 5 (segmented tool bar inside a
-            // Tools dropdown opened by default, layers list open). The
-            // lab route keeps this as the initial variant but still lets
-            // reviewers flip between Opt 2 / Opt 3 / Opt 5 / Original.
-            variant="opt5"
-            lab={drawPanelLab}
-            typeLab={typePanelLab}
-          />
+          <Suspense fallback={null}>
+            <MapDrawPanel
+              open={mapDrawPanelOpen}
+              onClose={closeMapDrawPanel}
+              width={sidebarWidth}
+              noTransition={panelSwitching}
+              // Production default: Opt 5 (segmented tool bar inside a
+              // Tools dropdown opened by default, layers list open). The
+              // lab route keeps this as the initial variant but still lets
+              // reviewers flip between Opt 2 / Opt 3 / Opt 5 / Original.
+              variant="opt5"
+              lab={drawPanelLab}
+              typeLab={typePanelLab}
+            />
+          </Suspense>
         )}
 
         {devicesPanelOpen && (
