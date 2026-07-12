@@ -6,15 +6,7 @@
 
 import type { ElementType } from 'react';
 import { Camera, Crosshair, Radar, Radio, SunFilled, Target } from '@/lib/icons/central';
-import {
-  CameraIcon,
-  FloodlightIcon,
-  GotchaIcon,
-  LauncherIcon,
-  LidarIcon,
-  RadarIcon,
-  SensorIcon,
-} from '../tacticalIcons';
+import { ASSET_KIND_ICON } from '../assetKindIcons';
 import type { AssetKind } from './coverageModel';
 
 export interface AssetVisual {
@@ -30,14 +22,16 @@ export interface AssetVisual {
   shape: 'cone' | 'ring' | 'none';
 }
 
+// `mapIcon` routes through the canonical registry (`regulus` is the
+// registry's `sensor` / ECM kind) so onboarding markers match production.
 export const ASSET_VISUAL: Record<AssetKind, AssetVisual> = {
-  camera: { icon: Camera, mapIcon: CameraIcon, hex: '#22d3ee', textClass: 'text-cyan-300', shape: 'cone' },
-  radar: { icon: Radar, mapIcon: RadarIcon, hex: '#38bdf8', textClass: 'text-sky-300', shape: 'cone' },
-  lidar: { icon: Radar, mapIcon: LidarIcon, hex: '#2dd4bf', textClass: 'text-teal-300', shape: 'ring' },
-  gotcha: { icon: Crosshair, mapIcon: GotchaIcon, hex: '#a78bfa', textClass: 'text-violet-300', shape: 'ring' },
-  regulus: { icon: Radio, mapIcon: SensorIcon, hex: '#34d399', textClass: 'text-emerald-300', shape: 'ring' },
-  launcher: { icon: Target, mapIcon: LauncherIcon, hex: '#fb923c', textClass: 'text-orange-300', shape: 'ring' },
-  floodlight: { icon: SunFilled, mapIcon: FloodlightIcon, hex: '#fde68a', textClass: 'text-amber-200', shape: 'none' },
+  camera: { icon: Camera, mapIcon: ASSET_KIND_ICON.camera, hex: '#22d3ee', textClass: 'text-cyan-300', shape: 'cone' },
+  radar: { icon: Radar, mapIcon: ASSET_KIND_ICON.radar, hex: '#38bdf8', textClass: 'text-sky-300', shape: 'cone' },
+  lidar: { icon: Radar, mapIcon: ASSET_KIND_ICON.lidar, hex: '#2dd4bf', textClass: 'text-teal-300', shape: 'ring' },
+  gotcha: { icon: Crosshair, mapIcon: ASSET_KIND_ICON.gotcha, hex: '#a78bfa', textClass: 'text-violet-300', shape: 'ring' },
+  regulus: { icon: Radio, mapIcon: ASSET_KIND_ICON.sensor, hex: '#34d399', textClass: 'text-emerald-300', shape: 'ring' },
+  launcher: { icon: Target, mapIcon: ASSET_KIND_ICON.launcher, hex: '#fb923c', textClass: 'text-orange-300', shape: 'ring' },
+  floodlight: { icon: SunFilled, mapIcon: ASSET_KIND_ICON.floodlight, hex: '#fde68a', textClass: 'text-amber-200', shape: 'none' },
 };
 
 export const ASSET_ORDER: AssetKind[] = [

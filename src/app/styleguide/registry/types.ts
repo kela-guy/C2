@@ -110,6 +110,12 @@ export interface ComponentDocModule {
   id: string;
   /** Import + minimal usage snippet shown in the Usage block. */
   usage?: string;
+  /**
+   * Keep comments in the hero usage snippet. Set when the comments ARE the
+   * content — e.g. a self-contained handoff starter whose comments carry the
+   * layer-by-layer instructions.
+   */
+  usageKeepComments?: boolean;
   /** Raw component source (via Vite `?raw`) for the Source tab. */
   source?: string;
   /** Extra related files for the Files tab. */

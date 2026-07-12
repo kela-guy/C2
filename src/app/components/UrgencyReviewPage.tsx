@@ -36,13 +36,10 @@ import {
   CarCardIcon,
   TankCardIcon,
   TruckCardIcon,
-  CarIcon,
-  TankIcon,
-  TruckIcon,
-  UnknownIcon,
   HumanIcon,
   HumanCardIcon,
   UNKNOWN_GRAY,
+  resolveThreatGlyph,
   type Severity,
 } from '@/primitives';
 import {
@@ -53,7 +50,6 @@ import {
   SelectValue,
 } from './ui/select';
 import type { Detection } from '@/imports/ListOfSystems';
-import { DroneIcon } from './tacticalIcons';
 import { useCardSlots, type CardCallbacks } from '@/imports/useCardSlots';
 import { getCreatedAtMs } from '@/imports/useActivityStatus';
 import {
@@ -121,33 +117,38 @@ interface EntityOption {
   cardName: string;
 }
 
+// Marker glyphs route through the shared production resolver
+// (`resolveThreatGlyph`) so this review surface can never drift from what
+// the tactical map renders. `human` is the one exception — it has no
+// `classifiedType`, so it keeps a direct glyph reference.
 const ENTITY_OPTIONS: Record<EntityKey, EntityOption> = {
   drone: {
     key: 'drone',
     label: 'רחפן',
     cardIcon: DroneCardIcon,
-    renderMarker: (color) => <DroneIcon color={color} rotationDeg={0} size={32} />,
+    renderMarker: (color) =>
+      resolveThreatGlyph({ classifiedType: 'drone' }, color, { headingDeg: 90, size: 32 }),
     cardName: 'רחפן',
   },
   car: {
     key: 'car',
     label: 'רכב',
     cardIcon: CarCardIcon,
-    renderMarker: (color) => <CarIcon color={color} />,
+    renderMarker: (color) => resolveThreatGlyph({ classifiedType: 'car' }, color),
     cardName: 'רכב',
   },
   tank: {
     key: 'tank',
     label: 'טנק',
     cardIcon: TankCardIcon,
-    renderMarker: (color) => <TankIcon color={color} />,
+    renderMarker: (color) => resolveThreatGlyph({ classifiedType: 'tank' }, color),
     cardName: 'טנק',
   },
   truck: {
     key: 'truck',
     label: 'משאית',
     cardIcon: TruckCardIcon,
-    renderMarker: (color) => <TruckIcon color={color} />,
+    renderMarker: (color) => resolveThreatGlyph({ classifiedType: 'truck' }, color),
     cardName: 'משאית',
   },
   human: {
@@ -456,7 +457,7 @@ function UnknownRow() {
       <div className="flex items-center justify-center">
         <MapMarker
           style={markerStyle}
-          icon={<UnknownIcon color={markerStyle.glyphColor} />}
+          icon={resolveThreatGlyph(cuas_raw, markerStyle.glyphColor)}
           surfaceSize={44}
           ringSize={36}
         />

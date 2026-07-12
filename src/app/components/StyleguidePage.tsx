@@ -74,6 +74,7 @@ import {
 } from '@/shared/components/DevicesPanel';
 import { DeviceChildRow } from '@/app/components/devices-panel/DeviceChildRow';
 import { GOTCHA_UNITS } from '@/app/components/gotcha/gotchaAssets';
+import { gotchaSectorColor } from '@/app/components/gotcha/gotchaHealth';
 import { gotchaUnitsToDevices } from '@/app/components/gotcha/gotchaUnitsToDevices';
 import { CriticalAlertOverlay, showCriticalDroneAlert } from '@/app/components/gotcha/CriticalAlertOverlay';
 import { JamIcon, DroneDeviceIcon } from '@/primitives/ProductIcons';
@@ -859,12 +860,12 @@ function GotchaCriticalAlertDemo() {
   );
 }
 
-/** Sector / ring colour rules, mirroring `gotchaSectorColor` in CesiumTacticalMap. */
+/** Sector / ring colour legend — colours come straight from the production rule. */
 const GOTCHA_SECTOR_LEGEND: { label: string; color: string; note: string }[] = [
-  { label: 'Healthy', color: '#22b8cf', note: 'friendly cyan — hidden at rest' },
-  { label: 'Warning', color: SEVERITY_COLOR.MEDIUM, note: 'always drawn' },
-  { label: 'Error / blind', color: SEVERITY_COLOR.HIGH, note: 'always drawn' },
-  { label: 'Offline', color: SEVERITY_COLOR.LOW, note: 'neutral, known-absent' },
+  { label: 'Healthy', color: gotchaSectorColor('ok'), note: 'friendly cyan — hidden at rest' },
+  { label: 'Warning', color: gotchaSectorColor('warning'), note: 'always drawn' },
+  { label: 'Error / blind', color: gotchaSectorColor('error'), note: 'always drawn' },
+  { label: 'Offline', color: gotchaSectorColor('offline'), note: 'neutral, known-absent' },
 ];
 
 /** Map marker + 120-degree sector colour legend for the Gotcha effector. */
@@ -6507,9 +6508,6 @@ export function DetectionRow() {
                   <p className="text-base font-normal leading-relaxed text-white/50 tracking-wide">
                     {INTERACTION_STATES.length} interaction states &times; {AFFILIATIONS.length} affiliations = {INTERACTION_STATES.length * AFFILIATIONS.length} visual combinations. Hover a state card to preview it. Click an affiliation dot to change the hero.
                   </p>
-                  <p className="text-sm leading-relaxed text-white/40">
-                    Note: <code className="text-n-10">alert</code>, <code className="text-n-10">weaponPointing</code>, and <code className="text-n-10">weaponLocked</code> are legacy states from the removed Mapbox <code className="text-n-10">TacticalMap</code>. The production Cesium map does not drive them today — they are shown here to document the full design intent.
-                  </p>
                 </div>
                 <div className="flex gap-6">
 
@@ -6523,10 +6521,7 @@ export function DetectionRow() {
                         active: 'hostile',
                         disabled: 'neutral',
                         expired: 'unknown',
-                        alert: 'hostile',
                         jammer: 'possibleThreat',
-                        weaponPointing: 'hostile',
-                        weaponLocked: 'hostile',
                       };
                       return INTERACTION_STATES.map(state => {
                         const isHovered = explorerState === state;
@@ -6548,7 +6543,7 @@ export function DetectionRow() {
                               style={s}
                               surfaceSize={36}
                               ringSize={28}
-                              pulse={isHovered && (state === 'hovered' || state === 'selected' || state === 'active' || state === 'weaponPointing' || state === 'weaponLocked')}
+                              pulse={isHovered && (state === 'hovered' || state === 'selected' || state === 'active')}
                             />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-baseline gap-2">
@@ -6571,7 +6566,7 @@ export function DetectionRow() {
                           style={heroStyle}
                           surfaceSize={72}
                           ringSize={56}
-                          pulse={explorerState === 'hovered' || explorerState === 'selected' || explorerState === 'active' || explorerState === 'weaponPointing' || explorerState === 'weaponLocked'}
+                          pulse={explorerState === 'hovered' || explorerState === 'selected' || explorerState === 'active'}
                         />
                       );
                     })()}

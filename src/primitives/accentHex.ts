@@ -104,6 +104,16 @@ export const MARKER_HEX = {
   ink: '#0a0a0a',
   /** Pure white — glyphs / rings / surfaces on the dark map. */
   white: '#ffffff',
+  /** Healthy sensor FOV / gotcha-ok cyan (coverage tint, sector fans). */
+  fovCyan: '#22b8cf',
+  /** Active-jamming green (ECM coverage ring + engagement line). */
+  jamGreen: '#4ade80',
+  /** Friendly coverage cyan — energy walls, radar sweeps, planned routes. */
+  coverageCyan: '#22d3ee',
+  /** Legacy tactical glyph cyan — default fill for drone / missile SVGs. */
+  glyphCyan: '#15FFF6',
+  /** Jammed / disabled drone glyph fill. */
+  jammedGray: '#6b7280',
 } as const;
 
 export type AccentName = keyof typeof ACCENT_HEX;

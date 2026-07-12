@@ -1042,6 +1042,18 @@ const STRINGS_HE = {
       reset: 'הפריסה אופסה להצעה',
       undo: 'ביטול',
     },
+    /** Single-scene concept-video flow (intro → build → protected). */
+    video: {
+      introTitle: 'נגדיר את ההגנה על הבסיס',
+      introBody: 'צירי האיום סביב הבסיס פתוחים. גרור נכסים אל השטח וצפה בחומת הכיסוי שלהם נבנית סביב הבסיס.',
+      begin: 'התחלת ההקמה',
+      hint: 'גרור נכסים מהמדף אל המפה',
+      clear: 'ניקוי הכול',
+      cleared: 'כל הנכסים נוקו',
+      protectedTitle: 'הבסיס מוגן',
+      protectedBody: 'חומת הכיסוי הושלמה וכל צירי הגישה מכוסים. אפשר להמשיך לכוונן או לעבור לתצוגת השליטה.',
+      finish: 'מעבר לתצוגת השליטה',
+    },
   },
 };
 
@@ -1965,6 +1977,18 @@ const STRINGS_EN: Strings = {
       removed: 'Asset removed',
       reset: 'Layout reset to suggestion',
       undo: 'Undo',
+    },
+    /** Single-scene concept-video flow (intro → build → protected). */
+    video: {
+      introTitle: 'Set up your base protection',
+      introBody: 'The threat corridors around your base are open. Drag assets onto the live terrain and watch their coverage rise as a wall around the base.',
+      begin: 'Begin setup',
+      hint: 'Drag assets from the dock onto the map',
+      clear: 'Clear all',
+      cleared: 'All assets cleared',
+      protectedTitle: 'Base protected',
+      protectedBody: 'Your coverage wall is complete and every approach is covered. Keep refining, or enter the command view.',
+      finish: 'Enter command view',
     },
   },
 };

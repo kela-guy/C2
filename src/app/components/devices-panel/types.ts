@@ -282,6 +282,28 @@ export interface DevicesPanelProps {
   onReturnToBase?: (deviceId: string) => void;
 }
 
+/**
+ * Sandbox / styleguide presentation overrides for the collapsed row's
+ * status channels. Production callers never set this — it exists so
+ * design auditions (`/status-sandbox`) can restyle the REAL row
+ * (neutral tile, alternate badges) without forking it. All fields are
+ * optional; omitting them renders the shipped treatment.
+ */
+export interface DeviceStatusPresentation {
+  /** Force the healthy tile visual regardless of the derived health. */
+  neutralTile?: boolean;
+  /** Extra classes on the icon tile (e.g. a border texture). */
+  tileClassName?: string;
+  /** Rendered inside the icon tile (e.g. a corner shape badge). */
+  tileBadge?: React.ReactNode;
+  /**
+   * Replaces the offline-chip slot in the header's action cluster and is
+   * rendered for every health state (the default only mounts the chip
+   * when the device is offline).
+   */
+  statusSlot?: React.ReactNode;
+}
+
 /** Props consumed by the colocated `DeviceRow` (also exported for the styleguide). */
 export interface DeviceRowProps {
   device: Device;
@@ -324,4 +346,6 @@ export interface DeviceRowProps {
   selectedChildId?: string | null;
   connectionStateLabels?: Record<ConnectionState, string>;
   strings?: DevicesPanelStrings;
+  /** Design-audition overrides for the collapsed row's status channels. */
+  statusPresentation?: DeviceStatusPresentation;
 }

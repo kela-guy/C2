@@ -30,6 +30,8 @@ import {
   resolveMarkerStyle,
   resolveTargetMarkerStyle,
   resolveAssetMarkerStyle,
+  resolveThreatGlyph,
+  droneRotationFromHeading,
   type AssetHealth,
   type AssetMarkerInteraction,
   type InteractionState,
@@ -55,17 +57,15 @@ import {
   LauncherIcon,
   SensorIcon,
   DroneIcon,
-  MissileIcon,
   FloodlightIcon,
   SpeakerIcon,
   GotchaIcon,
 } from './tacticalIcons';
 import type { GotchaUnit } from './gotcha/types';
-import { effectiveSensorHealth, getUnitHealth } from './gotcha/gotchaHealth';
-import type { DeviceHealth } from './devices-panel/deviceHealth';
+import { effectiveSensorHealth, getUnitHealth, gotchaSectorColor } from './gotcha/gotchaHealth';
 import { MarkerOfflineBadge } from './devices-panel/OfflineBadge';
-import { CarIcon, TankIcon, TruckIcon, UnknownIcon } from '@/primitives/MapIcons';
-import { SEVERITY_COLOR, isUnclassifiedUnknown, UNKNOWN_GRAY, type Severity } from '@/primitives/urgency';
+import { SEVERITY_COLOR, type Severity } from '@/primitives/urgency';
+import { MARKER_HEX } from '@/primitives/accentHex';
 import { Phone } from '@/lib/icons/central';
 import {
   FOV_RADIUS_M,
@@ -271,97 +271,6 @@ const FLOODLIGHT_BEAM_M = 550;
  * caller supplies an explicit zoom-driven width.
  */
 const CAMERA_LOOK_AT_FOV_DEG = 120;
-
-/**
- * Gotcha sector / ring colour from a worst-wins `DeviceHealth`. Reuses the
- * unified urgency palette (`SEVERITY_COLOR`) so the effector speaks the same
- * colour language as the threat markers: warning → MEDIUM amber,
- * error → HIGH red. Offline is the neutral LOW zinc
- * (known-absent, not alarmist); healthy sectors use the friendly cyan.
- */
-const GOTCHA_OK_COLOR = '#22b8cf';
-function gotchaSectorColor(health: DeviceHealth): string {
-  switch (health) {
-    case 'warning':
-      return SEVERITY_COLOR.MEDIUM;
-    case 'error':
-      return SEVERITY_COLOR.HIGH;
-    case 'offline':
-      return SEVERITY_COLOR.LOW;
-    default:
-      return GOTCHA_OK_COLOR;
-  }
-}
-
-/**
- * `DroneIcon` draws its nose pointing east at `rotationDeg = 0`, but our
- * heading values follow the compass convention (`0° = north`, `90° = east`).
- * Subtract 90° so the nose actually points along the heading direction.
- * Same offset Mapbox uses throughout `TacticalMap.tsx`.
- */
-const droneRotationFromHeading = (headingDeg: number | null | undefined): number =>
-  (headingDeg ?? 0) - 90;
-
-/**
- * Pick the right hostile-target glyph from a {@link Detection}. The map
- * used to render every threat as a {@link DroneIcon} regardless of what
- * the operator had classified the target as, so a card titled "Vehicle"
- * still showed the drone glyph next to it. We resolve the icon in this
- * priority order:
- *
- *   1. `classifiedType` — the operator's confirmed call. Authoritative
- *      whenever it's set (`car` → vehicle, `drone` / `aircraft` → drone,
- *      `bird` falls back to drone since we have no bird glyph).
- *   2. `type` — the raw sensor classification. `ground_vehicle` → car,
- *      `missile` → missile, everything else (uav / aircraft / naval /
- *      unknown) falls back to drone.
- *
- * Each glyph is asked to render at the heading-rotated angle so the
- * nose / front aligns with motion. `CarIcon` doesn't take a rotation
- * prop today (the SVG is flat), so the rotation is dropped in that
- * branch — vehicles read fine without a heading nose.
- */
-function buildThreatIcon(
-  target: Detection,
-  glyphColor: string,
-  targetHeading: number | null,
-): React.ReactNode {
-  const rotationDeg =
-    targetHeading != null ? droneRotationFromHeading(targetHeading) : 0;
-
-  // Unclassified raw blip — a bare sensor track has no identity yet, so
-  // we render a gray question-mark glyph instead of guessing an entity.
-  // The map version carries a black stroke for legibility; it flips to
-  // the real entity glyph once the classify reveal lands.
-  if (isUnclassifiedUnknown(target)) {
-    return <UnknownIcon color={UNKNOWN_GRAY} />;
-  }
-
-  const classified = target.classifiedType;
-  if (classified === 'car') return <CarIcon color={glyphColor} />;
-  if (classified === 'tank') return <TankIcon color={glyphColor} />;
-  if (classified === 'truck') return <TruckIcon color={glyphColor} />;
-  if (classified === 'drone' || classified === 'aircraft' || classified === 'bird') {
-    return <DroneIcon color={glyphColor} rotationDeg={rotationDeg} />;
-  }
-
-  switch (target.type) {
-    case 'ground_vehicle':
-      return <CarIcon color={glyphColor} />;
-    case 'missile':
-      return <MissileIcon fill={glyphColor} rotationDeg={rotationDeg} />;
-    case 'uav':
-    case 'aircraft':
-    case 'naval':
-    case 'unknown':
-      return <DroneIcon color={glyphColor} rotationDeg={rotationDeg} />;
-    default: {
-      const _exhaustive: never = target.type;
-      void _exhaustive;
-      return <DroneIcon color={glyphColor} rotationDeg={rotationDeg} />;
-    }
-  }
-}
 
 /**
  * Heading window. Deliberately shorter than the velocity window (5-10 s in
@@ -914,7 +823,7 @@ function CesiumTacticalMapImpl({
           : alwaysOn && !isHovered && !isSelected
             ? 0.26
             : 0.4);
-      const fovColor = fovOptions?.color ?? '#22b8cf';
+      const fovColor = fovOptions?.color ?? MARKER_HEX.fovCyan;
 
       // Icons arrive pre-built (`<CameraIcon outlined />`); inject the resolved
       // glyph color so non-white treatments (offline dim) actually propagate —
@@ -1118,7 +1027,7 @@ function CesiumTacticalMapImpl({
           />
         ),
         coverageRadiusM: showHoverEffect || isJamming ? e.coverageRadiusM : undefined,
-        coverageColor: isJamming ? '#4ade80' : '#22b8cf',
+        coverageColor: isJamming ? MARKER_HEX.jamGreen : MARKER_HEX.fovCyan,
         onClick: () => onAssetClickRef.current?.(e.id),
         onContextMenu: (ev) => openContextMenu(ev, 'effector', e.id),
         onMouseEnter: () => setHoveredMarkerId(e.id),
@@ -1168,11 +1077,10 @@ function CesiumTacticalMapImpl({
         zIndex: isHovered ? 60 : isActive ? 50 : 20,
         content: (
           <MapMarker
-            icon={buildThreatIcon(t, style.glyphColor, targetHeading)}
+            icon={resolveThreatGlyph(t, style.glyphColor, { headingDeg: targetHeading })}
             style={style}
             surfaceSize={TARGET_SURFACE}
             ringSize={TARGET_RING}
-            heading={targetHeading ?? undefined}
             label={t.name ?? t.id}
             showLabel={isHovered || isActive}
             pulse={isHovered || isActive || isNewArrival}
@@ -1226,7 +1134,6 @@ function CesiumTacticalMapImpl({
               style={style}
               surfaceSize={SENSOR_SURFACE}
               ringSize={SENSOR_RING}
-              heading={d.headingDeg}
               label={d.name}
               showLabel={isHovered || isSelected}
               pulse={isHovered || isSelected}
@@ -1239,7 +1146,7 @@ function CesiumTacticalMapImpl({
               rangeM: DRONE_FOV_RADIUS_M,
               bearingDeg: d.headingDeg!,
               widthDeg: d.fovDeg ?? DRONE_FOV_DEG,
-              color: '#22b8cf',
+              color: MARKER_HEX.fovCyan,
               opacity: 0.4,
             }
           : undefined,
@@ -1483,12 +1390,12 @@ function CesiumTacticalMapImpl({
       glyphColor: color,
       innerGlowColor: color,
     });
-    const e = flowPreview.entity;
-    const icon =
-      e === 'car' ? <CarIcon color={color} />
-        : e === 'tank' ? <TankIcon color={color} />
-          : e === 'truck' ? <TruckIcon color={color} />
-            : <DroneIcon color={color} />;
+    // Same routing as live targets — a draft ghost previews the exact glyph
+    // the spawned entity will get (bird has no glyph and falls back to drone).
+    const icon = resolveThreatGlyph(
+      { entityStage: 'classified', classifiedType: flowPreview.entity },
+      color,
+    );
     return {
       id: 'flow-preview-ghost',
       lat: flowPreview.lat,
@@ -1597,7 +1504,7 @@ function CesiumTacticalMapImpl({
       out.push({
         id: 'mission-route-plan',
         points: missionRoute.waypoints.map((w) => ({ lat: w.lat, lon: w.lon })),
-        color: '#22d3ee',
+        color: MARKER_HEX.coverageCyan,
         width: 3,
         dashed: true,
       });
@@ -1641,7 +1548,7 @@ function CesiumTacticalMapImpl({
               { lat: jammer.lat, lon: jammer.lon },
               { lat: tLat, lon: tLon },
             ],
-            color: '#4ade80',
+            color: MARKER_HEX.jamGreen,
             width: 3,
             dashed: true,
           });

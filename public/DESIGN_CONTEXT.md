@@ -96,7 +96,7 @@ Use the CSS custom property (or the matching `@/primitives` export). Never hardc
 - **FilterBar** `@/primitives` (block) — Search input plus data-driven filter dropdowns. Pass any number of filter dimensions as a FilterDef[]. https://c2-hub-three.vercel.app/design-system#filter-bar · `npx shadcn@latest add @c2/filter-bar`
 - **Device Card** `@/shared/components/DevicesPanel` (block) — One collapsible row per field asset, registry-driven. Health tile, primary cluster, footer actions, and overflow. https://c2-hub-three.vercel.app/design-system#device-card
 - **DevicesPanel** `@/shared/components/DevicesPanel` (block) — Right-hand sidebar listing connected field devices grouped by type, with search and type-filter isolation. https://c2-hub-three.vercel.app/design-system#devices-panel
-- **MapMarker** `@/primitives` (block) — Composable tactical marker: layered surface, ring, glyph, glow, and overlays, driven by resolveMarkerStyle(). https://c2-hub-three.vercel.app/design-system#map-markers · `npx shadcn@latest add @c2/map-marker`
+- **MapMarker** `@/primitives` (block) —  https://c2-hub-three.vercel.app/design-system#map-markers · `npx shadcn@latest add @c2/map-marker`
 - **MapIcons** `@/primitives` (block) — First-party tactical glyphs — drone, missile, car, tank, truck, human, unknown, jam wave. Each ships in two forms: the map variant (color prop + black legibility stroke for imagery) and the *CardIcon variant (stroke-free, rides currentColor for in-UI tiles). https://c2-hub-three.vercel.app/design-system#map-icons · `npx shadcn@latest add @c2/map-icons`
 
 <!-- DESIGN_CONTEXT:components END -->

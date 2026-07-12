@@ -6,5 +6,5 @@ export type {
   AssetKind,
   CoverageResult,
   Placement,
-  OnboardingStep,
+  OnboardingPhase,
 } from './coverageModel';

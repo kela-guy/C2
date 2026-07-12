@@ -543,7 +543,7 @@
       "name": "MapMarker",
       "tier": "block",
       "group": "Tactical",
-      "description": "Composable tactical marker: layered surface, ring, glyph, glow, and overlays, driven by resolveMarkerStyle().",
+      "description": "",
       "importPath": "@/primitives",
       "registryName": "map-marker",
       "anatomy": ["map-icons"],

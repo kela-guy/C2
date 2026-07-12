@@ -6,13 +6,12 @@
  * (spine + status chip color) and the map marker (ring color + pulse)
  * read from this function so the operator sees one urgency language.
  *
- * Today the Detection type does not carry an upstream `severity` field —
- * the Triage Agent wire-up is downstream of this work. Until then,
- * `resolveTargetSeverity` derives a severity from the existing lifecycle,
- * mitigation, weapon, affiliation, and classification state on a
- * Detection. When the agent eventually populates a real severity field,
- * the function can short-circuit on it and the derivation below becomes
- * the fallback for un-enriched tracks.
+ * The resolvers here read a backend-agnostic {@link TargetStateInput}
+ * contract, not the app's `Detection` directly. When a backend supplies an
+ * explicit `severity` field (the Triage Agent wire-up), `resolveTargetSeverity`
+ * short-circuits on it; otherwise it derives a severity from the lifecycle,
+ * mitigation, weapon, affiliation, and classification state — the fallback
+ * for un-enriched tracks.
  *
  * Design notes (intent before code):
  *   1. Urgency owns ONE color across both surfaces. One function, two
@@ -29,10 +28,47 @@
  * See `docs/urgency-unification-plan.md` for the full rationale.
  */
 
-import type { Detection } from '@/imports/ListOfSystems';
+import type { Affiliation } from './markerStyles';
 import { MARKER_HEX } from './accentHex';
 
 export type Severity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+
+/**
+ * Backend-agnostic target state contract — the ONLY shape the marker/urgency
+ * primitives read. Every field is optional and JSON-serializable, so any
+ * backend can drive the marker system by supplying a plain object with the
+ * subset of fields it knows about.
+ *
+ * The app's `Detection` (in `@/imports/ListOfSystems`) satisfies this
+ * structurally — no adapter needed. If a backend widens one of these unions,
+ * TypeScript flags the call sites, which is the intended drift guard: the
+ * contract must be updated deliberately, not silently.
+ */
+export interface TargetStateInput {
+  /**
+   * Explicit backend-supplied severity (e.g. the Triage Agent's
+   * `TrackEnrichment.severity`). When present, `resolveTargetSeverity`
+   * short-circuits on it and the lifecycle derivation below becomes the
+   * fallback for un-enriched tracks.
+   */
+  severity?: Severity;
+  /** Lifecycle status of the track. */
+  status?: 'detection' | 'tracking' | 'event' | 'event_neutralized' | 'suspicion' | 'expired' | 'event_resolved';
+  activityStatus?: 'active' | 'recently_active' | 'timeout' | 'dismissed' | 'mitigated';
+  /** Non-empty when the operator dismissed the track. */
+  dismissReason?: string;
+  mitigationStatus?: 'idle' | 'mitigating' | 'mitigated' | 'failed';
+  weaponPointingStatus?: 'idle' | 'pointing' | 'pointed' | 'locking' | 'locked';
+  bdaStatus?: 'pending' | 'looking' | 'stabilizing' | 'observing' | 'complete';
+  alarmZone?: 'red' | 'yellow' | 'none';
+  /** Classification pipeline stage. */
+  entityStage?: 'raw_detection' | 'classified';
+  /** Operator/pipeline-confirmed entity class. */
+  classifiedType?: 'drone' | 'bird' | 'aircraft' | 'car' | 'tank' | 'truck' | 'unknown';
+  /** Raw sensor classification — glyph fallback when `classifiedType` is unset. */
+  type?: 'uav' | 'missile' | 'aircraft' | 'naval' | 'ground_vehicle' | 'unknown';
+  affiliation?: Affiliation;
+}
 
 /**
  * Severity ordering for sort + visual progression checks. Lower index =
@@ -129,7 +165,13 @@ export const SEVERITY_PULSE: Record<Severity, boolean> = {
  * `event_neutralized` / `event_resolved`), branch 1 takes over and
  * the target collapses to LOW.
  */
-export function resolveTargetSeverity(target: Detection): Severity {
+export function resolveTargetSeverity(target: TargetStateInput): Severity {
+  // 0. Explicit backend severity — an enriched track (Triage Agent) owns
+  //    its tier outright; the derivation below is the un-enriched fallback.
+  if (target.severity) {
+    return target.severity;
+  }
+
   // 1. Closed-out — always LOW. Visual decision: a resolved target
   //    must visibly recede in the queue so the operator's eye moves
   //    on. Desaturation is layered on top by the card/marker.
@@ -247,7 +289,7 @@ export function resolveTargetSeverity(target: Detection): Severity {
  * resolved/expired/dismissed tracks without re-implementing the
  * branching above.
  */
-export function isReceding(target: Detection): boolean {
+export function isReceding(target: TargetStateInput): boolean {
   return resolveTargetSeverity(target) === 'LOW';
 }
 
@@ -269,6 +311,6 @@ export const UNKNOWN_GRAY = MARKER_HEX.unknownGray;
  * MEDIUM for `raw_detection`) so the triage queue keeps surfacing the
  * track for review while the map/card de-emphasize it as unidentified.
  */
-export function isUnclassifiedUnknown(target: Detection): boolean {
+export function isUnclassifiedUnknown(target: TargetStateInput): boolean {
   return target.entityStage === 'raw_detection' && target.classifiedType == null;
 }

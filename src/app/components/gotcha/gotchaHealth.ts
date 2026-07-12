@@ -8,6 +8,8 @@
  * device tile: error > warning > offline > ok.
  */
 
+import { SEVERITY_COLOR } from '@/primitives/urgency';
+import { MARKER_HEX } from '@/primitives/accentHex';
 import type { DeviceHealth } from '../devices-panel/deviceHealth';
 import type { GotchaUnit, SectorHealth } from './types';
 
@@ -57,4 +59,27 @@ export function latencyHealth(latencyMs: number | undefined): DeviceHealth {
  */
 export function effectiveSensorHealth(health: SectorHealth, latencyMs?: number): DeviceHealth {
   return rollUpHealth([health, latencyHealth(latencyMs)]);
+}
+
+/**
+ * Gotcha sector / ring colour from a worst-wins `DeviceHealth`. Reuses the
+ * unified urgency palette (`SEVERITY_COLOR`) so the effector speaks the same
+ * colour language as the threat markers: warning → MEDIUM amber,
+ * error → HIGH red. Offline is the neutral LOW zinc
+ * (known-absent, not alarmist); healthy sectors use the friendly cyan.
+ *
+ * Lives here (not in `CesiumTacticalMap`) so lightweight consumers — the
+ * styleguide legend — can import the rule without pulling in Cesium.
+ */
+export function gotchaSectorColor(health: DeviceHealth): string {
+  switch (health) {
+    case 'warning':
+      return SEVERITY_COLOR.MEDIUM;
+    case 'error':
+      return SEVERITY_COLOR.HIGH;
+    case 'offline':
+      return SEVERITY_COLOR.LOW;
+    default:
+      return MARKER_HEX.fovCyan;
+  }
 }

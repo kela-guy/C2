@@ -20,7 +20,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Check, Trash2, Plus, Bird } from '@/lib/icons/central';
 import { useStrings } from '@/lib/intl';
-import { DroneCardIcon, CarIcon, TankIcon, TruckIcon } from '@/primitives/MapIcons';
+import { DroneCardIcon } from '@/primitives/MapIcons';
+import { resolveThreatGlyph } from '@/primitives/markerGlyphs';
 import {
   Select,
   SelectContent,
@@ -88,13 +89,16 @@ const SPEED_OPTIONS: FlowPlaybackSpeed[] = [0.5, 1, 2, 4];
 
 /**
  * Map-marker glyph per entity, rendered inside the entity chips so the
- * picker matches what the operator sees on the tactical map.
+ * picker matches what the operator sees on the tactical map. Vehicle glyphs
+ * route through the shared production resolver (`resolveThreatGlyph`);
+ * `drone` keeps the stroke-free card variant (chip legibility at 16px) and
+ * `bird` has no map glyph, so both stay chip-specific.
  */
 const ENTITY_ICON: Record<FlowEntity, (size: number) => React.ReactNode> = {
   drone: (size) => <DroneCardIcon size={size} />,
-  car: (size) => <CarIcon color="currentColor" size={size} />,
-  tank: (size) => <TankIcon color="currentColor" size={size} />,
-  truck: (size) => <TruckIcon color="currentColor" size={size} />,
+  car: (size) => resolveThreatGlyph({ classifiedType: 'car' }, 'currentColor', { size }),
+  tank: (size) => resolveThreatGlyph({ classifiedType: 'tank' }, 'currentColor', { size }),
+  truck: (size) => resolveThreatGlyph({ classifiedType: 'truck' }, 'currentColor', { size }),
   bird: (size) => <Bird size={size} />,
 };
 

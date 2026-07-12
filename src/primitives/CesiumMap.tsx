@@ -2,7 +2,7 @@
  * CesiumMap — generic CesiumJS viewer primitive.
  *
  * Drop-in component that wraps `Cesium.Viewer` with a prop-driven API for the
- * common surface our existing Mapbox-based map exposes:
+ * common tactical-map surface:
  *
  *   - basemap selection (Cesium Ion imagery, default Bing Aerial)
  *   - 2D / 2.5D / 3D scene mode
@@ -17,32 +17,19 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import * as Cesium from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import { createMotionTrack, type MotionTrack } from '@/lib/motionTracker';
+import { energyWallMaterial, getRadarSweepImage } from './cesiumEnergyMaterials';
+import { MARKER_HEX } from './accentHex';
 
 /**
  * Minimum container size (px) before we're willing to construct
  * `Cesium.Viewer`. Below this, WebGL context init can fail silently and leave
  * the viewer in a "half-built" state where `_cesiumWidget` is undefined,
- * which then explodes on the first public-getter access. Mirrors the same
- * threshold our Mapbox path uses for `mapbox-gl`.
+ * which then explodes on the first public-getter access. Same threshold the
+ * legacy Mapbox path used for `mapbox-gl`.
  */
 const MIN_MOUNT_SIZE_PX = 8;
 
 export type CesiumSceneMode = '2D' | '2.5D' | '3D';
-
-export interface CesiumMarker {
-  id: string;
-  /** Geographic position. */
-  lat: number;
-  lon: number;
-  /** Pin label shown on hover and to screen readers. */
-  label?: string;
-  /** Pin colour. Accepts any CSS color string. Defaults to `#22b8cf`. */
-  color?: string;
-  /** When set, draws a sensor field-of-view sector (degrees + heading + range). */
-  fov?: { rangeM: number; bearingDeg: number; widthDeg: number };
-  /** When set, draws an ECM coverage ring (radius in meters). */
-  coverageRadiusM?: number;
-}
 
 export interface CesiumMapFlyTo {
   lat: number;
@@ -114,14 +101,15 @@ export interface CesiumPolyline {
    * Animated particles flowing from the first to the last point of the
    * line. Used for engagement-pair viz so the user sees a clear direction
    * of fire even on a still map. Spring-eased so each dot accelerates and
-   * settles into the target — mirrors Mapbox's `useEngagementLine` look.
+   * settles into the target — matches the legacy `useEngagementLine` look
+   * (deleted in cesium-parity Phase 9).
    */
   particles?: {
-    /** Number of dots flowing along the line. Mapbox uses 3. */
+    /** Number of dots flowing along the line. The legacy look used 3. */
     count: number;
     /** Core dot colour. Defaults to the line's `color`. */
     color?: string;
-    /** Cycles per second. `0.25` ≈ 4 s loop, matching Mapbox. */
+    /** Cycles per second. `0.25` ≈ 4 s loop, matching the legacy timing. */
     speed?: number;
   };
 }
@@ -169,11 +157,43 @@ export interface CesiumHtmlMarker {
     /**
      * When true, also draw a translucent vertical "virtual wall" curtain along
      * the FOV cone perimeter (terrain-following), demonstrating the sensor's
-     * coverage volume. Independent of the flat/extruded sector fill.
+     * coverage volume. Independent of the flat/extruded sector fill. Rendered
+     * with the animated energy-wall material (gradient fade + traveling pulse).
      */
     wall?: boolean;
     /** Height of the FOV wall curtain in meters. Defaults to 120. */
     wallHeightM?: number;
+    /**
+     * When set, the wall rises from the ground over this duration (ms) the
+     * first time this marker id gets a wall. Position/param changes after
+     * that rebuild the wall at full height (no re-rise).
+     */
+    wallRiseMs?: number;
+  };
+  /**
+   * Animated 3D "energy wall" ring around the marker: the coverage volume as
+   * a glowing vertical curtain that follows the terrain along the radius
+   * perimeter. The money-shot visual for coverage — rendered with the
+   * energy-wall material (vertical fade + traveling pulse + top rim).
+   */
+  coverageWall?: {
+    radiusM: number;
+    heightM: number;
+    /** CSS color. Defaults to `MARKER_HEX.coverageCyan`. */
+    color?: string;
+    /** Wall rises 0 → heightM over this duration (ms) on first creation. */
+    riseMs?: number;
+  };
+  /**
+   * Rotating radar PPI sweep (terrain-anchored disc with a trailing conic
+   * gradient). Reads as an active search radar inside the coverage wall.
+   */
+  radarSweep?: {
+    rangeM: number;
+    /** CSS color. Defaults to `MARKER_HEX.coverageCyan`. */
+    color?: string;
+    /** Seconds per revolution. Defaults to 4. */
+    periodSec?: number;
   };
   /**
    * Optional multi-sector field-of-view (terrain-clamped polygons). Used by
@@ -231,8 +251,6 @@ export interface CesiumMapProps {
     /** When true, `heightM` is metres above the sampled terrain (AGL). */
     terrainRelative?: boolean;
   };
-  /** Markers to render as Cesium points/entities (cheap, GPU). */
-  markers?: CesiumMarker[];
   /** Markers rendered as DOM overlays positioned via scene transforms. */
   htmlMarkers?: CesiumHtmlMarker[];
   /** Polylines / trails (drone tracks, engagement lines, mission routes). */
@@ -250,7 +268,16 @@ export interface CesiumMapProps {
    * shows real 3D structures. Requires a valid `ionToken`. Loaded once at mount.
    */
   showOsmBuildings?: boolean;
-  /** Scene mode. Defaults to '2D' for parity with our current top-down Mapbox view. */
+  /**
+   * When true, streams Google Photorealistic 3D Tiles (via Cesium Ion asset
+   * 2275207) as the world — photoreal terrain + buildings. Requires a valid
+   * `ionToken`. The classic globe (imagery skin) is hidden while tiles render;
+   * the world terrain provider still loads underneath so terrain-relative
+   * cameras and ground sampling keep working. Read once at mount. Falls back
+   * to the classic globe + Ion imagery if the tileset fails to load.
+   */
+  photorealisticTiles?: boolean;
+  /** Scene mode. Defaults to '2D' for parity with the legacy top-down map view. */
   sceneMode?: CesiumSceneMode;
   /**
    * Cesium Ion imagery asset id. Defaults to 2 (Bing Maps Aerial),
@@ -276,10 +303,6 @@ export interface CesiumMapProps {
    * already dark, so this mainly matters with a token. Read once at mount.
    */
   darkImagery?: boolean;
-  /** Called when a `markers[]` entity is clicked (point markers only). */
-  onMarkerClick?: (id: string) => void;
-  /** Called when a `markers[]` entity is hovered (point markers only). */
-  onMarkerHover?: (id: string | null) => void;
   /**
    * Called when an HTML marker's FOV sector polygon (from `fovSectors`) is
    * clicked. Reports the owning marker id + the sector's `id` so the
@@ -517,9 +540,55 @@ function buildSectorPerimeter(
 }
 
 /**
+ * Attach an animated energy-wall (WallGraphics) to `entity` along the given
+ * perimeter path. Samples terrain under every vertex so the wall hugs the
+ * ground and rises a constant height. When `riseMs > 0`, the wall grows from
+ * the ground with an ease-out and then freezes to a constant-height wall so
+ * Cesium stops re-tessellating it every frame.
+ */
+function attachEnergyWall(
+  viewer: Cesium.Viewer,
+  entity: Cesium.Entity,
+  perimeter: Array<{ lat: number; lon: number }>,
+  heightM: number,
+  cssColor: string,
+  riseMs: number,
+): void {
+  void (async () => {
+    const grounds = await sampleGroundHeights(viewer, perimeter);
+    if (viewer.isDestroyed() || !viewer.entities.contains(entity)) return;
+    const positions = perimeter.map((p) => Cesium.Cartesian3.fromDegrees(p.lon, p.lat));
+    const targets = grounds.map((h) => h + heightM);
+    let maximumHeights: Cesium.Property | number[];
+    if (riseMs > 0) {
+      const start = performance.now();
+      maximumHeights = new Cesium.CallbackProperty(() => {
+        const t = Math.min(1, (performance.now() - start) / riseMs);
+        const eased = 1 - Math.pow(1 - t, 3);
+        return grounds.map((h) => h + Math.max(2, heightM * eased));
+      }, false);
+      window.setTimeout(() => {
+        if (viewer.isDestroyed() || !viewer.entities.contains(entity) || !entity.wall) return;
+        entity.wall.maximumHeights = new Cesium.ConstantProperty(targets);
+        viewer.scene.requestRender();
+      }, riseMs + 80);
+    } else {
+      maximumHeights = targets;
+    }
+    entity.wall = new Cesium.WallGraphics({
+      positions,
+      minimumHeights: grounds,
+      maximumHeights,
+      material: energyWallMaterial(cssColor),
+    });
+    viewer.scene.requestRender();
+  })();
+}
+
+/**
  * Lazy-built spring lookup table for particle easing. Same physics
- * constants as `useEngagementLine.ts` so the Cesium and Mapbox paths
- * accelerate / settle identically. Built on first use, then cached.
+ * constants the legacy `useEngagementLine.ts` used, so the animation
+ * feel carried over unchanged. Built on first use, then cached.
  */
 let SPRING_LUT_CACHE: number[] | null = null;
 function getSpringLUT(): number[] {
@@ -559,18 +628,16 @@ const SCENE_MODE_MAP: Record<CesiumSceneMode, Cesium.SceneMode> = {
 export function CesiumMap({
   ionToken,
   initialView,
-  markers,
   htmlMarkers,
   polylines,
   flyTo,
   orbit,
   showOsmBuildings = false,
+  photorealisticTiles = false,
   sceneMode = '2D',
   ionImageryAssetId = 2,
   darkMonochromeMap = false,
   darkImagery = false,
-  onMarkerClick,
-  onMarkerHover,
   onHtmlMarkerSectorClick,
   onGroundClick,
   pickerRef,
@@ -580,9 +647,6 @@ export function CesiumMap({
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Cesium.Viewer | null>(null);
   const osmBuildingsRef = useRef<Cesium.Cesium3DTileset | null>(null);
-  const markerEntitiesRef = useRef<Map<string, Cesium.Entity>>(new Map());
-  const fovEntitiesRef = useRef<Cesium.Entity[]>([]);
-  const coverageEntitiesRef = useRef<Cesium.Entity[]>([]);
   /**
    * Geometry entities (FOV / coverage) attached to HTML markers, keyed by
    * marker id. Paired with a per-id content fingerprint so we only rebuild the
@@ -591,12 +655,18 @@ export function CesiumMap({
    * reference changes (which happens on hover/selection, not just on real
    * geometry changes).
    */
-  const htmlGeometryEntitiesRef = useRef<Map<string, { fov?: Cesium.Entity; fovWall?: Cesium.Entity; coverage?: Cesium.Entity; dome?: Cesium.Entity; sectors?: Cesium.Entity[] }>>(new Map());
-  const htmlGeometryFingerprintRef = useRef<Map<string, { fovKey: string | null; coverageKey: string | null; sectorsKey: string | null }>>(new Map());
+  const htmlGeometryEntitiesRef = useRef<Map<string, { fov?: Cesium.Entity; fovWall?: Cesium.Entity; coverage?: Cesium.Entity; dome?: Cesium.Entity; sectors?: Cesium.Entity[]; wall?: Cesium.Entity; sweep?: Cesium.Entity }>>(new Map());
+  const htmlGeometryFingerprintRef = useRef<Map<string, { fovKey: string | null; coverageKey: string | null; sectorsKey: string | null; wallKey: string | null; sweepKey: string | null }>>(new Map());
+  /**
+   * Marker ids whose energy wall (coverage or FOV) has already played its
+   * rise animation. Ensures the rise fires once per marker lifetime — moving
+   * a placed asset rebuilds its wall at full height instead of re-rising.
+   */
+  const wallRisenRef = useRef<Set<string>>(new Set());
   /**
    * Maps a FOV-sector entity id → its owning marker + sector id, so the
    * LEFT_CLICK picker can route a polygon click back through
-   * `onHtmlMarkerSectorClick` (sector polygons aren't in `markerEntitiesRef`).
+   * `onHtmlMarkerSectorClick`.
    */
   const htmlSectorOwnerRef = useRef<Map<string, { markerId: string; sectorId: string }>>(new Map());
   /**
@@ -688,6 +758,20 @@ export function CesiumMap({
   const htmlMarkerCartographicRef = useRef<Map<string, { lat: number; lon: number }>>(new Map());
 
   /**
+   * Per-marker cached surface height for Google-tiles mode (globe hidden).
+   * `scene.sampleHeight` renders a tiny off-screen pick pass through the
+   * 3D-tileset traversal — calling it per marker per frame (as the naive
+   * preRender loop did) starves the MAIN camera's tile refinement: the
+   * traversal keeps servicing one-pixel pick views and the visible scene
+   * never streams past the coarse levels. Sample once per marker position,
+   * cache the result, and only retry (throttled) while tiles are still
+   * loading underneath the marker.
+   */
+  const htmlMarkerTileHeightRef = useRef<
+    Map<string, { lat: number; lon: number; h: number | undefined; sampledAt: number }>
+  >(new Map());
+
+  /**
    * Per-id motion tracks for `htmlMarkers[m].kinematic === true`. Lat/lon
    * arriving on prop updates is pushed as a sample; the preRender loop
    * queries the track at frame time to get a smoothed (interpolated /
@@ -700,6 +784,15 @@ export function CesiumMap({
    */
   const motionTracksRef = useRef<Map<string, MotionTrack>>(new Map());
   const kinematicCartesianScratchRef = useRef<Map<string, Cesium.Cartesian3>>(new Map());
+
+  /**
+   * True while any polyline is time-animated (flowing particles or a
+   * 2-point smoothed engagement line). These read `Date.now()` inside
+   * `CallbackProperty` closures, so Cesium's request-render mode has no
+   * way to know they need frames — while any are live we drive a rAF
+   * loop that requests a render each frame (see effect below).
+   */
+  const [hasAnimatedPolylines, setHasAnimatedPolylines] = useState(false);
 
   // ── Mount-readiness gate ──────────────────────────────────────────────────
   // Defer Viewer construction until the container actually has dimensions.
@@ -743,6 +836,16 @@ export function CesiumMap({
     let viewer: Cesium.Viewer;
     try {
       viewer = new Cesium.Viewer(containerRef.current, {
+        // Only render frames when something actually changed (camera move,
+        // entity update, tile load, explicit `scene.requestRender()`).
+        // Without this Cesium redraws the whole globe at up to 60 fps even
+        // when the map is completely still, pegging the GPU process.
+        // Continuous animations (particle dots, kinematic markers, orbit)
+        // each drive their own `requestRender()` loop — see below.
+        requestRenderMode: true,
+        // Never re-render just because simulation time advanced; nothing in
+        // the scene is keyed to the Cesium clock.
+        maximumRenderTimeChange: Infinity,
         // Strip the widgets we don't need (keeps UI minimal).
         animation: false,
         timeline: false,
@@ -764,17 +867,66 @@ export function CesiumMap({
       throw err;
     }
 
-    // Imagery. Two modes:
-    //   1. `darkMonochromeMap` — CARTO Dark Matter (no-labels) raster
+    // Imagery. Three modes:
+    //   1. `photorealisticTiles` — Google Photorealistic 3D Tiles via Cesium
+    //      Ion (asset 2275207). The tiles ARE the world (photoreal terrain +
+    //      buildings), so the classic globe skin is hidden entirely. Falls
+    //      back to mode 3 if the tileset fails to load.
+    //   2. `darkMonochromeMap` — CARTO Dark Matter (no-labels) raster
     //      tiles. Public CDN, no token. Used by `/demo` so recordings
     //      read cleanly against bright markers without depending on
     //      the Ion satellite. Synchronous construction (no `fromAssetId`
     //      promise), so we add immediately.
-    //   2. Default — Bing Aerial via Cesium Ion (asset 2 by default).
+    //   3. Default — Bing Aerial via Cesium Ion (asset 2 by default).
     //      Guard against the viewer being destroyed (StrictMode
     //      double-mount, fast nav) before the imagery promise resolves
     //      — otherwise we crash inside Cesium internals.
-    if (darkMonochromeMap) {
+    const useGoogleTiles = photorealisticTiles && !!ionToken;
+    const loadIonImagery = () => {
+      Cesium.IonImageryProvider.fromAssetId(ionImageryAssetId)
+        .then((provider) => {
+          if (viewer.isDestroyed()) return;
+          const layer = viewer.imageryLayers.addImageryProvider(provider);
+          if (darkImagery) applyDarkImagery(layer);
+          viewer.scene.requestRender();
+        })
+        .catch((err) => {
+          if (viewer.isDestroyed()) return;
+          console.error('[CesiumMap] failed to load Ion imagery:', err);
+        });
+    };
+    if (useGoogleTiles) {
+      // Hide the globe immediately — the tiles replace it. The world terrain
+      // provider still loads below so ground sampling / terrain-relative
+      // cameras keep working (sampleTerrainMostDetailed reads the provider
+      // directly, independent of globe rendering).
+      viewer.scene.globe.show = false;
+      Cesium.createGooglePhotorealistic3DTileset({ onlyUsingWithGoogleGeocoder: true })
+        .then((tileset) => {
+          if (viewer.isDestroyed()) return;
+          // Sharper than the library defaults: the cinematic camera sits low
+          // and oblique, where the default SSE 16 + dynamicScreenSpaceError
+          // (which deliberately degrades oblique views to save bandwidth)
+          // read as a blurry mess. Halving the SSE and disabling the dynamic
+          // degradation costs more tile downloads but keeps the hero shots
+          // crisp.
+          tileset.maximumScreenSpaceError = 8;
+          tileset.dynamicScreenSpaceError = false;
+          tileset.foveatedScreenSpaceError = false;
+          // Default cache (512 MB) evicts aggressively at low SSE; give the
+          // demo scene room so orbiting doesn't re-stream the same tiles.
+          tileset.cacheBytes = 1_536 * 1024 * 1024;
+          viewer.scene.primitives.add(tileset);
+          viewer.scene.requestRender();
+        })
+        .catch((err) => {
+          console.error('[CesiumMap] failed to load Google Photorealistic 3D Tiles:', err);
+          if (viewer.isDestroyed()) return;
+          // Fall back to the classic globe so the map isn't a void.
+          viewer.scene.globe.show = true;
+          loadIonImagery();
+        });
+    } else if (darkMonochromeMap) {
       const provider = new Cesium.UrlTemplateImageryProvider({
         // CARTO Dark Matter (no labels). `{s}` rotates through the
         // listed subdomains for connection parallelism.
@@ -785,16 +937,7 @@ export function CesiumMap({
       });
       viewer.imageryLayers.addImageryProvider(provider);
     } else {
-      Cesium.IonImageryProvider.fromAssetId(ionImageryAssetId)
-        .then((provider) => {
-          if (viewer.isDestroyed()) return;
-          const layer = viewer.imageryLayers.addImageryProvider(provider);
-          if (darkImagery) applyDarkImagery(layer);
-        })
-        .catch((err) => {
-          if (viewer.isDestroyed()) return;
-          console.error('[CesiumMap] failed to load Ion imagery:', err);
-        });
+      loadIonImagery();
     }
 
     // Cesium World Terrain (Ion asset 1). Without it the globe is a smooth
@@ -806,6 +949,7 @@ export function CesiumMap({
       .then((terrain) => {
         if (viewer.isDestroyed()) return;
         viewer.terrainProvider = terrain;
+        viewer.scene.requestRender();
       })
       .catch((err) => {
         if (viewer.isDestroyed()) return;
@@ -815,12 +959,15 @@ export function CesiumMap({
     // Cesium OSM Buildings (Ion asset). Gives a close oblique view real 3D
     // structures for the cinematic demo. Requires a token; destroyed with the
     // viewer on unmount (it's a scene primitive), so no separate teardown.
-    if (showOsmBuildings && ionToken) {
+    // Skipped in Google-tiles mode — the photoreal tiles already include
+    // real buildings and the extruded OSM shells would z-fight them.
+    if (showOsmBuildings && ionToken && !useGoogleTiles) {
       Cesium.createOsmBuildingsAsync()
         .then((tileset) => {
           if (viewer.isDestroyed()) return;
           viewer.scene.primitives.add(tileset);
           osmBuildingsRef.current = tileset;
+          viewer.scene.requestRender();
         })
         .catch((err) => {
           if (viewer.isDestroyed()) return;
@@ -871,7 +1018,8 @@ export function CesiumMap({
       });
     }
 
-    // Click → marker handler.
+    // Click → sector / bare-ground handler. (Marker click/hover is handled
+    // by the HTML overlay markers themselves via React DOM events.)
     const handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
     handler.setInputAction((event: Cesium.ScreenSpaceEventHandler.PositionedEvent) => {
       const picked = viewer.scene.pick(event.position);
@@ -884,10 +1032,6 @@ export function CesiumMap({
           onHtmlMarkerSectorClickRef.current?.(sectorOwner.markerId, sectorOwner.sectorId);
           return;
         }
-        if (markerEntitiesRef.current.has(entityId)) {
-          onMarkerClick?.(entityId);
-          return;
-        }
       }
       // Bare-ground click → report lat/lon for click-to-place.
       if (onGroundClickRef.current) {
@@ -895,16 +1039,6 @@ export function CesiumMap({
         if (ground) onGroundClickRef.current(ground.lat, ground.lon);
       }
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
-
-    handler.setInputAction((event: Cesium.ScreenSpaceEventHandler.MotionEvent) => {
-      const picked = viewer.scene.pick(event.endPosition);
-      const id = picked?.id;
-      if (id instanceof Cesium.Entity && id.id && markerEntitiesRef.current.has(String(id.id))) {
-        onMarkerHover?.(String(id.id));
-      } else {
-        onMarkerHover?.(null);
-      }
-    }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
     // Per-frame sync of DOM-overlay marker positions. Cesium emits
     // `preRender` before each frame; we project each marker's cached
@@ -940,6 +1074,42 @@ export function CesiumMap({
       // projection ignores altitude, so we skip the work entirely.
       const isMode3D = viewer.scene.mode === Cesium.SceneMode.SCENE3D;
       const globe = viewer.scene.globe;
+      // With the globe hidden (Google Photorealistic 3D Tiles mode) terrain
+      // tiles never load, so `globe.getHeight` returns undefined. Sample the
+      // rendered scene geometry (the photoreal tiles) instead so markers sit
+      // on the actual visible surface — including rooftops.
+      //
+      // CRITICAL: `scene.sampleHeight` may only be called sparingly — each
+      // call runs a pick render through the tileset traversal, and hammering
+      // it per frame starves the main view's tile refinement (the site area
+      // visibly never sharpens). Heights are cached per marker id + position
+      // in `htmlMarkerTileHeightRef`; unresolved samples (tiles not loaded
+      // yet) retry at most every 500 ms.
+      const tileHeights = htmlMarkerTileHeightRef.current;
+      const nowMs = performance.now();
+      const sampleTilesHeightCached = (id: string, lat: number, lon: number): number | undefined => {
+        const cached = tileHeights.get(id);
+        if (
+          cached &&
+          cached.lat === lat &&
+          cached.lon === lon &&
+          (cached.h !== undefined || nowMs - cached.sampledAt < 500)
+        ) {
+          return cached.h;
+        }
+        const h = viewer.scene.sampleHeightSupported
+          ? viewer.scene.sampleHeight(Cesium.Cartographic.fromDegrees(lon, lat, 0, terrainSampleCarto))
+          : undefined;
+        tileHeights.set(id, { lat, lon, h, sampledAt: nowMs });
+        return h;
+      };
+      const sampleSurfaceHeight = (id: string, lat: number, lon: number): number | undefined => {
+        if (globe.show) {
+          Cesium.Cartographic.fromDegrees(lon, lat, 0, terrainSampleCarto);
+          return globe.getHeight(terrainSampleCarto);
+        }
+        return sampleTilesHeightCached(id, lat, lon);
+      };
       // Kinematic tracks that are still smoothing toward the latest
       // sample or extrapolating forward need the scene to keep
       // rendering — Cesium's request-render mode would otherwise idle
@@ -954,8 +1124,13 @@ export function CesiumMap({
           if (scratch) {
             let alt = 0;
             if (isMode3D) {
-              Cesium.Cartographic.fromDegrees(s.lon, s.lat, 0, terrainSampleCarto);
-              const h = globe.getHeight(terrainSampleCarto);
+              // Quantize the moving position (~1 m) so the height cache holds
+              // between frames instead of resampling continuously.
+              const h = sampleSurfaceHeight(
+                id,
+                Math.round(s.lat * 1e5) / 1e5,
+                Math.round(s.lon * 1e5) / 1e5,
+              );
               if (typeof h === 'number') alt = h;
             }
             Cesium.Cartesian3.fromDegrees(s.lon, s.lat, alt, undefined, scratch);
@@ -967,8 +1142,7 @@ export function CesiumMap({
           if (cart && isMode3D) {
             const carto = cartographics.get(id);
             if (carto) {
-              Cesium.Cartographic.fromDegrees(carto.lon, carto.lat, 0, terrainSampleCarto);
-              const h = globe.getHeight(terrainSampleCarto);
+              const h = sampleSurfaceHeight(id, carto.lat, carto.lon);
               const alt = typeof h === 'number' ? h : 0;
               // Mutate the cached Cartesian3 in place so static markers
               // also stay aligned to terrain without per-frame allocation.
@@ -993,6 +1167,10 @@ export function CesiumMap({
     });
 
     viewerRef.current = viewer;
+    if (import.meta.env.DEV) {
+      // Dev-only escape hatch for debugging the live scene from the console.
+      (window as unknown as Record<string, unknown>).__cesiumViewer = viewer;
+    }
 
     // Hand the consumer an imperative screen->lat/lon picker for drag-drop.
     if (pickerRef) {
@@ -1010,11 +1188,9 @@ export function CesiumMap({
       handler.destroy();
       viewer.destroy();
       viewerRef.current = null;
-      markerEntitiesRef.current.clear();
-      fovEntitiesRef.current = [];
-      coverageEntitiesRef.current = [];
       htmlGeometryEntitiesRef.current.clear();
       htmlGeometryFingerprintRef.current.clear();
+      wallRisenRef.current.clear();
       htmlSectorOwnerRef.current.clear();
       polylineEntitiesRef.current.clear();
       polylineFingerprintRef.current.clear();
@@ -1024,6 +1200,7 @@ export function CesiumMap({
       motionTracksRef.current.clear();
       kinematicCartesianScratchRef.current.clear();
       htmlMarkerCartographicRef.current.clear();
+      htmlMarkerTileHeightRef.current.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mountReady]);
@@ -1078,7 +1255,9 @@ export function CesiumMap({
     }
 
     // Force a render so positions update immediately even without user
-    // interaction (Cesium uses request-render mode by default).
+    // interaction (the viewer runs with `requestRenderMode: true`). For
+    // kinematic markers this also seeds the preRender loop, which keeps
+    // requesting frames while any track is still interpolating.
     viewerRef.current?.scene.requestRender();
   }, [htmlMarkers]);
 
@@ -1102,6 +1281,7 @@ export function CesiumMap({
     const target = SCENE_MODE_MAP[sceneMode];
     if (viewer.scene.mode === target) return;
     viewer.scene.mode = target;
+    viewer.scene.requestRender();
 
     if (sceneMode === '3D') {
       const cart = viewer.camera.positionCartographic;
@@ -1192,106 +1372,29 @@ export function CesiumMap({
     return () => cancelAnimationFrame(raf);
   }, [panVelocity]);
 
-  // ── Markers + FOV + Coverage (rebuild on prop change) ──────────────────────
+  // ── Render driver for time-animated polylines ──────────────────────────────
+  // Particle dots and smoothed engagement lines animate off `Date.now()`
+  // inside CallbackProperty closures, which request-render mode can't see.
+  // While any are on screen, request a frame per rAF tick so they keep
+  // flowing; the loop stops (and the scene goes idle) the moment the last
+  // animated line leaves the prop set.
   useEffect(() => {
+    if (!hasAnimatedPolylines) return;
     const viewer = viewerRef.current;
     if (!viewer) return;
 
-    // Clear previous.
-    for (const entity of markerEntitiesRef.current.values()) {
-      viewer.entities.remove(entity);
-    }
-    markerEntitiesRef.current.clear();
-    for (const entity of fovEntitiesRef.current) viewer.entities.remove(entity);
-    fovEntitiesRef.current = [];
-    for (const entity of coverageEntitiesRef.current) viewer.entities.remove(entity);
-    coverageEntitiesRef.current = [];
-
-    if (!markers) return;
-
-    for (const marker of markers) {
-      const color = marker.color ?? '#22b8cf';
-      const cesiumColor = Cesium.Color.fromCssColorString(color);
-
-      // Pin entity.
-      const entity = viewer.entities.add({
-        id: marker.id,
-        name: marker.label ?? marker.id,
-        position: Cesium.Cartesian3.fromDegrees(marker.lon, marker.lat),
-        point: {
-          pixelSize: 12,
-          color: cesiumColor,
-          outlineColor: Cesium.Color.WHITE,
-          outlineWidth: 2,
-          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-          disableDepthTestDistance: Number.POSITIVE_INFINITY,
-        },
-        label: marker.label
-          ? {
-              text: marker.label,
-              font: '12px sans-serif',
-              fillColor: Cesium.Color.WHITE,
-              outlineColor: Cesium.Color.BLACK,
-              outlineWidth: 2,
-              style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-              verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-              pixelOffset: new Cesium.Cartesian2(0, -16),
-              showBackground: true,
-              backgroundColor: Cesium.Color.BLACK.withAlpha(0.6),
-              backgroundPadding: new Cesium.Cartesian2(6, 4),
-              disableDepthTestDistance: Number.POSITIVE_INFINITY,
-            }
-          : undefined,
-      });
-      markerEntitiesRef.current.set(marker.id, entity);
-
-      // FOV sector.
-      if (marker.fov) {
-        const fovEntity = viewer.entities.add({
-          id: `${marker.id}__fov`,
-          polygon: {
-            hierarchy: new Cesium.PolygonHierarchy(
-              buildSectorPositions(
-                marker.lat,
-                marker.lon,
-                marker.fov.rangeM,
-                marker.fov.bearingDeg,
-                marker.fov.widthDeg,
-              ),
-            ),
-            material: cesiumColor.withAlpha(0.18),
-            outline: true,
-            outlineColor: cesiumColor.withAlpha(0.6),
-            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-          },
-        });
-        fovEntitiesRef.current.push(fovEntity);
-      }
-
-      // ECM coverage ring.
-      if (marker.coverageRadiusM != null) {
-        const coverageEntity = viewer.entities.add({
-          id: `${marker.id}__coverage`,
-          position: Cesium.Cartesian3.fromDegrees(marker.lon, marker.lat),
-          ellipse: {
-            semiMajorAxis: marker.coverageRadiusM,
-            semiMinorAxis: marker.coverageRadiusM,
-            material: cesiumColor.withAlpha(0.10),
-            outline: true,
-            outlineColor: cesiumColor.withAlpha(0.5),
-            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-          },
-        });
-        coverageEntitiesRef.current.push(coverageEntity);
-      }
-    }
-  }, [markers]);
+    let raf = 0;
+    const step = () => {
+      if (!viewer.isDestroyed()) viewer.scene.requestRender();
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [hasAnimatedPolylines]);
 
   // ── FOV + coverage entities for HTML markers ──────────────────────────────
   // The DOM overlay renders the icon + tooltip; Cesium renders the geometry
-  // (terrain-clamped sector polygon for FOV, ellipse for coverage). These
-  // are kept in a separate ref so the `markers[]` effect above doesn't tear
-  // them down on every change.
+  // (terrain-clamped sector polygon for FOV, ellipse for coverage).
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer) return;
@@ -1307,7 +1410,9 @@ export function CesiumMap({
         const hasCoverage = m.coverageRadiusM != null;
         const sectors = m.fovSectors ?? [];
         const hasSectors = sectors.length > 0;
-        if (!hasFov && !hasCoverage && !hasSectors) continue;
+        const hasWall = !!m.coverageWall;
+        const hasSweep = !!m.radarSweep;
+        if (!hasFov && !hasCoverage && !hasSectors && !hasWall && !hasSweep) continue;
         desiredIds.add(m.id);
 
         const fovKey = hasFov
@@ -1325,13 +1430,21 @@ export function CesiumMap({
               )
               .join('|')
           : null;
+        const wallKey = hasWall
+          ? `${m.lat},${m.lon},${m.coverageWall!.radiusM},${m.coverageWall!.heightM},${m.coverageWall!.color ?? MARKER_HEX.coverageCyan}`
+          : null;
+        const sweepKey = hasSweep
+          ? `${m.lat},${m.lon},${m.radarSweep!.rangeM},${m.radarSweep!.color ?? MARKER_HEX.coverageCyan},${m.radarSweep!.periodSec ?? 4}`
+          : null;
 
         const prev = fingerprints.get(m.id);
         if (
           prev &&
           prev.fovKey === fovKey &&
           prev.coverageKey === coverageKey &&
-          prev.sectorsKey === sectorsKey
+          prev.sectorsKey === sectorsKey &&
+          prev.wallKey === wallKey &&
+          prev.sweepKey === sweepKey
         ) {
           // Identical FOV/coverage/sector params — leave the existing
           // geometry in place so Cesium doesn't re-tessellate it.
@@ -1344,13 +1457,15 @@ export function CesiumMap({
         if (slot?.fovWall) viewer.entities.remove(slot.fovWall);
         if (slot?.coverage) viewer.entities.remove(slot.coverage);
         if (slot?.dome) viewer.entities.remove(slot.dome);
+        if (slot?.wall) viewer.entities.remove(slot.wall);
+        if (slot?.sweep) viewer.entities.remove(slot.sweep);
         if (slot?.sectors) {
           for (const s of slot.sectors) {
             viewer.entities.remove(s);
             htmlSectorOwnerRef.current.delete(String(s.id));
           }
         }
-        const nextSlot: { fov?: Cesium.Entity; fovWall?: Cesium.Entity; coverage?: Cesium.Entity; dome?: Cesium.Entity; sectors?: Cesium.Entity[] } = {};
+        const nextSlot: { fov?: Cesium.Entity; fovWall?: Cesium.Entity; coverage?: Cesium.Entity; dome?: Cesium.Entity; sectors?: Cesium.Entity[]; wall?: Cesium.Entity; sweep?: Cesium.Entity } = {};
 
         if (hasSectors) {
           const sectorEntities: Cesium.Entity[] = [];
@@ -1406,7 +1521,9 @@ export function CesiumMap({
           // Vertical "virtual wall" curtain along the cone perimeter. Built
           // async because it samples terrain at each vertex so the wall hugs
           // the ground and rises a constant height — reads as a glowing sensor
-          // force-field over uneven terrain.
+          // force-field over uneven terrain. Uses the animated energy-wall
+          // material; on first creation for this marker id it can play a rise
+          // animation (`wallRiseMs`).
           if (m.fov!.wall) {
             const wallHeight = m.fov!.wallHeightM ?? 120;
             const perimeter = buildSectorPerimeter(
@@ -1418,21 +1535,66 @@ export function CesiumMap({
             );
             const wallEntity = viewer.entities.add({ id: `${m.id}__fovwall` });
             nextSlot.fovWall = wallEntity;
-            void (async () => {
-              const grounds = await sampleGroundHeights(viewer, perimeter);
-              if (viewer.isDestroyed() || !viewer.entities.contains(wallEntity)) return;
-              wallEntity.wall = new Cesium.WallGraphics({
-                positions: perimeter.map((p) => Cesium.Cartesian3.fromDegrees(p.lon, p.lat)),
-                minimumHeights: grounds,
-                maximumHeights: grounds.map((h) => h + wallHeight),
-                material: fovColor.withAlpha(0.26),
-                outline: true,
-                outlineColor: fovColor.withAlpha(0.9),
-                outlineWidth: 2,
-              });
-              viewer.scene.requestRender();
-            })();
+            const riseMs = wallRisenRef.current.has(m.id) ? 0 : (m.fov!.wallRiseMs ?? 0);
+            wallRisenRef.current.add(m.id);
+            attachEnergyWall(
+              viewer,
+              wallEntity,
+              perimeter,
+              wallHeight,
+              m.fov!.color ?? '#22b8cf',
+              riseMs,
+            );
           }
+        }
+
+        // Animated coverage "energy wall" ring — the coverage volume as a
+        // glowing terrain-following curtain along the radius perimeter.
+        if (hasWall) {
+          const cw = m.coverageWall!;
+          const perimeter = buildSectorPerimeter(m.lat, m.lon, cw.radiusM, 0, 360);
+          const wallEntity = viewer.entities.add({ id: `${m.id}__energywall` });
+          nextSlot.wall = wallEntity;
+          const riseMs = wallRisenRef.current.has(m.id) ? 0 : (cw.riseMs ?? 0);
+          wallRisenRef.current.add(m.id);
+          attachEnergyWall(viewer, wallEntity, perimeter, cw.heightM, cw.color ?? MARKER_HEX.coverageCyan, riseMs);
+        }
+
+        // Rotating radar PPI sweep — an ellipse with a trailing conic-gradient
+        // texture spun via `stRotation`. Anchored just above the sampled
+        // ground so it doesn't z-fight the surface.
+        if (hasSweep) {
+          const sweep = m.radarSweep!;
+          const periodSec = sweep.periodSec ?? 4;
+          const sweepColor = Cesium.Color.fromCssColorString(sweep.color ?? MARKER_HEX.coverageCyan).withAlpha(0.5);
+          const rotation = new Cesium.CallbackProperty(
+            () => -(((performance.now() / 1000) % periodSec) / periodSec) * Math.PI * 2,
+            false,
+          );
+          const sweepEntity = viewer.entities.add({
+            id: `${m.id}__sweep`,
+            position: Cesium.Cartesian3.fromDegrees(m.lon, m.lat, 0),
+            ellipse: {
+              semiMajorAxis: sweep.rangeM,
+              semiMinorAxis: sweep.rangeM,
+              material: new Cesium.ImageMaterialProperty({
+                image: getRadarSweepImage(),
+                transparent: true,
+                color: sweepColor,
+              }),
+              stRotation: rotation,
+              height: 1,
+            },
+          });
+          nextSlot.sweep = sweepEntity;
+          const sweepLat = m.lat;
+          const sweepLon = m.lon;
+          void (async () => {
+            const [groundH] = await sampleGroundHeights(viewer, [{ lat: sweepLat, lon: sweepLon }]);
+            if (viewer.isDestroyed() || !viewer.entities.contains(sweepEntity) || !sweepEntity.ellipse) return;
+            sweepEntity.ellipse.height = new Cesium.ConstantProperty(groundH + 4);
+            viewer.scene.requestRender();
+          })();
         }
 
         if (hasCoverage) {
@@ -1495,7 +1657,7 @@ export function CesiumMap({
         }
 
         entities.set(m.id, nextSlot);
-        fingerprints.set(m.id, { fovKey, coverageKey, sectorsKey });
+        fingerprints.set(m.id, { fovKey, coverageKey, sectorsKey, wallKey, sweepKey });
       }
     }
 
@@ -1506,6 +1668,8 @@ export function CesiumMap({
       if (slot.fovWall) viewer.entities.remove(slot.fovWall);
       if (slot.coverage) viewer.entities.remove(slot.coverage);
       if (slot.dome) viewer.entities.remove(slot.dome);
+      if (slot.wall) viewer.entities.remove(slot.wall);
+      if (slot.sweep) viewer.entities.remove(slot.sweep);
       if (slot.sectors) {
         for (const s of slot.sectors) {
           viewer.entities.remove(s);
@@ -1514,11 +1678,30 @@ export function CesiumMap({
       }
       entities.delete(id);
       fingerprints.delete(id);
+      wallRisenRef.current.delete(id);
       changed = true;
     }
 
     if (changed) viewer.scene.requestRender();
   }, [htmlMarkers]);
+
+  // ── Animated coverage-material render loop ─────────────────────────────────
+  // Energy walls / radar sweeps are time-driven materials; with Cesium in
+  // request-render mode they would freeze after one frame. Keep the scene
+  // rendering while any marker carries one.
+  const hasAnimatedCoverage = !!htmlMarkers?.some(
+    (m) => m.coverageWall || m.radarSweep || m.fov?.wall,
+  );
+  useEffect(() => {
+    if (!hasAnimatedCoverage) return;
+    let raf = 0;
+    const tick = () => {
+      viewerRef.current?.scene.requestRender();
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [hasAnimatedCoverage]);
 
   // ── Polylines (trails, engagement lines, mission routes) ──────────────────
   // Per id: if the content + style fingerprint is identical to the previous
@@ -1541,6 +1724,18 @@ export function CesiumMap({
     const particleEndpoints = polylineParticleEndpointsRef.current;
     const desiredIds = new Set<string>();
     let scheduledRender = false;
+
+    // Particles and smoothed 2-point lines animate off wall-clock time
+    // inside CallbackProperty closures — flag them so the render-driver
+    // effect below keeps frames coming while any are on screen.
+    setHasAnimatedPolylines(
+      (polylines ?? []).some(
+        (l) =>
+          l.points.length >= 2 &&
+          ((l.particles != null && l.particles.count > 0) ||
+            (l.dashed === true && l.points.length === 2)),
+      ),
+    );
 
     if (polylines) {
       for (const line of polylines) {

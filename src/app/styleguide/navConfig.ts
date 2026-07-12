@@ -135,11 +135,14 @@ export const NAV: NavGroup[] = [
         label: 'Map Markers',
         children: [
           { id: 'layer-anatomy', label: 'Layer Anatomy' },
-          { id: 'state-matrix', label: 'State Matrix' },
+          { id: 'affiliations', label: 'Affiliations' },
+          { id: 'interaction', label: 'Interaction States' },
+          { id: 'asset-health', label: 'Asset Health' },
           { id: 'severity-matrix', label: 'Severity & Urgency' },
-          { id: 'icon-catalog', label: 'Icon Catalog' },
+          { id: 'glyph-routing', label: 'Glyph Routing' },
         ],
       },
+      { id: 'map-icons', label: 'Map Icons' },
     ],
   },
   {

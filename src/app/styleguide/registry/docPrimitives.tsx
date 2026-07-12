@@ -160,7 +160,7 @@ export function ComponentPreview({
       style={{ backgroundColor: SURFACE.level0 }}
     >
       <div
-        dir="rtl"
+        dir="ltr"
         data-align={align}
         className={cn(
           'flex w-full justify-center p-10',
@@ -255,7 +255,7 @@ export function PreviewTile({
     : undefined;
   return (
     <div
-      dir="rtl"
+      dir="ltr"
       className={cn(
         'rounded-xl',
         RING,
@@ -277,8 +277,9 @@ export function PreviewTile({
  *
  * Craft: concentric radius (`rounded-lg` tiles inside the `rounded-xl`
  * canvas), the single layered-shadow `RING` depth strategy, `tabular-nums`
- * so numeric edge cases align, and `dir="rtl"` to match the live app context
- * like {@link PreviewTile}.
+ * so numeric edge cases align, and an explicit `dir="ltr"` — the styleguide
+ * page is always LTR (components document their own RTL support) — like
+ * {@link PreviewTile}.
  */
 export function EdgeCaseGrid({ cases }: { cases: EdgeCase[] }) {
   return (
@@ -289,7 +290,7 @@ export function EdgeCaseGrid({ cases }: { cases: EdgeCase[] }) {
             {ec.label}
           </h3>
           <div
-            dir="rtl"
+            dir="ltr"
             className={cn(
               'flex min-h-[120px] flex-1 items-center justify-center overflow-hidden rounded-lg p-6 tabular-nums',
               RING,

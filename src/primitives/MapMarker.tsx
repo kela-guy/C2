@@ -50,6 +50,16 @@ export function MapMarker({
   const outerSize = Math.max(surfaceSize, ringSize);
   const compassLetter = heading != null ? headingToCompass(heading) : null;
   const borderColor = hexToRgba(s.ringColor, s.ringOpacity);
+
+  // Affiliation-shape channel (`/status-v2` audition): the surface + ring can
+  // render as a square or diamond instead of the default circle. A diamond is
+  // a rotated square, shrunk so its bounding box stays close to the circle's
+  // footprint (diagonal = size × √2 otherwise).
+  const shape = s.ringShape ?? 'circle';
+  const shapeRadius = shape === 'circle' ? '9999px' : '15%';
+  const shapeScale = shape === 'diamond' ? 0.82 : shape === 'square' ? 0.94 : 1;
+  const shapeRotate = shape === 'diamond' ? ' rotate(45deg)' : '';
+  const shapedTransform = `translate(-50%, -50%)${shapeRotate}`;
   const [hovered, setHovered] = useState(false);
   const pulseRef = useRef<HTMLDivElement>(null);
 
@@ -102,13 +112,14 @@ export function MapMarker({
       >
         {/* Layer 1 (bottom): Surface */}
         <div
-          className="absolute rounded-full"
+          className="absolute"
           style={{
-            width: surfaceSize,
-            height: surfaceSize,
+            width: surfaceSize * shapeScale,
+            height: surfaceSize * shapeScale,
+            borderRadius: shapeRadius,
             top: '50%',
             left: '50%',
-            transform: 'translate(-50%, -50%)',
+            transform: shapedTransform,
             background: hexToRgba(s.surfaceFill, s.surfaceOpacity),
             backdropFilter: s.surfaceBlur > 0 ? `blur(${s.surfaceBlur}px)` : undefined,
             WebkitBackdropFilter: s.surfaceBlur > 0 ? `blur(${s.surfaceBlur}px)` : undefined,
@@ -120,13 +131,14 @@ export function MapMarker({
         {/* Layer 2: Ring */}
         {s.ringWidth > 0 && (
           <div
-            className={`absolute rounded-full pointer-events-none z-[1] ${s.ringPulse ? 'animate-pulse' : ''}`}
+            className={`absolute pointer-events-none z-[1] ${s.ringPulse ? 'animate-pulse' : ''}`}
             style={{
-              width: ringSize,
-              height: ringSize,
+              width: ringSize * shapeScale,
+              height: ringSize * shapeScale,
+              borderRadius: shapeRadius,
               top: '50%',
               left: '50%',
-              transform: 'translate(-50%, -50%)',
+              transform: shapedTransform,
               border: `${s.ringWidth}px ${s.ringDash === 'dashed' ? 'dashed' : 'solid'} ${borderColor}`,
               opacity: layerDim(2),
               transition: 'border-color 200ms ease, border-width 200ms ease, opacity 300ms ease',

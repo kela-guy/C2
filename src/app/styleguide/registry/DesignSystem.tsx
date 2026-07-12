@@ -41,6 +41,12 @@ function TierToggle({
   tier: ComponentTier;
   onChange: (t: ComponentTier) => void;
 }) {
+  // Expanding segmented control: the active segment carries the label, idle
+  // segments collapse to their icon. Width is driven by CSS (`flex-grow` on
+  // the segment, a 0fr↔1fr grid track around the label) so every element stays
+  // in normal document flow and the icons slide with the layout — framer's
+  // `layout` transforms made them visibly jump. Width, label fade, and color
+  // swap all run on the shared --motion-moderate token.
   return (
     <div className={cn('flex gap-1 rounded-lg p-1', RING)}>
       {TIERS.map((t) => {
@@ -52,13 +58,39 @@ function TierToggle({
             type="button"
             onClick={() => onChange(t)}
             aria-pressed={active}
+            aria-label={TIER_LABEL[t]}
+            title={active ? undefined : TIER_LABEL[t]}
+            style={{ flexGrow: active ? 1 : 0 }}
             className={cn(
-              'flex flex-1 items-center justify-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-[color,background-color,transform] duration-150 ease-out active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring',
-              active ? 'bg-state-selected text-n-12' : 'text-n-9 hover:text-n-11',
+              'flex items-center justify-center overflow-hidden whitespace-nowrap rounded-md px-2.5 py-1.5 text-xs font-medium cursor-pointer',
+              'transition-[flex-grow,background-color,color,transform] duration-[var(--motion-moderate)] ease-out active:scale-[0.97] motion-reduce:transition-none',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring',
+              active
+                ? 'bg-state-selected text-n-12'
+                : 'text-n-9 hover:bg-state-hover hover:text-n-11',
             )}
           >
-            <Icon size={13} fill="currentColor" strokeWidth={0} aria-hidden="true" />
-            {TIER_LABEL[t]}
+            <Icon
+              size={13}
+              fill="currentColor"
+              strokeWidth={0}
+              aria-hidden="true"
+              className="shrink-0"
+            />
+            <span
+              aria-hidden={!active}
+              className="grid transition-[grid-template-columns] duration-[var(--motion-moderate)] ease-out motion-reduce:transition-none"
+              style={{ gridTemplateColumns: active ? '1fr' : '0fr' }}
+            >
+              <span
+                className={cn(
+                  'min-w-0 overflow-hidden ps-1.5 transition-opacity duration-[var(--motion-moderate)] ease-out motion-reduce:transition-none',
+                  active ? 'opacity-100' : 'opacity-0',
+                )}
+              >
+                {TIER_LABEL[t]}
+              </span>
+            </span>
           </button>
         );
       })}

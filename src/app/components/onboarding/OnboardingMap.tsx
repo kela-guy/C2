@@ -1,19 +1,20 @@
 /**
- * Cesium map surface for the onboarding lab. Renders the live 3D terrain plus:
+ * Cesium map surface for the onboarding concept-video scene. Renders Google
+ * Photorealistic 3D Tiles (falling back to the dark raster map without a
+ * token) plus:
  *   - placed assets, drawn with the production friendly marker (MapMarker +
- *     tactical glyph) so the onboarding map matches the real C2 map,
- *   - threat-axis wedges (red) for the axes passed in `axisIds`,
- *   - threat zones (the "why" shown before any assets — sparse red risk markers),
- *   - coverage-gap voids that pulse until covered.
+ *     tactical glyph) with a "deployed" drop-in moment (ground ripple +
+ *     rising light beacon),
+ *   - an always-on animated coverage volume per asset: a glowing 3D energy
+ *     wall along the coverage perimeter (cyan), a rotating PPI sweep for
+ *     radars, and an edge-glow FOV curtain for directional cameras,
+ *   - threat-axis wedges (red) for the axes passed in `axisIds`, with an
+ *     extruded "threat corridor" treatment + incoming particle flows while
+ *     `threatEmphasis` is set (the cinematic intro).
  *
- * Placement is interactive: drag a tray chip onto the map (react-dnd → screen
- * pick → lat/lon), or drag a placed marker to reposition it. Built on the
- * `CesiumMap` primitive's additive `pickerRef` / `onGroundClick` hooks.
- *
- * Note: the Cesium html-marker layer mounts/unmounts content directly, so
- * exit animations are not available — markers animate on entrance only (with a
- * stagger for the suggestion reveal), and threat markers simply unmount when
- * the suggested assets take over.
+ * Placement is interactive: drag a dock chip onto the map (react-dnd →
+ * screen pick → lat/lon), or drag a placed marker to reposition it. Built on
+ * the `CesiumMap` primitive's additive `pickerRef` / `onGroundClick` hooks.
  */
 
 import { useCallback, useMemo, useRef } from 'react';
@@ -21,7 +22,8 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { useDrop } from 'react-dnd';
 import { useStrings } from '@/lib/intl';
 import { MapMarker, resolveMarkerStyle } from '@/primitives';
-import { WarningTriangle } from '@/lib/icons/central';
+import { MARKER_HEX } from '@/primitives/accentHex';
+import { X } from '@/lib/icons/central';
 import { destination } from '@/app/lib/mapGeo';
 import {
   CesiumMap,
@@ -39,13 +41,21 @@ import {
   SITE_HERO_HEADING_DEG,
   THREAT_AXES,
   type AssetKind,
-  type CoverageGap,
   type Placement,
-  type ThreatZone,
 } from './coverageModel';
 import { ONBOARDING_DND_TYPE, type OnboardingDragItem } from './dnd';
 
 const ION_TOKEN = (import.meta.env.VITE_CESIUM_ION_TOKEN as string | undefined) ?? '';
+
+/**
+ * Single restrained coverage colour for every friendly asset — the walls
+ * should read as ONE fused shield, not a rainbow. Red stays reserved for
+ * threat wedges.
+ */
+const COVERAGE_HEX = MARKER_HEX.coverageCyan;
+
+/** Duration of the energy-wall rise animation on placement. */
+const WALL_RISE_MS = 700;
 
 /**
  * Height of the extruded red threat-corridor volumes, in meters. Kept low so
@@ -53,8 +63,15 @@ const ION_TOKEN = (import.meta.env.VITE_CESIUM_ION_TOKEN as string | undefined) 
  * terrain rather than a giant wall that blocks the view.
  */
 const THREAT_VOLUME_HEIGHT_M = 160;
-/** Vertical scale of the protective "shield" dome relative to its radius. */
-const COVERAGE_DOME_RATIO = 0.4;
+
+/**
+ * Energy-wall height for a coverage ring of the given radius. Proportional so
+ * small rings read as intimate bubbles and the big effector rings still feel
+ * like distant ramparts, clamped so nothing dwarfs the low hero camera.
+ */
+function wallHeightFor(radiusM: number): number {
+  return Math.min(220, Math.max(80, radiusM * 0.12));
+}
 
 type Picker = ((clientX: number, clientY: number) => { lat: number; lon: number } | null) | null;
 
@@ -62,21 +79,20 @@ interface PlacementMarkerProps {
   placement: Placement;
   selected: boolean;
   draggable: boolean;
-  /** Reveal-order index — staggers the suggestion entrance. */
-  index: number;
   pickerRef: React.MutableRefObject<Picker>;
   onSelect: (id: string) => void;
   onMove: (id: string, lat: number, lon: number) => void;
+  onRemove: (id: string) => void;
 }
 
 function PlacementMarker({
   placement,
   selected,
   draggable,
-  index,
   pickerRef,
   onSelect,
   onMove,
+  onRemove,
 }: PlacementMarkerProps) {
   const t = useStrings();
   const visual = ASSET_VISUAL[placement.kind];
@@ -124,15 +140,51 @@ function PlacementMarker({
       onPointerMove={onPointerMove}
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
-      initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.7 }}
+      initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.6 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={
         prefersReducedMotion
           ? { duration: 0 }
-          : { type: 'spring', stiffness: 420, damping: 28, delay: Math.min(index, 12) * 0.05 }
+          : { type: 'spring', stiffness: 420, damping: 26 }
       }
-      className={cn('relative inline-flex', draggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer')}
+      className={cn(
+        'relative inline-flex',
+        draggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer',
+      )}
     >
+      {/* "Deployed" feedback — plays once on mount. A thin ground ripple
+          expands outward while a brief vertical light beacon rises and fades.
+          Professional confirmation, not a bouncing cartoon. */}
+      {!prefersReducedMotion && (
+        <>
+          <motion.span
+            className="pointer-events-none absolute left-1/2 top-1/2 size-9 -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-300/70"
+            initial={{ scale: 0.4, opacity: 0.8 }}
+            animate={{ scale: 3.4, opacity: 0 }}
+            transition={{ duration: 1.1, ease: 'easeOut' }}
+            aria-hidden="true"
+          />
+          <motion.span
+            className="pointer-events-none absolute left-1/2 top-1/2 size-9 -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-300/50"
+            initial={{ scale: 0.4, opacity: 0.6 }}
+            animate={{ scale: 2.4, opacity: 0 }}
+            transition={{ duration: 1.1, delay: 0.22, ease: 'easeOut' }}
+            aria-hidden="true"
+          />
+          <motion.span
+            className="pointer-events-none absolute bottom-1/2 left-1/2 h-20 w-[3px] origin-bottom -translate-x-1/2 rounded-full"
+            style={{
+              background:
+                'linear-gradient(to top, rgba(103,232,249,0.9), rgba(103,232,249,0))',
+              filter: 'drop-shadow(0 0 6px rgba(103,232,249,0.8))',
+            }}
+            initial={{ scaleY: 0, opacity: 0 }}
+            animate={{ scaleY: [0, 1, 1], opacity: [0, 0.9, 0] }}
+            transition={{ duration: 1.0, ease: 'easeOut', times: [0, 0.35, 1] }}
+            aria-hidden="true"
+          />
+        </>
+      )}
       <MapMarker
         icon={<MapIcon outlined />}
         style={style}
@@ -142,101 +194,58 @@ function PlacementMarker({
         showLabel={selected}
         pulse={selected}
       />
-    </motion.div>
-  );
-}
-
-function ThreatZoneMarker({ severity }: { severity: ThreatZone['severity'] }) {
-  const prefersReducedMotion = useReducedMotion();
-  const high = severity === 'high';
-  return (
-    <motion.div
-      className="relative inline-flex items-center justify-center"
-      initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.5 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.3, ease: 'easeOut' }}
-      aria-hidden="true"
-    >
-      {!prefersReducedMotion && (
-        <motion.span
-          className={cn('absolute rounded-full', high ? 'bg-red-500/30' : 'bg-amber-400/25')}
-          style={{ width: 26, height: 26 }}
-          animate={{ scale: [1, 2.3], opacity: [0.55, 0] }}
-          transition={{ duration: 1.8, ease: 'easeOut', repeat: Infinity }}
-        />
+      {selected && draggable && (
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove(placement.id);
+          }}
+          aria-label={t.onboarding.explain.remove}
+          className="absolute -end-2 -top-2 z-10 flex size-5 items-center justify-center rounded-full bg-slate-900/90 text-slate-300 ring-1 ring-white/25 transition-colors hover:bg-red-500/90 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
+        >
+          <X size={11} aria-hidden="true" />
+        </button>
       )}
-      <span
-        className={cn(
-          'relative flex size-6 items-center justify-center rounded-full ring-2',
-          high ? 'bg-red-500/90 ring-red-300/50' : 'bg-amber-400/90 ring-amber-200/50',
-        )}
-      >
-        <WarningTriangle size={13} className="text-white" aria-hidden="true" />
-      </span>
     </motion.div>
-  );
-}
-
-function GapDot({ kind }: { kind: CoverageGap['kind'] }) {
-  const prefersReducedMotion = useReducedMotion();
-  const blind = kind === 'blind';
-  return (
-    <motion.span
-      initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.5 }}
-      animate={
-        prefersReducedMotion
-          ? { opacity: 1, scale: 1 }
-          : { opacity: [0.55, 1, 0.55], scale: 1 }
-      }
-      transition={
-        prefersReducedMotion
-          ? { duration: 0 }
-          : { opacity: { duration: 2, ease: 'easeInOut', repeat: Infinity }, scale: { duration: 0.25, ease: 'easeOut' } }
-      }
-      className={cn(
-        'block size-3 rounded-full ring-2',
-        blind ? 'bg-red-500/70 ring-red-400/40' : 'bg-amber-400/70 ring-amber-300/40',
-      )}
-      aria-hidden="true"
-    />
   );
 }
 
 export interface OnboardingMapProps {
   placements: Placement[];
-  gaps: CoverageGap[];
-  /** Threat-axis ids drawn as red wedges (threats = all, refine/summary = open). */
+  /** Threat-axis ids drawn as red wedges (open approaches). */
   axisIds: string[];
-  /** Risk markers shown before assets exist (the "why"); empty otherwise. */
-  threatZones: ThreatZone[];
+  /**
+   * Cinematic threat treatment: extruded corridor volumes + incoming particle
+   * flows on the wedge axes. On for the intro beat, off while building.
+   */
+  threatEmphasis: boolean;
   selectedId: string | null;
   draggable: boolean;
   onSelect: (id: string | null) => void;
   onPlace: (kind: AssetKind, lat: number, lon: number) => void;
   onMove: (id: string, lat: number, lon: number) => void;
+  onRemove: (id: string) => void;
   flyTo: CesiumMapFlyTo | null;
-  /** Cinematic orbit (e.g. during the scan beat). Null releases the camera. */
+  /** Cinematic orbit (the intro beat). Null releases the camera. */
   orbit: CesiumMapOrbit | null;
 }
 
 export function OnboardingMap({
   placements,
-  gaps,
   axisIds,
-  threatZones,
+  threatEmphasis,
   selectedId,
   draggable,
   onSelect,
   onPlace,
   onMove,
+  onRemove,
   flyTo,
   orbit,
 }: OnboardingMapProps) {
   const pickerRef = useRef<Picker>(null);
-
-  // The threat reveal is the only moment risk markers exist, so it doubles as
-  // the gate for the volumetric menace (extruded wedges + incoming flows).
-  const threatsActive = threatZones.length > 0;
 
   const [, dropRef] = useDrop<OnboardingDragItem, unknown, unknown>(
     () => ({
@@ -265,9 +274,8 @@ export function OnboardingMap({
       ),
     });
 
-    // Threat-axis wedges (red). Driven by `axisIds`, decoupled from coverage:
-    // the threats step passes every axis (nothing is covered yet); refine and
-    // summary pass only the still-open axes.
+    // Threat-axis wedges (red) for the still-open approaches. With
+    // `threatEmphasis`, the wedges extrude into low corridor volumes.
     for (const axis of THREAT_AXES) {
       if (!axisIds.includes(axis.id)) continue;
       markers.push({
@@ -281,28 +289,15 @@ export function OnboardingMap({
           bearingDeg: axis.bearingDeg,
           widthDeg: 14,
           color: '#ef4444',
-          // Extruded "threat corridor" volume during the reveal; a flatter
-          // ground wedge once it's just a lingering open-axis reminder.
-          opacity: threatsActive ? 0.22 : 0.16,
-          ...(threatsActive ? { extrudedHeightM: THREAT_VOLUME_HEIGHT_M } : {}),
+          opacity: threatEmphasis ? 0.22 : 0.14,
+          ...(threatEmphasis ? { extrudedHeightM: THREAT_VOLUME_HEIGHT_M } : {}),
         },
       });
     }
 
-    // Threat zones — the "why", marked before any asset is suggested.
-    for (const zone of threatZones) {
-      markers.push({
-        id: zone.id,
-        lat: zone.lat,
-        lon: zone.lon,
-        zIndex: 18,
-        content: <ThreatZoneMarker severity={zone.severity} />,
-      });
-    }
-
-    // Placed assets, drawn with the production friendly marker. Coverage
-    // geometry is shown ONLY for the focused (tapped) asset — never all cones.
-    placements.forEach((p, i) => {
+    // Placed assets, drawn with the production friendly marker. Every asset
+    // carries its coverage volume ALWAYS — the walls are the point.
+    for (const p of placements) {
       const cap = CAPABILITIES[p.kind];
       const visual = ASSET_VISUAL[p.kind];
       const isSelected = selectedId === p.id;
@@ -316,66 +311,65 @@ export function OnboardingMap({
             placement={p}
             selected={isSelected}
             draggable={draggable}
-            index={i}
             pickerRef={pickerRef}
             onSelect={onSelect}
             onMove={onMove}
+            onRemove={onRemove}
           />
         ),
       };
-      if (isSelected) {
-        if (visual.shape === 'cone' && cap.detect) {
-          marker.fov = {
-            rangeM: cap.detect.rangeM,
-            bearingDeg: p.bearingDeg ?? 0,
-            widthDeg: cap.detect.fovDeg,
-            color: visual.hex,
-            opacity: 0.16,
-            // Glowing vertical curtain along the cone perimeter so the FOV
-            // coverage reads as a 3D volume from the near-ground camera.
-            wall: true,
-            wallHeightM: 130,
+
+      // Directional cameras keep the FOV cone + edge-glow curtain; every
+      // omnidirectional / effector asset gets the circular energy wall at its
+      // effective range. Radars additionally spin a PPI sweep.
+      const isDirectional =
+        visual.shape === 'cone' && !!cap.detect && cap.detect.fovDeg < 360;
+      if (isDirectional && cap.detect) {
+        marker.fov = {
+          rangeM: cap.detect.rangeM,
+          bearingDeg: p.bearingDeg ?? 0,
+          widthDeg: cap.detect.fovDeg,
+          color: COVERAGE_HEX,
+          opacity: isSelected ? 0.14 : 0.08,
+          wall: true,
+          wallHeightM: wallHeightFor(cap.detect.rangeM),
+          wallRiseMs: WALL_RISE_MS,
+        };
+      } else {
+        const radiusM = cap.mitigate?.rangeM ?? cap.detect?.rangeM;
+        if (radiusM != null) {
+          marker.coverageWall = {
+            radiusM,
+            heightM: wallHeightFor(radiusM),
+            color: COVERAGE_HEX,
+            riseMs: WALL_RISE_MS,
           };
+          // Ground footprint ring only for the focused asset — keeps the
+          // base map clean while making the tapped asset's reach unambiguous.
+          if (isSelected) {
+            marker.coverageRadiusM = radiusM;
+            marker.coverageColor = COVERAGE_HEX;
+          }
         }
-        if (cap.mitigate) {
-          marker.coverageRadiusM = cap.mitigate.rangeM;
-          marker.coverageColor = visual.hex;
-        } else if (visual.shape === 'ring' && cap.detect) {
-          marker.coverageRadiusM = cap.detect.rangeM;
-          marker.coverageColor = visual.hex;
-        }
-        if (marker.coverageRadiusM != null) {
-          // 3D "shield" dome so the focused asset's protection reads as a
-          // volume bubble, not just a flat ground ring.
-          marker.coverageDome = true;
-          marker.coverageHeightM = marker.coverageRadiusM * COVERAGE_DOME_RATIO;
+        if (p.kind === 'radar' && cap.detect) {
+          marker.radarSweep = { rangeM: cap.detect.rangeM, color: COVERAGE_HEX, periodSec: 4 };
         }
       }
-      markers.push(marker);
-    });
 
-    // Coverage-gap voids.
-    for (const gap of gaps) {
-      markers.push({
-        id: gap.id,
-        lat: gap.lat,
-        lon: gap.lon,
-        zIndex: 15,
-        content: <GapDot kind={gap.kind} />,
-      });
+      markers.push(marker);
     }
 
     return markers;
-  }, [placements, gaps, axisIds, threatZones, selectedId, draggable, onSelect, onMove, threatsActive]);
+  }, [placements, axisIds, threatEmphasis, selectedId, draggable, onSelect, onMove, onRemove]);
 
-  // Incoming approach-flow arrows: a red dashed line per threat axis, running
-  // from the AOI perimeter inward to the base so the particles read as an
-  // "incoming route". Only during the threat reveal.
+  // Incoming approach-flow arrows during the intro: a red dashed line per
+  // open axis, running from the AOI perimeter inward so the particles read
+  // as an "incoming route".
   const prefersReducedMotion = useReducedMotion();
   const polylines = useMemo<CesiumPolyline[]>(() => {
-    if (!threatsActive) return [];
+    if (!threatEmphasis) return [];
     return THREAT_AXES.filter((axis) => axisIds.includes(axis.id)).map((axis) => {
-      const [periLat, periLon] = destination(SITE.lat, SITE.lon, AOI_RADIUS_M, axis.bearingDeg);
+      const [periLon, periLat] = destination(SITE.lat, SITE.lon, AOI_RADIUS_M, axis.bearingDeg);
       return {
         id: `flow-${axis.id}`,
         // Perimeter -> SITE so particles flow toward the base.
@@ -390,7 +384,7 @@ export function OnboardingMap({
         ...(prefersReducedMotion ? {} : { particles: { count: 4, speed: 0.35 } }),
       };
     });
-  }, [threatsActive, axisIds, prefersReducedMotion]);
+  }, [threatEmphasis, axisIds, prefersReducedMotion]);
 
   const handleGroundClick = useCallback(() => onSelect(null), [onSelect]);
 
@@ -398,15 +392,14 @@ export function OnboardingMap({
     <div ref={dropRef} className="absolute inset-0">
       <CesiumMap
         ionToken={ION_TOKEN}
+        photorealisticTiles={!!ION_TOKEN}
         darkMonochromeMap={!ION_TOKEN}
-        darkImagery={!!ION_TOKEN}
-        showOsmBuildings={!!ION_TOKEN}
         sceneMode="3D"
         initialView={{
           lat: SITE.lat,
           lon: SITE.lon,
-          heightM: 180,
-          pitchDeg: -14,
+          heightM: 700,
+          pitchDeg: -30,
           headingDeg: SITE_HERO_HEADING_DEG,
           terrainRelative: true,
         }}

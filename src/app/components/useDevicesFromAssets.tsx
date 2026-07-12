@@ -19,16 +19,7 @@ import {
   FLOODLIGHT_ASSETS,
   SPEAKER_ASSETS,
 } from './tacticalAssets';
-import {
-  SensorIcon,
-  CameraIcon,
-  RadarIcon,
-  DroneHiveIcon,
-  LauncherIcon,
-  LidarIcon,
-  FloodlightIcon,
-  SpeakerIcon,
-} from './tacticalIcons';
+import { ASSET_KIND_ICON } from './assetKindIcons';
 import { useStrings } from '@/lib/intl';
 import type { Device, DeviceError } from './DevicesPanel';
 
@@ -100,7 +91,7 @@ export function useDevicesFromAssets(): Device[] {
       connectionState: (DEVICE_CONNECTION[a.id] ?? 'online') as Device['connectionState'],
       fovDeg: a.fovDeg,
       bearingDeg: a.bearingDeg,
-      Icon: CameraIcon,
+      Icon: ASSET_KIND_ICON.camera,
       batteryPct: a.id === 'CAM-NVT-PTZ-N' ? 18 : undefined,
       capabilities: CAMERA_CAPS[a.id],
       errors: DEVICE_ERRORS[a.id],
@@ -116,7 +107,7 @@ export function useDevicesFromAssets(): Device[] {
       connectionState: (DEVICE_CONNECTION[a.id] ?? 'online') as Device['connectionState'],
       fovDeg: a.fovDeg,
       bearingDeg: a.bearingDeg,
-      Icon: RadarIcon,
+      Icon: ASSET_KIND_ICON.radar,
       errors: DEVICE_ERRORS[a.id],
     })),
     ...DRONE_HIVE_ASSETS.map((a) => ({
@@ -128,7 +119,7 @@ export function useDevicesFromAssets(): Device[] {
       status: 'available' as const,
       operationalStatus: 'operational' as const,
       connectionState: 'online' as const,
-      Icon: DroneHiveIcon,
+      Icon: ASSET_KIND_ICON.droneHive,
       batteryPct: 91,
     })),
     ...REGULUS_EFFECTORS.map((e) => ({
@@ -141,7 +132,7 @@ export function useDevicesFromAssets(): Device[] {
       operationalStatus: (DEVICE_HEALTH[e.id] ?? 'operational') as Device['operationalStatus'],
       connectionState: (DEVICE_CONNECTION[e.id] ?? 'online') as Device['connectionState'],
       coverageRadiusM: e.coverageRadiusM,
-      Icon: SensorIcon,
+      Icon: ASSET_KIND_ICON.sensor,
       errors: DEVICE_ERRORS[e.id],
     })),
     ...LAUNCHER_ASSETS.map((l) => ({
@@ -153,7 +144,7 @@ export function useDevicesFromAssets(): Device[] {
       status: 'available' as const,
       operationalStatus: 'operational' as const,
       connectionState: 'online' as const,
-      Icon: LauncherIcon,
+      Icon: ASSET_KIND_ICON.launcher,
     })),
     ...LIDAR_ASSETS.map((a) => ({
       id: a.id,
@@ -166,7 +157,7 @@ export function useDevicesFromAssets(): Device[] {
       connectionState: (DEVICE_CONNECTION[a.id] ?? 'online') as Device['connectionState'],
       fovDeg: a.fovDeg,
       bearingDeg: a.bearingDeg,
-      Icon: LidarIcon,
+      Icon: ASSET_KIND_ICON.lidar,
       errors: DEVICE_ERRORS[a.id],
     })),
     ...WEAPON_SYSTEM_ASSETS.map((a) => ({
@@ -178,7 +169,7 @@ export function useDevicesFromAssets(): Device[] {
       status: 'available' as const,
       operationalStatus: 'operational' as const,
       connectionState: 'online' as const,
-      Icon: LauncherIcon,
+      Icon: ASSET_KIND_ICON.launcher,
     })),
     ...FLOODLIGHT_ASSETS.map((a) => ({
       id: a.id,
@@ -189,7 +180,7 @@ export function useDevicesFromAssets(): Device[] {
       status: 'available' as const,
       operationalStatus: (DEVICE_HEALTH[a.id] ?? 'operational') as Device['operationalStatus'],
       connectionState: (DEVICE_CONNECTION[a.id] ?? 'online') as Device['connectionState'],
-      Icon: FloodlightIcon,
+      Icon: ASSET_KIND_ICON.floodlight,
     })),
     ...SPEAKER_ASSETS.map((a) => ({
       id: a.id,
@@ -200,7 +191,7 @@ export function useDevicesFromAssets(): Device[] {
       status: 'available' as const,
       operationalStatus: (DEVICE_HEALTH[a.id] ?? 'operational') as Device['operationalStatus'],
       connectionState: (DEVICE_CONNECTION[a.id] ?? 'online') as Device['connectionState'],
-      Icon: SpeakerIcon,
+      Icon: ASSET_KIND_ICON.speaker,
     })),
     {
       id: 'FRIENDLY-01',

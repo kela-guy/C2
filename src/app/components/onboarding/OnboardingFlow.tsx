@@ -1,17 +1,26 @@
 /**
- * OnboardingFlow — the state machine + composition for the auto-coverage lab.
+ * OnboardingFlow — the single-scene concept-video experience.
  *
- * Owns placements, selection, step, and an undo snapshot. Coverage is scored
- * from a deferred copy of placements so dragging a marker stays smooth while
- * the score/gaps catch up a beat later (the "throttled live preview" from the
- * plan). Nothing auto-commits — the whole layout is a reversible draft (I7).
+ * One continuous cinematic scene in three beats:
+ *   intro     — slow orbit over the bare site, red threat corridors converge
+ *               on the base, a minimal title card invites the operator in.
+ *   build     — the camera settles into the hero oblique, the asset dock
+ *               slides up, and the operator drags assets onto the live 3D
+ *               terrain. Every drop raises an animated coverage wall and the
+ *               protection score climbs live.
+ *   protected — one-way latch when the combined score crosses the threshold:
+ *               the camera pulls back over the fused shield and the "Base
+ *               protected" banner appears. Building stays enabled.
+ *
+ * Owns placements, selection, and phase. Coverage is scored from a deferred
+ * copy of placements so dragging a marker stays smooth while the score/wedges
+ * catch up a beat later.
  */
 
 import {
   useCallback,
   useDeferredValue,
   useEffect,
-  useMemo,
   useReducer,
   useRef,
   useState,
@@ -19,75 +28,46 @@ import {
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useStrings } from '@/lib/intl';
+import { CheckCircle2 } from '@/lib/icons/central';
 import { bearingDegrees } from '@/app/lib/mapGeo';
+import { Button } from '@/primitives/Button';
 import type { CesiumMapFlyTo, CesiumMapOrbit } from '@/primitives/CesiumMap';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '../ui/alert-dialog';
 import { ASSET_VISUAL } from './assetCatalog';
+import { AssetDock } from './AssetDock';
 import { OnboardingMap } from './OnboardingMap';
-import { OnboardingPanel } from './OnboardingPanel';
-import { ProtectionScoreHud } from './ProtectionScoreHud';
-import { ScanOverlay } from './ScanOverlay';
 import { useCoverageScore } from './useCoverageScore';
 import {
   CAPABILITIES,
-  ONBOARDING_STEPS,
+  PROTECTED_THRESHOLD,
   SITE,
   SITE_HERO_HEADING_DEG,
-  THREAT_AXES,
-  getThreatZones,
   type AssetKind,
-  type OnboardingStep,
+  type OnboardingPhase,
   type Placement,
 } from './coverageModel';
-import { getSuggestedPlacements, nextPlacementId } from './suggestLayout';
+import { nextPlacementId } from './suggestLayout';
 
-/** How long the scan animation holds before auto-advancing to the threats step. */
-const SCAN_DURATION_MS = 2500;
-
-/** Default oblique pitch for the cinematic on-field camera (negative looks down). */
-const HERO_PITCH_DEG = -16;
+/**
+ * Default oblique pitch for the cinematic camera (negative looks down).
+ * Steep enough that the photoreal city/airport fabric fills the frame
+ * instead of a compressed horizon band, shallow enough to stay cinematic.
+ */
+const HERO_PITCH_DEG = -27;
 
 interface FlowState {
-  step: OnboardingStep;
   placements: Placement[];
   selectedId: string | null;
 }
 
 type FlowAction =
-  | { type: 'NEXT' }
-  | { type: 'BACK' }
   | { type: 'SELECT'; id: string | null }
   | { type: 'PLACE'; placement: Placement }
   | { type: 'MOVE'; id: string; lat: number; lon: number }
   | { type: 'REMOVE'; id: string }
   | { type: 'RESTORE'; placements: Placement[] };
 
-function stepAt(step: OnboardingStep, delta: number): OnboardingStep {
-  const i = ONBOARDING_STEPS.indexOf(step);
-  const next = Math.min(ONBOARDING_STEPS.length - 1, Math.max(0, i + delta));
-  return ONBOARDING_STEPS[next];
-}
-
 function reducer(state: FlowState, action: FlowAction): FlowState {
   switch (action.type) {
-    case 'NEXT':
-      return { ...state, step: stepAt(state.step, 1), selectedId: null };
-    case 'BACK': {
-      // `scanning` is transient — stepping back never lands on it (and never
-      // replays the scan). Going back from `threats` returns to `welcome`.
-      let target = stepAt(state.step, -1);
-      if (target === 'scanning') target = 'welcome';
-      return { ...state, step: target, selectedId: null };
-    }
     case 'SELECT':
       return { ...state, selectedId: action.id };
     case 'PLACE':
@@ -96,7 +76,19 @@ function reducer(state: FlowState, action: FlowAction): FlowState {
       return {
         ...state,
         placements: state.placements.map((p) =>
-          p.id === action.id ? { ...p, lat: action.lat, lon: action.lon } : p,
+          p.id === action.id
+            ? {
+                ...p,
+                lat: action.lat,
+                lon: action.lon,
+                // Directional assets keep facing outward as they're dragged
+                // around the perimeter.
+                bearingDeg:
+                  p.bearingDeg != null
+                    ? bearingDegrees(SITE.lat, SITE.lon, action.lat, action.lon)
+                    : undefined,
+              }
+            : p,
         ),
       };
     case 'REMOVE':
@@ -112,10 +104,6 @@ function reducer(state: FlowState, action: FlowAction): FlowState {
   }
 }
 
-function initState(): FlowState {
-  return { step: 'welcome', placements: getSuggestedPlacements(), selectedId: null };
-}
-
 interface Snack {
   id: number;
   message: string;
@@ -126,64 +114,39 @@ export function OnboardingFlow() {
   const t = useStrings();
   const navigate = useNavigate();
   const prefersReducedMotion = useReducedMotion();
-  const [state, dispatch] = useReducer(reducer, undefined, initState);
+  const [state, dispatch] = useReducer(reducer, { placements: [], selectedId: null });
+  const [phase, setPhase] = useState<OnboardingPhase>('intro');
   const [flyTo, setFlyTo] = useState<CesiumMapFlyTo | null>(null);
   const [orbit, setOrbit] = useState<CesiumMapOrbit | null>(null);
-  const [exitOpen, setExitOpen] = useState(false);
   const [snack, setSnack] = useState<Snack | null>(null);
   const snackSeq = useRef(0);
 
   const placementsRef = useRef(state.placements);
   placementsRef.current = state.placements;
 
-  // Deferred scoring keeps marker dragging smooth; the HUD/gaps trail a beat.
+  // Deferred scoring keeps marker dragging smooth; the HUD/wedges trail a beat.
   const deferredPlacements = useDeferredValue(state.placements);
   const result = useCoverageScore(deferredPlacements);
 
-  const openAxisIds = result.openAxes.map((a) => a.id);
-  const selected = state.placements.find((p) => p.id === state.selectedId) ?? null;
-  const draggable = state.step === 'refine';
+  const building = phase !== 'intro';
 
-  // Progressive disclosure: every element appears only once it has a reason.
-  //   welcome  — bare base, panel explains the scan.
-  //   scanning — sweep animation only; no assets, no problems, no score.
-  //   threats  — problem areas marked first (red wedges + risk markers), the "why".
-  //   review   — Kela's suggested assets + score; coverage only for the tapped asset.
-  //   refine   — gaps + still-open axes become actionable.
-  //   summary  — clean; the payoff is a high score + an empty gap list.
-  const showAssets =
-    state.step === 'review' || state.step === 'refine' || state.step === 'summary';
-  const showGaps = state.step === 'refine' || state.step === 'summary';
-  const showOpenAxes = state.step === 'refine' || state.step === 'summary';
-  const showHud = showAssets;
+  // The red wedges track the still-open approaches; with no assets placed
+  // every corridor is open, so the intro reads as a base under threat.
+  const axisIds = result.openAxes.map((a) => a.id);
 
-  // Threats step: mark every approach (nothing is covered yet) + sparse risk
-  // markers. Otherwise wedges follow the still-open axes once gaps matter.
-  const threatZones = useMemo(
-    () => (state.step === 'threats' ? getThreatZones() : []),
-    [state.step],
-  );
-  const axisIds =
-    state.step === 'threats'
-      ? THREAT_AXES.map((a) => a.id)
-      : showOpenAxes
-        ? openAxisIds
-        : [];
-
-  // Scanning is a transient beat — auto-advance to the threats reveal.
+  // One-way payoff latch: the first time the combined score crosses the
+  // threshold, flip to the protected beat (camera pull-back + banner).
   useEffect(() => {
-    if (state.step !== 'scanning') return;
-    const handle = window.setTimeout(() => dispatch({ type: 'NEXT' }), SCAN_DURATION_MS);
-    return () => window.clearTimeout(handle);
-  }, [state.step]);
+    if (phase === 'build' && result.combined >= PROTECTED_THRESHOLD) {
+      setPhase('protected');
+    }
+  }, [phase, result.combined]);
 
-  // Per-step cinematic camera. Hero oblique on welcome; a slow orbit while we
-  // "scan"; a higher oblique framing all approach volumes on the threats
-  // reveal; a pull-back over the protection picture on review; back to the
-  // hero for refine/summary (free navigation). The orbit prop is released
-  // (null) on every non-scan step so free camera control resumes.
+  // Per-phase cinematic camera. Slow orbit while the intro card is up; the
+  // hero oblique for building (free camera after the fly settles); a higher
+  // pull-back over the fused shield for the protected payoff.
   useEffect(() => {
-    const dur = prefersReducedMotion ? 0 : 2.0;
+    const dur = prefersReducedMotion ? 0 : 2.4;
     // Heights are metres ABOVE GROUND (terrainRelative) so the view hugs the
     // field instead of floating at a sea-level altitude.
     const hero = (aglM: number, pitchDeg = HERO_PITCH_DEG): CesiumMapFlyTo => ({
@@ -196,43 +159,28 @@ export function OnboardingFlow() {
       terrainRelative: true,
     });
 
-    switch (state.step) {
-      case 'scanning':
+    switch (phase) {
+      case 'intro':
         setFlyTo(null);
         setOrbit({
           lat: SITE.lat,
           lon: SITE.lon,
-          heightM: 200,
-          pitchDeg: -18,
-          periodSec: 34,
+          heightM: 700,
+          pitchDeg: -30,
+          periodSec: 46,
           terrainRelative: true,
         });
         break;
-      case 'threats':
-        // Lift just enough to read the approach corridors + volumes, still low.
+      case 'build':
         setOrbit(null);
-        setFlyTo(hero(430, -24));
+        setFlyTo(hero(420, HERO_PITCH_DEG));
         break;
-      case 'review':
+      case 'protected':
         setOrbit(null);
-        setFlyTo(hero(520, -26));
-        break;
-      case 'refine':
-        setOrbit(null);
-        setFlyTo(hero(320, -20));
-        break;
-      case 'summary':
-        setOrbit(null);
-        setFlyTo(hero(520, -26));
-        break;
-      case 'welcome':
-      default:
-        // Ground-hugging hero — feels like standing on the field.
-        setOrbit(null);
-        setFlyTo(hero(180, -14));
+        setFlyTo(hero(950, -33));
         break;
     }
-  }, [state.step, prefersReducedMotion]);
+  }, [phase, prefersReducedMotion]);
 
   useEffect(() => {
     if (!snack) return;
@@ -248,9 +196,11 @@ export function OnboardingFlow() {
   const handlePlace = useCallback(
     (kind: AssetKind, lat: number, lon: number) => {
       const cap = CAPABILITIES[kind];
+      // Directional detectors face OUTWARD (away from the base) by default —
+      // a dropped camera watches the approach beyond it, not the base itself.
       const bearingDeg =
-        cap.detect && ASSET_VISUAL[kind].shape === 'cone'
-          ? bearingDegrees(lat, lon, SITE.lat, SITE.lon)
+        cap.detect && ASSET_VISUAL[kind].shape === 'cone' && cap.detect.fovDeg < 360
+          ? bearingDegrees(SITE.lat, SITE.lon, lat, lon)
           : undefined;
       const placement: Placement = {
         id: nextPlacementId(kind),
@@ -278,34 +228,14 @@ export function OnboardingFlow() {
     [pushSnack, t],
   );
 
-  const handleReset = useCallback(() => {
-    pushSnack(t.onboarding.toast.reset, placementsRef.current);
-    dispatch({ type: 'RESTORE', placements: getSuggestedPlacements() });
+  const handleClear = useCallback(() => {
+    pushSnack(t.onboarding.video.cleared, placementsRef.current);
+    dispatch({ type: 'RESTORE', placements: [] });
   }, [pushSnack, t]);
 
   const handleSelect = useCallback((id: string | null) => {
     dispatch({ type: 'SELECT', id });
   }, []);
-
-  const handleSkipScan = useCallback(() => dispatch({ type: 'NEXT' }), []);
-
-  const handleFocusGap = useCallback(
-    (lat: number, lon: number) => {
-      // Dive obliquely toward the finding, looking outward along the axis from
-      // the base so the threat reads against the terrain it's approaching.
-      setOrbit(null);
-      setFlyTo({
-        lat,
-        lon,
-        heightM: 150,
-        pitchDeg: -12,
-        headingDeg: bearingDegrees(SITE.lat, SITE.lon, lat, lon),
-        durationSec: prefersReducedMotion ? 0 : 1.4,
-        terrainRelative: true,
-      });
-    },
-    [prefersReducedMotion],
-  );
 
   const handleUndo = useCallback(() => {
     if (!snack) return;
@@ -313,51 +243,107 @@ export function OnboardingFlow() {
     setSnack(null);
   }, [snack]);
 
-  const canReset = state.placements.some((p) => p.source === 'user') || state.placements.length !== 11;
-
   return (
     <div className="relative h-full w-full">
       <OnboardingMap
-        placements={showAssets ? state.placements : []}
-        gaps={showGaps ? result.gaps : []}
+        placements={state.placements}
         axisIds={axisIds}
-        threatZones={threatZones}
+        threatEmphasis={phase === 'intro'}
         selectedId={state.selectedId}
-        draggable={draggable}
+        draggable={building}
         onSelect={handleSelect}
         onPlace={handlePlace}
         onMove={handleMove}
+        onRemove={handleRemove}
         flyTo={flyTo}
         orbit={orbit}
       />
 
-      {state.step === 'scanning' && <ScanOverlay />}
+      {/* Intro title card — cinematic scrim + headline over the slow orbit. */}
+      <AnimatePresence>
+        {phase === 'intro' && (
+          <motion.div
+            key="intro"
+            initial={prefersReducedMotion ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.5, ease: 'easeIn' } }}
+            transition={{ duration: 0.8, ease: 'easeOut' }}
+            className="absolute inset-0 z-20 flex flex-col items-center justify-end pb-[12vh]"
+          >
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background:
+                  'linear-gradient(to top, rgba(5,8,14,0.85) 0%, rgba(5,8,14,0.35) 35%, rgba(5,8,14,0.15) 60%, rgba(5,8,14,0.4) 100%)',
+              }}
+              aria-hidden="true"
+            />
+            <motion.div
+              initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.25, ease: 'easeOut' }}
+              className="relative flex max-w-xl flex-col items-center gap-4 px-6 text-center"
+            >
+              <span className="text-2xs font-semibold uppercase tracking-[0.35em] text-cyan-300/90">
+                {t.onboarding.title}
+              </span>
+              <h1 className="text-4xl font-semibold leading-tight text-white [text-shadow:0_2px_24px_rgba(0,0,0,0.7)]">
+                {t.onboarding.video.introTitle}
+              </h1>
+              <p className="text-sm leading-relaxed text-slate-11 [text-shadow:0_1px_12px_rgba(0,0,0,0.8)]">
+                {t.onboarding.video.introBody}
+              </p>
+              <Button
+                label={t.onboarding.video.begin}
+                variant="fill"
+                size="lg"
+                onClick={() => setPhase('build')}
+                className="mt-2 min-w-48"
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {showHud && (
-        <div className="pointer-events-none absolute end-4 top-4 z-20">
-          <div className="pointer-events-auto">
-            <ProtectionScoreHud result={result} showOpenAxis={showOpenAxes} />
-          </div>
+      {/* "Base protected" payoff banner. */}
+      <AnimatePresence>
+        {phase === 'protected' && (
+          <motion.div
+            key="protected"
+            initial={prefersReducedMotion ? false : { opacity: 0, y: -18 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            className="absolute start-1/2 top-6 z-30 flex w-[min(440px,90vw)] -translate-x-1/2 flex-col items-center gap-2.5 rounded-xl border border-emerald-300/25 bg-slate-950/80 px-6 py-4 text-center shadow-[0_16px_48px_rgba(0,0,0,0.55)] backdrop-blur-md rtl:translate-x-1/2"
+          >
+            <div className="flex items-center gap-2 text-emerald-300">
+              <CheckCircle2 size={18} aria-hidden="true" />
+              <span className="text-base font-semibold text-white">
+                {t.onboarding.video.protectedTitle}
+              </span>
+            </div>
+            <p className="text-xs-plus leading-relaxed text-slate-10">
+              {t.onboarding.video.protectedBody}
+            </p>
+            <Button
+              label={t.onboarding.video.finish}
+              variant="fill"
+              size="md"
+              onClick={() => navigate('/')}
+              className="mt-1"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Asset dock — bottom centre while building (never unmounts after). */}
+      {building && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-5 z-20 flex justify-center">
+          <AssetDock canClear={state.placements.length > 0} onClear={handleClear} />
         </div>
       )}
 
-      <OnboardingPanel
-        open
-        step={state.step}
-        result={result}
-        selected={selected}
-        canReset={canReset}
-        threatZones={threatZones}
-        onNext={() => dispatch({ type: 'NEXT' })}
-        onBack={() => dispatch({ type: 'BACK' })}
-        onReset={handleReset}
-        onSkipScan={handleSkipScan}
-        onExitRequest={() => setExitOpen(true)}
-        onFinish={() => navigate('/')}
-        onFocusGap={handleFocusGap}
-        onRemove={handleRemove}
-      />
-
+      {/* Undo snackbar. */}
       <AnimatePresence>
         {snack && (
           <motion.div
@@ -366,7 +352,7 @@ export function OnboardingFlow() {
             animate={{ opacity: 1, y: 0 }}
             exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="absolute bottom-6 start-1/2 z-30 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-white/10 bg-slate-2/95 px-3.5 py-2 text-xs text-slate-11 shadow-[0_8px_24px_rgba(0,0,0,0.5)] backdrop-blur-sm rtl:translate-x-1/2"
+            className="absolute bottom-32 start-1/2 z-30 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-white/10 bg-slate-2/95 px-3.5 py-2 text-xs text-slate-11 shadow-[0_8px_24px_rgba(0,0,0,0.5)] backdrop-blur-sm rtl:translate-x-1/2"
           >
             <span>{snack.message}</span>
             <button
@@ -379,21 +365,6 @@ export function OnboardingFlow() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      <AlertDialog open={exitOpen} onOpenChange={setExitOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t.onboarding.exitConfirm.title}</AlertDialogTitle>
-            <AlertDialogDescription>{t.onboarding.exitConfirm.body}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t.onboarding.exitConfirm.cancel}</AlertDialogCancel>
-            <AlertDialogAction onClick={() => navigate('/')}>
-              {t.onboarding.exitConfirm.confirm}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

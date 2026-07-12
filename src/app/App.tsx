@@ -75,7 +75,7 @@ const PathfinderStory = SHOW_LABS
 
 // Geo Entities Sandbox — dev-only surface for iterating on how geographic
 // entities (targets, friendlies, sensors, zones, POIs) are projected, styled,
-// and selected before the work lands in the real Cesium/Mapbox map layers.
+// and selected before the work lands in the real Cesium map layers.
 // Guarded by `import.meta.env.DEV` so it tree-shakes out of production.
 const GeoEntitiesSandbox = import.meta.env.DEV
   ? lazy(() => import("./components/geo-entities-sandbox/GeoEntitiesSandbox"))
@@ -132,6 +132,24 @@ const ThemeSandbox = import.meta.env.DEV
 
 // /theme-orange-sandbox is the same ThemeSandbox component booted with the
 // imported shadcn/tweakcn orange preset (see theme-sandbox/presets.ts).
+
+// Status Sandbox — dev-only design exploration for how entity status
+// (online / warning-error / offline) is communicated on the asset-panel
+// row and the map marker. Two finalist directions rendered side by
+// side against one simulated entity set, with grayscale / density /
+// glance-test stress toggles. Guarded by `import.meta.env.DEV` so it
+// tree-shakes out of production.
+const StatusSandbox = import.meta.env.DEV
+  ? lazy(() => import("./components/status-sandbox/StatusSandbox"))
+  : null;
+
+// Status v2 Sandbox — dev-only round-2 exploration: hostile markers by
+// ring *shape* (circle vs square vs diamond) and the collapsed 2-status
+// model (online / error-with-reason) vs today's 3-status one. Lean,
+// self-contained; reach it directly at /status-v2.
+const StatusV2Sandbox = import.meta.env.DEV
+  ? lazy(() => import("./components/status-v2/StatusV2Sandbox"))
+  : null;
 
 function PlaygroundFallback() {
   return (
@@ -437,6 +455,37 @@ export default function App() {
                   element={
                     <Suspense fallback={<PlaygroundFallback />}>
                       <ThemeSandbox preset="tweakcn-orange" />
+                    </Suspense>
+                  }
+                />
+              )}
+              {/*
+                Status Sandbox — DEV-only. Side-by-side exploration of the two
+                finalist entity-status communication designs (panel row + map
+                marker) against one simulated entity set. Reach it directly at
+                /status-sandbox.
+              */}
+              {StatusSandbox && (
+                <Route
+                  path="/status-sandbox"
+                  element={
+                    <Suspense fallback={<PlaygroundFallback />}>
+                      <StatusSandbox />
+                    </Suspense>
+                  }
+                />
+              )}
+              {/*
+                Status v2 Sandbox — DEV-only. Round-2 exploration: hostile
+                affiliation by ring shape + the 2-status (online / error)
+                model. Reach it directly at /status-v2.
+              */}
+              {StatusV2Sandbox && (
+                <Route
+                  path="/status-v2"
+                  element={
+                    <Suspense fallback={<PlaygroundFallback />}>
+                      <StatusV2Sandbox />
                     </Suspense>
                   }
                 />

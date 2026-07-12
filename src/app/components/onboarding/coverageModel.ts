@@ -91,8 +91,8 @@ export interface ThreatAxis {
 }
 
 /**
- * Default approach corridors toward `SITE`. West is the primary (wadi) axis,
- * matching the Wizard-of-Oz kit's planted weak ground axis.
+ * Default approach corridors toward `SITE`. West is the primary axis — at the
+ * Nice site it runs along the coastline, the natural low-altitude approach.
  */
 export const THREAT_AXES: ThreatAxis[] = [
   { id: 'north', bearingDeg: 0, weight: 1.0 },
@@ -107,28 +107,29 @@ export const ALPHA = 0.6;
 /**
  * Demo base location for the onboarding lab. Decoupled from the live tactical
  * map's `SITE_CENTER` so the demo can be staged anywhere with one edit — all
- * onboarding geometry (threat axes, risk zones, suggested layout, camera) is
- * derived relative to this point.
+ * onboarding geometry (threat axes, camera framing) is derived relative to
+ * this point.
  *
- * Currently set to the Mitzpe Ramon crater rim — the ~300 m cliffs of Makhtesh
- * Ramon drop away to the south, giving a spectacular canyon vista at the
- * near-ground camera that sells the "standing on the field" feel.
+ * Currently set to a desert facility in the central Arava valley (southern
+ * Israel). NOTE: Google Photorealistic 3D Tiles have no photogrammetry here —
+ * the tileset falls back to satellite-draped terrain, which still reads well
+ * from the cinematic altitudes we use.
  *
- * Alternatives worth recording at:
- *   - Golan / Mount Hermon foothills: { lat: 33.2540, lon: 35.7130 }, heading 0
- *   - Golan / Mount Bental lookout:   { lat: 33.1080, lon: 35.7820 }, heading 0
- *   - Original Jezreel valley site:   { lat: 32.4666, lon: 35.0013 }, heading 0
+ * Alternatives worth recording at (all with strong Google 3D photogrammetry):
+ *   - Nice Côte d'Azur Airport: { lat: 43.6584, lon: 7.2159 }, heading 150
+ *   - Monaco harbour:           { lat: 43.7350, lon: 7.4210 }, heading 0
+ *   - Athens / Piraeus:         { lat: 37.9430, lon: 23.6300 }, heading 90
  */
-export const ONBOARDING_SITE = { lat: 30.6088, lon: 34.8015 } as const;
+export const ONBOARDING_SITE = { lat: 30.667959803081146, lon: 35.26389645387763 } as const;
 
 export const SITE = ONBOARDING_SITE;
 
 /**
  * Heading (deg, 0=N) the cinematic hero camera faces. Tuned per site so the
- * opening frame looks toward the most dramatic terrain. At Mitzpe Ramon the
- * crater is to the south, so we face 180° to look out over the canyon.
+ * opening frame looks toward the most dramatic view. At the Arava site we face
+ * east: across the valley floor toward the Edom mountain wall on the far side.
  */
-export const SITE_HERO_HEADING_DEG = 180;
+export const SITE_HERO_HEADING_DEG = 90;
 
 export const AOI_RADIUS_M = 3000;
 export const GRID_CELL_M = 100;
@@ -200,68 +201,20 @@ export function angularDiffDeg(a: number, b: number): number {
   return d;
 }
 
-/** Steps of the onboarding flow, in order. */
-export type OnboardingStep =
-  | 'welcome'
-  | 'scanning'
-  | 'threats'
-  | 'review'
-  | 'refine'
-  | 'summary';
-export const ONBOARDING_STEPS: OnboardingStep[] = [
-  'welcome',
-  'scanning',
-  'threats',
-  'review',
-  'refine',
-  'summary',
-];
+/**
+ * Phases of the single-scene concept-video flow, in order:
+ *   intro     — cinematic slow orbit over the bare site + title card.
+ *   build     — free camera, asset dock open; drag assets, walls rise,
+ *               the score climbs live.
+ *   protected — one-way latch once the combined score crosses
+ *               {@link PROTECTED_THRESHOLD}: camera pulls back, the
+ *               "Base protected" banner appears. Building stays enabled.
+ */
+export type OnboardingPhase = 'intro' | 'build' | 'protected';
 
 /**
- * Steps that earn a progress dot. `scanning` is a transient auto-advancing
- * moment, so it never appears as a dot — the rail would flicker otherwise.
+ * Combined protection score (0..1) at which the scene flips to the
+ * `protected` payoff. Tuned so a sensible handful of assets (air detect +
+ * mitigate over the main corridors, some ground coverage) gets there.
  */
-export const VISIBLE_STEPS: OnboardingStep[] = [
-  'welcome',
-  'threats',
-  'review',
-  'refine',
-  'summary',
-];
-
-/**
- * A problematic area surfaced BEFORE any assets exist — the "why" behind the
- * suggested layout. Derived from the threat axes (placement-independent), so
- * it can be shown in the `threats` step to justify Kela's recommendation.
- */
-export interface ThreatZone {
-  id: string;
-  lat: number;
-  lon: number;
-  /** Approach bearing toward the protected centre (0=N, 90=E). */
-  bearingDeg: number;
-  severity: 'high' | 'medium';
-}
-
-/**
- * Representative risk markers, one per approach corridor, placed partway out
- * along each axis from the protected centre. Primary corridors (weight >= 1.6)
- * read as `high`. Kept deliberately sparse (one per axis) so the map shows a
- * clear threat picture, not a field of red dots.
- */
-export function getThreatZones(): ThreatZone[] {
-  const distM = AOI_RADIUS_M * 0.6;
-  return THREAT_AXES.map((axis) => {
-    const rad = (axis.bearingDeg * Math.PI) / 180;
-    const east = Math.sin(rad) * distM;
-    const north = Math.cos(rad) * distM;
-    const { lat, lon } = fromLocalMeters(east, north, SITE);
-    return {
-      id: `zone-${axis.id}`,
-      lat,
-      lon,
-      bearingDeg: axis.bearingDeg,
-      severity: axis.weight >= 1.6 ? ('high' as const) : ('medium' as const),
-    };
-  });
-}
+export const PROTECTED_THRESHOLD = 0.5;

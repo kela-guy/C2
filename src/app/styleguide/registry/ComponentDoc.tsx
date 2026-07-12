@@ -49,7 +49,13 @@ function TierChip({ tier }: { tier: ResolvedComponent['tier'] }) {
 function Hero({ c }: { c: ResolvedComponent }) {
   const hero = c.doc?.examples[0];
   if (!hero) return null;
-  return <ComponentPreview render={hero.render} code={c.doc?.usage ?? hero.code} />;
+  return (
+    <ComponentPreview
+      render={hero.render}
+      code={c.doc?.usage ?? hero.code}
+      stripComments={!c.doc?.usageKeepComments}
+    />
+  );
 }
 
 function AnatomySection({
@@ -192,9 +198,11 @@ export function ComponentDoc({
           </h1>
           <TierChip tier={c.tier} />
         </div>
-        <p className="max-w-[68ch] text-base leading-7 text-n-9" style={{ textWrap: 'pretty' }}>
-          {c.description}
-        </p>
+        {c.description && (
+          <p className="max-w-[68ch] text-base leading-7 text-n-9" style={{ textWrap: 'pretty' }}>
+            {c.description}
+          </p>
+        )}
         {c.parentId && (
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <ParentBacklink c={c} onNavigate={onNavigate} />

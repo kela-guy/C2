@@ -1,21 +1,19 @@
-import type { Detection } from '@/imports/ListOfSystems';
 import {
   resolveTargetSeverity,
   isUnclassifiedUnknown,
   UNKNOWN_GRAY,
   SEVERITY_COLOR,
   SEVERITY_PULSE,
+  type TargetStateInput,
 } from './urgency';
 import { MARKER_HEX } from './accentHex';
 
 export type Affiliation = 'friendly' | 'hostile' | 'possibleThreat' | 'neutral' | 'unknown';
 
-// NOTE: `alert`, `weaponPointing`, and `weaponLocked` are legacy states that
-// were only exercised by the Mapbox `TacticalMap.tsx` renderer (deleted in
-// cesium-parity Phase 9). The production Cesium
-// path (`CesiumTacticalMap.tsx`) does not drive them today — it uses
-// `default | hovered | selected | active | disabled | expired | jammer`. They
-// remain in the matrix so the styleguide can document the full design intent.
+// The full interaction set the production Cesium path drives. (Legacy
+// Mapbox-era states — `alert`, `weaponPointing`, `weaponLocked` — were
+// removed with the marker handoff cleanup; weapon urgency now lives in the
+// severity model, see `resolveTargetSeverity`.)
 export type InteractionState =
   | 'default'
   | 'hovered'
@@ -23,10 +21,7 @@ export type InteractionState =
   | 'active'
   | 'disabled'
   | 'expired'
-  | 'alert'
-  | 'jammer'
-  | 'weaponPointing'
-  | 'weaponLocked';
+  | 'jammer';
 
 export const INTERACTION_STATES: InteractionState[] = [
   'default',
@@ -35,10 +30,7 @@ export const INTERACTION_STATES: InteractionState[] = [
   'active',
   'disabled',
   'expired',
-  'alert',
   'jammer',
-  'weaponPointing',
-  'weaponLocked',
 ];
 
 export const AFFILIATIONS: Affiliation[] = ['friendly', 'hostile', 'possibleThreat', 'neutral', 'unknown'];
@@ -58,10 +50,7 @@ export const INTERACTION_STATE_LABELS: Record<InteractionState, string> = {
   active: 'Active / Engaged',
   disabled: 'Disabled / Offline',
   expired: 'Expired',
-  alert: 'Alert',
   jammer: 'Jammer',
-  weaponPointing: 'Weapon Pointing',
-  weaponLocked: 'Weapon Locked',
 };
 
 export interface MarkerStyle {
@@ -75,6 +64,13 @@ export interface MarkerStyle {
   ringWidth: number;
   ringOpacity: number;
   ringDash: 'solid' | 'dashed';
+  /**
+   * Ring silhouette. `circle` (default) is the shipped look; `square` and
+   * `diamond` are affiliation-shape auditions (`/status-v2` sandbox) so
+   * hostile detections can be told apart from own assets by geometry, not
+   * color alone. Optional so existing style literals stay valid.
+   */
+  ringShape?: 'circle' | 'square' | 'diamond';
   ringPulse: boolean;
   glyphColor: string;
   glyphOpacity: number;
@@ -224,22 +220,6 @@ const STATE_MATRIX: Record<InteractionState, (p: AffiliationPalette) => MarkerSt
     glyphOpacity: 0.4,
     markerScale: 1,
   }),
-  alert: (p) => ({
-    surfaceFill: p.surface,
-    surfaceOpacity: p.surfaceOpacity,
-    surfaceBlur: 1,
-    innerGlow: false,
-    innerGlowColor: MARKER_HEX.white,
-    innerGlowOpacity: 0,
-    ringColor: MARKER_HEX.hostile,
-    ringWidth: 2,
-    ringOpacity: 1,
-    ringDash: 'solid',
-    ringPulse: true,
-    glyphColor: MARKER_HEX.white,
-    glyphOpacity: 1,
-    markerScale: 1,
-  }),
   jammer: (p) => ({
     surfaceFill: p.surface,
     surfaceOpacity: p.surfaceOpacity,
@@ -253,38 +233,6 @@ const STATE_MATRIX: Record<InteractionState, (p: AffiliationPalette) => MarkerSt
     ringDash: 'solid',
     ringPulse: true,
     glyphColor: MARKER_HEX.friendly,
-    glyphOpacity: 1,
-    markerScale: 1,
-  }),
-  weaponPointing: () => ({
-    surfaceFill: MARKER_HEX.white,
-    surfaceOpacity: 0.1,
-    surfaceBlur: 1,
-    innerGlow: true,
-    innerGlowColor: MARKER_HEX.weaponWarning,
-    innerGlowOpacity: 0.4,
-    ringColor: MARKER_HEX.weaponWarning,
-    ringWidth: 2,
-    ringOpacity: 1,
-    ringDash: 'solid',
-    ringPulse: true,
-    glyphColor: MARKER_HEX.weaponWarning,
-    glyphOpacity: 1,
-    markerScale: 1,
-  }),
-  weaponLocked: () => ({
-    surfaceFill: MARKER_HEX.white,
-    surfaceOpacity: 0.1,
-    surfaceBlur: 1,
-    innerGlow: true,
-    innerGlowColor: MARKER_HEX.hostile,
-    innerGlowOpacity: 0.4,
-    ringColor: MARKER_HEX.hostile,
-    ringWidth: 2,
-    ringOpacity: 1,
-    ringDash: 'solid',
-    ringPulse: false,
-    glyphColor: MARKER_HEX.hostile,
     glyphOpacity: 1,
     markerScale: 1,
   }),
@@ -308,10 +256,9 @@ export function resolveMarkerStyle(
 }
 
 /**
- * Interaction subset that applies to a target marker. Tactical states
- * like `alert` / `jammer` / `weaponPointing` are deliberately omitted —
- * a target's "tactical urgency" now lives in its severity, not in the
- * marker's interaction state.
+ * Interaction subset that applies to a target marker. The `jammer`
+ * tactical state is deliberately omitted — a target's "tactical urgency"
+ * lives in its severity, not in the marker's interaction state.
  */
 export type TargetMarkerInteraction =
   | 'default'
@@ -327,7 +274,7 @@ export type TargetMarkerInteraction =
  * This mirrors the existing TacticalMap fallback logic so the visual
  * stays the same for callers that haven't migrated to richer IFF data.
  */
-function targetAffiliation(target: Detection): Affiliation {
+export function targetAffiliation(target: TargetStateInput): Affiliation {
   if (target.classifiedType === 'bird') return 'unknown';
   if (target.affiliation) return target.affiliation;
   if (target.entityStage === 'classified') return 'hostile';
@@ -336,7 +283,7 @@ function targetAffiliation(target: Detection): Affiliation {
 }
 
 /**
- * Resolve a marker style for a Detection under the unified urgency
+ * Resolve a marker style for a target state under the unified urgency
  * model. The marker speaks ONE urgency color — ring and glyph both
  * carry the same hue, so the operator never has to translate between
  * a "ring red" and a "glyph red" that mean different things.
@@ -355,7 +302,7 @@ function targetAffiliation(target: Detection): Affiliation {
  * regardless of upstream signals.
  */
 export function resolveTargetMarkerStyle(
-  target: Detection,
+  target: TargetStateInput,
   interaction: TargetMarkerInteraction = 'default',
 ): MarkerStyle {
   const affiliation = targetAffiliation(target);

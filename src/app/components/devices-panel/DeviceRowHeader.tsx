@@ -13,14 +13,14 @@
  * Show-on-map pinned to the outer edge.
  */
 
-import { memo, useEffect, useState } from 'react';
+import { memo, useEffect, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { spring } from '@/lib/springs';
 import { List } from '@/lib/icons/central';
 import { HEALTH_BADGE_CLASS, HEALTH_DOT_CLASS } from '@/primitives/HealthStatus';
 import { DotmSquare18 } from '@/app/components/ui/dotm-square-18';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip';
-import type { ConnectionState, Device } from './types';
+import type { ConnectionState, Device, DeviceStatusPresentation } from './types';
 import { resolveDeviceAction, type DeviceActionContext } from './deviceActions';
 import type { DeviceTypeConfig } from './deviceRegistry';
 import { DEVICE_HEALTH_VISUAL, getDeviceHealth, getDeviceHealthReason, getEffectiveDeviceHealth, getUnhealthyChildCount, type DeviceHealth } from './deviceHealth';
@@ -32,6 +32,8 @@ interface DeviceRowHeaderProps {
   cfg: DeviceTypeConfig;
   ctx: DeviceActionContext;
   connectionStateLabels: Record<ConnectionState, string>;
+  /** Design-audition overrides (`/status-sandbox`). Absent in production. */
+  statusPresentation?: DeviceStatusPresentation;
 }
 
 /**
@@ -47,7 +49,7 @@ const HEALTH_TONE: Record<DeviceHealth, { dot: string; badge: string | null }> =
   ok: { dot: HEALTH_DOT_CLASS.ok, badge: null },
 };
 
-export const DeviceRowHeader = memo(function DeviceRowHeader({ device, cfg, ctx, connectionStateLabels }: DeviceRowHeaderProps) {
+export const DeviceRowHeader = memo(function DeviceRowHeader({ device, cfg, ctx, connectionStateLabels, statusPresentation }: DeviceRowHeaderProps) {
   const { strings } = ctx;
   const nonOnline = device.connectionState !== 'online';
 
@@ -55,7 +57,9 @@ export const DeviceRowHeader = memo(function DeviceRowHeader({ device, cfg, ctx,
   // collapsed row reflects the unit's true state without expanding.
   const isComposite = cfg.capabilities.composite === true && (device.children?.length ?? 0) > 0;
   const health = isComposite ? getEffectiveDeviceHealth(device) : getDeviceHealth(device);
-  const healthVisual = DEVICE_HEALTH_VISUAL[health];
+  const healthVisual = statusPresentation?.neutralTile
+    ? DEVICE_HEALTH_VISUAL.ok
+    : DEVICE_HEALTH_VISUAL[health];
   const healthReason = getDeviceHealthReason(device, strings, connectionStateLabels);
   const connectionLabel = connectionStateLabels[device.connectionState];
 
@@ -92,7 +96,7 @@ export const DeviceRowHeader = memo(function DeviceRowHeader({ device, cfg, ctx,
 
   const tile = (
     <div
-      className={`relative w-8 h-8 rounded flex items-center justify-center shrink-0 transition-[background-color,box-shadow] duration-150 ease-out ${healthVisual.tile}`}
+      className={`relative w-8 h-8 rounded flex items-center justify-center shrink-0 transition-[background-color,box-shadow] duration-150 ease-out ${healthVisual.tile} ${statusPresentation?.tileClassName ?? ''}`}
       data-handoff-component="device-icon"
       data-health={health}
       {...(healthReason ? { role: 'status', 'aria-label': healthReason } : {})}
@@ -104,6 +108,7 @@ export const DeviceRowHeader = memo(function DeviceRowHeader({ device, cfg, ctx,
       />
       {/* No offline corner badge here — the OfflineChip in the actions
           cluster already carries the offline cue for the parent row. */}
+      {statusPresentation?.tileBadge}
     </div>
   );
 
@@ -164,6 +169,7 @@ export const DeviceRowHeader = memo(function DeviceRowHeader({ device, cfg, ctx,
         logsTone={logsTone}
         logsCount={issueCount}
         offlineLabel={health === 'offline' ? strings.healthOffline : null}
+        statusSlot={statusPresentation?.statusSlot}
       />
     </>
   );
@@ -181,6 +187,7 @@ function PrimaryCluster({
   logsTone,
   logsCount,
   offlineLabel,
+  statusSlot,
 }: {
   cfg: DeviceTypeConfig;
   ctx: DeviceActionContext;
@@ -188,6 +195,8 @@ function PrimaryCluster({
   logsCount: number;
   /** Non-null when the device is offline — renders the chip inline-start of Show-on-map. */
   offlineLabel: string | null;
+  /** Audition override: replaces the offline-chip slot, rendered for every state. */
+  statusSlot?: ReactNode;
 }) {
   // Offline rows keep only the channels that still make sense without a
   // connection: Logs (read history) and Show-on-map (recenter). Interactive
@@ -224,7 +233,7 @@ function PrimaryCluster({
       )}
       {/* Offline chip sits just inboard of Show-on-map: left of the icon in
           LTR, right of it in RTL (flex order follows the row direction). */}
-      {offlineLabel != null && <OfflineChip label={offlineLabel} />}
+      {statusSlot !== undefined ? statusSlot : offlineLabel != null && <OfflineChip label={offlineLabel} />}
       {center?.node}
     </div>
   );

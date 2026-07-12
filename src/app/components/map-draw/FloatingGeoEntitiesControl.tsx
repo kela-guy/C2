@@ -1,6 +1,7 @@
 /**
- * Floating Geo Entities control — the map's top-right entry point into
- * the geo-drawing flow.
+ * Floating Geo Entities control — the map's top-end entry point into
+ * the geo-drawing flow (top-right in LTR, top-left in RTL, where the
+ * docked panel owns the right edge).
  *
  * Shape: a unified TWO-STAGE strip (ported from the Floating Panel
  * sandbox V1).
@@ -51,7 +52,7 @@ import {
   TooltipTrigger,
 } from '@/app/components/ui/tooltip';
 import { MapPin, type IconProps } from '@/lib/icons/central';
-import { DirIsland } from '@/lib/direction/DirIsland';
+import { DirIsland, useIsRtl } from '@/lib/direction';
 import type { ComponentType, SVGProps } from 'react';
 import { CircleDrawIcon, LineDrawIcon, PolygonDrawIcon } from './icons';
 import { useMapDraw, type MapDrawTool } from './MapDrawProvider';
@@ -106,6 +107,7 @@ export function FloatingGeoEntitiesControl({
   onClosePanel,
 }: FloatingGeoEntitiesControlProps) {
   const { draw, drawTool, setDrawTool } = useMapDraw();
+  const isRtl = useIsRtl();
 
   // The tool shown on the closed chip AND the one a fresh draft begins
   // with. Defaults to Polygon; tracks the live engine tool whenever one
@@ -179,55 +181,79 @@ export function FloatingGeoEntitiesControl({
   // glyph), not on the container border.
   const anchorArmed = drawTool === selectedTool.id;
 
+  // The anchor cell — the selected tool's always-visible chip face.
+  const anchorSlot = (
+    <IconSlot
+      tool={selectedTool}
+      // The anchor is the current selection; mirror the engine's
+      // armed state so the chip highlights only when the tool is
+      // actually live. Clicking it re-arms the shown tool.
+      active={anchorArmed}
+      pendingHint={saveRequired}
+      onClick={() => chooseTool(selectedTool.id)}
+      reachable
+    />
+  );
+
+  const otherSlots = others.map((tool) => (
+    <IconSlot
+      key={tool.id}
+      tool={tool}
+      active={false}
+      blocked={saveRequired}
+      onClick={() => chooseTool(tool.id)}
+      reachable={open}
+    />
+  ));
+
   return (
     <TooltipProvider delayDuration={150}>
-      {/* Pin to LTR so flex order + justify-end stay stable in the RTL
-          app shell. Physical `right-3` keeps the strip on the map's
-          visual top-right; extras clip from the left when collapsed. */}
-      <DirIsland
-        direction="ltr"
-        className="pointer-events-auto absolute top-3 right-3 z-40"
-      >
-        <div
-          ref={rootRef}
-          role="toolbar"
-          aria-label="Geo Entities"
-          // Hover (and keyboard focus) drives the two-stage reveal: the
-          // strip expands while the pointer is over it and collapses the
-          // moment it leaves — so moving out onto the map to drop the
-          // first point closes the strip on its own.
-          onMouseEnter={() => setOpen(true)}
-          onMouseLeave={() => setOpen(false)}
-          onFocusCapture={() => setOpen(true)}
-          onBlur={handleBlur}
-          // `p-[2px]` + `gap-[2px]` = 2 px on every edge and between
-          // every cell. Open width = 2 + 4×24 + 3×2 + 2 = 106 px.
-          className={`flex h-7 items-center justify-end gap-[2px] overflow-hidden rounded-[2px] p-[2px] bg-black/70 shadow-[0_4px_12px_rgba(0,0,0,0.45)] ring-1 ring-inset ring-white/10 backdrop-blur-md transition-[width] duration-200 ease-out ${
-            open ? 'w-[106px]' : 'w-7'
-          }`}
-        >
-          {others.map((tool) => (
-            <IconSlot
-              key={tool.id}
-              tool={tool}
-              active={false}
-              blocked={saveRequired}
-              onClick={() => chooseTool(tool.id)}
-              reachable={open}
-            />
-          ))}
-          <IconSlot
-            tool={selectedTool}
-            // The anchor is the current selection; mirror the engine's
-            // armed state so the chip highlights only when the tool is
-            // actually live. Clicking it re-arms the shown tool.
-            active={anchorArmed}
-            pendingHint={saveRequired}
-            onClick={() => chooseTool(selectedTool.id)}
-            reachable
-          />
-        </div>
-      </DirIsland>
+      {/* The outer wrapper follows the APP direction so logical `end-3`
+          places the strip on the map's top-right in LTR and top-left in
+          RTL — in RTL the docked panel occupies the right edge and would
+          cover it. The inner DirIsland pins only the strip's CONTENTS to
+          LTR so the icon glyphs and gap math stay stable; the anchor cell
+          and grow direction mirror explicitly via `isRtl` below. */}
+      <div className="pointer-events-auto absolute top-3 end-3 z-40">
+        <DirIsland direction="ltr">
+          <div
+            ref={rootRef}
+            role="toolbar"
+            aria-label="Geo Entities"
+            // Hover (and keyboard focus) drives the two-stage reveal: the
+            // strip expands while the pointer is over it and collapses the
+            // moment it leaves — so moving out onto the map to drop the
+            // first point closes the strip on its own.
+            onMouseEnter={() => setOpen(true)}
+            onMouseLeave={() => setOpen(false)}
+            onFocusCapture={() => setOpen(true)}
+            onBlur={handleBlur}
+            // `p-[2px]` + `gap-[2px]` = 2 px on every edge and between
+            // every cell. Open width = 2 + 4×24 + 3×2 + 2 = 106 px.
+            // The anchor cell hugs the screen-edge side of the strip
+            // (right in LTR, left in RTL) so it never moves while the
+            // strip grows toward the map center: justify pins the row to
+            // that edge and the extras reveal on the opposite side.
+            className={`flex h-7 items-center ${
+              isRtl ? 'justify-start' : 'justify-end'
+            } gap-[2px] overflow-hidden rounded-[2px] p-[2px] bg-black/70 shadow-[0_4px_12px_rgba(0,0,0,0.45)] ring-1 ring-inset ring-white/10 backdrop-blur-md transition-[width] duration-200 ease-out ${
+              open ? 'w-[106px]' : 'w-7'
+            }`}
+          >
+            {isRtl ? (
+              <>
+                {anchorSlot}
+                {otherSlots}
+              </>
+            ) : (
+              <>
+                {otherSlots}
+                {anchorSlot}
+              </>
+            )}
+          </div>
+        </DirIsland>
+      </div>
     </TooltipProvider>
   );
 }

@@ -12,6 +12,11 @@ const dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(file
 
 const ANALYZE = process.env.ANALYZE === '1';
 
+// react-scan is opt-in: it instruments every React commit even when its
+// overlay is hidden, which taxes the default dev loop. Run
+// `REACT_SCAN=1 pnpm dev` to enable it (overlay shows with `?perf=1`).
+const REACT_SCAN = process.env.REACT_SCAN === '1';
+
 export default defineConfig(({ mode }) => {
   const isDev = mode === 'development';
   // `vercelToolbar()` serves the toolbar's client assets so PMs can pin
@@ -20,10 +25,9 @@ export default defineConfig(({ mode }) => {
   const plugins: PluginOption[] = [react(), tailwindcss(), cesium(), vercelToolbar()];
 
   // react-scan annotates every commit with a render-cause overlay in
-  // dev. We import its Vite plugin (which only takes effect during
-  // `vite dev`) and hide the overlay behind `?perf=1` (the package
-  // honors that automatically).
-  if (isDev) {
+  // dev. It is opt-in via `REACT_SCAN=1 pnpm dev` (the overlay itself
+  // shows with `?perf=1`, which the package honors automatically).
+  if (isDev && REACT_SCAN) {
     plugins.push(reactScan({ enable: true, autoDisplayNames: true }));
   }
 

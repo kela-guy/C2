@@ -10,6 +10,7 @@ export {
   SEVERITY_SURFACE_OPACITY,
   SEVERITY_PULSE,
   type Severity,
+  type TargetStateInput,
 } from './urgency';
 export { StatusChip, STATUS_CHIP_COLORS, type StatusChipColor } from './StatusChip';
 export {
@@ -47,7 +48,6 @@ export { MapMarker, type MapMarkerProps } from './MapMarker';
 export {
   CesiumMap,
   type CesiumMapProps,
-  type CesiumMarker,
   type CesiumHtmlMarker,
   type CesiumMapFlyTo,
   type CesiumPolyline,
@@ -75,6 +75,17 @@ export {
   HUMAN_BODY_PATH,
 } from './MapIcons';
 export {
+  resolveThreatGlyph,
+  droneRotationFromHeading,
+  type ThreatGlyphOptions,
+} from './markerGlyphs';
+export {
+  markerLayerClasses,
+  MARKER_LAYERS,
+  type MarkerLayerName,
+  type MarkerLayerClassOptions,
+} from './markerTailwind';
+export {
   type Affiliation,
   type InteractionState,
   type MarkerStyle,
@@ -92,5 +103,6 @@ export {
   resolveMarkerStyle,
   resolveTargetMarkerStyle,
   resolveAssetMarkerStyle,
+  targetAffiliation,
   headingToCompass,
 } from './markerStyles';

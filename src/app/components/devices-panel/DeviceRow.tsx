@@ -61,6 +61,7 @@ export const DeviceRow = memo(function DeviceRow({
   selectedChildId,
   connectionStateLabels = DEFAULT_CONNECTION_STATE_LABELS,
   strings = DEFAULT_DEVICE_PANEL_STRINGS,
+  statusPresentation,
 }: DeviceRowProps) {
   const cfg = DEVICE_REGISTRY[device.type];
   const draggable = !!cfg.capabilities.draggableToFeed;
@@ -186,6 +187,7 @@ export const DeviceRow = memo(function DeviceRow({
           cfg={cfg}
           ctx={ctx}
           connectionStateLabels={connectionStateLabels}
+          statusPresentation={statusPresentation}
         />
       </div>
 

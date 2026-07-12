@@ -7,7 +7,10 @@
  * cesium-parity Phase 9.
  */
 
-import { DRONE_PATH, MISSILE_PATH } from '@/primitives/MapIcons';
+// DroneIcon / MissileIcon are defined in the primitives layer (next to the
+// glyph resolver that routes to them) and re-exported here so existing
+// consumers keep importing every tactical glyph from one place.
+export { DroneIcon, MissileIcon } from '@/primitives/MapIcons';
 
 /**
  * Sensor (ECM/jam) tactical icon. `outlined` adds a black stroke for
@@ -82,39 +85,6 @@ export const RadarIcon = ({
     </svg>
   );
 };
-
-export const MissileIcon = ({ rotationDeg = 0, fill = '#15FFF6' }: { rotationDeg?: number; fill?: string }) => (
-  <svg
-    width="42"
-    height="30"
-    viewBox="0 0 42 30"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    style={{ transform: `rotate(${rotationDeg}deg)` }}
-  >
-    <path d={MISSILE_PATH} fill={fill} stroke="black"/>
-  </svg>
-);
-
-/** rotationDeg: 0 = nose to right (east). disabled = jammed state (greyed out). */
-export const DroneIcon = ({ rotationDeg = 0, disabled = false, color, size = 28 }: { rotationDeg?: number; disabled?: boolean; color?: string; size?: number }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 28 32"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className={`drop-shadow-lg transition-transform duration-150 ${disabled ? 'opacity-70' : ''}`}
-    style={{ transform: `rotate(${rotationDeg}deg)` }}
-  >
-    <path
-      d={DRONE_PATH}
-      fill={disabled ? '#6b7280' : color || '#15FFF6'}
-      stroke="#0a0a0a"
-      strokeWidth="1"
-    />
-  </svg>
-);
 
 export const DroneHiveIcon = ({
   size = 28,
@@ -279,3 +249,15 @@ export const GotchaIcon = ({
     </svg>
   );
 };
+
+/**
+ * Props shared by every friendly-asset tactical glyph above. `outlined`
+ * adds the black map-legibility stroke; tiles use the clean fill-only look.
+ */
+export interface AssetGlyphProps {
+  size?: number;
+  fill?: string;
+  active?: boolean;
+  outlined?: boolean;
+}
+
