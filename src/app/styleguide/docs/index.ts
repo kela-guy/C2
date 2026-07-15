@@ -46,6 +46,8 @@ import { cardFooterDockDoc } from './card-footer-dock.doc';
 import { filterBarDoc } from './filter-bar.doc';
 import { mapMarkersDoc } from './map-markers.doc';
 import { mapIconsDoc } from './map-icons.doc';
+import { deviceCardDoc } from './device-card.doc';
+import { devicesPanelDoc } from './devices-panel.doc';
 
 export const DOC_MODULES: Record<string, ComponentDocModule> = {
   [tokensDoc.id]: tokensDoc,
@@ -83,4 +85,6 @@ export const DOC_MODULES: Record<string, ComponentDocModule> = {
   [filterBarDoc.id]: filterBarDoc,
   [mapMarkersDoc.id]: mapMarkersDoc,
   [mapIconsDoc.id]: mapIconsDoc,
+  [deviceCardDoc.id]: deviceCardDoc,
+  [devicesPanelDoc.id]: devicesPanelDoc,
 };
