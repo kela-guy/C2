@@ -25,6 +25,7 @@ import { COMPONENTS, childrenOf, getComponent, groupsForTier, TIER_LABEL } from 
 import type { ComponentTier, ResolvedComponent } from './types';
 import { ComponentDoc } from './ComponentDoc';
 import { RING } from './docPrimitives';
+import { SpacingInspector } from './SpacingInspector';
 
 const TIERS: ComponentTier[] = ['foundation', 'primitive', 'block'];
 
@@ -245,6 +246,10 @@ export default function DesignSystem() {
           </div>
         </main>
       </div>
+
+      {/* Floating Figma-dev-mode spacing inspector — everything on the page
+          (nav, docs, previews) becomes hover-measurable while armed. */}
+      <SpacingInspector />
 
       <CommandDialog open={searchOpen} onOpenChange={setSearchOpen}>
         <CommandInput placeholder="Search components…" />

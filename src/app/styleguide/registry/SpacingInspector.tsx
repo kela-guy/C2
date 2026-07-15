@@ -1,19 +1,20 @@
 /**
- * Figma-dev-mode-style spacing inspector for styleguide docs.
+ * Figma-dev-mode-style spacing inspector for the design system pages.
  *
- * Wraps a live preview; toggling "Inspect spacing" arms a hit-test layer so
- * hovering any element inside the preview draws measurement overlays (padding
- * bands, flex/grid gap bands, a W × H badge) and clicking selects it, opening
- * a "Layer properties" panel: the nested Border → Padding box-model diagram
- * plus a copyable, layout-only CSS readout. Every value is read live from
+ * A floating "Inspect spacing" button (mounted once by the DesignSystem
+ * shell) arms a full-viewport hit-test layer: hovering ANY element on the
+ * page draws measurement overlays (padding bands, flex/grid gap bands, a
+ * W × H badge) and clicking selects it, opening a floating "Layer properties"
+ * panel — the nested Border → Padding box-model diagram plus a copyable,
+ * layout-only CSS readout. Every value is read live from
  * `getBoundingClientRect()` + `getComputedStyle()`, so the annotations always
- * describe the real rendered component — nothing is hand-maintained.
+ * describe the real rendered page — nothing is hand-maintained.
  *
- * While inspecting, pointer events are intercepted (like Figma), so the
- * component underneath doesn't react to clicks. Escape clears the selection,
- * then exits inspect mode.
+ * While inspecting, pointer events are intercepted (like Figma), so the page
+ * underneath doesn't react to clicks. Escape clears the selection, then
+ * exits inspect mode.
  */
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Ruler, X } from '@/lib/icons/central';
 import { SURFACE } from '@/primitives';
 import { cn } from '@/shared/components/ui/utils';
@@ -25,6 +26,9 @@ const PADDING_GREEN = 'rgba(10, 207, 131, 0.28)';
 const PADDING_GREEN_TEXT = '#7ce7bb';
 const GAP_MAGENTA = 'rgba(255, 36, 189, 0.24)';
 const GAP_MAGENTA_TEXT = '#ff8adf';
+
+/** Marks the inspector's own chrome so it never inspects itself. */
+const SELF_ATTR = 'data-spacing-inspector';
 
 interface Box {
   top: number;
@@ -47,20 +51,15 @@ interface Measurement {
 const px = (v: string) => Number.parseFloat(v) || 0;
 const round = (v: number) => Math.round(v * 10) / 10;
 
-function relBox(rect: DOMRect, root: DOMRect): Box {
-  return {
-    top: rect.top - root.top,
-    left: rect.left - root.left,
-    width: rect.width,
-    height: rect.height,
-  };
+/** Overlays live in a `fixed inset-0` layer, so viewport coords ARE layer coords. */
+function viewportBox(rect: DOMRect): Box {
+  return { top: rect.top, left: rect.left, width: rect.width, height: rect.height };
 }
 
-function measure(el: HTMLElement, rootEl: HTMLElement): Measurement {
-  const root = rootEl.getBoundingClientRect();
+function measure(el: HTMLElement): Measurement {
   const rect = el.getBoundingClientRect();
   const cs = getComputedStyle(el);
-  const box = relBox(rect, root);
+  const box = viewportBox(rect);
 
   const pt = px(cs.paddingTop);
   const pr = px(cs.paddingRight);
@@ -85,7 +84,7 @@ function measure(el: HTMLElement, rootEl: HTMLElement): Measurement {
   if (pl >= 0.5) pads.push({ top: sideTop, left: innerLeft, width: pl, height: sideHeight, label: `${round(pl)}` });
   if (pr >= 0.5) pads.push({ top: sideTop, left: innerLeft + innerWidth - pr, width: pr, height: sideHeight, label: `${round(pr)}` });
 
-  const gaps = measureGaps(el, cs, root);
+  const gaps = measureGaps(el, cs);
 
   return {
     outline: box,
@@ -100,7 +99,7 @@ function measure(el: HTMLElement, rootEl: HTMLElement): Measurement {
  * actual rects (not the `gap` value alone), so `justify-content` distribution
  * and grid tracks measure correctly too.
  */
-function measureGaps(el: HTMLElement, cs: CSSStyleDeclaration, root: DOMRect): LabeledBox[] {
+function measureGaps(el: HTMLElement, cs: CSSStyleDeclaration): LabeledBox[] {
   const display = cs.display;
   const isFlex = display.includes('flex');
   const isGrid = display.includes('grid');
@@ -125,8 +124,8 @@ function measureGaps(el: HTMLElement, cs: CSSStyleDeclaration, root: DOMRect): L
         const overlap = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
         if (gap >= 0.5 && overlap > 0) {
           out.push({
-            left: a.right - root.left,
-            top: Math.max(a.top, b.top) - root.top,
+            left: a.right,
+            top: Math.max(a.top, b.top),
             width: gap,
             height: overlap,
             label: `${round(gap)}`,
@@ -137,8 +136,8 @@ function measureGaps(el: HTMLElement, cs: CSSStyleDeclaration, root: DOMRect): L
         const overlap = Math.min(a.right, b.right) - Math.max(a.left, b.left);
         if (gap >= 0.5 && overlap > 0) {
           out.push({
-            left: Math.max(a.left, b.left) - root.left,
-            top: a.bottom - root.top,
+            left: Math.max(a.left, b.left),
+            top: a.bottom,
             width: overlap,
             height: gap,
             label: `${round(gap)}`,
@@ -150,55 +149,122 @@ function measureGaps(el: HTMLElement, cs: CSSStyleDeclaration, root: DOMRect): L
   return out;
 }
 
-/** `4px 8px 4px 0`-style shorthand, collapsing equal sides like the CSS cascade. */
-function shorthand(t: number, r: number, b: number, l: number): string {
-  const f = (v: number) => (v === 0 ? '0' : `${round(v)}px`);
-  if (t === r && r === b && b === l) return f(t);
-  if (t === b && r === l) return `${f(t)} ${f(r)}`;
-  return `${f(t)} ${f(r)} ${f(b)} ${f(l)}`;
+/** The default Tailwind spacing scale (token → px = token × 4). */
+const TW_SPACING = new Set([
+  0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 20, 24,
+  28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 72, 80, 96,
+]);
+
+/** px → Tailwind spacing suffix: `10` → `2.5`, `1` → `px`, off-scale → `[18px]`. */
+function twSpace(v: number): string {
+  if (v === 0) return '0';
+  if (v === 1) return 'px';
+  const scale = v / 4;
+  if (TW_SPACING.has(scale)) return String(scale);
+  return `[${round(v)}px]`;
 }
 
-interface CssLine {
-  prop: string;
-  value: string;
-}
+const TW_DISPLAY: Record<string, string> = {
+  block: 'block', 'inline-block': 'inline-block', inline: 'inline',
+  flex: 'flex', 'inline-flex': 'inline-flex',
+  grid: 'grid', 'inline-grid': 'inline-grid',
+  'flow-root': 'flow-root', contents: 'contents', none: 'hidden',
+  table: 'table', 'table-row': 'table-row', 'table-cell': 'table-cell',
+  'list-item': 'list-item',
+};
 
-/** Layout-only readout, mirroring the properties Figma dev mode surfaces. */
-function buildLayoutLines(cs: CSSStyleDeclaration): CssLine[] {
-  const lines: CssLine[] = [{ prop: 'display', value: cs.display }];
+const TW_ALIGN_ITEMS: Record<string, string> = {
+  'flex-start': 'items-start', start: 'items-start',
+  'flex-end': 'items-end', end: 'items-end',
+  center: 'items-center', baseline: 'items-baseline', stretch: 'items-stretch',
+};
+
+const TW_JUSTIFY: Record<string, string> = {
+  'flex-start': 'justify-start', start: 'justify-start',
+  'flex-end': 'justify-end', end: 'justify-end',
+  center: 'justify-center', 'space-between': 'justify-between',
+  'space-around': 'justify-around', 'space-evenly': 'justify-evenly',
+};
+
+const TW_ALIGN_SELF: Record<string, string> = {
+  'flex-start': 'self-start', start: 'self-start',
+  'flex-end': 'self-end', end: 'self-end',
+  center: 'self-center', stretch: 'self-stretch', baseline: 'self-baseline',
+};
+
+/**
+ * Layout-only readout as Tailwind utilities — the same properties Figma dev
+ * mode surfaces, phrased the way this codebase authors them. Values that
+ * don't sit on the default scale fall back to arbitrary-value classes.
+ */
+function buildTailwindClasses(cs: CSSStyleDeclaration): string[] {
+  const out: string[] = [];
   const isFlex = cs.display.includes('flex');
   const isGrid = cs.display.includes('grid');
 
+  out.push(TW_DISPLAY[cs.display] ?? `[display:${cs.display}]`);
+
+  // Padding, collapsed the way it's authored: p → px/py → per-side.
   const pt = px(cs.paddingTop);
   const pr = px(cs.paddingRight);
   const pb = px(cs.paddingBottom);
   const pl = px(cs.paddingLeft);
-  if (pt || pr || pb || pl) lines.push({ prop: 'padding', value: shorthand(pt, pr, pb, pl) });
+  if (pt || pr || pb || pl) {
+    if (pt === pr && pr === pb && pb === pl) {
+      out.push(`p-${twSpace(pt)}`);
+    } else if (pt === pb && pl === pr) {
+      if (pl) out.push(`px-${twSpace(pl)}`);
+      if (pt) out.push(`py-${twSpace(pt)}`);
+    } else {
+      if (pt) out.push(`pt-${twSpace(pt)}`);
+      if (pr) out.push(`pr-${twSpace(pr)}`);
+      if (pb) out.push(`pb-${twSpace(pb)}`);
+      if (pl) out.push(`pl-${twSpace(pl)}`);
+    }
+  }
 
-  if (isFlex && cs.flexDirection !== 'row') lines.push({ prop: 'flex-direction', value: cs.flexDirection });
+  if (isFlex && cs.flexDirection !== 'row') {
+    const dir: Record<string, string> = {
+      column: 'flex-col', 'column-reverse': 'flex-col-reverse', 'row-reverse': 'flex-row-reverse',
+    };
+    out.push(dir[cs.flexDirection] ?? `[flex-direction:${cs.flexDirection}]`);
+  }
   if ((isFlex || isGrid) && cs.alignItems !== 'normal' && cs.alignItems !== 'stretch') {
-    lines.push({ prop: 'align-items', value: cs.alignItems });
+    out.push(TW_ALIGN_ITEMS[cs.alignItems] ?? `[align-items:${cs.alignItems}]`);
   }
   if ((isFlex || isGrid) && cs.justifyContent !== 'normal' && cs.justifyContent !== 'flex-start') {
-    lines.push({ prop: 'justify-content', value: cs.justifyContent });
+    out.push(TW_JUSTIFY[cs.justifyContent] ?? `[justify-content:${cs.justifyContent}]`);
   }
 
   const rowGap = px(cs.rowGap);
   const colGap = px(cs.columnGap);
   if (rowGap || colGap) {
-    lines.push({ prop: 'gap', value: rowGap === colGap ? `${round(rowGap)}px` : `${round(rowGap)}px ${round(colGap)}px` });
+    if (rowGap === colGap) out.push(`gap-${twSpace(rowGap)}`);
+    else {
+      if (colGap) out.push(`gap-x-${twSpace(colGap)}`);
+      if (rowGap) out.push(`gap-y-${twSpace(rowGap)}`);
+    }
   }
 
   const grow = cs.flexGrow;
   const shrink = cs.flexShrink;
   const basis = cs.flexBasis;
   if (grow !== '0' || shrink !== '1' || (basis !== 'auto' && basis !== '0%')) {
-    const basisOut = basis === '0%' || basis === '0px' ? '0' : basis;
-    lines.push({ prop: 'flex', value: `${grow} ${shrink} ${basisOut}` });
+    if (grow === '1' && shrink === '1' && (basis === '0%' || basis === '0px')) out.push('flex-1');
+    else if (grow === '1' && shrink === '1' && basis === 'auto') out.push('flex-auto');
+    else if (grow === '0' && shrink === '0' && basis === 'auto') out.push('flex-none');
+    else if (grow === '1' && shrink === '0' && (basis === '0%' || basis === '0px')) out.push('flex-[1_0_0]');
+    else if (shrink === '0' && grow === '0' && (basis === 'auto' || basis === '0%')) out.push('shrink-0');
+    else {
+      const basisOut = basis === '0%' || basis === '0px' ? '0' : basis;
+      out.push(`flex-[${grow}_${shrink}_${basisOut}]`);
+    }
   }
-  if (cs.alignSelf !== 'auto' && cs.alignSelf !== 'normal') lines.push({ prop: 'align-self', value: cs.alignSelf });
+  if (cs.alignSelf !== 'auto' && cs.alignSelf !== 'normal') {
+    out.push(TW_ALIGN_SELF[cs.alignSelf] ?? `[align-self:${cs.alignSelf}]`);
+  }
 
-  return lines;
+  return out;
 }
 
 function boxStyle(b: Box): React.CSSProperties {
@@ -227,7 +293,7 @@ function BandLabel({ box, color, text }: { box: Box; color: string; text: string
 
 function OverlayLayer({ m, selected }: { m: Measurement; selected: boolean }) {
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 z-40" dir="ltr">
+    <div aria-hidden {...{ [SELF_ATTR]: true }} className="pointer-events-none fixed inset-0 z-[96]" dir="ltr">
       {m.pads.map((p, i) => (
         <div key={`p${i}`} className="absolute" style={{ ...boxStyle(p), backgroundColor: PADDING_GREEN }} />
       ))}
@@ -320,29 +386,23 @@ function BoxModelDiagram({ el }: { el: HTMLElement }) {
   );
 }
 
-/** Numbered, syntax-tinted layout readout with a copy affordance. */
-function LayoutCssBlock({ lines }: { lines: CssLine[] }) {
-  const cssText = lines.map((l) => `${l.prop}: ${l.value};`).join('\n');
+/** Tailwind-class layout readout with a copy affordance (copies one class string). */
+function LayoutTwBlock({ classes }: { classes: string[] }) {
+  const classText = classes.join(' ');
   return (
     <div>
       <div className="mb-1.5 flex items-center justify-between">
         <span className="text-xs font-medium text-n-10">Layout</span>
-        <CopyButton text={cssText} label="Copy layout CSS" />
+        <CopyButton text={classText} label="Copy Tailwind classes" />
       </div>
-      <div className={cn('overflow-x-auto rounded-lg px-3 py-2.5', RING)} style={{ backgroundColor: SURFACE.level1 }} dir="ltr">
-        <ol className="font-mono text-[11px] leading-5">
-          {lines.map((l, i) => (
-            <li key={l.prop} className="flex gap-2 whitespace-nowrap">
-              <span className="w-4 select-none text-right text-n-7 tabular-nums">{i + 1}</span>
-              <span>
-                <span className="text-n-10">{l.prop}</span>
-                <span className="text-n-8">: </span>
-                <span className="text-pink-400">{l.value}</span>
-                <span className="text-n-8">;</span>
-              </span>
-            </li>
+      <div className={cn('rounded-lg px-3 py-2.5', RING)} style={{ backgroundColor: SURFACE.level1 }} dir="ltr">
+        <div className="flex flex-wrap gap-x-1.5 gap-y-1 font-mono text-[11px] leading-5">
+          {classes.map((c) => (
+            <span key={c} className="rounded bg-white/[0.05] px-1 text-pink-400">
+              {c}
+            </span>
           ))}
-        </ol>
+        </div>
       </div>
     </div>
   );
@@ -352,7 +412,11 @@ function LayerPropertiesPanel({ el, onClear }: { el: HTMLElement; onClear: () =>
   const tag = el.tagName.toLowerCase();
   return (
     <div
-      className={cn('w-[240px] shrink-0 space-y-3 rounded-xl p-3', RING)}
+      {...{ [SELF_ATTR]: true }}
+      className={cn(
+        'fixed bottom-20 right-5 z-[97] max-h-[70vh] w-[250px] space-y-3 overflow-y-auto rounded-xl p-3 shadow-[0_8px_32px_rgba(0,0,0,0.5)]',
+        RING,
+      )}
       style={{ backgroundColor: SURFACE.level0 }}
       dir="ltr"
     >
@@ -371,7 +435,7 @@ function LayerPropertiesPanel({ el, onClear }: { el: HTMLElement; onClear: () =>
         </button>
       </div>
       <BoxModelDiagram el={el} />
-      <LayoutCssBlock lines={buildLayoutLines(getComputedStyle(el))} />
+      <LayoutTwBlock classes={buildTailwindClasses(getComputedStyle(el))} />
     </div>
   );
 }
@@ -383,95 +447,131 @@ interface OverlaySnapshot {
   panelEl: HTMLElement | null;
 }
 
-export function SpacingInspector({
-  children,
-  frameless = false,
-}: {
-  children: React.ReactNode;
-  /**
-   * Skip the inspector's own surface (ring, background, padding) — for
-   * embedding inside a container that already provides the preview frame,
-   * e.g. a doc hero's `ComponentPreview`.
-   */
-  frameless?: boolean;
-}) {
-  const contentRef = useRef<HTMLDivElement>(null);
-  const captureRef = useRef<HTMLDivElement>(null);
+/**
+ * Floating page-level inspector. Mount once per page (the DesignSystem shell
+ * does); everything rendered on the page becomes inspectable.
+ */
+export function SpacingInspector() {
   const [active, setActive] = useState(false);
-  const [hoverEl, setHoverEl] = useState<HTMLElement | null>(null);
-  const [selectedEl, setSelectedEl] = useState<HTMLElement | null>(null);
-  // Bumped by the ResizeObserver so overlay geometry re-derives after the
-  // wrapped component animates or reflows.
-  const [measureTick, setMeasureTick] = useState(0);
   const [snapshot, setSnapshot] = useState<OverlaySnapshot | null>(null);
+  // Hover/selection live in refs: they're DOM handles only read by event
+  // callbacks, and every visual update flows through `refresh()` below.
+  const hoverRef = useRef<HTMLElement | null>(null);
+  const selectedRef = useRef<HTMLElement | null>(null);
+
+  // Re-derives the overlay geometry from the current hover/selection. Called
+  // from event callbacks only (pointer, scroll, resize, ResizeObserver), with
+  // stale-element guards — the page may unmount nodes while they're held.
+  const refresh = useCallback(() => {
+    const liveHover = hoverRef.current && document.contains(hoverRef.current) ? hoverRef.current : null;
+    const liveSelected =
+      selectedRef.current && document.contains(selectedRef.current) ? selectedRef.current : null;
+    const measuredEl = liveHover ?? liveSelected;
+    setSnapshot({
+      m: measuredEl ? measure(measuredEl) : null,
+      isSelected: measuredEl !== null && measuredEl === liveSelected,
+      panelEl: liveSelected,
+    });
+  }, []);
 
   const deactivate = useCallback(() => {
+    hoverRef.current = null;
+    selectedRef.current = null;
     setActive(false);
-    setHoverEl(null);
-    setSelectedEl(null);
+    setSnapshot(null);
   }, []);
 
   useEffect(() => {
     if (!active) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
-      if (selectedEl) setSelectedEl(null);
-      else deactivate();
+      if (selectedRef.current) {
+        selectedRef.current = null;
+        refresh();
+      } else {
+        deactivate();
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [active, selectedEl, deactivate]);
+  }, [active, deactivate, refresh]);
 
+  // Keep the overlays glued to the page while it scrolls, resizes, or
+  // reflows under the frozen pointer state.
   useEffect(() => {
-    if (!active || !contentRef.current) return;
-    const bump = () => setMeasureTick((t) => t + 1);
-    const ro = new ResizeObserver(bump);
-    ro.observe(contentRef.current);
-    if (hoverEl) ro.observe(hoverEl);
-    if (selectedEl) ro.observe(selectedEl);
-    window.addEventListener('resize', bump);
-    window.addEventListener('scroll', bump, true);
+    if (!active) return;
+    const ro = new ResizeObserver(refresh);
+    ro.observe(document.body);
+    window.addEventListener('resize', refresh);
+    window.addEventListener('scroll', refresh, true);
     return () => {
       ro.disconnect();
-      window.removeEventListener('resize', bump);
-      window.removeEventListener('scroll', bump, true);
+      window.removeEventListener('resize', refresh);
+      window.removeEventListener('scroll', refresh, true);
     };
-  }, [active, hoverEl, selectedEl]);
+  }, [active, refresh]);
 
-  // The capture layer sits on top of the preview and owns hit-testing, so the
-  // wrapped component never sees clicks while inspecting (Figma behavior).
+  // The capture layer covers the viewport and owns hit-testing, so the page
+  // never sees clicks while inspecting (Figma behavior). The inspector's own
+  // chrome (button, panel, overlays) is excluded via SELF_ATTR.
   const pick = useCallback((clientX: number, clientY: number): HTMLElement | null => {
-    const root = contentRef.current;
-    if (!root) return null;
     for (const el of document.elementsFromPoint(clientX, clientY)) {
-      if (el === captureRef.current) continue;
-      if (el !== root && root.contains(el)) return el as HTMLElement;
+      if (!(el instanceof HTMLElement)) continue;
+      if (el.closest(`[${SELF_ATTR}]`)) continue;
+      if (el === document.body || el === document.documentElement) continue;
+      return el;
     }
     return null;
   }, []);
 
-  // All DOM reads happen here (never in render): derive the overlay geometry
-  // after layout, with stale-element guards — the wrapped demo may unmount
-  // nodes (collapse, conditional rendering) while they're hovered/selected.
-  useLayoutEffect(() => {
-    if (!active || !contentRef.current) {
-      setSnapshot(null);
-      return;
-    }
-    const root = contentRef.current;
-    const liveHover = hoverEl && root.contains(hoverEl) ? hoverEl : null;
-    const liveSelected = selectedEl && root.contains(selectedEl) ? selectedEl : null;
-    const measuredEl = liveHover ?? liveSelected;
-    setSnapshot({
-      m: measuredEl ? measure(measuredEl, root) : null,
-      isSelected: measuredEl !== null && measuredEl === liveSelected,
-      panelEl: liveSelected,
-    });
-  }, [active, hoverEl, selectedEl, measureTick]);
-
   return (
-    <div className="w-full space-y-3" dir="ltr">
-      <div className="flex flex-wrap items-center justify-center gap-3">
+    <>
+      {active && (
+        <div
+          {...{ [SELF_ATTR]: true }}
+          className="fixed inset-0 z-[95] cursor-crosshair"
+          onMouseMove={(e) => {
+            hoverRef.current = pick(e.clientX, e.clientY);
+            refresh();
+          }}
+          onMouseLeave={() => {
+            hoverRef.current = null;
+            refresh();
+          }}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            selectedRef.current = pick(e.clientX, e.clientY);
+            refresh();
+          }}
+        />
+      )}
+
+      {active && snapshot?.m && <OverlayLayer m={snapshot.m} selected={snapshot.isSelected} />}
+
+      {active && snapshot?.panelEl && (
+        <LayerPropertiesPanel
+          el={snapshot.panelEl}
+          onClear={() => {
+            selectedRef.current = null;
+            refresh();
+          }}
+        />
+      )}
+
+      <div
+        {...{ [SELF_ATTR]: true }}
+        className="fixed bottom-5 right-5 z-[98] flex items-center gap-3"
+        dir="ltr"
+      >
+        {active && (
+          <span
+            className={cn('rounded-lg px-3 py-1.5 text-xs text-n-9', RING)}
+            style={{ backgroundColor: SURFACE.level0 }}
+          >
+            Hover to measure · click to select · Esc to exit
+          </span>
+        )}
         <button
           type="button"
           onClick={() => (active ? deactivate() : setActive(true))}
@@ -480,47 +580,12 @@ export function SpacingInspector({
             'inline-flex h-9 items-center gap-2 rounded-lg px-4 text-sm font-semibold text-white transition-[filter,box-shadow,transform] duration-150 ease-out hover:brightness-110 active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring',
             active && 'ring-2 ring-sky-300/60',
           )}
-          style={{ backgroundColor: SELECT_BLUE, boxShadow: '0 1px 2px rgba(0,0,0,0.4)' }}
+          style={{ backgroundColor: SELECT_BLUE, boxShadow: '0 4px 16px rgba(0,0,0,0.45)' }}
         >
           <Ruler size={15} aria-hidden="true" />
           {active ? 'Done inspecting' : 'Inspect spacing'}
         </button>
-        {active && (
-          <span className="text-xs text-n-9">
-            Hover to measure · click to select · Esc to exit
-          </span>
-        )}
       </div>
-
-      <div className="flex flex-wrap items-start gap-4">
-        <div
-          className={cn('relative min-w-0 flex-1', !frameless && cn('rounded-xl p-8', RING))}
-          style={frameless ? undefined : { backgroundColor: SURFACE.level0 }}
-        >
-          {/* Mirrors ComponentPreview's flex centering so heroes keep their
-              natural width whether or not the inspector wraps them. */}
-          <div ref={contentRef} className="relative flex w-full justify-center">
-            {children}
-            {snapshot?.m && <OverlayLayer m={snapshot.m} selected={snapshot.isSelected} />}
-          </div>
-          {active && (
-            <div
-              ref={captureRef}
-              className="absolute inset-0 z-50 cursor-crosshair"
-              onMouseMove={(e) => setHoverEl(pick(e.clientX, e.clientY))}
-              onMouseLeave={() => setHoverEl(null)}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setSelectedEl(pick(e.clientX, e.clientY));
-              }}
-            />
-          )}
-        </div>
-        {active && snapshot?.panelEl && (
-          <LayerPropertiesPanel el={snapshot.panelEl} onClear={() => setSelectedEl(null)} />
-        )}
-      </div>
-    </div>
+    </>
   );
 }

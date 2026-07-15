@@ -9,7 +9,6 @@ import { useState } from 'react';
 import { DevicesPanel, type Device } from '@/shared/components/DevicesPanel';
 import { LAYOUT_TOKENS } from '@/primitives';
 import devicesPanelImplSrc from '@/app/components/devices-panel/DevicesPanelImpl.tsx?raw';
-import { SpacingInspector } from '../registry/SpacingInspector';
 import { DEVICE_DOC_FLEET } from './device-card.doc';
 import type { ComponentDocModule } from '../registry/types';
 
@@ -79,20 +78,6 @@ export const devicesPanelDoc: ComponentDocModule = {
       title: 'Empty state',
       render: () => <PanelDemo devices={[]} height={260} />,
       code: `<DevicesPanel devices={[]} open onClose={close} onFlyTo={flyTo} />`,
-    },
-    {
-      id: 'spacing',
-      title: 'Spacing',
-      render: () => (
-        <SpacingInspector>
-          <PanelDemo devices={DEVICE_DOC_FLEET.slice(0, 5)} height={420} />
-        </SpacingInspector>
-      ),
-      code: `import { SpacingInspector } from "@/app/styleguide/registry/SpacingInspector"
-
-<SpacingInspector>
-  <DevicesPanel devices={devices} open onClose={close} onFlyTo={flyTo} />
-</SpacingInspector>`,
     },
   ],
 };
