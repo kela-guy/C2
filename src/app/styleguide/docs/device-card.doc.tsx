@@ -5,9 +5,9 @@
  * adapted from the devices-lab mock set so every health tier and device
  * family is represented without importing sandbox modules.
  *
- * Includes a Figma-dev-mode Spacing example: the row wrapped in
+ * The hero (like every registry hero) ships with the Figma-dev-mode
  * `SpacingInspector`, so developers can hover/click to read the real padding,
- * gap, and size values straight off the rendered component.
+ * gap, and size values straight off the rendered row.
  */
 import { useState } from 'react';
 import {
@@ -29,7 +29,6 @@ import { gotchaUnitsToDevices } from '@/app/components/gotcha/gotchaUnitsToDevic
 import deviceRowSrc from '@/app/components/devices-panel/DeviceRow.tsx?raw';
 import deviceRegistrySrc from '@/app/components/devices-panel/deviceRegistry.ts?raw';
 import deviceHealthSrc from '@/app/components/devices-panel/deviceHealth.ts?raw';
-import { SpacingInspector } from '../registry/SpacingInspector';
 import type { ComponentDocModule } from '../registry/types';
 
 const noop = () => {};
@@ -218,8 +217,7 @@ export const deviceCardDoc: ComponentDocModule = {
     {
       id: 'expanded',
       title: 'Expanded',
-      description:
-        'Full anatomy: header (health tile, name, primary cluster), the ordered stats grid from DEVICE_REGISTRY, and the footer action bar resolved via resolveDeviceAction.',
+      // Hero — the registry shell wraps every hero in the spacing inspector.
       render: () => (
         <RowFrame>
           <DemoRow device={camNominal} defaultExpanded />
@@ -229,23 +227,17 @@ export const deviceCardDoc: ComponentDocModule = {
     {
       id: 'collapsed',
       title: 'Collapsed',
-      description:
-        'Header only — the worst-wins health tile, name, metric line, and the always-visible primary cluster (Show-on-map plus the per-type On/Off).',
       render: () => <RowStack devices={[camNominal, speaker, floodlight]} />,
       code: `<DeviceRow device={device} isExpanded={false} onToggle={toggle} onHover={setHovered} onFlyTo={flyTo} />`,
     },
     {
       id: 'health-states',
       title: 'Health states',
-      description:
-        'The tile rolls up status, operationalStatus, connectionState, and open errors worst-wins (getDeviceHealth): ok, warning (degraded link), error (malfunction + open errors), and offline.',
       render: () => <RowStack devices={[camNominal, radarWarn, droneError, camOffline]} />,
     },
     {
       id: 'device-types',
       title: 'Per-type controls',
-      description:
-        'Nothing branches on device.type — DEVICE_REGISTRY declares each family\u2019s capabilities and action slots. Speaker shows the now-playing readout, floodlight its On/Off segmented, ECM the destructive jam split-button, and the Gotcha effector renders as a composite parent with nested sensor children.',
       render: () => (
         <RowFrame>
           <div className="flex flex-col divide-y divide-white/[0.06]">
@@ -256,24 +248,6 @@ export const deviceCardDoc: ComponentDocModule = {
           </div>
         </RowFrame>
       ),
-    },
-    {
-      id: 'spacing',
-      title: 'Spacing',
-      description:
-        'Figma-dev-mode measurements read live off the rendered row: hover any element to see its padding (green), flex/grid gaps (magenta), and size; click to open Layer properties with the box model and a copyable layout readout. Canonical values — header px-4 py-2.5 gap-2.5 (16/10/10), stats grid px-4 py-3 gap-x-4 gap-y-5, footer px-2 py-1.5 gap-2, health tile 32 × 32.',
-      render: () => (
-        <SpacingInspector>
-          <RowFrame width={380}>
-            <DemoRow device={camNominal} defaultExpanded />
-          </RowFrame>
-        </SpacingInspector>
-      ),
-      code: `import { SpacingInspector } from "@/app/styleguide/registry/SpacingInspector"
-
-<SpacingInspector>
-  <DeviceRow device={device} isExpanded onToggle={toggle} onHover={setHovered} onFlyTo={flyTo} />
-</SpacingInspector>`,
     },
   ],
   edgeCases: [

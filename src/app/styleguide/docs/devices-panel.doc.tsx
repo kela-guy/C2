@@ -72,23 +72,17 @@ export const devicesPanelDoc: ComponentDocModule = {
     {
       id: 'panel',
       title: 'Panel',
-      description:
-        'Full interactive panel — the device breakdown by type. Groups are computed from each device\u2019s type with per-group counts; try searching, isolating a type via the filter, expanding rows, and toggling a floodlight or speaker.',
       render: () => <PanelDemo devices={DEVICE_DOC_FLEET} />,
     },
     {
       id: 'empty',
       title: 'Empty state',
-      description:
-        'When no devices match the current search or type filter, the list area shows the no-matches placeholder and the header count reads 0.',
       render: () => <PanelDemo devices={[]} height={260} />,
       code: `<DevicesPanel devices={[]} open onClose={close} onFlyTo={flyTo} />`,
     },
     {
       id: 'spacing',
       title: 'Spacing',
-      description:
-        'Inspect the panel chrome like Figma dev mode: hover the header, group headers, and rows to read live padding and gap values; click to open the box model and layout readout.',
       render: () => (
         <SpacingInspector>
           <PanelDemo devices={DEVICE_DOC_FLEET.slice(0, 5)} height={420} />

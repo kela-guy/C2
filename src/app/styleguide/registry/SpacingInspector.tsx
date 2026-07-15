@@ -383,7 +383,18 @@ interface OverlaySnapshot {
   panelEl: HTMLElement | null;
 }
 
-export function SpacingInspector({ children }: { children: React.ReactNode }) {
+export function SpacingInspector({
+  children,
+  frameless = false,
+}: {
+  children: React.ReactNode;
+  /**
+   * Skip the inspector's own surface (ring, background, padding) — for
+   * embedding inside a container that already provides the preview frame,
+   * e.g. a doc hero's `ComponentPreview`.
+   */
+  frameless?: boolean;
+}) {
   const contentRef = useRef<HTMLDivElement>(null);
   const captureRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(false);
@@ -460,32 +471,35 @@ export function SpacingInspector({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="w-full space-y-3" dir="ltr">
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center justify-center gap-3">
         <button
           type="button"
           onClick={() => (active ? deactivate() : setActive(true))}
           aria-pressed={active}
           className={cn(
-            'inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring',
-            RING,
-            active ? 'text-white' : 'text-n-11 hover:text-n-12',
+            'inline-flex h-9 items-center gap-2 rounded-lg px-4 text-sm font-semibold text-white transition-[filter,box-shadow,transform] duration-150 ease-out hover:brightness-110 active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring',
+            active && 'ring-2 ring-sky-300/60',
           )}
-          style={{ backgroundColor: active ? SELECT_BLUE : SURFACE.level1 }}
+          style={{ backgroundColor: SELECT_BLUE, boxShadow: '0 1px 2px rgba(0,0,0,0.4)' }}
         >
-          <Ruler size={14} aria-hidden="true" />
-          Inspect spacing
+          <Ruler size={15} aria-hidden="true" />
+          {active ? 'Done inspecting' : 'Inspect spacing'}
         </button>
-        <span className="text-xs text-n-9">
-          {active ? 'Hover to measure · click to select · Esc to exit' : 'Toggle to measure padding, gaps, and sizes like Figma dev mode.'}
-        </span>
+        {active && (
+          <span className="text-xs text-n-9">
+            Hover to measure · click to select · Esc to exit
+          </span>
+        )}
       </div>
 
       <div className="flex flex-wrap items-start gap-4">
         <div
-          className={cn('relative min-w-0 flex-1 rounded-xl p-8', RING)}
-          style={{ backgroundColor: SURFACE.level0 }}
+          className={cn('relative min-w-0 flex-1', !frameless && cn('rounded-xl p-8', RING))}
+          style={frameless ? undefined : { backgroundColor: SURFACE.level0 }}
         >
-          <div ref={contentRef} className="relative">
+          {/* Mirrors ComponentPreview's flex centering so heroes keep their
+              natural width whether or not the inspector wraps them. */}
+          <div ref={contentRef} className="relative flex w-full justify-center">
             {children}
             {snapshot?.m && <OverlayLayer m={snapshot.m} selected={snapshot.isSelected} />}
           </div>

@@ -19,6 +19,7 @@ import {
   EdgeCaseGrid,
   RING,
 } from './docPrimitives';
+import { SpacingInspector } from './SpacingInspector';
 import { cn } from '@/shared/components/ui/utils';
 import { SURFACE } from '@/primitives';
 
@@ -51,7 +52,10 @@ function Hero({ c }: { c: ResolvedComponent }) {
   if (!hero) return null;
   return (
     <ComponentPreview
-      render={hero.render}
+      // Every hero ships with the Figma-dev-mode spacing inspector inline, so
+      // developers can read live padding/gap/size measurements off the first
+      // preview of any component page without per-doc wiring.
+      render={() => <SpacingInspector frameless>{hero.render()}</SpacingInspector>}
       code={c.doc?.usage ?? hero.code}
       stripComments={!c.doc?.usageKeepComments}
     />
