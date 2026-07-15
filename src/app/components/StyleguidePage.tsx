@@ -863,9 +863,7 @@ function GotchaCriticalAlertDemo() {
 /** Sector / ring colour legend — colours come straight from the production rule. */
 const GOTCHA_SECTOR_LEGEND: { label: string; color: string; note: string }[] = [
   { label: 'Healthy', color: gotchaSectorColor('ok'), note: 'friendly cyan — hidden at rest' },
-  { label: 'Warning', color: gotchaSectorColor('warning'), note: 'always drawn' },
-  { label: 'Error / blind', color: gotchaSectorColor('error'), note: 'always drawn' },
-  { label: 'Offline', color: gotchaSectorColor('offline'), note: 'neutral, known-absent' },
+  { label: 'Error / blind', color: gotchaSectorColor('error'), note: 'red — the only trouble tier' },
 ];
 
 /** Map marker + 120-degree sector colour legend for the Gotcha effector. */
@@ -1166,11 +1164,9 @@ function DeviceElementsCatalog() {
   );
 }
 
-/** Worst-wins tone palette, mirroring `DeviceRowHeader`'s `HEALTH_TONE`. */
+/** Binary tone palette, mirroring `DeviceRowHeader`'s `HEALTH_TONE`. */
 const STYLEGUIDE_HEALTH_TONE: Record<DeviceHealth, { dot: string; badge: string | null }> = {
   error: { dot: HEALTH_DOT_CLASS.error, badge: HEALTH_BADGE_CLASS.error },
-  warning: { dot: HEALTH_DOT_CLASS.warning, badge: HEALTH_BADGE_CLASS.warning },
-  offline: { dot: HEALTH_DOT_CLASS.offline, badge: null },
   ok: { dot: HEALTH_DOT_CLASS.ok, badge: null },
 };
 
@@ -1271,19 +1267,19 @@ const STYLEGUIDE_HEALTH_TIP_SCENARIOS: HealthTipScenario[] = [
     he: { severity: 'קריטי', reason: 'תקלה' },
   },
   {
-    label: 'Warning · battery reason + connection',
-    tone: 'warning',
+    label: 'Error · battery reason + connection',
+    tone: 'error',
     errorCount: 1,
-    connectionColor: 'orange',
-    en: { severity: 'Warning', reason: 'Battery 34%', connection: 'Warning' },
-    he: { severity: 'אזהרה', reason: 'סוללה 34%', connection: 'אזהרה' },
+    connectionColor: 'red',
+    en: { severity: 'Errors', reason: 'Battery 18%', connection: 'Error' },
+    he: { severity: 'שגיאות', reason: 'סוללה 18%', connection: 'שגיאה' },
   },
   {
-    label: 'Offline · disconnected (gray chip, no badge)',
-    tone: 'offline',
-    connectionColor: 'gray',
-    en: { severity: 'Offline', reason: 'Disconnected', connection: 'Offline' },
-    he: { severity: 'לא מקוון', reason: 'נותק החיבור', connection: 'לא מקוון' },
+    label: 'Error · disconnected ("Offline" is the reason)',
+    tone: 'error',
+    connectionColor: 'red',
+    en: { severity: 'Errors', reason: 'Disconnected', connection: 'Offline' },
+    he: { severity: 'שגיאות', reason: 'נותק החיבור', connection: 'לא מקוון' },
   },
   {
     label: 'OK · no fence (header-only, minimal)',
@@ -1309,10 +1305,10 @@ const STYLEGUIDE_HEALTH_TIP_SCENARIOS: HealthTipScenario[] = [
   },
   {
     label: 'Missing reason + online (no fence, no divider)',
-    tone: 'warning',
+    tone: 'error',
     errorCount: 3,
-    en: { severity: 'Warning' },
-    he: { severity: 'אזהרה' },
+    en: { severity: 'Errors' },
+    he: { severity: 'שגיאות' },
   },
   {
     label: 'Long severity label vs badge (truncate test)',
@@ -1324,11 +1320,11 @@ const STYLEGUIDE_HEALTH_TIP_SCENARIOS: HealthTipScenario[] = [
   },
   {
     label: 'Connection-only fence (no reason)',
-    tone: 'warning',
+    tone: 'error',
     errorCount: 1,
-    connectionColor: 'orange',
-    en: { severity: 'Warning', connection: 'Warning' },
-    he: { severity: 'אזהרה', connection: 'אזהרה' },
+    connectionColor: 'red',
+    en: { severity: 'Errors', connection: 'Error' },
+    he: { severity: 'שגיאות', connection: 'שגיאה' },
   },
   {
     label: 'Reason-only fence (online, no chip)',
@@ -1557,7 +1553,6 @@ function TargetCardFlows() {
                 style={flow1Hovered ? hoveredStyle : defaultStyle}
                 surfaceSize={42}
                 ringSize={34}
-                pulse={flow1Hovered}
               />
             </div>
             <div className="flex flex-col items-center gap-2 opacity-40" aria-label="כלי נוסף">
@@ -1582,7 +1577,7 @@ function TargetCardFlows() {
       <InteractionFlowBlock
         id="flow-open-card"
         title="Open Card → Map Pulse + Pan"
-        description="Hovering a card activates the map marker pulse. Clicking expands the card and pans the map."
+        description="Hovering a card highlights its map marker. Clicking expands the card, activates the pulse, and pans the map."
         cardZone={
           <div
             className="overflow-hidden cursor-pointer"
@@ -1638,18 +1633,18 @@ function TargetCardFlows() {
               style={(flow2Hovered || flow2Open) ? activeStyle : defaultStyle}
               surfaceSize={42}
               ringSize={34}
-              pulse={flow2Hovered || flow2Open}
+              pulse={flow2Open}
             />
             <span className="text-xs font-medium text-n-120 tabular-nums">
-              {flow2Open ? 'Active (open)' : flow2Hovered ? 'Pulsing (hover)' : 'Idle'}
+              {flow2Open ? 'Active (open)' : flow2Hovered ? 'Highlighted (hover)' : 'Idle'}
             </span>
           </div>
         }
         steps={[
           { label: 'User hovers detection card in sidebar' },
-          { label: 'Marker immediately enters active state with pulse' },
+          { label: 'Marker enters its static hover-highlight state' },
           { label: 'User clicks card header to expand' },
-          { label: 'Map pans to target coordinates' },
+          { label: 'Marker pulses and map pans to target coordinates' },
         ]}
       />
 
@@ -1765,7 +1760,6 @@ function TargetCardFlows() {
                 style={flow5HoveredSensor === 'rf-01' ? friendlyHovered : friendlyDefault}
                 surfaceSize={38}
                 ringSize={30}
-                pulse={flow5HoveredSensor === 'rf-01'}
                 showLabel={flow5HoveredSensor === 'rf-01'}
                 label="RF Scanner"
               />
@@ -1777,7 +1771,6 @@ function TargetCardFlows() {
                 style={flow5HoveredSensor === 'radar-01' ? friendlyHovered : friendlyDefault}
                 surfaceSize={38}
                 ringSize={30}
-                pulse={flow5HoveredSensor === 'radar-01'}
                 showLabel={flow5HoveredSensor === 'radar-01'}
                 label="Radar X-Band"
               />
@@ -1926,7 +1919,7 @@ function DeviceCardFlows() {
       <InteractionFlowBlock
         id="flow-hover-device"
         title="Hover Device Row → Map Highlight"
-        description="Hovering a device row in the DevicesPanel highlights the corresponding asset marker on the map with inner glow + pulse."
+        description="Hovering a device row in the DevicesPanel highlights the corresponding asset marker on the map with a static inner glow."
         cardZone={
           <div className="overflow-hidden" style={{ backgroundColor: 'rgb(9,9,11)', borderRadius: CARD_TOKENS.container.borderRadius }}>
             <div dir="rtl" className="px-4 py-1.5 text-xs font-normal uppercase tracking-wider text-white border-b border-white/5 bg-white/5">
@@ -1956,7 +1949,6 @@ function DeviceCardFlows() {
                 style={flowHoverDeviceId === hoverDeviceCam1.id ? friendlyHovered : friendlyDefault}
                 surfaceSize={38}
                 ringSize={30}
-                pulse={flowHoverDeviceId === hoverDeviceCam1.id}
               />
               <span className="text-xs font-medium text-n-120">PTZ-N</span>
             </div>
@@ -1966,7 +1958,6 @@ function DeviceCardFlows() {
                 style={flowHoverDeviceId === hoverDeviceCam2.id ? friendlyHovered : friendlyDefault}
                 surfaceSize={38}
                 ringSize={30}
-                pulse={flowHoverDeviceId === hoverDeviceCam2.id}
               />
               <span className="text-xs font-medium text-n-120">Pixelsight</span>
             </div>
@@ -2018,7 +2009,7 @@ function DeviceCardFlows() {
                 style={flow4Selected || flow4HoveredRow === flow4DeviceCam1.id ? friendlySelected : friendlyDefault}
                 surfaceSize={38}
                 ringSize={30}
-                pulse={flow4Selected || flow4HoveredRow === flow4DeviceCam1.id}
+                pulse={flow4Selected}
               />
               <span className="text-xs font-medium text-n-9">PTZ-N</span>
             </div>
@@ -2028,7 +2019,6 @@ function DeviceCardFlows() {
                 style={flow4HoveredRow === flow4DeviceCam2.id ? friendlyHovered : friendlyDefault}
                 surfaceSize={38}
                 ringSize={30}
-                pulse={flow4HoveredRow === flow4DeviceCam2.id}
               />
               <span className="text-xs font-medium text-n-120">Pixelsight</span>
             </div>
@@ -5326,15 +5316,12 @@ export function DetectionRow() {
                       <div>
 
               {/* ── Health tile ─────────────────────────────────── */}
-              <ExampleBlock id="device-health" title="Health — the icon tile (worst-wins severity)">
+              <ExampleBlock id="device-health" title="Health — the icon tile (binary: ok / error)">
                 <div className="flex flex-col gap-6 w-full" dir="ltr">
                   <div className="flex flex-wrap items-start gap-8">
                     {[
                       { key: 'ok', tile: DEVICE_HEALTH_VISUAL.ok.tile, iconFill: DEVICE_HEALTH_VISUAL.ok.iconFill },
-                      { key: 'warning', tile: DEVICE_HEALTH_VISUAL.warning.tile, iconFill: DEVICE_HEALTH_VISUAL.warning.iconFill },
-                      // error is the top tier — no separate critical state
                       { key: 'error', tile: DEVICE_HEALTH_VISUAL.error.tile, iconFill: DEVICE_HEALTH_VISUAL.error.iconFill },
-                      { key: 'offline', tile: DEVICE_HEALTH_VISUAL.offline.tile, iconFill: DEVICE_HEALTH_VISUAL.offline.iconFill },
                     ].map((s) => (
                       <div key={s.key} className="flex flex-col items-center gap-2">
                         <div
@@ -5349,9 +5336,10 @@ export function DetectionRow() {
                     ))}
                   </div>
                   <p className="text-xs text-n-9">
-                    <code className="font-mono text-n-10">error</code> and{' '}
-                    <code className="font-mono text-n-10">critical</code> share the red tint; only critical pulses
-                    (needs attention now) — error is static (known-broken).
+                    Two states only: the tile is neutral while the asset works and red
+                    (<code className="font-mono text-n-10">--accent-danger-soft</code>) when it has an error.
+                    The cause — offline, malfunction, low battery, stale link — is text in the tooltip
+                    and connection chip, never a separate color tier.
                   </p>
                 </div>
               </ExampleBlock>
@@ -5360,7 +5348,7 @@ export function DetectionRow() {
               <ExampleBlock id="device-health-tooltip" title="Health tooltip — edge cases (titled header + fence)">
                 <div className="w-full">
                   <p className="mb-6 text-xs text-n-9">
-                    The titled health tooltip across everything it must carry — all four tones, error-count
+                    The titled health tooltip across everything it must carry — both tones, error-count
                     extremes (badge hidden at 0, “99+” clamp), short / long / missing reasons, partial or
                     absent fences, and an over-long severity label — each in English (LTR) and Hebrew (RTL).
                   </p>
@@ -6543,7 +6531,7 @@ export function DetectionRow() {
                               style={s}
                               surfaceSize={36}
                               ringSize={28}
-                              pulse={isHovered && (state === 'hovered' || state === 'selected' || state === 'active')}
+                              pulse={state === 'selected' || state === 'active'}
                             />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-baseline gap-2">
@@ -6566,7 +6554,7 @@ export function DetectionRow() {
                           style={heroStyle}
                           surfaceSize={72}
                           ringSize={56}
-                          pulse={explorerState === 'hovered' || explorerState === 'selected' || explorerState === 'active'}
+                          pulse={explorerState === 'selected' || explorerState === 'active'}
                         />
                       );
                     })()}

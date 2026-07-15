@@ -26,23 +26,19 @@ import type { ConnectionState, Device, DevicesPanelStrings } from './types';
 /** Severity dot + badge tone from the shared HealthStatus vocabulary. */
 const HEALTH_TONE: Record<DeviceHealth, { dot: string; badge: string }> = {
   error: { dot: HEALTH_DOT_CLASS.error, badge: HEALTH_BADGE_CLASS.error },
-  warning: { dot: HEALTH_DOT_CLASS.warning, badge: HEALTH_BADGE_CLASS.warning },
-  offline: { dot: HEALTH_DOT_CLASS.offline, badge: HEALTH_BADGE_CLASS.offline },
   ok: { dot: HEALTH_DOT_CLASS.ok, badge: HEALTH_BADGE_CLASS.ok },
 };
 
 /**
- * Worst-tone-first ordering for the summary chips. `ok` is intentionally
- * omitted: the all-healthy state is the default, so a green "N ok" chip is
- * noise — the header only surfaces buckets that need attention.
+ * Summary buckets for the collapsed header. `ok` is intentionally omitted:
+ * the all-healthy state is the default, so a green "N ok" chip is noise —
+ * the header only surfaces the error bucket.
  */
-const SUMMARY_ORDER: DeviceHealth[] = ['error', 'warning', 'offline'];
+const SUMMARY_ORDER: DeviceHealth[] = ['error'];
 
 function healthLabel(health: DeviceHealth, strings: DevicesPanelStrings): string {
   return {
     error: strings.healthError,
-    warning: strings.healthWarning,
-    offline: strings.healthOffline,
     ok: strings.healthHealthy,
   }[health];
 }
@@ -93,7 +89,7 @@ export const DeviceChildGroup = memo(function DeviceChildGroup({
           type="button"
           aria-expanded={open}
           onClick={() => setOpen((v) => !v)}
-          className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-start transition-colors duration-150 ease-out hover:bg-state-hover active:bg-state-pressed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-state-focus-ring"
+          className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-start transition-colors duration-[var(--motion-fast)] ease-out hover:bg-state-hover active:bg-state-pressed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-state-focus-ring"
         >
           <span className="text-xs-plus font-semibold uppercase tracking-wide text-white/55">
             {strings.sensorsGroupLabel}
@@ -119,21 +115,21 @@ export const DeviceChildGroup = memo(function DeviceChildGroup({
                 down-chevron is symmetric so only the rotate sign matters. */}
             <ChevronDownFilled
               size={14}
-              className={`shrink-0 text-white/40 transition-transform duration-150 motion-reduce:transition-none ${
+              className={`shrink-0 text-white/40 transition-transform duration-[var(--motion-fast)] motion-reduce:transition-none ${
                 open ? '' : '-rotate-90 rtl:rotate-90'
               }`}
             />
           </span>
         </button>
         <div
-          className={`grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none ${
+          className={`grid transition-[grid-template-rows] duration-[var(--motion-moderate)] ease-out motion-reduce:transition-none ${
             open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
           }`}
         >
           <div className="overflow-hidden">
             <div
               aria-hidden={!open}
-              className={`mt-0.5 flex flex-col gap-0.5 transition-opacity duration-150 ease-out motion-reduce:transition-none ${
+              className={`mt-0.5 flex flex-col gap-0.5 transition-opacity duration-[var(--motion-fast)] ease-out motion-reduce:transition-none ${
                 open ? 'opacity-100' : 'pointer-events-none opacity-0'
               }`}
             >

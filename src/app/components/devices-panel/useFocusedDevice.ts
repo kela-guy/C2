@@ -48,8 +48,14 @@ export function useFocusedDevice({
       return [...prev, type];
     });
     setQuery('');
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     requestAnimationFrame(() => {
-      focusedRowRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      focusedRowRef.current?.scrollIntoView({
+        behavior: prefersReducedMotion ? 'auto' : 'smooth',
+        block: 'center',
+      });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusedDeviceId]);

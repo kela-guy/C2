@@ -80,7 +80,7 @@ export function CameraSettingsMenu({
               type="button"
               aria-label={t.settingsTriggerAriaLabel}
               aria-pressed={open}
-              className={`p-2 rounded-full transition-colors duration-150 ease-out
+              className={`p-2 rounded-full transition-colors duration-[var(--motion-fast)] ease-out
                 focus-visible:ring-2 focus-visible:ring-state-focus-ring focus-visible:outline-none
                 active:scale-[0.97]
                 ${open

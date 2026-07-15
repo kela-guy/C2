@@ -156,7 +156,7 @@ function TransportButton({
           onClick={onClick}
           disabled={disabled}
           aria-label={label}
-          className={`size-9 inline-flex items-center justify-center transition-colors duration-150 ease-out
+          className={`size-9 inline-flex items-center justify-center transition-colors duration-[var(--motion-fast)] ease-out
             focus-visible:ring-2 focus-visible:ring-state-focus-ring focus-visible:outline-none
             disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.97]
             ${primary

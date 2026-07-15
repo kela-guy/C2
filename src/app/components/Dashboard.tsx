@@ -66,6 +66,8 @@ import { useDevicesFromAssets } from './useDevicesFromAssets';
 import { useGotchaUnits } from './gotcha/useGotchaUnits';
 import { gotchaUnitsToDevices } from './gotcha/gotchaUnitsToDevices';
 import { getUnitHealth } from './gotcha/gotchaHealth';
+import { AssetConfigPanel } from './asset-config/AssetConfigPanel';
+import { buildVisibleAssetIds, readStoredAssetCounts, writeStoredAssetCounts, type AssetCounts } from './asset-config/assetConfig';
 import { CriticalAlertOverlay, type CriticalDroneAlert } from './gotcha/CriticalAlertOverlay';
 import { VideoHudPanel } from './video-hud-sandbox/VideoHudPanel';
 import type { VideoHudPanelFeed as CameraFeed } from './video-hud-sandbox/VideoHudPanel';
@@ -249,14 +251,14 @@ function SplitDropZone({
           flex flex-col items-center justify-center gap-2
           rounded-xl border-2 border-dashed backdrop-blur-sm
           shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_8px_24px_-4px_rgba(0,0,0,0.5)]
-          transition-[background-color,border-color] duration-200 ease-out
+          transition-[background-color,border-color] duration-[var(--motion-moderate)] ease-out
           ${isOver
             ? 'border-sky-400/40 bg-[#1c2028]/95'
             : 'border-white/[0.15] bg-[#181818]/95'}`}
       >
-        <SplitLeftIcon className={`transition-colors duration-150 ease-out
+        <SplitLeftIcon className={`transition-colors duration-[var(--motion-fast)] ease-out
           ${isOver ? 'text-white/60' : 'text-white/25'}`} />
-        <span className={`text-xs transition-colors duration-150 ease-out
+        <span className={`text-xs transition-colors duration-[var(--motion-fast)] ease-out
           ${isOver ? 'text-white/60' : 'text-white/30'}`}>
           {isOver ? t.dashboard.dropZoneRelease : t.dashboard.dropZoneHint}
         </span>
@@ -309,12 +311,30 @@ export const Dashboard = ({
 }: DashboardProps = {}) => {
   const allDevices = useDevicesFromAssets();
   const { units: gotchaUnits } = useGotchaUnits();
+  // Demo asset-count caps (rail popover). `visibleAssetIds` is the union of
+  // seed ids that survive the per-kind caps; the map, devices panel, and flow
+  // assets all filter by membership so every surface stays in sync. Seeded
+  // from localStorage so a configured demo survives a page refresh.
+  const [assetCounts, setAssetCounts] = useState<AssetCounts>(() => readStoredAssetCounts());
+  useEffect(() => {
+    writeStoredAssetCounts(assetCounts);
+  }, [assetCounts]);
+  const visibleAssetIds = useMemo(() => buildVisibleAssetIds(assetCounts), [assetCounts]);
+  const visibleGotchaUnits = useMemo(
+    () => gotchaUnits.filter((u) => visibleAssetIds.has(u.id)),
+    [gotchaUnits, visibleAssetIds],
+  );
   // Composite Gotcha effectors render through the shared DeviceRow like every
   // other asset; the effector group sorts first via TYPE_ORDER.
-  const gotchaDevices = useMemo(() => gotchaUnitsToDevices(gotchaUnits), [gotchaUnits]);
+  const gotchaDevices = useMemo(() => gotchaUnitsToDevices(visibleGotchaUnits), [visibleGotchaUnits]);
   const devicesWithGotcha = useMemo(
-    () => [...gotchaDevices, ...allDevices],
-    [gotchaDevices, allDevices],
+    () => [
+      ...gotchaDevices,
+      // Pathfinder is launch-lifecycle-driven, not a seed registry asset —
+      // it stays regardless of the caps.
+      ...allDevices.filter((d) => d.id === PATHFINDER_DEVICE_ID || visibleAssetIds.has(d.id)),
+    ],
+    [gotchaDevices, allDevices, visibleAssetIds],
   );
   // Active i18n catalog. Locale is driven by the direction system
   // (`'rtl'` ⇒ Hebrew, `'ltr'` ⇒ English), so the marketing
@@ -575,6 +595,17 @@ export const Dashboard = ({
     ];
   });
   const [selectedLauncherIds, setSelectedLauncherIds] = useState<Map<string, string>>(new Map());
+  // Demo asset-count caps applied to the Dashboard-owned effector lists.
+  // The unfiltered state arrays stay authoritative (engagement handlers
+  // mutate them by id); only what's presented gets filtered.
+  const visibleRegulusEffectors = useMemo(
+    () => regulusEffectors.filter((e) => visibleAssetIds.has(e.id)),
+    [regulusEffectors, visibleAssetIds],
+  );
+  const visibleLauncherEffectors = useMemo(
+    () => launcherEffectors.filter((l) => visibleAssetIds.has(l.id)),
+    [launcherEffectors, visibleAssetIds],
+  );
   const [mapFocusRequest, setMapFocusRequest] = useState<{ lat: number; lon: number } | null>(null);
   const [allCamerasBusyForTarget, setAllCamerasBusyForTarget] = useState<string | null>(null);
   const [cameraPointingTargetId, setCameraPointingTargetId] = useState<string | null>(null);
@@ -645,6 +676,7 @@ export const Dashboard = ({
   const cuasIntervalRef2 = useRef<NodeJS.Timeout | null>(null);
   const cuasIntervalRef3 = useRef<NodeJS.Timeout | null>(null);
   const cuasIntervalRef4 = useRef<NodeJS.Timeout | null>(null);
+  const cuasGotchaIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const cuasMassRefs = useRef<NodeJS.Timeout[]>([]);
 
   // Master unmount cleanup for every long-lived timer the dashboard owns.
@@ -653,7 +685,7 @@ export const Dashboard = ({
   // logs a React warning and keeps the entire (heavy) Dashboard subtree alive
   // in the heap.
   useEffect(() => {
-    const cuasRefs = [cuasIntervalRef, cuasIntervalRef2, cuasIntervalRef3, cuasIntervalRef4];
+    const cuasRefs = [cuasIntervalRef, cuasIntervalRef2, cuasIntervalRef3, cuasIntervalRef4, cuasGotchaIntervalRef];
     const massRefs = cuasMassRefs;
     const pending = pendingTimeoutsRef;
     const camPointing = cameraPointingTimeoutRef;
@@ -747,6 +779,12 @@ export const Dashboard = ({
     : true;
   const patrolProgressRef = useRef<number[]>(friendlyPatrolRoutes.map(() => 0));
   const friendlyTrailRef = useRef<[number, number][][]>(friendlyPatrolRoutes.map(() => []));
+  // Live mirror of the friendly-drone cap for the sim loop below — the loop
+  // mounts once (empty deps), so it reads the current cap through a ref.
+  const friendlyDroneCountRef = useRef(assetCounts.friendlyDrone);
+  useEffect(() => {
+    friendlyDroneCountRef.current = assetCounts.friendlyDrone;
+  }, [assetCounts.friendlyDrone]);
   const trailTickRef = useRef(0);
   // Tick at 250 ms (4 Hz). The kinematic motion track in CesiumMap
   // smoothly interpolates between samples, so the visible movement is
@@ -775,7 +813,9 @@ export const Dashboard = ({
         return next >= friendlyPatrolRoutes[i].waypoints.length ? 0 : next;
       });
 
-      const drones: FriendlyDrone[] = friendlyPatrolRoutes.map((route, i) => {
+      // Demo cap: first N routes only. `slice` keeps indices 0..n-1 aligned
+      // with the progress/trail refs, so hidden drones simply stop reporting.
+      const drones: FriendlyDrone[] = friendlyPatrolRoutes.slice(0, friendlyDroneCountRef.current).map((route, i) => {
         const progress = patrolProgressRef.current[i];
         const legIndex = Math.floor(progress) % route.waypoints.length;
         const legFrac = progress - legIndex;
@@ -1274,6 +1314,45 @@ export const Dashboard = ({
     });
   }, [devicesPanelOpen, spawnCuasTarget]);
 
+  // Hostile drone aimed at the Gotcha unit. The card's counter-air split
+  // button recommends the flow whose nearest available effector is closest
+  // (see `buildCounterAirActions`), so an approach that starts and ends
+  // inside the Gotcha's win zone makes capture the default recommendation
+  // from the moment the detection lands — reinforced by an explicit
+  // "system recommends" notification.
+  const handleCUASGotchaRecommended = useCallback(() => {
+    const unit = visibleGotchaUnits[0];
+    if (!unit) {
+      handleCUASSingle();
+      return;
+    }
+    if (devicesPanelOpen) setPanelSwitching(true);
+    setDevicesPanelOpen(false);
+    setSelectedAssetId(null);
+    setSidebarOpen(true);
+
+    if (cuasGotchaIntervalRef.current) clearInterval(cuasGotchaIntervalRef.current);
+
+    const targetId = spawnCuasTarget({
+      startLat: unit.lat + 0.007, startLon: unit.lon + 0.007,
+      endLat: unit.lat + 0.0006, endLon: unit.lon + 0.0006,
+      nameSuffix: String(Math.floor(Math.random() * 900) + 100),
+      intervalRef: cuasGotchaIntervalRef,
+      entity: 'drone',
+    });
+
+    // Let the detection notification land first, then surface the
+    // system's capture recommendation tied to the same target code.
+    scheduleTimeout(() => {
+      showTacticalNotification({
+        title: t.notifications.gotchaRecommendedTitle,
+        message: t.notifications.gotchaRecommendedMessage(unit.name),
+        code: targetId,
+        level: 'info',
+      });
+    }, 1500);
+  }, [devicesPanelOpen, spawnCuasTarget, visibleGotchaUnits, handleCUASSingle, t, scheduleTimeout]);
+
   const handleCUASMassDetection = useCallback(() => {
     if (devicesPanelOpen) setPanelSwitching(true);
     setDevicesPanelOpen(false);
@@ -1332,14 +1411,13 @@ export const Dashboard = ({
 
   // --- Gotcha (counter-drone net effector) engagement ---
   // Expose the Gotcha units as generic flow assets; availability folds the
-  // unit's worst-wins health (a degraded/offline unit can't engage).
+  // unit's binary health (a failing unit can't engage).
   const gotchaEffectors = useMemo(
-    () => gotchaUnits.map((u) => {
-      const health = getUnitHealth(u);
-      const available = health === 'ok' || health === 'warning';
+    () => visibleGotchaUnits.map((u) => {
+      const available = getUnitHealth(u) === 'ok';
       return { id: u.id, name: u.name, lat: u.lat, lon: u.lon, status: available ? 'available' : 'unavailable' };
     }),
-    [gotchaUnits],
+    [visibleGotchaUnits],
   );
 
   const handleGotchaSelect = useCallback((targetId: string, gotchaId: string) => {
@@ -1684,8 +1762,8 @@ export const Dashboard = ({
   }, [scheduleTimeout]);
 
   const flowAssets = useMemo(
-    () => ({ regulusEffectors, launcherEffectors, gotchaEffectors }),
-    [regulusEffectors, launcherEffectors, gotchaEffectors],
+    () => ({ regulusEffectors: visibleRegulusEffectors, launcherEffectors: visibleLauncherEffectors, gotchaEffectors }),
+    [visibleRegulusEffectors, visibleLauncherEffectors, gotchaEffectors],
   );
   const flowSelectedIds = useMemo(
     () => ({ regulusEffectors: selectedEffectorIds, launcherEffectors: selectedLauncherIds, gotchaEffectors: selectedGotchaIds }),
@@ -1944,7 +2022,7 @@ export const Dashboard = ({
       width: sidebarWidth,
       backgroundColor: 'var(--surface-2)',
       ...(isDragging ? { transition: 'none', willChange: 'width' } : {}),
-      ...(isSnapping ? { transition: 'width 200ms ease-out' } : {}),
+      ...(isSnapping ? { transition: 'width var(--motion-moderate) ease-out' } : {}),
     }),
     [sidebarWidth, isDragging, isSnapping],
   );
@@ -2145,9 +2223,10 @@ export const Dashboard = ({
     // this just guarantees Simulations isn't left covering it.
     setSimulationsPanelOpen(false);
     if (kind === 'single') handleCUASSingle();
+    else if (kind === 'gotcha') handleCUASGotchaRecommended();
     else if (kind === 'flow') handleCUASFlow();
     else handleCUASMassDetection();
-  }, [handleCUASSingle, handleCUASFlow, handleCUASMassDetection]);
+  }, [handleCUASSingle, handleCUASGotchaRecommended, handleCUASFlow, handleCUASMassDetection]);
 
   const handleRunFlow = useCallback((def: FlowDef) => {
     // Switch to the target panel (closes Simulations + devices), then
@@ -2445,6 +2524,13 @@ export const Dashboard = ({
             data-handoff-inspector="true"
             className="size-6"
           />
+          {/* Demo asset-count caps — controls how many entities of each
+              kind the map + devices panel present. */}
+          <AssetConfigPanel
+            counts={assetCounts}
+            onChange={setAssetCounts}
+            side={railTooltipSide}
+          />
           <Tooltip>
             <TooltipTrigger asChild>
               <a
@@ -2530,7 +2616,7 @@ export const Dashboard = ({
                   highlightedSensorIds={highlightedSensorIds}
                   sensorFocusId={sensorFocusId}
                   onContextMenuAction={handleContextMenuAction}
-                  regulusEffectors={regulusEffectors}
+                  regulusEffectors={visibleRegulusEffectors}
                   focusCoords={null}
                   jammingTargetId={null}
                   jammingJammerAssetId={null}
@@ -2547,14 +2633,15 @@ export const Dashboard = ({
                   floodlightOnIds={floodlightOnIds}
                   speakerPlayingIds={speakerPlayingIds}
                   selectedEffectorIds={selectedEffectorIds}
-                  launcherEffectors={launcherEffectors}
+                  launcherEffectors={visibleLauncherEffectors}
                   selectedLauncherIds={selectedLauncherIds}
                   darkMonochromeMap={demoMode}
                   sensorDetectionLinks={flowSensorLinks}
                   flowPreview={flowPreview}
-                  gotchaUnits={gotchaUnits}
+                  gotchaUnits={visibleGotchaUnits}
                   cameraLookAtRequest={cameraLookAtRequest}
                   panVelocity={edgePanVelocity}
+                  visibleAssetIds={visibleAssetIds}
                 />
               </CesiumErrorBoundary>
               {/*
@@ -2590,7 +2677,7 @@ export const Dashboard = ({
 
           {isCameraViewerOpen && (
             <>
-              <ResizableHandle className="w-px bg-white/10 hover:bg-white/20 transition-colors duration-150 ease-out" />
+              <ResizableHandle className="w-px bg-white/10 hover:bg-white/20 transition-colors duration-[var(--motion-fast)] ease-out" />
               <ResizablePanel defaultSize={45} minSize={25} maxSize={60} collapsible collapsedSize={0} onCollapse={handleCameraViewerCollapse}>
                   <VideoHudPanel
                     feeds={cameraViewerFeeds}
@@ -2610,7 +2697,7 @@ export const Dashboard = ({
         <aside
           ref={asideRef}
           className={`
-            absolute top-0 bottom-0 start-0 border-e border-white/10 flex flex-col ${panelSwitching || isDragging ? '' : isSnapping ? '' : 'transition-[transform,opacity] duration-300 ease-in-out'} z-30
+            absolute top-0 bottom-0 start-0 border-e border-white/10 flex flex-col ${panelSwitching || isDragging ? '' : isSnapping ? '' : 'transition-[transform,opacity] duration-[var(--motion-slow)] ease-out'} z-30
             ${sidebarOpen ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full'}
           `}
           style={sidebarStyle}

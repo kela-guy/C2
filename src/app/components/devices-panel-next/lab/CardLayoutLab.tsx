@@ -29,7 +29,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/
 import { DEFAULT_CONNECTION_STATE_LABELS } from '../../devices-panel/constants';
 import type { ConnectionState } from '../../devices-panel/types';
 import { DEVICE_HEALTH_VISUAL, type DeviceHealth } from '../../devices-panel/deviceHealth';
-import { OfflineChip, OfflineHatch } from '../../devices-panel/OfflineBadge';
 import { DotmSquare18 } from '@/app/components/ui/dotm-square-18';
 import { DotmCircular4 } from '@/app/components/ui/dotm-circular-4';
 import {
@@ -48,13 +47,10 @@ import { splitFooterActions } from '../../devices-panel/footerOverflow';
 /**
  * Tile-tooltip tone — the chosen "Titled header + divider" study (option 2 in
  * `TooltipDesigns`): a severity dot + label, an optional count badge for the
- * trouble tones, and a worst-wins severity title. `offline`/`ok` never carry a
- * badge (offline is known-absent, ok has nothing to count).
+ * error tone, and a worst-wins severity title. `ok` never carries a badge.
  */
 const HEALTH_TONE: Record<DeviceHealth, { dot: string; badge: string | null; label: string }> = {
   error: { dot: HEALTH_DOT_CLASS.error, badge: HEALTH_BADGE_CLASS.error, label: 'Errors' },
-  warning: { dot: HEALTH_DOT_CLASS.warning, badge: HEALTH_BADGE_CLASS.warning, label: 'Warning' },
-  offline: { dot: HEALTH_DOT_CLASS.offline, badge: null, label: 'Offline' },
   ok: { dot: HEALTH_DOT_CLASS.ok, badge: null, label: 'Healthy' },
 };
 
@@ -70,7 +66,7 @@ const HEALTH_TONE: Record<DeviceHealth, { dot: string; badge: string | null; lab
  * the row name stays uncluttered.
  */
 export function DeviceTile({ device }: { device: LabDevice }) {
-  const health: DeviceHealth = device.health ?? (device.online ? 'ok' : 'offline');
+  const health: DeviceHealth = device.health ?? (device.online ? 'ok' : 'error');
   const connection: ConnectionState = device.connection ?? (device.online ? 'online' : 'offline');
   const visual = DEVICE_HEALTH_VISUAL[health];
   const errorCount = device.errorCount ?? 0;
@@ -158,8 +154,8 @@ function PrimaryCluster({ device }: { device: LabDevice }) {
   const { primary } = DEVICE_ACTIONS[device.kind];
   const card = useCardState();
   const reduceMotion = useReducedMotion();
-  // Mirrors the real `DeviceRowHeader`: offline rows keep only Show-on-map
-  // (recentering doesn't need a link) + the offline chip; interactive
+  // Offline connections keep only Show-on-map (recentering doesn't need a
+  // link); interactive
   // controls are hidden — a device you can't reach shouldn't offer to act.
   const offline = !device.online;
   // Show on map is pinned to the outer edge; everything else renders inboard.
@@ -229,8 +225,6 @@ function PrimaryCluster({ device }: { device: LabDevice }) {
       {/* Armed-notifications echo: timer then bell, so the bell lands directly
           beside the Show-on-map glyph and the HH:MM:SS timer sits to its left. */}
       {!offline && <NotifyHeaderIndicator />}
-      {/* Offline chip sits just inboard of Show-on-map, same as the panel. */}
-      {offline && <OfflineChip label="Offline" />}
       {primary.includes('showOnMap') && (
         <ActionControl id="showOnMap" device={device} iconOnly />
       )}
@@ -279,14 +273,11 @@ export function CardShell({
   onToggle,
   header,
   children,
-  offline = false,
 }: {
   open: boolean;
   onToggle: () => void;
   header: ReactNode;
   children?: ReactNode;
-  /** Applies the shipped offline surface: the faint diagonal hatch. */
-  offline?: boolean;
 }) {
   return (
     <DeviceCardProvider>
@@ -306,8 +297,6 @@ export function CardShell({
             open ? 'bg-white/[0.04]' : 'hover:bg-state-hover active:bg-state-pressed'
           }`}
         >
-          {/* Offline surface — same hatch as the shipped `DeviceRow`. */}
-          {offline && <OfflineHatch />}
           {header}
         </div>
         {open && children && (
@@ -592,7 +581,6 @@ function DeviceCardRow({ device }: { device: LabDevice }) {
     <CardShell
       open={open}
       onToggle={toggle}
-      offline={!device.online}
       header={
         <>
           <DeviceTile device={device} />

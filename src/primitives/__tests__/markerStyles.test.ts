@@ -26,10 +26,19 @@ describe('resolveMarkerStyle', () => {
     expect(s.innerGlow).toBe(false);
   });
 
-  it('resting hostile marker: hostile red ring + glyph', () => {
+  it('resting hostile marker: black diamond ring, red glyph, static ring', () => {
     const s = resolveMarkerStyle('default', 'hostile');
-    expect(s.ringColor).toBe(MARKER_HEX.hostile);
+    // The constant hostile pulse is the MapMarker halo (`pulse` prop), not
+    // the standard black resting ring itself.
+    expect(s.ringColor).toBe(MARKER_HEX.ringResting);
     expect(s.glyphColor).toBe(MARKER_HEX.hostile);
+    expect(s.ringShape).toBe('diamond');
+    expect(s.ringPulse).toBe(false);
+  });
+
+  it('non-hostile affiliations keep the circle ring', () => {
+    expect(resolveMarkerStyle('default', 'friendly').ringShape).toBeUndefined();
+    expect(resolveMarkerStyle('default', 'possibleThreat').ringShape).toBeUndefined();
   });
 
   it('hovered / selected / active flip the ring white and light the glow', () => {
@@ -87,24 +96,41 @@ describe('resolveTargetMarkerStyle', () => {
     expect(s.innerGlowColor).toBe(UNKNOWN_GRAY);
   });
 
-  it('speaks one severity color across ring, glyph, and glow', () => {
-    // mitigating → CRITICAL: hostile red, pulsing, heavier ring.
+  it('speaks one severity color across ring, glyph, and glow (non-hostile)', () => {
+    // mitigating (possibleThreat fallback) → CRITICAL: red, pulsing, heavier ring.
     const critical = resolveTargetMarkerStyle({ mitigationStatus: 'mitigating' });
     expect(critical.ringColor).toBe(SEVERITY_COLOR.CRITICAL);
     expect(critical.glyphColor).toBe(SEVERITY_COLOR.CRITICAL);
     expect(critical.innerGlowColor).toBe(SEVERITY_COLOR.CRITICAL);
     expect(critical.ringPulse).toBe(true);
     expect(critical.ringWidth).toBe(3);
-
-    // detection (hostile default) → HIGH: same red, no pulse, standard ring.
-    const high = resolveTargetMarkerStyle({ status: 'detection' });
-    expect(high.ringColor).toBe(SEVERITY_COLOR.HIGH);
-    expect(high.ringPulse).toBe(false);
-    expect(high.ringWidth).toBe(2);
   });
 
-  it('keeps the severity ring color even while hovered', () => {
-    const s = resolveTargetMarkerStyle({ status: 'detection' }, 'hovered');
+  it('hostile targets: black diamond ring and red glyph — whatever the severity', () => {
+    // The hostile hue is pinned to red on the glyph; the ring stays the
+    // standard black resting ring in a diamond. Constant hostile motion is
+    // the MapMarker halo (`pulse` prop); severity drives ring weight only.
+    const hostile = resolveTargetMarkerStyle({ status: 'detection', severity: 'MEDIUM' });
+    expect(hostile.ringShape).toBe('diamond');
+    expect(hostile.ringColor).toBe(MARKER_HEX.ringResting);
+    expect(hostile.glyphColor).toBe(MARKER_HEX.hostile);
+    expect(hostile.innerGlowColor).toBe(MARKER_HEX.hostile);
+    expect(hostile.ringPulse).toBe(false);
+
+    // A HIGH hostile ring stays static too; its call site supplies the halo.
+    const high = resolveTargetMarkerStyle({ status: 'detection' });
+    expect(high.ringPulse).toBe(false);
+    expect(high.ringWidth).toBe(2);
+
+    // Non-hostile affiliations keep circle + severity color, severity pulse.
+    const possible = resolveTargetMarkerStyle({ affiliation: 'possibleThreat', severity: 'MEDIUM' });
+    expect(possible.ringShape).toBe('circle');
+    expect(possible.ringColor).toBe(SEVERITY_COLOR.MEDIUM);
+    expect(possible.ringPulse).toBe(false);
+  });
+
+  it('keeps the severity ring color even while hovered (non-hostile)', () => {
+    const s = resolveTargetMarkerStyle({ affiliation: 'possibleThreat', severity: 'HIGH' }, 'hovered');
     expect(s.ringColor).toBe(SEVERITY_COLOR.HIGH);
     expect(s.innerGlow).toBe(true);
   });
@@ -123,29 +149,18 @@ describe('resolveAssetMarkerStyle', () => {
     expect(resolveAssetMarkerStyle('ok', 'hovered')).toEqual(resolveMarkerStyle('hovered', 'friendly'));
   });
 
-  it('warning / error recolor only the resting ring; glyph stays white', () => {
-    const warning = resolveAssetMarkerStyle('warning');
-    expect(warning.ringColor).toBe(MARKER_HEX.weaponWarning);
-    expect(warning.glyphColor).toBe(MARKER_HEX.white);
-
+  it('error paints the resting ring red; the glyph stays white', () => {
     const error = resolveAssetMarkerStyle('error');
     expect(error.ringColor).toBe(MARKER_HEX.hostile);
+    expect(error.ringDash).toBe('solid');
     expect(error.glyphColor).toBe(MARKER_HEX.white);
+    expect(error.ringPulse).toBe(false);
   });
 
-  it('interaction wins the ring, glow keeps the health hue', () => {
+  it('interaction wins the ring, glow rides the error hue', () => {
     const s = resolveAssetMarkerStyle('error', 'hovered');
     expect(s.ringColor).toBe(MARKER_HEX.white);
     expect(s.innerGlowColor).toBe(MARKER_HEX.hostile);
-  });
-
-  it('offline dashes the ring and grays the glyph without recoloring the ring', () => {
-    const s = resolveAssetMarkerStyle('offline');
-    expect(s.ringDash).toBe('dashed');
-    expect(s.ringColor).toBe(MARKER_HEX.ringResting);
-    expect(s.glyphColor).toBe(MARKER_HEX.disabledGray);
-    expect(s.surfaceOpacity).toBe(0.04);
-    expect(s.ringPulse).toBe(false);
   });
 });
 

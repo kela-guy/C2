@@ -90,17 +90,19 @@ export function markerLayerClasses(
   const surfaceSize = options.surfaceSize ?? 42;
   const ringSize = options.ringSize ?? surfaceSize;
 
-  // Affiliation-shape channel — same geometry math as MapMarker.
+  // Affiliation-shape channel — same geometry math as MapMarker: the shape
+  // applies to the ring only (sharp-cornered diamond for hostile); the
+  // surface always stays a circle.
   const shape = style.ringShape ?? 'circle';
-  const radiusClass = shape === 'circle' ? 'rounded-full' : 'rounded-[15%]';
-  const shapeScale = shape === 'diamond' ? 0.82 : shape === 'square' ? 0.94 : 1;
+  const ringRadiusClass = shape === 'diamond' ? 'rounded-none' : 'rounded-full';
+  const ringScale = shape === 'diamond' ? 0.82 : 1;
   const center = 'absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2';
   const rotate = shape === 'diamond' ? ' rotate-45' : '';
 
   const surface = [
-    center + rotate,
-    `size-[${px(surfaceSize * shapeScale)}]`,
-    radiusClass,
+    center,
+    `size-[${px(surfaceSize)}]`,
+    'rounded-full',
     `bg-[${hexToRgba(style.surfaceFill, style.surfaceOpacity)}]`,
     style.surfaceBlur > 0 ? `backdrop-blur-[${px(style.surfaceBlur)}]` : null,
   ]
@@ -112,12 +114,12 @@ export function markerLayerClasses(
       ? [
           center + rotate,
           'pointer-events-none z-[1]',
-          `size-[${px(ringSize * shapeScale)}]`,
-          radiusClass,
+          `size-[${px(ringSize * ringScale)}]`,
+          ringRadiusClass,
           `border-[${px(style.ringWidth)}]`,
           style.ringDash === 'dashed' ? 'border-dashed' : 'border-solid',
           `border-[${hexToRgba(style.ringColor, style.ringOpacity)}]`,
-          style.ringPulse ? 'animate-pulse' : null,
+          style.ringPulse ? 'animate-pulse motion-reduce:animate-none' : null,
         ]
           .filter(Boolean)
           .join(' ')

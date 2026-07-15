@@ -105,7 +105,7 @@ function PathfinderCardDemo({
     errors: malfunction
       ? [
           { severity: 'error', message: locale === 'he' ? 'תקלת מנוע' : 'Motor fault' },
-          { severity: 'warning', message: locale === 'he' ? 'מתח סוללה נמוך' : 'Low battery voltage' },
+          { severity: 'error', message: locale === 'he' ? 'מתח סוללה נמוך' : 'Low battery voltage' },
         ]
       : undefined,
     Icon: DroneDeviceIcon,

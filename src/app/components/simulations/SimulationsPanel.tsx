@@ -19,6 +19,7 @@
 import { useState } from 'react';
 import { Play, Pencil, Trash2, Target, Radar } from '@/lib/icons/central';
 import { CuasIcon } from '@/primitives/ProductIcons';
+import { GotchaIcon } from '@/app/components/tacticalIcons';
 import { DroneCardIcon, CarCardIcon, TankCardIcon, TruckCardIcon } from '@/primitives';
 import { Bird } from '@/lib/icons/central';
 import { useStrings } from '@/lib/intl';
@@ -52,7 +53,7 @@ const ENTITY_GLYPH: Record<FlowEntity, EntityGlyph> = {
   bird: (p) => <Bird size={p.size ?? 16} />,
 };
 
-export type BuiltinKind = 'single' | 'flow' | 'swarm';
+export type BuiltinKind = 'single' | 'gotcha' | 'flow' | 'swarm';
 
 export interface SimulationsPanelProps {
   open: boolean;
@@ -86,6 +87,7 @@ export function SimulationsPanel({
 
   const builtins: { kind: BuiltinKind; title: string; desc: string; icon: React.ReactNode }[] = [
     { kind: 'single', title: s.builtin.singleTitle, desc: s.builtin.singleDesc, icon: <Target size={18} /> },
+    { kind: 'gotcha', title: s.builtin.gotchaTitle, desc: s.builtin.gotchaDesc, icon: <GotchaIcon size={18} fill="currentColor" /> },
     { kind: 'flow', title: s.builtin.flowTitle, desc: s.builtin.flowDesc, icon: <CuasIcon size={18} strokeWidth={1.5} /> },
     { kind: 'swarm', title: s.builtin.swarmTitle, desc: s.builtin.swarmDesc, icon: <Radar size={18} /> },
   ];

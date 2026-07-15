@@ -7,10 +7,8 @@
  * sensors + camera). Each child's `DeviceHealth` is mapped back onto the plain
  * fields `getDeviceHealth` already reads (connection state / errors), so the
  * shared tile + roll-up reuse the existing derivation with no new vocabulary:
- *   warning  → connectionState 'warning'
- *   error    → an `errors[]` entry (red)
- *   offline  → connectionState 'offline'
- *   ok       → online
+ *   error → an `errors[]` entry (red)
+ *   ok    → online
  */
 
 import type {
@@ -28,25 +26,18 @@ type HealthFields = Pick<
   'status' | 'operationalStatus' | 'connectionState' | 'errors'
 >;
 
-/** Map a worst-wins `DeviceHealth` onto the fields `getDeviceHealth` reads. */
+/** Map a binary `DeviceHealth` onto the fields `getDeviceHealth` reads. */
 function healthToDeviceFields(health: DeviceHealth, faultMessage: string): HealthFields {
   const operationalStatus: OperationalStatus = 'operational';
-  switch (health) {
-    case 'error':
-      return {
-        status: 'active',
-        operationalStatus,
-        connectionState: 'online',
-        errors: [{ severity: 'error', message: faultMessage } satisfies DeviceError],
-      };
-    case 'warning':
-      return { status: 'active', operationalStatus, connectionState: 'warning' };
-    case 'offline':
-      return { status: 'offline', operationalStatus, connectionState: 'offline' };
-    case 'ok':
-    default:
-      return { status: 'active', operationalStatus, connectionState: 'online' };
+  if (health === 'error') {
+    return {
+      status: 'active',
+      operationalStatus,
+      connectionState: 'online',
+      errors: [{ severity: 'error', message: faultMessage } satisfies DeviceError],
+    };
   }
+  return { status: 'active', operationalStatus, connectionState: 'online' };
 }
 
 /** `123.4°` formatting for the bearing portion of a sensor's metric line. */

@@ -171,7 +171,7 @@ export function CardHeader({
         {status}
 
         <div
-          className={`text-slate-9 shrink-0 transition-transform duration-200${open ? ' rotate-180' : ''}`}
+          className={`text-slate-9 shrink-0 transition-transform duration-[var(--motion-moderate)]${open ? ' rotate-180' : ''}`}
         >
           <CardChevronDown size={d.animation.chevronSize} aria-hidden="true" />
         </div>

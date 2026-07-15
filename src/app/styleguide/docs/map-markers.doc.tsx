@@ -12,6 +12,7 @@ import {
   resolveMarkerStyle,
   resolveAssetMarkerStyle,
   resolveTargetMarkerStyle,
+  targetAffiliation,
   resolveThreatGlyph,
   markerLayerClasses,
   MARKER_LAYERS,
@@ -144,7 +145,7 @@ function LayerAnatomyExample() {
 
       <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
         {/* Live preview — highlightLayer dims all but the hovered layer;
-            hovering the panel pulses the marker and hides the hint. */}
+            hovering the panel hides the hint without pulsing the marker. */}
         <div
           className="relative flex items-center justify-center rounded-xl border border-white/10 p-8"
           style={{ background: 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.25) 0%, rgba(0,0,0,1) 61%)' }}
@@ -158,8 +159,8 @@ function LayerAnatomyExample() {
             ringSize={56}
             label="Tooltip"
             showLabel
-            pulse={previewHovered}
             highlightLayer={hoveredLayer}
+            pulse={aff === 'hostile' && state !== 'disabled' && state !== 'expired'}
           />
           <span
             aria-hidden="true"
@@ -167,7 +168,7 @@ function LayerAnatomyExample() {
               previewHovered ? 'opacity-0' : 'opacity-100'
             }`}
           >
-            Hover for animation
+            Hover to inspect layers
           </span>
         </div>
 
@@ -306,6 +307,7 @@ function LayerAnatomy() {
         label="Tooltip"
         showLabel
         highlightLayer={hoveredLayer}
+        pulse={aff === "hostile" && state !== "disabled" && state !== "expired"}
       />
 
       {/* Layer list — hover isolates, the button copies the Tailwind string */}
@@ -335,6 +337,7 @@ function LayerAnatomy() {
     style={resolveMarkerStyle("default", aff)}
     surfaceSize={36}
     ringSize={28}
+    pulse={aff === "hostile"}
   />
 ))}`,
       render: () => (
@@ -348,6 +351,7 @@ function LayerAnatomy() {
                   style={style}
                   surfaceSize={36}
                   ringSize={28}
+                  pulse={aff === 'hostile'}
                 />
                 <span className="text-2xs text-slate-9">{AFFILIATION_LABELS[aff]}</span>
               </div>
@@ -359,9 +363,9 @@ function LayerAnatomy() {
     {
       id: 'interaction',
       title: 'Interaction states',
-      code: `<MapMarker style={resolveMarkerStyle("default", "hostile")} … />
-<MapMarker style={resolveMarkerStyle("selected", "hostile")} … />
-<MapMarker style={resolveMarkerStyle("expired", "hostile")} … />`,
+      code: `<MapMarker style={resolveMarkerStyle("default", "hostile")} pulse … />
+<MapMarker style={resolveMarkerStyle("selected", "hostile")} pulse … />
+<MapMarker style={resolveMarkerStyle("expired", "hostile")} pulse={false} … />`,
       render: () => (
         <div className="flex items-end gap-8">
           {(['default', 'selected', 'expired'] as const).map((state) => {
@@ -373,6 +377,7 @@ function LayerAnatomy() {
                   style={style}
                   surfaceSize={36}
                   ringSize={28}
+                  pulse={state !== 'expired'}
                 />
                 <span className="text-2xs text-slate-9">{state}</span>
               </div>
@@ -384,9 +389,10 @@ function LayerAnatomy() {
     {
       id: 'asset-health',
       title: 'Friendly-asset health',
-      code: `<MapMarker style={resolveAssetMarkerStyle("warning")} … />
-<MapMarker style={resolveAssetMarkerStyle("error")} … />
-<MapMarker style={resolveAssetMarkerStyle("offline")} … />`,
+      code: `// Binary model: error paints the resting ring red; the reason rides
+// the label/tooltip. Interaction still flips the ring white.
+<MapMarker style={resolveAssetMarkerStyle("ok")} … />
+<MapMarker style={resolveAssetMarkerStyle("error")} … />`,
       render: () => (
         <div className="flex items-end gap-8">
           {ASSET_HEALTHS.map((health) => {
@@ -409,13 +415,18 @@ function LayerAnatomy() {
     {
       id: 'severity-matrix',
       title: 'Severity & urgency (targets)',
-      code: `import { resolveTargetMarkerStyle, resolveThreatGlyph } from "@/primitives"
+      code: `import { resolveTargetMarkerStyle, resolveThreatGlyph, targetAffiliation } from "@/primitives"
 
 // TargetStateInput is backend-agnostic — plain JSON state.
 const state = { status: "event", classifiedType: "car" }  // → CRITICAL
 const style = resolveTargetMarkerStyle(state)
 
-<MapMarker icon={resolveThreatGlyph(state, style.glyphColor)} style={style} … />`,
+<MapMarker
+  icon={resolveThreatGlyph(state, style.glyphColor)}
+  style={style}
+  pulse={targetAffiliation(state) === "hostile"}
+  …
+/>`,
       render: () => (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
           {SEVERITY_ORDER.map((sev) => {
@@ -431,6 +442,7 @@ const style = resolveTargetMarkerStyle(state)
                   style={style}
                   surfaceSize={42}
                   ringSize={34}
+                  pulse={targetAffiliation(state) === 'hostile'}
                 />
                 <div className="flex flex-col items-center gap-0.5">
                   <span className="text-xs font-semibold text-slate-11">{SEVERITY_LABEL[sev]}</span>

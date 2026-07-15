@@ -471,6 +471,26 @@
 }
 
 /*
+ * Reduced motion for the CSS overlay layer. framer-motion is covered
+ * app-wide by <MotionConfig reducedMotion="user">, but tw-animate-css
+ * keyframes are not. Zero out the transform-carrying enter/exit vars so
+ * overlays keep their opacity fade (comprehension) and drop all
+ * zoom/slide movement.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .overlay-motion-fast[data-state],
+  .overlay-motion-moderate[data-state],
+  .overlay-motion-slow[data-state] {
+    --tw-enter-scale: 1;
+    --tw-enter-translate-x: 0;
+    --tw-enter-translate-y: 0;
+    --tw-exit-scale: 1;
+    --tw-exit-translate-x: 0;
+    --tw-exit-translate-y: 0;
+  }
+}
+
+/*
  * There is intentionally no `.dark { … }` variable block: :root above IS
  * the dark theme (mode convention: dark by default, `.light` opt-in on a
  * subtree — see palette.css). The `.dark` class on <html> remains only so
@@ -611,6 +631,15 @@
   animation: jam-confirm-blink 0.7s ease-in-out;
 }
 
+/* Ambient/attention loops stop entirely under reduced motion — the armed /
+   engaged state stays readable through color and copy. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-missile-pulse,
+  .animate-jam-confirm-blink {
+    animation: none;
+  }
+}
+
 /*
  * Sonner toasts — unify built-in toasts with the tactical design
  * language. All values route through palette.css tokens; the 2px corner
@@ -662,7 +691,7 @@
   font-size: var(--text-xs) !important;
   font-weight: var(--font-weight-medium) !important;
   line-height: 1 !important;
-  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease !important;
+  transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease, border-color var(--motion-fast) ease !important;
 }
 [data-sonner-toast][data-styled='true'] [data-button]:hover {
   background: var(--state-hover-strong) !important;

@@ -94,13 +94,12 @@ export function getJamDisabledReason(
 /** Tailwind text color for the battery percentage cell. */
 export function getBatteryColor(pct: number): string {
   if (pct <= 20) return HEALTH_TEXT_CLASS.error;
-  if (pct <= 40) return HEALTH_TEXT_CLASS.warning;
   return HEALTH_TEXT_CLASS.ok;
 }
 
 /** Tailwind text color for the operational-status cell. */
 export function getHealthColor(status: OperationalStatus): string {
-  return status === 'malfunctioning' ? HEALTH_TEXT_CLASS.warning : HEALTH_TEXT_CLASS.ok;
+  return status === 'malfunctioning' ? HEALTH_TEXT_CLASS.error : HEALTH_TEXT_CLASS.ok;
 }
 
 export interface DeviceDetailRow {

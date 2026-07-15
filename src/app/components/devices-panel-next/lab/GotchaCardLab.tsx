@@ -13,7 +13,7 @@
  * Both studies reuse the production health vocabulary
  * (`DEVICE_HEALTH_VISUAL` / `getDeviceHealth` / `getEffectiveDeviceHealth`)
  * and are driven by the real seed unit via `gotchaUnitsToDevices`, so the
- * states on screen (3 sectors OK, Sector E warning, camera OK) are real.
+ * states on screen (3 sectors OK, Sector E error, camera OK) are real.
  */
 
 import { useState, type ReactNode } from 'react';
@@ -46,13 +46,11 @@ const HEALTH_TONE: Record<
   { dot: string; badge: string; ring: string; text: string; label: string }
 > = {
   error: { dot: HEALTH_DOT_CLASS.error, badge: HEALTH_BADGE_CLASS.error, ring: HEALTH_RING_CLASS.error, text: HEALTH_TEXT_CLASS.error, label: 'Errors' },
-  warning: { dot: HEALTH_DOT_CLASS.warning, badge: HEALTH_BADGE_CLASS.warning, ring: HEALTH_RING_CLASS.warning, text: HEALTH_TEXT_CLASS.warning, label: 'Warning' },
-  offline: { dot: HEALTH_DOT_CLASS.offline, badge: HEALTH_BADGE_CLASS.offline, ring: HEALTH_RING_CLASS.offline, text: HEALTH_TEXT_CLASS.offline, label: 'Offline' },
   ok: { dot: HEALTH_DOT_CLASS.ok, badge: HEALTH_BADGE_CLASS.ok, ring: HEALTH_RING_CLASS.ok, text: HEALTH_TEXT_CLASS.ok, label: 'Healthy' },
 };
 
 /** Worst-tone-first ordering for the inset summary chips (V3). */
-const SUMMARY_ORDER: DeviceHealth[] = ['error', 'warning', 'offline', 'ok'];
+const SUMMARY_ORDER: DeviceHealth[] = ['error', 'ok'];
 
 // ---------------------------------------------------------------------------
 // Seed data — the real effector, adapted through the production mapper

@@ -30,6 +30,7 @@ import {
   resolveMarkerStyle,
   resolveTargetMarkerStyle,
   resolveAssetMarkerStyle,
+  targetAffiliation,
   resolveThreatGlyph,
   droneRotationFromHeading,
   type AssetHealth,
@@ -63,7 +64,6 @@ import {
 } from './tacticalIcons';
 import type { GotchaUnit } from './gotcha/types';
 import { effectiveSensorHealth, getUnitHealth, gotchaSectorColor } from './gotcha/gotchaHealth';
-import { MarkerOfflineBadge } from './devices-panel/OfflineBadge';
 import { SEVERITY_COLOR, type Severity } from '@/primitives/urgency';
 import { MARKER_HEX } from '@/primitives/accentHex';
 import { Phone } from '@/lib/icons/central';
@@ -176,12 +176,12 @@ export interface CesiumTacticalMapProps {
   hoveredTargetIdFromCard?: string | null;
   /** Click on a sensor/effector/launcher icon to open its device card */
   onAssetClick?: (assetId: string) => void;
-  /** Asset IDs that are offline — show a gray badge on the map */
+  /** Asset IDs that are offline — rendered with the standard red error ring. */
   offlineAssetIds?: string[];
   /**
-   * Per-asset health (worst-wins, from the devices panel). Drives the marker
-   * ring color: black/ok, amber/warning, red/error,
-   * dashed gray/offline. Assets not in the map render as `ok`.
+   * Per-asset health (worst-wins, from the devices panel). Binary: an
+   * `error` asset paints its resting ring red; `ok` keeps the standard
+   * black. Assets not in the map render as `ok`.
    */
   assetHealthById?: ReadonlyMap<string, AssetHealth>;
   /** Floodlight IDs currently lit — keeps their beam cone visible even at rest. */
@@ -203,10 +203,9 @@ export interface CesiumTacticalMapProps {
   forceUnits?: ForceUnitMarker[];
   /**
    * Composite Gotcha counter-drone effectors. Each renders as one marker
-   * with up to four 120-degree sector polygons fanned around it. Sectors are
-   * hidden at rest, shown on hover/select of the unit, and ALWAYS shown when
-   * a sector is non-healthy (yellow = warning, red = error/blind). Clicking
-   * a sector drills into that sensor child via `onAssetClick`.
+   * with up to four sector polygons fanned around it. Sectors are hidden at
+   * rest and shown on hover/select of the unit (red = error/blind).
+   * Clicking a sector drills into that sensor child via `onAssetClick`.
    */
   gotchaUnits?: GotchaUnit[];
   /**
@@ -223,6 +222,13 @@ export interface CesiumTacticalMapProps {
    * publishes velocity changes, we just carry the prop through.
    */
   panVelocity?: { vx: number; vy: number } | null;
+  /**
+   * Demo asset-count filter (see `asset-config/assetConfig.ts`). When
+   * provided, static asset markers (cameras / radars / lidars / hive /
+   * weapon / launchers / floodlights / speakers) whose id is not in the
+   * set are skipped. Undefined = show everything (production default).
+   */
+  visibleAssetIds?: ReadonlySet<string>;
 }
 
 /**
@@ -454,22 +460,16 @@ function CesiumTacticalMapImpl({
   darkMonochromeMap,
   cameraLookAtRequest,
   panVelocity,
+  visibleAssetIds,
   onMarkerClick,
   onAssetClick,
   onContextMenuAction,
 }: CesiumTacticalMapProps) {
   const t = useStrings().map;
-  // Offline can arrive via the legacy id list or as `offline` health — union
-  // both so FOV suppression / kinematics behave the same either way.
-  const offlineSet = useMemo(() => {
-    const s = new Set(offlineAssetIds ?? []);
-    if (assetHealthById) {
-      for (const [id, health] of assetHealthById) {
-        if (health === 'offline') s.add(id);
-      }
-    }
-    return s;
-  }, [offlineAssetIds, assetHealthById]);
+  // Disconnected assets (FOV suppression / kinematics). Health itself is
+  // binary now — "offline" arrives only via this id list; on the marker it
+  // renders as the standard red error ring.
+  const offlineSet = useMemo(() => new Set(offlineAssetIds ?? []), [offlineAssetIds]);
   const litFloodlightSet = useMemo(() => floodlightOnIds ?? new Set<string>(), [floodlightOnIds]);
   const playingSpeakerSet = useMemo(() => speakerPlayingIds ?? new Set<string>(), [speakerPlayingIds]);
   // The draft preview only shows while no real flow geometry exists; once
@@ -520,9 +520,12 @@ function CesiumTacticalMapImpl({
     let diff = targetBearing - startBearing;
     if (diff > 180) diff -= 360;
     if (diff < -180) diff += 360;
+    const prefersReduced =
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     // Small change → snap directly (continuous tracking of a moving target);
     // large change → animate the slew.
-    if (Math.abs(diff) < 5) {
+    if (Math.abs(diff) < 5 || prefersReduced) {
       const b = ((targetBearing % 360) + 360) % 360;
       setCameraLookAtBearing({ cameraId: cam.id, bearing: b });
       cameraLookAtBearingRef.current = b;
@@ -793,9 +796,9 @@ function CesiumTacticalMapImpl({
       const isHighlighted = highlightedSensorSet.has(id);
       const isHovered = isHoveredFromCard || isHoveredOnMap;
       const isActive = active && !isOffline;
-      // Health owns the ring color (black/ok, amber/warning, red/error,
-      // dashed gray/offline); interaction only adds glow + emphasis on top.
-      const health: AssetHealth = isOffline ? 'offline' : (assetHealthById?.get(id) ?? 'ok');
+      // 2-state health: an error paints the resting ring red (offline is
+      // just one error reason); interaction still flips the ring white.
+      const health: AssetHealth = isOffline ? 'error' : (assetHealthById?.get(id) ?? 'ok');
       const interaction: AssetMarkerInteraction = isHovered
         ? 'hovered'
         : isSelected
@@ -838,18 +841,15 @@ function CesiumTacticalMapImpl({
         lon,
         zIndex: isHovered ? 40 : isSelected || isActive ? 30 : 10,
         content: (
-          <div className="relative inline-flex">
-            <MapMarker
-              icon={coloredIcon}
-              style={style}
-              surfaceSize={surfaceSize}
-              ringSize={ringSize}
-              label={label}
-              showLabel={isHovered || isSelected || isActive}
-              pulse={isHovered || isSelected || isActive}
-            />
-            {isOffline && <MarkerOfflineBadge />}
-          </div>
+          <MapMarker
+            icon={coloredIcon}
+            style={style}
+            surfaceSize={surfaceSize}
+            ringSize={ringSize}
+            label={label}
+            showLabel={isHovered || isSelected || isActive}
+            pulse={isSelected || isActive}
+          />
         ),
         fov: fov && showFov
           ? { rangeM: fov.rangeM, bearingDeg: fov.bearingDeg, widthDeg: fov.widthDeg, color: fovColor, opacity: fovOpacity }
@@ -892,8 +892,10 @@ function CesiumTacticalMapImpl({
   const staticAssetMarkers = useMemo<CesiumHtmlMarker[]>(() => {
     const out: CesiumHtmlMarker[] = [];
     const seen = new Set<string>();
+    // Demo asset-count filter — undefined means "show everything".
+    const isVisible = (id: string) => visibleAssetIds == null || visibleAssetIds.has(id);
     const push = (m: CesiumHtmlMarker) => {
-      if (seen.has(m.id)) return;
+      if (seen.has(m.id) || !isVisible(m.id)) return;
       seen.add(m.id);
       out.push(m);
     };
@@ -983,6 +985,7 @@ function CesiumTacticalMapImpl({
     playingSpeakerSet,
     cameraLookAtBearing,
     cameraLookAtRequest?.fovOverrideDeg,
+    visibleAssetIds,
   ]);
 
   /**
@@ -1023,7 +1026,7 @@ function CesiumTacticalMapImpl({
             ringSize={SENSOR_RING}
             label={e.name}
             showLabel={showHoverEffect || isJamming}
-            pulse={showHoverEffect}
+            pulse={isEngaged}
           />
         ),
         coverageRadiusM: showHoverEffect || isJamming ? e.coverageRadiusM : undefined,
@@ -1058,16 +1061,20 @@ function CesiumTacticalMapImpl({
       const isHoveredFromCard = hoveredTargetIdFromCard === t.id;
       const isHoveredOnMap = hoveredMarkerId === t.id;
       const isHovered = isHoveredFromCard || isHoveredOnMap;
-      // Unified urgency model: ring + pulse from severity (same source
-      // the card spine reads). Affiliation glyph + interaction overlays
-      // remain in `resolveTargetMarkerStyle`. See
-      // `docs/urgency-unification-plan.md`.
+      // Unified urgency model: severity drives non-hostile ring urgency;
+      // hostile identity uses a black diamond ring + red glyph and the
+      // MapMarker halo. Interaction overlays remain in
+      // `resolveTargetMarkerStyle`.
+      const lifecycleInteraction = detectionInteractionState(t);
+      const isLifecycleFinal =
+        lifecycleInteraction === 'expired' || lifecycleInteraction === 'disabled';
       const interaction: TargetMarkerInteraction = isHovered
         ? 'hovered'
         : isActive
           ? 'selected'
-          : detectionInteractionState(t);
+          : lifecycleInteraction;
       const style = resolveTargetMarkerStyle(t, interaction);
+      const isHostile = targetAffiliation(t) === 'hostile';
       const isNewArrival = t.isNew === true;
       const targetHeading = targetHeadingFromTrail(t);
       out.push({
@@ -1083,7 +1090,7 @@ function CesiumTacticalMapImpl({
             ringSize={TARGET_RING}
             label={t.name ?? t.id}
             showLabel={isHovered || isActive}
-            pulse={isHovered || isActive || isNewArrival}
+            pulse={!isLifecycleFinal && (isHostile || isActive || isNewArrival)}
           />
         ),
         kinematic: true,
@@ -1109,7 +1116,7 @@ function CesiumTacticalMapImpl({
       const isHoveredFromCard = hoveredSensorIdFromCard === d.id;
       const isHoveredOnMap = hoveredMarkerId === d.id;
       const isHovered = isHoveredFromCard || isHoveredOnMap;
-      const health: AssetHealth = isOffline ? 'offline' : (assetHealthById?.get(d.id) ?? 'ok');
+      const health: AssetHealth = isOffline ? 'error' : (assetHealthById?.get(d.id) ?? 'ok');
       const interaction: AssetMarkerInteraction = isSelected
         ? 'selected'
         : isHovered
@@ -1123,23 +1130,20 @@ function CesiumTacticalMapImpl({
         lon: d.lon,
         zIndex: isHovered ? 40 : 25,
         content: (
-          <div className="relative inline-flex">
-            <MapMarker
-              icon={
-                <DroneIcon
-                  color={style.glyphColor}
-                  rotationDeg={droneRotationFromHeading(d.headingDeg)}
-                />
-              }
-              style={style}
-              surfaceSize={SENSOR_SURFACE}
-              ringSize={SENSOR_RING}
-              label={d.name}
-              showLabel={isHovered || isSelected}
-              pulse={isHovered || isSelected}
-            />
-            {isOffline && <MarkerOfflineBadge />}
-          </div>
+          <MapMarker
+            icon={
+              <DroneIcon
+                color={style.glyphColor}
+                rotationDeg={droneRotationFromHeading(d.headingDeg)}
+              />
+            }
+            style={style}
+            surfaceSize={SENSOR_SURFACE}
+            ringSize={SENSOR_RING}
+            label={d.name}
+            showLabel={isHovered || isSelected}
+            pulse={isSelected}
+          />
         ),
         fov: showFov
           ? {
@@ -1192,7 +1196,7 @@ function CesiumTacticalMapImpl({
             ringSize={SENSOR_RING}
             label={(l as unknown as { name?: string }).name ?? l.id}
             showLabel={showHoverEffect}
-            pulse={showHoverEffect}
+            pulse={isEngaged}
           />
         ),
         onClick: () => onAssetClickRef.current?.(l.id),
@@ -1240,7 +1244,7 @@ function CesiumTacticalMapImpl({
             ringSize={SENSOR_RING}
             label={u.label}
             showLabel={isHovered || isDispatched}
-            pulse={isHovered || isDispatched}
+            pulse={isDispatched}
           />
         ),
         onClick: () => onAssetClickRef.current?.(u.id),
@@ -1253,11 +1257,10 @@ function CesiumTacticalMapImpl({
 
   /**
    * Slice 5c — composite Gotcha effectors. One marker per unit with up to
-   * four sector polygons. Sectors stay hidden at rest (keeps the map quiet),
-   * appear in full when the unit is hovered/selected, and a non-healthy
-   * sector is ALWAYS drawn (yellow = warning, red = error/blind, gray =
-   * offline) so a coverage gap can't hide. Clicking a sector drills into the
-   * child sensor via `onAssetClick` (wired through `onHtmlMarkerSectorClick`).
+   * four sector polygons. Sectors stay hidden at rest (keeps the map quiet)
+   * and appear in full when the unit is hovered/selected (red = error /
+   * blind). Clicking a sector drills into the child sensor via
+   * `onAssetClick` (wired through `onHtmlMarkerSectorClick`).
    */
   const gotchaMarkers = useMemo<CesiumHtmlMarker[]>(() => {
     if (!gotchaUnits || gotchaUnits.length === 0) return [];
@@ -1279,10 +1282,10 @@ function CesiumTacticalMapImpl({
         : isHovered
           ? 'hovered'
           : 'default';
-      // Non-healthy units energize their own marker ring so the operator
+      // Failing units energize their own marker ring so the operator
       // spots trouble even before reading the sectors. Health never fires
       // the critical takeover — it's a steady status tint, no pulse.
-      const unhealthy = unitHealth !== 'ok' && unitHealth !== 'offline';
+      const unhealthy = unitHealth === 'error';
       const style = resolveMarkerStyle(
         state,
         'friendly',
@@ -1326,7 +1329,7 @@ function CesiumTacticalMapImpl({
               ringSize={SENSOR_RING}
               label={unit.name}
               showLabel={isHovered || isSelected}
-              pulse={isHovered || isSelected}
+              pulse={isSelected}
             />
           </span>
         ),
@@ -1801,7 +1804,7 @@ function CesiumTacticalMapImpl({
       {controlIndicator && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
           <div
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-900/90 backdrop-blur-md shadow-[0_0_0_1px_rgba(52,211,153,0.6),0_10px_15px_-3px_rgba(0,0,0,0.3),0_0_20px_rgba(52,211,153,0.2)] animate-pulse"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-900/90 backdrop-blur-md shadow-[0_0_0_1px_rgba(52,211,153,0.6),0_10px_15px_-3px_rgba(0,0,0,0.3),0_0_20px_rgba(52,211,153,0.2)] animate-pulse motion-reduce:animate-none"
             style={{ animationDuration: '3s' }}
           >
             <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />

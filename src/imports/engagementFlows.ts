@@ -277,9 +277,9 @@ export function getGotchaFlow(t: Strings): EngagementFlowDef {
         stripLabel: g.engagedStrip,
         stripIcon: Check,
         stripTone: 'success',
-        terminalActions: [
-          { id: 'investigate-bda', label: g.verifyBdaPtz, icon: Eye, variant: 'fill', callbackKey: 'onVerify', callbackArg: 'investigate' },
-        ],
+        // No terminalActions: the card slots swap in the speaker (PA
+        // broadcast) toggle for the engaged gotcha state instead of the
+        // PTZ investigate action (see `buildFlowActions`).
       },
     },
 

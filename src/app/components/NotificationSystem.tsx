@@ -67,7 +67,7 @@ const LiveBatchedToast = ({ toastId }: { toastId: string }) => {
               <span className="text-sm font-medium text-slate-12 truncate">{data.title}</span>
               <button
                 onClick={(e) => { e.stopPropagation(); toast.dismiss(toastId); flushBatch(); }}
-                className="text-slate-8 hover:text-slate-10 transition-[color,opacity] duration-150 shrink-0 opacity-0 group-hover:opacity-100 p-1 -m-1"
+                className="text-slate-8 hover:text-slate-10 transition-[color,opacity] duration-[var(--motion-fast)] shrink-0 opacity-0 group-hover:opacity-100 p-1 -m-1"
                 aria-label={nt.stackCloseAriaLabel}
               >
                 <X size={14} />
@@ -227,7 +227,7 @@ export function NotificationSystem() {
     <>
       <div
         aria-hidden="true"
-        className={`notif-vignette fixed inset-0 pointer-events-none z-40 transition-opacity duration-300 ease-out ${
+        className={`notif-vignette fixed inset-0 pointer-events-none z-40 transition-opacity duration-[var(--motion-slow)] ease-out ${
           criticalActive ? 'visible' : 'invisible'
         }`}
         style={{

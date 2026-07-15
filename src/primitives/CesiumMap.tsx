@@ -1278,6 +1278,9 @@ export function CesiumMap({
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer) return;
+    const prefersReduced =
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     const target = SCENE_MODE_MAP[sceneMode];
     if (viewer.scene.mode === target) return;
     viewer.scene.mode = target;
@@ -1321,7 +1324,7 @@ export function CesiumMap({
             heading,
             roll: 0,
           },
-          duration: 0.8,
+          duration: prefersReduced ? 0 : 0.8,
         });
       }
     }
@@ -2017,9 +2020,12 @@ export function CesiumMap({
   // ── Imperative fly-to ──────────────────────────────────────────────────────
   useEffect(() => {
     if (!flyTo || !viewerRef.current) return;
+    const prefersReduced =
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     const viewer = viewerRef.current;
     const heightM = flyTo.heightM ?? 1500;
-    const duration = flyTo.durationSec ?? 1.2;
+    const duration = prefersReduced ? 0 : (flyTo.durationSec ?? 1.2);
 
     // Top-down (legacy) fly when no pitch is requested.
     if (flyTo.pitchDeg == null) {

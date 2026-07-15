@@ -205,7 +205,7 @@ export function CameraFeedTile({
     return (
       <div
         ref={dropRef}
-        className={`w-full h-full relative flex items-center justify-center bg-surface-1 transition-shadow duration-150 ease-out
+        className={`w-full h-full relative flex items-center justify-center bg-surface-1 transition-shadow duration-[var(--motion-fast)] ease-out
           ${showDropAccent ? 'shadow-[inset_0_0_0_2px_rgba(56,189,248,0.6)]' : ''}`}
       >
         <div className="flex flex-col items-center gap-2 text-white/60">
@@ -248,7 +248,7 @@ export function CameraFeedTile({
           if (!e.currentTarget.contains(e.relatedTarget as Node)) setFocusWithin(false);
         }}
         onKeyDown={handleKeyDown}
-        className={`w-full h-full relative bg-black overflow-hidden focus:outline-none transition-shadow duration-150 ease-out
+        className={`w-full h-full relative bg-black overflow-hidden focus:outline-none transition-shadow duration-[var(--motion-fast)] ease-out
           ${cursorClass}
           ${showDropAccent ? 'shadow-[inset_0_0_0_2px_rgba(56,189,248,0.6)]' : 'focus-visible:shadow-[inset_0_0_0_2px_rgba(255,255,255,0.3)]'}`}
       >

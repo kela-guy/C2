@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
+import { spring } from '@/lib/springs';
 import { useDrop } from 'react-dnd';
 import { X, Plus, Camera, ChevronDown, Map, SplitSquareHorizontal } from '@/lib/icons/central';
 import { useStrings } from '@/lib/intl';
@@ -45,7 +46,7 @@ function CameraPickerContent({
           <DropdownMenuItem
             key={cam.id}
             disabled={inUse}
-            className="flex items-center gap-2 px-2.5 py-2 rounded-md text-xs text-slate-11 cursor-pointer hover:bg-state-hover-overlay hover:text-white transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex items-center gap-2 px-2.5 py-2 rounded-md text-xs text-slate-11 cursor-pointer hover:bg-state-hover-overlay hover:text-white transition-colors duration-[var(--motion-fast)] disabled:cursor-not-allowed disabled:opacity-40"
             onClick={() => onSelect(cam.id)}
           >
             <Camera size={14} className="shrink-0 text-slate-10" aria-hidden="true" />
@@ -103,12 +104,12 @@ function FeedSlot({
 
   if (!cameraId) {
     return (
-      <div ref={slotDropRef} className={`flex-1 min-h-0 relative flex items-center justify-center bg-surface-1 transition-[box-shadow] duration-200 ease-out ${isOverSlot ? 'shadow-[inset_0_0_0_2px_rgba(255,255,255,0.25)]' : ''}`}>
+      <div ref={slotDropRef} className={`flex-1 min-h-0 relative flex items-center justify-center bg-surface-1 transition-[box-shadow] duration-[var(--motion-moderate)] ease-out ${isOverSlot ? 'shadow-[inset_0_0_0_2px_rgba(255,255,255,0.25)]' : ''}`}>
         {onRemove && (
           <button
             type="button"
             onClick={onRemove}
-            className="absolute top-2 start-2 p-2.5 rounded text-white/30 hover:text-white hover:bg-red-500/30 transition-colors duration-150 ease-out active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-state-focus-ring focus-visible:outline-none z-10"
+            className="absolute top-2 start-2 p-2.5 rounded text-white/30 hover:text-white hover:bg-red-500/30 transition-colors duration-[var(--motion-fast)] ease-out active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-state-focus-ring focus-visible:outline-none z-10"
             title={t.removeWindow}
             aria-label={t.removeWindowAriaLabel}
           >
@@ -122,7 +123,7 @@ function FeedSlot({
               className="flex items-center gap-2 px-3 py-2 rounded-md
                          border border-dashed border-white/10
                          cursor-pointer hover:border-white/20 hover:bg-state-hover
-                         transition-colors duration-150
+                         transition-colors duration-[var(--motion-fast)]
                          focus-visible:ring-2 focus-visible:ring-state-focus-ring focus-visible:outline-none"
             >
               <Plus size={14} className="text-white/40 shrink-0" aria-hidden="true" />
@@ -142,7 +143,7 @@ function FeedSlot({
                 <DropdownMenuItem
                   key={cam.id}
                   disabled={inUse}
-                  className="flex items-center gap-2 px-2.5 py-2 rounded-md text-xs text-slate-11 cursor-pointer hover:bg-state-hover-overlay hover:text-white transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="flex items-center gap-2 px-2.5 py-2 rounded-md text-xs text-slate-11 cursor-pointer hover:bg-state-hover-overlay hover:text-white transition-colors duration-[var(--motion-fast)] disabled:cursor-not-allowed disabled:opacity-40"
                   onClick={() => onSelect(cam.id)}
                 >
                   <Camera size={14} className="shrink-0 text-slate-10" aria-hidden="true" />
@@ -152,7 +153,7 @@ function FeedSlot({
             })}
             <DropdownMenuItem
               disabled
-              className="flex items-center gap-2 px-2.5 py-2 rounded-md text-xs text-slate-11 cursor-pointer hover:bg-state-hover-overlay hover:text-white transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex items-center gap-2 px-2.5 py-2 rounded-md text-xs text-slate-11 cursor-pointer hover:bg-state-hover-overlay hover:text-white transition-colors duration-[var(--motion-fast)] disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Map size={14} className="shrink-0 text-slate-10" aria-hidden="true" />
               <span className="flex-1 text-start">{t.mapPickerOption}</span>
@@ -169,7 +170,7 @@ function FeedSlot({
   return (
     <div
       ref={slotDropRef}
-      className={`flex-1 min-h-0 relative bg-black overflow-hidden group/feed transition-[box-shadow] duration-200 ease-out ${isOverSlot ? 'shadow-[inset_0_0_0_2px_rgba(255,255,255,0.25)]' : ''}`}
+      className={`flex-1 min-h-0 relative bg-black overflow-hidden group/feed transition-[box-shadow] duration-[var(--motion-moderate)] ease-out ${isOverSlot ? 'shadow-[inset_0_0_0_2px_rgba(255,255,255,0.25)]' : ''}`}
       onMouseEnter={() => onHover?.(cameraId)}
       onMouseLeave={() => onHover?.(null)}
     >
@@ -190,7 +191,7 @@ function FeedSlot({
 
       {/* Top overlay: always-visible badges + hover controls */}
       <div className="absolute inset-x-0 top-0">
-        <div className="h-16 bg-gradient-to-b from-black/60 to-transparent opacity-0 group-hover/feed:opacity-100 transition-opacity duration-200 ease-out" />
+        <div className="h-16 bg-gradient-to-b from-black/60 to-transparent opacity-0 group-hover/feed:opacity-100 transition-opacity duration-[var(--motion-moderate)] ease-out" />
 
         <div className="absolute top-0 inset-x-0 px-2.5 pt-2 flex items-center gap-1.5">
           {/* Always-visible: LIVE badge */}
@@ -202,7 +203,7 @@ function FeedSlot({
           <div className="flex-1" />
 
           {/* Hover-only: camera picker + remove */}
-          <div className={`transition-opacity duration-200 ease-out ${
+          <div className={`transition-opacity duration-[var(--motion-moderate)] ease-out ${
             isPickerOpen
               ? 'opacity-100 pointer-events-auto'
               : 'opacity-0 group-hover/feed:opacity-100 pointer-events-none group-hover/feed:pointer-events-auto'
@@ -212,7 +213,7 @@ function FeedSlot({
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded bg-white/10 hover:bg-white/20 transition-colors duration-150 ease-out active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-state-focus-ring focus-visible:outline-none"
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded bg-white/10 hover:bg-white/20 transition-colors duration-[var(--motion-fast)] ease-out active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-state-focus-ring focus-visible:outline-none"
                   >
                     <span className="text-xs font-medium text-white/90 truncate max-w-[100px]">{label}</span>
                     <ChevronDown size={10} className="text-white/60 shrink-0" />
@@ -225,7 +226,7 @@ function FeedSlot({
                 <button
                   type="button"
                   onClick={onRemove}
-                  className="relative p-2 rounded text-white/40 hover:text-white hover:bg-red-500/30 transition-colors duration-150 ease-out active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-state-focus-ring focus-visible:outline-none before:absolute before:inset-[-4px] before:content-['']"
+                  className="relative p-2 rounded text-white/40 hover:text-white hover:bg-red-500/30 transition-colors duration-[var(--motion-fast)] ease-out active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-state-focus-ring focus-visible:outline-none before:absolute before:inset-[-4px] before:content-['']"
                   title={t.removeCamera}
                   aria-label={t.removeCameraAriaLabel}
                 >
@@ -341,7 +342,7 @@ export function CameraViewerPanel({ feeds, onFeedsChange, onCameraHover, weaponF
               : { y: shouldReduceMotion ? 0 : '100%', opacity: 0 }}
             transition={shouldReduceMotion
               ? { duration: 0.15 }
-              : { type: 'spring', duration: 0.35, bounce: 0.1 }}
+              : spring.slow}
             className="absolute inset-0 flex items-center justify-center gap-1.5
                        bg-[#0a0a0a]/90 backdrop-blur-sm
                        border-t border-dashed border-white/[0.08]

@@ -97,7 +97,7 @@ export function DockedPanel({
         dockClass,
         noTransition
           ? ''
-          : 'transition-transform duration-300 ease-out motion-reduce:transition-none',
+          : 'transition-transform duration-[var(--motion-slow)] ease-out motion-reduce:transition-none',
         open ? 'translate-x-0' : `${closedTranslate} pointer-events-none`,
         className,
       )}

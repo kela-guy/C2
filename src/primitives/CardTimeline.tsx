@@ -71,7 +71,7 @@ export function CardTimeline({ steps, compact, className = '', statusLabels: sta
       {steps.map((step, idx) => (
         <div
           key={idx}
-          className={`flex items-center gap-2.5 text-xs font-mono transition-colors duration-300 ${
+          className={`flex items-center gap-2.5 text-xs font-mono transition-colors duration-[var(--motion-slow)] ${
             step.status === 'active'
               ? 'text-white'
               : step.status === 'complete'

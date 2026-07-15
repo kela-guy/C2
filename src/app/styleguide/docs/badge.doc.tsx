@@ -29,13 +29,11 @@ import activityTimestampChipSrc from '@/primitives/ActivityTimestampChip.tsx?raw
 import newUpdatesPillSrc from '@/primitives/NewUpdatesPill.tsx?raw';
 import type { ComponentDocModule } from '../registry/types';
 
-const HEALTH_TONES: HealthTone[] = ['ok', 'warning', 'error', 'offline'];
+const HEALTH_TONES: HealthTone[] = ['ok', 'error'];
 
 const HEALTH_TONE_LABEL: Record<HealthTone, string> = {
   ok: 'OK',
-  warning: 'Warning',
   error: 'Error',
-  offline: 'Offline',
 };
 
 export const badgeDoc: ComponentDocModule = {
@@ -114,12 +112,12 @@ export const badgeDoc: ComponentDocModule = {
       id: 'health-status',
       title: 'Domain variant: HealthStatus (StatusDot / HealthBadge)',
       description:
-        'The canonical health tone vocabulary — ok / warning / error / offline mapped once onto palette tokens. StatusDot is the smallest unit (a styled span with a vivid accent fill where the color IS the signal; offline deliberately stays neutral slate). HealthBadge is this Badge compressed into the devices-panel chip grammar (16px tall, 2px corner) with the tone classes on top. Always pair a dot with a textual label or aria-label.',
+        'The canonical health tone vocabulary — binary ok / error mapped once onto palette tokens. The cause of an error (offline, low battery, malfunction) is text, never its own tone. StatusDot is the smallest unit (a styled span with a vivid accent fill where the color IS the signal). HealthBadge is this Badge compressed into the devices-panel chip grammar (16px tall, 2px corner) with the tone classes on top. Always pair a dot with a textual label or aria-label.',
       code: `import { StatusDot, HealthBadge, HEALTH_TEXT_CLASS } from "@/primitives"
 
 <StatusDot tone="ok" />
 <HealthBadge tone="error">3 שגיאות</HealthBadge>
-<span className={HEALTH_TEXT_CLASS.warning}>אזהרת סוללה</span>`,
+<span className={HEALTH_TEXT_CLASS.error}>סוללה 18%</span>`,
       render: () => (
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-6">
@@ -132,9 +130,8 @@ export const badgeDoc: ComponentDocModule = {
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <HealthBadge tone="error">3 שגיאות</HealthBadge>
-            <HealthBadge tone="warning">סוללה 20%</HealthBadge>
+            <HealthBadge tone="error">מנותק</HealthBadge>
             <HealthBadge tone="ok">מחובר</HealthBadge>
-            <HealthBadge tone="offline">מנותק</HealthBadge>
           </div>
         </div>
       ),
@@ -145,14 +142,11 @@ export const badgeDoc: ComponentDocModule = {
       description:
         'Standalone labels and telemetry values compose from the exported class records instead of re-declaring emerald/red/amber at the call site.',
       code: `<span className={HEALTH_TEXT_CLASS.error}>חיישן מנותק</span>
-<span className={HEALTH_TEXT_CLASS.warning}>אות חלש</span>
 <span className={HEALTH_TEXT_CLASS.ok}>כל המערכות תקינות</span>`,
       render: () => (
         <div className="flex flex-col items-start gap-1.5 text-xs font-medium">
           <span className={HEALTH_TEXT_CLASS.error}>חיישן מנותק</span>
-          <span className={HEALTH_TEXT_CLASS.warning}>אות חלש</span>
           <span className={HEALTH_TEXT_CLASS.ok}>כל המערכות תקינות</span>
-          <span className={HEALTH_TEXT_CLASS.offline}>לא מקוון</span>
         </div>
       ),
     },
@@ -247,7 +241,7 @@ export const badgeDoc: ComponentDocModule = {
       note: 'The dot is aria-hidden — the row text carries the meaning. Never ship a color-only signal.',
       render: () => (
         <div className="flex items-center gap-2 rounded bg-surface-2 px-3 py-2 text-xs text-slate-11">
-          <StatusDot tone="warning" />
+          <StatusDot tone="error" />
           <span>מצלמה צפונית — אות חלש</span>
         </div>
       ),

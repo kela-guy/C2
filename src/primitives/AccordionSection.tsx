@@ -40,7 +40,7 @@ export function AccordionSection({
         <div className="flex items-center gap-2">
           {headerAction}
           <div
-            className="text-slate-9 transition-transform duration-200 group-data-[state=open]:rotate-180"
+            className="text-slate-9 transition-transform duration-[var(--motion-moderate)] group-data-[state=open]:rotate-180"
             aria-hidden="true"
           >
             <ChevronDown size={16} />
@@ -48,7 +48,7 @@ export function AccordionSection({
         </div>
       </CollapsibleTrigger>
 
-      <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
+      <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down data-[state=open]:[animation-duration:var(--motion-moderate)] data-[state=closed]:[animation-duration:var(--motion-moderate-exit)]">
         <div
           className="flex flex-wrap px-[8px] py-[0px]"
           style={{

@@ -1272,7 +1272,7 @@ function LayerRow({
           onMouseLeave={() => setHoveredShapeId(null)}
           onFocus={() => setHoveredShapeId(shape.id)}
           onBlur={() => setHoveredShapeId(null)}
-          className={`group flex cursor-pointer items-stretch overflow-hidden rounded-[2px] border transition-[background,border-color,opacity] duration-100 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring ${
+          className={`group flex cursor-pointer items-stretch overflow-hidden rounded-[2px] border transition-[background,border-color,opacity] duration-[var(--motion-fast)] ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring ${
             // Standard white hover — subtle border + fill that reads as
             // "this is the row you're pointing at / hovering on the map"
             // without shouting. Idle rows have a near-invisible fill;

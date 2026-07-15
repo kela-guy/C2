@@ -43,7 +43,7 @@ export function CardFooterDock({ actions, className }: CardFooterDockProps) {
               'h-8 rounded-[5px] px-3',
               'text-xs font-medium text-slate-11',
               'bg-white/[0.08] border border-white/[0.06]',
-              'transition-[background-color,border-color] duration-150 ease-out',
+              'transition-[background-color,border-color] duration-[var(--motion-fast)] ease-out',
               'hover:bg-state-hover-overlay hover:border-white/[0.10]',
               'active:bg-state-pressed active:scale-[0.98]',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring',
@@ -51,7 +51,7 @@ export function CardFooterDock({ actions, className }: CardFooterDockProps) {
             )}
           >
             {action.loading ? (
-              <span className="w-3.5 h-3.5 border-2 border-slate-9 border-t-slate-11 rounded-full animate-spin" />
+              <span className="w-3.5 h-3.5 border-2 border-slate-9 border-t-slate-11 rounded-full animate-spin motion-reduce:animate-none" />
             ) : Icon ? (
               <Icon size={14} className="shrink-0" aria-hidden="true" />
             ) : null}

@@ -61,7 +61,7 @@ const droneError: Device = {
   errors: [
     { severity: 'error', message: 'Motor 3 current spike — thrust derated' },
     { severity: 'error', message: 'Connection lost to ground station (retrying)' },
-    { severity: 'warning', message: 'GPS accuracy reduced — 9 satellites' },
+    { severity: 'error', message: 'GPS accuracy reduced — 9 satellites' },
   ],
   Icon: DroneDeviceIcon,
 };
@@ -114,9 +114,9 @@ const busyLog: Device = {
   fovDeg: 360, bearingDeg: 0,
   errors: [
     { severity: 'error', message: 'Point cloud dropout on sector 3' },
-    { severity: 'warning', message: 'Window contamination detected' },
-    { severity: 'warning', message: 'Spin rate jitter above tolerance' },
-    { severity: 'warning', message: 'Returns below expected density' },
+    { severity: 'error', message: 'Window contamination detected' },
+    { severity: 'error', message: 'Spin rate jitter above tolerance' },
+    { severity: 'error', message: 'Returns below expected density' },
   ],
   Icon: LidarIcon,
 };

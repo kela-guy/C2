@@ -8,10 +8,9 @@
  * an optional camera/net sub-device.
  *
  * Health intentionally reuses the device panel's `DeviceHealth` vocabulary
- * (`ok | warning | error | critical | offline`) so the marker, the sidebar
- * tile, and the roll-up all speak ONE health language — see
- * `devices-panel/deviceHealth.ts`. There is no second `operational/degraded`
- * vocabulary.
+ * (`ok | error`) so the marker, the sidebar tile, and the roll-up all speak
+ * ONE health language — see `devices-panel/deviceHealth.ts`. There is no
+ * second `operational/degraded` vocabulary.
  */
 
 import type { DeviceHealth } from '../devices-panel/deviceHealth';
@@ -35,11 +34,10 @@ export interface GotchaSensor {
   fovDeg: number;
   rangeM: number;
   /**
-   * Worst-wins sector status. There is deliberately NO dedicated
-   * calibration UI: if the unit can't confirm north/orientation, that
-   * uncertainty is folded into this health (`warning` / `error`) so it reads
-   * as "something not OK on this sector" — the same channel as every other
-   * fault.
+   * Binary sector status. There is deliberately NO dedicated calibration
+   * UI: if the unit can't confirm north/orientation, that uncertainty is
+   * folded into this health (`error`) so it reads as "something not OK on
+   * this sector" — the same channel as every other fault.
    */
   health: SectorHealth;
   /** Detection-to-display latency in milliseconds. Drives the latency monitor. */

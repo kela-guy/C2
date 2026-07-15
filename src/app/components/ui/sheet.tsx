@@ -58,7 +58,7 @@ function SheetContent({
       <SheetPrimitive.Content
         data-slot="sheet-content"
         className={cn(
-          "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-50 flex flex-col gap-4 shadow-lg transition ease-in-out data-[state=closed]:duration-[var(--motion-slow-exit)] data-[state=open]:duration-[var(--motion-slow)]",
+          "overlay-motion-slow bg-background data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-50 flex flex-col gap-4 shadow-lg",
           // `side` is a *physical* prop — callers pick which screen edge
           // the sheet docks to (a "right notifications drawer" stays on
           // the right in both RTL and LTR). The close button below uses

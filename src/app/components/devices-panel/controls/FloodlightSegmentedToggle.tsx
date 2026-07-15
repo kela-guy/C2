@@ -33,7 +33,7 @@ interface Slots {
 function SlidingSegmented({ on, onToggle, disabled, slots, className }: FloodlightSegmentedProps & { slots: Slots }) {
   const segBase = cn(
     'relative z-10 inline-flex items-center justify-center gap-1.5 px-3 py-1 text-xs font-medium',
-    'transition-colors duration-150 ease-out',
+    'transition-colors duration-[var(--motion-fast)] ease-out',
     'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-state-focus-ring',
     'active:scale-[0.98] disabled:cursor-not-allowed',
     slots.seg,
@@ -54,7 +54,7 @@ function SlidingSegmented({ on, onToggle, disabled, slots, className }: Floodlig
       <span
         aria-hidden="true"
         className={cn(
-          'pointer-events-none absolute transition-transform duration-200 ease-out motion-reduce:transition-none',
+          'pointer-events-none absolute transition-transform duration-[var(--motion-moderate)] ease-out motion-reduce:transition-none',
           slots.thumb,
           on && slots.thumbOn,
           on ? 'translate-x-full [&:dir(rtl)]:-translate-x-full' : 'translate-x-0',

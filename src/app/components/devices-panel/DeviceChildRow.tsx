@@ -21,14 +21,11 @@ import {
   type DeviceHealth,
 } from './deviceHealth';
 import { DEFAULT_CONNECTION_STATE_LABELS } from './constants';
-import { OfflineBadge, OfflineHatch } from './OfflineBadge';
 import type { ConnectionState, Device, DevicesPanelStrings } from './types';
 
 function healthLabel(health: DeviceHealth, strings: DevicesPanelStrings): string {
   return {
     error: strings.healthError,
-    warning: strings.healthWarning,
-    offline: strings.healthOffline,
     ok: strings.healthHealthy,
   }[health];
 }
@@ -68,12 +65,8 @@ export const DeviceChildRow = memo(function DeviceChildRow({
   const reason = getDeviceHealthReason(device, strings, connectionStateLabels);
   const label = healthLabel(health, strings);
   const errorCount = getDeviceErrorCount(device);
-  // Mirror the parent header's Logs button tone: amber for a warning, red for
-  // error, so a warning child doesn't read as a hard error.
-  const logsToneClass =
-    health === 'warning'
-      ? 'text-amber-300 hover:bg-amber-500/10 focus-visible:ring-amber-300/40'
-      : 'text-red-300 hover:bg-red-500/10 focus-visible:ring-red-300/40';
+  // Mirror the parent header's Logs button tone — the error red.
+  const logsToneClass = 'text-red-300 hover:bg-red-500/10 focus-visible:ring-red-300/40';
 
   const activate = () => {
     onSelect(device.id);
@@ -98,26 +91,19 @@ export const DeviceChildRow = memo(function DeviceChildRow({
       data-child-id={device.id}
       data-health={health}
       data-selected={selected || undefined}
-      className={`group relative flex min-h-[40px] items-center gap-2.5 py-2 text-end cursor-pointer transition-[background-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-state-focus-ring focus-visible:ring-inset ${
+      className={`group relative flex min-h-[40px] items-center gap-2.5 py-2 text-end cursor-pointer transition-[background-color] duration-[var(--motion-fast)] ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-state-focus-ring focus-visible:ring-inset ${
         inset ? 'px-2 rounded' : 'ps-4 pe-4 border-b border-white/[0.04]'
       } ${selected ? 'bg-white/[0.07]' : 'hover:bg-state-hover active:bg-state-pressed'}`}
     >
-      {/* Offline children carry the same hatched surface as offline parents. */}
-      {health === 'offline' && <OfflineHatch />}
       <div
         className={`relative w-6 h-6 rounded flex items-center justify-center shrink-0 ${visual.tile}`}
         {...(reason ? { role: 'status', 'aria-label': reason } : {})}
       >
         <device.Icon size={15} fill={visual.iconFill} />
-        {visual.showOfflineBadge && <OfflineBadge size={16} />}
       </div>
 
       <div className="flex-1 min-w-0 text-start">
-        <span
-          className={`text-xs font-medium truncate block ${
-            health === 'offline' ? 'text-white/55' : 'text-slate-11'
-          }`}
-        >
+        <span className="text-xs font-medium truncate block text-slate-11">
           {device.name}
         </span>
       </div>
@@ -132,7 +118,7 @@ export const DeviceChildRow = memo(function DeviceChildRow({
             e.stopPropagation();
             onOpenErrors();
           }}
-          className={`inline-flex h-5 shrink-0 items-center gap-1 rounded px-1.5 text-2xs font-medium transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 [&_svg]:size-3 ${logsToneClass}`}
+          className={`inline-flex h-5 shrink-0 items-center gap-1 rounded px-1.5 text-2xs font-medium transition-[background-color,transform] duration-[var(--motion-fast)] ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 [&_svg]:size-3 ${logsToneClass}`}
         >
           <List size={11} aria-hidden="true" />
           {errorCount > 0 && (

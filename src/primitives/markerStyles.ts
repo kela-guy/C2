@@ -65,12 +65,13 @@ export interface MarkerStyle {
   ringOpacity: number;
   ringDash: 'solid' | 'dashed';
   /**
-   * Ring silhouette. `circle` (default) is the shipped look; `square` and
-   * `diamond` are affiliation-shape auditions (`/status-v2` sandbox) so
-   * hostile detections can be told apart from own assets by geometry, not
-   * color alone. Optional so existing style literals stay valid.
+   * Ring silhouette. `circle` (default) is the friendly/neutral look;
+   * `diamond` is the hostile frame — a sharp-cornered rotated square
+   * (MIL-STD-2525-inspired) applied to the ring only, so hostile
+   * detections read by geometry before color. Optional so existing style
+   * literals stay valid.
    */
-  ringShape?: 'circle' | 'square' | 'diamond';
+  ringShape?: 'circle' | 'diamond';
   ringPulse: boolean;
   glyphColor: string;
   glyphOpacity: number;
@@ -97,7 +98,9 @@ export const AFFILIATION_PALETTES: Record<Affiliation, AffiliationPalette> = {
     glyph: MARKER_HEX.hostile,
     surface: MARKER_HEX.white,
     surfaceOpacity: 0.1,
-    ring: MARKER_HEX.hostile,
+    // The hostile read is glyph red + diamond geometry + constant marker
+    // halo; the ring itself stays the standard black resting ring.
+    ring: MARKER_HEX.ringResting,
     ringOpacity: 1,
   },
   possibleThreat: {
@@ -245,6 +248,12 @@ export function resolveMarkerStyle(
 ): MarkerStyle {
   const palette = AFFILIATION_PALETTES[affiliation];
   const base = STATE_MATRIX[state](palette);
+  // Hostile affiliation carries its identity everywhere: a standard black
+  // diamond ring + red glyph. The constant hostile pulse is MapMarker's
+  // expanding halo (`pulse` prop), driven by call sites rather than the ring.
+  if (affiliation === 'hostile') {
+    base.ringShape = 'diamond';
+  }
   if (!overrides) return base;
   const merged = { ...base };
   for (const key of Object.keys(overrides) as (keyof MarkerStyle)[]) {
@@ -330,22 +339,29 @@ export function resolveTargetMarkerStyle(
 
   const severity = resolveTargetSeverity(target);
   const base = resolveMarkerStyle(interaction, affiliation);
-  const severityColor = SEVERITY_COLOR[severity];
+
+  // Hostile is a fixed identity read: red glyph + BLACK diamond ring
+  // (shape applied to the ring only — see MapMarker). Its constant motion
+  // comes from MapMarker's halo (`pulse` prop), never from the ring.
+  // Severity still drives ring weight, but never the hostile hue — a
+  // MEDIUM hostile no longer reads orange.
+  const hostile = affiliation === 'hostile';
+  const accent = hostile ? MARKER_HEX.hostile : SEVERITY_COLOR[severity];
 
   return {
     ...base,
-    ringColor: severityColor,
-    ringPulse: SEVERITY_PULSE[severity],
+    ringColor: hostile ? MARKER_HEX.ringResting : SEVERITY_COLOR[severity],
+    ringShape: hostile ? 'diamond' : 'circle',
+    ringPulse: hostile ? false : SEVERITY_PULSE[severity],
     ringOpacity: 1,
     // CRITICAL gets a slightly heavier ring — visual parallel of the
     // card's higher icon-surface opacity at the same tier.
     ringWidth: severity === 'CRITICAL' ? 3 : 2,
-    // Glyph + inner glow ride the same severity color as the ring so
-    // the marker reads as one tier, not two. Keeps the underlying glow
-    // toggle from the interaction state (only hovered/selected/active
-    // light it up); severity only picks the *color* that gets glowed.
-    glyphColor: severityColor,
-    innerGlowColor: severityColor,
+    // Glyph + inner glow ride the same accent so the marker reads as one
+    // tier, not two. Keeps the underlying glow toggle from the interaction
+    // state (only hovered/selected/active light it up).
+    glyphColor: accent,
+    innerGlowColor: accent,
   };
 }
 
@@ -353,83 +369,55 @@ export function resolveTargetMarkerStyle(
  * Friendly-asset health — mirrors the devices panel's `DeviceHealth`
  * (`deviceHealth.ts`) so the map marker and the panel tile always tell the
  * same story about the same asset.
+ *
+ * Two states only: an asset is working (`ok`) or it isn't (`error`).
+ * The *cause* (offline, malfunction, low battery, stale link…) is a reason
+ * carried as text — tooltip, panel chip, errors dialog — never its own
+ * color tier.
  */
-export type AssetHealth = 'ok' | 'warning' | 'error' | 'offline';
+export type AssetHealth = 'ok' | 'error';
 
-export const ASSET_HEALTHS: AssetHealth[] = ['ok', 'warning', 'error', 'offline'];
+export const ASSET_HEALTHS: AssetHealth[] = ['ok', 'error'];
 
 export const ASSET_HEALTH_LABELS: Record<AssetHealth, string> = {
   ok: 'OK',
-  warning: 'Warning',
   error: 'Error',
-  offline: 'Offline',
 };
 
 /**
- * Ring color per health tier. `ok` keeps the friendly palette's black ring;
- * trouble tiers recolor the ring only — the glyph stays white so identity
- * never changes, only the urgency channel.
- *
- *   warning  → amber (same family as the panel's warning tile / amber-400 dot)
- *   error    → red (same red the target severity system speaks in `urgency.ts`)
- *   offline  → desaturated gray, dashed — "known-absent", not alarmist
+ * The error red the map ring speaks — same red the target severity system
+ * uses in `urgency.ts`, so "something is wrong" is one hue everywhere.
  */
-export const ASSET_HEALTH_RING_COLOR: Record<AssetHealth, string> = {
-  ok: MARKER_HEX.ringResting,
-  warning: MARKER_HEX.weaponWarning,
-  error: MARKER_HEX.hostile,
-  offline: MARKER_HEX.disabledGray,
-};
+export const ASSET_HEALTH_ERROR_COLOR = MARKER_HEX.hostile;
 
 /** Interaction subset a friendly asset marker actually drives today. */
 export type AssetMarkerInteraction = 'default' | 'hovered' | 'selected' | 'active';
 
 /**
- * Resolve a friendly-asset marker style under the health model. Health owns
- * the ring at rest; the glyph stays white. Interaction wins the ring:
- * hovered / selected / active flip it white (the standard friendly cue) and
- * the health color returns on mouse-out — the glow emphasis still rides the
- * health hue so the tier stays readable while interacted with.
+ * Resolve a friendly-asset marker style under the 2-state health model.
  *
- * `offline` replaces the old all-gray `disabled` look: a dashed black ring
- * (standard interaction colors), gray glyph at full opacity, and a nearly
- * invisible surface — clearly absent without hiding what the asset is. (The
- * map pairs this with the wifi-off corner badge; see `MarkerOfflineBadge`.)
+ * Health owns the resting ring: `error` paints it red; `ok` keeps the
+ * standard black. Interaction wins the ring — hovered / selected / active
+ * flip it white (the standard friendly cue) and the red returns on
+ * mouse-out, while the glow emphasis rides the error hue so the tier stays
+ * readable during interaction. The glyph stays white so identity never
+ * shifts; the *cause* is text on the label/tooltip and the panel row.
  */
 export function resolveAssetMarkerStyle(
   health: AssetHealth = 'ok',
   interaction: AssetMarkerInteraction = 'default',
 ): MarkerStyle {
-  // The base interaction matrix already speaks the interaction ring language
-  // (black at rest, white while hovered/selected/active) — health only
-  // recolors the resting ring.
   const base = resolveMarkerStyle(interaction, 'friendly');
   if (health === 'ok') return base;
 
-  const ringColor = ASSET_HEALTH_RING_COLOR[health];
-  const interacting = interaction !== 'default';
-
-  if (health === 'offline') {
-    return {
-      ...base,
-      // Ring speaks the standard interaction language (black at rest, white
-      // while hovered/selected) — only the dash pattern and the gray glyph
-      // mark the marker as offline.
-      ringDash: 'dashed',
-      ringPulse: false,
-      surfaceOpacity: 0.04,
-      innerGlowColor: ringColor,
-      glyphColor: ringColor,
-    };
-  }
-
   return {
     ...base,
-    ringColor: interacting ? base.ringColor : ringColor,
-    // Glow emphasis (hover/selected) rides the health hue so the marker keeps
-    // reading as one tier while the ring itself flips white.
-    innerGlowColor: ringColor,
-    glyphColor: MARKER_HEX.white,
+    // Error recolors the resting ring only — interacted rings keep the
+    // standard white flip from the interaction matrix.
+    ringColor: interaction === 'default' ? ASSET_HEALTH_ERROR_COLOR : base.ringColor,
+    // Glow emphasis (hover/selected) rides the error hue so the interacted
+    // marker still says "this one needs attention".
+    innerGlowColor: ASSET_HEALTH_ERROR_COLOR,
   };
 }
 

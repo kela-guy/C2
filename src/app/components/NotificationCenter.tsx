@@ -186,7 +186,7 @@ export const NotificationCenter = ({ trigger: customTrigger }: NotificationCente
               aria-label={nt.centerOpenAriaLabel}
               className={`
                 relative w-10 h-10 rounded-full flex items-center justify-center
-                transition-colors duration-200 border
+                transition-colors duration-[var(--motion-moderate)] border
                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring
                 ${isOpen
                   ? 'bg-blue-900/30 border-blue-500/50 text-blue-400'

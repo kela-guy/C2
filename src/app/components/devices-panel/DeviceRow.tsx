@@ -33,7 +33,6 @@ import { DeviceRowDetails } from './DeviceRowDetails';
 import { DeviceActionBar } from './DeviceActionBar';
 import { DeviceChildGroup } from './DeviceChildGroup';
 import { DeviceErrorsDialog } from './controls/DeviceErrorsDialog';
-import { OfflineHatch } from './OfflineBadge';
 import type { Device, DeviceCameraDragItem, DeviceRowProps } from './types';
 
 export const DeviceRow = memo(function DeviceRow({
@@ -175,13 +174,10 @@ export const DeviceRow = memo(function DeviceRow({
         onMouseEnter={() => onHover(device.id)}
         onMouseLeave={() => onHover(null)}
         data-handoff-component="device-row-header"
-        className={`relative flex items-center justify-center gap-2.5 px-4 py-2.5 text-end transition-[background-color,border-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-state-focus-ring border-b border-white/[0.06] ${
+        className={`relative flex items-center justify-center gap-2.5 px-4 py-2.5 text-end transition-[background-color,border-color] duration-[var(--motion-fast)] ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-state-focus-ring border-b border-white/[0.06] ${
           isExpanded ? 'bg-white/[0.04]' : 'hover:bg-state-hover active:bg-state-pressed'
         } cursor-pointer`}
       >
-        {/* Offline surface — the hatched-row treatment chosen in the
-            `/devices-lab` offline-emphasis audition. */}
-        {!online && <OfflineHatch />}
         <DeviceRowHeader
           device={device}
           cfg={cfg}
@@ -192,7 +188,7 @@ export const DeviceRow = memo(function DeviceRow({
       </div>
 
       <CollapsibleContent
-        className="overflow-hidden animate-in fade-in-0 duration-200"
+        className="overflow-hidden animate-in fade-in-0 duration-[var(--motion-moderate)] ease-[var(--ease-bounce)] motion-reduce:animate-none"
         data-handoff-component="device-row-details"
       >
         <div className="flex flex-col bg-white/[0.03]">

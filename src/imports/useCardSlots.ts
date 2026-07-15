@@ -505,30 +505,7 @@ function buildCounterAirActions(
   //    camera — no accent color, just an on/off press.
   //  - jammer recommended -> the shared camera/PTZ toggle (jam owns the camera).
   if (primary.flow.id === 'gotcha') {
-    const isAudioPlaying = !!ctx.isAudioPlaying;
-    // Per-card picker is gone, so fall back to the first track — the badge
-    // still names whatever will broadcast.
-    const trackLabel =
-      ctx.audioTracks?.find((tk) => tk.id === ctx.selectedAudioTrackId)?.label ??
-      ctx.audioTracks?.[0]?.label;
-    actions.push({
-      id: 'play-audio',
-      label: t.cards.playAudio,
-      size: 'sm',
-      group: 'secondary',
-      onClick: (e) => {
-        e.stopPropagation();
-        callbacks.onPlayAudio?.();
-      },
-      toggle: {
-        on: isAudioPlaying,
-        offLabel: t.cards.playAudio,
-        onLabel: t.cards.stopAudio,
-        offIcon: SpeakerFilled,
-        onIcon: SpeakerWaveLoaderIcon,
-        badge: trackLabel,
-      },
-    });
+    actions.push(buildPlayAudioAction(callbacks, ctx, t));
   } else {
     const cameraFlow = flows.find((f) => f.showCamera);
     if (cameraFlow) {
@@ -561,6 +538,42 @@ function buildCounterAirActions(
   return actions;
 }
 
+/**
+ * The card's PA-broadcast (speaker) toggle — play/stop audio over the nearest
+ * speaker for this target. One shape shared by the engaging secondary slot
+ * and the gotcha terminal state.
+ */
+function buildPlayAudioAction(
+  callbacks: CardCallbacks,
+  ctx: CardContext,
+  t: Strings,
+): CardAction {
+  const isAudioPlaying = !!ctx.isAudioPlaying;
+  // Per-card picker is gone, so fall back to the first track — the badge
+  // still names whatever will broadcast.
+  const trackLabel =
+    ctx.audioTracks?.find((tk) => tk.id === ctx.selectedAudioTrackId)?.label ??
+    ctx.audioTracks?.[0]?.label;
+  return {
+    id: 'play-audio',
+    label: t.cards.playAudio,
+    size: 'sm',
+    group: 'secondary',
+    onClick: (e) => {
+      e.stopPropagation();
+      callbacks.onPlayAudio?.();
+    },
+    toggle: {
+      on: isAudioPlaying,
+      offLabel: t.cards.playAudio,
+      onLabel: t.cards.stopAudio,
+      offIcon: SpeakerFilled,
+      onIcon: SpeakerWaveLoaderIcon,
+      badge: trackLabel,
+    },
+  };
+}
+
 function buildFlowActions(
   flow: EngagementFlowDef,
   target: Detection,
@@ -583,6 +596,13 @@ function buildFlowActions(
         ? { label: phaseUI.stripLabel, icon: phaseUI.stripIcon!, tone: phaseUI.stripTone! }
         : undefined,
     });
+
+    // Gotcha engaged: the speaker broadcast toggle replaces the PTZ
+    // investigate action — the capture is confirmed on-net, not re-verified.
+    if (flow.id === 'gotcha') {
+      actions.push(buildPlayAudioAction(callbacks, ctx, t));
+      return actions;
+    }
 
     if (phaseUI.terminalActions) {
       for (const ta of phaseUI.terminalActions) {

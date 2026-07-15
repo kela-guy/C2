@@ -114,7 +114,7 @@ export function TargetCard({
           {(children != null || footer != null) && (
             <CollapsibleContent
               id={contentId}
-              className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down"
+              className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down data-[state=open]:[animation-duration:var(--motion-moderate)] data-[state=closed]:[animation-duration:var(--motion-moderate-exit)]"
             >
               {children != null && (
                 <div

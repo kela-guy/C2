@@ -1,57 +1,49 @@
 /**
  * Canonical health/status tone vocabulary.
  *
- * ONE place maps the four asset-health tones (ok / warning / error /
- * offline) onto palette.css tokens. Previously this map was re-declared
- * in ≥8 files (DeviceRowHeader, DeviceChildGroup, StatusChip, the
- * devices-lab pages, StyleguidePage, …), each hardcoding
- * `emerald-400`/`red-400`/`amber-400` while `--accent-success/-warning/
- * -danger` sat unused. Every consumer now composes from these records.
+ * ONE place maps the asset-health tones onto palette.css tokens.
+ * Previously these maps were re-declared in ≥8 files (DeviceRowHeader,
+ * DeviceChildGroup, StatusChip, the devices-lab pages, StyleguidePage, …),
+ * each hardcoding `emerald-400`/`red-400` while `--accent-success/-danger`
+ * sat unused. Every consumer now composes from these records.
+ *
+ * Two tones only: an asset is working (`ok`) or it isn't (`error`).
+ * The cause (offline, malfunction, low battery…) is text, never a color
+ * tier of its own.
  *
  * Tone → token contract:
  *   dot    vivid accent fill (the color IS the signal; tiny area)
  *   text   accent text tier (step-11 analogue, legible at 10–11px)
  *   badge  tint fill + accent text (count chips / summary pills)
  *   ring   vivid accent at 40% (focus/selection rings on toned cards)
- *
- * `offline` deliberately stays neutral (slate + state overlays): a
- * disconnected asset is "known-absent, not alarmist".
  */
 
 import { Badge } from '@/shared/components/ui/badge';
 import { cn } from '@/shared/components/ui/utils';
 
-export type HealthTone = 'ok' | 'warning' | 'error' | 'offline';
+export type HealthTone = 'ok' | 'error';
 
 /** Small round status-indicator fill. */
 export const HEALTH_DOT_CLASS: Record<HealthTone, string> = {
   error: 'bg-accent-danger',
-  warning: 'bg-accent-warning',
-  offline: 'bg-slate-8',
   ok: 'bg-accent-success',
 };
 
 /** Count-badge / summary-chip surface: tint fill + legible accent text. */
 export const HEALTH_BADGE_CLASS: Record<HealthTone, string> = {
   error: 'bg-accent-danger-tint text-accent-danger-text',
-  warning: 'bg-accent-warning-tint text-accent-warning-text',
-  offline: 'bg-state-hover-overlay text-slate-11',
   ok: 'bg-accent-success-tint text-accent-success-text',
 };
 
 /** Standalone toned text (labels, telemetry values). */
 export const HEALTH_TEXT_CLASS: Record<HealthTone, string> = {
   error: 'text-accent-danger-text',
-  warning: 'text-accent-warning-text',
-  offline: 'text-slate-10',
   ok: 'text-accent-success-text',
 };
 
 /** Ring tint for toned cards / selected states. */
 export const HEALTH_RING_CLASS: Record<HealthTone, string> = {
   error: 'ring-accent-danger/40',
-  warning: 'ring-accent-warning/40',
-  offline: 'ring-border-default',
   ok: 'ring-accent-success/30',
 };
 

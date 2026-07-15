@@ -21,7 +21,7 @@ export function CameraTelemetryStrip({ visible, status }: CameraTelemetryStripPr
 
   return (
     <div
-      className={`absolute z-20 left-1/2 -translate-x-1/2 bottom-12 transition-opacity duration-200 ease-out
+      className={`absolute z-20 left-1/2 -translate-x-1/2 bottom-12 transition-opacity duration-[var(--motion-moderate)] ease-out
         ${visible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
       aria-hidden={!visible}
     >

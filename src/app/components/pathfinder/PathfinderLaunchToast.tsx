@@ -212,7 +212,7 @@ function PrimaryButton({
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex h-7 items-center justify-center gap-1.5 rounded-[1px] bg-slate-12 px-3 text-xs font-semibold text-slate-2 transition-[background-color,transform] duration-150 hover:bg-white active:scale-95"
+      className="inline-flex h-7 items-center justify-center gap-1.5 rounded-[1px] bg-slate-12 px-3 text-xs font-semibold text-slate-2 transition-[background-color,transform] duration-[var(--motion-fast)] hover:bg-white active:scale-95"
     >
       {icon}
       {children}
@@ -230,7 +230,7 @@ function StopButton({ onClick, children }: { onClick: () => void; children: Reac
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex h-7 items-center justify-center gap-1.5 rounded-[1px] px-2.5 text-xs font-medium text-accent-danger/80 transition-[background-color,color] duration-150 hover:bg-accent-danger/10 hover:text-accent-danger active:scale-95"
+      className="inline-flex h-7 items-center justify-center gap-1.5 rounded-[1px] px-2.5 text-xs font-medium text-accent-danger/80 transition-[background-color,color] duration-[var(--motion-fast)] hover:bg-accent-danger/10 hover:text-accent-danger active:scale-95"
     >
       <SquareFilled size={12} aria-hidden />
       {children}
@@ -244,7 +244,7 @@ function GhostDismiss({ onClick, label }: { onClick: () => void; label: string }
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="grid size-6 place-items-center rounded-[1px] text-slate-8 opacity-0 transition-[color,opacity] duration-150 hover:text-slate-11 focus-visible:opacity-100 group-hover:opacity-100"
+      className="grid size-6 place-items-center rounded-[1px] text-slate-8 opacity-0 transition-[color,opacity] duration-[var(--motion-fast)] hover:text-slate-11 focus-visible:opacity-100 group-hover:opacity-100"
     >
       <span className="text-base leading-none">×</span>
     </button>

@@ -205,7 +205,7 @@ export function SplitActionButton({
             <ChevronDown
               size={Math.max(sz.icon - 2, 10)}
               className={cn(
-                'opacity-90 transition-transform duration-200',
+                'opacity-90 transition-transform duration-[var(--motion-moderate)]',
                 sz.chevronCls,
                 menuOpen && 'rotate-180',
               )}
@@ -249,7 +249,7 @@ export function SplitActionButton({
                       <DropdownMenuItem
                         key={item.id}
                         disabled={item.disabled}
-                        className="group flex w-full flex-row items-center justify-start gap-2 rounded-md px-2.5 py-2 text-xs text-slate-11 cursor-pointer transition-[background-color,color] duration-150 ease-out hover:bg-state-hover-overlay hover:text-white focus:bg-white/[0.08] focus:text-white"
+                        className="group flex w-full flex-row items-center justify-start gap-2 rounded-md px-2.5 py-2 text-xs text-slate-11 cursor-pointer transition-[background-color,color] duration-[var(--motion-fast)] ease-out hover:bg-state-hover-overlay hover:text-white focus:bg-white/[0.08] focus:text-white"
                         onClick={(e) => {
                           e.stopPropagation();
                           item.onClick(e);
@@ -265,7 +265,7 @@ export function SplitActionButton({
                         )} />
                         {ItemIcon && <ItemIcon size={14} className="shrink-0" aria-hidden="true" />}
                         <span className="min-w-0 flex-1 text-start">{item.label}</span>
-                        <span className="text-xs text-white/40 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                        <span className="text-xs text-white/40 opacity-0 group-hover:opacity-100 transition-opacity duration-[var(--motion-fast)]">
                           {placeholder}
                         </span>
                       </DropdownMenuItem>
@@ -281,7 +281,7 @@ export function SplitActionButton({
                 <DropdownMenuItem
                   key={item.id}
                   disabled={item.disabled}
-                  className="flex w-full flex-row items-center justify-start gap-2 rounded-md px-2.5 py-2 text-xs text-slate-11 cursor-pointer transition-[background-color,color] duration-150 ease-out hover:bg-state-hover-overlay hover:text-white focus:bg-white/[0.08] focus:text-white"
+                  className="flex w-full flex-row items-center justify-start gap-2 rounded-md px-2.5 py-2 text-xs text-slate-11 cursor-pointer transition-[background-color,color] duration-[var(--motion-fast)] ease-out hover:bg-state-hover-overlay hover:text-white focus:bg-white/[0.08] focus:text-white"
                   onClick={(e) => {
                     e.stopPropagation();
                     item.onClick(e);

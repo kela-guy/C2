@@ -108,7 +108,7 @@ export function CardIdentity({
                     'has-[[data-copied]]:opacity-100',
                     // Touch devices have no hover — always visible.
                     '[@media(hover:none)]:opacity-100',
-                    'transition-opacity duration-150 ease-out',
+                    'transition-opacity duration-[var(--motion-fast)] ease-out',
                   )}
                   style={
                     {

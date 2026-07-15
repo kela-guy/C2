@@ -1,11 +1,10 @@
 /**
  * Sandbox-only device fixtures for `/devices-lab`.
  *
- * Covers every `DeviceType`, spread across the state-color tiers settled in
- * the lab — NO `critical` tier anymore (error is the top severity): errored
- * asset (red tile + Logs channel), connection warning, low battery, offline
- * (dim tile + wifi-off badge), and plain healthy. Production data still
- * comes from `useDevicesFromAssets`.
+ * Covers every `DeviceType` across the binary health model: errored assets
+ * (red tile + Logs channel — causes include faults, dropped links, low
+ * battery, offline) and plain healthy. Production data still comes from
+ * `useDevicesFromAssets`.
  */
 
 import type { Device } from '../devices-panel/types';
@@ -29,18 +28,18 @@ export const MOCK_DEVICES: Device[] = [
     status: 'available', operationalStatus: 'operational', connectionState: 'online',
     fovDeg: 62, bearingDeg: 145, batteryPct: 82, capabilities: ['video', 'photo'], Icon: CameraIcon,
   },
-  // errored asset — warning tile + red Logs channel (open errors), not critical (no pulse)
+  // errored asset — red tile + red Logs channel (open errors)
   {
     id: 'CAM-02', name: 'PixelSight West', type: 'camera', lat: 32.793, lon: 34.984,
     status: 'available', operationalStatus: 'operational', connectionState: 'warning',
     fovDeg: 40, bearingDeg: 270, batteryPct: 35, capabilities: ['video'],
     errors: [
       { severity: 'error', message: 'Lens heater fault — defrost unavailable' },
-      { severity: 'warning', message: 'Stream bitrate degraded (link quality low)' },
+      { severity: 'error', message: 'Stream bitrate degraded (link quality low)' },
     ],
     Icon: CameraIcon,
   },
-  // offline — disconnected (faint tile, glyph desaturated)
+  // error — disconnected (red tile; "Offline" is the reason text)
   {
     id: 'CAM-03', name: 'Gate Cam', type: 'camera', lat: 32.802, lon: 35.052,
     status: 'offline', operationalStatus: 'operational', connectionState: 'offline',
@@ -54,11 +53,11 @@ export const MOCK_DEVICES: Device[] = [
     errors: [
       { severity: 'error', message: 'Antenna motor stalled — no rotation' },
       { severity: 'error', message: 'Connection lost to processing unit' },
-      { severity: 'warning', message: 'Internal temperature above nominal (78°C)' },
+      { severity: 'error', message: 'Internal temperature above nominal (78°C)' },
     ],
     Icon: RadarIcon,
   },
-  // warning — degraded connection only (amber tile, no open errors)
+  // error — degraded connection (red tile; stale link is the reason)
   {
     id: 'RAD-02', name: 'Magos N', type: 'radar', lat: 32.838, lon: 35.017,
     status: 'available', operationalStatus: 'operational', connectionState: 'warning',
@@ -75,23 +74,23 @@ export const MOCK_DEVICES: Device[] = [
     id: 'DRN-01', name: 'Patrol-3', type: 'drone', lat: 32.774, lon: 35.033,
     status: 'active', operationalStatus: 'operational', connectionState: 'online',
     altitude: '120 m', batteryPct: 64,
-    errors: [{ severity: 'warning', message: 'GPS accuracy reduced — 9 satellites' }],
+    errors: [{ severity: 'error', message: 'GPS accuracy reduced — 9 satellites' }],
     Icon: DroneDeviceIcon,
   },
-  // warning — low battery (<= 40%), still online
+  // error — battery at the critical floor (<= 20%), still online
   {
     id: 'DRN-02', name: 'Observer-7', type: 'drone', lat: 32.766, lon: 34.971,
     status: 'active', operationalStatus: 'operational', connectionState: 'online',
-    altitude: '90 m', batteryPct: 34, Icon: DroneDeviceIcon,
+    altitude: '90 m', batteryPct: 18, Icon: DroneDeviceIcon,
   },
-  // offline — disconnected drone (dim tile + wifi-off badge in the drones group)
+  // error — disconnected drone ("Offline" reason chip in the drones group)
   {
     id: 'DRN-03', name: 'Scout-2', type: 'drone', lat: 32.759, lon: 35.018,
     status: 'offline', operationalStatus: 'operational', connectionState: 'offline',
     Icon: DroneDeviceIcon,
   },
   // errored asset — a deliberately busy log (30 entries) to exercise the
-  // errors modal's inner scroll + severity filter badges.
+  // errors modal's inner scroll.
   {
     id: 'ECM-01', name: 'Regulus North', type: 'ecm', lat: 32.833, lon: 35.041,
     status: 'available', operationalStatus: 'operational', connectionState: 'online',
@@ -109,24 +108,24 @@ export const MOCK_DEVICES: Device[] = [
       { severity: 'error', message: 'Timing reference drift exceeds limit' },
       { severity: 'error', message: 'Transmit gate stuck closed' },
       { severity: 'error', message: 'Memory ECC double-bit error' },
-      { severity: 'warning', message: 'Cooling fan RPM below threshold' },
-      { severity: 'warning', message: 'Calibration overdue (14 days)' },
-      { severity: 'warning', message: 'Power supply ripple elevated' },
-      { severity: 'warning', message: 'Internal temperature 71°C (high)' },
-      { severity: 'warning', message: 'Reflected power above nominal' },
-      { severity: 'warning', message: 'Clock jitter trending upward' },
-      { severity: 'warning', message: 'Firmware update available (v4.2.1)' },
-      { severity: 'warning', message: 'Spectrum mask margin narrowing' },
-      { severity: 'warning', message: 'GPS disciplining holdover active' },
-      { severity: 'warning', message: 'Battery backup at 62%' },
-      { severity: 'warning', message: 'Log storage 84% full' },
-      { severity: 'warning', message: 'Heartbeat latency 320 ms' },
-      { severity: 'warning', message: 'Antenna A gain 0.6 dB below baseline' },
-      { severity: 'warning', message: 'Fan 2 duty cycle saturated' },
-      { severity: 'warning', message: 'Config drift from golden profile' },
-      { severity: 'warning', message: 'NTP sync skew 1.4 s' },
-      { severity: 'warning', message: 'Self-test deferred (busy)' },
-      { severity: 'warning', message: 'Uplink retransmits elevated (3%)' },
+      { severity: 'error', message: 'Cooling fan RPM below threshold' },
+      { severity: 'error', message: 'Calibration overdue (14 days)' },
+      { severity: 'error', message: 'Power supply ripple elevated' },
+      { severity: 'error', message: 'Internal temperature 71°C (high)' },
+      { severity: 'error', message: 'Reflected power above nominal' },
+      { severity: 'error', message: 'Clock jitter trending upward' },
+      { severity: 'error', message: 'Firmware update available (v4.2.1)' },
+      { severity: 'error', message: 'Spectrum mask margin narrowing' },
+      { severity: 'error', message: 'GPS disciplining holdover active' },
+      { severity: 'error', message: 'Battery backup at 62%' },
+      { severity: 'error', message: 'Log storage 84% full' },
+      { severity: 'error', message: 'Heartbeat latency 320 ms' },
+      { severity: 'error', message: 'Antenna A gain 0.6 dB below baseline' },
+      { severity: 'error', message: 'Fan 2 duty cycle saturated' },
+      { severity: 'error', message: 'Config drift from golden profile' },
+      { severity: 'error', message: 'NTP sync skew 1.4 s' },
+      { severity: 'error', message: 'Self-test deferred (busy)' },
+      { severity: 'error', message: 'Uplink retransmits elevated (3%)' },
     ],
     Icon: SensorIcon,
   },
@@ -141,16 +140,16 @@ export const MOCK_DEVICES: Device[] = [
     id: 'LCH-01', name: 'Missile Launcher', type: 'launcher', lat: 32.844, lon: 35.005,
     status: 'available', operationalStatus: 'operational', connectionState: 'online', Icon: LauncherIcon,
   },
-  // warning + errored asset — degraded connection with open errors (warning tile + red Logs + count badge)
+  // errored asset — degraded connection with open errors (red tile + red Logs + count badge)
   {
     id: 'LID-01', name: 'LIDAR East', type: 'lidar', lat: 32.815, lon: 35.071,
     status: 'available', operationalStatus: 'operational', connectionState: 'warning',
     fovDeg: 360, bearingDeg: 0,
     errors: [
       { severity: 'error', message: 'Point cloud dropout on sector 3' },
-      { severity: 'warning', message: 'Window contamination detected' },
-      { severity: 'warning', message: 'Spin rate jitter above tolerance' },
-      { severity: 'warning', message: 'Returns below expected density' },
+      { severity: 'error', message: 'Window contamination detected' },
+      { severity: 'error', message: 'Spin rate jitter above tolerance' },
+      { severity: 'error', message: 'Returns below expected density' },
     ],
     Icon: LidarIcon,
   },
@@ -181,9 +180,9 @@ export const MOCK_DEVICES: Device[] = [
     errors: [
       { severity: 'error', message: 'Driver array fault — reduced output' },
       { severity: 'error', message: 'Audio input clipping detected' },
-      { severity: 'warning', message: 'Amplifier running hot' },
-      { severity: 'warning', message: 'Track cache failed to preload' },
-      { severity: 'warning', message: 'Firmware update pending' },
+      { severity: 'error', message: 'Amplifier running hot' },
+      { severity: 'error', message: 'Track cache failed to preload' },
+      { severity: 'error', message: 'Firmware update pending' },
     ],
     Icon: SpeakerIcon,
   },

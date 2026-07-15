@@ -122,7 +122,7 @@ export function CardMedia({
             </div>
             <button
               onClick={handleExpand}
-              className="absolute inset-0 z-10 flex items-center justify-center opacity-0 group-hover/media:opacity-100 transition-opacity duration-200 cursor-pointer"
+              className="absolute inset-0 z-10 flex items-center justify-center opacity-0 group-hover/media:opacity-100 transition-opacity duration-[var(--motion-moderate)] cursor-pointer"
               aria-label="Expand recording"
             >
               <div className="flex items-center gap-1.5 bg-black/70 backdrop-blur-sm px-3 py-1.5 rounded-md shadow-[0_0_0_1px_rgba(255,255,255,0.15)]">
@@ -257,7 +257,7 @@ function LightboxVideo({ src, initialTime }: { src: string; initialTime: number 
         >
           <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-full">
             <div
-              className="h-full w-full origin-left rounded-full bg-cyan-400 transition-transform duration-100"
+              className="h-full w-full origin-left rounded-full bg-cyan-400 transition-transform duration-[var(--motion-fast)]"
               style={{ transform: `scaleX(${scale})` }}
             />
           </div>
@@ -375,7 +375,7 @@ const VideoWithControls = React.forwardRef<HTMLVideoElement, { src: string }>(
           >
             <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-full">
               <div
-                className="h-full w-full origin-left rounded-full bg-cyan-400 transition-transform duration-100"
+                className="h-full w-full origin-left rounded-full bg-cyan-400 transition-transform duration-[var(--motion-fast)]"
                 style={{ transform: `scaleX(${scale})` }}
               />
             </div>

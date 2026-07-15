@@ -242,7 +242,7 @@ export interface LabDevice {
   errorCount?: number;
   /**
    * Worst-wins severity for the icon tile (mirrors the real `deviceHealth`
-   * model). Defaults to `ok` when online, `offline` otherwise.
+   * binary model). Defaults to `ok` when online, `error` otherwise.
    */
   health?: DeviceHealth;
   /**
@@ -275,7 +275,7 @@ export const LAB_DEVICES: LabDevice[] = [
     online: true,
     health: 'ok',
   },
-  // errored asset — red errors chip + red Logs, but no critical pulse (warning tile)
+  // errored asset — red errors chip + red Logs
   {
     id: 'CAM-1',
     name: 'PTZ North',
@@ -290,10 +290,10 @@ export const LAB_DEVICES: LabDevice[] = [
     online: true,
     cameraPreview: true,
     errorCount: 2,
-    health: 'warning',
+    health: 'error',
     healthReason: 'Sensor fault',
   },
-  // warning — degraded connection (amber tile + dot + orange chip)
+  // error — degraded connection remains the reason
   {
     id: 'SPK-1',
     name: 'LRAD North',
@@ -305,10 +305,11 @@ export const LAB_DEVICES: LabDevice[] = [
       { label: 'Health', value: 'Degraded', color: 'text-amber-400' },
     ],
     online: true,
-    health: 'warning',
+    health: 'error',
     connection: 'warning',
+    healthReason: 'Connection degraded',
   },
-  // offline — disconnected (faint tile, gray dot/chip, actions disabled)
+  // error — offline is retained as connection input and surfaced as the reason
   {
     id: 'ECM-1',
     name: 'Regulus North',
@@ -321,8 +322,9 @@ export const LAB_DEVICES: LabDevice[] = [
       { label: 'Health', value: 'Offline', color: 'text-white/50' },
     ],
     online: false,
-    health: 'offline',
+    health: 'error',
     connection: 'offline',
+    healthReason: 'Device offline',
   },
   // ok — second On/Off device, lone-overflow footer
   {

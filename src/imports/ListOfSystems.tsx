@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { AnimatePresence, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Virtuoso } from 'react-virtuoso';
 import {
   TargetCard,
@@ -1009,7 +1009,13 @@ function ListOfSystemsImpl({
       <div className="relative flex-1 min-h-0">
         <AnimatePresence>
           {showNewUpdatesPill && (
-            <div className="pointer-events-none absolute inset-x-0 top-2 z-20 flex justify-center px-3">
+            // The wrapper must be a motion element: AnimatePresence only
+            // defers unmount for motion children, so with a plain <div> the
+            // pill's own exit animation never got a chance to run.
+            <motion.div
+              key="new-updates-pill"
+              className="pointer-events-none absolute inset-x-0 top-2 z-20 flex justify-center px-3"
+            >
               <div className="pointer-events-auto">
                 <NewUpdatesPill
                   count={visibleArrivalTargets.length}
@@ -1023,7 +1029,7 @@ function ListOfSystemsImpl({
                   }}
                 />
               </div>
-            </div>
+            </motion.div>
           )}
         </AnimatePresence>
 

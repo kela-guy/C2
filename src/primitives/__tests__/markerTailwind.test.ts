@@ -22,15 +22,28 @@ describe('markerLayerClasses', () => {
 
   it('generates the ring layer from ring width / dash / color / opacity', () => {
     const hostile = markerLayerClasses(resolveMarkerStyle('default', 'hostile'));
-    // MARKER_HEX.hostile at full opacity.
+    // MARKER_HEX.ringResting (#1e2124) at full opacity — the hostile read is
+    // geometry + glyph red; the ring stays black and static. Constant hostile
+    // motion comes from MapMarker's expanding halo.
     expect(hostile.ring).toContain('border-[2px]');
     expect(hostile.ring).toContain('border-solid');
-    expect(hostile.ring).toContain('border-[rgba(252,69,64,1)]');
+    expect(hostile.ring).toContain('border-[rgba(30,33,36,1)]');
     expect(hostile.ring).not.toContain('animate-pulse');
 
     const expired = markerLayerClasses(resolveMarkerStyle('expired', 'hostile'));
     expect(expired.ring).toContain('border-dashed');
     expect(expired.ring).toContain('border-[1px]');
+    // Lifecycle-final rings remain static too.
+    expect(expired.ring).not.toContain('animate-pulse');
+  });
+
+  it('keeps the surface circular even when the ring is a diamond', () => {
+    const classes = markerLayerClasses(resolveMarkerStyle('default', 'hostile'), {
+      surfaceSize: 42,
+    });
+    expect(classes.surface).toContain('rounded-full');
+    expect(classes.surface).toContain('size-[42px]');
+    expect(classes.surface).not.toContain('rotate-45');
   });
 
   it('returns an empty string for layers the style disables', () => {
@@ -64,19 +77,19 @@ describe('markerLayerClasses', () => {
     expect(expired.glyph).toContain('opacity-[0.4]');
   });
 
-  it('handles the diamond affiliation shape (rotation + scale + radius)', () => {
-    const classes = markerLayerClasses(
-      resolveMarkerStyle('default', 'hostile', { ringShape: 'diamond' }),
-      { surfaceSize: 42 },
-    );
-    expect(classes.surface).toContain('rotate-45');
-    expect(classes.surface).toContain('rounded-[15%]');
+  it('renders the hostile diamond on the ring only (rotation + scale + sharp corners)', () => {
+    // Hostile affiliation carries ringShape: 'diamond' by default.
+    const classes = markerLayerClasses(resolveMarkerStyle('default', 'hostile'), {
+      surfaceSize: 42,
+    });
+    expect(classes.ring).toContain('rotate-45');
+    expect(classes.ring).toContain('rounded-none');
     // 42 × 0.82 ≈ 34px.
-    expect(classes.surface).toContain('size-[34px]');
+    expect(classes.ring).toContain('size-[34px]');
   });
 
   it('defaults ringSize to surfaceSize', () => {
-    const classes = markerLayerClasses(resolveMarkerStyle('default', 'hostile'), {
+    const classes = markerLayerClasses(resolveMarkerStyle('default', 'friendly'), {
       surfaceSize: 36,
     });
     expect(classes.ring).toContain('size-[36px]');

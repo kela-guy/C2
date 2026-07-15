@@ -29,32 +29,31 @@ const DEVICE_HEALTH: Record<string, 'operational' | 'malfunctioning'> = {
 };
 
 const DEVICE_CONNECTION: Record<string, 'online' | 'offline' | 'error' | 'warning'> = {
-  'SENS-NVT-MAGOS-S': 'warning',
   'REG-NVT-SOUTH': 'error',
   'FRIENDLY-02': 'offline',
-  'LIDAR-NVT-01': 'warning',
 };
 
 /**
  * Open errors per device — light the red health tile + header error button,
- * and populate the errors modal (severity glyph + message, filterable by
- * error/warning). The list length is the count badge.
+ * and populate the errors modal (each row a red glyph + the cause). The
+ * list length is the count badge. Every entry is an error with a reason —
+ * there is no warning tier.
  */
 const DEVICE_ERRORS: Record<string, DeviceError[]> = {
   'CAM-NVT-PTZ-N': [
     { severity: 'error', message: 'Image sensor fault — intermittent dropouts' },
-    { severity: 'warning', message: 'Battery critically low (18%)' },
+    { severity: 'error', message: 'Battery critically low (18%)' },
   ],
   'REG-NVT-SOUTH': [
     { severity: 'error', message: 'Amplifier channel offline' },
     { severity: 'error', message: 'Connection lost to control unit' },
-    { severity: 'warning', message: 'Internal temperature above nominal' },
+    { severity: 'error', message: 'Internal temperature above nominal' },
   ],
   'SENS-NVT-MAGOS-S': [
     { severity: 'error', message: 'Antenna motor stalled — no rotation' },
   ],
   'LIDAR-NVT-01': [
-    { severity: 'warning', message: 'Window contamination detected' },
+    { severity: 'error', message: 'Window contamination detected' },
   ],
 };
 

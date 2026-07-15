@@ -164,7 +164,7 @@ export function VideoPanel({
   return (
     <div
       ref={panelDropRef as unknown as React.Ref<HTMLDivElement>}
-      className={`h-full flex flex-col bg-[#0a0a0a] relative transition-shadow duration-150 ease-out
+      className={`h-full flex flex-col bg-[#0a0a0a] relative transition-shadow duration-[var(--motion-fast)] ease-out
         ${showPanelDropAccent ? 'shadow-[inset_0_0_0_2px_rgba(56,189,248,0.45)]' : ''}`}
       data-testid="video-panel"
     >

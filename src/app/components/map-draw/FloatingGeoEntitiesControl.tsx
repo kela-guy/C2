@@ -236,7 +236,7 @@ export function FloatingGeoEntitiesControl({
             // that edge and the extras reveal on the opposite side.
             className={`flex h-7 items-center ${
               isRtl ? 'justify-start' : 'justify-end'
-            } gap-[2px] overflow-hidden rounded-[2px] p-[2px] bg-black/70 shadow-[0_4px_12px_rgba(0,0,0,0.45)] ring-1 ring-inset ring-white/10 backdrop-blur-md transition-[width] duration-200 ease-out ${
+            } gap-[2px] overflow-hidden rounded-[2px] p-[2px] bg-black/70 shadow-[0_4px_12px_rgba(0,0,0,0.45)] ring-1 ring-inset ring-white/10 backdrop-blur-md transition-[width] duration-[var(--motion-moderate)] ease-out ${
               open ? 'w-[106px]' : 'w-7'
             }`}
           >

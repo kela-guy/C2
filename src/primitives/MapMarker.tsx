@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, type ReactNode } from 'react';
+import { useRef, useEffect, type ReactNode } from 'react';
 import { type MarkerStyle, headingToCompass } from './markerStyles';
 import { hexToRgba } from './tokens';
 
@@ -51,25 +51,28 @@ export function MapMarker({
   const compassLetter = heading != null ? headingToCompass(heading) : null;
   const borderColor = hexToRgba(s.ringColor, s.ringOpacity);
 
-  // Affiliation-shape channel (`/status-v2` audition): the surface + ring can
-  // render as a square or diamond instead of the default circle. A diamond is
-  // a rotated square, shrunk so its bounding box stays close to the circle's
-  // footprint (diagonal = size × √2 otherwise).
+  // Affiliation-shape channel: hostile markers swap the ring — and only the
+  // ring — for a sharp-cornered diamond (MIL-STD-2525 hostile frame). The
+  // surface stays a circle so the glyph keeps its familiar footing. The
+  // diamond is a rotated square, shrunk so its bounding box stays close to
+  // the circle's footprint (diagonal = size × √2 otherwise).
   const shape = s.ringShape ?? 'circle';
-  const shapeRadius = shape === 'circle' ? '9999px' : '15%';
-  const shapeScale = shape === 'diamond' ? 0.82 : shape === 'square' ? 0.94 : 1;
-  const shapeRotate = shape === 'diamond' ? ' rotate(45deg)' : '';
-  const shapedTransform = `translate(-50%, -50%)${shapeRotate}`;
-  const [hovered, setHovered] = useState(false);
+  const ringRadius = shape === 'diamond' ? '0' : '9999px';
+  const ringScale = shape === 'diamond' ? 0.82 : 1;
+  const ringTransform = `translate(-50%, -50%)${shape === 'diamond' ? ' rotate(45deg)' : ''}`;
   const pulseRef = useRef<HTMLDivElement>(null);
 
-  const shouldPulse = hovered || pulse;
+  const shouldPulse = pulse;
   const hl = highlightLayer ?? null;
   const layerDim = (layer: number) =>
     hl != null && hl !== layer ? 0.15 : 1;
 
   useEffect(() => {
     if (!shouldPulse || !pulseRef.current) return;
+    if (
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    ) return;
     const el = pulseRef.current;
 
     const anim = el.animate(
@@ -88,11 +91,9 @@ export function MapMarker({
   }, [shouldPulse]);
 
   const handleMouseEnter = () => {
-    setHovered(true);
     onMouseEnter?.();
   };
   const handleMouseLeave = () => {
-    setHovered(false);
     onMouseLeave?.();
   };
 
@@ -104,44 +105,44 @@ export function MapMarker({
           width: outerSize,
           height: outerSize,
           transform: `scale(${s.markerScale})`,
-          transition: 'transform 200ms ease',
+          transition: 'transform var(--motion-moderate) ease',
         }}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onClick={onClick}
       >
-        {/* Layer 1 (bottom): Surface */}
+        {/* Layer 1 (bottom): Surface — always a circle; only the ring carries
+            the affiliation shape. */}
         <div
-          className="absolute"
+          className="absolute rounded-full"
           style={{
-            width: surfaceSize * shapeScale,
-            height: surfaceSize * shapeScale,
-            borderRadius: shapeRadius,
+            width: surfaceSize,
+            height: surfaceSize,
             top: '50%',
             left: '50%',
-            transform: shapedTransform,
+            transform: 'translate(-50%, -50%)',
             background: hexToRgba(s.surfaceFill, s.surfaceOpacity),
             backdropFilter: s.surfaceBlur > 0 ? `blur(${s.surfaceBlur}px)` : undefined,
             WebkitBackdropFilter: s.surfaceBlur > 0 ? `blur(${s.surfaceBlur}px)` : undefined,
             opacity: layerDim(1),
-            transition: 'opacity 300ms ease',
+            transition: 'opacity var(--motion-slow) ease',
           }}
         />
 
         {/* Layer 2: Ring */}
         {s.ringWidth > 0 && (
           <div
-            className={`absolute pointer-events-none z-[1] ${s.ringPulse ? 'animate-pulse' : ''}`}
+            className={`absolute pointer-events-none z-[1] ${s.ringPulse ? 'animate-pulse motion-reduce:animate-none' : ''}`}
             style={{
-              width: ringSize * shapeScale,
-              height: ringSize * shapeScale,
-              borderRadius: shapeRadius,
+              width: ringSize * ringScale,
+              height: ringSize * ringScale,
+              borderRadius: ringRadius,
               top: '50%',
               left: '50%',
-              transform: shapedTransform,
+              transform: ringTransform,
               border: `${s.ringWidth}px ${s.ringDash === 'dashed' ? 'dashed' : 'solid'} ${borderColor}`,
               opacity: layerDim(2),
-              transition: 'border-color 200ms ease, border-width 200ms ease, opacity 300ms ease',
+              transition: 'border-color var(--motion-moderate) ease, border-width var(--motion-moderate) ease, opacity var(--motion-slow) ease',
             }}
           />
         )}
@@ -161,7 +162,7 @@ export function MapMarker({
                 ? hexToRgba(s.innerGlowColor, 1)
                 : hexToRgba(s.innerGlowColor, (hl === 4 && !s.innerGlow) ? 0.5 : (s.innerGlowOpacity || 0.4)),
               opacity: layerDim(4),
-              transition: 'opacity 300ms ease',
+              transition: 'opacity var(--motion-slow) ease',
             }}
           />
         )}
@@ -171,7 +172,7 @@ export function MapMarker({
           className="relative flex items-center justify-center z-[3]"
           style={{
             opacity: s.glyphOpacity * layerDim(3),
-            transition: 'opacity 300ms ease',
+            transition: 'opacity var(--motion-slow) ease',
           }}
         >
           {icon}
@@ -196,7 +197,7 @@ export function MapMarker({
                 border: '1px solid rgba(255,255,255,0.2)',
                 boxShadow: '0px 0px 0px 1px rgba(0,0,0,1)',
                 opacity: layerDim(5),
-                transition: 'opacity 300ms ease',
+                transition: 'opacity var(--motion-slow) ease',
               }}
             >
               <span
@@ -220,7 +221,7 @@ export function MapMarker({
               border: '1px solid rgba(255,255,255,0.2)',
               boxShadow: '0px 0px 0px 1px rgba(0,0,0,0.7)',
               opacity: layerDim(5),
-              transition: 'opacity 300ms ease',
+              transition: 'opacity var(--motion-slow) ease',
             }}
           >
             <span className="text-xs font-bold leading-none text-white">
@@ -233,7 +234,7 @@ export function MapMarker({
       {/* Label/Tooltip — floats top-right of the marker */}
       {showLabel && label && (
         <div
-          // z-[7] keeps the tooltip above corner badges (MarkerOfflineBadge
+          // z-[7] keeps the tooltip above corner badges (chips
           // rides at z-[6]) so the label never gets clipped by them.
           className="absolute whitespace-nowrap pointer-events-none z-[7]"
           style={{
@@ -245,7 +246,7 @@ export function MapMarker({
             padding: '3px 8px',
             boxShadow: '0 0 0 1px rgba(255,255,255,0.1), 0 4px 12px rgba(0,0,0,0.4)',
             opacity: layerDim(5),
-            transition: 'opacity 300ms ease',
+            transition: 'opacity var(--motion-slow) ease',
           }}
         >
           <span className="text-xs font-medium text-white">{label}</span>

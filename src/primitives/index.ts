@@ -99,7 +99,7 @@ export {
   AFFILIATION_PALETTES,
   ASSET_HEALTHS,
   ASSET_HEALTH_LABELS,
-  ASSET_HEALTH_RING_COLOR,
+  ASSET_HEALTH_ERROR_COLOR,
   resolveMarkerStyle,
   resolveTargetMarkerStyle,
   resolveAssetMarkerStyle,

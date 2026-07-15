@@ -5,7 +5,7 @@
  * line fenced below.
  *
  * This gallery stress-tests that one form against everything it has to carry
- * in production: all four health tones (critical / warning / offline / ok),
+ * in production: both health tones (error / ok),
  * error-count extremes (0, 1, many, 99+), short/long/missing reasons, partial
  * or absent footers, and an over-long severity label. Every case is shown in
  * English (LTR) and Hebrew (RTL). Square corners; the inner badge uses a 2px
@@ -16,7 +16,7 @@ import type { ReactNode } from 'react';
 import { HEALTH_BADGE_CLASS, HEALTH_DOT_CLASS } from '@/primitives/HealthStatus';
 
 /** Worst-wins health tone, mirroring `deviceHealth.ts`. */
-type Tone = 'critical' | 'warning' | 'offline' | 'ok';
+type Tone = 'error' | 'ok';
 
 interface ToneStyle {
   /** Leading severity dot. */
@@ -27,13 +27,10 @@ interface ToneStyle {
 
 /**
  * Tone palette grounded in the existing tokens (`CONNECTION_STATE_COLORS`,
- * `DEVICE_HEALTH_VISUAL`). Only trouble tones carry a count badge — offline is
- * known-absent (not alarmist) and ok has nothing to count.
+ * `DEVICE_HEALTH_VISUAL`). Only error carries a count badge.
  */
 const TONES: Record<Tone, ToneStyle> = {
-  critical: { dot: HEALTH_DOT_CLASS.error, badge: HEALTH_BADGE_CLASS.error },
-  warning: { dot: HEALTH_DOT_CLASS.warning, badge: HEALTH_BADGE_CLASS.warning },
-  offline: { dot: HEALTH_DOT_CLASS.offline, badge: null },
+  error: { dot: HEALTH_DOT_CLASS.error, badge: HEALTH_BADGE_CLASS.error },
   ok: { dot: HEALTH_DOT_CLASS.ok, badge: null },
 };
 
@@ -111,45 +108,45 @@ function TitledTip({ tone, errors, content }: { tone: Tone; errors?: number; con
 
 const SCENARIOS: Scenario[] = [
   {
-    label: 'Critical · 2 errors · full footer (canonical)',
-    tone: 'critical',
+    label: 'Error · 2 reasons · full footer (canonical)',
+    tone: 'error',
     errors: 2,
-    en: { severity: 'Critical', reason: 'Sensor fault', connection: 'Warning', updated: '3m ago' },
-    he: { severity: 'קריטי', reason: 'תקלת חיישן', connection: 'אזהרה', updated: 'לפני 3 ד׳' },
+    en: { severity: 'Error', reason: 'Sensor fault', connection: 'Warning', updated: '3m ago' },
+    he: { severity: 'שגיאה', reason: 'תקלת חיישן', connection: 'אזהרה', updated: 'לפני 3 ד׳' },
   },
   {
-    label: 'Critical · 99+ errors (count clamp)',
-    tone: 'critical',
+    label: 'Error · 99+ reasons (count clamp)',
+    tone: 'error',
     errors: 248,
-    en: { severity: 'Critical', reason: 'Repeated command timeouts', connection: 'Error', updated: 'just now' },
-    he: { severity: 'קריטי', reason: 'פסקי זמן חוזרים בפקודות', connection: 'שגיאה', updated: 'הרגע' },
+    en: { severity: 'Error', reason: 'Repeated command timeouts', connection: 'Error', updated: 'just now' },
+    he: { severity: 'שגיאה', reason: 'פסקי זמן חוזרים בפקודות', connection: 'שגיאה', updated: 'הרגע' },
   },
   {
-    label: 'Critical · 1 error (singular count)',
-    tone: 'critical',
+    label: 'Error · 1 reason (singular count)',
+    tone: 'error',
     errors: 1,
-    en: { severity: 'Critical', reason: 'Motor stall', connection: 'Error', updated: '1m ago' },
-    he: { severity: 'קריטי', reason: 'תקיעת מנוע', connection: 'שגיאה', updated: 'לפני דקה' },
+    en: { severity: 'Error', reason: 'Motor stall', connection: 'Error', updated: '1m ago' },
+    he: { severity: 'שגיאה', reason: 'תקיעת מנוע', connection: 'שגיאה', updated: 'לפני דקה' },
   },
   {
-    label: 'Critical · 0 errors (badge hidden)',
-    tone: 'critical',
+    label: 'Error · 0 logged reasons (badge hidden)',
+    tone: 'error',
     errors: 0,
-    en: { severity: 'Critical', reason: 'Malfunction', connection: 'Online', updated: '2m ago' },
-    he: { severity: 'קריטי', reason: 'תקלה', connection: 'מחובר', updated: 'לפני 2 ד׳' },
+    en: { severity: 'Error', reason: 'Malfunction', connection: 'Online', updated: '2m ago' },
+    he: { severity: 'שגיאה', reason: 'תקלה', connection: 'מחובר', updated: 'לפני 2 ד׳' },
   },
   {
-    label: 'Warning · battery reason · full footer',
-    tone: 'warning',
+    label: 'Error · low-battery reason · full footer',
+    tone: 'error',
     errors: 1,
-    en: { severity: 'Warning', reason: 'Battery 34%', connection: 'Warning', updated: '5m ago' },
-    he: { severity: 'אזהרה', reason: 'סוללה 34%', connection: 'אזהרה', updated: 'לפני 5 ד׳' },
+    en: { severity: 'Error', reason: 'Battery 34%', connection: 'Warning', updated: '5m ago' },
+    he: { severity: 'שגיאה', reason: 'סוללה 34%', connection: 'אזהרה', updated: 'לפני 5 ד׳' },
   },
   {
-    label: 'Offline · no badge · freshness-only footer',
-    tone: 'offline',
-    en: { severity: 'Offline', reason: 'Disconnected', updated: '12m ago' },
-    he: { severity: 'מנותק', reason: 'נותק החיבור', updated: 'לפני 12 ד׳' },
+    label: 'Error · offline reason · freshness-only footer',
+    tone: 'error',
+    en: { severity: 'Error', reason: 'Device offline', updated: '12m ago' },
+    he: { severity: 'שגיאה', reason: 'המכשיר מנותק', updated: 'לפני 12 ד׳' },
   },
   {
     label: 'OK · no badge · no footer (minimal / header-only)',
@@ -159,16 +156,16 @@ const SCENARIOS: Scenario[] = [
   },
   {
     label: 'Long reason (wrap test)',
-    tone: 'critical',
+    tone: 'error',
     errors: 7,
     en: {
-      severity: 'Critical',
+      severity: 'Error',
       reason: 'GPS module unresponsive after firmware rollback; awaiting reconnection and operator acknowledgement',
       connection: 'Error',
       updated: '8m ago',
     },
     he: {
-      severity: 'קריטי',
+      severity: 'שגיאה',
       reason: 'מודול ה-GPS אינו מגיב לאחר חזרת קושחה; ממתין לחיבור מחדש ולאישור מפעיל',
       connection: 'שגיאה',
       updated: 'לפני 8 ד׳',
@@ -176,31 +173,31 @@ const SCENARIOS: Scenario[] = [
   },
   {
     label: 'Missing reason (header-only, no divider)',
-    tone: 'warning',
+    tone: 'error',
     errors: 3,
-    en: { severity: 'Warning' },
-    he: { severity: 'אזהרה' },
+    en: { severity: 'Error' },
+    he: { severity: 'שגיאה' },
   },
   {
-    label: 'Long severity label vs badge (truncate test)',
-    tone: 'critical',
+    label: 'Long malfunction reason vs badge (wrap test)',
+    tone: 'error',
     errors: 12,
-    en: { severity: 'Communications subsystem malfunction', reason: 'Link degraded', connection: 'Error', updated: '4m ago' },
-    he: { severity: 'תקלה במערכת התקשורת המשנית', reason: 'הקישור מתדרדר', connection: 'שגיאה', updated: 'לפני 4 ד׳' },
+    en: { severity: 'Error', reason: 'Communications subsystem malfunction; link degraded', connection: 'Error', updated: '4m ago' },
+    he: { severity: 'שגיאה', reason: 'תקלה במערכת התקשורת המשנית; הקישור מתדרדר', connection: 'שגיאה', updated: 'לפני 4 ד׳' },
   },
   {
     label: 'Footer: connection-only',
-    tone: 'warning',
+    tone: 'error',
     errors: 1,
-    en: { severity: 'Warning', reason: 'Latency spike', connection: 'Warning' },
-    he: { severity: 'אזהרה', reason: 'קפיצת השהיה', connection: 'אזהרה' },
+    en: { severity: 'Error', reason: 'Latency spike', connection: 'Warning' },
+    he: { severity: 'שגיאה', reason: 'קפיצת השהיה', connection: 'אזהרה' },
   },
   {
     label: 'Footer: freshness-only',
-    tone: 'critical',
+    tone: 'error',
     errors: 2,
-    en: { severity: 'Critical', reason: 'Sensor fault', updated: '3m ago' },
-    he: { severity: 'קריטי', reason: 'תקלת חיישן', updated: 'לפני 3 ד׳' },
+    en: { severity: 'Error', reason: 'Sensor fault', updated: '3m ago' },
+    he: { severity: 'שגיאה', reason: 'תקלת חיישן', updated: 'לפני 3 ד׳' },
   },
 ];
 

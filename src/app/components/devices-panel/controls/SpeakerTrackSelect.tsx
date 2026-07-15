@@ -51,7 +51,7 @@ export function SpeakerTrackSelect({ tracks, strings, value, onChange }: Speaker
           data-handoff-component="device-speaker-track"
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => e.stopPropagation()}
-          className="flex h-7 min-w-0 max-w-[180px] items-center justify-between gap-1.5 px-2 rounded text-xs font-medium text-white/[0.64] hover:text-white bg-white/[0.05] hover:bg-state-hover-overlay transition-[background-color,color,transform] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-state-focus-ring"
+          className="flex h-7 min-w-0 max-w-[180px] items-center justify-between gap-1.5 px-2 rounded text-xs font-medium text-white/[0.64] hover:text-white bg-white/[0.05] hover:bg-state-hover-overlay transition-[background-color,color,transform] duration-[var(--motion-fast)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-state-focus-ring"
         >
           <span className="truncate">{selected?.label ?? strings.audioTrack}</span>
           <ChevronsUpDown size={12} className="shrink-0 opacity-60" />

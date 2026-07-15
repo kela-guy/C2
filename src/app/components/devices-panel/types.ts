@@ -30,9 +30,12 @@ export type ConnectionState = 'online' | 'offline' | 'error' | 'warning';
 export type OperationalStatus = 'operational' | 'malfunctioning';
 export type CameraCapability = 'video' | 'photo';
 
-/** A single open error/warning on a device, shown in the errors modal. */
+/**
+ * A single open error on a device, shown in the errors modal. There is no
+ * warning severity — every open issue is an error with a cause.
+ */
 export interface DeviceError {
-  severity: 'error' | 'warning';
+  severity: 'error';
   message: string;
 }
 
@@ -194,18 +197,12 @@ export interface DevicesPanelStrings {
   /** Errors modal — title prefix + empty-state line. */
   errorsModalTitle: string;
   errorsModalEmpty: string;
-  /** Errors modal severity filters (badge labels). */
-  errorsFilterAll: string;
-  errorsFilterErrors: string;
-  errorsFilterWarnings: string;
-  /** Shown in the list area when the active filter matches nothing. */
-  errorsFilterNoMatch: string;
   /** Per-line copy affordance (idle + post-copy) in the errors modal. */
   errorCopy: string;
   errorCopied: string;
-  /** Worst-wins severity titles shown in the health-tile tooltip. */
+  /** Health titles shown in the health-tile tooltip. */
   healthError: string;
-  healthWarning: string;
+  /** Textual reason label for a dropped link (offline chip). */
   healthOffline: string;
   healthHealthy: string;
   /** Group label + toggle for a composite device's nested children panel. */

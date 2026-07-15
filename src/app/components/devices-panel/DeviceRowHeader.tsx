@@ -15,7 +15,7 @@
 
 import { memo, useEffect, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { spring } from '@/lib/springs';
+import { spring, springExit } from '@/lib/springs';
 import { List } from '@/lib/icons/central';
 import { HEALTH_BADGE_CLASS, HEALTH_DOT_CLASS } from '@/primitives/HealthStatus';
 import { DotmSquare18 } from '@/app/components/ui/dotm-square-18';
@@ -38,14 +38,12 @@ interface DeviceRowHeaderProps {
 
 /**
  * Tile-tooltip tone — severity dot + label, an optional count badge for
- * the trouble tones, and the worst-wins severity title. `offline` / `ok`
- * never carry a badge. Colors come from the shared HealthStatus tone
- * vocabulary (palette.css accents) — no local color decisions.
+ * the error tone. `ok` never carries a badge. Colors come from the shared
+ * HealthStatus tone vocabulary (palette.css accents) — no local color
+ * decisions.
  */
 const HEALTH_TONE: Record<DeviceHealth, { dot: string; badge: string | null }> = {
   error: { dot: HEALTH_DOT_CLASS.error, badge: HEALTH_BADGE_CLASS.error },
-  warning: { dot: HEALTH_DOT_CLASS.warning, badge: HEALTH_BADGE_CLASS.warning },
-  offline: { dot: HEALTH_DOT_CLASS.offline, badge: null },
   ok: { dot: HEALTH_DOT_CLASS.ok, badge: null },
 };
 
@@ -65,8 +63,6 @@ export const DeviceRowHeader = memo(function DeviceRowHeader({ device, cfg, ctx,
 
   const healthLabel = {
     error: strings.healthError,
-    warning: strings.healthWarning,
-    offline: strings.healthOffline,
     ok: strings.healthHealthy,
   }[health];
 
@@ -80,23 +76,18 @@ export const DeviceRowHeader = memo(function DeviceRowHeader({ device, cfg, ctx,
   const hasFence = reasonText != null || fenceConnection != null;
   const hasTooltip = nonOnline || healthReason != null || ctx.errorCount > 0;
 
-  // Header Logs button: composites roll their unhealthy children into one
-  // count; flat devices keep their own open-error count. The button's tone
-  // follows the worst-wins severity (amber for warning, red for error)
-  // so a degraded-but-not-broken unit still surfaces a channel.
+  // Header Logs button: composites roll their failing children into one
+  // count; flat devices keep their own open-error count.
   const issueCount = isComposite ? getUnhealthyChildCount(device) : ctx.errorCount;
-  const logsTone: 'error' | 'warning' | null =
-    issueCount > 0
-      ? health === 'warning'
-        ? 'warning'
-        : health === 'error'
-          ? 'error'
-          : null
-      : null;
+  const showLogsButton = issueCount > 0 && health === 'error';
+
+  // The offline chip is the textual reason channel for a dropped link —
+  // driven by the raw connection state now that health itself is binary.
+  const isDisconnected = device.connectionState === 'offline';
 
   const tile = (
     <div
-      className={`relative w-8 h-8 rounded flex items-center justify-center shrink-0 transition-[background-color,box-shadow] duration-150 ease-out ${healthVisual.tile} ${statusPresentation?.tileClassName ?? ''}`}
+      className={`relative w-8 h-8 rounded flex items-center justify-center shrink-0 transition-[background-color,box-shadow] duration-[var(--motion-fast)] ease-out ${healthVisual.tile} ${statusPresentation?.tileClassName ?? ''}`}
       data-handoff-component="device-icon"
       data-health={health}
       {...(healthReason ? { role: 'status', 'aria-label': healthReason } : {})}
@@ -152,13 +143,7 @@ export const DeviceRowHeader = memo(function DeviceRowHeader({ device, cfg, ctx,
       )}
 
       <div className="flex-1 min-w-0 text-start">
-        {/* Offline rows dim the name — part of the hatched-surface treatment,
-            so the dead row recedes while the chip + hatch carry the signal. */}
-        <span
-          className={`text-sm font-medium truncate block ${
-            health === 'offline' ? 'text-white/55' : 'text-slate-11'
-          }`}
-        >
+        <span className="text-sm font-medium truncate block text-slate-11">
           {device.name}
         </span>
       </div>
@@ -166,9 +151,9 @@ export const DeviceRowHeader = memo(function DeviceRowHeader({ device, cfg, ctx,
       <PrimaryCluster
         cfg={cfg}
         ctx={ctx}
-        logsTone={logsTone}
+        showLogs={showLogsButton}
         logsCount={issueCount}
-        offlineLabel={health === 'offline' ? strings.healthOffline : null}
+        offlineLabel={isDisconnected ? strings.healthOffline : null}
         statusSlot={statusPresentation?.statusSlot}
       />
     </>
@@ -184,14 +169,14 @@ export const DeviceRowHeader = memo(function DeviceRowHeader({ device, cfg, ctx,
 function PrimaryCluster({
   cfg,
   ctx,
-  logsTone,
+  showLogs,
   logsCount,
   offlineLabel,
   statusSlot,
 }: {
   cfg: DeviceTypeConfig;
   ctx: DeviceActionContext;
-  logsTone: 'error' | 'warning' | null;
+  showLogs: boolean;
   logsCount: number;
   /** Non-null when the device is offline — renders the chip inline-start of Show-on-map. */
   offlineLabel: string | null;
@@ -210,12 +195,11 @@ function PrimaryCluster({
 
   return (
     <div className="flex shrink-0 items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
-      {logsTone && (
+      {showLogs && (
         <LogsErrorButton
           count={logsCount}
-          tone={logsTone}
           logsLabel={ctx.strings.logs}
-          errorsLabel={logsTone === 'warning' ? ctx.strings.errorsFilterWarnings : ctx.strings.errors}
+          errorsLabel={ctx.strings.errors}
           onOpenErrors={ctx.onOpenErrors}
         />
       )}
@@ -241,30 +225,24 @@ function PrimaryCluster({
 
 /**
  * Header issue channel — mounts when the device (or its children) needs
- * attention. Shows the Logs glyph + count, tinted by the worst-wins
- * severity: red for error / critical, amber for warning (no resting
+ * attention. Shows the Logs glyph + count in the error red (no resting
  * surface, just a hover affordance). Clicking opens the errors modal,
- * which lists each open error and warning.
+ * which lists each open error with its cause.
  */
 function LogsErrorButton({
   count,
-  tone,
   logsLabel,
   errorsLabel,
   onOpenErrors,
 }: {
   count: number;
-  tone: 'error' | 'warning';
   logsLabel: string;
   errorsLabel: string;
   onOpenErrors: () => void;
 }) {
   const display = count > 99 ? '99+' : count;
   const label = `${logsLabel} · ${count} ${errorsLabel}`;
-  const toneClass =
-    tone === 'warning'
-      ? 'text-amber-300 hover:bg-amber-500/10 focus-visible:ring-amber-300/40'
-      : 'text-red-300 hover:bg-red-500/10 focus-visible:ring-red-300/40';
+  const toneClass = 'text-red-300 hover:bg-red-500/10 focus-visible:ring-red-300/40';
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -276,7 +254,7 @@ function LogsErrorButton({
             e.stopPropagation();
             onOpenErrors();
           }}
-          className={`inline-flex h-6 shrink-0 items-center gap-1 rounded px-1.5 text-xs font-medium transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 [&_svg]:size-3 ${toneClass}`}
+          className={`inline-flex h-6 shrink-0 items-center gap-1 rounded px-1.5 text-xs font-medium transition-[background-color,transform] duration-[var(--motion-fast)] ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 [&_svg]:size-3 ${toneClass}`}
         >
           <List size={12} />
           <span className="tabular-nums">{display}</span>
@@ -311,8 +289,8 @@ function SpeakerNowPlaying({ ctx }: { ctx: DeviceActionContext }) {
 
   return (
     <span
-      className={`grid ease-[cubic-bezier(0.22,1,0.36,1)] transition-[grid-template-columns] motion-reduce:transition-none ${
-        trackOpen ? 'grid-cols-[1fr] duration-200' : 'grid-cols-[0fr] duration-150'
+      className={`grid ease-[var(--ease-bounce)] transition-[grid-template-columns] motion-reduce:transition-none ${
+        trackOpen ? 'grid-cols-[1fr] duration-[var(--motion-moderate)]' : 'grid-cols-[0fr] duration-[var(--motion-fast)]'
       }`}
     >
       <span className="flex min-w-0 overflow-hidden">
@@ -325,7 +303,7 @@ function SpeakerNowPlaying({ ctx }: { ctx: DeviceActionContext }) {
               aria-label={track ? `${ctx.strings.nowPlayingAriaLabel} — ${track.label}` : undefined}
               initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9, x: 6, filter: 'blur(4px)' }}
               animate={reduceMotion ? { opacity: 1 } : { opacity: 1, scale: 1, x: 0, filter: 'blur(0px)' }}
-              exit={{ opacity: 0, transition: { duration: reduceMotion ? 0 : 0.1, ease: 'easeOut' } }}
+              exit={{ opacity: 0, transition: reduceMotion ? { duration: 0 } : springExit.fast }}
               transition={reduceMotion ? { duration: 0 } : spring.moderate}
               className="me-1 rtl:me-1 rtl:ms-1 inline-flex origin-right items-center gap-1.5 whitespace-nowrap text-xs font-medium text-white"
             >

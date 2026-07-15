@@ -208,7 +208,7 @@ export function DevicesPanel({
     <aside
       data-handoff-component="devices-panel"
       className={`absolute top-0 bottom-0 start-0 border-e border-white/10 flex flex-col z-10 font-sans ${
-        noTransition ? '' : 'transition-transform duration-300 ease-out'
+        noTransition ? '' : 'transition-transform duration-[var(--motion-slow)] ease-out'
       } ${open ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full pointer-events-none'}`}
       style={{ width: width ?? LAYOUT_TOKENS.sidebarWidthPx, backgroundColor: 'var(--surface-2)' }}
     >
@@ -222,7 +222,7 @@ export function DevicesPanel({
           </h2>
           <button
             onClick={onClose}
-            className="p-2 -m-1 rounded hover:bg-state-hover-overlay text-slate-9 hover:text-slate-11 transition-[color,background-color,transform] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
+            className="p-2 -m-1 rounded hover:bg-state-hover-overlay text-slate-9 hover:text-slate-11 transition-[color,background-color,transform] duration-[var(--motion-fast)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring"
             aria-label={closeAriaLabel}
           >
             <X size={14} />

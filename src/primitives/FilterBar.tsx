@@ -133,7 +133,7 @@ export function FilterBar({
             <button
               type="button"
               onClick={() => onQueryChange('')}
-              className="absolute end-1.5 top-1/2 flex h-5 w-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded text-slate-9 transition-colors duration-150 before:absolute before:-inset-2 before:content-[''] hover:bg-state-hover hover:text-slate-11 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-state-focus-ring"
+              className="absolute end-1.5 top-1/2 flex h-5 w-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded text-slate-9 transition-colors duration-[var(--motion-fast)] before:absolute before:-inset-2 before:content-[''] hover:bg-state-hover hover:text-slate-11 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-state-focus-ring"
               aria-label={clearSearchAriaLabel}
             >
               <X size={10} aria-hidden="true" />
@@ -145,7 +145,7 @@ export function FilterBar({
           <button
             type="button"
             onClick={onReset}
-            className="inline-flex h-7 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded bg-white/[0.06] px-2 text-xs font-medium text-white transition-[background-color,transform] duration-150 hover:bg-state-hover-overlay focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-state-focus-ring active:scale-[0.99] motion-reduce:active:scale-100 animate-in fade-in-0 zoom-in-95 motion-reduce:animate-none"
+            className="inline-flex h-7 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded bg-white/[0.06] px-2 text-xs font-medium text-white transition-[background-color,transform] duration-[var(--motion-fast)] hover:bg-state-hover-overlay focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-state-focus-ring active:scale-[0.99] motion-reduce:active:scale-100 animate-in fade-in-0 zoom-in-95 motion-reduce:animate-none"
             aria-label={resetAriaLabel}
           >
             <ResetIcon size={11} className="shrink-0" />
@@ -219,7 +219,7 @@ function FilterPopoverButton({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className={`inline-flex h-7 w-full cursor-pointer items-center justify-center gap-1.5 rounded px-2 text-xs font-medium text-white transition-[background-color,transform] duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-state-focus-ring active:scale-[0.99] motion-reduce:active:scale-100 ${
+          className={`inline-flex h-7 w-full cursor-pointer items-center justify-center gap-1.5 rounded px-2 text-xs font-medium text-white transition-[background-color,transform] duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-state-focus-ring active:scale-[0.99] motion-reduce:active:scale-100 ${
             active || open
               ? 'bg-sky-500/[0.12]'
               : 'bg-white/[0.06] hover:bg-state-hover-overlay'
@@ -232,7 +232,7 @@ function FilterPopoverButton({
           <span className="flex-1 truncate text-end text-slate-10 tabular-nums">{value}</span>
           <ChevronDown
             size={10}
-            className={`ms-auto shrink-0 opacity-50 transition-transform duration-150 motion-reduce:transition-none ${open ? 'rotate-180' : ''}`}
+            className={`ms-auto shrink-0 opacity-50 transition-transform duration-[var(--motion-fast)] motion-reduce:transition-none ${open ? 'rotate-180' : ''}`}
             aria-hidden="true"
           />
         </button>
@@ -250,7 +250,7 @@ function FilterPopoverButton({
         // the corner adjacent to the trigger.
         align="start"
         sideOffset={4}
-        className="w-64 overflow-hidden rounded-lg p-0.5 shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_4px_12px_rgba(0,0,0,0.25),0_16px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl [transform-origin:var(--radix-popover-content-transform-origin)] data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-1 data-[side=top]:slide-in-from-bottom-1 data-[state=open]:duration-150 data-[state=closed]:duration-100"
+        className="w-64 overflow-hidden rounded-lg p-0.5 shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_4px_12px_rgba(0,0,0,0.25),0_16px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl [transform-origin:var(--radix-popover-content-transform-origin)] data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-1 data-[side=top]:slide-in-from-bottom-1"
       >
         <div className="relative">
           <div ref={bodyRef} className="max-h-[min(60vh,20rem)] overflow-y-auto p-0.5">{children}</div>
@@ -293,7 +293,7 @@ function MultiSelectList({
           <label
             key={item.value}
             htmlFor={fieldId}
-            className={`flex h-7 cursor-pointer items-center gap-2.5 rounded-md px-2.5 text-start text-xs transition-colors duration-150 focus-within:bg-white/10 focus-within:outline-none ${
+            className={`flex h-7 cursor-pointer items-center gap-2.5 rounded-md px-2.5 text-start text-xs transition-colors duration-[var(--motion-fast)] focus-within:bg-white/10 focus-within:outline-none ${
               active
                 ? 'text-sky-100'
                 : 'text-slate-11 hover:bg-state-hover hover:text-white'

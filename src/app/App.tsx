@@ -133,20 +133,10 @@ const ThemeSandbox = import.meta.env.DEV
 // /theme-orange-sandbox is the same ThemeSandbox component booted with the
 // imported shadcn/tweakcn orange preset (see theme-sandbox/presets.ts).
 
-// Status Sandbox — dev-only design exploration for how entity status
-// (online / warning-error / offline) is communicated on the asset-panel
-// row and the map marker. Two finalist directions rendered side by
-// side against one simulated entity set, with grayscale / density /
-// glance-test stress toggles. Guarded by `import.meta.env.DEV` so it
-// tree-shakes out of production.
-const StatusSandbox = import.meta.env.DEV
-  ? lazy(() => import("./components/status-sandbox/StatusSandbox"))
-  : null;
-
-// Status v2 Sandbox — dev-only round-2 exploration: hostile markers by
-// ring *shape* (circle vs square vs diamond) and the collapsed 2-status
-// model (online / error-with-reason) vs today's 3-status one. Lean,
-// self-contained; reach it directly at /status-v2.
+// Status v2 Sandbox — dev-only demo of the SHIPPED status design: hostile
+// markers read by the diamond ring, friendly errors by the red ring, and
+// the binary online / error-with-reason model. Lean, self-contained; reach
+// it directly at /status-v2.
 const StatusV2Sandbox = import.meta.env.DEV
   ? lazy(() => import("./components/status-v2/StatusV2Sandbox"))
   : null;
@@ -460,25 +450,10 @@ export default function App() {
                 />
               )}
               {/*
-                Status Sandbox — DEV-only. Side-by-side exploration of the two
-                finalist entity-status communication designs (panel row + map
-                marker) against one simulated entity set. Reach it directly at
-                /status-sandbox.
-              */}
-              {StatusSandbox && (
-                <Route
-                  path="/status-sandbox"
-                  element={
-                    <Suspense fallback={<PlaygroundFallback />}>
-                      <StatusSandbox />
-                    </Suspense>
-                  }
-                />
-              )}
-              {/*
-                Status v2 Sandbox — DEV-only. Round-2 exploration: hostile
-                affiliation by ring shape + the 2-status (online / error)
-                model. Reach it directly at /status-v2.
+                Status v2 Sandbox — DEV-only. Demo of the shipped status
+                design: hostile diamond ring, friendly error dot, and the
+                2-status (online / error) model. Reach it directly at
+                /status-v2.
               */}
               {StatusV2Sandbox && (
                 <Route

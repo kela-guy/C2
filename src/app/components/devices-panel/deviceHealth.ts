@@ -1,28 +1,21 @@
 /**
  * Unified "asset health" model for the device icon tile.
  *
- * Operators need ONE place to glance at to know whether an asset needs
- * attention. Today trouble is smeared across two axes (operational
- * malfunction + connection state) and four redundant cues. This rolls
- * them into a single worst-wins severity carried by the icon tile, with
- * the connection chip kept as the textual detail.
+ * Two states only: the asset is working (`ok`) or it isn't (`error`).
+ * Everything that used to be its own tier — connection warning, low
+ * battery, offline — is now a *reason inside error*, carried as text
+ * (tile tooltip, connection chip, errors modal), never as its own color.
+ * The only time the tile isn't red is when everything works.
  *
- * Severity precedence (worst wins):
- *   error    : malfunction | connection error | battery <= 20% | open errors — the top tier (red)
- *   warning  : connection warning | battery <= 40%
- *   offline  : disconnected (known-absent, not alarmist)
- *   ok       : everything nominal
- *
- * There is no separate `critical` tier — error is the top severity
- * (decision locked in the `/devices-lab` state-color audition).
+ * Error triggers (any one is enough):
+ *   malfunction | connection error/warning/offline | battery <= 20% | open errors
  */
 
 import type { ConnectionState, Device, DeviceError, DevicesPanelStrings } from './types';
 
-export type DeviceHealth = 'ok' | 'warning' | 'error' | 'offline';
+export type DeviceHealth = 'ok' | 'error';
 
 const BATTERY_CRITICAL_PCT = 20;
-const BATTERY_LOW_PCT = 40;
 
 /**
  * Open-error count for a device. The structured `errors` list is the source
@@ -38,49 +31,34 @@ export function getDeviceHealth(device: Device): DeviceHealth {
   if (
     device.operationalStatus === 'malfunctioning' ||
     device.connectionState === 'error' ||
+    device.connectionState === 'warning' ||
+    device.connectionState === 'offline' ||
     (batt != null && batt <= BATTERY_CRITICAL_PCT) ||
     getDeviceErrorCount(device) > 0
   ) {
     return 'error';
   }
-  if (device.connectionState === 'warning' || (batt != null && batt <= BATTERY_LOW_PCT)) {
-    return 'warning';
-  }
-  if (device.connectionState === 'offline') return 'offline';
   return 'ok';
 }
 
 /**
- * Worst-wins severity rank. Higher = more urgent. Mirrors the precedence in
- * `getDeviceHealth` so a roll-up reads identically to a single tile.
- */
-const HEALTH_RANK: Record<DeviceHealth, number> = {
-  error: 3,
-  warning: 2,
-  offline: 1,
-  ok: 0,
-};
-
-/**
- * Effective health for a (possibly composite) device: the worst of the
- * device's own health and every child's health. Non-composite devices have
- * no `children`, so this equals `getDeviceHealth` — zero behavior change for
- * the existing flat devices.
+ * Effective health for a (possibly composite) device: `error` if the
+ * device or any descendant child has an error. Non-composite devices have
+ * no `children`, so this equals `getDeviceHealth`.
  */
 export function getEffectiveDeviceHealth(device: Device): DeviceHealth {
-  let worst = getDeviceHealth(device);
+  if (getDeviceHealth(device) === 'error') return 'error';
   for (const child of device.children ?? []) {
-    const childHealth = getEffectiveDeviceHealth(child);
-    if (HEALTH_RANK[childHealth] > HEALTH_RANK[worst]) worst = childHealth;
+    if (getEffectiveDeviceHealth(child) === 'error') return 'error';
   }
-  return worst;
+  return 'ok';
 }
 
-/** Number of children at or above `warning` — drives the persistent parent cue. */
+/** Number of children in error — drives the persistent parent cue. */
 export function getUnhealthyChildCount(device: Device): number {
   let count = 0;
   for (const child of device.children ?? []) {
-    if (HEALTH_RANK[getEffectiveDeviceHealth(child)] >= HEALTH_RANK.warning) count += 1;
+    if (getEffectiveDeviceHealth(child) === 'error') count += 1;
   }
   return count;
 }
@@ -100,10 +78,10 @@ export function getCompositeErrorCount(device: Device): number {
 
 /**
  * A device's own open issues for the errors modal. Structured `errors[]` are
- * the source of truth when present; otherwise a warning / error
- * health is synthesized into a single entry from its human-readable reason, so
- * a degraded asset that carries no structured error (e.g. a connection warning)
- * still explains itself in the modal. `ok` / `offline` contribute nothing.
+ * the source of truth when present; otherwise an error health is synthesized
+ * into a single entry from its human-readable reason, so a failing asset that
+ * carries no structured error (e.g. a dropped link) still explains itself in
+ * the modal. `ok` contributes nothing.
  */
 function getDeviceOwnIssues(
   device: Device,
@@ -111,12 +89,8 @@ function getDeviceOwnIssues(
   connectionLabels: Record<ConnectionState, string>,
 ): DeviceError[] {
   if (device.errors?.length) return device.errors;
-  const health = getDeviceHealth(device);
-  const reason = getDeviceHealthReason(device, strings, connectionLabels);
-  if (health === 'warning') {
-    return [{ severity: 'warning', message: reason ?? strings.healthWarning }];
-  }
-  if (health === 'error') {
+  if (getDeviceHealth(device) === 'error') {
+    const reason = getDeviceHealthReason(device, strings, connectionLabels);
     return [{ severity: 'error', message: reason ?? strings.healthError }];
   }
   return [];
@@ -126,8 +100,7 @@ function getDeviceOwnIssues(
  * Flattened issue list for a (possibly composite) device: the device's own
  * issues first, then each child's, with the child name prefixed onto the
  * message so the parent's errors modal stays legible about which sensor /
- * camera is at fault. Warnings are included alongside errors so the amber Logs
- * button always opens onto an explanation.
+ * camera is at fault.
  */
 export function getAggregatedIssues(
   device: Device,
@@ -144,23 +117,15 @@ export function getAggregatedIssues(
 }
 
 export interface DeviceHealthVisual {
-  /** Icon-tile background. Severity tints mirror the `HEALTH_TONE` badge fills (flat, no ring). */
+  /** Icon-tile background. The error tint mirrors the `HEALTH_TONE` badge fill (flat, no ring). */
   tile: string;
-  /** Fill passed to the device glyph. Offline desaturates; issues keep the glyph legible. */
+  /** Fill passed to the device glyph. Stays legible in both states. */
   iconFill: string;
-  /**
-   * Offline is the only tone that adds a structural cue on top of the tint:
-   * a wifi-off corner badge on the tile. Dimming alone was too easy to miss
-   * in a long list — the badge names the reason at a glance.
-   */
-  showOfflineBadge?: boolean;
 }
 
 export const DEVICE_HEALTH_VISUAL: Record<DeviceHealth, DeviceHealthVisual> = {
   ok: { tile: 'bg-white/10', iconFill: 'white' },
-  warning: { tile: 'bg-[oklch(0.733_0.194_75_/_0.3)]', iconFill: 'white' },
-  error: { tile: 'bg-[oklch(0.384_0.13_25)]', iconFill: 'white' },
-  offline: { tile: 'bg-white/[0.04]', iconFill: 'rgba(255,255,255,0.4)', showOfflineBadge: true },
+  error: { tile: 'bg-accent-danger-soft', iconFill: 'white' },
 };
 
 /**
@@ -176,9 +141,8 @@ export function getDeviceHealthReason(
   const batt = device.batteryPct;
   if (device.operationalStatus === 'malfunctioning') return strings.healthMalfunction;
   if (device.connectionState === 'error') return connectionLabels.error;
-  if (batt != null && batt <= BATTERY_CRITICAL_PCT) return `${strings.battery} ${batt}%`;
   if (device.connectionState === 'warning') return connectionLabels.warning;
-  if (batt != null && batt <= BATTERY_LOW_PCT) return `${strings.battery} ${batt}%`;
   if (device.connectionState === 'offline') return connectionLabels.offline;
+  if (batt != null && batt <= BATTERY_CRITICAL_PCT) return `${strings.battery} ${batt}%`;
   return null;
 }

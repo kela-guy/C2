@@ -37,7 +37,7 @@ export function DeviceOverflowMenu({ kinds, ctx }: DeviceOverflowMenuProps) {
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} aria-hidden="true" />
           <div
             role="menu"
-            className="absolute end-0 bottom-full z-30 mb-1 flex w-[180px] flex-col gap-0.5 rounded-md border border-white/10 bg-slate-2 p-1 shadow-[0_8px_24px_rgba(0,0,0,0.4)] animate-in fade-in-0 zoom-in-95 duration-150 motion-reduce:animate-none"
+            className="absolute end-0 bottom-full z-30 mb-1 flex w-[180px] flex-col gap-0.5 rounded-md border border-white/10 bg-slate-2 p-1 shadow-[0_8px_24px_rgba(0,0,0,0.4)] animate-in fade-in-0 zoom-in-95 duration-[var(--motion-fast)] origin-bottom-right rtl:origin-bottom-left motion-reduce:animate-none"
           >
             {kinds.map((kind) => {
               if (kind === 'notifications') return <NotificationsMenuItem key={kind} ctx={ctx} />;
@@ -62,7 +62,7 @@ function TriggerButton({ open, label, onClick }: { open: boolean; label: string;
         e.stopPropagation();
         onClick();
       }}
-      className={`inline-flex size-6 items-center justify-center rounded text-white/70 transition-colors duration-150 hover:bg-state-hover-overlay hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring [&_svg]:size-3 ${
+      className={`inline-flex size-6 items-center justify-center rounded text-white/70 transition-colors duration-[var(--motion-fast)] hover:bg-state-hover-overlay hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-state-focus-ring [&_svg]:size-3 ${
         open ? 'bg-white/10 text-white' : ''
       }`}
     >

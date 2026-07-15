@@ -151,25 +151,24 @@ export const DEFAULT_DEVICE_PANEL_STRINGS: DevicesPanelStrings = {
   nowPlayingAriaLabel: 'Now playing',
   errorsModalTitle: 'Errors',
   errorsModalEmpty: 'No error details',
-  errorsFilterAll: 'All',
-  errorsFilterErrors: 'Errors',
-  errorsFilterWarnings: 'Warnings',
-  errorsFilterNoMatch: 'No matching entries',
   errorCopy: 'Copy',
   errorCopied: 'Copied',
   healthError: 'Errors',
-  healthWarning: 'Malfunction',
   healthOffline: 'Offline',
   healthHealthy: 'Healthy',
   sensorsGroupLabel: 'Sensors',
 };
 
-/** Per-state dot colour used for the small status indicator in the row icon. */
+/**
+ * Per-state dot colour used for the small status indicator in the row icon.
+ * Binary read: online is the only non-red state — every degraded connection
+ * (offline / error / stale warning feed) is an error with a textual reason.
+ */
 export const CONNECTION_STATE_COLORS: Record<ConnectionState, string> = {
   online: HEALTH_DOT_CLASS.ok,
-  offline: HEALTH_DOT_CLASS.offline,
+  offline: HEALTH_DOT_CLASS.error,
   error: HEALTH_DOT_CLASS.error,
-  warning: HEALTH_DOT_CLASS.warning,
+  warning: HEALTH_DOT_CLASS.error,
 };
 
 /** Per-state chip palette used for the inline `StatusChip` next to the device name. */
@@ -178,9 +177,9 @@ export const CONNECTION_STATE_CHIP_COLORS: Record<
   'green' | 'gray' | 'red' | 'orange'
 > = {
   online: 'green',
-  offline: 'gray',
+  offline: 'red',
   error: 'red',
-  warning: 'orange',
+  warning: 'red',
 };
 
 /** Mute timer length — the same 30 minutes the prototype has shipped with. */

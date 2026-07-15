@@ -21,7 +21,7 @@ export const DroneIcon = ({ rotationDeg = 0, disabled = false, color, size = 28 
     viewBox="0 0 28 32"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
-    className={`drop-shadow-lg transition-transform duration-150 ${disabled ? 'opacity-70' : ''}`}
+    className={`drop-shadow-lg transition-transform duration-[var(--motion-fast)] ${disabled ? 'opacity-70' : ''}`}
     style={{ transform: `rotate(${rotationDeg}deg)` }}
   >
     <path
